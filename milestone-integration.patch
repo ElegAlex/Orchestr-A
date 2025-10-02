@@ -1,0 +1,63 @@
+--- src/pages/ProjectDetail.tsx.original
++++ src/pages/ProjectDetail.tsx
+@@ -47,6 +47,7 @@
+ import ProjectGantt from '../components/project/ProjectGantt';
+ import EpicModal from '../components/project/EpicModal';
+ import MilestoneModal from '../components/project/MilestoneModal';
++import MilestoneView from '../components/project/MilestoneView';
+
+ interface TabPanelProps {
+   children?: React.ReactNode;
+@@ -410,6 +411,11 @@
+             iconPosition="start"
+             label="Tâches"
+           />
++          <Tab
++            icon={<TimelineIcon />}
++            iconPosition="start"
++            label="Vue par Jalons"
++          />
+           <Tab
+             icon={<PeopleIcon />}
+             iconPosition="start"
+@@ -450,14 +456,20 @@
+           <TabPanel value={tabValue} index={1}>
+             <ProjectTasks projectId={project.id} />
+           </TabPanel>
+           <TabPanel value={tabValue} index={2}>
++            <MilestoneView
++              projectId={project.id}
++              onCreateMilestone={handleCreateMilestone}
++            />
++          </TabPanel>
++          <TabPanel value={tabValue} index={3}>
+             <ProjectTeam project={project} onRefresh={loadProject} />
+           </TabPanel>
+-          <TabPanel value={tabValue} index={3}>
++          <TabPanel value={tabValue} index={4}>
+             <ProjectRoadmap
+               projectId={project.id}
+               onCreateEpic={handleCreateEpic}
+               onCreateMilestone={handleCreateMilestone}
+               onEditEpic={handleEditEpic}
+               onEditMilestone={handleEditMilestone}
+               refreshTrigger={roadmapKey}
+             />
+           </TabPanel>
+-          <TabPanel value={tabValue} index={4}>
++          <TabPanel value={tabValue} index={5}>
+             <ProjectGantt project={project} onRefresh={loadProject} />
+           </TabPanel>
+-          <TabPanel value={tabValue} index={5}>
++          <TabPanel value={tabValue} index={6}>
+             <ProjectRaci project={project} onRefresh={loadProject} />
+           </TabPanel>
+-          <TabPanel value={tabValue} index={6}>
++          <TabPanel value={tabValue} index={7}>
+             <ProjectDocuments projectId={project.id} />
+           </TabPanel>
+-          <TabPanel value={tabValue} index={7}>
++          <TabPanel value={tabValue} index={8}>
+             <ProjectSettings project={project} onUpdate={loadProject} />
+           </TabPanel>
+         </Box>

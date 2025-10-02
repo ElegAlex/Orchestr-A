@@ -1,0 +1,413 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Paper,
+  Typography,
+  Box,
+  Card,
+  CardContent,
+  LinearProgress,
+  Avatar,
+  AvatarGroup,
+  Chip,
+  CircularProgress,
+  Button,
+  Alert,
+} from '@mui/material';
+import Grid from '@mui/material/Grid';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import PeopleIcon from '@mui/icons-material/People';
+import FolderIcon from '@mui/icons-material/Folder';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { 
+  dashboardService, 
+  DashboardStats, 
+  RecentProject, 
+  TaskSummary, 
+  TeamMemberWorkload 
+} from '../services/dashboard.service';
+import { TaskTimeModal, TaskData } from '../components/dashboard/TaskTimeModal';
+import MyPlanning from '../components/dashboard/MyPlanning';
+
+export const Dashboard: React.FC = () => {
+  const user = useSelector((state: RootState) => state.auth.user);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+  const [upcomingTasks, setUpcomingTasks] = useState<TaskSummary[]>([]);
+  const [tasksByProject, setTasksByProject] = useState<{ [projectId: string]: { projectName: string; tasks: (TaskSummary & { estimatedHours?: number; loggedHours?: number })[] } }>({});
+  // Supprimé: teamWorkload pour optimiser les performances
+  const [showInitButton, setShowInitButton] = useState(false);
+  const [timeModalOpen, setTimeModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskData | null>(null);
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        
+        // Charger toutes les données en parallèle (sans teamWorkload pour optimiser)
+        const [statsData, projectsData, tasksData, tasksByProjectData] = await Promise.all([
+          dashboardService.getDashboardStats(user.id),
+          dashboardService.getRecentProjects(user.id),
+          dashboardService.getUpcomingTasks(user.id),
+          dashboardService.getTasksByProject(user.id),
+        ]);
+
+        setStats(statsData);
+        setRecentProjects(projectsData);
+        setUpcomingTasks(tasksData);
+        setTasksByProject(tasksByProjectData);
+        
+        // Afficher le bouton d'initialisation si aucune donnée n'est présente
+        setShowInitButton(
+          projectsData.length === 0 && 
+          tasksData.length === 0
+        );
+      } catch (error) {
+        console.error('Erreur lors du chargement du dashboard:', error);
+        setShowInitButton(true); // Afficher le bouton en cas d'erreur aussi
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, [user]);
+
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'P0': return 'error';
+      case 'P1': return 'warning';
+      case 'P2': return 'info';
+      default: return 'default';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active': return 'En cours';
+      case 'review': return 'En révision';
+      case 'completed': return 'Terminé';
+      case 'on_hold': return 'En attente';
+      default: return status;
+    }
+  };
+
+  const getStatusColor = (status: string): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
+    switch (status) {
+      case 'active': return 'success';
+      case 'review': return 'warning';
+      case 'completed': return 'info';
+      case 'on_hold': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('fr-FR');
+  };
+
+  const getDueLabel = (dueDate: Date) => {
+    const today = new Date();
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Aujourd\'hui';
+    if (diffDays === 1) return 'Demain';
+    if (diffDays < 7) return `Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+    return formatDate(dueDate);
+  };
+
+  const handleTaskClick = (task: TaskSummary & { estimatedHours?: number; loggedHours?: number }) => {
+    const taskData: TaskData = {
+      id: task.id,
+      title: task.title,
+      status: task.status === 'todo' ? 'TODO' : task.status === 'in_progress' ? 'IN_PROGRESS' : 'DONE',
+      priority: task.priority,
+      dueDate: task.dueDate,
+      projectName: task.projectName,
+      projectId: '', // TODO: récupérer depuis les données
+      estimatedHours: task.estimatedHours,
+      loggedHours: task.loggedHours
+    };
+    setSelectedTask(taskData);
+    setTimeModalOpen(true);
+  };
+
+  const handleSaveTime = async (timeEntry: { taskId: string; userId: string; date: Date; hours: number; description?: string }) => {
+    if (!user) return;
+    
+    try {
+      await dashboardService.saveTimeEntry(timeEntry);
+      
+      // Recharger les données des tâches
+      const [tasksData, tasksByProjectData] = await Promise.all([
+        dashboardService.getUpcomingTasks(user.id),
+        dashboardService.getTasksByProject(user.id)
+      ]);
+      
+      setUpcomingTasks(tasksData);
+      setTasksByProject(tasksByProjectData);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du temps:', error);
+      throw error;
+    }
+  };
+
+  const handleUpdateStatus = async (taskId: string, newStatus: 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED') => {
+    if (!user) return;
+    
+    try {
+      await dashboardService.updateTaskStatus(taskId, newStatus, user.id);
+      
+      // Recharger les données des tâches
+      const [tasksData, tasksByProjectData] = await Promise.all([
+        dashboardService.getUpcomingTasks(user.id),
+        dashboardService.getTasksByProject(user.id)
+      ]);
+      
+      setUpcomingTasks(tasksData);
+      setTasksByProject(tasksByProjectData);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      throw error;
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  const statsData = [
+    {
+      title: 'Projets actifs',
+      value: stats?.activeProjects.toString() || '0',
+      icon: <FolderIcon />,
+      color: '#667eea',
+      trend: 'Projets en cours',
+    },
+    {
+      title: 'Tâches en cours',
+      value: stats?.activeTasks.toString() || '0',
+      icon: <AssignmentIcon />,
+      color: '#f6b93b',
+      trend: 'À traiter',
+    },
+    {
+      title: 'Équipe',
+      value: stats?.teamMembers.toString() || '0',
+      icon: <PeopleIcon />,
+      color: '#4834d4',
+      trend: 'Membres actifs',
+    },
+    {
+      title: 'Taux d\'achèvement',
+      value: `${stats?.completionRate || 0}%`,
+      icon: <TrendingUpIcon />,
+      color: '#00d2d3',
+      trend: 'Tâches terminées',
+    },
+  ];
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Typography variant="h4">
+          Bienvenue, {user?.firstName || 'Utilisateur'} !
+        </Typography>
+        
+      </Box>
+
+      {showInitButton && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            Il semble que vous n'ayez pas encore de données. 
+            Cliquez sur le bouton ci-dessus pour créer des projets et tâches de démonstration !
+          </Typography>
+        </Alert>
+      )}
+
+      <Grid container spacing={3}>
+        {statsData.map((stat, index) => (
+          <Grid item xs={12} sm={6} md={3} key={index}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: `${stat.color}20`,
+                      color: stat.color,
+                      mr: 2,
+                    }}
+                  >
+                    {stat.icon}
+                  </Avatar>
+                  <Box>
+                    <Typography color="text.secondary" variant="body2">
+                      {stat.title}
+                    </Typography>
+                    <Typography variant="h5" fontWeight="bold">
+                      {stat.value}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  {stat.trend}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 3 }}>
+              Projets récents
+            </Typography>
+            {recentProjects.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Aucun projet trouvé. Créez votre premier projet !
+              </Typography>
+            ) : (
+              recentProjects.map((project) => (
+                <Box key={project.id} sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {project.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        {project.description}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                        <Chip
+                          label={getStatusLabel(project.status)}
+                          size="small"
+                          color={getStatusColor(project.status)}
+                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <AccessTimeIcon fontSize="small" sx={{ mr: 0.5 }} />
+                          <Typography variant="caption">{formatDate(project.deadline)}</Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                    <Typography variant="h6" color="primary">
+                      {project.teamMembers.length}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={project.progress}
+                      sx={{ flexGrow: 1, mr: 2, height: 8, borderRadius: 4 }}
+                      color={project.progress > 75 ? 'success' : project.progress > 50 ? 'warning' : 'error'}
+                    />
+                    <Typography variant="body2">{project.progress}%</Typography>
+                  </Box>
+                </Box>
+              ))
+            )}
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 3 }}>
+              Mes tâches par projet
+            </Typography>
+            {Object.keys(tasksByProject).length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Aucune tâche dans vos projets. Parfait !
+              </Typography>
+            ) : (
+              Object.entries(tasksByProject).map(([projectId, projectData]) => (
+                <Box key={projectId} sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+                    📂 {projectData.projectName}
+                  </Typography>
+                  {projectData.tasks.slice(0, 3).map((task, index) => (
+                    <Box
+                      key={task.id}
+                      onClick={() => handleTaskClick(task)}
+                      sx={{
+                        mb: 1,
+                        p: 1.5,
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                          borderColor: 'primary.main'
+                        },
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight="medium">
+                          {task.title}
+                        </Typography>
+                        <Chip
+                          label={task.priority}
+                          size="small"
+                          color={getPriorityColor(task.priority) as any}
+                        />
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <AccessTimeIcon fontSize="small" sx={{ mr: 0.5 }} />
+                          <Typography 
+                            variant="caption" 
+                            color={getDueLabel(task.dueDate) === 'Aujourd\'hui' ? 'error' : 'text.secondary'}
+                          >
+                            {getDueLabel(task.dueDate)}
+                          </Typography>
+                        </Box>
+                        {task.loggedHours && (
+                          <Typography variant="caption" color="text.secondary">
+                            {task.loggedHours}h
+                            {task.estimatedHours && ` / ${task.estimatedHours}h`}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  ))}
+                  {projectData.tasks.length > 3 && (
+                    <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      ... et {projectData.tasks.length - 3} autres tâches
+                    </Typography>
+                  )}
+                </Box>
+              ))
+            )}
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12}>
+          <MyPlanning />
+        </Grid>
+      </Grid>
+
+      <TaskTimeModal
+        open={timeModalOpen}
+        onClose={() => {
+          setTimeModalOpen(false);
+          setSelectedTask(null);
+        }}
+        task={selectedTask}
+        onSaveTime={handleSaveTime}
+        onUpdateStatus={handleUpdateStatus}
+      />
+    </Box>
+  );
+};

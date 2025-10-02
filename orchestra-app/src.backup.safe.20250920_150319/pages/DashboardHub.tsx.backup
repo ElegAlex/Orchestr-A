@@ -1,0 +1,290 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  IconButton,
+  Tooltip,
+  CircularProgress,
+  Chip,
+  Alert,
+  Button,
+  Stack,
+  Avatar,
+} from '@mui/material';
+import {
+  Person as PersonIcon,
+  Assignment as AssignmentIcon,
+  Refresh as RefreshIcon,
+  Notifications as NotificationsIcon,
+  Today as TodayIcon,
+  AccessTime as TimeIcon,
+} from '@mui/icons-material';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
+import MyPlanning from '../components/dashboard/MyPlanning';
+import { taskService } from '../services/task.service';
+import { projectService } from '../services/project.service';
+
+interface PersonalAlert {
+  id: string;
+  type: 'task' | 'deadline' | 'meeting' | 'project';
+  title: string;
+  message: string;
+  priority: 'high' | 'medium' | 'low';
+  date: Date;
+}
+
+interface PersonalKPI {
+  label: string;
+  value: string | number;
+  icon: React.ReactElement;
+  color: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+  trend?: 'up' | 'down' | 'stable';
+}
+
+export const DashboardHub: React.FC = () => {
+  const user = useSelector((state: RootState) => state.auth.user);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [personalAlerts, setPersonalAlerts] = useState<PersonalAlert[]>([]);
+  const [personalKPIs, setPersonalKPIs] = useState<PersonalKPI[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les données personnelles uniquement
+  const loadPersonalDashboardData = useCallback(async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    try {
+      // Charger MES données réelles depuis Firebase
+      const [userTasks, userProjects] = await Promise.all([
+        taskService.getTasksByAssignee(user.id),
+        projectService.getProjectsByUser(user.id)
+      ]);
+
+      // Calculer les alertes personnelles basées sur les vraies données
+      const alerts: PersonalAlert[] = [];
+      
+      // Tâches en retard
+      const overdueTasks = userTasks.filter(task => 
+        task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE'
+      );
+      if (overdueTasks.length > 0) {
+        alerts.push({
+          id: 'overdue-tasks',
+          type: 'task',
+          title: 'Tâches en retard',
+          message: `${overdueTasks.length} tâche${overdueTasks.length > 1 ? 's' : ''} dépassent leur échéance`,
+          priority: 'high',
+          date: new Date()
+        });
+      }
+
+      // Échéances proches (dans les 2 prochains jours)
+      const upcomingTasks = userTasks.filter(task => {
+        if (!task.dueDate || task.status === 'DONE') return false;
+        const dueDate = new Date(task.dueDate);
+        const twoDaysFromNow = new Date();
+        twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
+        return dueDate <= twoDaysFromNow && dueDate >= new Date();
+      });
+      if (upcomingTasks.length > 0) {
+        alerts.push({
+          id: 'upcoming-deadlines',
+          type: 'deadline',
+          title: 'Échéances proches',
+          message: `${upcomingTasks.length} tâche${upcomingTasks.length > 1 ? 's' : ''} à terminer sous 2 jours`,
+          priority: 'medium',
+          date: new Date()
+        });
+      }
+
+      setPersonalAlerts(alerts);
+
+      // Calculer MES KPIs personnels basés sur les vraies données
+      const today = new Date();
+      const todayTasks = userTasks.filter(task => {
+        if (task.dueDate) {
+          const dueDate = new Date(task.dueDate);
+          return dueDate.toDateString() === today.toDateString();
+        }
+        return false;
+      });
+
+      const completedTasks = userTasks.filter(task => task.status === 'DONE');
+      const completionRate = userTasks.length > 0 ? Math.round((completedTasks.length / userTasks.length) * 100) : 0;
+      const activeProjects = userProjects.filter(project => 
+        project.status === 'active' || project.status === 'planning'
+      );
+
+      const kpis: PersonalKPI[] = [
+        {
+          label: 'Mes tâches du jour',
+          value: todayTasks.length,
+          icon: <TodayIcon />,
+          color: 'primary'
+        },
+        {
+          label: 'Temps passé aujourd\'hui',
+          value: '0h', // TODO: Intégrer système de time tracking
+          icon: <TimeIcon />,
+          color: 'success'
+        },
+        {
+          label: 'Mes projets actifs',
+          value: activeProjects.length,
+          icon: <AssignmentIcon />,
+          color: 'primary'
+        },
+        {
+          label: 'Mon taux de completion',
+          value: `${completionRate}%`,
+          icon: <PersonIcon />,
+          color: completionRate >= 75 ? 'success' : completionRate >= 50 ? 'warning' : 'error',
+          trend: completionRate >= 75 ? 'up' : completionRate >= 50 ? 'stable' : 'down'
+        }
+      ];
+      setPersonalKPIs(kpis);
+    } catch (error) {
+      console.error('Erreur lors du chargement des données personnelles:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadPersonalDashboardData();
+  }, [loadPersonalDashboardData]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadPersonalDashboardData();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 3 }}>
+      {/* Header Personnel */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+        <Box display="flex" alignItems="center" gap={2}>
+          <Avatar sx={{ bgcolor: 'primary.main' }}>
+            <PersonIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="h4" component="h1">
+              Mon Cockpit Personnel
+            </Typography>
+            <Typography variant="subtitle1" color="text.secondary">
+              Bonjour {user?.displayName || 'Utilisateur'} • {new Date().toLocaleDateString('fr-FR', { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'long' 
+              })}
+            </Typography>
+          </Box>
+        </Box>
+        
+        <Stack direction="row" spacing={1}>
+          <Tooltip title="Notifications">
+            <IconButton color="primary">
+              <NotificationsIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Actualiser">
+            <IconButton onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshIcon className={isRefreshing ? 'spinning' : ''} />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </Box>
+
+      <Grid container spacing={3}>
+        {/* KPI Personnels */}
+        <Grid item xs={12}>
+          <Typography variant="h6" gutterBottom>
+            Mes indicateurs
+          </Typography>
+          <Grid container spacing={2}>
+            {personalKPIs.map((kpi, index) => (
+              <Grid item xs={12} sm={6} md={3} key={index}>
+                <Card>
+                  <CardContent>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Box color={`${kpi.color}.main`}>
+                        {kpi.icon}
+                      </Box>
+                      <Box flexGrow={1}>
+                        <Typography variant="h5" color={kpi.color}>
+                          {kpi.value}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {kpi.label}
+                        </Typography>
+                      </Box>
+                      {kpi.trend && (
+                        <Chip 
+                          size="small" 
+                          label={kpi.trend === 'up' ? '↗' : kpi.trend === 'down' ? '↘' : '→'}
+                          color={kpi.trend === 'up' ? 'success' : kpi.trend === 'down' ? 'error' : 'default'}
+                        />
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+
+        {/* Alertes Personnelles */}
+        <Grid item xs={12} md={4}>
+          <Typography variant="h6" gutterBottom>
+            Mes alertes
+          </Typography>
+          <Stack spacing={1}>
+            {personalAlerts.map((alert) => (
+              <Alert 
+                key={alert.id}
+                severity={alert.priority === 'high' ? 'error' : alert.priority === 'medium' ? 'warning' : 'info'}
+                action={
+                  <Button size="small">Voir</Button>
+                }
+              >
+                <Typography variant="subtitle2">
+                  {alert.title}
+                </Typography>
+                <Typography variant="body2">
+                  {alert.message}
+                </Typography>
+              </Alert>
+            ))}
+          </Stack>
+        </Grid>
+
+        {/* Planning Principal */}
+        <Grid item xs={12} md={8}>
+          <Typography variant="h6" gutterBottom>
+            Mon planning
+          </Typography>
+          <Card>
+            <CardContent sx={{ p: 0 }}>
+              <MyPlanning />
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
+export default DashboardHub;

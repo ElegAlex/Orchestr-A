@@ -1,0 +1,569 @@
+import React, { useEffect, useState, useMemo } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Avatar,
+  Chip,
+  Grid,
+  IconButton,
+  Menu,
+  MenuItem,
+  TextField,
+  InputAdornment,
+  Fab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Select,
+  FormControl,
+  InputLabel,
+  CircularProgress,
+  Alert,
+  Badge,
+  Tooltip,
+  LinearProgress,
+  Stack
+} from '@mui/material';
+import {
+  Search as SearchIcon,
+  Add as AddIcon,
+  MoreVert as MoreVertIcon,
+  Person as PersonIcon,
+  Schedule as ScheduleIcon,
+  CheckCircle as CheckCircleIcon,
+  Refresh as RefreshIcon,
+  ViewList as ViewListIcon,
+  ViewModule as ViewModuleIcon,
+  Assessment as AssessmentIcon
+} from '@mui/icons-material';
+import { useAppDispatch, useAppSelector } from '../hooks/redux';
+import {
+  fetchUsers,
+  fetchUserSkills,
+  calculateUserWorkload,
+  setFilters,
+  setViewMode,
+  setSelectedUser,
+  clearError
+} from '../store/slices/resourceSlice';
+import { User } from '../types';
+import SkillsMatrix from '../components/SkillsMatrix';
+import LeaveManagement from '../components/LeaveManagement';
+import WorkloadAlerts from '../components/WorkloadAlerts';
+
+const Resources: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const {
+    users,
+    selectedUser,
+    userSkills,
+    workloads,
+    alerts,
+    loading,
+    skillsLoading,
+    error,
+    filters,
+    viewMode
+  } = useAppSelector((state: any) => state.resources);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [openUserDialog, setOpenUserDialog] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchUsers());
+  }, [dispatch]);
+
+  const filteredUsers = useMemo(() => {
+    return users.filter((user: User) => {
+      const matchesSearch = user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           user.department?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesDepartment = !filters.department || user.department === filters.department;
+      const matchesRole = !filters.role || user.role === filters.role;
+      
+      let matchesAvailability = true;
+      if (filters.availability && filters.availability !== 'all') {
+        const workload = workloads[user.id];
+        if (workload) {
+          const isOverloaded = workload.availability.overloadRisk === 'high' || workload.availability.overloadRisk === 'critical';
+          matchesAvailability = filters.availability === 'overloaded' ? isOverloaded : !isOverloaded;
+        }
+      }
+
+      return matchesSearch && matchesDepartment && matchesRole && matchesAvailability;
+    });
+  }, [users, searchTerm, filters, workloads]);
+
+  const getAvailabilityColor = (user: User): 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' | 'default' => {
+    const workload = workloads[user.id];
+    if (!workload) return 'info';
+    
+    switch (workload.availability.overloadRisk) {
+      case 'none':
+      case 'low':
+        return 'success';
+      case 'medium':
+        return 'warning';
+      case 'high':
+      case 'critical':
+        return 'error';
+      default:
+        return 'info';
+    }
+  };
+
+  const getProgressColor = (user: User): 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' | 'inherit' => {
+    const workload = workloads[user.id];
+    if (!workload) return 'info';
+    
+    switch (workload.availability.overloadRisk) {
+      case 'none':
+      case 'low':
+        return 'success';
+      case 'medium':
+        return 'warning';
+      case 'high':
+      case 'critical':
+        return 'error';
+      default:
+        return 'info';
+    }
+  };
+
+  const getAvailabilityText = (user: User) => {
+    const workload = workloads[user.id];
+    if (!workload) return 'Non calculé';
+    
+    const { available, theoretical } = workload.availability.capacity;
+    const percentage = Math.round((available / theoretical) * 100);
+    return `${percentage}% disponible`;
+  };
+
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, userId: string) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedUserId(userId);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedUserId(null);
+  };
+
+  const handleViewSkills = () => {
+    if (selectedUserId) {
+      dispatch(fetchUserSkills(selectedUserId));
+      const user = users.find((u: User) => u.id === selectedUserId);
+      dispatch(setSelectedUser(user || null));
+      setOpenUserDialog(true);
+    }
+    handleMenuClose();
+  };
+
+  const handleCalculateWorkload = async () => {
+    if (selectedUserId) {
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + 3);
+      await dispatch(calculateUserWorkload({ 
+        userId: selectedUserId, 
+        startDate, 
+        endDate 
+      }));
+    }
+    handleMenuClose();
+  };
+
+  const handleRefreshAll = async () => {
+    setRefreshing(true);
+    try {
+      await dispatch(fetchUsers());
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + 3);
+      
+      for (const user of users) {
+        await dispatch(calculateUserWorkload({ 
+          userId: user.id, 
+          startDate, 
+          endDate 
+        }));
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const renderUserCard = (user: User) => {
+    const skills = userSkills[user.id] || [];
+    const workload = workloads[user.id];
+    const userAlerts = alerts.filter((alert: any) => alert.userId === user.id && !alert.resolvedAt);
+
+    return (
+      <Grid item xs={12} sm={6} md={4} key={user.id}>
+        <Card sx={{ height: '100%', position: 'relative' }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+              <Box display="flex" alignItems="center" gap={2}>
+                <Badge
+                  badgeContent={userAlerts.length}
+                  color="error"
+                  invisible={userAlerts.length === 0}
+                >
+                  <Avatar
+                    src={user.avatarUrl}
+                    sx={{ width: 48, height: 48 }}
+                  >
+                    {user.firstName?.[0]}{user.lastName?.[0]}
+                  </Avatar>
+                </Badge>
+                <Box>
+                  <Typography variant="h6" noWrap>
+                    {user.displayName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {user.role.replace('_', ' ').toUpperCase()}
+                  </Typography>
+                </Box>
+              </Box>
+              <IconButton
+                size="small"
+                onClick={(e) => handleMenuClick(e, user.id)}
+              >
+                <MoreVertIcon />
+              </IconButton>
+            </Box>
+
+            <Box mb={2}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                {user.department}
+              </Typography>
+              <Chip
+                size="small"
+                label={getAvailabilityText(user)}
+                color={getAvailabilityColor(user)}
+                icon={workload ? <CheckCircleIcon /> : <ScheduleIcon />}
+              />
+            </Box>
+
+            {workload && (
+              <Box mb={2}>
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography variant="caption">
+                    Charge actuelle
+                  </Typography>
+                  <Typography variant="caption">
+                    {Math.round((workload.availability.allocated.total / workload.availability.capacity.theoretical) * 100)}%
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={Math.min((workload.availability.allocated.total / workload.availability.capacity.theoretical) * 100, 100)}
+                  color={getProgressColor(user)}
+                />
+              </Box>
+            )}
+
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Compétences principales
+              </Typography>
+              <Box display="flex" flexWrap="wrap" gap={0.5} mt={1}>
+                {skills.slice(0, 3).map((skill: any) => (
+                  <Chip
+                    key={skill.id}
+                    label={skill.name}
+                    size="small"
+                    variant="outlined"
+                    color={skill.level === 'expert' ? 'primary' : 'default'}
+                  />
+                ))}
+                {skills.length > 3 && (
+                  <Chip
+                    label={`+${skills.length - 3}`}
+                    size="small"
+                    variant="outlined"
+                    color="default"
+                  />
+                )}
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+    );
+  };
+
+  const renderUserList = (user: User) => {
+    const skills = userSkills[user.id] || [];
+    // const workload = workloads[user.id];
+    const userAlerts = alerts.filter((alert: any) => alert.userId === user.id && !alert.resolvedAt);
+
+    return (
+      <Card key={user.id} sx={{ mb: 1 }}>
+        <CardContent sx={{ py: 2 }}>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box display="flex" alignItems="center" gap={2}>
+              <Badge
+                badgeContent={userAlerts.length}
+                color="error"
+                invisible={userAlerts.length === 0}
+              >
+                <Avatar src={user.avatarUrl} sx={{ width: 40, height: 40 }}>
+                  {user.firstName?.[0]}{user.lastName?.[0]}
+                </Avatar>
+              </Badge>
+              <Box>
+                <Typography variant="subtitle1">
+                  {user.displayName}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {user.department} • {user.role.replace('_', ' ')}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box display="flex" alignItems="center" gap={2}>
+              <Box textAlign="center" minWidth={100}>
+                <Typography variant="caption" color="text.secondary">
+                  Disponibilité
+                </Typography>
+                <Box>
+                  <Chip
+                    size="small"
+                    label={getAvailabilityText(user)}
+                    color={getAvailabilityColor(user)}
+                  />
+                </Box>
+              </Box>
+
+              <Box textAlign="center" minWidth={80}>
+                <Typography variant="caption" color="text.secondary">
+                  Compétences
+                </Typography>
+                <Typography variant="body2">
+                  {skills.length}
+                </Typography>
+              </Box>
+
+              <IconButton
+                size="small"
+                onClick={(e) => handleMenuClick(e, user.id)}
+              >
+                <MoreVertIcon />
+              </IconButton>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <Box>
+      <Box display="flex" justifyContent="between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1">
+          Équipe & Ressources
+        </Typography>
+        <Box display="flex" gap={1}>
+          <Tooltip title="Actualiser les données">
+            <IconButton
+              onClick={handleRefreshAll}
+              disabled={refreshing}
+              color="primary"
+            >
+              {refreshing ? <CircularProgress size={24} /> : <RefreshIcon />}
+            </IconButton>
+          </Tooltip>
+          <IconButton
+            color={viewMode === 'list' ? 'primary' : 'default'}
+            onClick={() => dispatch(setViewMode('list'))}
+          >
+            <ViewListIcon />
+          </IconButton>
+          <IconButton
+            color={viewMode === 'grid' ? 'primary' : 'default'}
+            onClick={() => dispatch(setViewMode('grid'))}
+          >
+            <ViewModuleIcon />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch(clearError())}>
+          {error}
+        </Alert>
+      )}
+
+      <Box mb={3}>
+        <WorkloadAlerts
+          showAllUsers={true}
+          maxItems={3}
+          compact={true}
+        />
+      </Box>
+
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
+            <TextField
+              placeholder="Rechercher un membre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+              sx={{ minWidth: 250 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Département</InputLabel>
+              <Select
+                value={filters.department || ''}
+                label="Département"
+                onChange={(e) => dispatch(setFilters({ department: e.target.value || undefined }))}
+              >
+                <MenuItem value="">Tous</MenuItem>
+                <MenuItem value="IT">IT</MenuItem>
+                <MenuItem value="RH">RH</MenuItem>
+                <MenuItem value="Finance">Finance</MenuItem>
+                <MenuItem value="Juridique">Juridique</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Rôle</InputLabel>
+              <Select
+                value={filters.role || ''}
+                label="Rôle"
+                onChange={(e) => dispatch(setFilters({ role: e.target.value || undefined }))}
+              >
+                <MenuItem value="">Tous</MenuItem>
+                <MenuItem value="admin">Admin</MenuItem>
+                <MenuItem value="manager">Chef de projet</MenuItem>
+                <MenuItem value="contributor">Contributeur</MenuItem>
+                <MenuItem value="viewer">Observateur</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Disponibilité</InputLabel>
+              <Select
+                value={filters.availability || 'all'}
+                label="Disponibilité"
+                onChange={(e) => dispatch(setFilters({ availability: e.target.value as any }))}
+              >
+                <MenuItem value="all">Tous</MenuItem>
+                <MenuItem value="available">Disponibles</MenuItem>
+                <MenuItem value="overloaded">Surchargés</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {loading ? (
+        <Box display="flex" justifyContent="center" py={4}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            {filteredUsers.length} membre{filteredUsers.length !== 1 ? 's' : ''} trouvé{filteredUsers.length !== 1 ? 's' : ''}
+          </Typography>
+
+          {viewMode === 'grid' ? (
+            <Grid container spacing={2}>
+              {filteredUsers.map(renderUserCard)}
+            </Grid>
+          ) : (
+            <Stack spacing={1}>
+              {filteredUsers.map(renderUserList)}
+            </Stack>
+          )}
+        </Box>
+      )}
+
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={handleViewSkills}>
+          <PersonIcon sx={{ mr: 1 }} />
+          Voir les compétences
+        </MenuItem>
+        <MenuItem onClick={handleCalculateWorkload}>
+          <AssessmentIcon sx={{ mr: 1 }} />
+          Calculer la charge
+        </MenuItem>
+      </Menu>
+
+      <Dialog
+        open={openUserDialog}
+        onClose={() => setOpenUserDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {selectedUser?.displayName} - Profil détaillé
+        </DialogTitle>
+        <DialogContent>
+          {selectedUser && (
+            <Box>
+              <SkillsMatrix
+                user={selectedUser}
+                editable={true}
+                showActions={true}
+              />
+              
+              <Box mt={4}>
+                <LeaveManagement
+                  userId={selectedUser.id}
+                  showActions={true}
+                />
+              </Box>
+
+              <Box mt={4}>
+                <WorkloadAlerts
+                  userId={selectedUser.id}
+                  showAllUsers={false}
+                  maxItems={5}
+                />
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenUserDialog(false)}>
+            Fermer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Fab
+        color="primary"
+        aria-label="add"
+        sx={{ position: 'fixed', bottom: 16, right: 16 }}
+        onClick={() => {/* TODO: Ajouter un nouveau membre */}}
+      >
+        <AddIcon />
+      </Fab>
+    </Box>
+  );
+};
+
+export default Resources;

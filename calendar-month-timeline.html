@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vue Mensuelle Timeline - 31 Jours</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        .header {
+            padding: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #f0f0f0;
+            transform: translateY(-1px);
+        }
+
+        /* TIMELINE CONTAINER */
+        .timeline-wrapper {
+            display: flex;
+            height: calc(100vh - 200px);
+            overflow: hidden;
+        }
+
+        /* COLONNE GAUCHE : UTILISATEURS */
+        .users-column {
+            width: 220px;
+            min-width: 220px;
+            border-right: 2px solid #e0e0e0;
+            background: #fafafa;
+            overflow-y: auto;
+            position: sticky;
+            left: 0;
+            z-index: 100;
+        }
+
+        .service-header {
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            color: #667eea;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .service-header:hover {
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+        }
+
+        .user-row {
+            height: 80px;
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            transition: background 0.2s;
+        }
+
+        .user-row:hover {
+            background: #f8f9fa;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: #666;
+        }
+
+        /* COLONNE DROITE : TIMELINE */
+        .timeline-column {
+            flex: 1;
+            overflow-x: auto;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* HEADERS JOURS (STICKY) */
+        .days-header {
+            display: flex;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: white;
+            border-bottom: 2px solid #e0e0e0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .day-cell-header {
+            width: 44px;
+            min-width: 44px;
+            padding: 8px 4px;
+            text-align: center;
+            border-right: 1px solid #e0e0e0;
+            background: white;
+            position: relative;
+        }
+
+        .day-cell-header.today {
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        .day-cell-header.weekend {
+            background: #f5f5f5;
+        }
+
+        .day-name {
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .day-number {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* GRILLE TIMELINE */
+        .timeline-grid {
+            position: relative;
+        }
+
+        .timeline-row {
+            height: 80px;
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+            position: relative;
+        }
+
+        .timeline-row:hover {
+            background: #f8f9fa;
+        }
+
+        .day-cell {
+            width: 44px;
+            min-width: 44px;
+            border-right: 1px solid #f0f0f0;
+            position: relative;
+            padding: 4px 2px;
+        }
+
+        .day-cell.weekend {
+            background: #fafafa;
+        }
+
+        .day-cell.today {
+            background: linear-gradient(180deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-left: 2px solid #667eea;
+            border-right: 2px solid #667eea;
+        }
+
+        .day-cell:hover {
+            background: #e3f2fd;
+            cursor: pointer;
+        }
+
+        /* TÂCHES (BARRES) */
+        .task-bar {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 28px;
+            border-radius: 4px;
+            padding: 4px 6px;
+            color: white;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .task-bar:hover {
+            transform: translateY(-50%) scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 20;
+        }
+
+        .task-bar.project {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .task-bar.simple {
+            background: linear-gradient(90deg, #f093fb, #f5576c);
+        }
+
+        .task-bar.critical {
+            background: linear-gradient(90deg, #fa709a, #fee140);
+            border: 2px solid #ff6b6b;
+        }
+
+        /* INDICATEURS DANS CELLULES */
+        .task-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            position: absolute;
+            top: 4px;
+        }
+
+        .task-indicator.project { background: #667eea; }
+        .task-indicator.simple { background: #f5576c; }
+        .task-indicator.critical { background: #ff6b6b; }
+
+        .task-count {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #667eea;
+            color: white;
+            border-radius: 10px;
+            padding: 1px 5px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        /* TOOLTIP */
+        .tooltip {
+            position: fixed;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 250px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .tooltip.show {
+            display: block;
+        }
+
+        .tooltip-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .tooltip-time {
+            color: #a0c4ff;
+            font-size: 11px;
+        }
+
+        /* ZOOM CONTROLS */
+        .zoom-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 8px;
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .zoom-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: #667eea;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:hover {
+            background: #764ba2;
+            transform: scale(1.1);
+        }
+
+        /* LÉGENDE */
+        .legend {
+            display: flex;
+            gap: 20px;
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+
+        /* SCROLLBAR STYLE */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .users-column {
+                width: 180px;
+                min-width: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>📅 Planning Mensuel - Janvier 2025</h1>
+            <p style="opacity: 0.9; margin-top: 5px;">Vue Timeline avec 31 jours • Scroll horizontal optimisé</p>
+            <div class="controls">
+                <button class="btn">◀ Décembre</button>
+                <button class="btn">Aujourd'hui</button>
+                <button class="btn">Février ▶</button>
+                <button class="btn">🔍 Zoom adaptatif</button>
+                <button class="btn">📊 Export</button>
+            </div>
+        </div>
+
+        <!-- TIMELINE -->
+        <div class="timeline-wrapper">
+            <!-- COLONNE UTILISATEURS -->
+            <div class="users-column">
+                <!-- SERVICE 1 : ENCADREMENT -->
+                <div class="service-header">
+                    <span>▼</span>
+                    <span>👔 Encadrement</span>
+                    <span style="margin-left: auto; font-size: 11px;">(3)</span>
+                </div>
+                <div class="user-row">
+                    <div class="avatar">JD</div>
+                    <div class="user-info">
+                        <div class="user-name">Jean Dupont</div>
+                        <div class="user-role">Manager</div>
+                    </div>
+                </div>
+                <div class="user-row">
+                    <div class="avatar">MM</div>
+                    <div class="user-info">
+                        <div class="user-name">Marie Martin</div>
+                        <div class="user-role">Responsable</div>
+                    </div>
+                </div>
+                <div class="user-row">
+                    <div class="avatar">PB</div>
+                    <div class="user-info">
+                        <div class="user-name">Paul Bernard</div>
+                        <div class="user-role">Chef de projet</div>
+                    </div>
+                </div>
+
+                <!-- SERVICE 2 : DÉVELOPPEMENT -->
+                <div class="service-header">
+                    <span>▼</span>
+                    <span>💻 Développement</span>
+                    <span style="margin-left: auto; font-size: 11px;">(4)</span>
+                </div>
+                <div class="user-row">
+                    <div class="avatar">AL</div>
+                    <div class="user-info">
+                        <div class="user-name">Alice Leroux</div>
+                        <div class="user-role">Dev Senior</div>
+                    </div>
+                </div>
+                <div class="user-row">
+                    <div class="avatar">TD</div>
+                    <div class="user-info">
+                        <div class="user-name">Thomas Dubois</div>
+                        <div class="user-role">Dev Full-Stack</div>
+                    </div>
+                </div>
+                <div class="user-row">
+                    <div class="avatar">SP</div>
+                    <div class="user-info">
+                        <div class="user-name">Sophie Petit</div>
+                        <div class="user-role">Dev Frontend</div>
+                    </div>
+                </div>
+                <div class="user-row">
+                    <div class="avatar">LM</div>
+                    <div class="user-info">
+                        <div class="user-name">Lucas Moreau</div>
+                        <div class="user-role">Dev Backend</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLONNE TIMELINE -->
+            <div class="timeline-column" id="timeline">
+                <!-- HEADERS JOURS -->
+                <div class="days-header" id="daysHeader">
+                    <!-- Généré par JS -->
+                </div>
+
+                <!-- GRILLE TIMELINE -->
+                <div class="timeline-grid" id="timelineGrid">
+                    <!-- Généré par JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- LÉGENDE -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(90deg, #667eea, #764ba2);"></div>
+                <span>Tâche projet</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(90deg, #f093fb, #f5576c);"></div>
+                <span>Tâche simple</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(90deg, #fa709a, #fee140);"></div>
+                <span>Critique P0</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #667eea; border-radius: 50%;"></div>
+                <span>Indicateur tâche</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ZOOM CONTROLS -->
+    <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomOut()">−</button>
+        <button class="zoom-btn" onclick="zoomIn()">+</button>
+        <button class="zoom-btn" onclick="resetZoom()">⟲</button>
+    </div>
+
+    <!-- TOOLTIP -->
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-title" id="tooltipTitle"></div>
+        <div class="tooltip-time" id="tooltipTime"></div>
+    </div>
+
+    <script>
+        // DONNÉES DE TEST
+        const users = [
+            { id: 1, name: 'Jean Dupont', service: 'encadrement' },
+            { id: 2, name: 'Marie Martin', service: 'encadrement' },
+            { id: 3, name: 'Paul Bernard', service: 'encadrement' },
+            { id: 4, name: 'Alice Leroux', service: 'dev' },
+            { id: 5, name: 'Thomas Dubois', service: 'dev' },
+            { id: 6, name: 'Sophie Petit', service: 'dev' },
+            { id: 7, name: 'Lucas Moreau', service: 'dev' },
+        ];
+
+        const tasks = [
+            { userId: 1, start: 2, end: 5, title: 'Planning Q1', type: 'project' },
+            { userId: 1, start: 8, end: 8, title: 'Réunion urgente', type: 'critical' },
+            { userId: 1, start: 15, end: 18, title: 'Audit sécurité', type: 'project' },
+
+            { userId: 2, start: 3, end: 7, title: 'Formation équipe', type: 'project' },
+            { userId: 2, start: 10, end: 10, title: 'Call client', type: 'simple' },
+            { userId: 2, start: 20, end: 25, title: 'Migration BDD', type: 'critical' },
+
+            { userId: 3, start: 1, end: 4, title: 'Sprint planning', type: 'project' },
+            { userId: 3, start: 12, end: 15, title: 'Code review', type: 'project' },
+            { userId: 3, start: 28, end: 31, title: 'Release v2.0', type: 'critical' },
+
+            { userId: 4, start: 5, end: 12, title: 'Dev feature X', type: 'project' },
+            { userId: 4, start: 15, end: 20, title: 'Refactoring', type: 'project' },
+            { userId: 4, start: 22, end: 22, title: 'Hotfix', type: 'simple' },
+
+            { userId: 5, start: 2, end: 8, title: 'Tests unitaires', type: 'project' },
+            { userId: 5, start: 10, end: 10, title: 'Daily standup', type: 'simple' },
+            { userId: 5, start: 18, end: 24, title: 'Optimisation perf', type: 'project' },
+
+            { userId: 6, start: 3, end: 9, title: 'UI/UX redesign', type: 'project' },
+            { userId: 6, start: 14, end: 19, title: 'Intégration API', type: 'project' },
+            { userId: 6, start: 27, end: 31, title: 'Tests E2E', type: 'project' },
+
+            { userId: 7, start: 1, end: 6, title: 'Microservices', type: 'project' },
+            { userId: 7, start: 11, end: 11, title: 'Déploiement', type: 'simple' },
+            { userId: 7, start: 16, end: 22, title: 'Architecture v3', type: 'critical' },
+        ];
+
+        let currentZoom = 44; // Largeur cellule en px
+        const today = 8; // Aujourd'hui = 8 janvier
+
+        // GÉNÉRATION HEADERS JOURS
+        function generateDaysHeader() {
+            const header = document.getElementById('daysHeader');
+            const days = ['Mer', 'Jeu', 'Ven', 'Sam', 'Dim', 'Lun', 'Mar']; // Janvier 2025 commence mercredi
+
+            for (let i = 1; i <= 31; i++) {
+                const dayName = days[(i - 1) % 7];
+                const isWeekend = dayName === 'Sam' || dayName === 'Dim';
+                const isToday = i === today;
+
+                const cell = document.createElement('div');
+                cell.className = `day-cell-header ${isToday ? 'today' : ''} ${isWeekend ? 'weekend' : ''}`;
+                cell.style.width = currentZoom + 'px';
+                cell.style.minWidth = currentZoom + 'px';
+                cell.innerHTML = `
+                    <span class="day-name">${dayName}</span>
+                    <span class="day-number">${i}</span>
+                `;
+                header.appendChild(cell);
+            }
+        }
+
+        // GÉNÉRATION GRILLE TIMELINE
+        function generateTimeline() {
+            const grid = document.getElementById('timelineGrid');
+            const days = ['Mer', 'Jeu', 'Ven', 'Sam', 'Dim', 'Lun', 'Mar'];
+
+            users.forEach(user => {
+                const row = document.createElement('div');
+                row.className = 'timeline-row';
+
+                // Cellules jours
+                for (let i = 1; i <= 31; i++) {
+                    const dayName = days[(i - 1) % 7];
+                    const isWeekend = dayName === 'Sam' || dayName === 'Dim';
+                    const isToday = i === today;
+
+                    const cell = document.createElement('div');
+                    cell.className = `day-cell ${isToday ? 'today' : ''} ${isWeekend ? 'weekend' : ''}`;
+                    cell.style.width = currentZoom + 'px';
+                    cell.style.minWidth = currentZoom + 'px';
+                    cell.dataset.userId = user.id;
+                    cell.dataset.day = i;
+
+                    // Ajouter indicateurs de tâches ponctuelles
+                    const dayTasks = tasks.filter(t => t.userId === user.id && t.start === i && t.end === i);
+                    dayTasks.forEach((task, idx) => {
+                        const indicator = document.createElement('div');
+                        indicator.className = `task-indicator ${task.type}`;
+                        indicator.style.left = (4 + idx * 10) + 'px';
+                        indicator.title = task.title;
+                        cell.appendChild(indicator);
+                    });
+
+                    // Event listeners
+                    cell.addEventListener('click', () => {
+                        alert(`Créer une tâche pour ${user.name} le ${i} janvier`);
+                    });
+
+                    row.appendChild(cell);
+                }
+
+                // Ajouter barres de tâches
+                const userTasks = tasks.filter(t => t.userId === user.id && (t.end - t.start) > 0);
+                userTasks.forEach(task => {
+                    const bar = document.createElement('div');
+                    bar.className = `task-bar ${task.type}`;
+
+                    const startPos = (task.start - 1) * currentZoom;
+                    const width = (task.end - task.start + 1) * currentZoom - 4;
+
+                    bar.style.left = startPos + 'px';
+                    bar.style.width = width + 'px';
+                    bar.textContent = task.title;
+
+                    // Tooltip au hover
+                    bar.addEventListener('mouseenter', (e) => showTooltip(e, task));
+                    bar.addEventListener('mouseleave', hideTooltip);
+                    bar.addEventListener('mousemove', (e) => moveTooltip(e));
+
+                    row.appendChild(bar);
+                });
+
+                grid.appendChild(row);
+            });
+        }
+
+        // TOOLTIP
+        function showTooltip(e, task) {
+            const tooltip = document.getElementById('tooltip');
+            const title = document.getElementById('tooltipTitle');
+            const time = document.getElementById('tooltipTime');
+
+            title.textContent = task.title;
+            time.textContent = `${task.start} - ${task.end} janvier • Type: ${task.type}`;
+
+            tooltip.classList.add('show');
+            moveTooltip(e);
+        }
+
+        function moveTooltip(e) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.left = (e.clientX + 15) + 'px';
+            tooltip.style.top = (e.clientY + 15) + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('show');
+        }
+
+        // ZOOM
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom + 10, 100);
+            redraw();
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom - 10, 30);
+            redraw();
+        }
+
+        function resetZoom() {
+            currentZoom = 44;
+            redraw();
+        }
+
+        function redraw() {
+            document.getElementById('daysHeader').innerHTML = '';
+            document.getElementById('timelineGrid').innerHTML = '';
+            generateDaysHeader();
+            generateTimeline();
+        }
+
+        // INIT
+        generateDaysHeader();
+        generateTimeline();
+
+        // Synchroniser scroll header et grille
+        const timeline = document.getElementById('timeline');
+        const header = document.getElementById('daysHeader');
+        timeline.addEventListener('scroll', () => {
+            header.scrollLeft = timeline.scrollLeft;
+        });
+    </script>
+</body>
+</html>

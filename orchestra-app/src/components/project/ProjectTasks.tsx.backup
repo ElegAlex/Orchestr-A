@@ -1,0 +1,449 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Chip,
+  Avatar,
+  LinearProgress,
+  Stack,
+  IconButton,
+  Menu,
+  MenuItem,
+  Dialog,
+  Tabs,
+  Tab,
+  Grid,
+  Alert,
+  CircularProgress,
+  Tooltip,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  ViewList as ViewListIcon,
+  ViewModule as ViewModuleIcon,
+  FilterList as FilterListIcon,
+  Sort as SortIcon,
+  MoreVert as MoreVertIcon,
+  PlayArrow as PlayArrowIcon,
+  Pause as PauseIcon,
+  CheckCircle as CheckCircleIcon,
+  Block as BlockIcon,
+} from '@mui/icons-material';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  useSensors,
+  useSensor,
+  PointerSensor,
+  KeyboardSensor,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { Task, TaskStatus } from '../../types';
+import { taskService } from '../../services/task.service';
+import { TaskFilters } from '../tasks/TaskFilters';
+import { KanbanColumn } from '../kanban/KanbanColumn';
+import { TaskCard } from '../kanban/TaskCard';
+import { TaskModal } from '../tasks/TaskModal';
+
+interface TaskFilterState {
+  status?: string;
+  assignee?: string;
+  priority?: string;
+  search?: string;
+}
+
+interface ProjectTasksProps {
+  projectId: string;
+}
+
+const TASK_STATUSES: { [key in TaskStatus]: { label: string; color: string; icon: React.ReactElement } } = {
+  TODO: { 
+    label: 'À faire', 
+    color: '#2196f3',
+    icon: <ViewListIcon />
+  },
+  IN_PROGRESS: { 
+    label: 'En cours', 
+    color: '#ff9800',
+    icon: <PlayArrowIcon />
+  },
+  DONE: { 
+    label: 'Terminé', 
+    color: '#4caf50',
+    icon: <CheckCircleIcon />
+  },
+  BLOCKED: { 
+    label: 'Bloqué', 
+    color: '#f44336',
+    icon: <BlockIcon />
+  },
+};
+
+const ProjectTasks: React.FC<ProjectTasksProps> = ({ projectId }) => {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [filters, setFilters] = useState<TaskFilterState>({});
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [tabValue, setTabValue] = useState(0);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  useEffect(() => {
+    loadTasks();
+  }, [projectId]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [tasks, filters]);
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      const projectTasks = await taskService.getTasksByProject(projectId);
+      setTasks(projectTasks);
+    } catch (error) {
+      console.error('Erreur lors du chargement des tâches:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...tasks];
+
+    // Appliquer les filtres
+    if (filters.status && filters.status !== 'all') {
+      filtered = filtered.filter(task => task.status === filters.status);
+    }
+
+    if (filters.assignee) {
+      filtered = filtered.filter(task => task.assigneeId === filters.assignee);
+    }
+
+    if (filters.priority && filters.priority !== 'all') {
+      filtered = filtered.filter(task => task.priority === filters.priority);
+    }
+
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(task =>
+        task.title.toLowerCase().includes(searchLower) ||
+        task.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    setFilteredTasks(filtered);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over || active.id === over.id) return;
+
+    const taskId = active.id as string;
+    const newStatus = over.id as TaskStatus;
+
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        await taskService.updateTask(taskId, {
+          ...task,
+          status: newStatus,
+          updatedAt: new Date()
+        });
+        await loadTasks();
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+    }
+  };
+
+  const handleCreateTask = () => {
+    setSelectedTask(null);
+    setTaskModalOpen(true);
+  };
+
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task);
+    setTaskModalOpen(true);
+  };
+
+  const handleTaskSaved = () => {
+    loadTasks();
+    setTaskModalOpen(false);
+    setSelectedTask(null);
+  };
+
+  const getTasksByStatus = (status: TaskStatus) => {
+    return filteredTasks.filter(task => task.status === status);
+  };
+
+  const getTaskStats = () => {
+    const stats = {
+      total: filteredTasks.length,
+      completed: filteredTasks.filter(t => t.status === 'DONE').length,
+      inProgress: filteredTasks.filter(t => t.status === 'IN_PROGRESS').length,
+      blocked: filteredTasks.filter(t => t.status === 'BLOCKED').length,
+      todo: filteredTasks.filter(t => t.status === 'TODO').length,
+    };
+    
+    const completionRate = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
+    
+    return { ...stats, completionRate };
+  };
+
+  const stats = getTaskStats();
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" py={4}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      {/* Header avec statistiques */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" color="primary">
+                {stats.total}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Total tâches
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={2.4}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" color="success.main">
+                {stats.completed}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Terminées
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={2.4}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" color="warning.main">
+                {stats.inProgress}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                En cours
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={2.4}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" color="error.main">
+                {stats.blocked}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Bloquées
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={2.4}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" color="info.main">
+                {Math.round(stats.completionRate)}%
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Completion
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={stats.completionRate}
+                sx={{ mt: 1 }}
+                color="info"
+              />
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Toolbar */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Box display="flex" alignItems="center" gap={2}>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleCreateTask}
+              >
+                Nouvelle tâche
+              </Button>
+              
+              <Box display="flex" alignItems="center" gap={1}>
+                <Tooltip title="Vue liste">
+                  <IconButton
+                    color={viewMode === 'list' ? 'primary' : 'default'}
+                    onClick={() => setViewMode('list')}
+                  >
+                    <ViewListIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Vue Kanban">
+                  <IconButton
+                    color={viewMode === 'kanban' ? 'primary' : 'default'}
+                    onClick={() => setViewMode('kanban')}
+                  >
+                    <ViewModuleIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
+
+            <Box display="flex" alignItems="center" gap={1}>
+              <IconButton>
+                <FilterListIcon />
+              </IconButton>
+              <IconButton>
+                <SortIcon />
+              </IconButton>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Filtres - TODO: Intégrer TaskFilters correctement */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="body2" color="text.secondary">
+            Filtres avancés disponibles bientôt
+          </Typography>
+        </CardContent>
+      </Card>
+
+      {/* Vue Kanban */}
+      {viewMode === 'kanban' ? (
+        <DndContext
+          sensors={sensors}
+          onDragEnd={handleDragEnd}
+        >
+          <Box display="flex" gap={2} overflow="auto" minHeight="600px">
+            {Object.entries(TASK_STATUSES).map(([status, config]) => (
+              <KanbanColumn
+                key={status}
+                status={status as TaskStatus}
+                tasks={getTasksByStatus(status as TaskStatus)}
+                onTaskClick={handleTaskClick}
+                onMenuClick={(e, task) => {}}
+                selectedTaskIds={new Set()}
+                onSelectionChange={() => {}}
+              />
+            ))}
+          </Box>
+        </DndContext>
+      ) : (
+        /* Vue Liste */
+        <Card>
+          <CardContent>
+            <Stack spacing={2}>
+              {filteredTasks.length === 0 ? (
+                <Alert severity="info">
+                  Aucune tâche trouvée pour ce projet.
+                </Alert>
+              ) : (
+                filteredTasks.map((task) => (
+                  <Card
+                    key={task.id}
+                    variant="outlined"
+                    sx={{ 
+                      cursor: 'pointer',
+                      '&:hover': { bgcolor: 'action.hover' }
+                    }}
+                    onClick={() => handleTaskClick(task)}
+                  >
+                    <CardContent>
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Box display="flex" alignItems="center" gap={2}>
+                          {TASK_STATUSES[task.status].icon}
+                          <Box>
+                            <Typography variant="h6">
+                              {task.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {task.description}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Chip
+                            label={TASK_STATUSES[task.status].label}
+                            size="small"
+                            sx={{ 
+                              bgcolor: TASK_STATUSES[task.status].color + '20',
+                              color: TASK_STATUSES[task.status].color 
+                            }}
+                          />
+                          <Chip
+                            label={task.priority}
+                            size="small"
+                            color={task.priority === 'P0' ? 'error' : task.priority === 'P1' ? 'warning' : 'default'}
+                          />
+                          {task.assigneeId && (
+                            <Avatar sx={{ width: 32, height: 32 }}>
+                              {task.assigneeId.charAt(0).toUpperCase()}
+                            </Avatar>
+                          )}
+                          <IconButton size="small">
+                            <MoreVertIcon />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Modal de création/édition de tâche */}
+      <TaskModal
+        open={taskModalOpen}
+        onClose={() => setTaskModalOpen(false)}
+        task={selectedTask}
+        projectId={projectId}
+        onSave={handleTaskSaved}
+      />
+    </Box>
+  );
+};
+
+export default ProjectTasks;

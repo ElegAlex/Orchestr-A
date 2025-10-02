@@ -1,0 +1,514 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
+  IconButton,
+  Chip,
+  Box,
+  Typography,
+  FormControlLabel,
+  Switch,
+  Alert,
+} from '@mui/material';
+import {
+  Close as CloseIcon,
+  Flag as MilestoneIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  CheckCircle as CheckIcon,
+} from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { fr } from 'date-fns/locale';
+import { Milestone, MilestoneType, MilestoneStatus, User } from '../../types';
+import { milestoneService } from '../../services/milestone.service';
+import { userService } from '../../services/user.service';
+
+interface MilestoneModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (milestone: Milestone) => void;
+  projectId: string;
+  milestone?: Milestone | null;
+}
+
+const MilestoneModal: React.FC<MilestoneModalProps> = ({
+  open,
+  onClose,
+  onSave,
+  projectId,
+  milestone,
+}) => {
+  const [formData, setFormData] = useState<Partial<Milestone>>({
+    projectId,
+    name: '',
+    description: '',
+    type: 'checkpoint' as MilestoneType,
+    status: 'upcoming' as MilestoneStatus,
+    startDate: undefined,
+    dueDate: undefined,
+    isKeyDate: false,
+    followsTasks: false,
+    validationRequired: false,
+    impact: 'medium',
+    showOnRoadmap: true,
+    color: '#9C27B0',
+    deliverables: [],
+    successCriteria: [],
+    reviewers: [],
+    epicIds: [],
+    taskIds: [],
+    affectedTeams: [],
+  });
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [newCriteria, setNewCriteria] = useState('');
+  const [newDeliverable, setNewDeliverable] = useState({ name: '', type: 'document' as const });
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const usersData = await userService.getAllUsers();
+        setUsers(usersData.filter(u => u.isActive));
+      } catch (error) {
+        console.error('Error loading users:', error);
+      }
+    };
+    
+    if (open) {
+      loadUsers();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (milestone) {
+      setFormData({
+        ...milestone,
+        startDate: milestone.startDate || undefined,
+        dueDate: milestone.dueDate || undefined,
+      });
+    } else {
+      // Reset to initial state for new milestone
+      setFormData({
+        projectId,
+        name: '',
+        description: '',
+        type: 'checkpoint',
+        status: 'upcoming',
+        startDate: undefined,
+        dueDate: undefined,
+        isKeyDate: false,
+        followsTasks: false,
+        validationRequired: false,
+        impact: 'medium',
+        showOnRoadmap: true,
+        color: '#9C27B0',
+        deliverables: [],
+        successCriteria: [],
+        reviewers: [],
+        epicIds: [],
+        taskIds: [],
+        affectedTeams: [],
+      });
+    }
+  }, [milestone, projectId]);
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.name?.trim()) {
+      newErrors.name = 'Le nom du jalon est requis';
+    }
+    
+    if (!formData.description?.trim()) {
+      newErrors.description = 'La description est requise';
+    }
+    
+    if (!formData.dueDate) {
+      newErrors.dueDate = 'La date de fin est requise';
+    }
+    
+    if (formData.startDate && formData.dueDate && formData.startDate > formData.dueDate) {
+      newErrors.dates = 'La date de début doit être antérieure à la date de fin';
+    }
+    
+    if (!formData.ownerId) {
+      newErrors.owner = 'Un responsable doit être désigné';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+    
+    setLoading(true);
+    try {
+      const milestoneData = {
+        ...formData,
+        code: formData.code || `M-${Date.now().toString(36).toUpperCase()}`,
+        completionRate: formData.completionRate || 0,
+        createdBy: formData.createdBy || 'current-user', // À remplacer par l'utilisateur actuel
+        createdAt: milestone?.createdAt || new Date(),
+        updatedAt: new Date(),
+      } as Milestone;
+      
+      if (milestone) {
+        await milestoneService.updateMilestone(milestone.id, milestoneData);
+      } else {
+        await milestoneService.createMilestone(milestoneData);
+      }
+      
+      onSave(milestoneData);
+      onClose();
+    } catch (error) {
+      console.error('Error saving milestone:', error);
+      setErrors({ submit: 'Erreur lors de la sauvegarde du jalon' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddCriteria = () => {
+    if (newCriteria.trim()) {
+      setFormData({
+        ...formData,
+        successCriteria: [...(formData.successCriteria || []), newCriteria.trim()],
+      });
+      setNewCriteria('');
+    }
+  };
+
+  const handleAddDeliverable = () => {
+    if (newDeliverable.name.trim()) {
+      const deliverable = {
+        id: Date.now().toString(),
+        name: newDeliverable.name.trim(),
+        description: '',
+        type: newDeliverable.type,
+        isRequired: true,
+        status: 'pending' as const,
+      };
+      setFormData({
+        ...formData,
+        deliverables: [...(formData.deliverables || []), deliverable],
+      });
+      setNewDeliverable({ name: '', type: 'document' });
+    }
+  };
+
+  const milestoneTypes: { value: MilestoneType; label: string }[] = [
+    { value: 'delivery', label: 'Livraison' },
+    { value: 'review', label: 'Revue de projet' },
+    { value: 'decision', label: 'Point de décision' },
+    { value: 'release', label: 'Mise en production' },
+    { value: 'demo', label: 'Démonstration' },
+    { value: 'checkpoint', label: 'Point de contrôle' },
+    { value: 'deadline', label: 'Échéance' },
+  ];
+
+  const milestoneStatuses: { value: MilestoneStatus; label: string; color: string }[] = [
+    { value: 'upcoming', label: 'À venir', color: 'info' },
+    { value: 'in_progress', label: 'En cours', color: 'primary' },
+    { value: 'at_risk', label: 'À risque', color: 'warning' },
+    { value: 'completed', label: 'Complété', color: 'success' },
+    { value: 'missed', label: 'Manqué', color: 'error' },
+  ];
+
+  return (
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={fr}>
+      <Dialog 
+        open={open} 
+        onClose={onClose} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{ sx: { maxHeight: '90vh' } }}
+      >
+        <DialogTitle>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <MilestoneIcon color="primary" />
+              <Typography variant="h6">
+                {milestone ? 'Modifier le jalon' : 'Créer un jalon'}
+              </Typography>
+            </Stack>
+            <IconButton onClick={onClose} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+
+        <DialogContent dividers>
+          {errors.submit && (
+            <Alert severity="error" sx={{ mb: 2 }}>{errors.submit}</Alert>
+          )}
+
+          <Grid container spacing={3}>
+            {/* Informations de base */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom color="primary">
+                Informations générales
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={8}>
+              <TextField
+                fullWidth
+                label="Nom du jalon"
+                value={formData.name || ''}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                error={!!errors.name}
+                helperText={errors.name}
+                required
+              />
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Type</InputLabel>
+                <Select
+                  value={formData.type || 'checkpoint'}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as MilestoneType })}
+                  label="Type"
+                >
+                  {milestoneTypes.map(type => (
+                    <MenuItem key={type.value} value={type.value}>
+                      {type.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Description"
+                value={formData.description || ''}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                error={!!errors.description}
+                helperText={errors.description}
+                required
+              />
+            </Grid>
+
+            {/* Dates et statut */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom color="primary">
+                Planning
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <DatePicker
+                label="Date de début"
+                value={formData.startDate || null}
+                onChange={(date) => setFormData({ ...formData, startDate: date || undefined })}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    error: !!errors.dates,
+                  },
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <DatePicker
+                label="Date de fin"
+                value={formData.dueDate || null}
+                onChange={(date) => setFormData({ ...formData, dueDate: date || undefined })}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    required: true,
+                    error: !!errors.dueDate || !!errors.dates,
+                    helperText: errors.dueDate || errors.dates,
+                  },
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Statut</InputLabel>
+                <Select
+                  value={formData.status || 'upcoming'}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as MilestoneStatus })}
+                  label="Statut"
+                >
+                  {milestoneStatuses.map(status => (
+                    <MenuItem key={status.value} value={status.value}>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Chip size="small" label={status.label} color={status.color as any} />
+                      </Stack>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Responsables */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom color="primary">
+                Responsables
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth required>
+                <InputLabel>Responsable du jalon</InputLabel>
+                <Select
+                  value={formData.ownerId || ''}
+                  onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
+                  label="Responsable du jalon"
+                  error={!!errors.owner}
+                >
+                  {users.map(user => (
+                    <MenuItem key={user.id} value={user.id}>
+                      {user.displayName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Impact</InputLabel>
+                <Select
+                  value={formData.impact || 'medium'}
+                  onChange={(e) => setFormData({ ...formData, impact: e.target.value as any })}
+                  label="Impact"
+                >
+                  <MenuItem value="low">Faible</MenuItem>
+                  <MenuItem value="medium">Moyen</MenuItem>
+                  <MenuItem value="high">Élevé</MenuItem>
+                  <MenuItem value="critical">Critique</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Critères de succès */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom color="primary">
+                Critères de succès
+              </Typography>
+              <Stack spacing={2}>
+                <Stack direction="row" spacing={1}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Ajouter un critère de succès"
+                    value={newCriteria}
+                    onChange={(e) => setNewCriteria(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCriteria();
+                      }
+                    }}
+                  />
+                  <IconButton onClick={handleAddCriteria} color="primary">
+                    <AddIcon />
+                  </IconButton>
+                </Stack>
+                
+                {formData.successCriteria?.map((criteria, index) => (
+                  <Stack key={index} direction="row" alignItems="center" spacing={1}>
+                    <CheckIcon fontSize="small" color="success" />
+                    <Typography variant="body2" sx={{ flex: 1 }}>{criteria}</Typography>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        const newCriteria = [...(formData.successCriteria || [])];
+                        newCriteria.splice(index, 1);
+                        setFormData({ ...formData, successCriteria: newCriteria });
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                ))}
+              </Stack>
+            </Grid>
+
+            {/* Options */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom color="primary">
+                Options
+              </Typography>
+              <Stack spacing={1}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.isKeyDate || false}
+                      onChange={(e) => setFormData({ ...formData, isKeyDate: e.target.checked })}
+                    />
+                  }
+                  label="Jalon critique (ne peut pas être déplacé)"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.followsTasks || false}
+                      onChange={(e) => setFormData({ ...formData, followsTasks: e.target.checked })}
+                    />
+                  }
+                  label="Dates automatiques selon les tâches liées"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.validationRequired || false}
+                      onChange={(e) => setFormData({ ...formData, validationRequired: e.target.checked })}
+                    />
+                  }
+                  label="Validation requise"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.showOnRoadmap || false}
+                      onChange={(e) => setFormData({ ...formData, showOnRoadmap: e.target.checked })}
+                    />
+                  }
+                  label="Afficher sur la roadmap"
+                />
+              </Stack>
+            </Grid>
+          </Grid>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={onClose}>Annuler</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {milestone ? 'Mettre à jour' : 'Créer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </LocalizationProvider>
+  );
+};
+
+export default MilestoneModal;

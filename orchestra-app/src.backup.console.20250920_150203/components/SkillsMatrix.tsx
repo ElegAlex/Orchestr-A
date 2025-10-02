@@ -1,0 +1,478 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Chip,
+  Grid,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  IconButton,
+  Tooltip,
+  LinearProgress,
+  Alert,
+  Divider,
+  Badge,
+  Stack
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Star as StarIcon,
+  StarBorder as StarBorderIcon,
+  Verified as VerifiedIcon,
+  AccessTime as AccessTimeIcon,
+  TrendingUp as TrendingUpIcon,
+  School as SchoolIcon,
+  Work as WorkIcon
+} from '@mui/icons-material';
+import { useAppDispatch, useAppSelector } from '../hooks/redux';
+import {
+  fetchUserSkills,
+  addUserSkill,
+  updateUserSkill,
+  deleteUserSkill
+} from '../store/slices/resourceSlice';
+import { UserSkill, User } from '../types';
+
+interface SkillsMatrixProps {
+  user: User;
+  editable?: boolean;
+  showActions?: boolean;
+}
+
+const SkillsMatrix: React.FC<SkillsMatrixProps> = ({ 
+  user, 
+  editable = false, 
+  showActions = true 
+}) => {
+  const dispatch = useAppDispatch();
+  const { userSkills, skillsLoading } = useAppSelector((state: any) => state.resources);
+
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editingSkill, setEditingSkill] = useState<UserSkill | null>(null);
+  const [skillForm, setSkillForm] = useState({
+    name: '',
+    category: 'technical' as UserSkill['category'],
+    level: 'beginner' as UserSkill['level'],
+    yearsExperience: 0,
+    certifications: '',
+    projects: '',
+    lastUsed: new Date(),
+    selfAssessed: true,
+    managerValidated: false
+  });
+
+  const skills = userSkills[user.id] || [];
+
+  useEffect(() => {
+    if (skills.length === 0) {
+      dispatch(fetchUserSkills(user.id));
+    }
+  }, [dispatch, user.id, skills.length]);
+
+  const getCategoryColor = (category: UserSkill['category']) => {
+    switch (category) {
+      case 'technical':
+        return 'primary';
+      case 'methodology':
+        return 'secondary';
+      case 'domain':
+        return 'info';
+      case 'soft':
+        return 'success';
+      default:
+        return 'default';
+    }
+  };
+
+  const getLevelStars = (level: UserSkill['level']) => {
+    const levels = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 };
+    const stars = levels[level] || 0;
+    return Array(4).fill(0).map((_, i) => 
+      i < stars ? <StarIcon key={i} color="warning" fontSize="small" /> 
+                : <StarBorderIcon key={i} color="disabled" fontSize="small" />
+    );
+  };
+
+  const getCategoryIcon = (category: UserSkill['category']) => {
+    switch (category) {
+      case 'technical':
+        return <WorkIcon />;
+      case 'methodology':
+        return <TrendingUpIcon />;
+      case 'domain':
+        return <SchoolIcon />;
+      case 'soft':
+        return <AccessTimeIcon />;
+      default:
+        return <WorkIcon />;
+    }
+  };
+
+  const handleOpenDialog = (skill?: UserSkill) => {
+    if (skill) {
+      setEditingSkill(skill);
+      setSkillForm({
+        name: skill.name,
+        category: skill.category,
+        level: skill.level,
+        yearsExperience: skill.yearsExperience,
+        certifications: skill.certifications?.join(', ') || '',
+        projects: skill.projects?.join(', ') || '',
+        lastUsed: skill.lastUsed || new Date(),
+        selfAssessed: skill.selfAssessed,
+        managerValidated: skill.managerValidated
+      });
+    } else {
+      setEditingSkill(null);
+      setSkillForm({
+        name: '',
+        category: 'technical',
+        level: 'beginner',
+        yearsExperience: 0,
+        certifications: '',
+        projects: '',
+        lastUsed: new Date(),
+        selfAssessed: true,
+        managerValidated: false
+      });
+    }
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setEditingSkill(null);
+  };
+
+  const handleSaveSkill = async () => {
+    const skillData = {
+      ...skillForm,
+      certifications: skillForm.certifications ? skillForm.certifications.split(',').map(s => s.trim()) : [],
+      projects: skillForm.projects ? skillForm.projects.split(',').map(s => s.trim()) : []
+    };
+
+    if (editingSkill) {
+      await dispatch(updateUserSkill({
+        userId: user.id,
+        skillId: editingSkill.id,
+        updates: skillData
+      }));
+    } else {
+      await dispatch(addUserSkill({
+        userId: user.id,
+        skill: skillData
+      }));
+    }
+
+    handleCloseDialog();
+  };
+
+  const handleDeleteSkill = async (skillId: string) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette compétence ?')) {
+      await dispatch(deleteUserSkill({
+        userId: user.id,
+        skillId
+      }));
+    }
+  };
+
+  const groupedSkills = skills.reduce((acc: any, skill: UserSkill) => {
+    if (!acc[skill.category]) {
+      acc[skill.category] = [];
+    }
+    acc[skill.category].push(skill);
+    return acc;
+  }, {});
+
+  const getSkillProgress = (skill: UserSkill) => {
+    const levels = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 };
+    return levels[skill.level] || 0;
+  };
+
+  const categoryLabels = {
+    technical: 'Techniques',
+    methodology: 'Méthodologiques',
+    domain: 'Domaine métier',
+    soft: 'Soft skills'
+  };
+
+  if (skillsLoading) {
+    return (
+      <Card>
+        <CardContent>
+          <Box display="flex" alignItems="center" gap={2} mb={2}>
+            <LinearProgress sx={{ flexGrow: 1 }} />
+            <Typography variant="body2" color="text.secondary">
+              Chargement des compétences...
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Box>
+      <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
+        <Typography variant="h6" component="h2">
+          Matrice de compétences
+        </Typography>
+        {editable && showActions && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+            size="small"
+          >
+            Ajouter
+          </Button>
+        )}
+      </Box>
+
+      {skills.length === 0 ? (
+        <Alert severity="info">
+          Aucune compétence enregistrée pour cet utilisateur.
+        </Alert>
+      ) : (
+        <Stack spacing={3}>
+          {Object.entries(groupedSkills).map(([category, categorySkills]: [string, any]) => (
+            <Card key={category} variant="outlined">
+              <CardContent>
+                <Box display="flex" alignItems="center" gap={2} mb={2}>
+                  {getCategoryIcon(category as UserSkill['category'])}
+                  <Typography variant="h6" color="primary">
+                    {categoryLabels[category as keyof typeof categoryLabels]}
+                  </Typography>
+                  <Chip
+                    label={`${categorySkills.length} compétence${categorySkills.length > 1 ? 's' : ''}`}
+                    size="small"
+                    color={getCategoryColor(category as UserSkill['category'])}
+                    variant="outlined"
+                  />
+                </Box>
+
+                <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                  {categorySkills.map((skill: UserSkill) => (
+                    <Box>
+                      <Card variant="outlined" sx={{ height: '100%' }}>
+                        <CardContent sx={{ pb: 1 }}>
+                          <Box display="flex" justifyContent="between" alignItems="start" mb={1}>
+                            <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 600 }}>
+                              {skill.name}
+                            </Typography>
+                            {editable && showActions && (
+                              <Box>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleOpenDialog(skill)}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => handleDeleteSkill(skill.id)}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            )}
+                          </Box>
+
+                          <Box mb={2}>
+                            <Box display="flex" alignItems="center" gap={1} mb={1}>
+                              <Typography variant="caption" color="text.secondary">
+                                Niveau:
+                              </Typography>
+                              <Box display="flex">
+                                {getLevelStars(skill.level)}
+                              </Box>
+                            </Box>
+                            <LinearProgress
+                              variant="determinate"
+                              value={getSkillProgress(skill)}
+                              color={skill.level === 'expert' ? 'success' : 'primary'}
+                              sx={{ height: 6, borderRadius: 3 }}
+                            />
+                          </Box>
+
+                          <Stack spacing={1}>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <AccessTimeIcon fontSize="small" color="disabled" />
+                              <Typography variant="caption" color="text.secondary">
+                                {skill.yearsExperience} an{skill.yearsExperience > 1 ? 's' : ''} d'expérience
+                              </Typography>
+                            </Box>
+
+                            {skill.lastUsed && (
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <AccessTimeIcon fontSize="small" color="disabled" />
+                                <Typography variant="caption" color="text.secondary">
+                                  Utilisé: {new Date(skill.lastUsed).toLocaleDateString()}
+                                </Typography>
+                              </Box>
+                            )}
+
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Badge
+                                badgeContent={skill.managerValidated ? '✓' : '?'}
+                                color={skill.managerValidated ? 'success' : 'warning'}
+                                sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem' } }}
+                              >
+                                <VerifiedIcon
+                                  fontSize="small"
+                                  color={skill.managerValidated ? 'success' : 'disabled'}
+                                />
+                              </Badge>
+                              <Typography variant="caption" color="text.secondary">
+                                {skill.managerValidated ? 'Validé' : 'Auto-évalué'}
+                              </Typography>
+                            </Box>
+
+                            {skill.certifications && skill.certifications.length > 0 && (
+                              <Box>
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                  Certifications:
+                                </Typography>
+                                <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5}>
+                                  {skill.certifications.slice(0, 2).map((cert, index) => (
+                                    <Chip
+                                      key={index}
+                                      label={cert}
+                                      size="small"
+                                      variant="outlined"
+                                      color="secondary"
+                                    />
+                                  ))}
+                                  {skill.certifications.length > 2 && (
+                                    <Chip
+                                      label={`+${skill.certifications.length - 2}`}
+                                      size="small"
+                                      variant="outlined"
+                                      color="default"
+                                    />
+                                  )}
+                                </Box>
+                              </Box>
+                            )}
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    </Box>
+                  ))}
+                </Box>
+              </CardContent>
+            </Card>
+          ))}
+        </Stack>
+      )}
+
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingSkill ? 'Modifier la compétence' : 'Ajouter une compétence'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+            <Box>
+              <TextField
+                fullWidth
+                label="Nom de la compétence"
+                value={skillForm.name}
+                onChange={(e) => setSkillForm({ ...skillForm, name: e.target.value })}
+                required
+              />
+            </Box>
+            <Box>
+              <FormControl fullWidth>
+                <InputLabel>Catégorie</InputLabel>
+                <Select
+                  value={skillForm.category}
+                  label="Catégorie"
+                  onChange={(e) => setSkillForm({ ...skillForm, category: e.target.value as UserSkill['category'] })}
+                >
+                  <MenuItem value="technical">Techniques</MenuItem>
+                  <MenuItem value="methodology">Méthodologiques</MenuItem>
+                  <MenuItem value="domain">Domaine métier</MenuItem>
+                  <MenuItem value="soft">Soft skills</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            <Box>
+              <FormControl fullWidth>
+                <InputLabel>Niveau</InputLabel>
+                <Select
+                  value={skillForm.level}
+                  label="Niveau"
+                  onChange={(e) => setSkillForm({ ...skillForm, level: e.target.value as UserSkill['level'] })}
+                >
+                  <MenuItem value="beginner">Débutant</MenuItem>
+                  <MenuItem value="intermediate">Intermédiaire</MenuItem>
+                  <MenuItem value="advanced">Avancé</MenuItem>
+                  <MenuItem value="expert">Expert</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            <Box>
+              <TextField
+                fullWidth
+                type="number"
+                label="Années d'expérience"
+                value={skillForm.yearsExperience}
+                onChange={(e) => setSkillForm({ ...skillForm, yearsExperience: parseInt(e.target.value) || 0 })}
+                inputProps={{ min: 0, max: 50 }}
+              />
+            </Box>
+            <Box>
+              <TextField
+                fullWidth
+                label="Certifications (séparées par des virgules)"
+                value={skillForm.certifications}
+                onChange={(e) => setSkillForm({ ...skillForm, certifications: e.target.value })}
+                multiline
+                rows={2}
+                placeholder="AWS Certified, Scrum Master, ..."
+              />
+            </Box>
+            <Box>
+              <TextField
+                fullWidth
+                label="Projets associés (séparés par des virgules)"
+                value={skillForm.projects}
+                onChange={(e) => setSkillForm({ ...skillForm, projects: e.target.value })}
+                multiline
+                rows={2}
+                placeholder="Projet A, Migration Cloud, ..."
+              />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>
+            Annuler
+          </Button>
+          <Button
+            onClick={handleSaveSkill}
+            variant="contained"
+            disabled={!skillForm.name.trim()}
+          >
+            {editingSkill ? 'Modifier' : 'Ajouter'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
+
+export default SkillsMatrix;

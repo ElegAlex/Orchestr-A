@@ -1,0 +1,370 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fonction pour vérifier si l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Fonction pour vérifier si l'utilisateur est propriétaire
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Fonction pour vérifier si l'utilisateur est admin
+    function isAdmin() {
+      return request.auth.token.role == 'admin';
+    }
+    
+    // Fonction pour vérifier si l'utilisateur est responsable
+    function isResponsable() {
+      return request.auth.token.role == 'responsable';
+    }
+    
+    // Fonction pour vérifier si l'utilisateur peut gérer les utilisateurs (admin ou responsable)
+    function canManageUsers() {
+      return isAdmin() || isResponsable();
+    }
+    
+    // Fonction pour vérifier si l'utilisateur est manager
+    function isManager() {
+      return request.auth.token.role == 'manager' || isAdmin() || isResponsable();
+    }
+    
+    // Fonction pour vérifier si l'utilisateur est membre d'une équipe projet
+    function isProjectMember(projectId) {
+      return exists(/databases/$(database)/documents/projects/$(projectId)/members/$(request.auth.uid));
+    }
+    
+    // Collection users - Profils utilisateurs
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (isOwner(userId) || canManageUsers());
+      allow update: if isAuthenticated() && (
+        // Seuls admin et responsable peuvent modifier les rôles
+        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) && canManageUsers()) ||
+        // L'utilisateur peut modifier ses propres données (sauf le rôle)
+        (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+        // Les managers peuvent modifier certains champs (sauf le rôle)
+        (isManager() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+        // Permettre modification des affectations services/départements par utilisateurs authentifiés (sauf le rôle)
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['serviceIds', 'serviceId', 'departmentId', 'updatedAt']) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
+      );
+      allow delete: if canManageUsers();
+
+      // Sous-collection skills des utilisateurs
+      match /skills/{skillId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && (isOwner(userId) || isManager());
+        allow update: if isAuthenticated() && (isOwner(userId) || isManager());
+        allow delete: if isAuthenticated() && (isOwner(userId) || isManager());
+      }
+    }
+    
+    // Collection projects - Projets
+    match /projects/{projectId} {
+      allow read: if isAuthenticated(); // Permettre la lecture à tous les utilisateurs authentifiés pour le dashboard
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isProjectMember(projectId) || isManager());
+      allow delete: if isManager();
+      
+      // Sous-collection members des projets
+      match /members/{memberId} {
+        allow read: if isAuthenticated() && (isProjectMember(projectId) || isManager());
+        allow write: if isAuthenticated() && (isProjectMember(projectId) || isManager());
+      }
+    }
+    
+    // Collection tasks - Tâches
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isOwner(resource.data.assigneeId) || 
+        isOwner(resource.data.createdBy) ||
+        isManager()
+      );
+      allow delete: if isAuthenticated() && (
+        isOwner(resource.data.createdBy) || 
+        isManager()
+      );
+    }
+    
+    // Collection comments - Commentaires
+    match /comments/{commentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isManager());
+    }
+    
+    // Collection documents - Documents
+    match /documents/{documentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isOwner(resource.data.uploadedBy) || isManager());
+      allow delete: if isAuthenticated() && (isOwner(resource.data.uploadedBy) || isManager());
+    }
+    
+    // Collection notifications - Notifications
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid);
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid);
+    }
+
+    // Collection userCapacities - Capacités utilisateurs mises en cache
+    match /userCapacities/{capacityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isManager());
+      allow delete: if isManager();
+    }
+
+    // Collection resourceAllocations - Allocations de ressources
+    match /resourceAllocations/{allocationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isManager());
+      allow delete: if isManager();
+    }
+    
+    // Collection activities - Journal d'activités
+    match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+    
+    // Collection timeEntries - Entrées de temps
+    match /timeEntries/{entryId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isManager());
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isManager());
+    }
+    
+    // Collection leaves - Demandes de congés
+    match /leaves/{leaveId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isManager());
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isManager());
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isManager());
+    }
+    
+    // Collection leaveRequests - Nouvelles demandes de congés
+    match /leaveRequests/{leaveId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isManager());
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isManager());
+    }
+    
+    // Collection leaveBalances - Soldes de congés
+    match /leaveBalances/{balanceId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+    
+    // Collection approvalSteps - Étapes de validation
+    match /approvalSteps/{stepId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+    
+    // Collection holidays - Jours fériés
+    match /holidays/{holidayId} {
+      allow read: if isAuthenticated();
+      allow create: if isManager();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+    
+    // Collection workContracts - Contrats de travail
+    match /workContracts/{contractId} {
+      allow read: if isAuthenticated();
+      allow create: if isManager();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+    
+    // Collection teams - Équipes
+    match /teams/{teamId} {
+      allow read: if isAuthenticated();
+      allow create: if isManager();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+    
+    // Collection reports - Rapports
+    match /reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isOwner(resource.data.generatedBy) || isManager());
+      allow delete: if isManager();
+    }
+    
+    // Collection webhooks - Webhooks
+    match /webhooks/{webhookId} {
+      allow read: if isManager();
+      allow write: if isAdmin();
+    }
+    
+    // Collection webhook_logs - Logs webhooks
+    match /webhook_logs/{logId} {
+      allow read: if isManager();
+      allow create: if true; // Créé par les Cloud Functions
+      allow update: if true; // Mis à jour par les Cloud Functions
+      allow delete: if isAdmin();
+    }
+    
+    // Collection sessions - Sessions utilisateurs
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // Collection risks - Risques projet
+    match /risks/{riskId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isProjectMember(resource.data.projectId) || isManager());
+      allow delete: if isManager();
+    }
+    
+    // Collection services - Services organisationnels
+    match /services/{serviceId} {
+      allow read: if isAuthenticated();
+      allow create: if isManager();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+    
+    // Collection departments - Départements organisationnels
+    match /departments/{departmentId} {
+      allow read: if isAuthenticated();
+      allow create: if isManager();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+    
+    // Collection skills - Compétences
+    match /skills/{skillId} {
+      allow read: if isAuthenticated();
+      allow create: if isManager();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+    
+    // Collection validation_requests - Demandes de validation workflow
+    match /validation_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isOwner(resource.data.assigneeId) || 
+        isOwner(resource.data.requestedBy) ||
+        isManager()
+      );
+      allow delete: if isManager();
+    }
+    
+    // Collection workflows - Définitions de workflow
+    match /workflows/{workflowId} {
+      allow read: if isAuthenticated();
+      allow create: if isManager();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+
+    // Collection workflow_instances - Instances d'exécution de workflows
+    match /workflow_instances/{instanceId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isOwner(resource.data.createdBy) ||
+        isManager()
+      );
+      allow delete: if isManager();
+    }
+
+    // Collection simpleTasks - Tâches simples (indépendantes des projets)
+    match /simpleTasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.responsible is list && request.auth.uid in resource.data.responsible ||
+        isOwner(resource.data.createdBy) ||
+        isManager()
+      );
+      allow delete: if isAuthenticated() && (
+        isOwner(resource.data.createdBy) ||
+        isManager()
+      );
+    }
+
+    // Collection remoteWorkSchedules - Plannings de télétravail hebdomadaires
+    match /remoteWorkSchedules/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (request.auth.uid == userId || isManager());
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isManager());
+      allow delete: if isManager();
+    }
+
+    // Collection remoteWorkDays - Jours spécifiques de télétravail
+    match /remoteWorkDays/{dayId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isManager());
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isManager());
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isManager());
+    }
+
+    // ===============================
+    // SYSTÈME TÉLÉTRAVAIL V2
+    // ===============================
+
+    // Collection userTeleworkProfiles - Profils télétravail des utilisateurs
+    match /userTeleworkProfiles/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (request.auth.uid == userId || isManager());
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isManager());
+      allow delete: if isManager();
+    }
+
+    // Collection teleworkOverrides - Exceptions télétravail
+    match /teleworkOverrides/{overrideId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isManager());
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isManager());
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isManager());
+    }
+
+    // Collection teamTeleworkRules - Règles télétravail d'équipe
+    match /teamTeleworkRules/{ruleId} {
+      allow read: if isAuthenticated();
+      allow create: if isManager();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+
+    // Collection teleworkSystemConfig - Configuration système télétravail
+    match /teleworkSystemConfig/{configId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // Règle par défaut - Refuser tout accès non explicitement autorisé
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

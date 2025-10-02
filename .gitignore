@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+orchestra-app/node_modules/
+functions/node_modules/
+
+# Production builds
+orchestra-app/build/
+functions/lib/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Firebase
+.firebase/
+.firebaserc
+
+# Debug files
+debug*.js
+debug*.html
+test-*.js
+test-*.html
+call-*.js
+clean-*.js
+restore-*.js
+setup-*.js
+update-*.js
+rebuild-*.js
+fix-*.sh
+
+# Exports & backups
+users*.json
+current-indexes.json
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+temp_*.json
+
+# OS
+.DS_Store
+Thumbs.db
