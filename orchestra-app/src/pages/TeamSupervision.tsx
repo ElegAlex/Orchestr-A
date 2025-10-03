@@ -12,13 +12,6 @@ import {
   AccordionSummary,
   AccordionDetails,
   Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Tabs,
   Tab,
   Card,
@@ -36,6 +29,7 @@ import { teamSupervisionService, ProjectWithMilestones } from '../services/team-
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { User, Task } from '../types';
+import TaskCardWithTimeEntry from '../components/project/TaskCardWithTimeEntry';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -109,34 +103,7 @@ const TeamSupervision: React.FC = () => {
     }
   };
 
-  const getPriorityColor = (priority: string): 'error' | 'warning' | 'info' | 'default' => {
-    switch (priority) {
-      case 'P0': return 'error';
-      case 'P1': return 'warning';
-      case 'P2': return 'info';
-      default: return 'default';
-    }
-  };
-
-  const getStatusColor = (status: string): 'success' | 'warning' | 'default' => {
-    switch (status) {
-      case 'DONE': return 'success';
-      case 'IN_PROGRESS': return 'warning';
-      default: return 'default';
-    }
-  };
-
-  const getStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'DONE': return 'Terminée';
-      case 'IN_PROGRESS': return 'En cours';
-      case 'TODO': return 'À faire';
-      case 'BACKLOG': return 'Backlog';
-      case 'BLOCKED': return 'Bloquée';
-      default: return status;
-    }
-  };
-
+  // Helper pour vérifier si une tâche est en retard
   const isTaskOverdue = (task: Task): boolean => {
     if (!task.dueDate) return false;
     return new Date(task.dueDate) < new Date() && task.status !== 'DONE';
@@ -165,27 +132,6 @@ const TeamSupervision: React.FC = () => {
       totalEstimatedHours,
     };
   }, [projectsData]);
-
-  const renderTaskRow = (task: Task) => (
-    <TableRow key={task.id} sx={{ backgroundColor: isTaskOverdue(task) ? '#fff3e0' : 'inherit' }}>
-      <TableCell>
-        <Box display="flex" alignItems="center" gap={1}>
-          {isTaskOverdue(task) && <WarningIcon color="error" fontSize="small" />}
-          {task.title}
-        </Box>
-      </TableCell>
-      <TableCell>
-        <Chip label={getStatusLabel(task.status)} color={getStatusColor(task.status)} size="small" />
-      </TableCell>
-      <TableCell>
-        <Chip label={task.priority} color={getPriorityColor(task.priority)} size="small" />
-      </TableCell>
-      <TableCell>
-        {task.dueDate ? new Date(task.dueDate).toLocaleDateString('fr-FR') : '-'}
-      </TableCell>
-      <TableCell>{task.estimatedHours ? `${task.estimatedHours}h` : '-'}</TableCell>
-    </TableRow>
-  );
 
   if (loading) {
     return (
@@ -326,25 +272,24 @@ const TeamSupervision: React.FC = () => {
                   <AccordionDetails>
                     {projectData.milestones.map((milestone, idx) => (
                       <Box key={milestone.milestoneId || idx} sx={{ mb: 3 }}>
-                        <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+                        <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                           📍 {milestone.milestoneName}
+                          <Chip
+                            label={`${milestone.tasks.length} tâche${milestone.tasks.length > 1 ? 's' : ''}`}
+                            size="small"
+                            variant="outlined"
+                          />
                         </Typography>
-                        <TableContainer component={Paper} variant="outlined">
-                          <Table size="small">
-                            <TableHead>
-                              <TableRow>
-                                <TableCell>Tâche</TableCell>
-                                <TableCell>Statut</TableCell>
-                                <TableCell>Priorité</TableCell>
-                                <TableCell>Échéance</TableCell>
-                                <TableCell>Estimation</TableCell>
-                              </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {milestone.tasks.map(renderTaskRow)}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {milestone.tasks.map(task => (
+                            <TaskCardWithTimeEntry
+                              key={task.id}
+                              task={task}
+                              onUpdate={loadAgentTasks}
+                              compact
+                            />
+                          ))}
+                        </Box>
                       </Box>
                     ))}
                   </AccordionDetails>
@@ -364,87 +309,49 @@ const TeamSupervision: React.FC = () => {
               </Alert>
             ) : (
               <Box>
-                {/* Timeline par projet/jalon */}
-                {projectsData.map((projectData) => (
-                  <Box key={projectData.project.id} sx={{ mb: 4 }}>
-                    <Typography variant="h6" gutterBottom>
-                      {projectData.project.name}
-                    </Typography>
-                    {projectData.milestones.map((milestone) => (
-                      <Box key={milestone.milestoneId || 'no-milestone'} sx={{ mb: 3, ml: 2 }}>
-                        <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                          📍 {milestone.milestoneName}
-                        </Typography>
-                        <Box sx={{ pl: 2 }}>
-                          {milestone.tasks
-                            .sort((a, b) => {
-                              const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-                              const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-                              return dateA - dateB;
-                            })
-                            .map((task) => {
-                              const taskDuration = task.startDate && task.dueDate
-                                ? Math.ceil((new Date(task.dueDate).getTime() - new Date(task.startDate).getTime()) / (1000 * 60 * 60 * 24))
-                                : 0;
+                {/* Timeline chronologique globale - toutes tâches triées par date */}
+                {(() => {
+                  // Flatten et trier toutes les tâches par date d'échéance
+                  const allTasks = projectsData.flatMap(p =>
+                    p.milestones.flatMap(m =>
+                      m.tasks.map(t => ({
+                        task: t,
+                        projectName: p.project.name,
+                        milestoneName: m.milestoneName,
+                      }))
+                    )
+                  ).sort((a, b) => {
+                    const dateA = a.task.dueDate ? new Date(a.task.dueDate).getTime() : Infinity;
+                    const dateB = b.task.dueDate ? new Date(b.task.dueDate).getTime() : Infinity;
+                    return dateA - dateB;
+                  });
 
-                              return (
-                                <Box
-                                  key={task.id}
-                                  sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 2,
-                                    mb: 1.5,
-                                    p: 1.5,
-                                    borderLeft: `4px solid ${
-                                      isTaskOverdue(task) ? '#f44336' :
-                                      task.status === 'IN_PROGRESS' ? '#ff9800' :
-                                      task.status === 'TODO' ? '#2196f3' : '#4caf50'
-                                    }`,
-                                    backgroundColor: isTaskOverdue(task) ? '#fff3e0' : '#f5f5f5',
-                                    borderRadius: 1,
-                                  }}
-                                >
-                                  <Box sx={{ minWidth: 120 }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {task.startDate ? new Date(task.startDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '-'}
-                                    </Typography>
-                                    {task.dueDate && (
-                                      <>
-                                        <Typography variant="caption" color="text.secondary"> → </Typography>
-                                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
-                                          {new Date(task.dueDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-                                        </Typography>
-                                      </>
-                                    )}
-                                  </Box>
-
-                                  <Box sx={{ flex: 1 }}>
-                                    <Box display="flex" alignItems="center" gap={1}>
-                                      {isTaskOverdue(task) && <WarningIcon color="error" fontSize="small" />}
-                                      <Typography variant="body2" fontWeight="medium">
-                                        {task.title}
-                                      </Typography>
-                                    </Box>
-                                    <Box display="flex" gap={1} mt={0.5}>
-                                      <Chip label={getStatusLabel(task.status)} size="small" color={getStatusColor(task.status)} />
-                                      <Chip label={task.priority} size="small" color={getPriorityColor(task.priority)} />
-                                      {taskDuration > 0 && (
-                                        <Chip label={`${taskDuration}j`} size="small" variant="outlined" />
-                                      )}
-                                      {task.estimatedHours && (
-                                        <Chip label={`${task.estimatedHours}h`} size="small" variant="outlined" />
-                                      )}
-                                    </Box>
-                                  </Box>
-                                </Box>
-                              );
-                            })}
+                  return (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {allTasks.length} tâche{allTasks.length > 1 ? 's' : ''} triée{allTasks.length > 1 ? 's' : ''} par ordre chronologique
+                      </Typography>
+                      {allTasks.map(({ task, projectName, milestoneName }) => (
+                        <Box key={task.id} sx={{ mb: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {projectName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">•</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {milestoneName}
+                            </Typography>
+                          </Box>
+                          <TaskCardWithTimeEntry
+                            task={task}
+                            onUpdate={loadAgentTasks}
+                            compact
+                          />
                         </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                ))}
+                      ))}
+                    </Box>
+                  );
+                })()}
               </Box>
             )}
           </TabPanel>
