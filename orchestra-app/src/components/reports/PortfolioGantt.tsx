@@ -23,13 +23,9 @@ import {
 } from '@mui/icons-material';
 import { format, differenceInDays, addDays, startOfMonth, endOfMonth, isWithinInterval, startOfWeek, endOfWeek, addMonths, subMonths, startOfDay, endOfDay, addHours, differenceInHours, getISOWeek, startOfYear, addWeeks, differenceInWeeks } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Project, Milestone, ProjectStatus } from '../../types';
-
-/**
- * Note : Ce composant utilise milestone.status stocké en BDD pour l'affichage
- * Le statut réel est calculé automatiquement basé sur les tâches dans ProjectRoadmap
- * TODO : Charger les tâches ici pour calculer le statut à la volée
- */
+import { Project, Milestone, ProjectStatus, Task } from '../../types';
+import { taskService } from '../../services/task.service';
+import { calculateMilestoneStatus } from '../../utils/milestone.utils';
 
 interface PortfolioGanttProps {
   projects: Project[];
@@ -43,10 +39,27 @@ const PortfolioGantt: React.FC<PortfolioGanttProps> = ({ projects, milestones })
   const [visibleProjects, setVisibleProjects] = useState<string[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   // Initialiser avec tous les projets visibles
   useEffect(() => {
     setVisibleProjects(projects.map(p => p.id));
+  }, [projects]);
+
+  // Charger toutes les tâches pour calculer les statuts des jalons
+  useEffect(() => {
+    const loadTasks = async () => {
+      const allTasks: Task[] = [];
+      for (const project of projects) {
+        const projectTasks = await taskService.getTasksByProject(project.id);
+        allTasks.push(...projectTasks);
+      }
+      setTasks(allTasks);
+    };
+
+    if (projects.length > 0) {
+      loadTasks();
+    }
   }, [projects]);
 
   // Filtrer les projets actifs et à venir
@@ -218,11 +231,17 @@ const PortfolioGantt: React.FC<PortfolioGanttProps> = ({ projects, milestones })
     return colors[status] || '#9e9e9e';
   };
 
-  // Couleur pour les jalons
-  const getMilestoneColor = (status: string, dueDate: Date) => {
-    if (status === 'completed') return '#4caf50';
+  // Couleur pour les jalons basée sur le statut calculé
+  const getMilestoneColor = (milestoneId: string, dueDate: Date) => {
+    // Calculer le statut dynamiquement
+    const milestoneTasks = tasks.filter(t => t.milestoneId === milestoneId);
+    const computedStatus = calculateMilestoneStatus(milestoneTasks);
+
+    if (computedStatus === 'completed') return '#4caf50';
+    if (computedStatus === 'in_progress') return '#ff9800';
+    // Si "upcoming" et date dépassée = en retard
     if (new Date(dueDate) < new Date()) return '#f44336';
-    return '#ff9800';
+    return '#2196f3'; // À venir (bleu)
   };
 
   // Navigation temporelle
@@ -528,7 +547,11 @@ const PortfolioGantt: React.FC<PortfolioGanttProps> = ({ projects, milestones })
                                 {format(milestoneStartDate, 'dd/MM/yyyy')} - {format(milestoneEndDate, 'dd/MM/yyyy')}
                               </Typography>
                               <Typography variant="caption" display="block">
-                                Statut: {milestone.status === 'completed' ? 'Atteint' : 'En attente'}
+                                Statut: {(() => {
+                                  const milestoneTasks = tasks.filter(t => t.milestoneId === milestone.id);
+                                  const status = calculateMilestoneStatus(milestoneTasks);
+                                  return status === 'completed' ? 'Terminé' : status === 'in_progress' ? 'En cours' : 'À venir';
+                                })()}
                               </Typography>
                             </Box>
                           }
@@ -541,17 +564,17 @@ const PortfolioGantt: React.FC<PortfolioGanttProps> = ({ projects, milestones })
                               left: `${milestoneBar.left}%`,
                               width: `${milestoneBar.width}%`,
                               height: 16,
-                              bgcolor: getMilestoneColor(milestone.status, milestoneEndDate),
+                              bgcolor: getMilestoneColor(milestone.id, milestoneEndDate),
                               borderRadius: 2,
                               border: '2px solid',
-                              borderColor: getMilestoneColor(milestone.status, milestoneEndDate),
+                              borderColor: getMilestoneColor(milestone.id, milestoneEndDate),
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               px: 0.5,
                               opacity: 0.9,
                               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                              background: `linear-gradient(45deg, ${getMilestoneColor(milestone.status, milestoneEndDate)} 0%, ${getMilestoneColor(milestone.status, milestoneEndDate)}aa 100%)`,
+                              background: `linear-gradient(45deg, ${getMilestoneColor(milestone.id, milestoneEndDate)} 0%, ${getMilestoneColor(milestone.id, milestoneEndDate)}aa 100%)`,
                               '&:hover': {
                                 opacity: 1,
                                 boxShadow: '0 4px 8px rgba(0,0,0,0.2)',

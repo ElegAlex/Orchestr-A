@@ -32,6 +32,7 @@ import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import SupervisedUserCircleIcon from '@mui/icons-material/SupervisedUserCircle';
 import { RootState, AppDispatch } from '../../store';
 import { signOut } from '../../store/slices/authSlice';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -83,6 +84,7 @@ export const MainLayout: React.FC = () => {
     { text: 'Ressources', icon: <PeopleIcon />, path: '/resources', permission: 'user.view' },
     { text: 'Calendrier', icon: <CalendarMonthIcon />, path: '/calendar', permission: 'project.view' },
     { text: 'Mes Congés', icon: <BeachAccessIcon />, path: '/my-leaves', permission: null },
+    { text: 'Supervision', icon: <SupervisedUserCircleIcon />, path: '/team-supervision', permission: 'team.supervise' },
     { text: 'Rapports', icon: <BarChartIcon />, path: '/reports', permission: 'report.view' },
     { text: 'Administration', icon: <AdminPanelSettingsIcon />, path: '/admin', permission: 'admin.access' },
     { text: 'Administration RH', icon: <AdminPanelSettingsIcon />, path: '/hr-admin', permission: 'hr.manage_employees' },

@@ -8,6 +8,7 @@ export interface User {
   permissions?: string[];
   avatarUrl?: string;
   department?: string;
+  managerId?: string; // ID du manager de l'utilisateur (pour hiérarchie)
   serviceId?: string; // Deprecated - à supprimer progressivement
   serviceIds?: string[]; // Nouveau: support multi-services  
   skills?: Skill[];

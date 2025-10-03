@@ -30,6 +30,7 @@ const HRAdmin = React.lazy(() => import('./pages/HRAdmin'));
 const HRDashboard = React.lazy(() => import('./pages/HRDashboard').then(module => ({ default: module.HRDashboard })));
 const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
 const Profile = React.lazy(() => import('./pages/Profile'));
+const TeamSupervision = React.lazy(() => import('./pages/TeamSupervision'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -199,6 +200,11 @@ function AppContent() {
           <Route path="profile" element={
             <Suspense fallback={<LoadingFallback />}>
               <Profile />
+            </Suspense>
+          } />
+          <Route path="team-supervision" element={
+            <Suspense fallback={<LoadingFallback />}>
+              <TeamSupervision />
             </Suspense>
           } />
         </Route>

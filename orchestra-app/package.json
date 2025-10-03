@@ -72,6 +72,7 @@
   },
   "devDependencies": {
     "@types/papaparse": "^5.3.16",
+    "firebase-admin": "^13.5.0",
     "source-map-explorer": "^2.5.3",
     "webpack-bundle-analyzer": "^4.10.2"
   }

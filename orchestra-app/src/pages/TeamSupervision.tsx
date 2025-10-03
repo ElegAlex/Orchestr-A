@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -21,11 +21,16 @@ import {
   Paper,
   Tabs,
   Tab,
+  Card,
+  CardContent,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   Warning as WarningIcon,
   Schedule as ScheduleIcon,
+  Assignment as AssignmentIcon,
+  CheckCircle as CheckCircleIcon,
+  TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import { teamSupervisionService, ProjectWithMilestones } from '../services/team-supervision.service';
 import { useSelector } from 'react-redux';
@@ -41,7 +46,13 @@ interface TabPanelProps {
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
-    <div hidden={value !== index} {...other}>
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`tabpanel-${index}`}
+      aria-labelledby={`tab-${index}`}
+      {...other}
+    >
       {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
     </div>
   );
@@ -131,6 +142,30 @@ const TeamSupervision: React.FC = () => {
     return new Date(task.dueDate) < new Date() && task.status !== 'DONE';
   };
 
+  // Calcul des métriques
+  const metrics = useMemo(() => {
+    const allTasks: Task[] = [];
+    projectsData.forEach(p => {
+      p.milestones.forEach(m => {
+        allTasks.push(...m.tasks);
+      });
+    });
+
+    const totalTasks = allTasks.length;
+    const overdueTasks = allTasks.filter(t => isTaskOverdue(t)).length;
+    const inProgressTasks = allTasks.filter(t => t.status === 'IN_PROGRESS').length;
+    const todoTasks = allTasks.filter(t => t.status === 'TODO').length;
+    const totalEstimatedHours = allTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+
+    return {
+      totalTasks,
+      overdueTasks,
+      inProgressTasks,
+      todoTasks,
+      totalEstimatedHours,
+    };
+  }, [projectsData]);
+
   const renderTaskRow = (task: Task) => (
     <TableRow key={task.id} sx={{ backgroundColor: isTaskOverdue(task) ? '#fff3e0' : 'inherit' }}>
       <TableCell>
@@ -171,17 +206,20 @@ const TeamSupervision: React.FC = () => {
   const selectedMember = teamMembers.find(m => m.id === selectedAgent);
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" gutterBottom>
+    <Box p={3} role="main" aria-label="Page de supervision d'équipe">
+      <Typography variant="h4" gutterBottom component="h1">
         Supervision
       </Typography>
 
       <FormControl fullWidth sx={{ mb: 3, maxWidth: 400 }}>
-        <InputLabel>Sélectionner un agent</InputLabel>
+        <InputLabel id="agent-select-label">Sélectionner un agent</InputLabel>
         <Select
+          labelId="agent-select-label"
+          id="agent-select"
           value={selectedAgent}
           label="Sélectionner un agent"
           onChange={(e) => setSelectedAgent(e.target.value)}
+          aria-describedby="agent-select-help"
         >
           {teamMembers.map((member) => (
             <MenuItem key={member.id} value={member.id}>
@@ -197,9 +235,64 @@ const TeamSupervision: React.FC = () => {
             {selectedMember?.displayName || selectedMember?.email}
           </Typography>
 
-          <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tab label="Vue Projets/Jalons" />
-            <Tab label="Vue Calendrier" disabled />
+          {/* Métriques de synthèse */}
+          {!loadingTasks && projectsData.length > 0 && (
+            <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }} gap={2} sx={{ mb: 3 }}>
+              <Card>
+                <CardContent>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <AssignmentIcon color="primary" />
+                    <Box>
+                      <Typography variant="h4">{metrics.totalTasks}</Typography>
+                      <Typography variant="body2" color="text.secondary">Tâches actives</Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <WarningIcon color="error" />
+                    <Box>
+                      <Typography variant="h4" color="error.main">{metrics.overdueTasks}</Typography>
+                      <Typography variant="body2" color="text.secondary">En retard</Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <TrendingUpIcon color="warning" />
+                    <Box>
+                      <Typography variant="h4" color="warning.main">{metrics.inProgressTasks}</Typography>
+                      <Typography variant="body2" color="text.secondary">En cours</Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <CheckCircleIcon color="success" />
+                    <Box>
+                      <Typography variant="h4">{metrics.totalEstimatedHours}h</Typography>
+                      <Typography variant="body2" color="text.secondary">Charge estimée</Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+          )}
+
+          <Tabs
+            value={tabValue}
+            onChange={(e, v) => setTabValue(v)}
+            sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
+            aria-label="Vues de supervision"
+          >
+            <Tab label="Vue Projets/Jalons" id="tab-0" aria-controls="tabpanel-0" />
+            <Tab label="Vue Timeline" id="tab-1" aria-controls="tabpanel-1" />
           </Tabs>
 
           <TabPanel value={tabValue} index={0}>
@@ -209,7 +302,7 @@ const TeamSupervision: React.FC = () => {
               </Box>
             ) : projectsData.length === 0 ? (
               <Alert severity="info">
-                Aucune tâche active trouvée pour cet agent (uniquement tâches où il est responsable, dans des projets actifs, non terminées, hors backlog).
+                Aucune tâche en cours pour {selectedMember?.displayName || 'cet agent'}.
               </Alert>
             ) : (
               projectsData.map((projectData) => (
@@ -261,7 +354,99 @@ const TeamSupervision: React.FC = () => {
           </TabPanel>
 
           <TabPanel value={tabValue} index={1}>
-            <Alert severity="info">Vue calendrier/timeline à venir...</Alert>
+            {loadingTasks ? (
+              <Box display="flex" justifyContent="center" p={3}>
+                <CircularProgress />
+              </Box>
+            ) : projectsData.length === 0 ? (
+              <Alert severity="info">
+                Aucune tâche en cours pour {selectedMember?.displayName || 'cet agent'}.
+              </Alert>
+            ) : (
+              <Box>
+                {/* Timeline par projet/jalon */}
+                {projectsData.map((projectData) => (
+                  <Box key={projectData.project.id} sx={{ mb: 4 }}>
+                    <Typography variant="h6" gutterBottom>
+                      {projectData.project.name}
+                    </Typography>
+                    {projectData.milestones.map((milestone) => (
+                      <Box key={milestone.milestoneId || 'no-milestone'} sx={{ mb: 3, ml: 2 }}>
+                        <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                          📍 {milestone.milestoneName}
+                        </Typography>
+                        <Box sx={{ pl: 2 }}>
+                          {milestone.tasks
+                            .sort((a, b) => {
+                              const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+                              const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+                              return dateA - dateB;
+                            })
+                            .map((task) => {
+                              const taskDuration = task.startDate && task.dueDate
+                                ? Math.ceil((new Date(task.dueDate).getTime() - new Date(task.startDate).getTime()) / (1000 * 60 * 60 * 24))
+                                : 0;
+
+                              return (
+                                <Box
+                                  key={task.id}
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 2,
+                                    mb: 1.5,
+                                    p: 1.5,
+                                    borderLeft: `4px solid ${
+                                      isTaskOverdue(task) ? '#f44336' :
+                                      task.status === 'IN_PROGRESS' ? '#ff9800' :
+                                      task.status === 'TODO' ? '#2196f3' : '#4caf50'
+                                    }`,
+                                    backgroundColor: isTaskOverdue(task) ? '#fff3e0' : '#f5f5f5',
+                                    borderRadius: 1,
+                                  }}
+                                >
+                                  <Box sx={{ minWidth: 120 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {task.startDate ? new Date(task.startDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '-'}
+                                    </Typography>
+                                    {task.dueDate && (
+                                      <>
+                                        <Typography variant="caption" color="text.secondary"> → </Typography>
+                                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                                          {new Date(task.dueDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                                        </Typography>
+                                      </>
+                                    )}
+                                  </Box>
+
+                                  <Box sx={{ flex: 1 }}>
+                                    <Box display="flex" alignItems="center" gap={1}>
+                                      {isTaskOverdue(task) && <WarningIcon color="error" fontSize="small" />}
+                                      <Typography variant="body2" fontWeight="medium">
+                                        {task.title}
+                                      </Typography>
+                                    </Box>
+                                    <Box display="flex" gap={1} mt={0.5}>
+                                      <Chip label={getStatusLabel(task.status)} size="small" color={getStatusColor(task.status)} />
+                                      <Chip label={task.priority} size="small" color={getPriorityColor(task.priority)} />
+                                      {taskDuration > 0 && (
+                                        <Chip label={`${taskDuration}j`} size="small" variant="outlined" />
+                                      )}
+                                      {task.estimatedHours && (
+                                        <Chip label={`${task.estimatedHours}h`} size="small" variant="outlined" />
+                                      )}
+                                    </Box>
+                                  </Box>
+                                </Box>
+                              );
+                            })}
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                ))}
+              </Box>
+            )}
           </TabPanel>
         </>
       )}

@@ -25,6 +25,7 @@ import { taskService } from '../../services/task.service';
 import { epicService } from '../../services/epic.service';
 import { milestoneService } from '../../services/milestone.service';
 import { userService } from '../../services/user.service';
+import { calculateMilestoneStatus } from '../../utils/milestone.utils';
 
 interface ProjectGanttProps {
   project: Project;
@@ -155,27 +156,31 @@ const ProjectGantt: React.FC<ProjectGanttProps> = ({ project, onRefresh }) => {
       })
       .forEach((milestone) => {
         // Pour les jalons, utiliser startDate si disponible, sinon calculer depuis la date de création
-        const startDate = milestone.startDate ? new Date(milestone.startDate) : 
+        const startDate = milestone.startDate ? new Date(milestone.startDate) :
                          milestone.createdAt ? new Date(milestone.createdAt) :
                          new Date();
         // La date de fin est la dueDate si disponible, sinon startDate + 30 jours
-        let endDate = milestone.dueDate ? new Date(milestone.dueDate) : 
+        let endDate = milestone.dueDate ? new Date(milestone.dueDate) :
                        new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-        
+
         // Validation: s'assurer que la date de fin est postérieure à la date de début
         if (endDate <= startDate) {
           endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000); // +1 jour minimum
         }
 
-        const milestoneStatusColor = getStatusColor(milestone.status);
-        const milestoneBackgroundColor = getStatusBackgroundColor(milestone.status);
-        const milestoneProgress = milestone.status === 'completed' ? 100 : 
-                                 milestone.status === 'in_progress' ? 50 : 0;
+        // Calculer le statut dynamiquement basé sur les tâches liées (comme dans VUE JALONS)
+        const milestoneTasks = ganttData.tasks.filter(task => task.milestoneId === milestone.id);
+        const computedStatus = calculateMilestoneStatus(milestoneTasks);
+
+        const milestoneStatusColor = getStatusColor(computedStatus);
+        const milestoneBackgroundColor = getStatusBackgroundColor(computedStatus);
+        const milestoneProgress = computedStatus === 'completed' ? 100 :
+                                 computedStatus === 'in_progress' ? 50 : 0;
 
         tasks.push({
           start: startDate,
           end: endDate,
-          name: `🎯 ${milestone.name} (État: ${milestone.status === 'upcoming' ? 'À venir' : milestone.status === 'in_progress' ? 'En cours' : 'Terminé'})`,
+          name: `🎯 ${milestone.name} (État: ${computedStatus === 'upcoming' ? 'À venir' : computedStatus === 'in_progress' ? 'En cours' : 'Terminé'})`,
           id: `milestone-${milestone.id}`,
           type: 'project',  // Utiliser 'project' au lieu de 'milestone' pour avoir une barre
           progress: milestoneProgress,
@@ -184,7 +189,7 @@ const ProjectGantt: React.FC<ProjectGanttProps> = ({ project, onRefresh }) => {
             progressColor: milestoneStatusColor,
             progressSelectedColor: milestoneStatusColor,
             backgroundColor: milestoneBackgroundColor,
-            backgroundSelectedColor: `${milestoneStatusColor  }40` // Couleur avec transparence
+            backgroundSelectedColor: `${milestoneStatusColor}40` // Couleur avec transparence
           }
         });
 

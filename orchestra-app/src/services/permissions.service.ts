@@ -1,6 +1,6 @@
 import { User } from '../types';
 
-export type Permission = 
+export type Permission =
   // Projets
   | 'project.view'
   | 'project.create'
@@ -8,7 +8,7 @@ export type Permission =
   | 'project.delete'
   | 'project.archive'
   | 'project.manage_team'
-  
+
   // Tâches
   | 'task.view'
   | 'task.create'
@@ -16,25 +16,28 @@ export type Permission =
   | 'task.delete'
   | 'task.assign'
   | 'task.change_status'
-  
+
   // Documents
   | 'document.view'
   | 'document.upload'
   | 'document.download'
   | 'document.delete'
-  
+
   // Rapports
   | 'report.view'
   | 'report.create'
   | 'report.export'
-  
+
   // Ressources humaines
   | 'hr.view_all_leaves'
   | 'hr.approve_leaves'
   | 'hr.manage_employees'
   | 'hr.view_skills'
   | 'hr.manage_contracts'
-  
+
+  // Équipe
+  | 'team.supervise'
+
   // Départements
   | 'department.view'
   | 'department.create'
@@ -43,14 +46,14 @@ export type Permission =
   | 'department.manage_members'
   | 'department.view_budget'
   | 'department.manage_budget'
-  
+
   // Utilisateurs
   | 'user.view'
   | 'user.create'
   | 'user.edit'
   | 'user.delete'
   | 'user.change_role'
-  
+
   // Administration
   | 'admin.access'
   | 'admin.settings'
@@ -81,18 +84,20 @@ const rolePermissions: Record<Role, Permission[]> = {
     'document.view', 'document.upload', 'document.download', 'document.delete',
     'report.view', 'report.create', 'report.export',
     'hr.view_all_leaves', 'hr.approve_leaves', 'hr.manage_employees', 'hr.view_skills', 'hr.manage_contracts',
+    'team.supervise',
     'department.view', 'department.create', 'department.edit', 'department.delete', 'department.manage_members', 'department.view_budget', 'department.manage_budget',
     'user.view', 'user.create', 'user.edit', 'user.delete', 'user.change_role',
     'admin.access' // Ajout de l'accès à l'interface d'administration pour le responsable
     // PAS d'accès aux autres permissions admin.* (settings, backup, logs, webhooks - technique uniquement)
   ],
-  
+
   manager: [
     'project.view', 'project.create', 'project.edit', 'project.archive', 'project.manage_team',
     'task.view', 'task.create', 'task.edit', 'task.delete', 'task.assign', 'task.change_status',
     'document.view', 'document.upload', 'document.download', 'document.delete',
     'report.view', 'report.create', 'report.export',
     'hr.view_all_leaves', 'hr.approve_leaves', 'hr.view_skills',
+    'team.supervise',
     'department.view', 'department.manage_members', 'department.view_budget',
     'user.view', 'user.edit'
   ],
