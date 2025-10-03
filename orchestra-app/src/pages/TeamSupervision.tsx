@@ -251,50 +251,92 @@ const TeamSupervision: React.FC = () => {
                 Aucune tâche en cours pour {selectedMember?.displayName || 'cet agent'}.
               </Alert>
             ) : (
-              projectsData.map((projectData) => (
-                <Accordion key={projectData.project.id} defaultExpanded sx={{ mb: 2 }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Box sx={{ width: '100%', pr: 2 }}>
-                      <Box display="flex" justifyContent="space-between" alignItems="center">
-                        <Typography variant="h6">{projectData.project.name}</Typography>
-                        <Chip
-                          icon={<ScheduleIcon />}
-                          label={`Échéance: ${new Date(projectData.project.dueDate).toLocaleDateString('fr-FR')}`}
-                          size="small"
-                          color={new Date(projectData.project.dueDate) < new Date() ? 'error' : 'default'}
-                        />
-                      </Box>
-                      <Typography variant="body2" color="text.secondary">
-                        {projectData.project.code}
-                      </Typography>
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    {projectData.milestones.map((milestone, idx) => (
-                      <Box key={milestone.milestoneId || idx} sx={{ mb: 3 }}>
-                        <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          📍 {milestone.milestoneName}
+              <Box>
+                {projectsData.map((projectData, projectIdx) => (
+                  <Accordion
+                    key={projectData.project.id}
+                    defaultExpanded
+                    sx={{
+                      mb: 3,
+                      '&:before': {
+                        display: 'none',
+                      },
+                      boxShadow: 2,
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon />}
+                      sx={{
+                        bgcolor: 'primary.50',
+                        '&:hover': {
+                          bgcolor: 'primary.100',
+                        },
+                      }}
+                    >
+                      <Box sx={{ width: '100%', pr: 2 }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="h6" color="primary.main" fontWeight="bold">
+                            Projet #{projectIdx + 1}: {projectData.project.name}
+                          </Typography>
                           <Chip
-                            label={`${milestone.tasks.length} tâche${milestone.tasks.length > 1 ? 's' : ''}`}
+                            icon={<ScheduleIcon />}
+                            label={`Échéance: ${new Date(projectData.project.dueDate).toLocaleDateString('fr-FR')}`}
                             size="small"
-                            variant="outlined"
+                            color={new Date(projectData.project.dueDate) < new Date() ? 'error' : 'default'}
                           />
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {milestone.tasks.map(task => (
-                            <TaskCardWithTimeEntry
-                              key={task.id}
-                              task={task}
-                              onUpdate={loadAgentTasks}
-                              compact
-                            />
-                          ))}
                         </Box>
+                        <Typography variant="body2" color="text.secondary">
+                          {projectData.project.code} • {projectData.milestones.reduce((sum, m) => sum + m.tasks.length, 0)} tâche(s)
+                        </Typography>
                       </Box>
-                    ))}
-                  </AccordionDetails>
-                </Accordion>
-              ))
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ bgcolor: 'grey.50', p: 3 }}>
+                      {projectData.milestones.map((milestone, idx) => (
+                        <Box
+                          key={milestone.milestoneId || idx}
+                          sx={{
+                            mb: idx < projectData.milestones.length - 1 ? 4 : 0,
+                            pb: idx < projectData.milestones.length - 1 ? 3 : 0,
+                            borderBottom: idx < projectData.milestones.length - 1 ? '2px solid' : 'none',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          <Box sx={{
+                            mb: 2,
+                            p: 1.5,
+                            bgcolor: 'white',
+                            borderRadius: 1,
+                            borderLeft: '4px solid',
+                            borderColor: 'primary.main',
+                          }}>
+                            <Typography variant="subtitle1" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              📍 {milestone.milestoneName}
+                              <Chip
+                                label={`${milestone.tasks.length} tâche${milestone.tasks.length > 1 ? 's' : ''}`}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                              />
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {milestone.tasks.map(task => (
+                              <TaskCardWithTimeEntry
+                                key={task.id}
+                                task={task}
+                                onUpdate={loadAgentTasks}
+                                compact
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      ))}
+                    </AccordionDetails>
+                  </Accordion>
+                ))}
+              </Box>
             )}
           </TabPanel>
 
