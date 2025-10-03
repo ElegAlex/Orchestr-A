@@ -375,17 +375,14 @@ const TeamSupervision: React.FC = () => {
               </Alert>
             ) : (
               <Box>
-                {/* Timeline chronologique globale - toutes tâches triées par date */}
-                {(() => {
-                  // Flatten et trier toutes les tâches par date d'échéance
-                  const allTasks = projectsData.flatMap(p =>
-                    p.milestones.flatMap(m =>
-                      m.tasks.map(t => ({
-                        task: t,
-                        projectName: p.project.name,
-                        milestoneName: m.milestoneName,
-                      }))
-                    )
+                {/* Timeline chronologique - organisée par projet avec headers gradient */}
+                {projectsData.map((projectData) => {
+                  // Flatten toutes les tâches du projet et trier par date
+                  const projectTasks = projectData.milestones.flatMap(m =>
+                    m.tasks.map(t => ({
+                      task: t,
+                      milestoneName: m.milestoneName,
+                    }))
                   ).sort((a, b) => {
                     const dateA = a.task.dueDate ? new Date(a.task.dueDate).getTime() : Infinity;
                     const dateB = b.task.dueDate ? new Date(b.task.dueDate).getTime() : Infinity;
@@ -393,31 +390,71 @@ const TeamSupervision: React.FC = () => {
                   });
 
                   return (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {allTasks.length} tâche{allTasks.length > 1 ? 's' : ''} triée{allTasks.length > 1 ? 's' : ''} par ordre chronologique
-                      </Typography>
-                      {allTasks.map(({ task, projectName, milestoneName }) => (
-                        <Box key={task.id} sx={{ mb: 2 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                              {projectName}
+                    <Box key={projectData.project.id} sx={{ mb: 4 }}>
+                      {/* Header projet identique à Vue Projets/Jalons */}
+                      <Box
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          color: 'white',
+                          p: 2.5,
+                          borderRadius: '12px',
+                          boxShadow: 3,
+                          mb: 2,
+                        }}
+                      >
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Box>
+                            <Typography variant="h5" fontWeight="bold" sx={{ mb: 0.5 }}>
+                              {projectData.project.name}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">•</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {milestoneName}
+                            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                              {projectData.project.code} • {projectTasks.length} tâche(s) • Vue chronologique
                             </Typography>
                           </Box>
-                          <TaskCardWithTimeEntry
-                            task={task}
-                            onUpdate={loadAgentTasks}
-                            compact
+                          <Chip
+                            icon={<ScheduleIcon sx={{ color: 'white !important' }} />}
+                            label={`Échéance: ${new Date(projectData.project.dueDate).toLocaleDateString('fr-FR')}`}
+                            sx={{
+                              bgcolor: 'rgba(255, 255, 255, 0.2)',
+                              color: 'white',
+                              fontWeight: 'bold',
+                              backdropFilter: 'blur(10px)',
+                              '& .MuiChip-icon': {
+                                color: 'white',
+                              },
+                            }}
                           />
                         </Box>
-                      ))}
+                      </Box>
+
+                      {/* Tâches triées chronologiquement pour ce projet */}
+                      <Box sx={{ pl: 0 }}>
+                        {projectTasks.map(({ task, milestoneName }) => (
+                          <Box key={task.id} sx={{ mb: 2 }}>
+                            {/* Badge jalon au-dessus de chaque tâche */}
+                            <Box sx={{ mb: 0.5, pl: 1 }}>
+                              <Chip
+                                label={`📍 ${milestoneName}`}
+                                size="small"
+                                variant="outlined"
+                                sx={{
+                                  borderColor: 'primary.main',
+                                  color: 'primary.main',
+                                  fontWeight: 'medium',
+                                }}
+                              />
+                            </Box>
+                            <TaskCardWithTimeEntry
+                              task={task}
+                              onUpdate={loadAgentTasks}
+                              compact
+                            />
+                          </Box>
+                        ))}
+                      </Box>
                     </Box>
                   );
-                })()}
+                })}
               </Box>
             )}
           </TabPanel>
