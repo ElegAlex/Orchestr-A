@@ -253,45 +253,68 @@ const TeamSupervision: React.FC = () => {
             ) : (
               <Box>
                 {projectsData.map((projectData, projectIdx) => (
-                  <Accordion
-                    key={projectData.project.id}
-                    defaultExpanded
-                    sx={{
-                      mb: 3,
-                      '&:before': {
-                        display: 'none',
-                      },
-                      boxShadow: 2,
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <AccordionSummary
-                      expandIcon={<ExpandMoreIcon />}
+                  <Box key={projectData.project.id} sx={{ mb: 4 }}>
+                    {/* Header projet très visible */}
+                    <Box
                       sx={{
-                        bgcolor: 'primary.50',
-                        '&:hover': {
-                          bgcolor: 'primary.100',
-                        },
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        p: 2.5,
+                        borderRadius: '12px 12px 0 0',
+                        boxShadow: 3,
                       }}
                     >
-                      <Box sx={{ width: '100%', pr: 2 }}>
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                          <Typography variant="h6" color="primary.main" fontWeight="bold">
-                            Projet #{projectIdx + 1}: {projectData.project.name}
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Box>
+                          <Typography variant="h5" fontWeight="bold" sx={{ mb: 0.5 }}>
+                            {projectData.project.name}
                           </Typography>
-                          <Chip
-                            icon={<ScheduleIcon />}
-                            label={`Échéance: ${new Date(projectData.project.dueDate).toLocaleDateString('fr-FR')}`}
-                            size="small"
-                            color={new Date(projectData.project.dueDate) < new Date() ? 'error' : 'default'}
-                          />
+                          <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                            {projectData.project.code} • {projectData.milestones.reduce((sum, m) => sum + m.tasks.length, 0)} tâche(s) active(s)
+                          </Typography>
                         </Box>
-                        <Typography variant="body2" color="text.secondary">
-                          {projectData.project.code} • {projectData.milestones.reduce((sum, m) => sum + m.tasks.length, 0)} tâche(s)
-                        </Typography>
+                        <Chip
+                          icon={<ScheduleIcon sx={{ color: 'white !important' }} />}
+                          label={`Échéance: ${new Date(projectData.project.dueDate).toLocaleDateString('fr-FR')}`}
+                          sx={{
+                            bgcolor: 'rgba(255, 255, 255, 0.2)',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            backdropFilter: 'blur(10px)',
+                            '& .MuiChip-icon': {
+                              color: 'white',
+                            },
+                          }}
+                        />
                       </Box>
-                    </AccordionSummary>
+                    </Box>
+
+                    {/* Contenu projet */}
+                    <Accordion
+                      defaultExpanded
+                      sx={{
+                        '&:before': {
+                          display: 'none',
+                        },
+                        boxShadow: 3,
+                        borderRadius: '0 0 12px 12px',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <AccordionSummary
+                        expandIcon={<ExpandMoreIcon />}
+                        sx={{
+                          bgcolor: 'grey.100',
+                          minHeight: 48,
+                          '&:hover': {
+                            bgcolor: 'grey.200',
+                          },
+                        }}
+                      >
+                        <Typography variant="subtitle1" fontWeight="medium">
+                          Jalons et tâches ({projectData.milestones.length} jalon{projectData.milestones.length > 1 ? 's' : ''})
+                        </Typography>
+                      </AccordionSummary>
                     <AccordionDetails sx={{ bgcolor: 'grey.50', p: 3 }}>
                       {projectData.milestones.map((milestone, idx) => (
                         <Box
@@ -335,6 +358,7 @@ const TeamSupervision: React.FC = () => {
                       ))}
                     </AccordionDetails>
                   </Accordion>
+                  </Box>
                 ))}
               </Box>
             )}
