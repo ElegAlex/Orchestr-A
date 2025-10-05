@@ -251,7 +251,7 @@ export const Tasks: React.FC = () => {
 
   const handleDeleteTask = () => {
     setDeleteDialogOpen(true);
-    handleMenuClose();
+    setAnchorEl(null); // Fermer le menu sans réinitialiser contextTask
   };
 
   const confirmDeleteTask = async () => {
@@ -444,7 +444,10 @@ export const Tasks: React.FC = () => {
       </Menu>
 
       {/* Dialog de confirmation de suppression */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => {
+        setDeleteDialogOpen(false);
+        setContextTask(null);
+      }}>
         <DialogTitle>Confirmer la suppression</DialogTitle>
         <DialogContent>
           <Typography>
@@ -453,7 +456,10 @@ export const Tasks: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Annuler</Button>
+          <Button onClick={() => {
+            setDeleteDialogOpen(false);
+            setContextTask(null);
+          }}>Annuler</Button>
           <Button onClick={confirmDeleteTask} color="error" variant="contained">
             Supprimer
           </Button>
