@@ -75,7 +75,9 @@ import { workloadCalculatorService } from '../../services/workload-calculator.se
 import { useTeleworkV2 } from '../../hooks/useTeleworkV2';
 import { TeleworkDayCell } from './TeleworkDayCell';
 import { TeleworkProfileModal } from './TeleworkProfileModal';
+import { TeleworkBulkDeclarationModal } from './TeleworkBulkDeclarationModal';
 import { TaskModalSimplified as TaskModal } from '../tasks/TaskModalSimplified';
+import { SimpleTaskModal } from './SimpleTaskModal';
 import { MonthView } from './MonthView';
 import { auth } from '../../config/firebase';
 
@@ -283,13 +285,6 @@ const renderEnhancedTaskCard = (item: CalendarItem, onClick: (item: CalendarItem
       {/* Affichage des horaires pour les tâches simples */}
       {(() => {
         const shouldDisplay = item.type === 'simple_task' && item.startTimeString && item.endTimeString;
-        console.log('🎯 RENDER CHECK:', {
-          title: item.title,
-          type: item.type,
-          startTimeString: item.startTimeString,
-          endTimeString: item.endTimeString,
-          shouldDisplay
-        });
         return shouldDisplay ? (
           <Typography
             variant="caption"
@@ -409,6 +404,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({ item, onMove, onResize, o
       ref={drag as any}
       onClick={() => onClick(item)}
       sx={{
+        width: '100%', // Forcer la largeur complète
         bgcolor: getItemColor(),
         color: 'white',
         borderRadius: 1,
@@ -483,25 +479,33 @@ interface TaskSlotProps {
   slotIndex: number;
   item?: CalendarItem;
   isEmpty: boolean;
+  taskZone?: 'project' | 'simple'; // Nouvelle prop pour identifier la zone
   onDrop: (item: CalendarItem, userId: string, date: Date, slotIndex: number) => void;
-  onCreateTask: (userId: string, date: Date) => void;
+  onCreateTask: (userId: string, date: Date, taskZone?: 'project' | 'simple') => void;
   onItemClick: (item: CalendarItem) => void;
 }
 
-const TaskSlot: React.FC<TaskSlotProps> = ({ 
-  userId, 
-  date, 
-  slotIndex, 
-  item, 
-  isEmpty, 
-  onDrop, 
+const TaskSlot: React.FC<TaskSlotProps> = ({
+  userId,
+  date,
+  slotIndex,
+  item,
+  isEmpty,
+  taskZone,
+  onDrop,
   onCreateTask,
-  onItemClick 
+  onItemClick
 }) => {
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: 'calendar-item',
-    canDrop: (item: CalendarItem) => {
-      return true; // Validation plus tard
+    canDrop: (draggedItem: CalendarItem) => {
+      // Validation : accepter seulement si le type correspond à la zone
+      if (taskZone === 'project') {
+        return draggedItem.type === 'task';
+      } else if (taskZone === 'simple') {
+        return draggedItem.type === 'simple_task';
+      }
+      return true;
     },
     drop: (draggedItem: CalendarItem) => {
       onDrop(draggedItem, userId, date, slotIndex);
@@ -510,11 +514,11 @@ const TaskSlot: React.FC<TaskSlotProps> = ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
     }),
-  }));
+  }), [taskZone, userId, date, slotIndex]);
 
   const handleSlotClick = () => {
     if (isEmpty && !item) {
-      onCreateTask(userId, date);
+      onCreateTask(userId, date, taskZone);
     } else if (item) {
       onItemClick(item);
     }
@@ -588,10 +592,11 @@ interface UserRowProps {
   onItemMove: (itemId: string, newStartTime: Date, newEndTime: Date, newUserId?: string) => void;
   onItemClick: (item: CalendarItem) => void;
   onItemDrop: (item: CalendarItem, userId: string, date: Date, slotIndex: number) => void;
-  onCreateTask: (userId: string, date: Date) => void;
+  onCreateTask: (userId: string, date: Date, taskZone?: 'project' | 'simple') => void;
   onTeleworkModeChange: (userId: string, date: Date, mode: 'office' | 'remote') => Promise<void>;
   onTeleworkProfileConfig: (userId: string) => void;
   onTeleworkDetails: (userId: string, date: Date) => void;
+  onBulkTeleworkDeclaration: (userId: string, userDisplayName: string) => void;
 }
 
 const UserRow: React.FC<UserRowProps> = ({
@@ -609,6 +614,7 @@ const UserRow: React.FC<UserRowProps> = ({
   onTeleworkModeChange,
   onTeleworkProfileConfig,
   onTeleworkDetails,
+  onBulkTeleworkDeclaration,
 }) => {
   const getUtilizationColor = (rate: number) => {
     if (rate <= 60) return 'success';
@@ -617,10 +623,25 @@ const UserRow: React.FC<UserRowProps> = ({
     return 'error';
   };
 
+  // Calculer le nombre max de tâches projet sur toute la semaine pour cet utilisateur
+  const maxProjectTasksCount = weekDays.reduce((max, date) => {
+    const dayItems = workloadDay.items.filter(item => isSameDay(item.startTime, date));
+    const projectTasks = dayItems.filter(item => item.type === 'task');
+    return Math.max(max, projectTasks.length);
+  }, 0);
+
+  // Hauteur de la zone projet : basée sur le max + 1 slot pour le drop zone
+  // Chaque tâche = 40px (height) + 4px (spacing) = 44px
+  const projectZoneHeight = (maxProjectTasksCount + 1) * 44;
+
   const renderDayColumn = (date: Date) => {
     const dayItems = workloadDay.items.filter(item =>
       isSameDay(item.startTime, date)
     );
+
+    // Séparer les tâches projet des tâches simples
+    const projectTasks = dayItems.filter(item => item.type === 'task');
+    const simpleTasks = dayItems.filter(item => item.type === 'simple_task');
 
     // Vérifier si l'utilisateur est en télétravail ce jour avec le nouveau système unifié
     const year = date.getFullYear();
@@ -631,42 +652,50 @@ const UserRow: React.FC<UserRowProps> = ({
     const teleworkResolution = teleworkSystem.getResolutionForDay(workloadDay.userId, date);
     const isRemoteDay = teleworkResolution?.resolvedMode === 'remote' || false;
 
-    // Logique dynamique: 1 slot minimum + 1 slot par tâche existante
-    const minSlots = 1;
-    const totalSlots = Math.max(minSlots, dayItems.length + 1);
+    // Créer un slot de drop pour la zone projet
+    const createProjectDropZone = () => (
+      <TaskSlot
+        key={`${date.toISOString()}-project-drop`}
+        userId={workloadDay.userId}
+        date={date}
+        slotIndex={-1}
+        item={undefined}
+        isEmpty={true}
+        taskZone="project"
+        onDrop={onItemDrop}
+        onCreateTask={onCreateTask}
+        onItemClick={onItemClick}
+      />
+    );
 
-    const taskSlots = Array.from({ length: totalSlots }, (_, slotIndex) => {
-      const item = dayItems[slotIndex] || undefined;
-      const isEmpty = !item && slotIndex >= dayItems.length;
-
-      return (
-        <TaskSlot
-          key={`${date.toISOString()}-slot-${slotIndex}`}
-          userId={workloadDay.userId}
-          date={date}
-          slotIndex={slotIndex}
-          item={item}
-          isEmpty={isEmpty}
-          onDrop={onItemDrop}
-          onCreateTask={onCreateTask}
-          onItemClick={onItemClick}
-        />
-      );
-    });
+    // Créer un slot de drop pour la zone simple
+    const createSimpleDropZone = () => (
+      <TaskSlot
+        key={`${date.toISOString()}-simple-drop`}
+        userId={workloadDay.userId}
+        date={date}
+        slotIndex={-1}
+        item={undefined}
+        isEmpty={true}
+        taskZone="simple"
+        onDrop={onItemDrop}
+        onCreateTask={onCreateTask}
+        onItemClick={onItemClick}
+      />
+    );
 
     return (
       <Box key={date.toISOString()} sx={{
-        width: 160, // Largeur fixe pour homogénéité
+        flex: 1,
         minWidth: 160,
-        maxWidth: 160,
         p: 0.5,
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: isRemoteDay ? 'rgba(156, 39, 176, 0.05)' : 'transparent', // Violet pour télétravail
+        bgcolor: isRemoteDay ? 'rgba(156, 39, 176, 0.05)' : 'transparent',
         borderRadius: 1,
         position: 'relative'
       }}>
-        {/* Indicateur télétravail en haut de la colonne */}
+        {/* Indicateur télétravail */}
         {isRemoteDay && (
           <Box
             sx={{
@@ -690,10 +719,68 @@ const UserRow: React.FC<UserRowProps> = ({
           </Box>
         )}
 
-        {/* Slots dynamiques de tâches */}
-        <Stack spacing={0.5}>
-          {taskSlots}
-        </Stack>
+        {/* ZONE PROJETS - Hauteur fixe homogène sur toute la semaine */}
+        <Box sx={{
+          height: projectZoneHeight,
+          minHeight: projectZoneHeight,
+          bgcolor: 'rgba(33, 150, 243, 0.04)', // Bleu très léger
+          borderRadius: 1,
+          p: 0.5,
+          mb: 0.5
+        }}>
+          {/* Tâches projet */}
+          <Stack spacing={0.5}>
+            {projectTasks.map((item, index) => (
+              <TaskSlot
+                key={`${date.toISOString()}-project-${index}`}
+                userId={workloadDay.userId}
+                date={date}
+                slotIndex={index}
+                item={item}
+                isEmpty={false}
+                taskZone="project"
+                onDrop={onItemDrop}
+                onCreateTask={onCreateTask}
+                onItemClick={onItemClick}
+              />
+            ))}
+            {createProjectDropZone()}
+          </Stack>
+        </Box>
+
+        {/* SÉPARATEUR */}
+        <Box
+          sx={{
+            borderTop: '1px dashed',
+            borderColor: 'divider',
+            opacity: 0.3,
+            my: 0.5
+          }}
+        />
+
+        {/* ZONE TÂCHES SIMPLES - Hauteur dynamique */}
+        <Box sx={{
+          p: 0.5
+        }}>
+          {/* Tâches simples */}
+          <Stack spacing={0.5}>
+            {simpleTasks.map((item, index) => (
+              <TaskSlot
+                key={`${date.toISOString()}-simple-${index}`}
+                userId={workloadDay.userId}
+                date={date}
+                slotIndex={index}
+                item={item}
+                isEmpty={false}
+                taskZone="simple"
+                onDrop={onItemDrop}
+                onCreateTask={onCreateTask}
+                onItemClick={onItemClick}
+              />
+            ))}
+            {createSimpleDropZone()}
+          </Stack>
+        </Box>
       </Box>
     );
   };
@@ -735,7 +822,7 @@ const UserRow: React.FC<UserRowProps> = ({
             </Stack>
 
             {/* Boutons télétravail avec le nouveau système */}
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap">
               {weekDays.map((day) => {
                 const resolution = teleworkSystem.getResolutionForDay(workloadDay.userId, day);
 
@@ -766,29 +853,49 @@ const UserRow: React.FC<UserRowProps> = ({
                   />
                 );
               })}
-            </Box>
+
+              {/* Bouton déclaration bulk */}
+              <IconButton
+                size="small"
+                onClick={() => onBulkTeleworkDeclaration(
+                  workloadDay.userId,
+                  getUserDisplayName(workloadDay.user)
+                )}
+                sx={{
+                  bgcolor: 'primary.light',
+                  color: 'primary.main',
+                  '&:hover': {
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                  },
+                  ml: 0.5,
+                }}
+                title="Planifier plusieurs jours"
+              >
+                <CalendarMonthIcon fontSize="small" />
+              </IconButton>
+            </Stack>
           </Box>
 
           {/* Zone des jours - s'adapte au reste */}
-          <Box sx={{ 
+          <Box sx={{
             flex: 1,
             minWidth: 0,
             overflowX: 'auto'
           }}>
-            <Stack direction="row" spacing={0.5}>
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
               {weekDays.map((day) => {
                   // Récupérer le contrat de cet utilisateur spécifique
                   const userContract = userContracts.get(workloadDay.userId) || null;
-                  
+
                   // Si l'utilisateur ne travaille pas ce jour, ne pas afficher la colonne
                   if (!isWorkingDay(day, userContract)) {
                     return (
-                      <Box 
+                      <Box
                         key={day.toISOString()}
-                        sx={{ 
-                          width: 160, 
-                          minWidth: 160, 
-                          maxWidth: 160,
+                        sx={{
+                          flex: 1,
+                          minWidth: 160,
                           p: 0.5,
                           display: 'flex',
                           alignItems: 'center',
@@ -804,10 +911,10 @@ const UserRow: React.FC<UserRowProps> = ({
                       </Box>
                     );
                   }
-                  
+
                   return renderDayColumn(day);
                 })}
-            </Stack>
+            </Box>
           </Box>
         </Box>
       </CardContent>
@@ -823,6 +930,7 @@ const UserRow: React.FC<UserRowProps> = ({
 interface PlanningCalendarProps {
   selectedProjects?: string[];
   selectedUsers?: string[];
+  selectedServices?: string[];
   onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
 }
 
@@ -839,6 +947,7 @@ const getUserDisplayName = (user: User): string => {
 const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
   selectedProjects = [],
   selectedUsers = [],
+  selectedServices = [],
   onTaskUpdate,
 }) => {
   // États principaux
@@ -853,7 +962,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
   const [departments, setDepartments] = useState<Department[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [rawWorkloadDays, setRawWorkloadDays] = useState<UserWorkloadDay[]>([]);
-  const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
+  const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set(['encadrement']));
   const [userContracts, setUserContracts] = useState<Map<string, WorkContract | null>>(new Map());
 
   // Calcul des dates du calendrier pour le hook télétravail
@@ -879,12 +988,22 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
 
   // Calculer la plage étendue pour le calendrier télétravail (période visible + marge)
   const teleworkDateRange = useMemo(() => {
-    const start = new Date(weekDays[0] || currentDate);
-    start.setDate(start.getDate() - 15); // 15 jours avant
-    const end = new Date(weekDays[weekDays.length - 1] || currentDate);
-    end.setDate(end.getDate() + 15); // 15 jours après
-    return { start, end };
-  }, [weekDays, currentDate]);
+    if (viewMode === 'month') {
+      // Vue mois : charger tout le mois + marge
+      const start = new Date(monthDays[0] || currentDate);
+      start.setDate(start.getDate() - 15); // 15 jours avant
+      const end = new Date(monthDays[monthDays.length - 1] || currentDate);
+      end.setDate(end.getDate() + 15); // 15 jours après
+      return { start, end };
+    } else {
+      // Vue semaine : charger la semaine + marge
+      const start = new Date(weekDays[0] || currentDate);
+      start.setDate(start.getDate() - 15); // 15 jours avant
+      const end = new Date(weekDays[weekDays.length - 1] || currentDate);
+      end.setDate(end.getDate() + 15); // 15 jours après
+      return { start, end };
+    }
+  }, [viewMode, weekDays, monthDays, currentDate]);
 
   // UserIds stable pour éviter les re-renders infinis
   const userIds = useMemo(() => users.map(u => u.id), [users]);
@@ -909,13 +1028,27 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
   const [draggedItem, setDraggedItem] = useState<CalendarItem | null>(null);
   
-  // États TaskModal
+  // États TaskModal (tâches projet)
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskModalData, setTaskModalData] = useState<{
     userId?: string;
     date?: Date;
     projectId?: string;
     task?: Task | null;
+  }>({});
+
+  // États SimpleTaskModal (tâches simples)
+  const [simpleTaskModalOpen, setSimpleTaskModalOpen] = useState(false);
+  const [simpleTaskModalData, setSimpleTaskModalData] = useState<{
+    userId?: string;
+    date?: Date;
+  }>({});
+
+  // États TeleworkBulkDeclarationModal
+  const [bulkTeleworkModalOpen, setBulkTeleworkModalOpen] = useState(false);
+  const [bulkTeleworkModalData, setBulkTeleworkModalData] = useState<{
+    userId?: string;
+    userDisplayName?: string;
   }>({});
 
   // Helper pour obtenir le nom du département par son ID
@@ -1003,9 +1136,35 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
       ]);
 
       // Filtrer selon les sélections et exclure les admins
-      const filteredUsers = selectedUsers.length > 0
+      let filteredUsers = selectedUsers.length > 0
         ? allUsers.filter(u => selectedUsers.includes(u.id) && u.role !== 'admin')
         : allUsers.filter(u => u.isActive && u.role !== 'admin');
+
+      // Filtrage par services
+      if (selectedServices.length > 0) {
+        filteredUsers = filteredUsers.filter(user => {
+          // Si "Encadrement" est sélectionné et l'utilisateur est manager/responsable
+          if (selectedServices.includes('encadrement') &&
+              (user.role === 'manager' || user.role === 'responsable')) {
+            return true;
+          }
+
+          // Support du nouveau champ serviceIds (array)
+          if (user.serviceIds && user.serviceIds.length > 0) {
+            const hasMatchingService = user.serviceIds.some(sId => selectedServices.includes(sId));
+            if (hasMatchingService) {
+              return true;
+            }
+          }
+
+          // Fallback sur l'ancien champ serviceId (déprécié)
+          if (user.serviceId && selectedServices.includes(user.serviceId)) {
+            return true;
+          }
+
+          return false;
+        });
+      }
 
       // Debug info cleaned up
 
@@ -1223,16 +1382,6 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                     estimatedHours: task.estimatedHours,
                     daysRemaining: differenceInDays(taskEnd, new Date()),
                   });
-
-                  // DEBUG: Log pour vérifier les horaires
-                  if (isSimpleTask) {
-                    console.log('🔍 CalendarItem créé:', {
-                      title: task.title,
-                      startTimeString: task.startTime,
-                      endTimeString: task.endTime,
-                      type: 'simple_task'
-                    });
-                  }
                 }
               }
           });
@@ -1300,7 +1449,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [currentDate, currentPeriod, selectedProjects, selectedUsers, viewMode]);
+  }, [currentDate, currentPeriod, selectedProjects, selectedUsers, selectedServices, viewMode]);
 
 
 
@@ -1459,19 +1608,28 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
     handleItemMove(item.id, newStartTime, newEndTime, userId);
   }, [handleItemMove]);
 
-  const handleCreateTask = useCallback((userId: string, date: Date) => {
-    // Si des projets sont sélectionnés, prendre le premier, sinon laisser vide (non affecté)
-    const defaultProject = selectedProjects.length > 0 
-      ? projects.find(p => selectedProjects.includes(p.id))
-      : null;
-    
-    setTaskModalData({
-      userId,
-      date,
-      projectId: defaultProject?.id || '', // Vide = non affecté
-      task: null,
-    });
-    setTaskModalOpen(true);
+  const handleCreateTask = useCallback((userId: string, date: Date, taskZone?: 'project' | 'simple') => {
+    if (taskZone === 'simple') {
+      // Ouvrir la modal de tâche simple
+      setSimpleTaskModalData({
+        userId,
+        date,
+      });
+      setSimpleTaskModalOpen(true);
+    } else {
+      // Ouvrir la modal de tâche projet
+      const defaultProject = selectedProjects.length > 0
+        ? projects.find(p => selectedProjects.includes(p.id))
+        : null;
+
+      setTaskModalData({
+        userId,
+        date,
+        projectId: defaultProject?.id || '',
+        task: null,
+      });
+      setTaskModalOpen(true);
+    }
   }, [projects, selectedProjects]);
 
   const handleTaskSave = useCallback(async (task: Task) => {
@@ -1530,6 +1688,17 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
     teleworkSystem.openStatsModal(userId);
   }, [teleworkSystem]);
 
+  const handleBulkTeleworkDeclaration = useCallback((userId: string, userDisplayName: string) => {
+    setBulkTeleworkModalData({ userId, userDisplayName });
+    setBulkTeleworkModalOpen(true);
+  }, []);
+
+  const handleBulkTeleworkSave = useCallback(async () => {
+    // Rafraîchir les données télétravail
+    await teleworkSystem.refreshData();
+    setBulkTeleworkModalOpen(false);
+  }, [teleworkSystem]);
+
   const handleTaskDelete = useCallback(async (taskId: string) => {
     const taskToDelete = selectedItem || workloadDays.flatMap(w => w.items).find(item => item.id === taskId);
 
@@ -1550,10 +1719,8 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
     try {
       // Utiliser le bon service selon le type de tâche
       if (taskToDelete.type === 'simple_task') {
-        console.log('🗑️ Suppression tâche simple:', originalTaskId);
         await simpleTaskService.delete(originalTaskId);
       } else {
-        console.log('🗑️ Suppression tâche projet:', originalTaskId);
         await taskService.deleteTask(originalTaskId);
       }
 
@@ -1583,16 +1750,13 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
 
       if (isSimpleTask) {
         // Pour les tâches simples, utiliser simpleTaskService
-        console.log('Chargement tâche simple:', taskId);
         task = await simpleTaskService.getById(taskId);
       } else {
         // Pour les tâches de projet, utiliser taskService
-        console.log('Chargement tâche projet:', taskId);
         task = await taskService.getTask(taskId);
       }
 
       if (task) {
-        console.log('Tâche chargée avec succès:', task);
 
         // Convertir SimpleTask en Task si nécessaire
         let taskForModal = task;
@@ -1711,7 +1875,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
     <DndProvider backend={HTML5Backend}>
       <Box>
         {/* Header avec navigation et stats */}
-        <Card sx={{ mb: 2 }}>
+        <Card sx={{ mb: 1 }}>
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="h4">
@@ -1803,27 +1967,26 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                 </Box>
                 
                 {/* Zone des jours - même structure que les lignes */}
-                <Box sx={{ 
+                <Box sx={{
                   flex: 1,
                   minWidth: 0,
-                  overflowX: 'auto'
+                  pb: 1
                 }}>
-                  <Stack direction="row" spacing={0.5}>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
                     {weekDays.map((day) => (
-                      <Box 
-                        key={day.toISOString()} 
-                        sx={{ 
-                          width: 160,
+                      <Box
+                        key={day.toISOString()}
+                        sx={{
+                          flex: 1,
                           minWidth: 160,
-                          maxWidth: 160,
                           textAlign: 'center',
                           p: 0.5,
                           borderRadius: 1,
                           backgroundColor: isToday(day) ? 'primary.light' : 'transparent'
                         }}
                       >
-                        <Typography 
-                          variant="body2" 
+                        <Typography
+                          variant="body2"
                           fontWeight="bold"
                           color={isToday(day) ? 'primary.main' : 'text.primary'}
                           sx={{ fontSize: '0.8rem' }}
@@ -1837,7 +2000,64 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                         )}
                       </Box>
                     ))}
-                  </Stack>
+                  </Box>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* En-têtes des colonnes jours du mois - sticky */}
+        {viewMode === 'month' && (
+          <Card sx={{
+            mb: 1,
+            position: 'sticky',
+            top: 64,
+            zIndex: 1000,
+            backgroundColor: 'background.paper',
+            boxShadow: 2
+          }}>
+            <CardContent sx={{ p: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                {/* Colonne utilisateur (220px fixe) - EXACTEMENT comme les lignes */}
+                <Box sx={{ width: 220, minWidth: 220, maxWidth: 220, flexShrink: 0, mr: 1 }}>
+                  <Typography variant="body2" fontWeight="bold" color="text.secondary">
+                    Ressources
+                  </Typography>
+                </Box>
+
+                {/* Zone timeline */}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', gap: 0 }}>
+                    {monthDays.map((day) => {
+                      const dayOfWeek = day.getDay();
+                      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+                      return (
+                        <Box
+                          key={day.toISOString()}
+                          sx={{
+                            flex: 1,
+                            minWidth: 44,
+                            borderRight: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: isWeekend ? 'grey.100' : 'transparent',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <Typography variant="caption" fontWeight="bold" color={isWeekend ? 'text.disabled' : 'text.primary'}>
+                            {format(day, 'dd')}
+                          </Typography>
+                          <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                            {format(day, 'EEE', { locale: fr }).substring(0, 1)}
+                          </Typography>
+                        </Box>
+                      );
+                    })}
+                  </Box>
                 </Box>
               </Box>
             </CardContent>
@@ -1920,6 +2140,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                               onTeleworkModeChange={handleTeleworkModeChange}
                               onTeleworkProfileConfig={handleTeleworkProfileConfig}
                               onTeleworkDetails={handleTeleworkDetails}
+                              onBulkTeleworkDeclaration={handleBulkTeleworkDeclaration}
                             />
                           ))}
                         </Stack>
@@ -2001,6 +2222,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                             onTeleworkModeChange={handleTeleworkModeChange}
                             onTeleworkProfileConfig={handleTeleworkProfileConfig}
                             onTeleworkDetails={handleTeleworkDetails}
+                            onBulkTeleworkDeclaration={handleBulkTeleworkDeclaration}
                           />
                         ))}
                       </Stack>
@@ -2127,7 +2349,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
           </DialogActions>
         </Dialog>
 
-        {/* TaskModal pour créer/éditer des tâches */}
+        {/* TaskModal pour créer/éditer des tâches projet */}
         <TaskModal
           open={taskModalOpen}
           onClose={() => {
@@ -2139,6 +2361,29 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
           dueDate={taskModalData.date}
           onSave={handleTaskSave}
           onDelete={handleTaskDelete}
+        />
+
+        {/* SimpleTaskModal pour créer des tâches simples */}
+        <SimpleTaskModal
+          open={simpleTaskModalOpen}
+          onClose={() => {
+            setSimpleTaskModalOpen(false);
+            setSimpleTaskModalData({});
+          }}
+          onCreate={async (taskInput, userIds) => {
+            // Créer la tâche simple pour le/les utilisateur(s)
+            if (userIds.length === 1) {
+              await simpleTaskService.create(taskInput, userIds[0], auth.currentUser?.uid || '');
+            } else {
+              await simpleTaskService.createMultiple(taskInput, userIds, auth.currentUser?.uid || '');
+            }
+            // Fermer la modal et recharger via une mise à jour de la clé
+            setSimpleTaskModalOpen(false);
+            setSimpleTaskModalData({});
+            // Force re-render pour recharger les données
+            window.location.reload();
+          }}
+          currentUserId={simpleTaskModalData.userId || auth.currentUser?.uid || ''}
         />
 
         {/* Modal de configuration profil télétravail */}
@@ -2153,6 +2398,16 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
             }
             teleworkSystem.closeModal();
           }}
+        />
+
+        {/* Modal de déclaration bulk télétravail */}
+        <TeleworkBulkDeclarationModal
+          open={bulkTeleworkModalOpen}
+          userId={bulkTeleworkModalData.userId || ''}
+          userDisplayName={bulkTeleworkModalData.userDisplayName || ''}
+          currentUserProfile={null}
+          onClose={() => setBulkTeleworkModalOpen(false)}
+          onSave={handleBulkTeleworkSave}
         />
       </Box>
     </DndProvider>

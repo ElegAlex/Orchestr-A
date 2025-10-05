@@ -73,71 +73,9 @@ export const MonthView: React.FC<MonthViewProps> = ({
 }) => {
   return (
     <Box sx={{ overflowX: 'auto', width: '100%' }}>
-      {/* Conteneur avec largeur fixe pour le scroll horizontal */}
       <Box sx={{ minWidth: 220 + 44 * monthDays.length }}>
-        {/* En-têtes des colonnes jours du mois (STICKY) */}
-        <Card sx={{
-          mb: 1,
-          position: 'sticky',
-          top: 64,
-          zIndex: 1000,
-          backgroundColor: 'background.paper',
-          boxShadow: 2
-        }}>
-          <CardContent sx={{ p: 1 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {/* Zone utilisateur header - même largeur que les lignes */}
-              <Box sx={{
-                width: 220,
-                minWidth: 220,
-                maxWidth: 220,
-                flexShrink: 0,
-                borderRight: '1px solid',
-                borderColor: 'divider',
-                pr: 1
-              }}>
-                <Typography variant="body2" fontWeight="bold" color="text.secondary">
-                  Ressources
-                </Typography>
-              </Box>
-
-              {/* Zone timeline jours du mois */}
-              <Box sx={{ flex: 1, minWidth: 0, pb: 1 }}>
-              <Stack direction="row" spacing={0}>
-                {monthDays.map((day) => {
-                  const dayOfWeek = day.getDay();
-                  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-                  return (
-                    <Box
-                      key={day.toISOString()}
-                      sx={{
-                        width: 44,
-                        minWidth: 44,
-                        maxWidth: 44,
-                        textAlign: 'center',
-                        borderRight: '1px solid',
-                        borderColor: 'divider',
-                        bgcolor: isWeekend ? 'grey.100' : 'transparent'
-                      }}
-                    >
-                      <Typography variant="caption" fontWeight="bold" color={isWeekend ? 'text.disabled' : 'text.primary'}>
-                        {format(day, 'dd')}
-                      </Typography>
-                      <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                        {format(day, 'EEE', { locale: require('date-fns/locale/fr').fr }).substring(0, 1)}
-                      </Typography>
-                    </Box>
-                  );
-                })}
-              </Stack>
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Corps - Planning groupé par service */}
-      <Stack spacing={1}>
+        {/* Corps - Planning groupé par service */}
+        <Stack spacing={1}>
         {Array.from(workloadDaysByService.entries()).map(([serviceId, serviceWorkloadDays]) => {
           // Gestion spéciale pour "Encadrement"
           if (serviceId === 'encadrement') {
@@ -218,11 +156,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
                         const timelineHeight = Math.max(60, totalBars * 22 + 16);
 
                         return (
-                          <Card key={workloadDay.userId} sx={{ mb: 1 }}>
-                            <CardContent sx={{ p: 1 }}>
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Box key={workloadDay.userId} sx={{ mb: 1, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                            <Box sx={{ display: "flex", alignItems: "center" }}>
                                 {/* Colonne utilisateur (220px fixe) */}
-                                <Box sx={{ width: 220, minWidth: 220, maxWidth: 220, flexShrink: 0 }}>
+                                <Box sx={{ width: 220, minWidth: 220, maxWidth: 220, flexShrink: 0, mr: 1 }}>
                                   <Stack direction="row" alignItems="center" spacing={1}>
                                     <Avatar
                                       src={workloadDay.user.avatarUrl}
@@ -244,7 +181,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                 {/* Zone timeline */}
                                 <Box sx={{ flex: 1, minWidth: 0, position: 'relative', height: timelineHeight }}>
                                   {/* Grille de fond avec indicateurs télétravail */}
-                                  <Stack direction="row" spacing={0} sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                                  <Box sx={{ display: 'flex', gap: 0, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
                                     {monthDays.map((day) => {
                                       const dayOfWeek = day.getDay();
                                       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -255,9 +192,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                         <Box
                                           key={day.toISOString()}
                                           sx={{
-                                            width: 44,
+                                            flex: 1,
                                             minWidth: 44,
-                                            maxWidth: 44,
                                             borderRight: '1px solid',
                                             borderColor: 'divider',
                                             bgcolor: isWeekend ? 'grey.50' : 'transparent',
@@ -268,7 +204,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                         />
                                       );
                                     })}
-                                  </Stack>
+                                  </Box>
 
                                   {/* Barres continues pour tâches multi-jours */}
                                   {Array.from(taskBars.entries()).map(([taskId, items], barIndex) => {
@@ -283,17 +219,19 @@ export const MonthView: React.FC<MonthViewProps> = ({
 
                                     if (startDayIndex === -1 || endDayIndex === -1) return null;
 
-                                    const barWidth = (endDayIndex - startDayIndex + 1) * 44 - 4;
-                                    const barLeft = startDayIndex * 44 + 2;
+                                    const totalDays = monthDays.length;
+                                    const spanDays = endDayIndex - startDayIndex + 1;
+                                    const widthPercent = (spanDays / totalDays) * 100;
+                                    const leftPercent = (startDayIndex / totalDays) * 100;
 
                                     return (
                                       <Box
                                         key={taskId}
                                         sx={{
                                           position: 'absolute',
-                                          left: `${barLeft}px`,
+                                          left: `calc(${leftPercent}% + 2px)`,
                                           top: `${barIndex * 22 + 8}px`,
-                                          width: `${barWidth}px`,
+                                          width: `calc(${widthPercent}% - 4px)`,
                                           height: 18,
                                           bgcolor: firstItem.color,
                                           borderRadius: 1,
@@ -336,10 +274,11 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                     if (dayIndex === -1) return null;
 
                                     const barOffset = taskBars.size;
+                                    const totalDays = monthDays.length;
+                                    const widthPercent = (1 / totalDays) * 100;
+                                    const leftPercent = (dayIndex / totalDays) * 100;
 
                                     return items.map((item, idx) => {
-                                      const barLeft = dayIndex * 44 + 2;
-                                      const barWidth = 44 - 4;
                                       const barTop = (barOffset + idx) * 22 + 8;
 
                                       return (
@@ -347,9 +286,9 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                           key={item.id}
                                           sx={{
                                             position: 'absolute',
-                                            left: `${barLeft}px`,
+                                            left: `calc(${leftPercent}% + 2px)`,
                                             top: `${barTop}px`,
-                                            width: `${barWidth}px`,
+                                            width: `calc(${widthPercent}% - 4px)`,
                                             height: 18,
                                             bgcolor: item.color,
                                             borderRadius: 1,
@@ -385,8 +324,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                   })}
                                 </Box>
                               </Box>
-                            </CardContent>
-                          </Card>
+                          </Box>
                         );
                       })}
                     </Stack>
@@ -469,11 +407,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       const timelineHeight = Math.max(60, totalBars * 22 + 16);
 
                       return (
-                        <Card key={workloadDay.userId} sx={{ mb: 1 }}>
-                          <CardContent sx={{ p: 1 }}>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Box key={workloadDay.userId} sx={{ mb: 1, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                          <Box sx={{ display: "flex", alignItems: "center" }}>
                               {/* Colonne utilisateur (220px fixe) */}
-                              <Box sx={{ width: 220, minWidth: 220, maxWidth: 220, flexShrink: 0 }}>
+                              <Box sx={{ width: 220, minWidth: 220, maxWidth: 220, flexShrink: 0, mr: 1 }}>
                                 <Stack direction="row" alignItems="center" spacing={1}>
                                   <Avatar
                                     src={workloadDay.user.avatarUrl}
@@ -495,7 +432,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                               {/* Zone timeline */}
                               <Box sx={{ flex: 1, minWidth: 0, position: 'relative', height: timelineHeight }}>
                                 {/* Grille de fond avec indicateurs télétravail */}
-                                <Stack direction="row" spacing={0} sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                                <Box sx={{ display: 'flex', gap: 0, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
                                   {monthDays.map((day) => {
                                     const dayOfWeek = day.getDay();
                                     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -506,9 +443,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                       <Box
                                         key={day.toISOString()}
                                         sx={{
-                                          width: 44,
+                                          flex: 1,
                                           minWidth: 44,
-                                          maxWidth: 44,
                                           borderRight: '1px solid',
                                           borderColor: 'divider',
                                           bgcolor: isWeekend ? 'grey.50' : 'transparent',
@@ -519,7 +455,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                       />
                                     );
                                   })}
-                                </Stack>
+                                </Box>
 
                                 {/* Barres continues pour tâches multi-jours */}
                                 {Array.from(taskBars.entries()).map(([taskId, items], barIndex) => {
@@ -534,17 +470,19 @@ export const MonthView: React.FC<MonthViewProps> = ({
 
                                   if (startDayIndex === -1 || endDayIndex === -1) return null;
 
-                                  const barWidth = (endDayIndex - startDayIndex + 1) * 44 - 4;
-                                  const barLeft = startDayIndex * 44 + 2;
+                                  const totalDays = monthDays.length;
+                                  const spanDays = endDayIndex - startDayIndex + 1;
+                                  const widthPercent = (spanDays / totalDays) * 100;
+                                  const leftPercent = (startDayIndex / totalDays) * 100;
 
                                   return (
                                     <Box
                                       key={taskId}
                                       sx={{
                                         position: 'absolute',
-                                        left: `${barLeft}px`,
+                                        left: `calc(${leftPercent}% + 2px)`,
                                         top: `${barIndex * 22 + 8}px`,
-                                        width: `${barWidth}px`,
+                                        width: `calc(${widthPercent}% - 4px)`,
                                         height: 18,
                                         bgcolor: firstItem.color,
                                         borderRadius: 1,
@@ -587,10 +525,11 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                   if (dayIndex === -1) return null;
 
                                   const barOffset = taskBars.size;
+                                  const totalDays = monthDays.length;
+                                  const widthPercent = (1 / totalDays) * 100;
+                                  const leftPercent = (dayIndex / totalDays) * 100;
 
                                   return items.map((item, idx) => {
-                                    const barLeft = dayIndex * 44 + 2;
-                                    const barWidth = 44 - 4;
                                     const barTop = (barOffset + idx) * 22 + 8;
 
                                     return (
@@ -598,9 +537,9 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                         key={item.id}
                                         sx={{
                                           position: 'absolute',
-                                          left: `${barLeft}px`,
+                                          left: `calc(${leftPercent}% + 2px)`,
                                           top: `${barTop}px`,
-                                          width: `${barWidth}px`,
+                                          width: `calc(${widthPercent}% - 4px)`,
                                           height: 18,
                                           bgcolor: item.color,
                                           borderRadius: 1,
@@ -636,8 +575,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                 })}
                               </Box>
                             </Box>
-                          </CardContent>
-                        </Card>
+                        </Box>
                       );
                     })}
                   </Stack>
@@ -646,7 +584,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
             </Box>
           );
         })}
-      </Stack>
+        </Stack>
       </Box>
     </Box>
   );

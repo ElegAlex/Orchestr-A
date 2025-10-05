@@ -16,6 +16,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Checkbox,
+  ListItemText,
 } from '@mui/material';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import {
@@ -43,10 +45,12 @@ import {
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Task, Project, User } from '../types';
+import { Service } from '../types/service';
 import { taskService } from '../services/task.service';
 import { projectService } from '../services/project.service';
 import { userService } from '../services/user.service';
 import { simpleTaskService } from '../services/simpleTask.service';
+import { ServiceService } from '../services/service.service';
 import { SimpleTaskModal } from '../components/calendar/SimpleTaskModal';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
@@ -93,9 +97,11 @@ const Calendar: React.FC = () => {
   });
   
   const [projects, setProjects] = useState<Project[]>([]);
-  
+  const [services, setServices] = useState<Service[]>([]);
+
   // États pour le mode Planning
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
   // ✅ États pour les tâches simples
   const [simpleTaskModalOpen, setSimpleTaskModalOpen] = useState(false);
@@ -151,19 +157,16 @@ const Calendar: React.FC = () => {
       const threeMonthsAhead = addMonths(now, 2);
       
       // ✅ Calendar général : récupérer TOUTES les tâches (projet + simples)
-      const [projectTasks, simpleTasks, projectsData] = await Promise.all([
+      const serviceService = new ServiceService();
+      const [projectTasks, simpleTasks, projectsData, servicesData] = await Promise.all([
         taskService.getTasks(), // Tâches de projet
         simpleTaskService.getAll(), // Toutes les tâches simples
         projectService.getActiveProjects(),
+        serviceService.getAllServices(), // Services
       ]);
 
-      console.log('📋 Tâches simples chargées:', simpleTasks.length);
-      if (simpleTasks[0]) {
-        console.log('📋 Exemple tâche simple:', simpleTasks[0]);
-        console.log('📋 Horaires:', simpleTasks[0].timeSlot);
-      }
-
       setProjects(projectsData);
+      setServices(servicesData);
 
       // Convertir SimpleTasks en format Task pour compatibilité
       const simpleTasksAsTaskFormat: Task[] = simpleTasks.map(st => ({
@@ -242,10 +245,6 @@ const Calendar: React.FC = () => {
               startTime: task.startTime,
               endTime: task.endTime,
             };
-
-            if (task.startTime) {
-              console.log('🕐 Événement créé avec horaires:', newEvent.title, newEvent.startTime, newEvent.endTime);
-            }
 
             taskEvents.push(newEvent);
           });
@@ -462,8 +461,7 @@ const Calendar: React.FC = () => {
                       </Typography>
                       {(() => {
                         if (event.startTime && event.endTime) {
-                          console.log('✅ AFFICHAGE horaires pour:', event.title, event.startTime, event.endTime);
-                          return (
+                            return (
                             <Typography
                               variant="caption"
                               sx={{
@@ -477,7 +475,6 @@ const Calendar: React.FC = () => {
                             </Typography>
                           );
                         }
-                        console.log('❌ PAS d\'horaires pour:', event.title, 'startTime:', event.startTime, 'endTime:', event.endTime);
                         return null;
                       })()}
                     </Box>
@@ -562,16 +559,13 @@ const Calendar: React.FC = () => {
                             )}
                           </Box>
                           {(() => {
-                            console.log('🔍 VUE SEMAINE - Event:', event.title, 'startTime:', event.startTime, 'endTime:', event.endTime);
                             if (event.startTime && event.endTime) {
-                              console.log('✅ SEMAINE - Affichage horaires');
-                              return (
+                                return (
                                 <Typography variant="caption" sx={{ display: 'block', color: '#667eea', fontWeight: 'bold', fontSize: '0.7rem' }}>
                                   🕐 {event.startTime} - {event.endTime}
                                 </Typography>
                               );
                             }
-                            console.log('❌ SEMAINE - Pas d\'horaires');
                             return null;
                           })()}
                           <Stack direction="row" spacing={0.5}>
@@ -869,12 +863,41 @@ const Calendar: React.FC = () => {
                 </Select>
               </FormControl>
 
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel>Services sélectionnés</InputLabel>
+                <Select
+                  multiple
+                  value={selectedServices}
+                  onChange={(e) => setSelectedServices(e.target.value as string[])}
+                  label="Services sélectionnés"
+                  renderValue={(selected) =>
+                    selected.length === 0 ? 'Tous les services' : `${selected.length} service(s)`
+                  }
+                >
+                  {/* Option spéciale "Encadrement" */}
+                  <MenuItem key="encadrement" value="encadrement">
+                    <Checkbox checked={selectedServices.includes('encadrement')} />
+                    <ListItemText
+                      primary="Encadrement"
+                      primaryTypographyProps={{ fontWeight: 600, color: 'primary.main' }}
+                    />
+                  </MenuItem>
+                  {/* Services réguliers */}
+                  {services.map((service) => (
+                    <MenuItem key={service.id} value={service.id}>
+                      <Checkbox checked={selectedServices.includes(service.id)} />
+                      <ListItemText primary={service.name} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
               <Button
                 variant="outlined"
                 size="small"
                 onClick={() => {
                   setSelectedProjects([]);
+                  setSelectedServices([]);
                   setFilters({
                     eventType: 'all',
                     project: 'all',
@@ -901,6 +924,7 @@ const Calendar: React.FC = () => {
           <PlanningCalendar
             selectedProjects={selectedProjects}
             selectedUsers={[]} // ✅ Calendar général : pas de filtre utilisateur
+            selectedServices={selectedServices}
             onTaskUpdate={handleTaskUpdate}
           />
         </Suspense>
