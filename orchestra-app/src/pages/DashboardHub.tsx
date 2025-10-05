@@ -36,6 +36,7 @@ import { RootState } from '../store';
 import { useSimulatedUser } from '../hooks/useSimulatedPermissions';
 import MyPlanning from '../components/dashboard/MyPlanning';
 import { QuickTimeEntryWidget } from '../components/dashboard/QuickTimeEntryWidget';
+import PersonalTodoWidget from '../components/dashboard/PersonalTodoWidget';
 import { taskService } from '../services/task.service';
 import { projectService } from '../services/project.service';
 import { simulatedDashboardHubService } from '../services/simulated-dashboard-hub.service';
@@ -703,7 +704,12 @@ export const DashboardHub: React.FC = () => {
         </Card>
       </Box>
 
-      {/* 3. Quick Time Entry Widget - En dernier */}
+      {/* 3. Ma To-Do */}
+      <Box mb={4}>
+        <PersonalTodoWidget />
+      </Box>
+
+      {/* 4. Quick Time Entry Widget - En dernier */}
       <Box mb={3}>
         <QuickTimeEntryWidget onTimeLogged={loadPersonalDashboardData} />
       </Box>

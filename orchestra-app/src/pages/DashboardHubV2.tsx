@@ -36,6 +36,7 @@ import { useSimulatedUser } from '../hooks/useSimulatedPermissions';
 import MyPlanning from '../components/dashboard/MyPlanning';
 import MyProjectsWidget from '../components/dashboard/MyProjectsWidget';
 import MyTasksWidget from '../components/dashboard/MyTasksWidget';
+import PersonalTodoWidget from '../components/dashboard/PersonalTodoWidget';
 import { dashboardHubV2Service, DashboardHubData } from '../services/dashboard-hub-v2.service';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -199,24 +200,17 @@ export const DashboardHubV2: React.FC = () => {
         </Alert>
       )}
 
-      {/* Alerte tâches en retard */}
-      {dashboardData.metrics.tasksOverdue > 0 && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          <Typography variant="subtitle2">
-            ⚠️ Attention : Vous avez {dashboardData.metrics.tasksOverdue} tâche{dashboardData.metrics.tasksOverdue > 1 ? 's' : ''} en retard
-          </Typography>
-          <Typography variant="body2">
-            Consultez la section "Mes Tâches" ci-dessous pour les traiter en priorité
-          </Typography>
-        </Alert>
-      )}
-
       {/* 1. PLANNING HEBDOMADAIRE (60% - Composant principal) */}
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ p: 0 }}>
           <MyPlanning />
         </CardContent>
       </Card>
+
+      {/* Ma To-Do */}
+      <Box sx={{ mb: 3 }}>
+        <PersonalTodoWidget />
+      </Box>
 
       {/* 2 & 3. WIDGETS LATÉRAUX : Mes Projets + Mes Tâches */}
       <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
