@@ -213,10 +213,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                             borderRight: '1px solid',
                                             borderColor: 'divider',
                                             bgcolor: isWeekend ? 'grey.50' : 'transparent',
-                                            border: hasLeaves
-                                              ? '2px solid rgba(76, 175, 80, 0.3)'
-                                              : isRemoteDay ? '2px solid #ff9800' : undefined,
-                                            borderRadius: hasLeaves || isRemoteDay ? 1 : 0,
+                                            borderLeft: isRemoteDay ? '2px solid #ff9800' : undefined,
+                                            borderTop: isRemoteDay ? '2px solid #ff9800' : undefined,
+                                            borderBottom: isRemoteDay ? '2px solid #ff9800' : undefined,
+                                            borderRadius: isRemoteDay ? 1 : 0,
                                             boxSizing: 'border-box'
                                           }}
                                         />
@@ -634,10 +634,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                           borderRight: '1px solid',
                                           borderColor: 'divider',
                                           bgcolor: isWeekend ? 'grey.50' : 'transparent',
-                                          border: hasLeaves
-                                            ? '2px solid rgba(76, 175, 80, 0.3)'
-                                            : isRemoteDay ? '2px solid #ff9800' : undefined,
-                                          borderRadius: hasLeaves || isRemoteDay ? 1 : 0,
+                                          borderLeft: isRemoteDay ? '2px solid #ff9800' : undefined,
+                                          borderTop: isRemoteDay ? '2px solid #ff9800' : undefined,
+                                          borderBottom: isRemoteDay ? '2px solid #ff9800' : undefined,
+                                          borderRadius: isRemoteDay ? 1 : 0,
                                           boxSizing: 'border-box'
                                         }}
                                       />

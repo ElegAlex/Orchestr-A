@@ -652,6 +652,16 @@ const Calendar: React.FC = () => {
                                         isLeave && event.halfDayType === 'morning' ? 'flex-start' :
                                         'stretch';
 
+                      if (isLeave) {
+                        console.log('[WEEK VIEW] Leave event:', {
+                          title: event.title,
+                          halfDayType: event.halfDayType,
+                          isHalfDay,
+                          widthPercent,
+                          alignSelf
+                        });
+                      }
+
                       const getLeaveIcon = () => {
                         if (!isLeave) return null;
                         if (event.halfDayType === 'morning') return '🌅';
