@@ -513,10 +513,28 @@ export const MonthView: React.FC<MonthViewProps> = ({
           const isExpanded = expandedServices.has(serviceId);
           const userCount = serviceWorkloadDays.length;
 
+          const serviceColor = service.color || '#1976d2';
+          // Convertir la couleur hex en RGB pour le gradient
+          const hexToRgb = (hex: string) => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+              r: parseInt(result[1], 16),
+              g: parseInt(result[2], 16),
+              b: parseInt(result[3], 16)
+            } : { r: 25, g: 118, b: 210 }; // Couleur par défaut
+          };
+          const rgb = hexToRgb(serviceColor);
+
           return (
             <Box key={serviceId}>
               {/* En-tête du service */}
-              <Card sx={{ mb: 0.5 }}>
+              <Card
+                sx={{
+                  mb: 0.5,
+                  background: `linear-gradient(90deg, rgba(${rgb.r},${rgb.g},${rgb.b},0.1) 0%, rgba(${rgb.r},${rgb.g},${rgb.b},0.05) 100%)`,
+                  border: `1px solid rgba(${rgb.r},${rgb.g},${rgb.b},0.2)`
+                }}
+              >
                 <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                   <Stack
                     direction="row"
@@ -530,7 +548,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                         width: 12,
                         height: 12,
                         borderRadius: '50%',
-                        bgcolor: service.color || '#1976d2'
+                        bgcolor: serviceColor
                       }}
                     />
                     <BusinessIcon sx={{ color: 'primary.main' }} />
