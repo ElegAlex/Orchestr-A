@@ -1,5 +1,5 @@
 // Orchestr'A Service Worker - PWA Offline-First
-const CACHE_NAME = 'orchestra-v7-week-view-planning-half-day-fix';
+const CACHE_NAME = 'orchestra-v8-week-overlays-half-day-fix';
 const CACHE_URLS = [
   '/',
   '/static/js/bundle.js',

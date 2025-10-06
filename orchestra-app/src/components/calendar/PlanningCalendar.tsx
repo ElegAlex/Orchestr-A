@@ -794,28 +794,35 @@ const UserRow: React.FC<UserRowProps> = ({
           position: 'relative'
         }}>
           {/* OVERLAY VERT pour masquer les tâches en cas de congé */}
-          {leaves.length > 0 && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                bgcolor: 'rgba(76, 175, 80, 0.7)', // Vert semi-transparent 70%
-                borderRadius: 1,
-                zIndex: 5,
-                pointerEvents: 'none', // Permet de cliquer à travers
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Typography sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem', opacity: 0.8 }}>
-                Absent
-              </Typography>
-            </Box>
-          )}
+          {leaves.length > 0 && leaves.map((leave, idx) => {
+            const isHalfDay = leave.halfDayType && leave.halfDayType !== 'full';
+            const widthPercent = isHalfDay ? '48%' : '100%';
+            const leftPosition = leave.halfDayType === 'afternoon' ? '52%' : '0';
+
+            return (
+              <Box
+                key={`overlay-project-${idx}`}
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: leftPosition,
+                  width: widthPercent,
+                  bottom: 0,
+                  bgcolor: 'rgba(76, 175, 80, 0.7)', // Vert semi-transparent 70%
+                  borderRadius: 1,
+                  zIndex: 5,
+                  pointerEvents: 'none', // Permet de cliquer à travers
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Typography sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem', opacity: 0.8 }}>
+                  Absent
+                </Typography>
+              </Box>
+            );
+          })}
           {/* Tâches projet */}
           <Stack spacing={0.5}>
             {projectTasks.map((item, index) => (
@@ -852,28 +859,35 @@ const UserRow: React.FC<UserRowProps> = ({
           position: 'relative'
         }}>
           {/* OVERLAY VERT pour masquer les tâches simples en cas de congé */}
-          {leaves.length > 0 && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                bgcolor: 'rgba(76, 175, 80, 0.7)', // Vert semi-transparent 70%
-                borderRadius: 1,
-                zIndex: 5,
-                pointerEvents: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Typography sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem', opacity: 0.8 }}>
-                Absent
-              </Typography>
-            </Box>
-          )}
+          {leaves.length > 0 && leaves.map((leave, idx) => {
+            const isHalfDay = leave.halfDayType && leave.halfDayType !== 'full';
+            const widthPercent = isHalfDay ? '48%' : '100%';
+            const leftPosition = leave.halfDayType === 'afternoon' ? '52%' : '0';
+
+            return (
+              <Box
+                key={`overlay-simple-${idx}`}
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: leftPosition,
+                  width: widthPercent,
+                  bottom: 0,
+                  bgcolor: 'rgba(76, 175, 80, 0.7)', // Vert semi-transparent 70%
+                  borderRadius: 1,
+                  zIndex: 5,
+                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Typography sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem', opacity: 0.8 }}>
+                  Absent
+                </Typography>
+              </Box>
+            );
+          })}
           {/* Tâches simples */}
           <Stack spacing={0.5}>
             {simpleTasks.map((item, index) => (
