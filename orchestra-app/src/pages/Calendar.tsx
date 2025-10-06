@@ -149,12 +149,7 @@ const Calendar: React.FC = () => {
 
   useEffect(() => {
     setFilteredEvents(filteredEventsOptimized);
-    console.log('[FILTERED EVENTS]', {
-      total: filteredEventsOptimized.length,
-      leaves: filteredEventsOptimized.filter(e => e.type === 'leave').length,
-      filters: filters
-    });
-  }, [filteredEventsOptimized, filters]);
+  }, [filteredEventsOptimized]);
 
   // Cache pour éviter les rechargements inutiles
   const loadData = useCallback(async () => {
@@ -319,17 +314,6 @@ const Calendar: React.FC = () => {
             halfDayType = 'morning';
           }
 
-          // DEBUG - Logs pour tracer
-          if (dayIndex === 0) {
-            console.log('[LEAVE DEBUG]', {
-              leaveId: leave.id,
-              type: leave.type,
-              halfDayStart: leave.halfDayStart,
-              halfDayEnd: leave.halfDayEnd,
-              calculatedHalfDayType: halfDayType,
-              totalDays: daysInRange.length
-            });
-          }
 
           const newEvent: CalendarEvent = {
             id: `leave-${leave.id}-day-${dayIndex}`,
@@ -471,15 +455,6 @@ const Calendar: React.FC = () => {
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isTodayDate = isToday(day);
 
-          // DEBUG - Log pour voir les événements par jour
-          if (dayEvents.length > 0) {
-            console.log('[DAY EVENTS]', {
-              day: format(day, 'yyyy-MM-dd'),
-              total: dayEvents.length,
-              leaves: dayEvents.filter(e => e.type === 'leave').length,
-              events: dayEvents.map(e => ({ type: e.type, title: e.title, halfDayType: e.halfDayType }))
-            });
-          }
 
           return (
             <Box sx={{ flexGrow: 1, minWidth: 200 }} key={index}>
@@ -537,17 +512,6 @@ const Calendar: React.FC = () => {
                                       isLeave && event.halfDayType === 'morning' ? 'flex-start' :
                                       'stretch';
 
-                    // DEBUG - Log pour vérifier les événements dans la vue Month
-                    if (isLeave) {
-                      console.log('[CALENDAR MONTH VIEW]', {
-                        eventId: event.id,
-                        title: event.title,
-                        halfDayType: event.halfDayType,
-                        isHalfDay,
-                        widthPercent,
-                        alignSelf
-                      });
-                    }
 
                     // Icône selon type de demi-journée
                     const getLeaveIcon = () => {
