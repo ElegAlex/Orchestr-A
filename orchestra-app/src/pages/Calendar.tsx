@@ -642,15 +642,31 @@ const Calendar: React.FC = () => {
                     </Typography>
                   </Box>
 
-                  <Stack spacing={1}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {dayEvents.map((event) => {
                       // Icône pour les congés avec demi-journée
                       const isLeave = event.type === 'leave';
+                      const isHalfDay = isLeave && event.halfDayType && event.halfDayType !== 'full';
+                      const widthPercent = isHalfDay ? '48%' : '100%';
+                      const alignSelf = isLeave && event.halfDayType === 'afternoon' ? 'flex-end' :
+                                        isLeave && event.halfDayType === 'morning' ? 'flex-start' :
+                                        'stretch';
+
                       const getLeaveIcon = () => {
                         if (!isLeave) return null;
                         if (event.halfDayType === 'morning') return '🌅';
                         if (event.halfDayType === 'afternoon') return '🌆';
                         return '🌞';
+                      };
+
+                      const getBgGradient = () => {
+                        if (!isLeave) return {};
+                        if (event.halfDayType === 'morning') {
+                          return { background: 'linear-gradient(90deg, rgba(76,175,80,0.1) 0%, rgba(129,199,132,0.1) 100%)' };
+                        } else if (event.halfDayType === 'afternoon') {
+                          return { background: 'linear-gradient(90deg, rgba(129,199,132,0.1) 0%, rgba(76,175,80,0.1) 100%)' };
+                        }
+                        return {};
                       };
 
                       return (
@@ -659,6 +675,9 @@ const Calendar: React.FC = () => {
                           variant="outlined"
                           sx={{
                             cursor: 'pointer',
+                            width: widthPercent,
+                            alignSelf: alignSelf,
+                            ...getBgGradient(),
                             '&:hover': { bgcolor: 'action.hover' },
                           }}
                           onClick={() => {
@@ -720,7 +739,7 @@ const Calendar: React.FC = () => {
                       </Card>
                       );
                     })}
-                  </Stack>
+                  </Box>
                 </CardContent>
               </Card>
             </Box>
