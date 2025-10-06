@@ -8,11 +8,12 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import { 
+import {
   Security as SecurityIcon,
   People as PeopleIcon,
   Build as RepairIcon,
-  AdminPanelSettings as RoleIcon
+  AdminPanelSettings as RoleIcon,
+  Folder as ProjectIcon
 } from '@mui/icons-material';
 import { UserManagement } from '../components/admin/UserManagement';
 import { DataRepairTool } from '../components/admin/DataRepairTool';
@@ -21,6 +22,7 @@ import { UserSimulationControl } from '../components/admin/UserSimulationControl
 import FixTaskIds from '../components/admin/FixTaskIds';
 import CleanOrphanReferences from '../components/admin/CleanOrphanReferences';
 import TeleworkMigrationTool from '../components/admin/TeleworkMigrationTool';
+import RecalculateAllProjects from '../components/admin/RecalculateAllProjects';
 import { usePermissions } from '../hooks/usePermissions';
 import { User } from '../types';
 import { permissionsService } from '../services/permissions.service';
@@ -221,6 +223,12 @@ const Admin: React.FC = () => {
               {...a11yProps(3)}
               disabled={!hasPermission('admin.settings')}
             />
+            <Tab
+              icon={<ProjectIcon />}
+              label="Recalcul Projets"
+              {...a11yProps(4)}
+              disabled={!hasPermission('admin.settings')}
+            />
           </Tabs>
         </Box>
 
@@ -278,6 +286,16 @@ const Admin: React.FC = () => {
           ) : (
             <Alert severity="warning">
               Vous n'avez pas les permissions pour accéder à l'outil de migration.
+            </Alert>
+          )}
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={4}>
+          {hasPermission('admin.settings') ? (
+            <RecalculateAllProjects />
+          ) : (
+            <Alert severity="warning">
+              Vous n'avez pas les permissions pour recalculer les projets.
             </Alert>
           )}
         </TabPanel>

@@ -382,27 +382,15 @@ export const Settings: React.FC = () => {
               icon={<AssignmentIcon />} 
               iconPosition="start"
             />
-            <Tab 
-              label="Affectation Services" 
-              icon={<AssignmentIcon />} 
+            <Tab
+              label="Affectation Services"
+              icon={<AssignmentIcon />}
               iconPosition="start"
             />
-            <Tab 
-              label="Général" 
-              icon={<SettingsIcon />} 
+            <Tab
+              label="Compétences"
+              icon={<AssignmentIcon />}
               iconPosition="start"
-              disabled
-            />
-            <Tab 
-              label="Compétences" 
-              icon={<AssignmentIcon />} 
-              iconPosition="start"
-            />
-            <Tab 
-              label="Notifications" 
-              icon={<SettingsIcon />} 
-              iconPosition="start"
-              disabled
             />
           </Tabs>
         </Box>
@@ -1213,15 +1201,7 @@ export const Settings: React.FC = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={4}>
-          <Typography>Paramètres généraux (à venir)</Typography>
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={5}>
           <SkillsTab />
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={6}>
-          <Typography>Paramètres de notifications (à venir)</Typography>
         </TabPanel>
       </Paper>
 

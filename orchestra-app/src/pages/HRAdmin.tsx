@@ -98,6 +98,7 @@ const HRAdmin: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [selectedUserContracts, setSelectedUserContracts] = useState<{ [userId: string]: WorkContract }>({});
+  const [userLeaves, setUserLeaves] = useState<{ [userId: string]: LeaveRequest[] }>({});
   const [userCapacities, setUserCapacities] = useState<UserCapacity[]>([]);
   
   // États pour les dialogs de paramétrage
@@ -190,6 +191,30 @@ const HRAdmin: React.FC = () => {
       setSelectedUserContracts(contractsData);
       console.log('📋 Contrats chargés:', Object.keys(contractsData).length, 'sur', usersData.length);
 
+      // Charger les congés pour tous les utilisateurs
+      const leavesData: { [userId: string]: LeaveRequest[] } = {};
+      console.log('🔄 Chargement des congés pour', usersData.length, 'utilisateurs...');
+
+      const leavesPromises = usersData.map(async (user) => {
+        try {
+          const leaves = await leaveService.getUserLeaves(user.id);
+          // Filtrer pour ne garder que les congés approuvés (en cours ou futurs)
+          const currentLeaves = leaves.filter(leave =>
+            leave.status === 'APPROVED' && new Date(leave.endDate) >= new Date()
+          );
+          if (currentLeaves.length > 0) {
+            leavesData[user.id] = currentLeaves;
+            console.log('✅ Congés chargés pour', user.displayName, ':', currentLeaves.length);
+          }
+        } catch (error) {
+          console.warn(`❌ Erreur congés pour ${user.displayName}:`, error);
+        }
+      });
+
+      await Promise.all(leavesPromises);
+      setUserLeaves(leavesData);
+      console.log('🏖️ Congés chargés:', Object.keys(leavesData).length, 'utilisateurs avec congés');
+
     } catch (error) {
       console.error('Erreur lors du chargement des données RH:', error);
     } finally {
@@ -201,13 +226,49 @@ const HRAdmin: React.FC = () => {
     setTabValue(newValue);
   };
 
-  // Gestion des congés
+  // NOTE: En mode déclaratif, plus besoin d'approuver/rejeter les congés
+  // Les congés sont automatiquement approuvés lors de leur déclaration
   const handleLeaveAction = async (leaveId: string, action: 'APPROVED' | 'REJECTED', reason?: string) => {
+    // Cette fonction n'est plus utilisée en mode déclaratif
+    console.log('Mode déclaratif: les congés sont automatiquement approuvés');
+  };
+
+  // Vérifier si l'utilisateur connecté peut gérer un utilisateur donné
+  const canManageUser = (targetUser: User): boolean => {
+    if (!user) return false;
+
+    // Admin et responsable peuvent gérer tout le monde
+    if (user.role === 'admin' || user.role === 'responsable') {
+      return true;
+    }
+
+    // Manager peut gérer les utilisateurs de ses services
+    if (user.role === 'manager') {
+      const managerServiceIds = user.serviceIds || [];
+      const targetUserServiceIds = targetUser.serviceIds || [];
+
+      // Vérifier si au moins un service en commun
+      return managerServiceIds.some(serviceId =>
+        targetUserServiceIds.includes(serviceId)
+      );
+    }
+
+    return false;
+  };
+
+  // Annuler un congé
+  const handleCancelLeave = async (leaveId: string, userId: string) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir annuler ce congé ?')) {
+      return;
+    }
+
     try {
-      await leaveService.processLeaveRequest(leaveId, action, user?.id || '', reason);
+      await leaveService.cancelLeaveRequest(leaveId, userId);
+      // Recharger les congés
       await loadAllData();
     } catch (error) {
-      console.error('Erreur lors du traitement de la demande:', error);
+      console.error('Erreur lors de l\'annulation du congé:', error);
+      alert('Erreur lors de l\'annulation du congé');
     }
   };
 
@@ -494,11 +555,11 @@ const HRAdmin: React.FC = () => {
             </Typography>
           </Box>
 
-          <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {users.map((user) => {
               const contract = selectedUserContracts[user.id];
               return (
-                <Box>
+                <Box sx={{ width: '100%' }}>
                   <Card 
                     variant="outlined"
                     sx={{ 
@@ -513,38 +574,31 @@ const HRAdmin: React.FC = () => {
                     }}
                   >
                     <CardContent>
+                      <Box display="flex" gap={3} alignItems="flex-start">
                       {/* En-tête utilisateur */}
-                      <Box display="flex" alignItems="center" gap={2} mb={2}>
+                      <Box display="flex" alignItems="center" gap={2} sx={{ minWidth: 250 }}>
                         <Avatar src={user.avatarUrl} sx={{ width: 48, height: 48 }}>
                           {user.firstName?.[0]}{user.lastName?.[0]}
                         </Avatar>
-                        <Box flexGrow={1}>
+                        <Box>
                           <Typography variant="h6" noWrap>
                             {user.displayName}
                           </Typography>
                           <Typography variant="body2" color="text.secondary" noWrap>
                             {user.department || 'Département non défini'}
                           </Typography>
-                        </Box>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          {user.isActive ? (
-                            <Chip label="Actif" size="small" color="success" />
-                          ) : (
-                            <Chip label="Inactif" size="small" color="default" />
-                          )}
-                          <IconButton 
-                            size="small" 
-                            color="error"
-                            onClick={(e) => handleDeleteClick(user, e)}
-                            sx={{ ml: 1 }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
+                          <Box display="flex" alignItems="center" gap={1} mt={1}>
+                            {user.isActive ? (
+                              <Chip label="Actif" size="small" color="success" />
+                            ) : (
+                              <Chip label="Inactif" size="small" color="default" />
+                            )}
+                          </Box>
                         </Box>
                       </Box>
 
                       {/* Informations contrat */}
-                      <Box sx={{ mb: 2 }}>
+                      <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle2" gutterBottom color="text.secondary">
                           📋 Contrat
                         </Typography>
@@ -587,12 +641,14 @@ const HRAdmin: React.FC = () => {
                       </Box>
 
                       {/* Informations congés */}
-                      <Box sx={{ mb: 2 }}>
+                      <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle2" gutterBottom color="text.secondary">
                           🏖️ Congés
                         </Typography>
+
+                        {/* Paramètres du contrat */}
                         {contract ? (
-                          <Stack spacing={1}>
+                          <Stack spacing={1} sx={{ mb: 1.5 }}>
                             <Box display="flex" justifyContent="space-between">
                               <Typography variant="body2">CP annuels</Typography>
                               <Typography variant="body2" fontWeight="bold">
@@ -609,14 +665,67 @@ const HRAdmin: React.FC = () => {
                             )}
                           </Stack>
                         ) : (
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                             Non configuré
+                          </Typography>
+                        )}
+
+                        {/* Congés en cours */}
+                        {userLeaves[user.id] && userLeaves[user.id].length > 0 ? (
+                          <Box>
+                            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                              Congés en cours/à venir :
+                            </Typography>
+                            <Stack spacing={0.5}>
+                              {userLeaves[user.id].slice(0, 3).map((leave) => (
+                                <Box
+                                  key={leave.id}
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    p: 0.5,
+                                    bgcolor: 'success.light',
+                                    borderRadius: 1,
+                                  }}
+                                >
+                                  <Stack spacing={0.2} sx={{ flex: 1 }}>
+                                    <Typography variant="caption" fontWeight="bold">
+                                      {format(new Date(leave.startDate), 'dd/MM', { locale: fr })} - {format(new Date(leave.endDate), 'dd/MM', { locale: fr })}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {leave.totalDays} jour{leave.totalDays > 1 ? 's' : ''}
+                                    </Typography>
+                                  </Stack>
+                                  {canManageUser(user) && (
+                                    <Tooltip title="Annuler ce congé">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => handleCancelLeave(leave.id, user.id)}
+                                        sx={{ ml: 0.5 }}
+                                      >
+                                        <DeleteIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )}
+                                </Box>
+                              ))}
+                              {userLeaves[user.id].length > 3 && (
+                                <Typography variant="caption" color="text.secondary">
+                                  +{userLeaves[user.id].length - 3} autre{userLeaves[user.id].length - 3 > 1 ? 's' : ''}
+                                </Typography>
+                              )}
+                            </Stack>
+                          </Box>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">
+                            Aucun congé en cours
                           </Typography>
                         )}
                       </Box>
 
                       {/* Télétravail */}
-                      <Box sx={{ mb: 1 }}>
+                      <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle2" gutterBottom color="text.secondary">
                           🏠 Télétravail
                         </Typography>
@@ -640,15 +749,23 @@ const HRAdmin: React.FC = () => {
                         )}
                       </Box>
 
-                      {/* Action */}
-                      <Box display="flex" justifyContent="center" mt={2}>
-                        <Button 
-                          variant="outlined" 
+                      {/* Actions */}
+                      <Box display="flex" flexDirection="column" gap={1} alignItems="flex-end">
+                        <Button
+                          variant="outlined"
                           size="small"
                           startIcon={<EditIcon />}
                         >
                           Configurer
                         </Button>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={(e) => handleDeleteClick(user, e)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
                       </Box>
                     </CardContent>
                   </Card>

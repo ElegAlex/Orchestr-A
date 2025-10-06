@@ -33,6 +33,7 @@ import {
   endOfWeek,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Timestamp } from 'firebase/firestore';
 import { TeleworkOverride, UserTeleworkProfile } from '../../types/telework.types';
 import { teleworkServiceV2 } from '../../services/telework-v2.service';
 
@@ -185,13 +186,17 @@ export const TeleworkBulkDeclarationModal: React.FC<TeleworkBulkDeclarationModal
 
       // Créer les nouveaux overrides
       if (datesToAdd.length > 0) {
-        await teleworkServiceV2.createBulkOverrides(
-          userId,
-          datesToAdd,
-          'remote',
-          userId,
-          'Déclaration en masse'
-        );
+        for (const date of datesToAdd) {
+          await teleworkServiceV2.requestOverride({
+            userId,
+            date: Timestamp.fromDate(date),
+            mode: 'remote',
+            source: 'user_request',
+            priority: 3,
+            reason: 'Déclaration en masse',
+            createdBy: userId,
+          });
+        }
       }
 
       // Supprimer les overrides désélectionnés

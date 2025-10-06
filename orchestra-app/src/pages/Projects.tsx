@@ -37,10 +37,12 @@ import {
   Upload as UploadIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { Project, ProjectStatus, Priority, ProjectCategory } from '../types';
+import { Project, ProjectStatus, Priority, ProjectCategory, Task } from '../types';
 import { projectService } from '../services/project.service';
 import ProjectImportDialog from '../components/project/ProjectImportDialog';
 import { ImportResult } from '../services/import.service';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 export const Projects: React.FC = () => {
   const navigate = useNavigate();
@@ -62,7 +64,61 @@ export const Projects: React.FC = () => {
     try {
       setLoading(true);
       const projectsData = await projectService.getAllProjects();
-      setProjects(projectsData);
+
+      // Recalculer le progress de chaque projet à la volée en excluant les sous-tâches
+      const projectsWithRecalculatedProgress = await Promise.all(
+        projectsData.map(async (project) => {
+          try {
+            const tasksQuery = query(
+              collection(db, 'tasks'),
+              where('projectId', '==', project.id)
+            );
+            const tasksSnapshot = await getDocs(tasksQuery);
+
+            if (tasksSnapshot.empty) {
+              return { ...project, progress: 0 };
+            }
+
+            let totalTasks = 0;
+            let completedTasks = 0;
+            let totalStoryPoints = 0;
+            let completedStoryPoints = 0;
+
+            tasksSnapshot.docs.forEach(doc => {
+              const task = doc.data() as Task;
+
+              // Exclure les sous-tâches
+              if (task.parentTaskId) {
+                return;
+              }
+
+              totalTasks++;
+              const storyPoints = task.storyPoints || 1;
+              totalStoryPoints += storyPoints;
+
+              if (task.status === 'DONE') {
+                completedTasks++;
+                completedStoryPoints += storyPoints;
+              }
+            });
+
+            // Calculer le progrès
+            let calculatedProgress = 0;
+            if (totalStoryPoints > 0) {
+              calculatedProgress = Math.round((completedStoryPoints / totalStoryPoints) * 100);
+            } else if (totalTasks > 0) {
+              calculatedProgress = Math.round((completedTasks / totalTasks) * 100);
+            }
+
+            return { ...project, progress: calculatedProgress };
+          } catch (error) {
+            console.error(`Error calculating progress for project ${project.id}:`, error);
+            return project;
+          }
+        })
+      );
+
+      setProjects(projectsWithRecalculatedProgress);
     } catch (error) {
       console.error('Error loading projects:', error);
     } finally {

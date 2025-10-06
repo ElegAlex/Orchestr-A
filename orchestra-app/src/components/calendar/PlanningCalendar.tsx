@@ -23,6 +23,8 @@ import {
   DialogContent,
   DialogActions,
   Collapse,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import {
   ChevronLeft as ChevronLeftIcon,
@@ -39,6 +41,9 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Delete as DeleteIcon,
+  FilterList as FilterListIcon,
+  EventAvailable as EventAvailableIcon,
+  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -179,6 +184,43 @@ interface UserWorkloadDay {
 
 
 type ViewMode = 'week' | 'month';
+type ViewFilter = 'all' | 'availability' | 'activity';
+
+// ========================================
+// FILTRAGE PAR VUE
+// ========================================
+
+/**
+ * Filtre les items du calendrier selon le filtre de vue sélectionné
+ * @param items - Liste des items du calendrier
+ * @param filter - Type de filtre à appliquer
+ * @returns Liste filtrée des items
+ */
+const filterItemsByViewFilter = (items: CalendarItem[], filter: ViewFilter): CalendarItem[] => {
+  if (filter === 'all') {
+    // Mode "Tout" : afficher tous les items
+    return items;
+  }
+
+  if (filter === 'availability') {
+    // Mode "Disponibilités" : afficher uniquement les congés, télétravail, jours fériés
+    return items.filter(item =>
+      item.type === 'leave' ||
+      item.type === 'remote' ||
+      item.isRemote === true
+    );
+  }
+
+  if (filter === 'activity') {
+    // Mode "Activités" : afficher uniquement les tâches (projet + simples)
+    return items.filter(item =>
+      item.type === 'task' ||
+      item.type === 'simple_task'
+    );
+  }
+
+  return items;
+};
 
 // ========================================
 // ENHANCED TASK CARD COMPONENT
@@ -592,6 +634,7 @@ const TaskSlot: React.FC<TaskSlotProps> = ({
 interface UserRowProps {
   workloadDay: UserWorkloadDay;
   viewMode: ViewMode;
+  viewFilter: ViewFilter;
   weekDays: Date[];
   departments: Department[];
   userContracts: Map<string, WorkContract | null>;
@@ -610,6 +653,7 @@ interface UserRowProps {
 const UserRow: React.FC<UserRowProps> = ({
   workloadDay,
   viewMode,
+  viewFilter,
   weekDays,
   departments,
   userContracts,
@@ -640,7 +684,10 @@ const UserRow: React.FC<UserRowProps> = ({
 
   // Hauteur de la zone projet : basée sur le max + 1 slot pour le drop zone
   // Chaque tâche = 40px (height) + 4px (spacing) = 44px
-  const projectZoneHeight = (maxProjectTasksCount + 1) * 44;
+  // En mode "Disponibilités", réduire la hauteur à 60px pour focus sur congés/télétravail
+  const projectZoneHeight = viewFilter === 'availability'
+    ? 60
+    : (maxProjectTasksCount + 1) * 44;
 
   const renderDayColumn = (date: Date) => {
     const dayItems = workloadDay.items.filter(item =>
@@ -1083,6 +1130,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
   // États principaux
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -1614,13 +1662,16 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
               // ✅ Tri chronologique des tâches par heure de début
               calendarItems.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
+              // ✅ Appliquer le filtre de vue (Tout/Disponibilités/Activités)
+              const filteredItems = filterItemsByViewFilter(calendarItems, viewFilter);
+
               return {
                 userId: user.id,
                 user,
                 date,
                 capacity: 0,
                 allocated: totalAllocated,
-                items: calendarItems,
+                items: filteredItems,
                 isRemoteWork,
                 utilizationRate,
                 contract: await capacityService.getUserContract(user.id),
@@ -1657,7 +1708,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [currentDate, currentPeriod, selectedProjects, selectedUsers, selectedServices, viewMode]);
+  }, [currentDate, currentPeriod, selectedProjects, selectedUsers, selectedServices, viewMode, viewFilter]);
 
 
 
@@ -2106,6 +2157,38 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                 </Typography>
               </Stack>
 
+              {/* Filtre de vue : Tout / Disponibilités / Activités */}
+              <ToggleButtonGroup
+                value={viewFilter}
+                exclusive
+                onChange={(e, newFilter) => {
+                  if (newFilter !== null) {
+                    setViewFilter(newFilter);
+                  }
+                }}
+                size="small"
+                sx={{ height: 32 }}
+              >
+                <ToggleButton value="all" sx={{ px: 1.5 }}>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <FilterListIcon fontSize="small" />
+                    <span>Tout</span>
+                  </Stack>
+                </ToggleButton>
+                <ToggleButton value="availability" sx={{ px: 1.5 }}>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <EventAvailableIcon fontSize="small" />
+                    <span>Disponibilités</span>
+                  </Stack>
+                </ToggleButton>
+                <ToggleButton value="activity" sx={{ px: 1.5 }}>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <AssignmentIcon fontSize="small" />
+                    <span>Activités</span>
+                  </Stack>
+                </ToggleButton>
+              </ToggleButtonGroup>
+
               {/* Stats et vue droite */}
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Chip
@@ -2343,6 +2426,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                               key={workloadDay.userId}
                               workloadDay={workloadDay}
                               viewMode={viewMode}
+                              viewFilter={viewFilter}
                               weekDays={weekDays}
                               departments={departments}
                               userContracts={userContracts}
@@ -2425,6 +2509,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                             key={workloadDay.userId}
                             workloadDay={workloadDay}
                             viewMode={viewMode}
+                            viewFilter={viewFilter}
                             weekDays={weekDays}
                             departments={departments}
                             userContracts={userContracts}
@@ -2458,6 +2543,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
             onItemClick={setSelectedItem}
             getUserDisplayName={getUserDisplayName}
             teleworkSystem={teleworkSystem}
+            viewFilter={viewFilter}
           />
         )}
 

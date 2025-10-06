@@ -14,7 +14,6 @@ import {
 } from '@mui/material';
 import {
   FolderOpen as ProjectIcon,
-  ArrowForward as ArrowForwardIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   Warning as WarningIcon,
@@ -240,20 +239,6 @@ export const MyProjectsWidget: React.FC<MyProjectsWidgetProps> = ({
               </Stack>
             )}
           </>
-        )}
-
-        {/* Lien vers tous les projets */}
-        {projects.length > 0 && (
-          <Button
-            fullWidth
-            variant="text"
-            size="small"
-            endIcon={<ArrowForwardIcon />}
-            onClick={() => navigate('/projects')}
-            sx={{ mt: 2 }}
-          >
-            Voir tous mes projets
-          </Button>
         )}
       </CardContent>
     </Card>

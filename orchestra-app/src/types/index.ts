@@ -422,13 +422,14 @@ export interface LeaveRequest {
   updatedAt: Date;
 }
 
-export type LeaveType = 
+export type LeaveType =
   | 'PAID_LEAVE' // Congés payés
   | 'RTT' // Récupération temps de travail
   | 'SICK_LEAVE' // Congé maladie
   | 'MATERNITY_LEAVE' // Congé maternité
   | 'PATERNITY_LEAVE' // Congé paternité
   | 'EXCEPTIONAL_LEAVE' // Congé exceptionnel
+  | 'CONVENTIONAL_LEAVE' // Congé conventionnel
   | 'UNPAID_LEAVE' // Congé sans solde
   | 'TRAINING'; // Formation
 

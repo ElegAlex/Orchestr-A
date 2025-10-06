@@ -25,7 +25,7 @@ class LeaveService {
   // ========================================
 
   /**
-   * Crée une nouvelle demande de congés
+   * Crée une nouvelle demande de congés (DÉCLARATIF - pas de validation)
    */
   async createLeaveRequest(leaveData: Omit<LeaveRequest, 'id' | 'createdAt' | 'updatedAt' | 'totalDays'>): Promise<string> {
     try {
@@ -43,75 +43,82 @@ class LeaveService {
         throw new Error(canTakeLeave.reason);
       }
 
+      const now = new Date();
       const docRef = await addDoc(collection(db, this.LEAVES_COLLECTION), {
         ...leaveData,
         totalDays,
-        status: 'PENDING',
+        status: 'APPROVED', // Directement approuvé (déclaratif)
         startDate: Timestamp.fromDate(leaveData.startDate),
         endDate: Timestamp.fromDate(leaveData.endDate),
-        createdAt: Timestamp.fromDate(new Date()),
+        createdAt: Timestamp.fromDate(now),
+        approvedAt: Timestamp.fromDate(now), // Auto-approuvé immédiatement
+        approvedBy: 'system-declarative', // Système déclaratif
       });
 
-      // Créer le workflow de validation
-      await this.createApprovalWorkflow(docRef.id, leaveData.userId, { ...leaveData, totalDays });
-
-      // Notifier les managers
-      await this.notifyManagers(leaveData.userId, docRef.id);
+      // Déduire immédiatement du solde
+      await this.deductLeaveBalance(leaveData.userId, leaveData.type, totalDays);
 
       return docRef.id;
     } catch (error) {
-      console.error('Erreur lors de la création de la demande de congés:', error);
       throw error;
     }
   }
 
   /**
-   * Approuve ou rejette une demande de congés
+   * Modifie une demande de congés (DÉCLARATIF - pas de validation)
+   * Utilisé uniquement pour mettre à jour une déclaration existante
    */
-  async processLeaveRequest(
-    leaveId: string, 
-    status: 'APPROVED' | 'REJECTED', 
-    approvedBy: string, 
-    rejectionReason?: string
+  async updateLeaveRequest(
+    leaveId: string,
+    leaveData: Partial<LeaveRequest>
   ): Promise<void> {
     try {
-      const batch = writeBatch(db);
       const leaveRef = doc(db, this.LEAVES_COLLECTION, leaveId);
 
-      // Récupérer la demande
+      // Récupérer la demande actuelle
       const leaveDoc = await getDoc(leaveRef);
       if (!leaveDoc.exists()) {
         throw new Error('Demande de congés introuvable');
       }
 
-      const leaveData = { id: leaveDoc.id, ...leaveDoc.data() } as LeaveRequest;
+      const currentLeave = { id: leaveDoc.id, ...leaveDoc.data() } as LeaveRequest;
 
-      // Mettre à jour le statut
-      batch.update(leaveRef, {
-        status,
-        approvedBy,
-        approvedAt: Timestamp.fromDate(new Date()),
-        rejectionReason: rejectionReason || null,
-        updatedAt: Timestamp.fromDate(new Date()),
-      });
+      // Rembourser l'ancien solde
+      await this.refundLeaveBalance(currentLeave.userId, currentLeave.type, currentLeave.totalDays);
 
-      // Si approuvé, déduire du solde de congés
-      if (status === 'APPROVED') {
-        await this.deductLeaveBalance(leaveData.userId, leaveData.type, leaveData.totalDays);
+      // Recalculer les jours si dates modifiées
+      let totalDays = currentLeave.totalDays;
+      if (leaveData.startDate || leaveData.endDate) {
+        totalDays = await this.calculateLeaveDays(
+          leaveData.startDate || currentLeave.startDate,
+          leaveData.endDate || currentLeave.endDate,
+          leaveData.halfDayStart ?? currentLeave.halfDayStart,
+          leaveData.halfDayEnd ?? currentLeave.halfDayEnd
+        );
       }
 
-      await batch.commit();
+      // Mettre à jour
+      await updateDoc(leaveRef, {
+        ...leaveData,
+        totalDays,
+        updatedAt: Timestamp.fromDate(new Date()),
+        ...(leaveData.startDate && { startDate: Timestamp.fromDate(leaveData.startDate) }),
+        ...(leaveData.endDate && { endDate: Timestamp.fromDate(leaveData.endDate) }),
+      });
 
-      // Notifier l'utilisateur
-      await this.notifyUser(leaveData.userId, leaveId, status);
+      // Déduire le nouveau solde
+      await this.deductLeaveBalance(
+        currentLeave.userId,
+        leaveData.type || currentLeave.type,
+        totalDays
+      );
     } catch (error) {
-      console.error('Erreur lors du traitement de la demande:', error);
       throw error;
     }
   }
 
   /**
-   * Annule une demande de congés
+   * Supprime définitivement une demande de congés (DÉCLARATIF)
    */
   async cancelLeaveRequest(leaveId: string, userId: string): Promise<void> {
     try {
@@ -124,22 +131,17 @@ class LeaveService {
 
       const leaveData = { id: leaveDoc.id, ...leaveDoc.data() } as LeaveRequest;
 
-      // Vérifier que l'utilisateur peut annuler (propriétaire ou admin)
+      // Vérifier que l'utilisateur peut supprimer (propriétaire ou admin)
       if (leaveData.userId !== userId) {
-        throw new Error('Non autorisé à annuler cette demande');
+        throw new Error('Non autorisé à supprimer cette demande');
       }
 
-      // Si la demande était approuvée, rembourser les congés
-      if (leaveData.status === 'APPROVED') {
-        await this.refundLeaveBalance(userId, leaveData.type, leaveData.totalDays);
-      }
+      // Rembourser les congés
+      await this.refundLeaveBalance(userId, leaveData.type, leaveData.totalDays);
 
-      await updateDoc(leaveRef, {
-        status: 'CANCELLED',
-        updatedAt: Timestamp.fromDate(new Date()),
-      });
+      // Supprimer définitivement au lieu de marquer comme annulé
+      await deleteDoc(leaveRef);
     } catch (error) {
-      console.error('Erreur lors de l\'annulation:', error);
       throw error;
     }
   }
@@ -169,7 +171,6 @@ class LeaveService {
 
       return Math.max(0, totalDays);
     } catch (error) {
-      console.error('Erreur lors du calcul des jours de congés:', error);
       throw error;
     }
   }
@@ -200,6 +201,9 @@ class LeaveService {
         case 'EXCEPTIONAL_LEAVE':
           availableDays = balance.exceptional || 0;
           break;
+        case 'CONVENTIONAL_LEAVE':
+          // Pas de limite pour les congés conventionnels (selon convention collective)
+          return { allowed: true };
         default:
           return { allowed: true };
       }
@@ -223,7 +227,6 @@ class LeaveService {
 
       return { allowed: true, remainingBalance: availableDays };
     } catch (error) {
-      console.error('Erreur lors de la vérification des congés:', error);
       return { allowed: false, reason: 'Erreur de vérification' };
     }
   }
@@ -244,7 +247,7 @@ class LeaveService {
         id: doc.id,
         ...doc.data(),
         startDate: doc.data().startDate.toDate(),
-        endDate: doc.data().dueDate.toDate(),
+        endDate: doc.data().endDate.toDate(),
       })) as LeaveRequest[];
 
       // Vérifier les chevauchements
@@ -256,7 +259,6 @@ class LeaveService {
         );
       });
     } catch (error) {
-      console.error('Erreur lors de la vérification des conflits:', error);
       return [];
     }
   }
@@ -293,14 +295,13 @@ class LeaveService {
       if (snapshot.empty || forceRefresh) {
         // Si forceRefresh, supprimer l'ancien solde d'abord
         if (forceRefresh && !snapshot.empty) {
-          console.log('🔄 Suppression de l\'ancien solde pour réinitialisation');
           const batch = writeBatch(db);
           snapshot.docs.forEach(doc => {
             batch.delete(doc.ref);
           });
           await batch.commit();
         }
-        
+
         // Créer un solde initial basé sur le contrat
         return await this.initializeLeaveBalance(userId, currentYear);
       }
@@ -315,7 +316,6 @@ class LeaveService {
         used: balanceData.used || { paidLeave: 0, rtt: 0, exceptional: 0 },
       };
     } catch (error) {
-      console.error('Erreur lors de la récupération du solde:', error);
       throw error;
     }
   }
@@ -325,16 +325,13 @@ class LeaveService {
    */
   async initializeLeaveBalance(userId: string, year: number): Promise<any> {
     try {
-      console.log(`🔧 Initialisation du solde de congés pour l'utilisateur ${userId}, année ${year}`);
-      
       // Récupérer le contrat utilisateur depuis le service capacity
       let contract = null;
       try {
         const { capacityService } = await import('./capacity.service');
         contract = await capacityService.getUserContract(userId);
-        console.log('📋 Contrat récupéré:', contract);
       } catch (error) {
-        console.error('Erreur lors de la récupération du contrat:', error);
+        // Ignorer l'erreur silencieusement
       }
 
       // Utiliser les RTT directement saisis dans l'admin RH, sinon calculer selon les heures
@@ -342,11 +339,9 @@ class LeaveService {
       if (contract?.rttDays !== undefined && contract.rttDays !== null) {
         // Priorité à la valeur saisie directement dans l'admin RH
         rttDays = contract.rttDays;
-        console.log('🎯 RTT depuis admin RH:', rttDays);
       } else if (contract?.weeklyHours && contract.weeklyHours > 35) {
         // Sinon, formule RTT: (heures_hebdo - 35) * 52 / 7
         rttDays = Math.round((contract.weeklyHours - 35) * 52 / 7);
-        console.log('🧮 RTT calculés depuis heures hebdo:', rttDays);
       }
 
       const defaultBalance = {
@@ -358,8 +353,6 @@ class LeaveService {
         used: { paidLeave: 0, rtt: 0, exceptional: 0 },
       };
 
-      console.log('💰 Solde initialisé:', defaultBalance);
-
       await addDoc(collection(db, this.LEAVE_BALANCES_COLLECTION), {
         ...defaultBalance,
         createdAt: Timestamp.fromDate(new Date()),
@@ -367,7 +360,6 @@ class LeaveService {
 
       return defaultBalance;
     } catch (error) {
-      console.error('Erreur lors de l\'initialisation du solde:', error);
       throw error;
     }
   }
@@ -410,7 +402,6 @@ class LeaveService {
         }
       }
     } catch (error) {
-      console.error('Erreur lors de la déduction du solde:', error);
       throw error;
     }
   }
@@ -453,7 +444,6 @@ class LeaveService {
         }
       }
     } catch (error) {
-      console.error('Erreur lors du remboursement:', error);
       throw error;
     }
   }
@@ -477,12 +467,15 @@ class LeaveService {
       let leaves = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        startDate: doc.data().startDate.toDate(),
-        endDate: doc.data().dueDate.toDate(),
-        createdAt: doc.data().createdAt.toDate(),
+        startDate: doc.data().startDate?.toDate() || new Date(),
+        endDate: doc.data().endDate?.toDate() || new Date(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
         updatedAt: doc.data().updatedAt?.toDate(),
         approvedAt: doc.data().approvedAt?.toDate(),
       })) as LeaveRequest[];
+
+      // Toujours filtrer les congés annulés (ne pas les afficher)
+      leaves = leaves.filter(leave => leave.status !== 'CANCELLED');
 
       // Filtrer par statut côté client si nécessaire
       if (status) {
@@ -492,7 +485,6 @@ class LeaveService {
       // Trier côté client par date de création décroissante
       return leaves.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } catch (error) {
-      console.error('Erreur lors de la récupération des congés:', error);
       throw error;
     }
   }
@@ -511,15 +503,14 @@ class LeaveService {
       const leaves = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        startDate: doc.data().startDate.toDate(),
-        endDate: doc.data().dueDate.toDate(),
-        createdAt: doc.data().createdAt.toDate(),
+        startDate: doc.data().startDate?.toDate() || new Date(),
+        endDate: doc.data().endDate?.toDate() || new Date(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
       })) as LeaveRequest[];
       
       // Trier côté client par date de création croissante
       return leaves.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
     } catch (error) {
-      console.error('Erreur lors de la récupération des demandes en attente:', error);
       throw error;
     }
   }
@@ -544,9 +535,9 @@ class LeaveService {
       let leaves = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        startDate: doc.data().startDate.toDate(),
-        endDate: doc.data().dueDate.toDate(),
-        createdAt: doc.data().createdAt.toDate(),
+        startDate: doc.data().startDate?.toDate() || new Date(),
+        endDate: doc.data().endDate?.toDate() || new Date(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
       })) as LeaveRequest[];
 
       // Filtrer par statut approuvé côté client
@@ -562,191 +553,13 @@ class LeaveService {
       // Trier côté client par date de début croissante
       return leaves.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
     } catch (error) {
-      console.error('Erreur lors de la récupération des congés d\'équipe:', error);
       throw error;
     }
   }
 
   // ========================================
-  // WORKFLOW DE VALIDATION HIÉRARCHIQUE
+  // MÉTHODES UTILITAIRES
   // ========================================
-
-  /**
-   * Obtient la chaîne de validation pour un utilisateur
-   */
-  async getApprovalChain(userId: string): Promise<{ managerId: string; level: number; required: boolean }[]> {
-    try {
-      // TODO: Intégrer avec le service organisationnel
-      // Pour l'instant, simuler une chaîne simple
-      return [
-        { managerId: 'manager-1', level: 1, required: true }, // Manager direct
-        { managerId: 'hr-admin', level: 2, required: false }, // RH si > 10 jours
-      ];
-    } catch (error) {
-      console.error('Erreur lors de la récupération de la chaîne de validation:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Détermine si une validation supplémentaire est requise
-   */
-  async requiresAdditionalApproval(leaveData: Partial<LeaveRequest>): Promise<boolean> {
-    // Règles métier pour validation supplémentaire
-    if (leaveData.totalDays && leaveData.totalDays > 10) return true; // Plus de 10 jours
-    if (leaveData.type === 'EXCEPTIONAL_LEAVE') return true; // Congés exceptionnels
-    if (leaveData.type === 'UNPAID_LEAVE') return true; // Congés sans solde
-    
-    // Vérifier les périodes sensibles (été, fin d'année)
-    if (leaveData.startDate) {
-      const month = leaveData.startDate.getMonth();
-      if (month >= 6 && month <= 8) return true; // Été
-      if (month === 11) return true; // Décembre
-    }
-    
-    return false;
-  }
-
-  /**
-   * Crée les étapes de validation pour une demande
-   */
-  async createApprovalWorkflow(leaveId: string, userId: string, leaveData: Partial<LeaveRequest>): Promise<void> {
-    try {
-      const chain = await this.getApprovalChain(userId);
-      const requiresExtra = await this.requiresAdditionalApproval(leaveData);
-      
-      const workflowSteps = chain.map((step, index) => ({
-        leaveId,
-        approverId: step.managerId,
-        level: step.level,
-        status: 'PENDING',
-        required: step.required || (requiresExtra && step.level === 2),
-        createdAt: Timestamp.fromDate(new Date()),
-      }));
-
-      // Sauvegarder les étapes de validation
-      const batch = writeBatch(db);
-      workflowSteps.forEach(step => {
-        const stepRef = doc(collection(db, 'approvalSteps'));
-        batch.set(stepRef, step);
-      });
-      await batch.commit();
-
-      console.log(`Workflow créé pour la demande ${leaveId}: ${workflowSteps.length} étapes`);
-    } catch (error) {
-      console.error('Erreur lors de la création du workflow:', error);
-    }
-  }
-
-  // ========================================
-  // NOTIFICATIONS AUTOMATIQUES
-  // ========================================
-
-  private async notifyManagers(userId: string, leaveId: string): Promise<void> {
-    try {
-      const chain = await this.getApprovalChain(userId);
-      const leaveDoc = await getDoc(doc(db, this.LEAVES_COLLECTION, leaveId));
-      
-      if (!leaveDoc.exists()) return;
-      
-      const leaveData = { id: leaveDoc.id, ...leaveDoc.data() } as LeaveRequest;
-      const user = await this.getUserInfo(userId);
-
-      // Notification au manager direct
-      if (chain.length > 0) {
-        await this.sendNotification({
-          recipientId: chain[0].managerId,
-          type: 'LEAVE_REQUEST_PENDING',
-          title: 'Nouvelle demande de congés',
-          message: `${user.displayName} a demandé ${leaveData.totalDays} jour(s) de ${this.getLeaveTypeLabel(leaveData.type)}`,
-          data: {
-            leaveId,
-            userId,
-            startDate: leaveData.startDate.toISOString(),
-            endDate: leaveData.endDate.toISOString(),
-          },
-          priority: 'NORMAL',
-        });
-      }
-
-      // Auto-approbation pour certains types
-      if (this.canAutoApprove(leaveData)) {
-        await this.processLeaveRequest(leaveId, 'APPROVED', 'system-auto-approval');
-      }
-    } catch (error) {
-      console.error('Erreur lors de la notification des managers:', error);
-    }
-  }
-
-  private async notifyUser(userId: string, leaveId: string, status: string, reason?: string): Promise<void> {
-    try {
-      const statusLabels: { [key: string]: string } = {
-        APPROVED: 'approuvée',
-        REJECTED: 'refusée',
-        CANCELLED: 'annulée',
-      };
-
-      await this.sendNotification({
-        recipientId: userId,
-        type: `LEAVE_REQUEST_${status}`,
-        title: `Demande de congés ${statusLabels[status] || status.toLowerCase()}`,
-        message: reason || `Votre demande de congés a été ${statusLabels[status] || status.toLowerCase()}`,
-        data: { leaveId },
-        priority: status === 'REJECTED' ? 'HIGH' : 'NORMAL',
-      });
-    } catch (error) {
-      console.error('Erreur lors de la notification utilisateur:', error);
-    }
-  }
-
-  /**
-   * Envoi une notification générique
-   */
-  private async sendNotification(notification: {
-    recipientId: string;
-    type: string;
-    title: string;
-    message: string;
-    data?: any;
-    priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
-  }): Promise<void> {
-    try {
-      await addDoc(collection(db, 'notifications'), {
-        ...notification,
-        priority: notification.priority || 'NORMAL',
-        read: false,
-        createdAt: Timestamp.fromDate(new Date()),
-      });
-      
-      console.log(`Notification envoyée à ${notification.recipientId}: ${notification.title}`);
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi de notification:', error);
-    }
-  }
-
-  /**
-   * Détermine si une demande peut être auto-approuvée
-   */
-  private canAutoApprove(leaveData: LeaveRequest): boolean {
-    // Auto-approbation pour RTT < 2 jours
-    if (leaveData.type === 'RTT' && leaveData.totalDays <= 2) return true;
-    
-    // Auto-approbation pour congés maladie < 3 jours
-    if (leaveData.type === 'SICK_LEAVE' && leaveData.totalDays <= 3) return true;
-    
-    return false;
-  }
-
-  /**
-   * Récupère les informations utilisateur
-   */
-  private async getUserInfo(userId: string): Promise<{ displayName: string; email: string }> {
-    // TODO: Intégrer avec le service utilisateur réel
-    return {
-      displayName: `Utilisateur ${userId}`,
-      email: `user${userId}@company.com`,
-    };
-  }
 
   /**
    * Obtient le libellé d'un type de congé
@@ -759,6 +572,7 @@ class LeaveService {
       MATERNITY_LEAVE: 'congé maternité',
       PATERNITY_LEAVE: 'congé paternité',
       EXCEPTIONAL_LEAVE: 'congé exceptionnel',
+      CONVENTIONAL_LEAVE: 'congé conventionnel',
       UNPAID_LEAVE: 'congé sans solde',
       TRAINING: 'formation',
     };
@@ -804,8 +618,8 @@ class LeaveService {
       const snapshot = await getDocs(q);
       const leaves = snapshot.docs.map(doc => ({
         ...doc.data(),
-        startDate: doc.data().startDate.toDate(),
-        endDate: doc.data().dueDate.toDate(),
+        startDate: doc.data().startDate?.toDate() || new Date(),
+        endDate: doc.data().endDate?.toDate() || new Date(),
       })) as LeaveRequest[];
 
       // Filtrer par année
@@ -847,7 +661,6 @@ class LeaveService {
 
       return stats;
     } catch (error) {
-      console.error('Erreur lors du calcul des statistiques:', error);
       throw error;
     }
   }

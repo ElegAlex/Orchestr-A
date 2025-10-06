@@ -62,6 +62,7 @@ interface MonthViewProps {
   onItemClick: (item: CalendarItem) => void;
   getUserDisplayName: (user: User) => string;
   teleworkSystem: any;
+  viewFilter: 'all' | 'availability' | 'activity';
 }
 
 export const MonthView: React.FC<MonthViewProps> = ({
@@ -74,6 +75,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
   onItemClick,
   getUserDisplayName,
   teleworkSystem,
+  viewFilter,
 }) => {
   return (
     <Box sx={{ overflowX: 'auto', width: '100%' }}>
@@ -167,7 +169,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
                         // Calculer le nombre max de barres empilées
                         const maxSingleDayBars = Math.max(...Array.from(singleDayItems.values()).map(items => items.length), 0);
                         const totalBars = taskBars.size + maxSingleDayBars;
-                        const timelineHeight = Math.max(60, totalBars * 22 + 16);
+                        // En mode "Disponibilités", réduire la hauteur à 60px minimum pour focus sur congés/télétravail
+                        const timelineHeight = viewFilter === 'availability'
+                          ? 60
+                          : Math.max(60, totalBars * 22 + 16);
 
                         return (
                           <Box key={workloadDay.userId} sx={{ mb: 1, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -604,7 +609,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       // Calculer le nombre max de barres empilées
                       const maxSingleDayBars = Math.max(...Array.from(singleDayItems.values()).map(items => items.length), 0);
                       const totalBars = taskBars.size + maxSingleDayBars;
-                      const timelineHeight = Math.max(60, totalBars * 22 + 16);
+                      // En mode "Disponibilités", réduire la hauteur à 60px minimum pour focus sur congés/télétravail
+                      const timelineHeight = viewFilter === 'availability'
+                        ? 60
+                        : Math.max(60, totalBars * 22 + 16);
 
                       return (
                         <Box key={workloadDay.userId} sx={{ mb: 1, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>

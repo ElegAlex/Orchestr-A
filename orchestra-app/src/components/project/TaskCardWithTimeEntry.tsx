@@ -196,13 +196,18 @@ const TaskCardWithTimeEntry: React.FC<TaskCardWithTimeEntryProps> = ({
   const isAssignedToCurrentUser = task.responsible?.includes(user?.id || '') || false;
   const hasSubtasks = stats.total > 0;
 
+  // Vérifier si la tâche est en retard
+  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE';
+
   return (
     <Card
       variant="outlined"
       sx={{
         transition: 'all 0.2s ease',
+        borderLeft: isOverdue ? '4px solid #d32f2f' : undefined,
+        backgroundColor: isOverdue ? 'rgba(211, 47, 47, 0.05)' : undefined,
         '&:hover': {
-          borderColor: statusConfig.color,
+          borderColor: isOverdue ? '#d32f2f' : statusConfig.color,
           boxShadow: 1,
         },
       }}
@@ -278,6 +283,33 @@ const TaskCardWithTimeEntry: React.FC<TaskCardWithTimeEntryProps> = ({
                   variant="outlined"
                 />
               )}
+
+              {/* Date d'échéance */}
+              {task.dueDate && (() => {
+                const dueDate = new Date(task.dueDate);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const isOverdue = dueDate < today && task.status !== 'DONE';
+                const isToday = dueDate.toDateString() === today.toDateString();
+                const isTomorrow = dueDate.toDateString() === new Date(today.getTime() + 86400000).toDateString();
+
+                return (
+                  <Chip
+                    icon={<AccessTimeIcon />}
+                    label={
+                      isToday ? 'Aujourd\'hui' :
+                      isTomorrow ? 'Demain' :
+                      format(dueDate, 'dd/MM/yyyy', { locale: fr })
+                    }
+                    size="small"
+                    color={isOverdue ? 'error' : isToday ? 'warning' : 'default'}
+                    variant={isOverdue ? 'filled' : 'outlined'}
+                    sx={{
+                      fontWeight: isOverdue || isToday ? 'bold' : 'normal',
+                    }}
+                  />
+                );
+              })()}
             </Stack>
           </Box>
 

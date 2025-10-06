@@ -3,21 +3,18 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box,
-  Drawer,
   AppBar,
   Toolbar,
   Typography,
   IconButton,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   Avatar,
   Menu,
   MenuItem,
   Divider,
+  Button,
+  Stack,
+  Tooltip,
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
 import FolderIcon from '@mui/icons-material/Folder';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PeopleIcon from '@mui/icons-material/People';
@@ -37,15 +34,12 @@ import { RootState, AppDispatch } from '../../store';
 import { signOut } from '../../store/slices/authSlice';
 import { usePermissions } from '../../hooks/usePermissions';
 
-const drawerWidth = 240;
-
 export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
   const { hasPermission, hasAdminAccess } = usePermissions();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   // Effet pour gérer le rechargement forcé après navigation depuis tasks
@@ -58,10 +52,6 @@ export const MainLayout: React.FC = () => {
       window.location.reload();
     }
   }, [location.pathname]);
-
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -92,155 +82,159 @@ export const MainLayout: React.FC = () => {
     { text: 'Paramètres', icon: <SettingsIcon />, path: '/settings', permission: null },
   ];
 
+  // Filtrage spécial pour les contributeurs et teamLead : accès limité à Mon Espace et Calendrier uniquement
+  const isLimitedRole = user?.role === 'contributor' || user?.role === 'teamLead';
+  const limitedRoleAllowedPaths = ['/dashboard-hub', '/calendar'];
+
   // Filtrer les items selon les permissions utilisateur
   const menuItems = allMenuItems.filter(item => {
+    // Si contributeur ou teamLead, ne garder que Mon Espace et Calendrier
+    if (isLimitedRole) {
+      return limitedRoleAllowedPaths.includes(item.path);
+    }
+
+    // Sinon, filtrage normal par permissions
     if (!item.permission) return true; // Items sans permission requis
     const hasAccess = hasPermission(item.permission as any);
     return hasAccess;
   });
 
-  const drawer = (
-    <Box>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div" fontWeight="bold">
-          Orchestr'A
-        </Typography>
-      </Toolbar>
-      <Divider />
-      <List>
-        {menuItems.map((item) => (
-          <ListItem
-            key={item.text}
-            onClick={() => {
-              navigate(item.path);
-              setMobileOpen(false);
-            }}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': {
-                backgroundColor: 'rgba(102, 126, 234, 0.08)',
-              },
-            }}
-          >
-            <ListItemIcon sx={{ color: '#667eea' }}>
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItem>
-        ))}
-      </List>
-    </Box>
-  );
-
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {/* Header avec navigation horizontale */}
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         }}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
+        <Toolbar sx={{ minHeight: { xs: 64, sm: 72 }, gap: 2 }}>
+          {/* Logo/Titre */}
+          <Typography
+            variant="h6"
+            noWrap
+            component="div"
+            fontWeight="bold"
+            sx={{
+              mr: 3,
+              cursor: 'pointer',
+              display: { xs: 'none', sm: 'block' }
+            }}
+            onClick={() => navigate('/dashboard-hub')}
           >
-            <MenuIcon />
-          </IconButton>
-          
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {/* Dynamic title based on route */}
+            Orchestr'A
           </Typography>
 
+          {/* Navigation horizontale avec icônes */}
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              flexGrow: 1,
+              overflowX: 'auto',
+              '&::-webkit-scrollbar': { height: 4 },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: 'rgba(255,255,255,0.3)',
+                borderRadius: 2
+              }
+            }}
+          >
+            {menuItems.map((item) => {
+              const isActive = location.pathname === item.path;
 
+              return (
+                <Tooltip key={item.text} title={item.text} arrow>
+                  <Button
+                    onClick={() => navigate(item.path)}
+                    sx={{
+                      color: 'white',
+                      flexDirection: 'column',
+                      minWidth: { xs: 60, sm: 70 },
+                      px: { xs: 1, sm: 1.5 },
+                      py: 0.75,
+                      textTransform: 'none',
+                      borderRadius: 2,
+                      backgroundColor: isActive ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      },
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <Box sx={{ fontSize: { xs: 20, sm: 24 }, mb: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {item.icon}
+                    </Box>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                        fontWeight: isActive ? 'bold' : 'normal',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%'
+                      }}
+                    >
+                      {item.text}
+                    </Typography>
+                  </Button>
+                </Tooltip>
+              );
+            })}
+          </Stack>
+
+          {/* Menu utilisateur */}
           <IconButton
             onClick={handleProfileMenuOpen}
             color="inherit"
-            sx={{ ml: 2 }}
+            sx={{ ml: 'auto' }}
           >
             {user?.avatarUrl ? (
               <Avatar src={user.avatarUrl} sx={{ width: 32, height: 32 }} />
             ) : (
-              <AccountCircleIcon />
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'rgba(255, 255, 255, 0.2)' }}>
+                {user?.displayName?.[0] || <AccountCircleIcon />}
+              </Avatar>
             )}
           </IconButton>
-          
+
           <Menu
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={handleProfileMenuClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
           >
-            <MenuItem onClick={() => navigate('/profile')}>
-              <ListItemIcon>
-                <AccountCircleIcon fontSize="small" />
-              </ListItemIcon>
+            <MenuItem onClick={() => { navigate('/profile'); handleProfileMenuClose(); }}>
+              <AccountCircleIcon fontSize="small" sx={{ mr: 1 }} />
               Mon profil
             </MenuItem>
-            <MenuItem onClick={() => navigate('/settings')}>
-              <ListItemIcon>
-                <SettingsIcon fontSize="small" />
-              </ListItemIcon>
+            <MenuItem onClick={() => { navigate('/settings'); handleProfileMenuClose(); }}>
+              <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
               Paramètres
             </MenuItem>
             <Divider />
             <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
+              <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
               Déconnexion
             </MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>
 
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true,
-          }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { 
-              boxSizing: 'border-box', 
-              width: drawerWidth 
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { 
-              boxSizing: 'border-box', 
-              width: drawerWidth 
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
+      {/* Contenu principal */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
+          mt: { xs: 8, sm: 9 },
         }}
       >
         <Outlet />

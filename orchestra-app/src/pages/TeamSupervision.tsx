@@ -16,6 +16,7 @@ import {
   Tab,
   Card,
   CardContent,
+  Paper,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -30,6 +31,10 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { User, Task } from '../types';
 import TaskCardWithTimeEntry from '../components/project/TaskCardWithTimeEntry';
+import { TaskModalSimplified as TaskModal } from '../components/tasks/TaskModalSimplified';
+import { Gantt, Task as GanttTask, ViewMode } from '@rsagiev/gantt-task-react-19';
+import '@rsagiev/gantt-task-react-19/dist/index.css';
+import { addDays } from 'date-fns';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -61,6 +66,8 @@ const TeamSupervision: React.FC = () => {
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
     loadTeamMembers();
@@ -103,11 +110,31 @@ const TeamSupervision: React.FC = () => {
     }
   };
 
+  const handleTaskEdit = (task: Task) => {
+    setSelectedTask(task);
+    setTaskModalOpen(true);
+  };
+
+  const handleTaskModalClose = () => {
+    setTaskModalOpen(false);
+    setSelectedTask(null);
+  };
+
+  const handleTaskSave = () => {
+    handleTaskModalClose();
+    loadAgentTasks();
+  };
+
   // Helper pour vérifier si une tâche est en retard
   const isTaskOverdue = (task: Task): boolean => {
     if (!task.dueDate) return false;
     return new Date(task.dueDate) < new Date() && task.status !== 'DONE';
   };
+
+  // Membre sélectionné
+  const selectedMember = useMemo(() => {
+    return teamMembers.find(m => m.id === selectedAgent) || null;
+  }, [selectedAgent, teamMembers]);
 
   // Calcul des métriques
   const metrics = useMemo(() => {
@@ -148,8 +175,6 @@ const TeamSupervision: React.FC = () => {
       </Box>
     );
   }
-
-  const selectedMember = teamMembers.find(m => m.id === selectedAgent);
 
   return (
     <Box p={3} role="main" aria-label="Page de supervision d'équipe">
@@ -350,6 +375,7 @@ const TeamSupervision: React.FC = () => {
                                 key={task.id}
                                 task={task}
                                 onUpdate={loadAgentTasks}
+                                onEdit={handleTaskEdit}
                                 compact
                               />
                             ))}
@@ -373,92 +399,97 @@ const TeamSupervision: React.FC = () => {
               <Alert severity="info">
                 Aucune tâche en cours pour {selectedMember?.displayName || 'cet agent'}.
               </Alert>
-            ) : (
-              <Box>
-                {/* Timeline chronologique - organisée par projet avec headers gradient */}
-                {projectsData.map((projectData) => {
-                  // Flatten toutes les tâches du projet et trier par date
-                  const projectTasks = projectData.milestones.flatMap(m =>
-                    m.tasks.map(t => ({
-                      task: t,
-                      milestoneName: m.milestoneName,
-                    }))
-                  ).sort((a, b) => {
-                    const dateA = a.task.dueDate ? new Date(a.task.dueDate).getTime() : Infinity;
-                    const dateB = b.task.dueDate ? new Date(b.task.dueDate).getTime() : Infinity;
-                    return dateA - dateB;
-                  });
+            ) : (() => {
+              // Convertir toutes les tâches en format Gantt
+              const allTasks = projectsData.flatMap(projectData =>
+                projectData.milestones.flatMap(m => m.tasks)
+              );
 
-                  return (
-                    <Box key={projectData.project.id} sx={{ mb: 4 }}>
-                      {/* Header projet identique à Vue Projets/Jalons */}
-                      <Box
-                        sx={{
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          color: 'white',
-                          p: 2.5,
-                          borderRadius: '12px',
-                          boxShadow: 3,
-                          mb: 2,
-                        }}
-                      >
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                          <Box>
-                            <Typography variant="h5" fontWeight="bold" sx={{ mb: 0.5 }}>
-                              {projectData.project.name}
-                            </Typography>
-                            <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                              {projectData.project.code} • {projectTasks.length} tâche(s) • Vue chronologique
-                            </Typography>
-                          </Box>
-                          <Chip
-                            icon={<ScheduleIcon sx={{ color: 'white !important' }} />}
-                            label={`Échéance: ${new Date(projectData.project.dueDate).toLocaleDateString('fr-FR')}`}
-                            sx={{
-                              bgcolor: 'rgba(255, 255, 255, 0.2)',
-                              color: 'white',
-                              fontWeight: 'bold',
-                              backdropFilter: 'blur(10px)',
-                              '& .MuiChip-icon': {
-                                color: 'white',
-                              },
-                            }}
-                          />
-                        </Box>
-                      </Box>
+              const ganttTasks: GanttTask[] = allTasks
+                .filter(task => task.dueDate) // Uniquement les tâches avec date
+                .map(task => {
+                  const startDate = task.startDate ? new Date(task.startDate) : new Date();
+                  const endDate = task.dueDate ? new Date(task.dueDate) : addDays(startDate, 1);
 
-                      {/* Tâches triées chronologiquement pour ce projet */}
-                      <Box sx={{ pl: 0 }}>
-                        {projectTasks.map(({ task, milestoneName }) => (
-                          <Box key={task.id} sx={{ mb: 2 }}>
-                            {/* Badge jalon au-dessus de chaque tâche */}
-                            <Box sx={{ mb: 0.5, pl: 1 }}>
-                              <Chip
-                                label={`📍 ${milestoneName}`}
-                                size="small"
-                                variant="outlined"
-                                sx={{
-                                  borderColor: 'primary.main',
-                                  color: 'primary.main',
-                                  fontWeight: 'medium',
-                                }}
-                              />
-                            </Box>
-                            <TaskCardWithTimeEntry
-                              task={task}
-                              onUpdate={loadAgentTasks}
-                              compact
-                            />
-                          </Box>
-                        ))}
-                      </Box>
-                    </Box>
+                  // Trouver le projet et jalon
+                  const projectData = projectsData.find(p =>
+                    p.milestones.some(m => m.tasks.some(t => t.id === task.id))
                   );
-                })}
-              </Box>
-            )}
+                  const milestone = projectData?.milestones.find(m =>
+                    m.tasks.some(t => t.id === task.id)
+                  );
+
+                  const statusColors: { [key: string]: string } = {
+                    TODO: '#2196F3',
+                    IN_PROGRESS: '#1976D2',
+                    DONE: '#388E3C',
+                    BLOCKED: '#D32F2F',
+                    BACKLOG: '#9E9E9E',
+                  };
+
+                  return {
+                    id: task.id,
+                    name: task.title,
+                    start: startDate,
+                    end: endDate,
+                    progress: task.status === 'DONE' ? 100 : task.status === 'IN_PROGRESS' ? 50 : 0,
+                    type: 'task' as const,
+                    styles: {
+                      backgroundColor: statusColors[task.status] || '#2196F3',
+                      backgroundSelectedColor: statusColors[task.status] || '#2196F3',
+                      progressColor: '#388E3C',
+                      progressSelectedColor: '#388E3C',
+                    },
+                    project: projectData?.project.name || '',
+                  };
+                })
+                .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+              if (ganttTasks.length === 0) {
+                return (
+                  <Alert severity="warning">
+                    Aucune tâche avec date d'échéance pour {selectedMember?.displayName || 'cet agent'}.
+                  </Alert>
+                );
+              }
+
+              // Calculer la largeur de colonne en fonction de l'espace disponible
+              const containerWidth = typeof window !== 'undefined' ? window.innerWidth - 400 : 1200;
+              const adaptiveColumnWidth = Math.max(200, Math.floor(containerWidth / 6));
+
+              return (
+                <Box sx={{ width: '100%' }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Timeline Gantt - {selectedMember?.displayName}
+                  </Typography>
+                  <Gantt
+                    tasks={ganttTasks}
+                    viewMode={ViewMode.Month}
+                    locale="fr-FR"
+                    columnWidth={adaptiveColumnWidth}
+                    listCellWidth="20%"
+                    rowHeight={50}
+                    ganttHeight={0}
+                    barCornerRadius={3}
+                    handleWidth={8}
+                    fontFamily="Roboto, Arial, sans-serif"
+                  />
+                </Box>
+              );
+            })()}
           </TabPanel>
         </>
+      )}
+
+      {/* Modal de tâche */}
+      {selectedTask && (
+        <TaskModal
+          open={taskModalOpen}
+          task={selectedTask}
+          projectId={selectedTask.projectId}
+          onClose={handleTaskModalClose}
+          onSave={handleTaskSave}
+        />
       )}
     </Box>
   );

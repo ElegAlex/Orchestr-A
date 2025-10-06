@@ -252,8 +252,10 @@ class DashboardHubService {
       ).length;
 
       // Calcul de la productivité
-      const totalTasks = tasks.length;
-      const completedTasks = tasks.filter(t => t.status === 'DONE').length;
+      // Exclure les sous-tâches du calcul (seules les tâches parentes comptent)
+      const parentTasks = tasks.filter(t => !t.parentTaskId);
+      const totalTasks = parentTasks.length;
+      const completedTasks = parentTasks.filter(t => t.status === 'DONE').length;
       const productivityRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
       
       // Tendance de productivité (comparaison avec semaine précédente)

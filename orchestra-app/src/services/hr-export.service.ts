@@ -594,6 +594,7 @@ class HRExportService {
       MATERNITY_LEAVE: 'Congé maternité',
       PATERNITY_LEAVE: 'Congé paternité',
       EXCEPTIONAL_LEAVE: 'Congé exceptionnel',
+      CONVENTIONAL_LEAVE: 'Congé conventionnel',
       UNPAID_LEAVE: 'Congé sans solde',
       TRAINING: 'Formation',
     };

@@ -49,6 +49,7 @@ const LEAVE_TYPES: { value: LeaveType; label: string; icon: React.ReactNode; col
   { value: 'SICK_LEAVE', label: 'Congé maladie', icon: <SickIcon />, color: 'error' },
   { value: 'TRAINING', label: 'Formation', icon: <TrainingIcon />, color: 'info' },
   { value: 'EXCEPTIONAL_LEAVE', label: 'Congé exceptionnel', icon: <VacationIcon />, color: 'warning' },
+  { value: 'CONVENTIONAL_LEAVE', label: 'Congé conventionnel', icon: <VacationIcon />, color: 'info' },
   { value: 'UNPAID_LEAVE', label: 'Congé sans solde', icon: <VacationIcon />, color: 'default' },
 ];
 

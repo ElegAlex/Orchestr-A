@@ -286,11 +286,18 @@ export class ProjectService {
 
       tasksSnapshot.docs.forEach(doc => {
         const task = doc.data();
+
+        // Exclure les sous-tâches du calcul de progression
+        // Seules les tâches parentes comptent
+        if (task.parentTaskId) {
+          return; // C'est une sous-tâche, on la skip
+        }
+
         totalTasks++;
-        
+
         const storyPoints = task.storyPoints || 1;
         totalStoryPoints += storyPoints;
-        
+
         if (task.status === 'DONE') {
           completedTasks++;
           completedStoryPoints += storyPoints;

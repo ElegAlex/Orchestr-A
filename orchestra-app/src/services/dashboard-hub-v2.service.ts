@@ -8,6 +8,8 @@ import { Task, Project } from '../types';
 import { taskService } from './task.service';
 import { projectService } from './project.service';
 import { simpleTaskService } from './simpleTask.service';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 export interface TasksByUrgency {
   overdue: Task[];      // En retard (dueDate < now)
@@ -152,25 +154,74 @@ class DashboardHubV2Service {
       // Récupérer les projets où l'utilisateur est membre
       const projects = await projectService.getProjectsByTeamMember(userId);
 
-      // Enrichir avec les métriques de tâches
-      const projectsWithMetrics: ProjectWithMetrics[] = projects.map(project => {
-        // Filtrer les tâches du projet qui sont assignées à l'utilisateur
-        const projectTasks = myTasks.filter(task => task.projectId === project.id);
+      // Enrichir avec les métriques de tâches ET recalculer le progress à la volée
+      const projectsWithMetrics: ProjectWithMetrics[] = await Promise.all(
+        projects.map(async project => {
+          // Filtrer les tâches du projet qui sont assignées à l'utilisateur
+          const projectTasks = myTasks.filter(task => task.projectId === project.id);
 
-        return {
-          ...project,
-          myTasksCount: projectTasks.length,
-          myTasksOverdue: projectTasks.filter(task =>
-            task.dueDate && new Date(task.dueDate) < new Date()
-          ).length,
-          myTasksInProgress: projectTasks.filter(task =>
-            task.status === 'IN_PROGRESS'
-          ).length,
-          myTasksTodo: projectTasks.filter(task =>
-            task.status === 'TODO' || task.status === 'BACKLOG'
-          ).length,
-        };
-      });
+          // Recalculer le progress à la volée en excluant les sous-tâches
+          let calculatedProgress = project.progress; // Par défaut, garder la valeur de la base
+          try {
+            const tasksQuery = query(
+              collection(db, 'tasks'),
+              where('projectId', '==', project.id)
+            );
+            const tasksSnapshot = await getDocs(tasksQuery);
+
+            if (!tasksSnapshot.empty) {
+              let totalTasks = 0;
+              let completedTasks = 0;
+              let totalStoryPoints = 0;
+              let completedStoryPoints = 0;
+
+              tasksSnapshot.docs.forEach(doc => {
+                const task = doc.data() as Task;
+
+                // Exclure les sous-tâches
+                if (task.parentTaskId) {
+                  return;
+                }
+
+                totalTasks++;
+                const storyPoints = task.storyPoints || 1;
+                totalStoryPoints += storyPoints;
+
+                if (task.status === 'DONE') {
+                  completedTasks++;
+                  completedStoryPoints += storyPoints;
+                }
+              });
+
+              // Calculer le progrès basé sur les story points si disponibles, sinon sur le nombre de tâches
+              if (totalStoryPoints > 0) {
+                calculatedProgress = Math.round((completedStoryPoints / totalStoryPoints) * 100);
+              } else if (totalTasks > 0) {
+                calculatedProgress = Math.round((completedTasks / totalTasks) * 100);
+              } else {
+                calculatedProgress = 0;
+              }
+            }
+          } catch (error) {
+            console.error(`Error calculating progress for project ${project.id}:`, error);
+          }
+
+          return {
+            ...project,
+            progress: calculatedProgress, // Utiliser le progress recalculé
+            myTasksCount: projectTasks.length,
+            myTasksOverdue: projectTasks.filter(task =>
+              task.dueDate && new Date(task.dueDate) < new Date()
+            ).length,
+            myTasksInProgress: projectTasks.filter(task =>
+              task.status === 'IN_PROGRESS'
+            ).length,
+            myTasksTodo: projectTasks.filter(task =>
+              task.status === 'TODO' || task.status === 'BACKLOG'
+            ).length,
+          };
+        })
+      );
 
       // Trier par nombre de tâches en retard DESC, puis par date de mise à jour
       return projectsWithMetrics.sort((a, b) => {

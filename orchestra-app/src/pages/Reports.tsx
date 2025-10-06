@@ -66,10 +66,11 @@ import { userService } from '../services/user.service';
 import { milestoneService } from '../services/milestone.service';
 import { format, subDays, startOfWeek, eachDayOfInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 // Lazy load des composants
 const PortfolioGantt = lazy(() => import('../components/reports/PortfolioGantt'));
-const AgileMetrics = lazy(() => import('../components/reports/AgileMetrics'));
 
 interface ReportData {
   projects: Project[];
@@ -107,16 +108,69 @@ const Reports: React.FC = () => {
         userService.getAllUsers()
       ]);
 
+      // Recalculer le progress de chaque projet à la volée en excluant les sous-tâches
+      const projectsWithRecalculatedProgress = await Promise.all(
+        projects.map(async (project) => {
+          try {
+            const tasksQuery = query(
+              collection(db, 'tasks'),
+              where('projectId', '==', project.id)
+            );
+            const tasksSnapshot = await getDocs(tasksQuery);
+
+            if (tasksSnapshot.empty) {
+              return { ...project, progress: 0 };
+            }
+
+            let totalTasks = 0;
+            let completedTasks = 0;
+            let totalStoryPoints = 0;
+            let completedStoryPoints = 0;
+
+            tasksSnapshot.docs.forEach(doc => {
+              const task = doc.data() as Task;
+
+              // Exclure les sous-tâches
+              if (task.parentTaskId) {
+                return;
+              }
+
+              totalTasks++;
+              const storyPoints = task.storyPoints || 1;
+              totalStoryPoints += storyPoints;
+
+              if (task.status === 'DONE') {
+                completedTasks++;
+                completedStoryPoints += storyPoints;
+              }
+            });
+
+            // Calculer le progrès
+            let calculatedProgress = 0;
+            if (totalStoryPoints > 0) {
+              calculatedProgress = Math.round((completedStoryPoints / totalStoryPoints) * 100);
+            } else if (totalTasks > 0) {
+              calculatedProgress = Math.round((completedTasks / totalTasks) * 100);
+            }
+
+            return { ...project, progress: calculatedProgress };
+          } catch (error) {
+            console.error(`Error calculating progress for project ${project.id}:`, error);
+            return project;
+          }
+        })
+      );
+
       // Charger les jalons pour tous les projets
-      const milestonePromises = projects.map(p => milestoneService.getProjectMilestones(p.id));
+      const milestonePromises = projectsWithRecalculatedProgress.map(p => milestoneService.getProjectMilestones(p.id));
       const milestonesArrays = await Promise.all(milestonePromises);
       const allMilestones = milestonesArrays.flat();
 
-      console.log('Projects loaded:', projects.length);
+      console.log('Projects loaded:', projectsWithRecalculatedProgress.length);
       console.log('Milestones loaded:', allMilestones.length);
       console.log('Milestones details:', allMilestones);
 
-      setData({ projects, tasks, users, milestones: allMilestones });
+      setData({ projects: projectsWithRecalculatedProgress, tasks, users, milestones: allMilestones });
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
     } finally {
@@ -162,8 +216,11 @@ const Reports: React.FC = () => {
     const totalProjects = filtered.projects.length;
     const activeProjects = filtered.projects.filter(p => p.status === 'active').length;
     const completedProjects = filtered.projects.filter(p => p.status === 'completed').length;
-    const totalTasks = filtered.tasks.length;
-    const completedTasks = filtered.tasks.filter(t => t.status === 'DONE').length;
+
+    // Exclure les sous-tâches du calcul (seules les tâches parentes comptent)
+    const parentTasks = filtered.tasks.filter(t => !t.parentTaskId);
+    const totalTasks = parentTasks.length;
+    const completedTasks = parentTasks.filter(t => t.status === 'DONE').length;
     const overdueTasks = filtered.tasks.filter(t => 
       t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'DONE'
     ).length;
@@ -217,11 +274,15 @@ const Reports: React.FC = () => {
 
   const getTaskStatusData = () => {
     const filtered = getFilteredData();
+
+    // Exclure les sous-tâches du calcul (seules les tâches parentes comptent)
+    const parentTasks = filtered.tasks.filter(t => !t.parentTaskId);
+
     const statusCounts = {
-      'À faire': filtered.tasks.filter(t => t.status === 'TODO').length,
-      'En cours': filtered.tasks.filter(t => t.status === 'IN_PROGRESS').length,
-      'Terminé': filtered.tasks.filter(t => t.status === 'DONE').length,
-      'Bloqué': filtered.tasks.filter(t => t.status === 'BLOCKED').length,
+      'À faire': parentTasks.filter(t => t.status === 'TODO').length,
+      'En cours': parentTasks.filter(t => t.status === 'IN_PROGRESS').length,
+      'Terminé': parentTasks.filter(t => t.status === 'DONE').length,
+      'Bloqué': parentTasks.filter(t => t.status === 'BLOCKED').length,
     };
 
     return Object.entries(statusCounts).map(([name, value]) => ({
@@ -231,50 +292,6 @@ const Reports: React.FC = () => {
              name === 'En cours' ? '#ff9800' : 
              name === 'Bloqué' ? '#f44336' : '#2196f3'
     }));
-  };
-
-  const getVelocityData = () => {
-    const days = eachDayOfInterval({
-      start: subDays(new Date(), 13),
-      end: new Date()
-    });
-
-    return days.map(day => {
-      const dayTasks = data.tasks.filter(t => {
-        if (t.completedDate) {
-          const completedDate = new Date(t.completedDate);
-          return format(completedDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
-        }
-        return false;
-      });
-
-      return {
-        date: format(day, 'dd/MM', { locale: fr }),
-        completed: dayTasks.length,
-        created: data.tasks.filter(t => 
-          format(new Date(t.createdAt), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
-        ).length
-      };
-    });
-  };
-
-  const getTeamPerformanceData = () => {
-    return data.users
-      .filter(u => u.isActive)
-      .map(user => {
-        const userTasks = data.tasks.filter(t => t.responsible && t.responsible.includes(user.id));
-        const completedTasks = userTasks.filter(t => t.status === 'DONE');
-        const activeTasks = userTasks.filter(t => t.status === 'IN_PROGRESS');
-        
-        return {
-          name: user.displayName.split(' ')[0],
-          completed: completedTasks.length,
-          active: activeTasks.length,
-          total: userTasks.length
-        };
-      })
-      .filter(user => user.total > 0)
-      .slice(0, 10); // Top 10 users
   };
 
   const exportReport = () => {
@@ -311,8 +328,6 @@ const Reports: React.FC = () => {
   const metrics = getMetrics();
   const projectProgressData = getProjectProgressData();
   const taskStatusData = getTaskStatusData();
-  const velocityData = getVelocityData();
-  const teamPerformanceData = getTeamPerformanceData();
 
   return (
     <Box sx={{ p: 3 }}>
@@ -383,12 +398,6 @@ const Reports: React.FC = () => {
             label="Gantt Portfolio"
             id="tab-1"
             aria-controls="tabpanel-1"
-          />
-          <Tab
-            icon={<SpeedIcon />}
-            label="Agile & DevOps"
-            id="tab-2"
-            aria-controls="tabpanel-2"
           />
         </Tabs>
       </Box>
@@ -487,67 +496,6 @@ const Reports: React.FC = () => {
             </CardContent>
           </Card>
         </Box>
-
-        {/* Vélocité de l'équipe */}
-        <Box sx={{ flexGrow: 1, minWidth: 200 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Vélocité (14 derniers jours)
-              </Typography>
-              <Box height={300}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={velocityData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <RechartsTooltip />
-                    <Area 
-                      type="monotone" 
-                      dataKey="completed" 
-                      stackId="1"
-                      stroke="#4caf50" 
-                      fill="#4caf50" 
-                      name="Terminées"
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="created" 
-                      stackId="2"
-                      stroke="#2196f3" 
-                      fill="#2196f3" 
-                      name="Créées"
-                    />
-                    <Legend />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </Box>
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Performance équipe */}
-        <Box sx={{ flexGrow: 1, minWidth: 200 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Performance de l'Équipe
-              </Typography>
-              <Box height={300}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={teamPerformanceData} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" width={80} />
-                    <RechartsTooltip />
-                    <Bar dataKey="completed" fill="#4caf50" name="Terminées" />
-                    <Bar dataKey="active" fill="#ff9800" name="En cours" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
-            </CardContent>
-          </Card>
-        </Box>
       </Box>
 
       {/* Tableau détaillé des projets */}
@@ -565,15 +513,22 @@ const Reports: React.FC = () => {
                   <TableCell>Progression</TableCell>
                   <TableCell align="center">Tâches</TableCell>
                   <TableCell>Chef de projet</TableCell>
+                  <TableCell align="right">Heures Consommées</TableCell>
+                  <TableCell align="right">Heures Budgétées</TableCell>
                   <TableCell>Échéance</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {getFilteredData().projects.map((project) => {
-                  const projectTasks = data.tasks.filter(t => t.projectId === project.id);
+                  // Exclure les sous-tâches du calcul (seules les tâches parentes comptent)
+                  const projectTasks = data.tasks.filter(t => t.projectId === project.id && !t.parentTaskId);
                   const completedTasks = projectTasks.filter(t => t.status === 'DONE');
                   const isOverdue = project.dueDate && new Date(project.dueDate) < new Date() && project.status !== 'completed';
-                  
+
+                  // Calculer les heures consommées : somme des loggedHours de toutes les tâches du projet
+                  const allProjectTasks = data.tasks.filter(t => t.projectId === project.id);
+                  const totalLoggedHours = allProjectTasks.reduce((sum, task) => sum + (task.loggedHours || 0), 0);
+
                   return (
                     <TableRow key={project.id}>
                       <TableCell>
@@ -617,18 +572,35 @@ const Reports: React.FC = () => {
                           {project.projectManager}
                         </Typography>
                       </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body2"
+                          color={
+                            project.budget && totalLoggedHours > project.budget
+                              ? 'error'
+                              : 'text.primary'
+                          }
+                        >
+                          {totalLoggedHours}h
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2">
+                          {project.budget || 0}h
+                        </Typography>
+                      </TableCell>
                       <TableCell>
-                        <Typography 
+                        <Typography
                           variant="body2"
                           color={isOverdue ? 'error' : 'text.primary'}
                         >
                           {project.dueDate ? format(new Date(project.dueDate), 'dd/MM/yyyy', { locale: fr }) : 'Non définie'}
                           {isOverdue && (
-                            <Chip 
-                              size="small" 
-                              label="Retard" 
-                              color="error" 
-                              sx={{ ml: 1 }} 
+                            <Chip
+                              size="small"
+                              label="Retard"
+                              color="error"
+                              sx={{ ml: 1 }}
                             />
                           )}
                         </Typography>
@@ -668,23 +640,6 @@ const Reports: React.FC = () => {
             <PortfolioGantt
               projects={data.projects}
               milestones={data.milestones}
-            />
-          </Suspense>
-        </Box>
-      )}
-
-      {/* Tab Panel 2: Agile & DevOps Metrics */}
-      {tabValue === 2 && (
-        <Box>
-          <Suspense fallback={
-            <Box display="flex" justifyContent="center" alignItems="center" height="400px">
-              <CircularProgress size={60} />
-            </Box>
-          }>
-            <AgileMetrics
-              tasks={data.tasks}
-              users={data.users}
-              projects={data.projects}
             />
           </Suspense>
         </Box>

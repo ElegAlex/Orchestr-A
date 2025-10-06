@@ -13,7 +13,6 @@ import {
   Divider,
 } from '@mui/material';
 import {
-  ArrowForward as ArrowForwardIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   ExpandMore as ExpandMoreIcon,
@@ -274,20 +273,6 @@ export const MyTasksWidget: React.FC<MyTasksWidgetProps> = ({
               setState={setTodoState}
             />
           </Box>
-        )}
-
-        {/* Lien vers toutes les tâches */}
-        {totalTasks > 0 && (
-          <Button
-            fullWidth
-            variant="text"
-            size="small"
-            endIcon={<ArrowForwardIcon />}
-            onClick={() => navigate('/tasks')}
-            sx={{ mt: 2 }}
-          >
-            Voir toutes mes tâches
-          </Button>
         )}
       </CardContent>
     </Card>

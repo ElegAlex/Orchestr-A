@@ -108,6 +108,7 @@ const Calendar: React.FC = () => {
   // États pour le mode Planning
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [servicesInitialized, setServicesInitialized] = useState(false);
 
   // ✅ États pour les tâches simples
   const [simpleTaskModalOpen, setSimpleTaskModalOpen] = useState(false);
@@ -115,6 +116,19 @@ const Calendar: React.FC = () => {
 
   // ✅ Récupérer l'utilisateur connecté
   const currentUser = useSelector((state: RootState) => state.auth.user);
+
+  // ✅ Initialiser les filtres services avec les services de l'utilisateur au chargement
+  useEffect(() => {
+    if (currentUser && !servicesInitialized && services.length > 0) {
+      const userServiceIds = currentUser.serviceIds || (currentUser.serviceId ? [currentUser.serviceId] : []);
+
+      if (userServiceIds.length > 0) {
+        setSelectedServices(userServiceIds);
+      }
+
+      setServicesInitialized(true);
+    }
+  }, [currentUser, services, servicesInitialized]);
 
   // ✅ Mémoisation des événements filtrés avec support tâches simples
   const filteredEventsOptimized = useMemo(() => {

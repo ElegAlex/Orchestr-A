@@ -18,13 +18,17 @@ import {
   Person as PersonIcon,
   Security as SecurityIcon,
   Settings as SettingsIcon,
-  PhotoCamera as PhotoIcon
+  PhotoCamera as PhotoIcon,
+  Stars as SkillsIcon,
+  WorkOutline as PortfolioIcon,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { PersonalInfoTab } from '../components/profile/PersonalInfoTab';
 import { SecurityTab } from '../components/profile/SecurityTab';
 import { PreferencesTab } from '../components/profile/PreferencesTab';
+import { SkillsTab } from '../components/profile/SkillsTab';
+import { PortfolioTab } from '../components/profile/PortfolioTab';
 import { profileService } from '../services/profile.service';
 
 interface TabPanelProps {
@@ -223,7 +227,7 @@ const Profile: React.FC = () => {
       {/* Onglets */}
       <Paper sx={{ width: '100%' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={handleTabChange} aria-label="Profile tabs">
+          <Tabs value={tabValue} onChange={handleTabChange} aria-label="Profile tabs" variant="scrollable" scrollButtons="auto">
             <Tab
               icon={<PersonIcon />}
               label="Informations Personnelles"
@@ -242,6 +246,18 @@ const Profile: React.FC = () => {
               iconPosition="start"
               {...a11yProps(2)}
             />
+            <Tab
+              icon={<SkillsIcon />}
+              label="Compétences"
+              iconPosition="start"
+              {...a11yProps(3)}
+            />
+            <Tab
+              icon={<PortfolioIcon />}
+              label="Portfolio"
+              iconPosition="start"
+              {...a11yProps(4)}
+            />
           </Tabs>
         </Box>
 
@@ -255,6 +271,14 @@ const Profile: React.FC = () => {
 
         <TabPanel value={tabValue} index={2}>
           <PreferencesTab user={user} onUpdate={loadProfileStats} />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={3}>
+          <SkillsTab user={user} onUpdate={loadProfileStats} />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={4}>
+          <PortfolioTab user={user} />
         </TabPanel>
       </Paper>
 

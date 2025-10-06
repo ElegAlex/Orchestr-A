@@ -391,66 +391,6 @@ export const HRDashboard: React.FC<HRDashboardProps> = ({
                   </CardContent>
                 </Card>
               </Box>
-
-              {/* Top utilisateurs */}
-              <Box sx={{ flexGrow: 1, minWidth: 200 }}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      Employés avec le plus de congés
-                    </Typography>
-                    <TableContainer>
-                      <Table>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Nom</TableCell>
-                            <TableCell>Département</TableCell>
-                            <TableCell align="center">Demandes</TableCell>
-                            <TableCell align="center">Jours total</TableCell>
-                            <TableCell align="center">Durée moyenne</TableCell>
-                            <TableCell>Derniers congés</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {hrMetrics.topLeaveUsers.slice(0, 10).map((user) => (
-                            <TableRow key={user.userId}>
-                              <TableCell>
-                                <Typography variant="body2" fontWeight="medium">
-                                  {user.displayName}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Chip 
-                                  label={user.department} 
-                                  size="small" 
-                                  color="default" 
-                                />
-                              </TableCell>
-                              <TableCell align="center">
-                                {user.leaveRequestsCount}
-                              </TableCell>
-                              <TableCell align="center">
-                                <Typography fontWeight="bold">
-                                  {formatDuration(user.totalLeaveDays)}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="center">
-                                {formatDuration(user.averageRequestDuration)}
-                              </TableCell>
-                              <TableCell>
-                                {user.lastLeaveDate 
-                                  ? format(user.lastLeaveDate, 'dd/MM/yyyy', { locale: fr })
-                                  : 'Aucun'
-                                }
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </CardContent>
-                </Card>
-              </Box>
             </Box>
           )}
         </TabPanel>
