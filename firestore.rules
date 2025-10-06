@@ -185,10 +185,15 @@ service cloud.firestore {
     
     // Collection leaveBalances - Soldes de congés
     match /leaveBalances/{balanceId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isManager();
-      allow delete: if isManager();
+      allow read: if isAuthenticated() &&
+                     (resource.data.userId == request.auth.uid || isManager());
+      // Création : vérifier que l'utilisateur crée son propre solde
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Mise à jour et suppression : vérifier que c'est le propriétaire ou un manager
+      allow update, delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isManager()
+      );
     }
     
     // Collection approvalSteps - Étapes de validation
@@ -382,7 +387,15 @@ service cloud.firestore {
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
-    
+
+    // Collection personalTodos - To-dos personnelles (Ma To-Do)
+    match /personalTodos/{todoId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
     // Règle par défaut - Refuser tout accès non explicitement autorisé
     match /{document=**} {
       allow read, write: if false;
