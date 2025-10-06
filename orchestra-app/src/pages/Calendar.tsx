@@ -51,6 +51,7 @@ import { projectService } from '../services/project.service';
 import { userService } from '../services/user.service';
 import { simpleTaskService } from '../services/simpleTask.service';
 import { ServiceService } from '../services/service.service';
+import { leaveService } from '../services/leave.service';
 import { SimpleTaskModal } from '../components/calendar/SimpleTaskModal';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
@@ -61,7 +62,7 @@ interface CalendarEvent {
   id: string;
   title: string;
   date: Date;
-  type: 'task' | 'project' | 'simple_task';
+  type: 'task' | 'project' | 'simple_task' | 'leave';
   status?: string;
   priority?: string;
   assignee?: User; // Premier responsable pour rétrocompatibilité
@@ -76,6 +77,11 @@ interface CalendarEvent {
   // Créneaux horaires
   startTime?: string;
   endTime?: string;
+  // Congés
+  leaveType?: string;
+  halfDayType?: 'morning' | 'afternoon' | 'full';
+  isFirstDay?: boolean;
+  isLastDay?: boolean;
 }
 
 type CalendarView = 'month' | 'week' | 'day';
@@ -110,10 +116,6 @@ const Calendar: React.FC = () => {
   // ✅ Récupérer l'utilisateur connecté
   const currentUser = useSelector((state: RootState) => state.auth.user);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   // ✅ Mémoisation des événements filtrés avec support tâches simples
   const filteredEventsOptimized = useMemo(() => {
     let filtered = [...events];
@@ -126,7 +128,7 @@ const Calendar: React.FC = () => {
     // Filtre par projet (ne s'applique qu'aux tâches de projet)
     if (filters.project !== 'all') {
       filtered = filtered.filter(event =>
-        event.project?.id === filters.project || event.type === 'simple_task'
+        event.project?.id === filters.project || event.type === 'simple_task' || event.type === 'leave'
       );
     }
 
@@ -137,6 +139,9 @@ const Calendar: React.FC = () => {
       } else if (filters.taskCategory === 'SIMPLE_TASK') {
         filtered = filtered.filter(event => event.type === 'simple_task');
       }
+      // Les congés passent toujours (ne sont pas filtrés par catégorie de tâche)
+      const leaves = events.filter(event => event.type === 'leave');
+      filtered = [...filtered, ...leaves];
     }
 
     return filtered;
@@ -156,13 +161,14 @@ const Calendar: React.FC = () => {
       const threeMonthsAgo = subMonths(now, 1);
       const threeMonthsAhead = addMonths(now, 2);
       
-      // ✅ Calendar général : récupérer TOUTES les tâches (projet + simples)
+      // ✅ Calendar général : récupérer TOUTES les tâches (projet + simples) + congés
       const serviceService = new ServiceService();
-      const [projectTasks, simpleTasks, projectsData, servicesData] = await Promise.all([
+      const [projectTasks, simpleTasks, projectsData, servicesData, leaves] = await Promise.all([
         taskService.getTasks(), // Tâches de projet
         simpleTaskService.getAll(), // Toutes les tâches simples
         projectService.getActiveProjects(),
         serviceService.getAllServices(), // Services
+        currentUser?.id ? leaveService.getUserLeaves(currentUser.id) : Promise.resolve([]), // Congés
       ]);
 
       setProjects(projectsData);
@@ -263,13 +269,90 @@ const Calendar: React.FC = () => {
           description: project.description,
         }));
 
-      setEvents([...taskEvents, ...projectEvents]);
+      // ✅ Convertir les congés en événements calendrier
+      const leaveEvents: CalendarEvent[] = [];
+
+      leaves.forEach(leave => {
+        // Générer tous les jours du congé
+        const daysInRange = eachDayOfInterval({
+          start: new Date(leave.startDate),
+          end: new Date(leave.endDate)
+        });
+
+        daysInRange.forEach((day, dayIndex) => {
+          const leaveTypeLabels: { [key: string]: string } = {
+            PAID_LEAVE: '🏖️ Congé payé',
+            RTT: '🎯 RTT',
+            SICK_LEAVE: '🏥 Congé maladie',
+            MATERNITY_LEAVE: '👶 Congé maternité',
+            PATERNITY_LEAVE: '👶 Congé paternité',
+            EXCEPTIONAL_LEAVE: '⭐ Congé exceptionnel',
+            CONVENTIONAL_LEAVE: '📋 Congé conventionnel',
+            UNPAID_LEAVE: '💼 Congé sans solde',
+            TRAINING: '📚 Formation',
+          };
+
+          // Déterminer si c'est le premier/dernier jour
+          const isFirstDay = dayIndex === 0;
+          const isLastDay = dayIndex === daysInRange.length - 1;
+
+          // Déterminer le type de demi-journée
+          let halfDayType: 'morning' | 'afternoon' | 'full' = 'full';
+
+          if (isFirstDay && isLastDay) {
+            // Journée isolée
+            if (leave.halfDayStart) {
+              halfDayType = 'afternoon'; // Commence l'après-midi
+            } else if (leave.halfDayEnd) {
+              halfDayType = 'morning'; // Se termine le matin
+            }
+          } else if (isFirstDay && leave.halfDayStart) {
+            // Premier jour d'une période, commence l'après-midi
+            halfDayType = 'afternoon';
+          } else if (isLastDay && leave.halfDayEnd) {
+            // Dernier jour d'une période, se termine le matin
+            halfDayType = 'morning';
+          }
+
+          const newEvent: CalendarEvent = {
+            id: `leave-${leave.id}-day-${dayIndex}`,
+            title: leaveTypeLabels[leave.type] || leave.type,
+            date: day,
+            type: 'leave',
+            status: leave.status,
+            description: leave.reason || '',
+            leaveType: leave.type,
+            // Multi-jours
+            originalTaskId: leave.id,
+            isSpanning: daysInRange.length > 1,
+            spanDay: dayIndex + 1,
+            totalSpanDays: daysInRange.length,
+            // Demi-journées
+            halfDayType,
+            isFirstDay,
+            isLastDay,
+          };
+
+          leaveEvents.push(newEvent);
+        });
+      });
+
+      // Fusionner tous les événements
+      const allEvents = [...taskEvents, ...projectEvents, ...leaveEvents];
+      setEvents(allEvents);
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
+      // Erreur silencieuse
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUser]);
+
+  // Charger les données au montage et quand l'utilisateur change
+  useEffect(() => {
+    if (currentUser) {
+      loadData();
+    }
+  }, [currentUser, loadData]);
 
   // Mémoisation des fonctions pour éviter les re-renders
   const navigateDate = useCallback((direction: 'prev' | 'next') => {
@@ -307,6 +390,7 @@ const Calendar: React.FC = () => {
       case 'task': return '#2196f3';
       case 'project': return '#ff9800';
       case 'simple_task': return '#9c27b0';
+      case 'leave': return '#4caf50'; // Vert pour les congés
       default: return '#666';
     }
   };
@@ -750,7 +834,7 @@ const Calendar: React.FC = () => {
       await taskService.updateTask(taskId, updates);
       loadData(); // Recharger les données
     } catch (error) {
-      console.error('Erreur lors de la mise à jour de la tâche:', error);
+      // Erreur silencieuse
     }
   };
 
@@ -760,16 +844,15 @@ const Calendar: React.FC = () => {
 
   return (
     <Box>
-        {/* En-tête avec actions rapides */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            {/* ✅ Barre d'actions principale */}
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+        {/* ✅ Header compact unifié */}
+        <Card sx={{ mb: 2 }}>
+          <CardContent sx={{ p: 2 }}>
+            {/* Barre principale avec titre et action */}
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
               <Typography variant="h5" component="h1">
                 📅 Calendrier & Planning
               </Typography>
 
-              {/* ✅ Bouton d'action */}
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -778,111 +861,51 @@ const Calendar: React.FC = () => {
                   setSimpleTaskModalOpen(true);
                 }}
                 color="primary"
-                sx={{ fontWeight: 'bold' }}
+                size="small"
               >
                 Nouvelle Tâche
               </Button>
             </Stack>
 
-            {/* ✅ Filtres étendus */}
-            <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mt: 2 }}>
-              {/* Filtre par catégorie de tâche */}
+            {/* ✅ Filtres compacts */}
+            <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
+              {/* Filtre projets */}
               <FormControl size="small" sx={{ minWidth: 180 }}>
-                <InputLabel>Type de tâche</InputLabel>
-                <Select
-                  value={filters.taskCategory}
-                  onChange={(e) => setFilters({ ...filters, taskCategory: e.target.value })}
-                  label="Type de tâche"
-                >
-                  <MenuItem value="all">Toutes les tâches</MenuItem>
-                  <MenuItem value="PROJECT_TASK">
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <ProjectIcon fontSize="small" />
-                      <Typography>Tâches projet</Typography>
-                    </Stack>
-                  </MenuItem>
-                  <MenuItem value="SIMPLE_TASK">
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <BoltIcon fontSize="small" />
-                      <Typography>Tâches simples</Typography>
-                    </Stack>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-
-              {/* Filtre par type */}
-              <FormControl size="small" sx={{ minWidth: 180 }}>
-                <InputLabel>Type</InputLabel>
-                <Select
-                  value={filters.eventType}
-                  onChange={(e) => setFilters({ ...filters, eventType: e.target.value })}
-                  label="Type"
-                >
-                  <MenuItem value="all">Tout afficher</MenuItem>
-                  <MenuItem value="task">
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <AssignmentIcon fontSize="small" />
-                      <span>Tâches projet</span>
-                    </Stack>
-                  </MenuItem>
-                  <MenuItem value="simple_task">
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <BoltIcon fontSize="small" />
-                      <span>Tâches simples</span>
-                    </Stack>
-                  </MenuItem>
-                  <MenuItem value="project">
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <ProjectIcon fontSize="small" />
-                      <span>Échéances projet</span>
-                    </Stack>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Projets sélectionnés</InputLabel>
+                <InputLabel>Projets</InputLabel>
                 <Select
                   multiple
                   value={selectedProjects}
                   onChange={(e) => setSelectedProjects(e.target.value as string[])}
-                  label="Projets sélectionnés"
+                  label="Projets"
                   renderValue={(selected) =>
-                    selected.length === 0 ? 'Tous les projets' : `${selected.length} projet(s)`
+                    selected.length === 0 ? 'Tous' : `${selected.length} projet(s)`
                   }
                 >
                   {projects.map((project) => (
                     <MenuItem key={project.id} value={project.id}>
-                      <Chip
-                        size="small"
-                        label={project.name}
-                        sx={{ maxWidth: 150 }}
-                      />
+                      <Checkbox checked={selectedProjects.includes(project.id)} />
+                      <ListItemText primary={project.name} />
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
 
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Services sélectionnés</InputLabel>
+              {/* Filtre services */}
+              <FormControl size="small" sx={{ minWidth: 180 }}>
+                <InputLabel>Services</InputLabel>
                 <Select
                   multiple
                   value={selectedServices}
                   onChange={(e) => setSelectedServices(e.target.value as string[])}
-                  label="Services sélectionnés"
+                  label="Services"
                   renderValue={(selected) =>
-                    selected.length === 0 ? 'Tous les services' : `${selected.length} service(s)`
+                    selected.length === 0 ? 'Tous' : `${selected.length} service(s)`
                   }
                 >
-                  {/* Option spéciale "Encadrement" */}
                   <MenuItem key="encadrement" value="encadrement">
                     <Checkbox checked={selectedServices.includes('encadrement')} />
-                    <ListItemText
-                      primary="Encadrement"
-                      primaryTypographyProps={{ fontWeight: 600, color: 'primary.main' }}
-                    />
+                    <ListItemText primary="Encadrement" primaryTypographyProps={{ fontWeight: 600 }} />
                   </MenuItem>
-                  {/* Services réguliers */}
                   {services.map((service) => (
                     <MenuItem key={service.id} value={service.id}>
                       <Checkbox checked={selectedServices.includes(service.id)} />
@@ -892,21 +915,19 @@ const Calendar: React.FC = () => {
                 </Select>
               </FormControl>
 
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => {
-                  setSelectedProjects([]);
-                  setSelectedServices([]);
-                  setFilters({
-                    eventType: 'all',
-                    project: 'all',
-                    taskCategory: 'all',
-                  });
-                }}
-              >
-                Réinitialiser filtres
-              </Button>
+              {/* Bouton réinitialiser */}
+              {(selectedProjects.length > 0 || selectedServices.length > 0) && (
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => {
+                    setSelectedProjects([]);
+                    setSelectedServices([]);
+                  }}
+                >
+                  Réinitialiser
+                </Button>
+              )}
             </Stack>
           </CardContent>
         </Card>

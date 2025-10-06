@@ -8,6 +8,7 @@ import {
   Avatar,
   Collapse,
   Chip,
+  Tooltip,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -39,6 +40,9 @@ interface CalendarItem {
   isSpanning?: boolean;
   spanDay?: number;
   totalSpanDays?: number;
+  // Congés - demi-journées
+  halfDayType?: 'morning' | 'afternoon' | 'full';
+  description?: string;
 }
 
 interface UserWorkloadDay {
@@ -135,8 +139,18 @@ export const MonthView: React.FC<MonthViewProps> = ({
                         const taskBars = new Map<string, CalendarItem[]>();
                         const singleDayItems = new Map<string, CalendarItem[]>();
 
+                        // Filtrer les congés
+                        const leavesMap = new Map<string, CalendarItem[]>();
+
                         workloadDay.items.forEach(item => {
-                          if (item.originalTaskId && item.isSpanning) {
+                          // Séparer les congés
+                          if (item.type === 'leave') {
+                            const dayKey = format(item.startTime, 'yyyy-MM-dd');
+                            if (!leavesMap.has(dayKey)) {
+                              leavesMap.set(dayKey, []);
+                            }
+                            leavesMap.get(dayKey)!.push(item);
+                          } else if (item.originalTaskId && item.isSpanning) {
                             if (!taskBars.has(item.originalTaskId)) {
                               taskBars.set(item.originalTaskId, []);
                             }
@@ -187,6 +201,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                                       const teleworkResolution = teleworkSystem.getResolutionForDay(workloadDay.userId, day);
                                       const isRemoteDay = teleworkResolution?.resolvedMode === 'remote';
+                                      const dayKey = format(day, 'yyyy-MM-dd');
+                                      const hasLeaves = leavesMap.has(dayKey) && leavesMap.get(dayKey)!.length > 0;
 
                                       return (
                                         <Box
@@ -196,15 +212,124 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                             minWidth: 44,
                                             borderRight: '1px solid',
                                             borderColor: 'divider',
-                                            bgcolor: isWeekend ? 'grey.50' : 'transparent',
-                                            border: isRemoteDay ? '2px solid #ff9800' : undefined,
-                                            borderRadius: isRemoteDay ? 1 : 0,
+                                            bgcolor: hasLeaves
+                                              ? 'rgba(76, 175, 80, 0.12)'
+                                              : isWeekend ? 'grey.50' : 'transparent',
+                                            border: hasLeaves
+                                              ? '2px solid rgba(76, 175, 80, 0.3)'
+                                              : isRemoteDay ? '2px solid #ff9800' : undefined,
+                                            borderRadius: hasLeaves || isRemoteDay ? 1 : 0,
                                             boxSizing: 'border-box'
                                           }}
                                         />
                                       );
                                     })}
                                   </Box>
+
+                                  {/* Bandeaux verts pour les congés */}
+                                  {Array.from(leavesMap.entries()).map(([dayKey, leaves]) => {
+                                    const dayIndex = monthDays.findIndex(d =>
+                                      format(d, 'yyyy-MM-dd') === dayKey
+                                    );
+
+                                    if (dayIndex === -1) return null;
+
+                                    const totalDays = monthDays.length;
+                                    const baseDayWidthPercent = (1 / totalDays) * 100;
+                                    const baseDayLeftPercent = (dayIndex / totalDays) * 100;
+
+                                    return leaves.map((leave, idx) => {
+                                      // Calculer position et largeur selon halfDayType
+                                      const isHalfDay = leave.halfDayType && leave.halfDayType !== 'full';
+                                      const widthMultiplier = isHalfDay ? 0.5 : 1;
+                                      const leftOffset = leave.halfDayType === 'afternoon' ? baseDayWidthPercent * 0.5 : 0;
+
+                                      // Gradient de couleur selon type de demi-journée
+                                      const getBgColor = () => {
+                                        if (leave.halfDayType === 'morning') {
+                                          return 'linear-gradient(90deg, #4caf50 0%, #81c784 100%)';
+                                        } else if (leave.halfDayType === 'afternoon') {
+                                          return 'linear-gradient(90deg, #81c784 0%, #4caf50 100%)';
+                                        }
+                                        return '#4caf50';
+                                      };
+
+                                      // Icône selon type de demi-journée
+                                      const getIcon = () => {
+                                        if (leave.halfDayType === 'morning') return '🌅';
+                                        if (leave.halfDayType === 'afternoon') return '🌆';
+                                        return '🌞';
+                                      };
+
+                                      // Tooltip descriptif
+                                      const getTooltipContent = () => {
+                                        const dayTypeText =
+                                          leave.halfDayType === 'morning' ? 'Matin uniquement' :
+                                          leave.halfDayType === 'afternoon' ? 'Après-midi uniquement' :
+                                          'Journée complète';
+
+                                        return (
+                                          <Box>
+                                            <Typography variant="caption" fontWeight="bold" display="block">
+                                              {leave.title}
+                                            </Typography>
+                                            <Typography variant="caption" display="block">
+                                              {getIcon()} {dayTypeText}
+                                            </Typography>
+                                            {leave.description && (
+                                              <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                                {leave.description}
+                                              </Typography>
+                                            )}
+                                          </Box>
+                                        );
+                                      };
+
+                                      return (
+                                        <Tooltip
+                                          key={`leave-banner-${dayKey}-${idx}`}
+                                          title={getTooltipContent()}
+                                          placement="top"
+                                          arrow
+                                        >
+                                          <Box
+                                            sx={{
+                                              position: 'absolute',
+                                              left: `calc(${baseDayLeftPercent}% + ${leftOffset}% + 2px)`,
+                                              top: `${4 + idx * 24}px`,
+                                              width: `calc(${baseDayWidthPercent * widthMultiplier}% - 4px)`,
+                                              background: getBgColor(),
+                                              color: 'white',
+                                              borderRadius: 1,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              gap: 0.5,
+                                              fontSize: '0.65rem',
+                                              fontWeight: 'bold',
+                                              py: 0.5,
+                                              px: 0.5,
+                                              zIndex: 8,
+                                              overflow: 'hidden',
+                                              textOverflow: 'ellipsis',
+                                              whiteSpace: 'nowrap',
+                                              cursor: 'pointer',
+                                              boxShadow: 1,
+                                              '&:hover': {
+                                                opacity: 0.9,
+                                                boxShadow: 2,
+                                              }
+                                            }}
+                                          >
+                                            <span style={{ fontSize: '0.7rem' }}>{getIcon()}</span>
+                                            <Typography noWrap fontSize="0.65rem" fontWeight="bold">
+                                              {leave.title}
+                                            </Typography>
+                                          </Box>
+                                        </Tooltip>
+                                      );
+                                    });
+                                  })}
 
                                   {/* Barres continues pour tâches multi-jours */}
                                   {Array.from(taskBars.entries()).map(([taskId, items], barIndex) => {
@@ -322,6 +447,51 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                       );
                                     });
                                   })}
+
+                                  {/* Overlays verts pour masquer les tâches lors des congés */}
+                                  {Array.from(leavesMap.entries()).map(([dayKey, leaves]) => {
+                                    const dayIndex = monthDays.findIndex(d =>
+                                      format(d, 'yyyy-MM-dd') === dayKey
+                                    );
+
+                                    if (dayIndex === -1) return null;
+
+                                    const totalDays = monthDays.length;
+                                    const widthPercent = (1 / totalDays) * 100;
+                                    const leftPercent = (dayIndex / totalDays) * 100;
+
+                                    return (
+                                      <Box
+                                        key={`leave-overlay-${dayKey}`}
+                                        sx={{
+                                          position: 'absolute',
+                                          left: `calc(${leftPercent}% + 2px)`,
+                                          top: 0,
+                                          width: `calc(${widthPercent}% - 4px)`,
+                                          height: '100%',
+                                          bgcolor: 'rgba(76, 175, 80, 0.7)',
+                                          zIndex: 15,
+                                          pointerEvents: 'none',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          borderRadius: 1
+                                        }}
+                                      >
+                                        <Typography
+                                          sx={{
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.75rem',
+                                            textAlign: 'center',
+                                            transform: 'rotate(-45deg)'
+                                          }}
+                                        >
+                                          Absent
+                                        </Typography>
+                                      </Box>
+                                    );
+                                  })}
                                 </Box>
                               </Box>
                           </Box>
@@ -386,8 +556,18 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       const taskBars = new Map<string, CalendarItem[]>();
                       const singleDayItems = new Map<string, CalendarItem[]>();
 
+                      // Filtrer les congés
+                      const leavesMap = new Map<string, CalendarItem[]>();
+
                       workloadDay.items.forEach(item => {
-                        if (item.originalTaskId && item.isSpanning) {
+                        // Séparer les congés
+                        if (item.type === 'leave') {
+                          const dayKey = format(item.startTime, 'yyyy-MM-dd');
+                          if (!leavesMap.has(dayKey)) {
+                            leavesMap.set(dayKey, []);
+                          }
+                          leavesMap.get(dayKey)!.push(item);
+                        } else if (item.originalTaskId && item.isSpanning) {
                           if (!taskBars.has(item.originalTaskId)) {
                             taskBars.set(item.originalTaskId, []);
                           }
@@ -438,6 +618,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                                     const teleworkResolution = teleworkSystem.getResolutionForDay(workloadDay.userId, day);
                                     const isRemoteDay = teleworkResolution?.resolvedMode === 'remote';
+                                    const dayKey = format(day, 'yyyy-MM-dd');
+                                    const hasLeaves = leavesMap.has(dayKey) && leavesMap.get(dayKey)!.length > 0;
 
                                     return (
                                       <Box
@@ -447,15 +629,124 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                           minWidth: 44,
                                           borderRight: '1px solid',
                                           borderColor: 'divider',
-                                          bgcolor: isWeekend ? 'grey.50' : 'transparent',
-                                          border: isRemoteDay ? '2px solid #ff9800' : undefined,
-                                          borderRadius: isRemoteDay ? 1 : 0,
+                                          bgcolor: hasLeaves
+                                            ? 'rgba(76, 175, 80, 0.12)'
+                                            : isWeekend ? 'grey.50' : 'transparent',
+                                          border: hasLeaves
+                                            ? '2px solid rgba(76, 175, 80, 0.3)'
+                                            : isRemoteDay ? '2px solid #ff9800' : undefined,
+                                          borderRadius: hasLeaves || isRemoteDay ? 1 : 0,
                                           boxSizing: 'border-box'
                                         }}
                                       />
                                     );
                                   })}
                                 </Box>
+
+                                {/* Bandeaux verts pour les congés */}
+                                {Array.from(leavesMap.entries()).map(([dayKey, leaves]) => {
+                                  const dayIndex = monthDays.findIndex(d =>
+                                    format(d, 'yyyy-MM-dd') === dayKey
+                                  );
+
+                                  if (dayIndex === -1) return null;
+
+                                  const totalDays = monthDays.length;
+                                  const baseDayWidthPercent = (1 / totalDays) * 100;
+                                  const baseDayLeftPercent = (dayIndex / totalDays) * 100;
+
+                                  return leaves.map((leave, idx) => {
+                                    // Calculer position et largeur selon halfDayType
+                                    const isHalfDay = leave.halfDayType && leave.halfDayType !== 'full';
+                                    const widthMultiplier = isHalfDay ? 0.5 : 1;
+                                    const leftOffset = leave.halfDayType === 'afternoon' ? baseDayWidthPercent * 0.5 : 0;
+
+                                    // Gradient de couleur selon type de demi-journée
+                                    const getBgColor = () => {
+                                      if (leave.halfDayType === 'morning') {
+                                        return 'linear-gradient(90deg, #4caf50 0%, #81c784 100%)';
+                                      } else if (leave.halfDayType === 'afternoon') {
+                                        return 'linear-gradient(90deg, #81c784 0%, #4caf50 100%)';
+                                      }
+                                      return '#4caf50';
+                                    };
+
+                                    // Icône selon type de demi-journée
+                                    const getIcon = () => {
+                                      if (leave.halfDayType === 'morning') return '🌅';
+                                      if (leave.halfDayType === 'afternoon') return '🌆';
+                                      return '🌞';
+                                    };
+
+                                    // Tooltip descriptif
+                                    const getTooltipContent = () => {
+                                      const dayTypeText =
+                                        leave.halfDayType === 'morning' ? 'Matin uniquement' :
+                                        leave.halfDayType === 'afternoon' ? 'Après-midi uniquement' :
+                                        'Journée complète';
+
+                                      return (
+                                        <Box>
+                                          <Typography variant="caption" fontWeight="bold" display="block">
+                                            {leave.title}
+                                          </Typography>
+                                          <Typography variant="caption" display="block">
+                                            {getIcon()} {dayTypeText}
+                                          </Typography>
+                                          {leave.description && (
+                                            <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                              {leave.description}
+                                            </Typography>
+                                          )}
+                                        </Box>
+                                      );
+                                    };
+
+                                    return (
+                                      <Tooltip
+                                        key={`leave-banner-${dayKey}-${idx}`}
+                                        title={getTooltipContent()}
+                                        placement="top"
+                                        arrow
+                                      >
+                                        <Box
+                                          sx={{
+                                            position: 'absolute',
+                                            left: `calc(${baseDayLeftPercent}% + ${leftOffset}% + 2px)`,
+                                            top: `${4 + idx * 24}px`,
+                                            width: `calc(${baseDayWidthPercent * widthMultiplier}% - 4px)`,
+                                            background: getBgColor(),
+                                            color: 'white',
+                                            borderRadius: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: 0.5,
+                                            fontSize: '0.65rem',
+                                            fontWeight: 'bold',
+                                            py: 0.5,
+                                            px: 0.5,
+                                            zIndex: 8,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            cursor: 'pointer',
+                                            boxShadow: 1,
+                                            '&:hover': {
+                                              opacity: 0.9,
+                                              boxShadow: 2,
+                                            }
+                                          }}
+                                        >
+                                          <span style={{ fontSize: '0.7rem' }}>{getIcon()}</span>
+                                          <Typography noWrap fontSize="0.65rem" fontWeight="bold">
+                                            {leave.title}
+                                          </Typography>
+                                        </Box>
+                                      </Tooltip>
+                                    );
+                                  });
+                                })}
 
                                 {/* Barres continues pour tâches multi-jours */}
                                 {Array.from(taskBars.entries()).map(([taskId, items], barIndex) => {
@@ -572,6 +863,51 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                       </Box>
                                     );
                                   });
+                                })}
+
+                                {/* Overlays verts pour masquer les tâches lors des congés */}
+                                {Array.from(leavesMap.entries()).map(([dayKey, leaves]) => {
+                                  const dayIndex = monthDays.findIndex(d =>
+                                    format(d, 'yyyy-MM-dd') === dayKey
+                                  );
+
+                                  if (dayIndex === -1) return null;
+
+                                  const totalDays = monthDays.length;
+                                  const widthPercent = (1 / totalDays) * 100;
+                                  const leftPercent = (dayIndex / totalDays) * 100;
+
+                                  return (
+                                    <Box
+                                      key={`leave-overlay-${dayKey}`}
+                                      sx={{
+                                        position: 'absolute',
+                                        left: `calc(${leftPercent}% + 2px)`,
+                                        top: 0,
+                                        width: `calc(${widthPercent}% - 4px)`,
+                                        height: '100%',
+                                        bgcolor: 'rgba(76, 175, 80, 0.7)',
+                                        zIndex: 15,
+                                        pointerEvents: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        borderRadius: 1
+                                      }}
+                                    >
+                                      <Typography
+                                        sx={{
+                                          color: 'white',
+                                          fontWeight: 'bold',
+                                          fontSize: '0.75rem',
+                                          textAlign: 'center',
+                                          transform: 'rotate(-45deg)'
+                                        }}
+                                      >
+                                        Absent
+                                      </Typography>
+                                    </Box>
+                                  );
                                 })}
                               </Box>
                             </Box>
