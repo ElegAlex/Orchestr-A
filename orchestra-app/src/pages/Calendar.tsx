@@ -612,6 +612,7 @@ const Calendar: React.FC = () => {
   };
 
   const renderWeekView = () => {
+    console.log('[WEEK VIEW RENDER] Version 2025-01-06-15h45');
     const weekStart = startOfWeek(currentDate, { locale: fr });
     const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -619,6 +620,7 @@ const Calendar: React.FC = () => {
       <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
         {days.map((day) => {
           const dayEvents = getEventsForDate(day);
+          console.log(`[WEEK VIEW DAY] ${format(day, 'yyyy-MM-dd')}: ${dayEvents.length} events`);
           const isTodayDate = isToday(day);
 
           return (
