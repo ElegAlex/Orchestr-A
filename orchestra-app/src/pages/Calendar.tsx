@@ -149,7 +149,12 @@ const Calendar: React.FC = () => {
 
   useEffect(() => {
     setFilteredEvents(filteredEventsOptimized);
-  }, [filteredEventsOptimized]);
+    console.log('[FILTERED EVENTS]', {
+      total: filteredEventsOptimized.length,
+      leaves: filteredEventsOptimized.filter(e => e.type === 'leave').length,
+      filters: filters
+    });
+  }, [filteredEventsOptimized, filters]);
 
   // Cache pour éviter les rechargements inutiles
   const loadData = useCallback(async () => {
@@ -465,6 +470,16 @@ const Calendar: React.FC = () => {
           const dayEvents = getEventsForDate(day);
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isTodayDate = isToday(day);
+
+          // DEBUG - Log pour voir les événements par jour
+          if (dayEvents.length > 0) {
+            console.log('[DAY EVENTS]', {
+              day: format(day, 'yyyy-MM-dd'),
+              total: dayEvents.length,
+              leaves: dayEvents.filter(e => e.type === 'leave').length,
+              events: dayEvents.map(e => ({ type: e.type, title: e.title, halfDayType: e.halfDayType }))
+            });
+          }
 
           return (
             <Box sx={{ flexGrow: 1, minWidth: 200 }} key={index}>
