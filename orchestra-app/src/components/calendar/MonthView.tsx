@@ -201,8 +201,6 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                                       const teleworkResolution = teleworkSystem.getResolutionForDay(workloadDay.userId, day);
                                       const isRemoteDay = teleworkResolution?.resolvedMode === 'remote';
-                                      const dayKey = format(day, 'yyyy-MM-dd');
-                                      const hasLeaves = leavesMap.has(dayKey) && leavesMap.get(dayKey)!.length > 0;
 
                                       return (
                                         <Box
@@ -622,8 +620,6 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                                     const teleworkResolution = teleworkSystem.getResolutionForDay(workloadDay.userId, day);
                                     const isRemoteDay = teleworkResolution?.resolvedMode === 'remote';
-                                    const dayKey = format(day, 'yyyy-MM-dd');
-                                    const hasLeaves = leavesMap.has(dayKey) && leavesMap.get(dayKey)!.length > 0;
 
                                     return (
                                       <Box
