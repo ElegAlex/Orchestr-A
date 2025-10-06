@@ -185,10 +185,13 @@ service cloud.firestore {
     
     // Collection leaveBalances - Soldes de congés
     match /leaveBalances/{balanceId} {
-      allow read: if isAuthenticated() &&
-                     (resource.data.userId == request.auth.uid || isManager());
-      // Création : vérifier que l'utilisateur crée son propre solde
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Lecture individuelle : propriétaire ou manager
+      allow get: if isAuthenticated() &&
+                    (resource.data.userId == request.auth.uid || isManager());
+      // Requêtes (where) : managers uniquement
+      allow list: if isAuthenticated() && isManager();
+      // Création : système ou propriétaire
+      allow create: if isAuthenticated();
       // Mise à jour et suppression : vérifier que c'est le propriétaire ou un manager
       allow update, delete: if isAuthenticated() && (
         resource.data.userId == request.auth.uid ||
