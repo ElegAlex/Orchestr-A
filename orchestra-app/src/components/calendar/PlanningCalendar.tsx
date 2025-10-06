@@ -700,45 +700,64 @@ const UserRow: React.FC<UserRowProps> = ({
         p: 0.5,
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: leaves.length > 0
-          ? 'rgba(76, 175, 80, 0.12)' // Fond vert léger si congé
-          : isRemoteDay
-            ? 'rgba(156, 39, 176, 0.05)'
-            : 'transparent',
+        bgcolor: isRemoteDay ? 'rgba(156, 39, 176, 0.05)' : 'transparent',
         borderRadius: 1,
         position: 'relative',
-        border: leaves.length > 0 ? '2px solid rgba(76, 175, 80, 0.3)' : 'none'
       }}>
         {/* BANDEAU CONGÉ - En haut de la colonne, priorité visuelle absolue */}
-        {leaves.length > 0 && (
-          <Box
-            sx={{
-              mb: 1,
-              bgcolor: '#4caf50',
-              color: 'white',
-              p: 1,
-              borderRadius: 1,
-              textAlign: 'center',
-              fontWeight: 'bold',
-              fontSize: '0.75rem',
-              border: '2px solid rgba(255,255,255,0.5)',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-              zIndex: 10,
-              position: 'relative'
-            }}
-          >
-            {leaves.map((leave, idx) => (
-              <Box key={idx}>
-                {leave.title}
+        {leaves.length > 0 && leaves.map((leave, idx) => {
+          const isHalfDay = leave.halfDayType && leave.halfDayType !== 'full';
+          const widthPercent = isHalfDay ? '48%' : '100%';
+          const alignSelf = leave.halfDayType === 'afternoon' ? 'flex-end' :
+                            leave.halfDayType === 'morning' ? 'flex-start' :
+                            'stretch';
+
+          const getLeaveIcon = () => {
+            if (leave.halfDayType === 'morning') return '🌅 ';
+            if (leave.halfDayType === 'afternoon') return '🌆 ';
+            return '🌞 ';
+          };
+
+          const getBgGradient = () => {
+            if (leave.halfDayType === 'morning') {
+              return 'linear-gradient(90deg, #4caf50 0%, #81c784 100%)';
+            } else if (leave.halfDayType === 'afternoon') {
+              return 'linear-gradient(90deg, #81c784 0%, #4caf50 100%)';
+            }
+            return '#4caf50';
+          };
+
+          return (
+            <Box
+              key={idx}
+              sx={{
+                mb: 1,
+                width: widthPercent,
+                alignSelf: alignSelf,
+                background: getBgGradient(),
+                color: 'white',
+                p: 1,
+                borderRadius: 1,
+                textAlign: 'center',
+                fontWeight: 'bold',
+                fontSize: '0.75rem',
+                border: '2px solid rgba(255,255,255,0.5)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                zIndex: 10,
+                position: 'relative'
+              }}
+            >
+              <Box>
+                {getLeaveIcon()}{leave.title}
                 {leave.isSpanning && leave.spanDay && leave.totalSpanDays && (
                   <Typography variant="caption" display="block" sx={{ fontSize: '0.65rem', opacity: 0.9, mt: 0.5 }}>
                     Jour {leave.spanDay}/{leave.totalSpanDays}
                   </Typography>
                 )}
               </Box>
-            ))}
-          </Box>
-        )}
+            </Box>
+          );
+        })}
 
         {/* Indicateur télétravail */}
         {isRemoteDay && !leaves.length && (
