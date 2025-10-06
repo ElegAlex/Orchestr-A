@@ -512,13 +512,15 @@ const Calendar: React.FC = () => {
                   )}
                 </Box>
 
-                <Stack spacing={0.5}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                   {dayEvents.slice(0, 3).map((event) => {
                     // Calcul de la largeur et de l'icône pour les congés avec demi-journée
                     const isLeave = event.type === 'leave';
                     const isHalfDay = isLeave && event.halfDayType && event.halfDayType !== 'full';
                     const widthPercent = isHalfDay ? '48%' : '100%';
-                    const marginLeft = isLeave && event.halfDayType === 'afternoon' ? '52%' : 0;
+                    const alignSelf = isLeave && event.halfDayType === 'afternoon' ? 'flex-end' :
+                                      isLeave && event.halfDayType === 'morning' ? 'flex-start' :
+                                      'stretch';
 
                     // DEBUG - Log pour vérifier les événements dans la vue Month
                     if (isLeave) {
@@ -528,7 +530,7 @@ const Calendar: React.FC = () => {
                         halfDayType: event.halfDayType,
                         isHalfDay,
                         widthPercent,
-                        marginLeft
+                        alignSelf
                       });
                     }
 
@@ -557,7 +559,7 @@ const Calendar: React.FC = () => {
                         sx={{
                           p: 0.5,
                           width: widthPercent,
-                          marginLeft: marginLeft,
+                          alignSelf: alignSelf,
                           background: getBgColor(),
                           borderLeft: `3px solid ${getEventTypeColor(event.type)}`,
                           borderRadius: 0.5,
@@ -621,7 +623,7 @@ const Calendar: React.FC = () => {
                       +{dayEvents.length - 3} autres
                     </Typography>
                   )}
-                </Stack>
+                </Box>
               </Box>
             </Box>
           );
