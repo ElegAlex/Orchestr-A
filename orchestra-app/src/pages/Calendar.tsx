@@ -314,6 +314,18 @@ const Calendar: React.FC = () => {
             halfDayType = 'morning';
           }
 
+          // DEBUG - Logs pour tracer
+          if (dayIndex === 0) {
+            console.log('[LEAVE DEBUG]', {
+              leaveId: leave.id,
+              type: leave.type,
+              halfDayStart: leave.halfDayStart,
+              halfDayEnd: leave.halfDayEnd,
+              calculatedHalfDayType: halfDayType,
+              totalDays: daysInRange.length
+            });
+          }
+
           const newEvent: CalendarEvent = {
             id: `leave-${leave.id}-day-${dayIndex}`,
             title: leaveTypeLabels[leave.type] || leave.type,
@@ -507,6 +519,18 @@ const Calendar: React.FC = () => {
                     const isHalfDay = isLeave && event.halfDayType && event.halfDayType !== 'full';
                     const widthPercent = isHalfDay ? '48%' : '100%';
                     const marginLeft = isLeave && event.halfDayType === 'afternoon' ? '52%' : 0;
+
+                    // DEBUG - Log pour vérifier les événements dans la vue Month
+                    if (isLeave) {
+                      console.log('[CALENDAR MONTH VIEW]', {
+                        eventId: event.id,
+                        title: event.title,
+                        halfDayType: event.halfDayType,
+                        isHalfDay,
+                        widthPercent,
+                        marginLeft
+                      });
+                    }
 
                     // Icône selon type de demi-journée
                     const getLeaveIcon = () => {
