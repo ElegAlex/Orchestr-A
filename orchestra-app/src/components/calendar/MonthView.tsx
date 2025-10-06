@@ -457,40 +457,46 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                     if (dayIndex === -1) return null;
 
                                     const totalDays = monthDays.length;
-                                    const widthPercent = (1 / totalDays) * 100;
-                                    const leftPercent = (dayIndex / totalDays) * 100;
+                                    const baseDayWidthPercent = (1 / totalDays) * 100;
+                                    const baseDayLeftPercent = (dayIndex / totalDays) * 100;
 
-                                    return (
-                                      <Box
-                                        key={`leave-overlay-${dayKey}`}
-                                        sx={{
-                                          position: 'absolute',
-                                          left: `calc(${leftPercent}% + 2px)`,
-                                          top: 0,
-                                          width: `calc(${widthPercent}% - 4px)`,
-                                          height: '100%',
-                                          bgcolor: 'rgba(76, 175, 80, 0.7)',
-                                          zIndex: 15,
-                                          pointerEvents: 'none',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          borderRadius: 1
-                                        }}
-                                      >
-                                        <Typography
+                                    return leaves.map((leave, idx) => {
+                                      const isHalfDay = leave.halfDayType && leave.halfDayType !== 'full';
+                                      const widthMultiplier = isHalfDay ? 0.5 : 1;
+                                      const leftOffset = leave.halfDayType === 'afternoon' ? baseDayWidthPercent * 0.5 : 0;
+
+                                      return (
+                                        <Box
+                                          key={`leave-overlay-${dayKey}-${idx}`}
                                           sx={{
-                                            color: 'white',
-                                            fontWeight: 'bold',
-                                            fontSize: '0.75rem',
-                                            textAlign: 'center',
-                                            transform: 'rotate(-45deg)'
+                                            position: 'absolute',
+                                            left: `calc(${baseDayLeftPercent}% + ${leftOffset}% + 2px)`,
+                                            top: 0,
+                                            width: `calc(${baseDayWidthPercent * widthMultiplier}% - 4px)`,
+                                            height: '100%',
+                                            bgcolor: 'rgba(76, 175, 80, 0.7)',
+                                            zIndex: 15,
+                                            pointerEvents: 'none',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: 1
                                           }}
                                         >
-                                          Absent
-                                        </Typography>
-                                      </Box>
-                                    );
+                                          <Typography
+                                            sx={{
+                                              color: 'white',
+                                              fontWeight: 'bold',
+                                              fontSize: '0.75rem',
+                                              textAlign: 'center',
+                                              transform: 'rotate(-45deg)'
+                                            }}
+                                          >
+                                            Absent
+                                          </Typography>
+                                        </Box>
+                                      );
+                                    });
                                   })}
                                 </Box>
                               </Box>
@@ -874,40 +880,46 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                   if (dayIndex === -1) return null;
 
                                   const totalDays = monthDays.length;
-                                  const widthPercent = (1 / totalDays) * 100;
-                                  const leftPercent = (dayIndex / totalDays) * 100;
+                                  const baseDayWidthPercent = (1 / totalDays) * 100;
+                                  const baseDayLeftPercent = (dayIndex / totalDays) * 100;
 
-                                  return (
-                                    <Box
-                                      key={`leave-overlay-${dayKey}`}
-                                      sx={{
-                                        position: 'absolute',
-                                        left: `calc(${leftPercent}% + 2px)`,
-                                        top: 0,
-                                        width: `calc(${widthPercent}% - 4px)`,
-                                        height: '100%',
-                                        bgcolor: 'rgba(76, 175, 80, 0.7)',
-                                        zIndex: 15,
-                                        pointerEvents: 'none',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        borderRadius: 1
-                                      }}
-                                    >
-                                      <Typography
+                                  return leaves.map((leave, idx) => {
+                                    const isHalfDay = leave.halfDayType && leave.halfDayType !== 'full';
+                                    const widthMultiplier = isHalfDay ? 0.5 : 1;
+                                    const leftOffset = leave.halfDayType === 'afternoon' ? baseDayWidthPercent * 0.5 : 0;
+
+                                    return (
+                                      <Box
+                                        key={`leave-overlay-${dayKey}-${idx}`}
                                         sx={{
-                                          color: 'white',
-                                          fontWeight: 'bold',
-                                          fontSize: '0.75rem',
-                                          textAlign: 'center',
-                                          transform: 'rotate(-45deg)'
+                                          position: 'absolute',
+                                          left: `calc(${baseDayLeftPercent}% + ${leftOffset}% + 2px)`,
+                                          top: 0,
+                                          width: `calc(${baseDayWidthPercent * widthMultiplier}% - 4px)`,
+                                          height: '100%',
+                                          bgcolor: 'rgba(76, 175, 80, 0.7)',
+                                          zIndex: 15,
+                                          pointerEvents: 'none',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          borderRadius: 1
                                         }}
                                       >
-                                        Absent
-                                      </Typography>
-                                    </Box>
-                                  );
+                                        <Typography
+                                          sx={{
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.75rem',
+                                            textAlign: 'center',
+                                            transform: 'rotate(-45deg)'
+                                          }}
+                                        >
+                                          Absent
+                                        </Typography>
+                                      </Box>
+                                    );
+                                  });
                                 })}
                               </Box>
                             </Box>
