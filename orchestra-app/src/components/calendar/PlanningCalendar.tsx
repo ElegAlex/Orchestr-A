@@ -72,14 +72,19 @@ import { departmentService } from '../../services/department.service';
 import { ServiceService } from '../../services/service.service';
 import { capacityService } from '../../services/capacity.service';
 import { workloadCalculatorService } from '../../services/workload-calculator.service';
+import { leaveService } from '../../services/leave.service';
 import { useTeleworkV2 } from '../../hooks/useTeleworkV2';
 import { TeleworkDayCell } from './TeleworkDayCell';
 import { TeleworkProfileModal } from './TeleworkProfileModal';
 import { TeleworkBulkDeclarationModal } from './TeleworkBulkDeclarationModal';
 import { TaskModalSimplified as TaskModal } from '../tasks/TaskModalSimplified';
 import { SimpleTaskModal } from './SimpleTaskModal';
+import { AdminLeaveDeclarationModal } from './AdminLeaveDeclarationModal';
 import { MonthView } from './MonthView';
 import { auth } from '../../config/firebase';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store';
+import { permissionsService } from '../../services/permissions.service';
 
 const serviceService = new ServiceService();
 
@@ -152,6 +157,9 @@ interface CalendarItem {
   progress?: number; // Progression 0-100%
   estimatedHours?: number; // Heures estimées
   daysRemaining?: number; // Jours restants avant deadline
+  // Congés - demi-journées
+  halfDayType?: 'morning' | 'afternoon' | 'full';
+  description?: string;
   // Créneaux horaires en string (pour tâches simples)
   startTimeString?: string; // Format "HH:mm"
   endTimeString?: string; // Format "HH:mm"
@@ -639,9 +647,10 @@ const UserRow: React.FC<UserRowProps> = ({
       isSameDay(item.startTime, date)
     );
 
-    // Séparer les tâches projet des tâches simples
+    // Séparer les tâches projet, tâches simples et congés
     const projectTasks = dayItems.filter(item => item.type === 'task');
     const simpleTasks = dayItems.filter(item => item.type === 'simple_task');
+    const leaves = dayItems.filter(item => item.type === 'leave');
 
     // Vérifier si l'utilisateur est en télétravail ce jour avec le nouveau système unifié
     const year = date.getFullYear();
@@ -691,12 +700,48 @@ const UserRow: React.FC<UserRowProps> = ({
         p: 0.5,
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: isRemoteDay ? 'rgba(156, 39, 176, 0.05)' : 'transparent',
+        bgcolor: leaves.length > 0
+          ? 'rgba(76, 175, 80, 0.12)' // Fond vert léger si congé
+          : isRemoteDay
+            ? 'rgba(156, 39, 176, 0.05)'
+            : 'transparent',
         borderRadius: 1,
-        position: 'relative'
+        position: 'relative',
+        border: leaves.length > 0 ? '2px solid rgba(76, 175, 80, 0.3)' : 'none'
       }}>
+        {/* BANDEAU CONGÉ - En haut de la colonne, priorité visuelle absolue */}
+        {leaves.length > 0 && (
+          <Box
+            sx={{
+              mb: 1,
+              bgcolor: '#4caf50',
+              color: 'white',
+              p: 1,
+              borderRadius: 1,
+              textAlign: 'center',
+              fontWeight: 'bold',
+              fontSize: '0.75rem',
+              border: '2px solid rgba(255,255,255,0.5)',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              zIndex: 10,
+              position: 'relative'
+            }}
+          >
+            {leaves.map((leave, idx) => (
+              <Box key={idx}>
+                {leave.title}
+                {leave.isSpanning && leave.spanDay && leave.totalSpanDays && (
+                  <Typography variant="caption" display="block" sx={{ fontSize: '0.65rem', opacity: 0.9, mt: 0.5 }}>
+                    Jour {leave.spanDay}/{leave.totalSpanDays}
+                  </Typography>
+                )}
+              </Box>
+            ))}
+          </Box>
+        )}
+
         {/* Indicateur télétravail */}
-        {isRemoteDay && (
+        {isRemoteDay && !leaves.length && (
           <Box
             sx={{
               position: 'absolute',
@@ -726,8 +771,32 @@ const UserRow: React.FC<UserRowProps> = ({
           bgcolor: 'rgba(33, 150, 243, 0.04)', // Bleu très léger
           borderRadius: 1,
           p: 0.5,
-          mb: 0.5
+          mb: 0.5,
+          position: 'relative'
         }}>
+          {/* OVERLAY VERT pour masquer les tâches en cas de congé */}
+          {leaves.length > 0 && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                bgcolor: 'rgba(76, 175, 80, 0.7)', // Vert semi-transparent 70%
+                borderRadius: 1,
+                zIndex: 5,
+                pointerEvents: 'none', // Permet de cliquer à travers
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Typography sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem', opacity: 0.8 }}>
+                Absent
+              </Typography>
+            </Box>
+          )}
           {/* Tâches projet */}
           <Stack spacing={0.5}>
             {projectTasks.map((item, index) => (
@@ -760,8 +829,32 @@ const UserRow: React.FC<UserRowProps> = ({
 
         {/* ZONE TÂCHES SIMPLES - Hauteur dynamique */}
         <Box sx={{
-          p: 0.5
+          p: 0.5,
+          position: 'relative'
         }}>
+          {/* OVERLAY VERT pour masquer les tâches simples en cas de congé */}
+          {leaves.length > 0 && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                bgcolor: 'rgba(76, 175, 80, 0.7)', // Vert semi-transparent 70%
+                borderRadius: 1,
+                zIndex: 5,
+                pointerEvents: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Typography sx={{ color: 'white', fontWeight: 'bold', fontSize: '0.7rem', opacity: 0.8 }}>
+                Absent
+              </Typography>
+            </Box>
+          )}
           {/* Tâches simples */}
           <Stack spacing={0.5}>
             {simpleTasks.map((item, index) => (
@@ -781,6 +874,7 @@ const UserRow: React.FC<UserRowProps> = ({
             {createSimpleDropZone()}
           </Stack>
         </Box>
+
       </Box>
     );
   };
@@ -950,6 +1044,9 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
   selectedServices = [],
   onTaskUpdate,
 }) => {
+  // Utilisateur connecté
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+
   // États principaux
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
@@ -1051,6 +1148,9 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
     userDisplayName?: string;
   }>({});
 
+  // États AdminLeaveDeclarationModal
+  const [adminLeaveModalOpen, setAdminLeaveModalOpen] = useState(false);
+
   // Helper pour obtenir le nom du département par son ID
   const getDepartmentName = (departmentId: string | undefined): string => {
     if (!departmentId) return '-';
@@ -1100,7 +1200,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
     const sortedEntries = Array.from(grouped.entries()).sort(([serviceA], [serviceB]) => {
       if (serviceA === 'encadrement') return -1;
       if (serviceB === 'encadrement') return 1;
-      
+
       const nameA = serviceA === 'no-service' ? 'Sans service' : serviceA;
       const nameB = serviceB === 'no-service' ? 'Sans service' : serviceB;
       return nameA.localeCompare(nameB);
@@ -1187,7 +1287,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
             const contract = await capacityService.getUserContract(user.id);
             contractsMap.set(user.id, contract);
           } catch (error) {
-            console.warn(`Impossible de charger le contrat pour ${user.displayName}:`, error);
+            // Erreur silencieuse lors du chargement du contrat
             contractsMap.set(user.id, null);
           }
         })
@@ -1213,9 +1313,10 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
           workloadPromises.push(async () => {
             try {
               // ✅ Récupérer TOUTES les tâches et appliquer le filtre RACI comme Dashboard-Hub
-              const [allTasks, allSimpleTasks] = await Promise.all([
+              const [allTasks, allSimpleTasks, userLeaves] = await Promise.all([
                 taskService.getTasks(), // Toutes les tâches
-                simpleTaskService.getAll().catch(() => []) // Toutes les tâches simples
+                simpleTaskService.getAll().catch(() => []), // Toutes les tâches simples
+                leaveService.getUserLeaves(user.id).catch(() => []) // Congés de l'utilisateur
               ]);
 
               // Filtrer les tâches simples pour cet utilisateur
@@ -1267,6 +1368,80 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
 
           // ✅ NOUVELLE LOGIQUE : 1 carte = 1 tâche (pas de regroupement par projet)
           const calendarItems: CalendarItem[] = [];
+
+          // ✅ Ajouter les congés en CalendarItems
+          userLeaves.forEach(leave => {
+            const leaveStart = new Date(leave.startDate);
+            const leaveEnd = new Date(leave.endDate);
+            const leaveDays = eachDayOfInterval({ start: leaveStart, end: leaveEnd });
+            const periodStart = viewMode === 'week' ? currentPeriod.start : monthDays[0];
+            const periodEnd = viewMode === 'week' ? currentPeriod.end : monthDays[monthDays.length - 1];
+
+            const leaveTypeLabels: { [key: string]: string } = {
+              PAID_LEAVE: '🏖️ Congé payé',
+              RTT: '🎯 RTT',
+              SICK_LEAVE: '🏥 Maladie',
+              MATERNITY_LEAVE: '👶 Maternité',
+              PATERNITY_LEAVE: '👶 Paternité',
+              EXCEPTIONAL_LEAVE: '⭐ Exceptionnel',
+              CONVENTIONAL_LEAVE: '📋 Conventionnel',
+              UNPAID_LEAVE: '💼 Sans solde',
+              TRAINING: '📚 Formation',
+            };
+
+            leaveDays.forEach((day, index) => {
+              // Vérifier si ce jour est dans la période affichée
+              const isInPeriod = day >= periodStart && day <= periodEnd;
+              if (isInPeriod) {
+                // Déterminer si c'est le premier/dernier jour
+                const isFirstDay = index === 0;
+                const isLastDay = index === leaveDays.length - 1;
+
+                // Déterminer le type de demi-journée
+                let halfDayType: 'morning' | 'afternoon' | 'full' = 'full';
+
+                if (isFirstDay && isLastDay) {
+                  // Journée isolée
+                  if (leave.halfDayStart) {
+                    halfDayType = 'afternoon'; // Commence l'après-midi
+                  } else if (leave.halfDayEnd) {
+                    halfDayType = 'morning'; // Se termine le matin
+                  }
+                } else if (isFirstDay && leave.halfDayStart) {
+                  // Premier jour d'une période, commence l'après-midi
+                  halfDayType = 'afternoon';
+                } else if (isLastDay && leave.halfDayEnd) {
+                  // Dernier jour d'une période, se termine le matin
+                  halfDayType = 'morning';
+                }
+
+                calendarItems.push({
+                  id: `leave-${leave.id}-${format(day, 'yyyy-MM-dd')}`,
+                  originalTaskId: leave.id,
+                  title: leaveTypeLabels[leave.type] || leave.type,
+                  type: 'leave' as any,
+                  startTime: new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0),
+                  endTime: new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59),
+                  userId: user.id,
+                  projectId: undefined,
+                  project: undefined,
+                  priority: 'P3' as 'P0' | 'P1' | 'P2' | 'P3',
+                  status: leave.status as any,
+                  assignee: user,
+                  color: '#4caf50', // Vert pour les congés
+                  isRemote: false,
+                  canMove: false,
+                  canResize: false,
+                  isSpanning: leaveDays.length > 1,
+                  spanDay: index + 1,
+                  totalSpanDays: leaveDays.length,
+                  // Demi-journées
+                  halfDayType,
+                  description: leave.reason,
+                });
+              }
+            });
+          });
 
           // ✅ Pour chaque tâche individuelle, créer un CalendarItem
           periodTasks.forEach(task => {
@@ -1439,7 +1614,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
       }
 
       const workloadData = await Promise.all(workloadPromises.map(fn => fn()));
-      
+
       // Détecter les conflits
       setRawWorkloadDays(workloadData);
 
@@ -1874,59 +2049,66 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
   return (
     <DndProvider backend={HTML5Backend}>
       <Box>
-        {/* Header avec navigation et stats */}
+        {/* ✅ Header compact unifié */}
         <Card sx={{ mb: 1 }}>
-          <CardContent>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h4">
-                📅 Planning
-              </Typography>
-              
-              {/* Stats globales */}
-              <Stack direction="row">
-                <Chip
-                  icon={<PersonIcon />}
-                  label={`${users.length} ressources`}
-                  color="primary"
-                />
-              </Stack>
-            </Stack>
-
-            {/* Navigation */}
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Stack direction="row" alignItems="center">
-                <IconButton onClick={handlePrevious}>
+          <CardContent sx={{ p: 1.5 }}>
+            {/* Barre unique compacte */}
+            <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+              {/* Navigation gauche */}
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <IconButton size="small" onClick={handlePrevious}>
                   <ChevronLeftIcon />
                 </IconButton>
-                
-                <Button variant="outlined" startIcon={<TodayIcon />} onClick={handleToday}>
+
+                <Button variant="outlined" size="small" startIcon={<TodayIcon />} onClick={handleToday}>
                   Aujourd'hui
                 </Button>
-                
-                <IconButton onClick={handleNext}>
+
+                <IconButton size="small" onClick={handleNext}>
                   <ChevronRightIcon />
                 </IconButton>
-                
-                <Typography variant="h6" sx={{ ml: 2, textTransform: 'capitalize' }}>
+
+                <Typography variant="subtitle1" fontWeight="bold" sx={{ ml: 1, textTransform: 'capitalize' }}>
                   {getViewTitle()}
                 </Typography>
               </Stack>
 
-              {/* Sélecteur de vue */}
-              <Stack direction="row">
-                <FormControl size="small">
+              {/* Stats et vue droite */}
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Chip
+                  icon={<PersonIcon />}
+                  label={`${users.length} ressource${users.length > 1 ? 's' : ''}`}
+                  color="primary"
+                  size="small"
+                />
+
+                {/* Bouton déclaration congés admin (admin/responsable/manager) */}
+                {currentUser && permissionsService.canApproveLeaves(currentUser) && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="secondary"
+                    onClick={() => setAdminLeaveModalOpen(true)}
+                    sx={{ whiteSpace: 'nowrap' }}
+                  >
+                    Déclarer congé
+                  </Button>
+                )}
+
+                {/* Sélecteur de vue */}
+                <FormControl size="small" sx={{ minWidth: 120 }}>
                   <Select
                     value={viewMode}
                     onChange={(e) => setViewMode(e.target.value as ViewMode)}
                   >
                     <MenuItem value="week">
-                      <Stack direction="row" alignItems="center" spacing={1}>
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
                         <ViewWeekIcon fontSize="small" />
                         <span>Semaine</span>
                       </Stack>
                     </MenuItem>
                     <MenuItem value="month">
-                      <Stack direction="row" alignItems="center" spacing={1}>
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
                         <CalendarMonthIcon fontSize="small" />
                         <span>Mois</span>
                       </Stack>
@@ -2409,6 +2591,19 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
           onClose={() => setBulkTeleworkModalOpen(false)}
           onSave={handleBulkTeleworkSave}
         />
+
+        {/* Modal de déclaration de congés admin */}
+        {currentUser && (
+          <AdminLeaveDeclarationModal
+            open={adminLeaveModalOpen}
+            currentUser={currentUser}
+            onClose={() => setAdminLeaveModalOpen(false)}
+            onSave={async () => {
+              await loadCalendarData();
+              setAdminLeaveModalOpen(false);
+            }}
+          />
+        )}
       </Box>
     </DndProvider>
   );
