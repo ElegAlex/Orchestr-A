@@ -1,5 +1,5 @@
 // Orchestr'A Service Worker - PWA Offline-First
-const CACHE_NAME = 'orchestra-v5-force-refresh-week-view';
+const CACHE_NAME = 'orchestra-v6-month-view-telework-border-fix';
 const CACHE_URLS = [
   '/',
   '/static/js/bundle.js',

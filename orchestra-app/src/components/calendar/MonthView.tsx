@@ -211,11 +211,11 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                             borderRight: '1px solid',
                                             borderColor: 'divider',
                                             bgcolor: isWeekend ? 'grey.50' : 'transparent',
-                                            borderLeft: isRemoteDay ? '2px solid #ff9800' : undefined,
-                                            borderTop: isRemoteDay ? '2px solid #ff9800' : undefined,
-                                            borderBottom: isRemoteDay ? '2px solid #ff9800' : undefined,
-                                            borderRadius: isRemoteDay ? 1 : 0,
-                                            boxSizing: 'border-box'
+                                            ...(isRemoteDay && {
+                                              border: '3px solid #ff9800',
+                                              borderRadius: 1,
+                                              boxSizing: 'border-box'
+                                            })
                                           }}
                                         />
                                       );
@@ -630,11 +630,11 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                           borderRight: '1px solid',
                                           borderColor: 'divider',
                                           bgcolor: isWeekend ? 'grey.50' : 'transparent',
-                                          borderLeft: isRemoteDay ? '2px solid #ff9800' : undefined,
-                                          borderTop: isRemoteDay ? '2px solid #ff9800' : undefined,
-                                          borderBottom: isRemoteDay ? '2px solid #ff9800' : undefined,
-                                          borderRadius: isRemoteDay ? 1 : 0,
-                                          boxSizing: 'border-box'
+                                          ...(isRemoteDay && {
+                                            border: '3px solid #ff9800',
+                                            borderRadius: 1,
+                                            boxSizing: 'border-box'
+                                          })
                                         }}
                                       />
                                     );
