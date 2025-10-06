@@ -501,68 +501,97 @@ const Calendar: React.FC = () => {
                 </Box>
 
                 <Stack spacing={0.5}>
-                  {dayEvents.slice(0, 3).map((event) => (
-                    <Box
-                      key={event.id}
-                      sx={{
-                        p: 0.5,
-                        bgcolor: `${getEventTypeColor(event.type)  }20`,
-                        borderLeft: `3px solid ${getEventTypeColor(event.type)}`,
-                        borderRadius: 0.5,
-                        cursor: 'pointer',
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedEvent(event);
-                        setEventDialogOpen(true);
-                      }}
-                    >
-                      <Typography
-                        variant="caption"
+                  {dayEvents.slice(0, 3).map((event) => {
+                    // Calcul de la largeur et de l'icône pour les congés avec demi-journée
+                    const isLeave = event.type === 'leave';
+                    const isHalfDay = isLeave && event.halfDayType && event.halfDayType !== 'full';
+                    const widthPercent = isHalfDay ? '48%' : '100%';
+                    const marginLeft = isLeave && event.halfDayType === 'afternoon' ? '52%' : 0;
+
+                    // Icône selon type de demi-journée
+                    const getLeaveIcon = () => {
+                      if (!isLeave) return '';
+                      if (event.halfDayType === 'morning') return '🌅 ';
+                      if (event.halfDayType === 'afternoon') return '🌆 ';
+                      return '🌞 ';
+                    };
+
+                    // Gradient pour les congés demi-journée
+                    const getBgColor = () => {
+                      if (!isLeave) return `${getEventTypeColor(event.type)}20`;
+                      if (event.halfDayType === 'morning') {
+                        return 'linear-gradient(90deg, rgba(76,175,80,0.2) 0%, rgba(129,199,132,0.2) 100%)';
+                      } else if (event.halfDayType === 'afternoon') {
+                        return 'linear-gradient(90deg, rgba(129,199,132,0.2) 0%, rgba(76,175,80,0.2) 100%)';
+                      }
+                      return `${getEventTypeColor(event.type)}20`;
+                    };
+
+                    return (
+                      <Box
+                        key={event.id}
                         sx={{
-                          display: 'block',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          fontSize: '0.7rem',
-                          fontWeight: 'bold',
+                          p: 0.5,
+                          width: widthPercent,
+                          marginLeft: marginLeft,
+                          background: getBgColor(),
+                          borderLeft: `3px solid ${getEventTypeColor(event.type)}`,
+                          borderRadius: 0.5,
+                          cursor: 'pointer',
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedEvent(event);
+                          setEventDialogOpen(true);
                         }}
                       >
-                        {event.title}
-                        {event.isSpanning && event.spanDay && event.totalSpanDays && (
-                          <Chip
-                            size="small"
-                            label={`J${event.spanDay}/${event.totalSpanDays}`}
-                            sx={{
-                              ml: 0.5,
-                              height: 14,
-                              fontSize: '0.55rem',
-                              bgcolor: 'rgba(0,0,0,0.15)',
-                              verticalAlign: 'middle',
-                            }}
-                          />
-                        )}
-                      </Typography>
-                      {(() => {
-                        if (event.startTime && event.endTime) {
-                            return (
-                            <Typography
-                              variant="caption"
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: 'block',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontSize: '0.7rem',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          {getLeaveIcon()}{event.title}
+                          {event.isSpanning && event.spanDay && event.totalSpanDays && (
+                            <Chip
+                              size="small"
+                              label={`J${event.spanDay}/${event.totalSpanDays}`}
                               sx={{
-                                display: 'block',
-                                fontSize: '0.65rem',
-                                color: '#667eea',
-                                fontWeight: 'bold',
+                                ml: 0.5,
+                                height: 14,
+                                fontSize: '0.55rem',
+                                bgcolor: 'rgba(0,0,0,0.15)',
+                                verticalAlign: 'middle',
                               }}
-                            >
-                              🕐 {event.startTime} - {event.endTime}
-                            </Typography>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </Box>
-                  ))}
+                            />
+                          )}
+                        </Typography>
+                        {(() => {
+                          if (event.startTime && event.endTime) {
+                              return (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: 'block',
+                                  fontSize: '0.65rem',
+                                  color: '#667eea',
+                                  fontWeight: 'bold',
+                                }}
+                              >
+                                🕐 {event.startTime} - {event.endTime}
+                              </Typography>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </Box>
+                    );
+                  })}
                   {dayEvents.length > 3 && (
                     <Typography variant="caption" color="text.secondary">
                       +{dayEvents.length - 3} autres
@@ -609,25 +638,39 @@ const Calendar: React.FC = () => {
                   </Box>
 
                   <Stack spacing={1}>
-                    {dayEvents.map((event) => (
-                      <Card
-                        key={event.id}
-                        variant="outlined"
-                        sx={{
-                          cursor: 'pointer',
-                          '&:hover': { bgcolor: 'action.hover' },
-                        }}
-                        onClick={() => {
-                          setSelectedEvent(event);
-                          setEventDialogOpen(true);
-                        }}
-                      >
-                        <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                          <Box display="flex" alignItems="center" gap={1} mb={0.5}>
-                            <AssignmentIcon fontSize="small" />
-                            <Typography variant="body2" fontWeight="bold" sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {event.title}
-                            </Typography>
+                    {dayEvents.map((event) => {
+                      // Icône pour les congés avec demi-journée
+                      const isLeave = event.type === 'leave';
+                      const getLeaveIcon = () => {
+                        if (!isLeave) return null;
+                        if (event.halfDayType === 'morning') return '🌅';
+                        if (event.halfDayType === 'afternoon') return '🌆';
+                        return '🌞';
+                      };
+
+                      return (
+                        <Card
+                          key={event.id}
+                          variant="outlined"
+                          sx={{
+                            cursor: 'pointer',
+                            '&:hover': { bgcolor: 'action.hover' },
+                          }}
+                          onClick={() => {
+                            setSelectedEvent(event);
+                            setEventDialogOpen(true);
+                          }}
+                        >
+                          <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                            <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                              {isLeave ? (
+                                <span style={{ fontSize: '1rem' }}>{getLeaveIcon()}</span>
+                              ) : (
+                                <AssignmentIcon fontSize="small" />
+                              )}
+                              <Typography variant="body2" fontWeight="bold" sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {event.title}
+                              </Typography>
                             {event.isSpanning && event.spanDay && event.totalSpanDays && (
                               <Chip
                                 size="small"
@@ -670,7 +713,8 @@ const Calendar: React.FC = () => {
                           </Stack>
                         </CardContent>
                       </Card>
-                    ))}
+                      );
+                    })}
                   </Stack>
                 </CardContent>
               </Card>
