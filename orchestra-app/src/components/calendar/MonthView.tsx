@@ -212,9 +212,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                             minWidth: 44,
                                             borderRight: '1px solid',
                                             borderColor: 'divider',
-                                            bgcolor: hasLeaves
-                                              ? 'rgba(76, 175, 80, 0.12)'
-                                              : isWeekend ? 'grey.50' : 'transparent',
+                                            bgcolor: isWeekend ? 'grey.50' : 'transparent',
                                             border: hasLeaves
                                               ? '2px solid rgba(76, 175, 80, 0.3)'
                                               : isRemoteDay ? '2px solid #ff9800' : undefined,
@@ -635,9 +633,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                           minWidth: 44,
                                           borderRight: '1px solid',
                                           borderColor: 'divider',
-                                          bgcolor: hasLeaves
-                                            ? 'rgba(76, 175, 80, 0.12)'
-                                            : isWeekend ? 'grey.50' : 'transparent',
+                                          bgcolor: isWeekend ? 'grey.50' : 'transparent',
                                           border: hasLeaves
                                             ? '2px solid rgba(76, 175, 80, 0.3)'
                                             : isRemoteDay ? '2px solid #ff9800' : undefined,
