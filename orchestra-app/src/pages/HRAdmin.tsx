@@ -73,6 +73,8 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import { capacityService } from '../services/capacity.service';
 import { userService } from '../services/user.service';
 import { UserConfigDialog } from '../components/hr/UserConfigDialog';
+import { TeamManagementTab } from '../components/resources/TeamManagementTab';
+import { SkillsMatrixTab } from '../components/resources/SkillsMatrixTab';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -537,10 +539,12 @@ const HRAdmin: React.FC = () => {
       {/* Onglets principaux */}
       <Card>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={handleTabChange}>
+          <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
             <Tab label="Ressources" />
             <Tab label="Jours fériés" />
             <Tab label="Paramètres globaux" />
+            <Tab label="Compétences" />
+            <Tab label="Skills Matrix" />
           </Tabs>
         </Box>
 
@@ -1184,8 +1188,18 @@ const HRAdmin: React.FC = () => {
           </Box>
         </TabPanel>
 
-        {/* Onglet Capacités */}
+        {/* Onglet Compétences */}
+        <TabPanel value={tabValue} index={3}>
+          <TeamManagementTab />
+        </TabPanel>
+
+        {/* Onglet Skills Matrix */}
         <TabPanel value={tabValue} index={4}>
+          <SkillsMatrixTab />
+        </TabPanel>
+
+        {/* Onglet Capacités (désactivé pour l'instant) */}
+        <TabPanel value={tabValue} index={5}>
           <Typography variant="h6" gutterBottom>
             Analyse de capacité - {selectedPeriod.label}
           </Typography>

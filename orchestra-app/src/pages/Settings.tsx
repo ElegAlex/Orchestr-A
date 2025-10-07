@@ -45,7 +45,8 @@ import {
   Settings as SettingsIcon,
   Group as GroupIcon,
   Assignment as AssignmentIcon,
-  SwapHoriz as SwapIcon
+  SwapHoriz as SwapIcon,
+  AdminPanelSettings as AdminIcon
 } from '@mui/icons-material';
 import { Service, CreateServiceRequest } from '../types/service';
 import { User, Department, CreateDepartmentRequest } from '../types';
@@ -57,6 +58,7 @@ import { departmentService } from '../services/department.service';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { SkillsTab } from '../components/settings/SkillsTab';
+import { UserManagement } from '../components/admin/UserManagement';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -390,6 +392,11 @@ export const Settings: React.FC = () => {
             <Tab
               label="Compétences"
               icon={<AssignmentIcon />}
+              iconPosition="start"
+            />
+            <Tab
+              label="Administration"
+              icon={<AdminIcon />}
               iconPosition="start"
             />
           </Tabs>
@@ -1202,6 +1209,10 @@ export const Settings: React.FC = () => {
 
         <TabPanel value={tabValue} index={4}>
           <SkillsTab />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={5}>
+          <UserManagement />
         </TabPanel>
       </Paper>
 

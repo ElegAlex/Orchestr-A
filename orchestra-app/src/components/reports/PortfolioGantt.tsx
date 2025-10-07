@@ -612,23 +612,11 @@ const PortfolioGantt: React.FC<PortfolioGanttProps> = ({ projects, milestones })
       <Box sx={{ display: 'flex', gap: 2, mt: 2, justifyContent: 'center' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Box sx={{ width: 30, height: 12, bgcolor: '#4caf50', borderRadius: 0.5 }} />
-          <Typography variant="caption">Actif</Typography>
+          <Typography variant="caption">Projet actif</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Box sx={{ width: 30, height: 12, bgcolor: '#2196f3', borderRadius: 0.5 }} />
-          <Typography variant="caption">Planification</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box sx={{ width: 12, height: 12, bgcolor: '#4caf50', borderRadius: '50%' }} />
-          <Typography variant="caption">Jalon atteint</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box sx={{ width: 12, height: 12, bgcolor: '#ff9800', borderRadius: '50%' }} />
-          <Typography variant="caption">Jalon à venir</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box sx={{ width: 12, height: 12, bgcolor: '#f44336', borderRadius: '50%' }} />
-          <Typography variant="caption">Jalon en retard</Typography>
+          <Typography variant="caption">Projet en planification</Typography>
         </Box>
       </Box>
     </Paper>

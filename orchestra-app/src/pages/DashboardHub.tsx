@@ -30,6 +30,9 @@ import {
   CheckCircle,
   CalendarMonth,
   ArrowForward,
+  Home as TeleworkIcon,
+  BeachAccess as LeaveIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
@@ -45,6 +48,12 @@ import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { TaskModalSimplified } from '../components/tasks/TaskModalSimplified';
 import { Task } from '../types';
+import { TeleworkBulkDeclarationModal } from '../components/calendar/TeleworkBulkDeclarationModal';
+import { AdminLeaveDeclarationModal } from '../components/calendar/AdminLeaveDeclarationModal';
+import { SimpleTaskModal } from '../components/calendar/SimpleTaskModal';
+import { permissionsService } from '../services/permissions.service';
+import { simpleTaskService } from '../services/simpleTask.service';
+import { CreateSimpleTaskInput } from '../types/simpleTask';
 
 interface PersonalAlert {
   id: string;
@@ -102,6 +111,9 @@ export const DashboardHub: React.FC = () => {
   const [personalAlerts, setPersonalAlerts] = useState<PersonalAlert[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [teleworkModalOpen, setTeleworkModalOpen] = useState(false);
+  const [adminLeaveModalOpen, setAdminLeaveModalOpen] = useState(false);
+  const [simpleTaskModalOpen, setSimpleTaskModalOpen] = useState(false);
 
   const loadPersonalDashboardData = useCallback(async () => {
     if (!user?.id) return;
@@ -288,6 +300,18 @@ export const DashboardHub: React.FC = () => {
       console.error('Error saving task:', error);
     }
   }, [loadPersonalDashboardData]);
+
+  const handleCreateSimpleTask = useCallback(async (task: CreateSimpleTaskInput, userIds: string[]) => {
+    if (!currentUser?.id) return;
+    try {
+      await simpleTaskService.createMultiple(task, userIds, currentUser.id);
+      setSimpleTaskModalOpen(false);
+      await loadPersonalDashboardData();
+    } catch (error) {
+      console.error('Error creating simple task:', error);
+      throw error;
+    }
+  }, [currentUser?.id, loadPersonalDashboardData]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -608,18 +632,52 @@ export const DashboardHub: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={3}>
         <Box>
           <Typography variant="h4" gutterBottom>
-            Bonjour {user?.firstName || user?.displayName} 👋
+            🎯 Mon Hub Personnel
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" color="text.secondary" gutterBottom>
             {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
           </Typography>
+          <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+            {personalKPIs.slice(0, 3).map((kpi) => (
+              <Typography key={kpi.id} variant="body2" color="text.secondary">
+                <strong>{kpi.value}</strong> {kpi.label.toLowerCase()}
+              </Typography>
+            ))}
+          </Stack>
         </Box>
-        <Stack direction="row" spacing={1}>
-          <IconButton 
-            onClick={handleRefresh} 
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Button
+            variant="outlined"
+            startIcon={<TeleworkIcon />}
+            onClick={() => setTeleworkModalOpen(true)}
+            size="small"
+          >
+            Télétravail
+          </Button>
+          {currentUser && permissionsService.canApproveLeaves(currentUser) && (
+            <Button
+              variant="outlined"
+              startIcon={<LeaveIcon />}
+              onClick={() => setAdminLeaveModalOpen(true)}
+              size="small"
+              color="secondary"
+            >
+              Déclarer congé
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setSimpleTaskModalOpen(true)}
+            size="small"
+          >
+            Nouvelle tâche
+          </Button>
+          <IconButton
+            onClick={handleRefresh}
             disabled={refreshing}
             size="large"
           >
@@ -721,6 +779,43 @@ export const DashboardHub: React.FC = () => {
         task={selectedTask}
         onSave={handleSaveTask}
       />
+
+      {/* Telework Modal */}
+      {user && (
+        <TeleworkBulkDeclarationModal
+          open={teleworkModalOpen}
+          onClose={() => setTeleworkModalOpen(false)}
+          onSave={() => {
+            setTeleworkModalOpen(false);
+            loadPersonalDashboardData();
+          }}
+          userId={user.id}
+          userDisplayName={user.displayName || `${user.firstName} ${user.lastName}`}
+        />
+      )}
+
+      {/* Admin Leave Declaration Modal */}
+      {currentUser && (
+        <AdminLeaveDeclarationModal
+          open={adminLeaveModalOpen}
+          onClose={() => setAdminLeaveModalOpen(false)}
+          onSave={() => {
+            setAdminLeaveModalOpen(false);
+            loadPersonalDashboardData();
+          }}
+          currentUser={currentUser}
+        />
+      )}
+
+      {/* Simple Task Modal */}
+      {user && (
+        <SimpleTaskModal
+          open={simpleTaskModalOpen}
+          onClose={() => setSimpleTaskModalOpen(false)}
+          onCreate={handleCreateSimpleTask}
+          currentUserId={user.id}
+        />
+      )}
     </Box>
   );
 };

@@ -71,14 +71,10 @@ export const MainLayout: React.FC = () => {
     { text: 'Mon Espace', icon: <TrendingUpIcon />, path: '/dashboard-hub', permission: null },
     { text: 'Projets', icon: <FolderIcon />, path: '/projects', permission: 'project.view' },
     // { text: 'Tâches', icon: <AssignmentIcon />, path: '/tasks', permission: 'task.view' }, // Masqué
-    { text: 'Ressources', icon: <PeopleIcon />, path: '/resources', permission: 'user.view' },
     { text: 'Calendrier', icon: <CalendarMonthIcon />, path: '/calendar', permission: 'project.view' },
-    { text: 'Mes Congés', icon: <BeachAccessIcon />, path: '/my-leaves', permission: null },
     { text: 'Supervision', icon: <SupervisedUserCircleIcon />, path: '/team-supervision', permission: 'team.supervise' },
     { text: 'Rapports', icon: <BarChartIcon />, path: '/reports', permission: 'report.view' },
-    { text: 'Administration', icon: <AdminPanelSettingsIcon />, path: '/admin', permission: 'admin.access' },
     { text: 'Administration RH', icon: <AdminPanelSettingsIcon />, path: '/hr-admin', permission: 'hr.manage_employees' },
-    { text: 'Dashboard RH', icon: <AssessmentIcon />, path: '/hr-dashboard', permission: 'hr.view_all_leaves' },
     { text: 'Paramètres', icon: <SettingsIcon />, path: '/settings', permission: null },
   ];
 
@@ -214,10 +210,6 @@ export const MainLayout: React.FC = () => {
             <MenuItem onClick={() => { navigate('/profile'); handleProfileMenuClose(); }}>
               <AccountCircleIcon fontSize="small" sx={{ mr: 1 }} />
               Mon profil
-            </MenuItem>
-            <MenuItem onClick={() => { navigate('/settings'); handleProfileMenuClose(); }}>
-              <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
-              Paramètres
             </MenuItem>
             <Divider />
             <MenuItem onClick={handleLogout}>

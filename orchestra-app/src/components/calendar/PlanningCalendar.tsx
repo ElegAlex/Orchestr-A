@@ -747,7 +747,7 @@ const UserRow: React.FC<UserRowProps> = ({
         p: 0.5,
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: isRemoteDay ? 'rgba(156, 39, 176, 0.05)' : 'transparent',
+        bgcolor: isRemoteDay ? 'rgba(255, 152, 0, 0.25)' : 'transparent',
         borderRadius: 1,
         position: 'relative',
       }}>
@@ -1127,20 +1127,27 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
   // Utilisateur connecté
   const currentUser = useSelector((state: RootState) => state.auth.user);
 
+  // Déterminer les services expanded par défaut selon le rôle
+  const getInitialExpandedServices = (): Set<string> => {
+    const isLimitedRole = currentUser?.role === 'contributor' || currentUser?.role === 'teamLead';
+    // Si contributor ou teamLead, ne pas ouvrir encadrement par défaut
+    return isLimitedRole ? new Set() : new Set(['encadrement']);
+  };
+
   // États principaux
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Données
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [rawWorkloadDays, setRawWorkloadDays] = useState<UserWorkloadDay[]>([]);
-  const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set(['encadrement']));
+  const [expandedServices, setExpandedServices] = useState<Set<string>>(getInitialExpandedServices());
   const [userContracts, setUserContracts] = useState<Map<string, WorkContract | null>>(new Map());
 
   // Calcul des dates du calendrier pour le hook télétravail
@@ -1375,13 +1382,20 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
       );
       setUserContracts(contractsMap);
 
-      // Ouvrir tous les services par défaut + encadrement
+      // Ouvrir les services par défaut selon le rôle de l'utilisateur connecté
+      const isLimitedRole = currentUser?.role === 'contributor' || currentUser?.role === 'teamLead';
       const services = new Set(filteredUsers.map(user => {
         if (user.role === 'manager' || user.role === 'responsable') {
           return 'encadrement';
         }
         return user.serviceIds?.[0] || user.serviceId || 'no-service';
       }));
+
+      // Si contributor ou teamLead, retirer 'encadrement' des services expanded
+      if (isLimitedRole) {
+        services.delete('encadrement');
+      }
+
       setExpandedServices(services);
 
       // Calculer la charge de travail pour chaque utilisateur et chaque jour
@@ -2103,7 +2117,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
       <Box display="flex" justifyContent="center" p={4}>
         <Stack alignItems="center">
           <CircularProgress />
-          <Typography>Chargement du planning intelligent...</Typography>
+          <Typography>Chargement du planning...</Typography>
         </Stack>
       </Box>
     );
@@ -2330,6 +2344,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                     {monthDays.map((day) => {
                       const dayOfWeek = day.getDay();
                       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                      const isTodayDay = isToday(day);
 
                       return (
                         <Box
@@ -2339,19 +2354,34 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                             minWidth: 44,
                             borderRight: '1px solid',
                             borderColor: 'divider',
-                            bgcolor: isWeekend ? 'grey.100' : 'transparent',
+                            bgcolor: isTodayDay ? 'primary.light' : isWeekend ? 'grey.100' : 'transparent',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            borderRadius: isTodayDay ? 1 : 0
                           }}
                         >
-                          <Typography variant="caption" fontWeight="bold" color={isWeekend ? 'text.disabled' : 'text.primary'}>
+                          <Typography
+                            variant="caption"
+                            fontWeight="bold"
+                            color={isTodayDay ? 'primary.main' : isWeekend ? 'text.disabled' : 'text.primary'}
+                          >
                             {format(day, 'dd')}
                           </Typography>
-                          <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                          <Typography
+                            variant="caption"
+                            display="block"
+                            color={isTodayDay ? 'primary.main' : 'text.secondary'}
+                            sx={{ fontSize: '0.65rem' }}
+                          >
                             {format(day, 'EEE', { locale: fr }).substring(0, 1)}
                           </Typography>
+                          {isTodayDay && (
+                            <Typography variant="caption" color="primary" sx={{ fontSize: '0.6rem', fontWeight: 'bold' }}>
+                              •
+                            </Typography>
+                          )}
                         </Box>
                       );
                     })}

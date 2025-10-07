@@ -17,19 +17,19 @@ import {
 import {
   Person as PersonIcon,
   Security as SecurityIcon,
-  Settings as SettingsIcon,
   PhotoCamera as PhotoIcon,
   Stars as SkillsIcon,
   WorkOutline as PortfolioIcon,
+  BeachAccess as LeavesIcon,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { PersonalInfoTab } from '../components/profile/PersonalInfoTab';
 import { SecurityTab } from '../components/profile/SecurityTab';
-import { PreferencesTab } from '../components/profile/PreferencesTab';
 import { SkillsTab } from '../components/profile/SkillsTab';
 import { PortfolioTab } from '../components/profile/PortfolioTab';
 import { profileService } from '../services/profile.service';
+import { MyLeaves } from './MyLeaves';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -241,20 +241,20 @@ const Profile: React.FC = () => {
               {...a11yProps(1)}
             />
             <Tab
-              icon={<SettingsIcon />}
-              label="Préférences"
+              icon={<SkillsIcon />}
+              label="Compétences"
               iconPosition="start"
               {...a11yProps(2)}
             />
             <Tab
-              icon={<SkillsIcon />}
-              label="Compétences"
+              icon={<PortfolioIcon />}
+              label="Portfolio"
               iconPosition="start"
               {...a11yProps(3)}
             />
             <Tab
-              icon={<PortfolioIcon />}
-              label="Portfolio"
+              icon={<LeavesIcon />}
+              label="Mes Congés"
               iconPosition="start"
               {...a11yProps(4)}
             />
@@ -270,15 +270,15 @@ const Profile: React.FC = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={2}>
-          <PreferencesTab user={user} onUpdate={loadProfileStats} />
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={3}>
           <SkillsTab user={user} onUpdate={loadProfileStats} />
         </TabPanel>
 
-        <TabPanel value={tabValue} index={4}>
+        <TabPanel value={tabValue} index={3}>
           <PortfolioTab user={user} />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={4}>
+          <MyLeaves />
         </TabPanel>
       </Paper>
 

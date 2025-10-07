@@ -56,7 +56,6 @@ const LEAVE_TYPES: { value: LeaveType; label: string; icon: React.ReactNode; col
   { value: 'SICK_LEAVE', label: 'Congé maladie', icon: <SickIcon />, color: 'error' },
   { value: 'TRAINING', label: 'Formation', icon: <TrainingIcon />, color: 'info' },
   { value: 'EXCEPTIONAL_LEAVE', label: 'Congé exceptionnel', icon: <EventIcon />, color: 'warning' },
-  { value: 'CONVENTIONAL_LEAVE', label: 'Congé conventionnel', icon: <EventIcon />, color: 'info' },
   { value: 'UNPAID_LEAVE', label: 'Congé sans solde', icon: <UnpaidIcon />, color: 'default' },
   { value: 'MATERNITY_LEAVE', label: 'Congé maternité', icon: <VacationIcon />, color: 'success' },
   { value: 'PATERNITY_LEAVE', label: 'Congé paternité', icon: <VacationIcon />, color: 'success' },
@@ -97,10 +96,6 @@ export const MyLeaves: React.FC = () => {
     reason: '',
   });
 
-  // Calcule si c'est une journée isolée
-  const isSingleDay = newLeave.startDate && newLeave.endDate &&
-    newLeave.startDate.toDateString() === newLeave.endDate.toDateString();
-
   // Calculer le nombre de jours ouvrés
   const calculateWorkingDays = (start: Date, end: Date, halfDayStart = false, halfDayEnd = false): number => {
     let days = 0;
@@ -123,36 +118,49 @@ export const MyLeaves: React.FC = () => {
   // Fonction pour charger les données des congés
   const loadLeaveData = async () => {
     if (!user) return;
-
+    
     try {
+      console.log('🔄 Chargement des congés pour l\'utilisateur:', user.id);
       setLoading(true);
-
+      
       // Charger les vraies demandes de congés depuis le service
       const userLeaveRequests = await leaveService.getUserLeaves(user.id);
       setLeaveRequests(userLeaveRequests);
-
+      
       // Charger le vrai solde depuis le service (avec refresh forcé pour récupérer les vraies données du contrat)
       const realBalance = await leaveService.getLeaveBalance(user.id, true);
-
-      // Calculer les soldes basés sur les vraies données (tous APPROVED en mode déclaratif)
+      console.log('💰 Solde réel récupéré (avec refresh):', realBalance);
+      
+      // Calculer les soldes basés sur les vraies données
       const usedPaid = userLeaveRequests
-        .filter(req => req.type === 'PAID_LEAVE')
+        .filter(req => req.type === 'PAID_LEAVE' && req.status === 'APPROVED')
         .reduce((sum, req) => sum + req.totalDays, 0);
-
+      
       const usedRtt = userLeaveRequests
-        .filter(req => req.type === 'RTT')
+        .filter(req => req.type === 'RTT' && req.status === 'APPROVED')
         .reduce((sum, req) => sum + req.totalDays, 0);
 
+      const pendingPaid = userLeaveRequests
+        .filter(req => req.type === 'PAID_LEAVE' && req.status === 'PENDING')
+        .reduce((sum, req) => sum + req.totalDays, 0);
+        
+      const pendingRtt = userLeaveRequests
+        .filter(req => req.type === 'RTT' && req.status === 'PENDING')
+        .reduce((sum, req) => sum + req.totalDays, 0);
+      
+      console.log('📊 Calculs:', { usedPaid, usedRtt, pendingPaid, pendingRtt });
+      
       setBalance({
         paidLeave: realBalance.paidLeave,
         rtt: realBalance.rtt,
         usedPaidLeave: realBalance.used.paidLeave,
         usedRtt: realBalance.used.rtt,
-        pendingPaidLeave: 0, // Plus de notion de "en attente" en mode déclaratif
-        pendingRtt: 0,
+        pendingPaidLeave: pendingPaid,
+        pendingRtt,
       });
+      
     } catch (error) {
-      // Erreur silencieuse
+      
     } finally {
       setLoading(false);
     }
@@ -166,6 +174,13 @@ export const MyLeaves: React.FC = () => {
   const handleSubmitLeave = async () => {
     if (!newLeave.startDate || !newLeave.endDate || !newLeave.type || !user) return;
 
+    const workingDays = calculateWorkingDays(
+      newLeave.startDate,
+      newLeave.endDate,
+      newLeave.halfDayStart,
+      newLeave.halfDayEnd
+    );
+
     const leaveRequestData = {
       userId: user.id,
       type: newLeave.type,
@@ -174,24 +189,29 @@ export const MyLeaves: React.FC = () => {
       halfDayStart: newLeave.halfDayStart || false,
       halfDayEnd: newLeave.halfDayEnd || false,
       reason: newLeave.reason || '',
-      status: 'APPROVED' as LeaveStatus, // Déclaratif, directement approuvé
+      status: 'PENDING' as LeaveStatus,
     };
 
     try {
       if (editingLeave) {
-        // Modifier la demande existante
+        // TODO: Pour l'instant, on annule l'ancienne et on crée une nouvelle
         await leaveService.cancelLeaveRequest(editingLeave.id, user.id);
-        await leaveService.createLeaveRequest(leaveRequestData);
+        const newId = await leaveService.createLeaveRequest(leaveRequestData);
+        // Recharger toutes les demandes depuis le service
+        const refreshedRequests = await leaveService.getUserLeaves(user.id);
+        setLeaveRequests(refreshedRequests);
       } else {
-        // Créer une nouvelle demande
+        // Création - créer une nouvelle demande
         await leaveService.createLeaveRequest(leaveRequestData);
+        // Recharger toutes les demandes depuis le service
+        const refreshedRequests = await leaveService.getUserLeaves(user.id);
+        setLeaveRequests(refreshedRequests);
       }
-
-      // Recharger les données
-      await loadLeaveData();
+      
       handleCloseDialog();
     } catch (error) {
-      alert(`Erreur: ${error instanceof Error ? error.message : 'Impossible de sauvegarder la demande'}`);
+      
+      // TODO: Afficher un message d'erreur à l'utilisateur
     }
   };
 
@@ -224,15 +244,14 @@ export const MyLeaves: React.FC = () => {
 
   const handleDeleteLeave = async (leaveId: string) => {
     if (!user) return;
-
+    
     try {
-      // Annuler la demande de congés (met le statut à CANCELLED)
+      // TODO: Ajouter un dialog de confirmation
       await leaveService.cancelLeaveRequest(leaveId, user.id);
-
-      // Recharger toutes les données pour mettre à jour les soldes
-      await loadLeaveData();
+      setLeaveRequests(prev => prev.filter(req => req.id !== leaveId));
     } catch (error) {
-      alert('Erreur lors de la suppression de la demande de congé');
+      
+      // TODO: Afficher un message d'erreur à l'utilisateur
     }
   };
 
@@ -286,29 +305,29 @@ export const MyLeaves: React.FC = () => {
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h3" color="primary">
-                {balance.paidLeave - balance.usedPaidLeave}
+                {balance.paidLeave - balance.usedPaidLeave - balance.pendingPaidLeave}
               </Typography>
               <Typography variant="body1" fontWeight="medium">
                 Congés payés
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Disponibles sur {balance.paidLeave} jours
+                Disponibles
               </Typography>
             </CardContent>
           </Card>
         </Box>
-
+        
         <Box sx={{ flexGrow: 1, minWidth: 200 }}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h3" color="secondary">
-                {balance.rtt - balance.usedRtt}
+                {balance.rtt - balance.usedRtt - balance.pendingRtt}
               </Typography>
               <Typography variant="body1" fontWeight="medium">
                 RTT
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Disponibles sur {balance.rtt} jours
+                Disponibles
               </Typography>
             </CardContent>
           </Card>
@@ -321,7 +340,7 @@ export const MyLeaves: React.FC = () => {
                 {balance.usedPaidLeave + balance.usedRtt}
               </Typography>
               <Typography variant="body1" fontWeight="medium">
-                Jours déclarés
+                Jours pris
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 Cette année
@@ -355,7 +374,8 @@ export const MyLeaves: React.FC = () => {
           <List>
             {leaveRequests.map((leave, index) => {
               const typeInfo = getTypeInfo(leave.type);
-
+              const canEdit = true; // Tous les congés peuvent être modifiés
+              
               return (
                 <React.Fragment key={leave.id}>
                   <ListItem sx={{ px: 0 }}>
@@ -364,32 +384,23 @@ export const MyLeaves: React.FC = () => {
                     </Box>
                     <ListItemText
                       primary={
-                        <Typography variant="body1" fontWeight="medium">
-                          {typeInfo.label}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <Typography variant="body1" fontWeight="medium">
+                            {typeInfo.label}
+                          </Typography>
+                          <Chip
+                            label={getStatusLabel(leave.status)}
+                            color={getStatusColor(leave.status)}
+                            size="small"
+                          />
+                        </Box>
                       }
                       secondary={
                         <Box>
                           <Typography variant="body2" color="text.primary">
-                            {leave.startDate.toDateString() === leave.endDate.toDateString() ? (
-                              // Journée isolée
-                              <>
-                                Le {format(leave.startDate, 'dd/MM/yyyy', { locale: fr })}
-                                {leave.halfDayStart && ' 🌆 (après-midi)'}
-                                {leave.halfDayEnd && ' 🌅 (matin)'}
-                                {!leave.halfDayStart && !leave.halfDayEnd && ' 🌞 (journée complète)'}
-                                {' '}({leave.totalDays} jour{leave.totalDays !== 1 ? 's' : ''})
-                              </>
-                            ) : (
-                              // Plusieurs jours
-                              <>
-                                Du {format(leave.startDate, 'dd/MM/yyyy', { locale: fr })}
-                                {leave.halfDayStart && ' 🌆 (après-midi)'}
-                                {' '}au {format(leave.endDate, 'dd/MM/yyyy', { locale: fr })}
-                                {leave.halfDayEnd && ' 🌅 (matin)'}
-                                {' '}({leave.totalDays} jour{leave.totalDays !== 1 ? 's' : ''})
-                              </>
-                            )}
+                            Du {format(leave.startDate, 'dd/MM/yyyy', { locale: fr })} 
+                            au {format(leave.endDate, 'dd/MM/yyyy', { locale: fr })}
+                            {' '}({leave.totalDays} jour{leave.totalDays > 1 ? 's' : ''})
                           </Typography>
                           {leave.reason && (
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -404,23 +415,27 @@ export const MyLeaves: React.FC = () => {
                     />
                     <ListItemSecondaryAction>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        <IconButton
-                          edge="end"
-                          size="small"
-                          onClick={() => handleEditLeave(leave)}
-                          title="Modifier"
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          edge="end"
-                          size="small"
-                          color="error"
-                          onClick={() => handleDeleteLeave(leave.id)}
-                          title="Supprimer"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
+                        {canEdit && (
+                          <IconButton 
+                            edge="end" 
+                            size="small" 
+                            onClick={() => handleEditLeave(leave)}
+                            title="Modifier"
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        )}
+                        {canEdit && (
+                          <IconButton 
+                            edge="end" 
+                            size="small" 
+                            color="error"
+                            onClick={() => handleDeleteLeave(leave.id)}
+                            title="Supprimer"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        )}
                       </Box>
                     </ListItemSecondaryAction>
                   </ListItem>
@@ -487,74 +502,35 @@ export const MyLeaves: React.FC = () => {
               />
             </Box>
 
-            {/* Gestion des demi-journées */}
-            {isSingleDay ? (
-              // Pour une journée isolée : choix Matin / Après-midi / Journée complète
-              <Box sx={{ flexGrow: 1, minWidth: 200 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Durée</InputLabel>
-                  <Select
-                    value={
-                      !newLeave.halfDayStart && !newLeave.halfDayEnd
-                        ? 'full'
-                        : newLeave.halfDayStart
-                          ? 'afternoon'
-                          : 'morning'
-                    }
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setNewLeave({
-                        ...newLeave,
-                        halfDayStart: value === 'afternoon',
-                        halfDayEnd: value === 'morning',
-                      });
-                    }}
-                    label="Durée"
-                  >
-                    <MenuItem value="full">🌞 Journée complète</MenuItem>
-                    <MenuItem value="morning">🌅 Matin uniquement</MenuItem>
-                    <MenuItem value="afternoon">🌆 Après-midi uniquement</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-            ) : (
-              // Pour plusieurs jours : options distinctes pour premier et dernier jour
-              <>
-                <Box sx={{ flexGrow: 1, minWidth: 200 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Premier jour</InputLabel>
-                    <Select
-                      value={newLeave.halfDayStart ? 'afternoon' : 'full'}
-                      onChange={(e) => setNewLeave({
-                        ...newLeave,
-                        halfDayStart: e.target.value === 'afternoon',
-                      })}
-                      label="Premier jour"
-                    >
-                      <MenuItem value="full">🌞 Journée complète</MenuItem>
-                      <MenuItem value="afternoon">🌆 Après-midi uniquement</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
+            <Box sx={{ flexGrow: 1, minWidth: 200 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={newLeave.halfDayStart || false}
+                    onChange={(e) => setNewLeave({
+                      ...newLeave,
+                      halfDayStart: e.target.checked,
+                    })}
+                  />
+                }
+                label="Demi-journée début"
+              />
+            </Box>
 
-                <Box sx={{ flexGrow: 1, minWidth: 200 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Dernier jour</InputLabel>
-                    <Select
-                      value={newLeave.halfDayEnd ? 'morning' : 'full'}
-                      onChange={(e) => setNewLeave({
-                        ...newLeave,
-                        halfDayEnd: e.target.value === 'morning',
-                      })}
-                      label="Dernier jour"
-                    >
-                      <MenuItem value="full">🌞 Journée complète</MenuItem>
-                      <MenuItem value="morning">🌅 Matin uniquement</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
-              </>
-            )}
+            <Box sx={{ flexGrow: 1, minWidth: 200 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={newLeave.halfDayEnd || false}
+                    onChange={(e) => setNewLeave({
+                      ...newLeave,
+                      halfDayEnd: e.target.checked,
+                    })}
+                  />
+                }
+                label="Demi-journée fin"
+              />
+            </Box>
 
             <Box sx={{ flexGrow: 1, minWidth: 200 }}>
               <TextField

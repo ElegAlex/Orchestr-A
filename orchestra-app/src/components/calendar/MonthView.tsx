@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -16,8 +16,9 @@ import {
   Business as BusinessIcon,
 } from '@mui/icons-material';
 import { format, isSameDay } from 'date-fns';
-import { User, Department, Project } from '../../types';
+import { User, Department, Project, Holiday } from '../../types';
 import { Service } from '../../types/service';
+import { holidayService } from '../../services/holiday.service';
 
 // Types pour les workload days
 interface CalendarItem {
@@ -77,6 +78,31 @@ export const MonthView: React.FC<MonthViewProps> = ({
   teleworkSystem,
   viewFilter,
 }) => {
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+
+  // Charger les jours fériés pour le mois affiché
+  useEffect(() => {
+    const loadHolidays = async () => {
+      if (monthDays.length > 0) {
+        const startDate = monthDays[0];
+        const endDate = monthDays[monthDays.length - 1];
+        try {
+          const fetchedHolidays = await holidayService.getHolidaysByPeriod(startDate, endDate);
+          setHolidays(fetchedHolidays);
+        } catch (error) {
+          console.error('Error loading holidays:', error);
+          setHolidays([]);
+        }
+      }
+    };
+    loadHolidays();
+  }, [monthDays]);
+
+  // Helper pour vérifier si un jour est férié
+  const isHoliday = (day: Date): boolean => {
+    return holidays.some(holiday => isSameDay(new Date(holiday.date), day));
+  };
+
   return (
     <Box sx={{ overflowX: 'auto', width: '100%' }}>
       <Box sx={{ minWidth: 220 + 44 * monthDays.length }}>
@@ -200,22 +226,32 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                 {/* Zone timeline */}
                                 <Box sx={{ flex: 1, minWidth: 0, position: 'relative', height: timelineHeight }}>
                                   {/* Grille de fond avec indicateurs télétravail */}
-                                  <Box sx={{ display: 'flex', gap: 0, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-                                    {monthDays.map((day) => {
+                                  <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                                    {monthDays.map((day, dayIndex) => {
                                       const dayOfWeek = day.getDay();
                                       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                                       const teleworkResolution = teleworkSystem.getResolutionForDay(workloadDay.userId, day);
                                       const isRemoteDay = teleworkResolution?.resolvedMode === 'remote';
 
+                                      const dayIsHoliday = isHoliday(day);
+                                      const isWeekendOrHoliday = isWeekend || dayIsHoliday;
+
+                                      const totalDays = monthDays.length;
+                                      const dayWidthPercent = (1 / totalDays) * 100;
+                                      const dayLeftPercent = (dayIndex / totalDays) * 100;
+
                                       return (
                                         <Box
                                           key={day.toISOString()}
                                           sx={{
-                                            flex: 1,
-                                            minWidth: 44,
+                                            position: 'absolute',
+                                            left: `${dayLeftPercent}%`,
+                                            width: `${dayWidthPercent}%`,
+                                            top: 0,
+                                            bottom: 0,
                                             borderRight: '1px solid',
                                             borderColor: 'divider',
-                                            bgcolor: isWeekend ? 'grey.50' : 'transparent',
+                                            bgcolor: isWeekendOrHoliday ? 'grey.200' : 'transparent',
                                             ...(isRemoteDay && {
                                               border: '3px solid #ff9800',
                                               borderRadius: 1,
@@ -640,22 +676,31 @@ export const MonthView: React.FC<MonthViewProps> = ({
                               {/* Zone timeline */}
                               <Box sx={{ flex: 1, minWidth: 0, position: 'relative', height: timelineHeight }}>
                                 {/* Grille de fond avec indicateurs télétravail */}
-                                <Box sx={{ display: 'flex', gap: 0, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-                                  {monthDays.map((day) => {
+                                <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                                  {monthDays.map((day, dayIndex) => {
                                     const dayOfWeek = day.getDay();
                                     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                                     const teleworkResolution = teleworkSystem.getResolutionForDay(workloadDay.userId, day);
                                     const isRemoteDay = teleworkResolution?.resolvedMode === 'remote';
+                                    const dayIsHoliday = isHoliday(day);
+                                    const isWeekendOrHoliday = isWeekend || dayIsHoliday;
+
+                                    const totalDays = monthDays.length;
+                                    const dayWidthPercent = (1 / totalDays) * 100;
+                                    const dayLeftPercent = (dayIndex / totalDays) * 100;
 
                                     return (
                                       <Box
                                         key={day.toISOString()}
                                         sx={{
-                                          flex: 1,
-                                          minWidth: 44,
+                                          position: 'absolute',
+                                          left: `${dayLeftPercent}%`,
+                                          width: `${dayWidthPercent}%`,
+                                          top: 0,
+                                          bottom: 0,
                                           borderRight: '1px solid',
                                           borderColor: 'divider',
-                                          bgcolor: isWeekend ? 'grey.50' : 'transparent',
+                                          bgcolor: isWeekendOrHoliday ? 'grey.200' : 'transparent',
                                           ...(isRemoteDay && {
                                             border: '3px solid #ff9800',
                                             borderRadius: 1,

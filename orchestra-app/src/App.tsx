@@ -21,13 +21,9 @@ const ProjectDetail = React.lazy(() => import('./pages/ProjectDetail'));
 const ProjectEdit = React.lazy(() => import('./pages/ProjectEdit').then(module => ({ default: module.ProjectEdit })));
 const Tasks = React.lazy(() => import('./pages/Tasks').then(module => ({ default: module.Tasks })));
 const SimpleResources = React.lazy(() => import('./pages/SimpleResources'));
-const Resources = React.lazy(() => import('./pages/Resources'));
 const Calendar = React.lazy(() => import('./pages/Calendar'));
-const MyLeaves = React.lazy(() => import('./pages/MyLeaves').then(module => ({ default: module.MyLeaves })));
 const Reports = React.lazy(() => import('./pages/Reports'));
-const Admin = React.lazy(() => import('./pages/Admin'));
 const HRAdmin = React.lazy(() => import('./pages/HRAdmin'));
-const HRDashboard = React.lazy(() => import('./pages/HRDashboard').then(module => ({ default: module.HRDashboard })));
 const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const TeamSupervision = React.lazy(() => import('./pages/TeamSupervision'));
@@ -152,11 +148,6 @@ function AppContent() {
               <Tasks />
             </Suspense>
           } />
-          <Route path="resources" element={
-            <Suspense fallback={<LoadingFallback />}>
-              <Resources />
-            </Suspense>
-          } />
           <Route path="simple-resources" element={
             <Suspense fallback={<LoadingFallback />}>
               <SimpleResources />
@@ -167,29 +158,14 @@ function AppContent() {
               <Calendar />
             </Suspense>
           } />
-          <Route path="my-leaves" element={
-            <Suspense fallback={<LoadingFallback />}>
-              <MyLeaves />
-            </Suspense>
-          } />
           <Route path="reports" element={
             <Suspense fallback={<LoadingFallback />}>
               <Reports />
             </Suspense>
           } />
-          <Route path="admin" element={
-            <Suspense fallback={<LoadingFallback />}>
-              <Admin />
-            </Suspense>
-          } />
           <Route path="hr-admin" element={
             <Suspense fallback={<LoadingFallback />}>
               <HRAdmin />
-            </Suspense>
-          } />
-          <Route path="hr-dashboard" element={
-            <Suspense fallback={<LoadingFallback />}>
-              <HRDashboard />
             </Suspense>
           } />
           <Route path="settings" element={
