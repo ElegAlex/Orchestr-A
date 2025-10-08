@@ -1,3 +1,16 @@
+/**
+ * Dashboard Hub V2 - Vue Opérationnelle Personnelle
+ *
+ * Architecture :
+ * 1. Planning Hebdomadaire (60% - Composant principal en haut)
+ * 2. Mes Projets (20% - Widget latéral gauche)
+ * 3. Mes Tâches Critiques (20% - Widget latéral droit)
+ *
+ * Données :
+ * - Projets : Uniquement ceux où l'utilisateur est membre d'équipe
+ * - Tâches : Uniquement celles où l'utilisateur est Responsible (R du RACI) et non terminées
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
@@ -5,626 +18,129 @@ import {
   CardContent,
   Typography,
   IconButton,
-  Tooltip,
   CircularProgress,
-  Chip,
   Alert,
   Button,
   Stack,
+  Chip,
   Avatar,
-  LinearProgress,
-  Paper,
 } from '@mui/material';
 import {
-  Assignment as AssignmentIcon,
   Refresh as RefreshIcon,
-  AccessTime,
-  TrendingUp,
-  TrendingDown,
-  Speed,
-  BarChart,
-  Event,
-  Groups,
-  Timer,
-  Warning,
-  CheckCircle,
-  CalendarMonth,
-  ArrowForward,
-  Home as TeleworkIcon,
-  BeachAccess as LeaveIcon,
-  Add as AddIcon,
+  FolderOpen as ProjectIcon,
+  Assignment as TaskIcon,
+  People as PeopleIcon,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { useSimulatedUser } from '../hooks/useSimulatedPermissions';
 import MyPlanning from '../components/dashboard/MyPlanning';
-import { QuickTimeEntryWidget } from '../components/dashboard/QuickTimeEntryWidget';
+import MyProjectsWidget from '../components/dashboard/MyProjectsWidget';
+import MyTasksWidget from '../components/dashboard/MyTasksWidget';
 import PersonalTodoWidget from '../components/dashboard/PersonalTodoWidget';
-import { taskService } from '../services/task.service';
-import { projectService } from '../services/project.service';
-import { simulatedDashboardHubService } from '../services/simulated-dashboard-hub.service';
-import { format, isValid } from 'date-fns';
+import { dashboardHubV2Service, DashboardHubData } from '../services/dashboard-hub-v2.service';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useNavigate } from 'react-router-dom';
-import { TaskModalSimplified } from '../components/tasks/TaskModalSimplified';
-import { Task } from '../types';
-import { TeleworkBulkDeclarationModal } from '../components/calendar/TeleworkBulkDeclarationModal';
-import { AdminLeaveDeclarationModal } from '../components/calendar/AdminLeaveDeclarationModal';
 import { SimpleTaskModal } from '../components/calendar/SimpleTaskModal';
-import { permissionsService } from '../services/permissions.service';
 import { simpleTaskService } from '../services/simpleTask.service';
 import { CreateSimpleTaskInput } from '../types/simpleTask';
-
-interface PersonalAlert {
-  id: string;
-  type: 'task' | 'deadline' | 'meeting' | 'project';
-  title: string;
-  message: string;
-  priority: 'high' | 'medium' | 'low';
-  date: Date;
-}
-
-interface PersonalKPI {
-  id: string;
-  label: string;
-  value: string | number;
-  unit?: string;
-  trend?: number;
-  trendLabel?: string;
-  color: 'primary' | 'success' | 'warning' | 'error' | 'info';
-  icon: React.ReactElement;
-  description?: string;
-  action?: () => void;
-}
-
-interface TaskWidget {
-  id: string;
-  title: string;
-  priority: 'P0' | 'P1' | 'P2' | 'P3';
-  dueDate: Date;
-  projectName: string;
-  status: string;
-  timeSpent?: number;
-  estimatedHours?: number;
-}
-
-interface UpcomingEvent {
-  id: string;
-  type: 'meeting' | 'deadline' | 'leave' | 'milestone' | 'review';
-  title: string;
-  date: Date;
-  description?: string;
-  color: string;
-}
+import { PresenceModal } from '../components/presence/PresenceModal';
 
 export const DashboardHub: React.FC = () => {
-  const navigate = useNavigate();
   const currentUser = useSelector((state: RootState) => state.auth.user);
-  const { user, isSimulating, originalUser } = useSimulatedUser();
+  const { user, isSimulating } = useSimulatedUser();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [personalKPIs, setPersonalKPIs] = useState<PersonalKPI[]>([]);
-  const [myTasks, setMyTasks] = useState<TaskWidget[]>([]);
-  const [todayTasks, setTodayTasks] = useState<TaskWidget[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [notifications, setNotifications] = useState<number>(0);
-  const [personalAlerts, setPersonalAlerts] = useState<PersonalAlert[]>([]);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [taskModalOpen, setTaskModalOpen] = useState(false);
-  const [teleworkModalOpen, setTeleworkModalOpen] = useState(false);
-  const [adminLeaveModalOpen, setAdminLeaveModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardHubData | null>(null);
   const [simpleTaskModalOpen, setSimpleTaskModalOpen] = useState(false);
+  const [presenceModalOpen, setPresenceModalOpen] = useState(false);
 
-  const loadPersonalDashboardData = useCallback(async () => {
-    if (!user?.id) return;
-    
-    setLoading(true);
+  // Chargement des données du dashboard
+  const loadDashboardData = useCallback(async () => {
+    if (!user?.id) {
+      setError('Utilisateur non connecté');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Charger toutes les données en parallèle avec le nouveau service
-      const [
-        kpis,
-        tasks,
-        events,
-        notifs,
-        userTasks, // Garder pour les alertes
-        // userProjects // Supprimé car non utilisé
-      ] = await Promise.all([
-        simulatedDashboardHubService.getPersonalKPIs(currentUser?.id || ''),
-        simulatedDashboardHubService.getMyTasks(currentUser?.id || ''),
-        simulatedDashboardHubService.getUpcomingEvents(currentUser?.id || ''),
-        simulatedDashboardHubService.getUnreadNotifications(currentUser?.id || ''),
-        taskService.getTasksByAssignee(user?.id || '')
-      ]);
+      setLoading(true);
+      setError(null);
 
-      // Calculer les alertes personnelles basées sur les vraies données
-      const alerts: PersonalAlert[] = [];
-      
-      // Tâches en retard
-      const overdueTasks = userTasks.filter(task => 
-        task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE'
-      );
-      if (overdueTasks.length > 0) {
-        alerts.push({
-          id: 'overdue-tasks',
-          type: 'task',
-          title: 'Tâches en retard',
-          message: `${overdueTasks.length} tâche${overdueTasks.length > 1 ? 's' : ''} dépassent leur échéance`,
-          priority: 'high',
-          date: new Date()
-        });
-      }
-
-      // Échéances proches (dans les 2 prochains jours)
-      const upcomingTasks = userTasks.filter(task => {
-        if (!task.dueDate || task.status === 'DONE') return false;
-        const dueDate = new Date(task.dueDate);
-        const twoDaysFromNow = new Date();
-        twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
-        return dueDate <= twoDaysFromNow && dueDate >= new Date();
-      });
-      if (upcomingTasks.length > 0) {
-        alerts.push({
-          id: 'upcoming-deadlines',
-          type: 'deadline',
-          title: 'Échéances proches',
-          message: `${upcomingTasks.length} tâche${upcomingTasks.length > 1 ? 's' : ''} à terminer sous 2 jours`,
-          priority: 'medium',
-          date: new Date()
-        });
-      }
-      setPersonalAlerts(alerts);
-
-      // Transformer les KPIs en format affichable
-      const formattedKPIs: PersonalKPI[] = [
-        {
-          id: 'tasks-in-progress',
-          label: 'Tâches en cours',
-          value: kpis.tasksInProgress,
-          trend: kpis.tasksCompletedThisWeek,
-          trendLabel: `${kpis.tasksCompletedThisWeek} terminée(s) cette semaine`,
-          color: 'primary',
-          icon: <AssignmentIcon />,
-          description: 'Tâches actuellement assignées',
-          action: () => navigate('/tasks')
-        },
-        {
-          id: 'productivity',
-          label: 'Completion',
-          value: kpis.productivityRate,
-          unit: '%',
-          trend: kpis.productivityTrend,
-          trendLabel: kpis.productivityTrend > 0 ? 'En hausse' : kpis.productivityTrend < 0 ? 'En baisse' : 'Stable',
-          color: kpis.productivityRate > 80 ? 'success' : kpis.productivityRate > 60 ? 'warning' : 'error',
-          icon: <Speed />,
-          description: 'Taux de complétion dans les délais'
-        },
-        {
-          id: 'upcoming-deadlines',
-          label: 'Échéances proches',
-          value: kpis.upcomingDeadlines,
-          trend: kpis.overdueTasksCount,
-          trendLabel: kpis.overdueTasksCount > 0 ? `${kpis.overdueTasksCount} en retard` : 'Tout à jour',
-          color: kpis.overdueTasksCount > 0 ? 'error' : 'info',
-          icon: <Event />,
-          description: 'Dans les 7 prochains jours'
-        },
-        {
-          id: 'team-collaboration',
-          label: 'Projets actifs',
-          value: kpis.activeProjects,
-          trend: kpis.teamSize,
-          trendLabel: `${kpis.teamSize} collaborateurs`,
-          color: 'info',
-          icon: <Groups />,
-          description: 'Projets en cours',
-          action: () => navigate('/projects')
-        },
-        {
-          id: 'time-tracking',
-          label: 'Temps cette semaine',
-          value: kpis.hoursLoggedThisWeek,
-          unit: 'h',
-          trend: kpis.averageHoursPerDay,
-          trendLabel: `Moyenne ${kpis.averageHoursPerDay.toFixed(1)}h/jour`,
-          color: kpis.hoursLoggedThisWeek > 40 ? 'warning' : 'success',
-          icon: <Timer />,
-          description: 'Cliquez pour saisir rapidement',
-          action: () => {
-            // Scroll vers le widget de saisie rapide
-            const element = document.querySelector('.quick-time-entry-widget');
-            if (element) {
-              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              // Optionnel: faire clignoter le widget
-              element.classList.add('highlight-widget');
-              setTimeout(() => element.classList.remove('highlight-widget'), 2000);
-            }
-          }
-        }
-      ];
-
-      setPersonalKPIs(formattedKPIs);
-
-      // Filtrer les tâches du jour
-      const today = new Date();
-      const todaysTasks = tasks.filter((task: TaskWidget) => {
-        const taskDate = new Date(task.dueDate);
-        return taskDate.toDateString() === today.toDateString();
-      });
-
-      setMyTasks(tasks.slice(0, 5)); // Top 5 tâches prioritaires
-      setTodayTasks(todaysTasks);
-      setUpcomingEvents(events);
-      setNotifications(notifs);
-
-    } catch (error) {
-      console.error('Erreur lors du chargement du dashboard:', error);
+      const data = await dashboardHubV2Service.getDashboardData(user.id);
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Erreur lors du chargement du dashboard:', err);
+      setError('Erreur lors du chargement des données');
     } finally {
       setLoading(false);
     }
-  }, [user?.id, navigate]);
+  }, [user?.id]);
 
+  // Chargement initial
   useEffect(() => {
-    loadPersonalDashboardData();
-  }, [loadPersonalDashboardData]);
+    loadDashboardData();
+  }, [loadDashboardData]);
 
+  // Rafraîchissement manuel
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadPersonalDashboardData();
+    await loadDashboardData();
     setTimeout(() => setRefreshing(false), 500);
   };
 
-  const handleTaskClick = useCallback(async (taskId: string) => {
-    try {
-      const task = await taskService.getTask(taskId);
-      if (task) {
-        setSelectedTask(task);
-        setTaskModalOpen(true);
-      }
-    } catch (error) {
-      console.error('Error loading task:', error);
-    }
-  }, []);
+  // Callback pour mise à jour des tâches
+  const handleTaskUpdate = useCallback(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
-  const handleCloseTaskModal = useCallback(() => {
-    setTaskModalOpen(false);
-    setSelectedTask(null);
-  }, []);
-
-  const handleSaveTask = useCallback(async (updatedTask: Task) => {
-    try {
-      await taskService.updateTask(updatedTask.id, updatedTask);
-      handleCloseTaskModal();
-      // Reload data after closing modal
-      await loadPersonalDashboardData();
-    } catch (error) {
-      console.error('Error saving task:', error);
-    }
-  }, [loadPersonalDashboardData]);
-
+  // Création de tâche simple
   const handleCreateSimpleTask = useCallback(async (task: CreateSimpleTaskInput, userIds: string[]) => {
     if (!currentUser?.id) return;
     try {
-      await simpleTaskService.createMultiple(task, userIds, currentUser.id);
+      if (userIds.length === 1) {
+        await simpleTaskService.create(task, userIds[0], currentUser.id);
+      } else {
+        await simpleTaskService.createMultiple(task, userIds, currentUser.id);
+      }
       setSimpleTaskModalOpen(false);
-      await loadPersonalDashboardData();
+      await loadDashboardData();
     } catch (error) {
       console.error('Error creating simple task:', error);
       throw error;
     }
-  }, [currentUser?.id, loadPersonalDashboardData]);
+  }, [currentUser?.id, loadDashboardData]);
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'P0': return 'error';
-      case 'P1': return 'warning';
-      case 'P2': return 'info';
-      default: return 'default';
-    }
-  };
-
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case 'meeting': return <Groups fontSize="small" />;
-      case 'deadline': return <Warning fontSize="small" />;
-      case 'leave': return <CalendarMonth fontSize="small" />;
-      case 'milestone': return <CheckCircle fontSize="small" />;
-      case 'review': return <AssignmentIcon fontSize="small" />;
-      default: return <Event fontSize="small" />;
-    }
-  };
-
-  const formatEventDate = (date: Date) => {
-    const eventDate = new Date(date);
-    const today = new Date();
-    const diffDays = Math.floor((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return "Aujourd'hui";
-    if (diffDays === 1) return "Demain";
-    if (diffDays <= 7) return format(eventDate, 'EEEE', { locale: fr });
-    return format(eventDate, 'dd MMM', { locale: fr });
-  };
-
-  // Composant de carte KPI amélioré
-  const KPICard: React.FC<{ kpi: PersonalKPI }> = ({ kpi }) => (
-    <Card 
-      sx={{ 
-        minWidth: 200,
-        cursor: kpi.action ? 'pointer' : 'default',
-        transition: 'all 0.3s',
-        '&:hover': kpi.action ? {
-          transform: 'translateY(-4px)',
-          boxShadow: 4
-        } : {}
-      }}
-      onClick={kpi.action}
-    >
-      <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-          <Box flex={1}>
-            <Typography color="text.secondary" variant="caption" gutterBottom>
-              {kpi.label}
-            </Typography>
-            <Box display="flex" alignItems="baseline" gap={0.5}>
-              <Typography variant="h4" fontWeight="bold" color={`${kpi.color}.main`}>
-                {kpi.value}
-              </Typography>
-              {kpi.unit && (
-                <Typography variant="h6" color="text.secondary">
-                  {kpi.unit}
-                </Typography>
-              )}
-            </Box>
-            {kpi.trendLabel && (
-              <Box display="flex" alignItems="center" gap={0.5} mt={1}>
-                {kpi.trend !== undefined && kpi.trend !== 0 && (
-                  kpi.trend > 0 ? 
-                    <TrendingUp fontSize="small" color="success" /> : 
-                    <TrendingDown fontSize="small" color="error" />
-                )}
-                <Typography variant="caption" color="text.secondary">
-                  {kpi.trendLabel}
-                </Typography>
-              </Box>
-            )}
-            {kpi.description && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                {kpi.description}
-              </Typography>
-            )}
-          </Box>
-          <Avatar sx={{ bgcolor: `${kpi.color}.light`, color: `${kpi.color}.main`, ml: 1 }}>
-            {kpi.icon}
-          </Avatar>
-        </Box>
-      </CardContent>
-    </Card>
-  );
-
-  // Widget de progression de la journée
-  const DayProgressWidget = () => {
-    const now = new Date();
-    const dayProgress = ((now.getHours() - 8) / 10) * 100;
-    const isWorkingHours = now.getHours() >= 8 && now.getHours() < 18;
-
-    return (
-      <Paper sx={{ p: 2 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6">Ma journée</Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip 
-              label={`${personalKPIs.find(k => k.id === 'time-tracking')?.value || 0}h/8h`}
-              size="small"
-              icon={<Timer />}
-              color={personalKPIs.find(k => k.id === 'time-tracking')?.color as any || 'default'}
-              onClick={() => {
-                const element = document.querySelector('.quick-time-entry-widget');
-                if (element) {
-                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-              }}
-              sx={{ cursor: 'pointer' }}
-            />
-            <Chip 
-              label={format(now, 'HH:mm', { locale: fr })}
-              size="small"
-              icon={<AccessTime />}
-            />
-          </Stack>
-        </Box>
-        
-        {isWorkingHours && (
-          <Box mb={2}>
-            <Box display="flex" justifyContent="space-between" mb={1}>
-              <Typography variant="body2">Progression</Typography>
-              <Typography variant="body2">{Math.round(dayProgress)}%</Typography>
-            </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={Math.min(100, Math.max(0, dayProgress))}
-              sx={{ height: 8, borderRadius: 4 }}
-            />
-          </Box>
-        )}
-
-        <Stack spacing={1}>
-          {todayTasks.length > 0 ? (
-            <>
-              <Typography variant="subtitle2" color="text.secondary">
-                Tâches du jour ({todayTasks.length})
-              </Typography>
-              {todayTasks.map(task => (
-                <Box 
-                  key={task.id}
-                  sx={{ 
-                    p: 1, 
-                    border: 1, 
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: 'action.hover' }
-                  }}
-                  onClick={() => handleTaskClick(task.id)}
-                >
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body2" noWrap sx={{ maxWidth: '70%' }}>
-                      {task.title}
-                    </Typography>
-                    <Chip 
-                      label={task.priority} 
-                      size="small" 
-                      color={getPriorityColor(task.priority) as any}
-                    />
-                  </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    {task.projectName}
-                  </Typography>
-                </Box>
-              ))}
-            </>
-          ) : (
-            <Alert severity="success" sx={{ py: 0.5 }}>
-              Aucune tâche prévue aujourd'hui
-            </Alert>
-          )}
-        </Stack>
-
-      </Paper>
-    );
-  };
-
-  // Widget des tâches prioritaires
-  const PriorityTasksWidget = () => (
-    <Paper sx={{ p: 2, height: '100%' }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6">Tâches prioritaires</Typography>
-        <Button 
-          size="small" 
-          endIcon={<ArrowForward />}
-          onClick={() => navigate('/tasks')}
-        >
-          Voir tout
-        </Button>
-      </Box>
-
-      <Stack spacing={1.5}>
-        {myTasks.map(task => (
-          <Card 
-            key={task.id} 
-            variant="outlined"
-            sx={{ 
-              cursor: 'pointer',
-              '&:hover': { bgcolor: 'action.hover' }
-            }}
-            onClick={() => handleTaskClick(task.id)}
-          >
-            <CardContent sx={{ py: 1.5 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                <Box flex={1}>
-                  <Typography variant="body2" fontWeight="medium">
-                    {task.title}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {task.projectName}
-                  </Typography>
-                  {task.estimatedHours && (
-                    <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
-                      <Timer fontSize="small" color="action" />
-                      <Typography variant="caption">
-                        {task.timeSpent || 0}/{task.estimatedHours}h
-                      </Typography>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={((task.timeSpent || 0) / task.estimatedHours) * 100}
-                        sx={{ flex: 1, height: 4, borderRadius: 2 }}
-                      />
-                    </Box>
-                  )}
-                </Box>
-                <Stack direction="row" spacing={0.5}>
-                  <Chip 
-                    label={task.priority} 
-                    size="small" 
-                    color={getPriorityColor(task.priority) as any}
-                  />
-                  {task.dueDate && isValid(new Date(task.dueDate)) && (
-                    <Chip 
-                      label={format(new Date(task.dueDate), 'dd/MM')} 
-                      size="small"
-                      variant="outlined"
-                      icon={<Event />}
-                    />
-                  )}
-                </Stack>
-              </Box>
-            </CardContent>
-          </Card>
-        ))}
-        {myTasks.length === 0 && (
-          <Alert severity="info" sx={{ py: 0.5 }}>
-            Aucune tâche assignée pour le moment
-          </Alert>
-        )}
-      </Stack>
-    </Paper>
-  );
-
-  // Widget du planning
-  const UpcomingEventsWidget = () => (
-    <Paper sx={{ p: 2, height: '100%' }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6">Agenda</Typography>
-      </Box>
-
-      <Stack spacing={1}>
-        {upcomingEvents.map(event => (
-          <Box 
-            key={event.id}
-            sx={{ 
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              p: 1,
-              borderLeft: 3,
-              borderColor: event.color,
-              bgcolor: 'background.default',
-              borderRadius: 1
-            }}
-          >
-            <Avatar sx={{ width: 32, height: 32, bgcolor: `${event.color}20` }}>
-              {getEventIcon(event.type)}
-            </Avatar>
-            <Box flex={1}>
-              <Typography variant="body2">{event.title}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                {formatEventDate(event.date)}
-              </Typography>
-            </Box>
-          </Box>
-        ))}
-
-        {upcomingEvents.length === 0 && (
-          <Alert severity="info" sx={{ py: 0.5 }}>
-            Aucun événement à venir
-          </Alert>
-        )}
-      </Stack>
-
-      <Button 
-        fullWidth 
-        variant="outlined" 
-        sx={{ mt: 2 }}
-        onClick={() => navigate('/calendar')}
-      >
-        Voir le calendrier complet
-      </Button>
-    </Paper>
-  );
-
-  if (loading) {
+  if (loading && !dashboardData) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
-        <Typography ml={2}>Chargement du tableau de bord...</Typography>
+        <Typography ml={2}>Chargement de votre dashboard...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box p={3}>
+        <Alert severity="error" action={
+          <Button color="inherit" size="small" onClick={loadDashboardData}>
+            Réessayer
+          </Button>
+        }>
+          {error}
+        </Alert>
+      </Box>
+    );
+  }
+
+  if (!dashboardData) {
+    return (
+      <Box p={3}>
+        <Alert severity="warning">
+          Aucune donnée disponible
+        </Alert>
       </Box>
     );
   }
@@ -632,54 +148,50 @@ export const DashboardHub: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={3}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
           <Typography variant="h4" gutterBottom>
             🎯 Mon Hub Personnel
           </Typography>
-          <Typography variant="body1" color="text.secondary" gutterBottom>
+          <Typography variant="body1" color="text.secondary">
             {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
           </Typography>
-          <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
-            {personalKPIs.slice(0, 3).map((kpi) => (
-              <Typography key={kpi.id} variant="body2" color="text.secondary">
-                <strong>{kpi.value}</strong> {kpi.label.toLowerCase()}
-              </Typography>
-            ))}
-          </Stack>
         </Box>
         <Stack direction="row" spacing={1} alignItems="center">
-          <Button
+          {/* Métriques rapides */}
+          <Chip
+            icon={<ProjectIcon />}
+            label={`${dashboardData.metrics.totalProjects} projet${dashboardData.metrics.totalProjects > 1 ? 's' : ''}`}
+            color="primary"
             variant="outlined"
-            startIcon={<TeleworkIcon />}
-            onClick={() => setTeleworkModalOpen(true)}
-            size="small"
-          >
-            Télétravail
-          </Button>
-          {currentUser && permissionsService.canApproveLeaves(currentUser) && (
-            <Button
-              variant="outlined"
-              startIcon={<LeaveIcon />}
-              onClick={() => setAdminLeaveModalOpen(true)}
+          />
+          <Chip
+            icon={<TaskIcon />}
+            label={`${dashboardData.metrics.totalTasks} tâche${dashboardData.metrics.totalTasks > 1 ? 's' : ''}`}
+            color="info"
+            variant="outlined"
+          />
+          {dashboardData.metrics.tasksOverdue > 0 && (
+            <Chip
+              label={`${dashboardData.metrics.tasksOverdue} en retard`}
+              color="error"
               size="small"
-              color="secondary"
-            >
-              Déclarer congé
-            </Button>
+            />
           )}
           <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setSimpleTaskModalOpen(true)}
+            variant="outlined"
+            startIcon={<PeopleIcon />}
+            onClick={() => setPresenceModalOpen(true)}
             size="small"
+            color="secondary"
           >
-            Nouvelle tâche
+            Présences
           </Button>
           <IconButton
             onClick={handleRefresh}
             disabled={refreshing}
             size="large"
+            color="primary"
           >
             {refreshing ? <CircularProgress size={24} /> : <RefreshIcon />}
           </IconButton>
@@ -695,9 +207,6 @@ export const DashboardHub: React.FC = () => {
             border: 2,
             borderColor: 'info.main',
             bgcolor: 'info.50',
-            '& .MuiAlert-icon': {
-              fontSize: '1.5rem'
-            }
           }}
           action={
             <Button
@@ -717,95 +226,45 @@ export const DashboardHub: React.FC = () => {
               {user?.firstName?.charAt(0) || user?.displayName?.charAt(0)}
             </Avatar>
             <Typography variant="body1">
-              <strong>🎭 Mode Simulation Actif</strong> - Vous voyez le dashboard de <strong>{user?.displayName || `${user?.firstName} ${user?.lastName}`}</strong>
+              <strong>🎭 Mode Simulation</strong> - Dashboard de{' '}
+              <strong>{user?.displayName || `${user?.firstName} ${user?.lastName}`}</strong>
             </Typography>
           </Box>
         </Alert>
       )}
 
-      {/* Alertes en haut */}
-      {personalAlerts.length > 0 && (
-        <Stack spacing={1} mb={3}>
-          {personalAlerts.map((alert) => (
-            <Alert 
-              key={alert.id}
-              severity={alert.priority === 'high' ? 'error' : alert.priority === 'medium' ? 'warning' : 'info'}
-              action={<Button size="small">Voir</Button>}
-            >
-              <Typography variant="subtitle2">{alert.title}</Typography>
-              <Typography variant="body2">{alert.message}</Typography>
-            </Alert>
-          ))}
-        </Stack>
-      )}
+      {/* 1. PLANNING HEBDOMADAIRE (60% - Composant principal) */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent sx={{ p: 0 }}>
+          <MyPlanning onNewTask={() => setSimpleTaskModalOpen(true)} />
+        </CardContent>
+      </Card>
 
-      {/* 1. Objectif Actuel + KPIs Grid - En premier */}
-      <Box display="flex" flexWrap="wrap" gap={2} mb={4}>
-
-        {/* KPIs */}
-        {personalKPIs.map(kpi => (
-          <Box key={kpi.id} sx={{ flex: '1 1 300px', minWidth: 200 }}>
-            <KPICard kpi={kpi} />
-          </Box>
-        ))}
-      </Box>
-
-      {/* 2. Planning Section - Au milieu */}
-      <Box mb={4}>
-        <Typography variant="h6" gutterBottom>
-          Mon planning détaillé
-        </Typography>
-        <Card>
-          <CardContent sx={{ p: 0 }}>
-            <MyPlanning />
-          </CardContent>
-        </Card>
-      </Box>
-
-      {/* 3. Ma To-Do */}
-      <Box mb={4}>
+      {/* Ma To-Do */}
+      <Box sx={{ mb: 3 }}>
         <PersonalTodoWidget />
       </Box>
 
-      {/* 4. Quick Time Entry Widget - En dernier */}
-      <Box mb={3}>
-        <QuickTimeEntryWidget onTimeLogged={loadPersonalDashboardData} />
+      {/* 2 & 3. WIDGETS LATÉRAUX : Mes Projets + Mes Tâches */}
+      <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        {/* Mes Projets (50% sur desktop) */}
+        <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: 300 }}>
+          <MyProjectsWidget
+            projects={dashboardData.myProjects}
+            loading={loading}
+          />
+        </Box>
+
+        {/* Mes Tâches Critiques (50% sur desktop) */}
+        <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: 300 }}>
+          <MyTasksWidget
+            tasksByUrgency={dashboardData.myTasksByUrgency}
+            mySimpleTasks={dashboardData.mySimpleTasks}
+            loading={loading}
+            onTaskUpdate={handleTaskUpdate}
+          />
+        </Box>
       </Box>
-
-      {/* Task Detail Modal */}
-      <TaskModalSimplified
-        open={taskModalOpen}
-        onClose={handleCloseTaskModal}
-        task={selectedTask}
-        onSave={handleSaveTask}
-      />
-
-      {/* Telework Modal */}
-      {user && (
-        <TeleworkBulkDeclarationModal
-          open={teleworkModalOpen}
-          onClose={() => setTeleworkModalOpen(false)}
-          onSave={() => {
-            setTeleworkModalOpen(false);
-            loadPersonalDashboardData();
-          }}
-          userId={user.id}
-          userDisplayName={user.displayName || `${user.firstName} ${user.lastName}`}
-        />
-      )}
-
-      {/* Admin Leave Declaration Modal */}
-      {currentUser && (
-        <AdminLeaveDeclarationModal
-          open={adminLeaveModalOpen}
-          onClose={() => setAdminLeaveModalOpen(false)}
-          onSave={() => {
-            setAdminLeaveModalOpen(false);
-            loadPersonalDashboardData();
-          }}
-          currentUser={currentUser}
-        />
-      )}
 
       {/* Simple Task Modal */}
       {user && (
@@ -816,6 +275,12 @@ export const DashboardHub: React.FC = () => {
           currentUserId={user.id}
         />
       )}
+
+      {/* Presence Modal */}
+      <PresenceModal
+        open={presenceModalOpen}
+        onClose={() => setPresenceModalOpen(false)}
+      />
     </Box>
   );
 };

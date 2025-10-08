@@ -106,7 +106,6 @@ const Calendar: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
 
   // États pour le mode Planning
-  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [servicesInitialized, setServicesInitialized] = useState(false);
 
@@ -938,94 +937,6 @@ const Calendar: React.FC = () => {
 
   return (
     <Box>
-        {/* ✅ Header compact unifié */}
-        <Card sx={{ mb: 2 }}>
-          <CardContent sx={{ p: 2 }}>
-            {/* Barre principale avec titre et action */}
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-              <Typography variant="h5" component="h1">
-                📅 Calendrier & Planning
-              </Typography>
-
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setSelectedDateForSimpleTask(new Date());
-                  setSimpleTaskModalOpen(true);
-                }}
-                color="primary"
-                size="small"
-              >
-                Nouvelle Tâche
-              </Button>
-            </Stack>
-
-            {/* ✅ Filtres compacts */}
-            <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-              {/* Filtre projets */}
-              <FormControl size="small" sx={{ minWidth: 180 }}>
-                <InputLabel>Projets</InputLabel>
-                <Select
-                  multiple
-                  value={selectedProjects}
-                  onChange={(e) => setSelectedProjects(e.target.value as string[])}
-                  label="Projets"
-                  renderValue={(selected) =>
-                    selected.length === 0 ? 'Tous' : `${selected.length} projet(s)`
-                  }
-                >
-                  {projects.map((project) => (
-                    <MenuItem key={project.id} value={project.id}>
-                      <Checkbox checked={selectedProjects.includes(project.id)} />
-                      <ListItemText primary={project.name} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              {/* Filtre services */}
-              <FormControl size="small" sx={{ minWidth: 180 }}>
-                <InputLabel>Services</InputLabel>
-                <Select
-                  multiple
-                  value={selectedServices}
-                  onChange={(e) => setSelectedServices(e.target.value as string[])}
-                  label="Services"
-                  renderValue={(selected) =>
-                    selected.length === 0 ? 'Tous' : `${selected.length} service(s)`
-                  }
-                >
-                  <MenuItem key="encadrement" value="encadrement">
-                    <Checkbox checked={selectedServices.includes('encadrement')} />
-                    <ListItemText primary="Encadrement" primaryTypographyProps={{ fontWeight: 600 }} />
-                  </MenuItem>
-                  {services.map((service) => (
-                    <MenuItem key={service.id} value={service.id}>
-                      <Checkbox checked={selectedServices.includes(service.id)} />
-                      <ListItemText primary={service.name} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              {/* Bouton réinitialiser */}
-              {(selectedProjects.length > 0 || selectedServices.length > 0) && (
-                <Button
-                  variant="text"
-                  size="small"
-                  onClick={() => {
-                    setSelectedProjects([]);
-                    setSelectedServices([]);
-                  }}
-                >
-                  Réinitialiser
-                </Button>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
-
         {/* Composant PlanningCalendar avec lazy loading */}
         <Suspense fallback={
           <Card>
@@ -1037,10 +948,16 @@ const Calendar: React.FC = () => {
           </Card>
         }>
           <PlanningCalendar
-            selectedProjects={selectedProjects}
+            selectedProjects={[]} // Filtre projets supprimé
             selectedUsers={[]} // ✅ Calendar général : pas de filtre utilisateur
             selectedServices={selectedServices}
+            services={services}
             onTaskUpdate={handleTaskUpdate}
+            onServicesChange={setSelectedServices}
+            onNewTask={() => {
+              setSelectedDateForSimpleTask(new Date());
+              setSimpleTaskModalOpen(true);
+            }}
           />
         </Suspense>
 

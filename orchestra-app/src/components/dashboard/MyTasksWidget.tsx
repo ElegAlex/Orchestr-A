@@ -20,14 +20,18 @@ import {
   Warning as WarningIcon,
   Schedule as ScheduleIcon,
   Assignment as AssignmentIcon,
+  PlaylistAddCheck as SimpleTaskIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { TasksByUrgency } from '../../services/dashboard-hub-v2.service';
 import TaskCardWithTimeEntry from '../project/TaskCardWithTimeEntry';
+import SimpleTaskCard from './SimpleTaskCard';
 import { Task } from '../../types';
+import { SimpleTask } from '../../types/simpleTask';
 
 interface MyTasksWidgetProps {
   tasksByUrgency: TasksByUrgency;
+  mySimpleTasks?: SimpleTask[];
   loading?: boolean;
   onTaskUpdate?: () => void;
 }
@@ -41,6 +45,7 @@ interface CategoryState {
 
 export const MyTasksWidget: React.FC<MyTasksWidgetProps> = ({
   tasksByUrgency,
+  mySimpleTasks = [],
   loading = false,
   onTaskUpdate,
 }) => {
@@ -52,9 +57,21 @@ export const MyTasksWidget: React.FC<MyTasksWidgetProps> = ({
   const [inProgressState, setInProgressState] = useState<CategoryState>({ expanded: true, currentPage: 0 });
   const [todoState, setTodoState] = useState<CategoryState>({ expanded: false, currentPage: 0 });
   const [blockedState, setBlockedState] = useState<CategoryState>({ expanded: true, currentPage: 0 });
+  const [simpleTasksState, setSimpleTasksState] = useState<CategoryState>({ expanded: true, currentPage: 0 });
 
   // Fonction utilitaire pour gérer la pagination
   const getPaginatedTasks = (tasks: Task[], currentPage: number) => {
+    const startIndex = currentPage * TASKS_PER_PAGE;
+    const endIndex = startIndex + TASKS_PER_PAGE;
+    return {
+      tasks: tasks.slice(startIndex, endIndex),
+      totalPages: Math.ceil(tasks.length / TASKS_PER_PAGE),
+      hasMore: tasks.length > endIndex,
+    };
+  };
+
+  // Pagination pour les tâches simples
+  const getPaginatedSimpleTasks = (tasks: SimpleTask[], currentPage: number) => {
     const startIndex = currentPage * TASKS_PER_PAGE;
     const endIndex = startIndex + TASKS_PER_PAGE;
     return {
@@ -175,13 +192,125 @@ export const MyTasksWidget: React.FC<MyTasksWidgetProps> = ({
     );
   };
 
+  // Composant pour les tâches simples
+  const SimpleTaskCategory: React.FC<{
+    title: string;
+    tasks: SimpleTask[];
+    color: 'error' | 'warning' | 'info' | 'default' | 'primary';
+    icon: React.ReactElement;
+    state: CategoryState;
+    setState: React.Dispatch<React.SetStateAction<CategoryState>>;
+  }> = ({ title, tasks, color, icon, state, setState }) => {
+    const { tasks: paginatedTasks, totalPages, hasMore } = getPaginatedSimpleTasks(tasks, state.currentPage);
+
+    if (tasks.length === 0) return null;
+
+    return (
+      <Box>
+        {/* En-tête catégorie */}
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          sx={{
+            py: 1,
+            px: 1.5,
+            bgcolor: `${color}.50`,
+            borderRadius: 1,
+            cursor: 'pointer',
+            '&:hover': {
+              bgcolor: `${color}.100`,
+            },
+          }}
+          onClick={() => setState({ ...state, expanded: !state.expanded })}
+        >
+          <Stack direction="row" alignItems="center" spacing={1}>
+            {icon}
+            <Typography variant="subtitle2" fontWeight="600">
+              {title}
+            </Typography>
+            <Chip
+              label={tasks.length}
+              size="small"
+              color={color}
+              sx={{ height: 20, fontSize: '0.7rem' }}
+            />
+          </Stack>
+          <IconButton size="small">
+            {state.expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          </IconButton>
+        </Stack>
+
+        {/* Liste des tâches simples */}
+        <Collapse in={state.expanded} timeout="auto">
+          <Stack spacing={1} sx={{ mt: 1, mb: 2 }}>
+            {paginatedTasks.map((task) => (
+              <SimpleTaskCard
+                key={task.id}
+                task={task}
+                onUpdate={onTaskUpdate}
+                compact={true}
+              />
+            ))}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{
+                  px: 2,
+                  py: 1,
+                  bgcolor: 'background.default',
+                  borderRadius: 1,
+                }}
+              >
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (state.currentPage > 0) {
+                      setState({ ...state, currentPage: state.currentPage - 1 });
+                    }
+                  }}
+                  disabled={state.currentPage === 0}
+                >
+                  <ChevronLeftIcon />
+                </IconButton>
+
+                <Typography variant="caption" color="text.secondary">
+                  {state.currentPage * TASKS_PER_PAGE + 1} - {Math.min((state.currentPage + 1) * TASKS_PER_PAGE, tasks.length)} sur {tasks.length}
+                </Typography>
+
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (state.currentPage < totalPages - 1) {
+                      setState({ ...state, currentPage: state.currentPage + 1 });
+                    }
+                  }}
+                  disabled={state.currentPage >= totalPages - 1}
+                >
+                  <ChevronRightIcon />
+                </IconButton>
+              </Stack>
+            )}
+          </Stack>
+        </Collapse>
+      </Box>
+    );
+  };
+
   // Calcul du total de tâches
   const totalTasks =
     tasksByUrgency.overdue.length +
     tasksByUrgency.dueSoon.length +
     tasksByUrgency.inProgress.length +
     tasksByUrgency.todo.length +
-    tasksByUrgency.blocked.length;
+    tasksByUrgency.blocked.length +
+    mySimpleTasks.length;
 
   if (loading) {
     return (
@@ -271,6 +400,16 @@ export const MyTasksWidget: React.FC<MyTasksWidgetProps> = ({
               icon={<AssignmentIcon sx={{ fontSize: 18, color: 'text.secondary' }} />}
               state={todoState}
               setState={setTodoState}
+            />
+
+            {/* Tâches simples */}
+            <SimpleTaskCategory
+              title="TÂCHES SIMPLES"
+              tasks={mySimpleTasks}
+              color="primary"
+              icon={<SimpleTaskIcon sx={{ fontSize: 18, color: 'primary.main' }} />}
+              state={simpleTasksState}
+              setState={setSimpleTasksState}
             />
           </Box>
         )}

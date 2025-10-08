@@ -14,7 +14,7 @@ import { MainLayout } from './components/layout/MainLayout';
 import { PrivateRoute } from './components/PrivateRoute';
 
 // Lazy-loaded components for better performance
-const DashboardHub = React.lazy(() => import('./pages/DashboardHubV2'));
+const DashboardHub = React.lazy(() => import('./pages/DashboardHub'));
 const Projects = React.lazy(() => import('./pages/Projects').then(module => ({ default: module.Projects })));
 const ProjectCreate = React.lazy(() => import('./pages/ProjectCreate').then(module => ({ default: module.ProjectCreate })));
 const ProjectDetail = React.lazy(() => import('./pages/ProjectDetail'));

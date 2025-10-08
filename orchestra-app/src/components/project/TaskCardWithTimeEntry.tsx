@@ -39,6 +39,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { Task, TaskStatus, TimeEntry } from '../../types';
 import { taskService } from '../../services/task.service';
+import { projectService } from '../../services/project.service';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useSubtasks } from '../../hooks/useSubtasks';
@@ -65,9 +66,28 @@ const TaskCardWithTimeEntry: React.FC<TaskCardWithTimeEntryProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusChanging, setStatusChanging] = useState(false);
+  const [projectName, setProjectName] = useState<string>('');
 
   // Gestion des sous-tâches
   const { subtasks, updateSubtask, stats } = useSubtasks(task.id);
+
+  // Charger le nom du projet
+  useEffect(() => {
+    const loadProjectName = async () => {
+      try {
+        const project = await projectService.getProject(task.projectId);
+        if (project) {
+          setProjectName(project.name);
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement du projet:', err);
+      }
+    };
+
+    if (task.projectId) {
+      loadProjectName();
+    }
+  }, [task.projectId]);
 
   useEffect(() => {
     if (timeExpanded) {
@@ -217,6 +237,12 @@ const TaskCardWithTimeEntry: React.FC<TaskCardWithTimeEntryProps> = ({
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1} mb={compact ? 0.5 : 1}>
           <Box flex={1}>
             <Typography variant={compact ? "body2" : "subtitle2"} fontWeight="bold" gutterBottom={!compact}>
+              {projectName && (
+                <Box component="span" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                  {projectName}
+                  <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>-</Box>
+                </Box>
+              )}
               {task.title}
             </Typography>
 

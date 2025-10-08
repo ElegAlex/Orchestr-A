@@ -195,10 +195,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
                         // Calculer le nombre max de barres empilées
                         const maxSingleDayBars = Math.max(...Array.from(singleDayItems.values()).map(items => items.length), 0);
                         const totalBars = taskBars.size + maxSingleDayBars;
-                        // En mode "Disponibilités", réduire la hauteur à 60px minimum pour focus sur congés/télétravail
+                        // En mode "Disponibilités", réduire la hauteur à 48px minimum pour focus sur congés/télétravail (réduction de 20%)
                         const timelineHeight = viewFilter === 'availability'
-                          ? 60
-                          : Math.max(60, totalBars * 22 + 16);
+                          ? 48
+                          : Math.max(48, totalBars * 22 + 16);
 
                         return (
                           <Box key={workloadDay.userId} sx={{ mb: 1, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -215,9 +215,6 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                     <Box flexGrow={1} minWidth={0}>
                                       <Typography variant="body2" fontWeight="bold" noWrap>
                                         {getUserDisplayName(workloadDay.user)}
-                                      </Typography>
-                                      <Typography variant="caption" color="text.secondary" noWrap>
-                                        {workloadDay.user.role}
                                       </Typography>
                                     </Box>
                                   </Stack>
@@ -252,13 +249,33 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                             borderRight: '1px solid',
                                             borderColor: 'divider',
                                             bgcolor: isWeekendOrHoliday ? 'grey.200' : 'transparent',
+                                            zIndex: 0,
                                             ...(isRemoteDay && {
                                               border: '3px solid #ff9800',
                                               borderRadius: 1,
-                                              boxSizing: 'border-box'
+                                              boxSizing: 'border-box',
+                                              bgcolor: 'rgba(255, 152, 0, 0.15)',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center'
                                             })
                                           }}
-                                        />
+                                        >
+                                          {isRemoteDay && (
+                                            <Typography
+                                              sx={{
+                                                fontSize: '10px',
+                                                fontWeight: 'bold',
+                                                color: '#ff9800',
+                                                opacity: 0.8,
+                                                userSelect: 'none',
+                                                pointerEvents: 'none'
+                                              }}
+                                            >
+                                              TLT
+                                            </Typography>
+                                          )}
+                                        </Box>
                                       );
                                     })}
                                   </Box>
@@ -645,10 +662,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       // Calculer le nombre max de barres empilées
                       const maxSingleDayBars = Math.max(...Array.from(singleDayItems.values()).map(items => items.length), 0);
                       const totalBars = taskBars.size + maxSingleDayBars;
-                      // En mode "Disponibilités", réduire la hauteur à 60px minimum pour focus sur congés/télétravail
+                      // En mode "Disponibilités", réduire la hauteur à 48px minimum pour focus sur congés/télétravail (réduction de 20%)
                       const timelineHeight = viewFilter === 'availability'
-                        ? 60
-                        : Math.max(60, totalBars * 22 + 16);
+                        ? 48
+                        : Math.max(48, totalBars * 22 + 16);
 
                       return (
                         <Box key={workloadDay.userId} sx={{ mb: 1, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -665,9 +682,6 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                   <Box flexGrow={1} minWidth={0}>
                                     <Typography variant="body2" fontWeight="bold" noWrap>
                                       {getUserDisplayName(workloadDay.user)}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary" noWrap>
-                                      {workloadDay.user.role}
                                     </Typography>
                                   </Box>
                                 </Stack>
@@ -701,13 +715,33 @@ export const MonthView: React.FC<MonthViewProps> = ({
                                           borderRight: '1px solid',
                                           borderColor: 'divider',
                                           bgcolor: isWeekendOrHoliday ? 'grey.200' : 'transparent',
+                                          zIndex: 0,
                                           ...(isRemoteDay && {
                                             border: '3px solid #ff9800',
                                             borderRadius: 1,
-                                            boxSizing: 'border-box'
+                                            boxSizing: 'border-box',
+                                            bgcolor: 'rgba(255, 152, 0, 0.15)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
                                           })
                                         }}
-                                      />
+                                      >
+                                        {isRemoteDay && (
+                                          <Typography
+                                            sx={{
+                                              fontSize: '10px',
+                                              fontWeight: 'bold',
+                                              color: '#ff9800',
+                                              opacity: 0.8,
+                                              userSelect: 'none',
+                                              pointerEvents: 'none'
+                                            }}
+                                          >
+                                            TLT
+                                          </Typography>
+                                        )}
+                                      </Box>
                                     );
                                   })}
                                 </Box>

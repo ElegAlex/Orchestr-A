@@ -12,8 +12,11 @@ import {
   IconButton,
   Button,
   FormControl,
+  InputLabel,
   Select,
   MenuItem,
+  Checkbox,
+  ListItemText,
   Alert,
   CircularProgress,
   LinearProgress,
@@ -23,27 +26,21 @@ import {
   DialogContent,
   DialogActions,
   Collapse,
-  ToggleButton,
-  ToggleButtonGroup,
 } from '@mui/material';
 import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   Today as TodayIcon,
-  ViewWeek as ViewWeekIcon,
   CalendarMonth as CalendarMonthIcon,
   Person as PersonIcon,
   Work as WorkIcon,
   Home as HomeIcon,
-  CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
   Business as BusinessIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Delete as DeleteIcon,
-  FilterList as FilterListIcon,
-  EventAvailable as EventAvailableIcon,
-  Assignment as AssignmentIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -497,11 +494,6 @@ const DraggableItem: React.FC<DraggableItemProps> = ({ item, onMove, onResize, o
             🕐 {item.startTimeString} - {item.endTimeString}
           </Typography>
         )}
-        {item.isSpanning && item.spanDay && item.totalSpanDays && item.totalSpanDays > 1 && (
-          <Typography variant="caption" display="block" sx={{ opacity: 0.7, fontSize: '0.65rem' }}>
-            Jour {item.spanDay}/{item.totalSpanDays}
-          </Typography>
-        )}
       </Box>
       {item.isRemote && (
         <Chip 
@@ -580,11 +572,10 @@ const TaskSlot: React.FC<TaskSlotProps> = ({
       onClick={handleSlotClick}
       sx={{
         width: '100%', // Prendre toute la largeur disponible
-        height: 40,
+        height: 38, // Réduit de 5% (40 * 0.95 = 38)
         border: '1px dashed',
-        borderColor: isOver ? 'primary.main' : isEmpty ? 'grey.300' : 'transparent',
-        bgcolor: isOver && canDrop ? 'primary.light' : 
-                isEmpty ? 'grey.50' : 'transparent',
+        borderColor: isOver ? 'primary.main' : isEmpty ? 'transparent' : 'transparent',
+        bgcolor: isOver && canDrop ? 'primary.light' : 'transparent',
         borderRadius: 1,
         p: 0.5,
         mb: 0.5,
@@ -607,20 +598,6 @@ const TaskSlot: React.FC<TaskSlotProps> = ({
           onResize={() => {}}
           onClick={onItemClick}
         />
-      ) : isEmpty ? (
-        <Typography 
-          variant="caption" 
-          color="text.secondary"
-          sx={{ 
-            fontSize: '0.7rem',
-            fontStyle: 'italic',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.5
-          }}
-        >
-          + Ajouter tâche
-        </Typography>
       ) : null}
     </Box>
   );
@@ -682,12 +659,12 @@ const UserRow: React.FC<UserRowProps> = ({
     return Math.max(max, projectTasks.length);
   }, 0);
 
-  // Hauteur de la zone projet : basée sur le max + 1 slot pour le drop zone
-  // Chaque tâche = 40px (height) + 4px (spacing) = 44px
+  // Hauteur de la zone projet : basée sur le max de tâches
+  // Chaque tâche = 38px (height, réduit de 5%) + 4px (spacing) = 42px
   // En mode "Disponibilités", réduire la hauteur à 60px pour focus sur congés/télétravail
   const projectZoneHeight = viewFilter === 'availability'
     ? 60
-    : (maxProjectTasksCount + 1) * 44;
+    : Math.max(42, maxProjectTasksCount * 42);
 
   const renderDayColumn = (date: Date) => {
     const dayItems = workloadDay.items.filter(item =>
@@ -708,37 +685,7 @@ const UserRow: React.FC<UserRowProps> = ({
     const teleworkResolution = teleworkSystem.getResolutionForDay(workloadDay.userId, date);
     const isRemoteDay = teleworkResolution?.resolvedMode === 'remote' || false;
 
-    // Créer un slot de drop pour la zone projet
-    const createProjectDropZone = () => (
-      <TaskSlot
-        key={`${date.toISOString()}-project-drop`}
-        userId={workloadDay.userId}
-        date={date}
-        slotIndex={-1}
-        item={undefined}
-        isEmpty={true}
-        taskZone="project"
-        onDrop={onItemDrop}
-        onCreateTask={onCreateTask}
-        onItemClick={onItemClick}
-      />
-    );
-
-    // Créer un slot de drop pour la zone simple
-    const createSimpleDropZone = () => (
-      <TaskSlot
-        key={`${date.toISOString()}-simple-drop`}
-        userId={workloadDay.userId}
-        date={date}
-        slotIndex={-1}
-        item={undefined}
-        isEmpty={true}
-        taskZone="simple"
-        onDrop={onItemDrop}
-        onCreateTask={onCreateTask}
-        onItemClick={onItemClick}
-      />
-    );
+    // Slots de drop supprimés - plus besoin avec le bouton "Nouvelle Tâche"
 
     return (
       <Box key={date.toISOString()} sx={{
@@ -778,29 +725,24 @@ const UserRow: React.FC<UserRowProps> = ({
             <Box
               key={idx}
               sx={{
-                mb: 1,
+                mb: 0.5,
                 width: widthPercent,
                 alignSelf: alignSelf,
                 background: getBgGradient(),
                 color: 'white',
-                p: 1,
+                p: 0.5,
                 borderRadius: 1,
                 textAlign: 'center',
                 fontWeight: 'bold',
-                fontSize: '0.75rem',
-                border: '2px solid rgba(255,255,255,0.5)',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                fontSize: '0.65rem',
+                border: '1px solid rgba(255,255,255,0.5)',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
                 zIndex: 10,
                 position: 'relative'
               }}
             >
               <Box>
                 {getLeaveIcon()}{leave.title}
-                {leave.isSpanning && leave.spanDay && leave.totalSpanDays && (
-                  <Typography variant="caption" display="block" sx={{ fontSize: '0.65rem', opacity: 0.9, mt: 0.5 }}>
-                    Jour {leave.spanDay}/{leave.totalSpanDays}
-                  </Typography>
-                )}
               </Box>
             </Box>
           );
@@ -886,16 +828,15 @@ const UserRow: React.FC<UserRowProps> = ({
                 onItemClick={onItemClick}
               />
             ))}
-            {createProjectDropZone()}
           </Stack>
         </Box>
 
-        {/* SÉPARATEUR */}
+        {/* SÉPARATEUR entre tâches projets et tâches simples */}
         <Box
           sx={{
-            borderTop: '1px dashed',
+            borderTop: '1px solid',
             borderColor: 'divider',
-            opacity: 0.3,
+            opacity: 0.5,
             my: 0.5
           }}
         />
@@ -951,7 +892,6 @@ const UserRow: React.FC<UserRowProps> = ({
                 onItemClick={onItemClick}
               />
             ))}
-            {createSimpleDropZone()}
           </Stack>
         </Box>
 
@@ -1105,7 +1045,11 @@ interface PlanningCalendarProps {
   selectedProjects?: string[];
   selectedUsers?: string[];
   selectedServices?: string[];
+  services?: Service[];
   onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
+  onServicesChange?: (services: string[]) => void;
+  onNewTask?: () => void;
+  hideServicesFilter?: boolean; // Pour masquer le filtre services (Dashboard Hub)
 }
 
 // Helper pour obtenir le nom d'affichage correct d'un utilisateur
@@ -1122,7 +1066,11 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
   selectedProjects = [],
   selectedUsers = [],
   selectedServices = [],
+  services: servicesFromProps,
   onTaskUpdate,
+  onServicesChange,
+  onNewTask,
+  hideServicesFilter = false,
 }) => {
   // Utilisateur connecté
   const currentUser = useSelector((state: RootState) => state.auth.user);
@@ -2147,72 +2095,97 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
   return (
     <DndProvider backend={HTML5Backend}>
       <Box>
-        {/* ✅ Header compact unifié */}
+        {/* ✅ Header compact unifié - UNE SEULE LIGNE COMPLETE */}
         <Card sx={{ mb: 1 }}>
           <CardContent sx={{ p: 1.5 }}>
-            {/* Barre unique compacte */}
-            <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
-              {/* Navigation gauche */}
-              <Stack direction="row" alignItems="center" spacing={1}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1} flexWrap="wrap">
+              {/* Groupe gauche : Filtre services + Nouvelle Tâche + Réinitialiser */}
+              {(onNewTask || !hideServicesFilter) && (
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  {!hideServicesFilter && (
+                    <FormControl size="small" sx={{ minWidth: 160 }}>
+                      <InputLabel>Services</InputLabel>
+                      <Select
+                        multiple
+                        value={selectedServices}
+                        onChange={(e) => onServicesChange?.(e.target.value as string[])}
+                        label="Services"
+                        renderValue={(selected) =>
+                          selected.length === 0 ? 'Tous' : `${selected.length} service(s)`
+                        }
+                      >
+                        <MenuItem key="encadrement" value="encadrement">
+                          <Checkbox checked={selectedServices.includes('encadrement')} />
+                          <ListItemText primary="Encadrement" primaryTypographyProps={{ fontWeight: 600 }} />
+                        </MenuItem>
+                        {(servicesFromProps || services).map((service) => (
+                          <MenuItem key={service.id} value={service.id}>
+                            <Checkbox checked={selectedServices.includes(service.id)} />
+                            <ListItemText primary={service.name} />
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
+
+                  {onNewTask && (
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={onNewTask}
+                      color="primary"
+                      size="small"
+                      sx={{ whiteSpace: 'nowrap' }}
+                    >
+                      Nouvelle Tâche
+                    </Button>
+                  )}
+
+                  {!hideServicesFilter && selectedServices.length > 0 && onServicesChange && (
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={() => onServicesChange([])}
+                    >
+                      Réinitialiser
+                    </Button>
+                  )}
+                </Stack>
+              )}
+
+              {/* Groupe centre : Navigation */}
+              <Stack direction="row" alignItems="center" spacing={0.5}>
                 <IconButton size="small" onClick={handlePrevious}>
                   <ChevronLeftIcon />
                 </IconButton>
-
                 <Button variant="outlined" size="small" startIcon={<TodayIcon />} onClick={handleToday}>
                   Aujourd'hui
                 </Button>
-
                 <IconButton size="small" onClick={handleNext}>
                   <ChevronRightIcon />
                 </IconButton>
-
                 <Typography variant="subtitle1" fontWeight="bold" sx={{ ml: 1, textTransform: 'capitalize' }}>
                   {getViewTitle()}
                 </Typography>
               </Stack>
 
-              {/* Filtre de vue : Tout / Disponibilités / Activités */}
-              <ToggleButtonGroup
-                value={viewFilter}
-                exclusive
-                onChange={(e, newFilter) => {
-                  if (newFilter !== null) {
-                    setViewFilter(newFilter);
-                  }
-                }}
-                size="small"
-                sx={{ height: 32 }}
-              >
-                <ToggleButton value="all" sx={{ px: 1.5 }}>
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <FilterListIcon fontSize="small" />
-                    <span>Tout</span>
-                  </Stack>
-                </ToggleButton>
-                <ToggleButton value="availability" sx={{ px: 1.5 }}>
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <EventAvailableIcon fontSize="small" />
-                    <span>Disponibilités</span>
-                  </Stack>
-                </ToggleButton>
-                <ToggleButton value="activity" sx={{ px: 1.5 }}>
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <AssignmentIcon fontSize="small" />
-                    <span>Activités</span>
-                  </Stack>
-                </ToggleButton>
-              </ToggleButtonGroup>
-
-              {/* Stats et vue droite */}
+              {/* Groupe droite : Tous les autres contrôles */}
               <Stack direction="row" alignItems="center" spacing={1}>
-                <Chip
-                  icon={<PersonIcon />}
-                  label={`${users.length} ressource${users.length > 1 ? 's' : ''}`}
-                  color="primary"
-                  size="small"
-                />
+                {/* Filtre affichage */}
+                <FormControl size="small" sx={{ minWidth: 130 }}>
+                  <InputLabel>Affichage</InputLabel>
+                  <Select
+                    value={viewFilter}
+                    onChange={(e) => setViewFilter(e.target.value as ViewFilter)}
+                    label="Affichage"
+                  >
+                    <MenuItem value="all">Tout</MenuItem>
+                    <MenuItem value="availability">Disponibilités</MenuItem>
+                    <MenuItem value="activity">Activités</MenuItem>
+                  </Select>
+                </FormControl>
 
-                {/* Bouton déclaration congés admin (admin/responsable/manager) */}
+                {/* Bouton déclaration congés */}
                 {currentUser && permissionsService.canApproveLeaves(currentUser) && (
                   <Button
                     variant="outlined"
@@ -2225,24 +2198,33 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                   </Button>
                 )}
 
+                {/* Bouton télétravail */}
+                {currentUser && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<HomeIcon />}
+                    onClick={() => {
+                      setBulkTeleworkModalData({
+                        userId: currentUser.id,
+                        userDisplayName: `${currentUser.firstName} ${currentUser.lastName}`
+                      });
+                      setBulkTeleworkModalOpen(true);
+                    }}
+                    sx={{ whiteSpace: 'nowrap' }}
+                  >
+                    Télétravail
+                  </Button>
+                )}
+
                 {/* Sélecteur de vue */}
-                <FormControl size="small" sx={{ minWidth: 120 }}>
+                <FormControl size="small" sx={{ minWidth: 100 }}>
                   <Select
                     value={viewMode}
                     onChange={(e) => setViewMode(e.target.value as ViewMode)}
                   >
-                    <MenuItem value="week">
-                      <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <ViewWeekIcon fontSize="small" />
-                        <span>Semaine</span>
-                      </Stack>
-                    </MenuItem>
-                    <MenuItem value="month">
-                      <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <CalendarMonthIcon fontSize="small" />
-                        <span>Mois</span>
-                      </Stack>
-                    </MenuItem>
+                    <MenuItem value="week">Semaine</MenuItem>
+                    <MenuItem value="month">Mois</MenuItem>
                   </Select>
                 </FormControl>
               </Stack>
@@ -2253,19 +2235,19 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
 
         {/* En-têtes des colonnes jours */}
         {viewMode === 'week' && (
-          <Card sx={{ 
-            mb: 1, 
-            position: 'sticky', 
+          <Card sx={{
+            mb: 1,
+            position: 'sticky',
             top: 64, // Hauteur approximative de la navbar Material-UI
-            zIndex: 1000, 
+            zIndex: 1000,
             backgroundColor: 'background.paper',
             boxShadow: 2
           }}>
-            <CardContent sx={{ p: 1 }}>
+            <CardContent sx={{ p: 0.5, py: 0.2 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 {/* Zone utilisateur header - même largeur que les lignes */}
-                <Box sx={{ 
-                  width: 240, 
+                <Box sx={{
+                  width: 240,
                   minWidth: 240,
                   maxWidth: 240,
                   flexShrink: 0,
@@ -2277,12 +2259,12 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                     Ressources
                   </Typography>
                 </Box>
-                
+
                 {/* Zone des jours - même structure que les lignes */}
                 <Box sx={{
                   flex: 1,
                   minWidth: 0,
-                  pb: 1
+                  pb: 0
                 }}>
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     {weekDays.map((day) => (
@@ -2292,7 +2274,8 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                           flex: 1,
                           minWidth: 160,
                           textAlign: 'center',
-                          p: 0.5,
+                          py: 0.2,
+                          px: 0.5,
                           borderRadius: 1,
                           backgroundColor: isToday(day) ? 'primary.light' : 'transparent'
                         }}
@@ -2329,7 +2312,7 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
             backgroundColor: 'background.paper',
             boxShadow: 2
           }}>
-            <CardContent sx={{ p: 1 }}>
+            <CardContent sx={{ p: 0.5, py: 0.2 }}>
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 {/* Colonne utilisateur (220px fixe) - EXACTEMENT comme les lignes */}
                 <Box sx={{ width: 220, minWidth: 220, maxWidth: 220, flexShrink: 0, mr: 1 }}>
@@ -2359,7 +2342,8 @@ const PlanningCalendar: React.FC<PlanningCalendarProps> = ({
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            borderRadius: isTodayDay ? 1 : 0
+                            borderRadius: isTodayDay ? 1 : 0,
+                            py: 0.1
                           }}
                         >
                           <Typography

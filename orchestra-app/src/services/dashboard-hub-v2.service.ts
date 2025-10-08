@@ -5,6 +5,7 @@
  */
 
 import { Task, Project } from '../types';
+import { SimpleTask } from '../types/simpleTask';
 import { taskService } from './task.service';
 import { projectService } from './project.service';
 import { simpleTaskService } from './simpleTask.service';
@@ -33,12 +34,16 @@ export interface DashboardHubData {
   // Tâches où l'utilisateur est Responsible (R du RACI)
   myTasksByUrgency: TasksByUrgency;
 
+  // Tâches simples de l'utilisateur (non terminées)
+  mySimpleTasks: SimpleTask[];
+
   // Métriques
   metrics: {
     totalProjects: number;
     totalTasks: number;
     tasksOverdue: number;
     tasksDueSoon: number;
+    simpleTasks: number;
   };
 }
 
@@ -58,6 +63,26 @@ class DashboardHubV2Service {
       return incompleteTasks;
     } catch (error) {
       console.error('Error getting responsible tasks:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Récupère les tâches simples de l'utilisateur non terminées
+   * Triées par date (plus anciennes d'abord)
+   */
+  async getMySimpleTasks(userId: string): Promise<SimpleTask[]> {
+    try {
+      // Récupérer toutes les tâches de l'utilisateur
+      const allSimpleTasks = await simpleTaskService.getByUser(userId);
+
+      // Filtrer uniquement celles qui ne sont pas terminées
+      const incompleteTasks = allSimpleTasks.filter(task => task.status !== 'DONE');
+
+      // Trier par date (plus anciennes d'abord)
+      return incompleteTasks.sort((a, b) => a.date.getTime() - b.date.getTime());
+    } catch (error) {
+      console.error('Error getting simple tasks:', error);
       return [];
     }
   }
@@ -250,17 +275,22 @@ class DashboardHubV2Service {
       // 3. Récupérer mes projets avec métriques
       const myProjects = await this.getMyProjectsWithMetrics(userId, myTasks);
 
-      // 4. Calculer les métriques
+      // 4. Récupérer mes tâches simples (non terminées)
+      const mySimpleTasks = await this.getMySimpleTasks(userId);
+
+      // 5. Calculer les métriques
       const metrics = {
         totalProjects: myProjects.length,
         totalTasks: myTasks.length,
         tasksOverdue: myTasksByUrgency.overdue.length,
         tasksDueSoon: myTasksByUrgency.dueSoon.length,
+        simpleTasks: mySimpleTasks.length,
       };
 
       return {
         myProjects,
         myTasksByUrgency,
+        mySimpleTasks,
         metrics,
       };
     } catch (error) {
