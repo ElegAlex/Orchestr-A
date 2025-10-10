@@ -120,7 +120,6 @@ export const MyLeaves: React.FC = () => {
     if (!user) return;
     
     try {
-      console.log('🔄 Chargement des congés pour l\'utilisateur:', user.id);
       setLoading(true);
       
       // Charger les vraies demandes de congés depuis le service
@@ -129,7 +128,6 @@ export const MyLeaves: React.FC = () => {
       
       // Charger le vrai solde depuis le service (avec refresh forcé pour récupérer les vraies données du contrat)
       const realBalance = await leaveService.getLeaveBalance(user.id, true);
-      console.log('💰 Solde réel récupéré (avec refresh):', realBalance);
       
       // Calculer les soldes basés sur les vraies données
       const usedPaid = userLeaveRequests
@@ -147,9 +145,7 @@ export const MyLeaves: React.FC = () => {
       const pendingRtt = userLeaveRequests
         .filter(req => req.type === 'RTT' && req.status === 'PENDING')
         .reduce((sum, req) => sum + req.totalDays, 0);
-      
-      console.log('📊 Calculs:', { usedPaid, usedRtt, pendingPaid, pendingRtt });
-      
+
       setBalance({
         paidLeave: realBalance.paidLeave,
         rtt: realBalance.rtt,

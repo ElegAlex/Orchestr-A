@@ -15,10 +15,11 @@ import {
   ExpandLess as ExpandLessIcon,
   Business as BusinessIcon,
 } from '@mui/icons-material';
-import { format, isSameDay } from 'date-fns';
-import { User, Department, Project, Holiday } from '../../types';
+import { format, isSameDay, isToday } from 'date-fns';
+import { User, Department, Project, Holiday, SchoolHoliday } from '../../types';
 import { Service } from '../../types/service';
 import { holidayService } from '../../services/holiday.service';
+import { schoolHolidaysService } from '../../services/schoolHolidays.service';
 
 // Types pour les workload days
 interface CalendarItem {
@@ -79,6 +80,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
   viewFilter,
 }) => {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [schoolHolidays, setSchoolHolidays] = useState<SchoolHoliday[]>([]);
 
   // Charger les jours fériés pour le mois affiché
   useEffect(() => {
@@ -98,14 +100,128 @@ export const MonthView: React.FC<MonthViewProps> = ({
     loadHolidays();
   }, [monthDays]);
 
+  // Charger les congés scolaires pour le mois affiché
+  useEffect(() => {
+    const loadSchoolHolidays = async () => {
+      if (monthDays.length > 0) {
+        const startDate = monthDays[0];
+        const endDate = monthDays[monthDays.length - 1];
+        try {
+          const fetchedSchoolHolidays = await schoolHolidaysService.getSchoolHolidaysByPeriod(startDate, endDate);
+          setSchoolHolidays(fetchedSchoolHolidays);
+        } catch (error) {
+          console.error('Error loading school holidays:', error);
+          setSchoolHolidays([]);
+        }
+      }
+    };
+    loadSchoolHolidays();
+  }, [monthDays]);
+
   // Helper pour vérifier si un jour est férié
   const isHoliday = (day: Date): boolean => {
     return holidays.some(holiday => isSameDay(new Date(holiday.date), day));
   };
 
+  // Helper pour vérifier si un jour est dans une période de congés scolaires
+  const getSchoolHolidayForDay = (day: Date): SchoolHoliday | null => {
+    const holiday = schoolHolidays.find(holiday => {
+      const dayTime = day.getTime();
+      const startTime = new Date(holiday.startDate).setHours(0, 0, 0, 0);
+      const endTime = new Date(holiday.endDate).setHours(23, 59, 59, 999);
+      return dayTime >= startTime && dayTime <= endTime;
+    }) || null;
+
+    return holiday;
+  };
+
   return (
     <Box sx={{ overflowX: 'auto', width: '100%' }}>
       <Box sx={{ minWidth: 220 + 44 * monthDays.length }}>
+        {/* En-tête avec dates et congés scolaires */}
+        <Box sx={{ mb: 1, pb: 1, borderBottom: '1px solid', borderColor: 'divider', position: 'sticky', top: 0, bgcolor: 'background.paper', zIndex: 100 }}>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            {/* Espace pour les noms d'utilisateurs */}
+            <Box sx={{ width: 220, minWidth: 220, maxWidth: 220, flexShrink: 0, mr: 1 }} />
+
+            {/* Dates et bandeaux - EXACTEMENT comme les lignes utilisateurs */}
+            <Box sx={{ flex: 1, minWidth: 0, position: 'relative', height: 60 }}>
+              <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                {monthDays.map((day, dayIndex) => {
+                  const dayOfWeek = day.getDay();
+                  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                  const dayIsHoliday = isHoliday(day);
+                  const isTodayDay = isToday(day);
+                  const schoolHoliday = getSchoolHolidayForDay(day);
+
+                  const totalDays = monthDays.length;
+                  const dayWidthPercent = (1 / totalDays) * 100;
+                  const dayLeftPercent = (dayIndex / totalDays) * 100;
+
+                  return (
+                    <Box
+                      key={day.toISOString()}
+                      sx={{
+                        position: 'absolute',
+                        left: `${dayLeftPercent}%`,
+                        width: `${dayWidthPercent}%`,
+                        top: 0,
+                        bottom: 0,
+                        borderRight: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: isTodayDay ? 'primary.light' : isWeekend || dayIsHoliday ? 'grey.100' : 'transparent',
+                        textAlign: 'center',
+                        borderRadius: isTodayDay ? 1 : 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                    {/* Numéro du jour */}
+                    <Typography variant="body2" fontWeight="bold" color={isTodayDay ? 'primary.main' : isWeekend || dayIsHoliday ? 'text.secondary' : 'text.primary'}>
+                      {format(day, 'd')}
+                    </Typography>
+
+                    {/* Nom du jour */}
+                    <Typography variant="caption" display="block" color={isTodayDay ? 'primary.main' : isWeekend ? 'text.secondary' : 'text.secondary'} sx={{ fontSize: '0.65rem' }}>
+                      {format(day, 'EEE')}
+                    </Typography>
+
+                    {/* Indicateur "Aujourd'hui" */}
+                    {isTodayDay && (
+                      <Typography variant="caption" display="block" color="primary.main" sx={{ fontSize: '0.6rem', fontWeight: 'bold' }}>
+                        Auj.
+                      </Typography>
+                    )}
+
+                    {/* Bandeau congé scolaire */}
+                    {schoolHoliday && (
+                      <Tooltip title={`${schoolHoliday.name} (Zone ${schoolHoliday.zone})`} arrow placement="top">
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            height: '12px',
+                            bgcolor: '#FFA726',
+                            cursor: 'help',
+                            '&:hover': {
+                              opacity: 0.8
+                            }
+                          }}
+                        />
+                      </Tooltip>
+                    )}
+                  </Box>
+                );
+              })}
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+
         {/* Corps - Planning groupé par service */}
         <Stack spacing={1}>
         {Array.from(workloadDaysByService.entries()).map(([serviceId, serviceWorkloadDays]) => {

@@ -448,10 +448,32 @@ export interface Holiday {
   updatedAt?: Date;
 }
 
-export type HolidayType = 
+export type HolidayType =
   | 'FIXED' // Date fixe (Noël, Fête du travail)
   | 'CALCULATED' // Date calculée (Pâques, Ascension)
   | 'CUSTOM'; // Défini manuellement
+
+// Congés scolaires
+export type SchoolHolidayZone = 'A' | 'B' | 'C' | 'ALL';
+
+export type SchoolHolidayPeriod =
+  | 'TOUSSAINT' // Vacances de la Toussaint
+  | 'NOEL' // Vacances de Noël
+  | 'HIVER' // Vacances d'hiver
+  | 'PRINTEMPS' // Vacances de printemps
+  | 'ETE'; // Grandes vacances d'été
+
+export interface SchoolHoliday {
+  id: string;
+  name: string; // "Vacances d'hiver 2025"
+  period: SchoolHolidayPeriod;
+  zone: SchoolHolidayZone; // A, B, C ou ALL pour toutes les zones
+  startDate: Date;
+  endDate: Date;
+  year: number; // Année scolaire (ex: 2024 pour 2024-2025)
+  createdAt: Date;
+  updatedAt?: Date;
+}
 
 // Calculs de capacité
 export interface UserCapacity {

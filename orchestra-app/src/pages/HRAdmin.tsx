@@ -75,6 +75,7 @@ import { userService } from '../services/user.service';
 import { UserConfigDialog } from '../components/hr/UserConfigDialog';
 import { TeamManagementTab } from '../components/resources/TeamManagementTab';
 import { SkillsMatrixTab } from '../components/resources/SkillsMatrixTab';
+import { SchoolHolidaysTab } from '../components/hr/SchoolHolidaysTab';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -542,6 +543,7 @@ const HRAdmin: React.FC = () => {
           <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
             <Tab label="Ressources" />
             <Tab label="Jours fériés" />
+            <Tab label="Congés scolaires" />
             <Tab label="Paramètres globaux" />
             <Tab label="Compétences" />
             <Tab label="Skills Matrix" />
@@ -936,9 +938,13 @@ const HRAdmin: React.FC = () => {
           </Box>
         </TabPanel>
 
+        {/* Onglet Congés scolaires */}
+        <TabPanel value={tabValue} index={2}>
+          <SchoolHolidaysTab />
+        </TabPanel>
 
         {/* Onglet Paramètres globaux */}
-        <TabPanel value={tabValue} index={2}>
+        <TabPanel value={tabValue} index={3}>
           <Typography variant="h6" gutterBottom>
             ⚙️ Paramètres globaux RH
           </Typography>
@@ -1189,17 +1195,17 @@ const HRAdmin: React.FC = () => {
         </TabPanel>
 
         {/* Onglet Compétences */}
-        <TabPanel value={tabValue} index={3}>
+        <TabPanel value={tabValue} index={4}>
           <TeamManagementTab />
         </TabPanel>
 
         {/* Onglet Skills Matrix */}
-        <TabPanel value={tabValue} index={4}>
+        <TabPanel value={tabValue} index={5}>
           <SkillsMatrixTab />
         </TabPanel>
 
         {/* Onglet Capacités (désactivé pour l'instant) */}
-        <TabPanel value={tabValue} index={5}>
+        <TabPanel value={tabValue} index={6}>
           <Typography variant="h6" gutterBottom>
             Analyse de capacité - {selectedPeriod.label}
           </Typography>

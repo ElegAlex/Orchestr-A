@@ -291,19 +291,50 @@ class LeaveService {
       );
 
       const snapshot = await getDocs(q);
-      
-      if (snapshot.empty || forceRefresh) {
-        // Si forceRefresh, supprimer l'ancien solde d'abord
-        if (forceRefresh && !snapshot.empty) {
-          const batch = writeBatch(db);
-          snapshot.docs.forEach(doc => {
-            batch.delete(doc.ref);
-          });
-          await batch.commit();
+
+      if (snapshot.empty) {
+        // Aucun solde existant, en créer un nouveau
+        return await this.initializeLeaveBalance(userId, currentYear);
+      }
+
+      if (forceRefresh && !snapshot.empty) {
+        // Si forceRefresh, recalculer le solde basé sur le contrat et mettre à jour
+        // Récupérer le contrat utilisateur
+        let contract = null;
+        try {
+          const { capacityService } = await import('./capacity.service');
+          contract = await capacityService.getUserContract(userId);
+        } catch (error) {
+          // Ignorer l'erreur silencieusement
         }
 
-        // Créer un solde initial basé sur le contrat
-        return await this.initializeLeaveBalance(userId, currentYear);
+        // Utiliser les RTT directement saisis ou calculer selon les heures
+        let rttDays = 0;
+        if (contract?.rttDays !== undefined && contract.rttDays !== null) {
+          rttDays = contract.rttDays;
+        } else if (contract?.weeklyHours && contract.weeklyHours > 35) {
+          rttDays = Math.round((contract.weeklyHours - 35) * 52 / 7);
+        }
+
+        const balanceData = snapshot.docs[0].data();
+        const refreshedBalance = {
+          userId,
+          year: currentYear,
+          paidLeave: contract?.paidLeaveDays || 25,
+          rtt: rttDays,
+          exceptional: 5,
+          used: balanceData.used || { paidLeave: 0, rtt: 0, exceptional: 0 },
+        };
+
+        // Mettre à jour le solde existant plutôt que de le supprimer
+        await updateDoc(snapshot.docs[0].ref, {
+          paidLeave: refreshedBalance.paidLeave,
+          rtt: refreshedBalance.rtt,
+          exceptional: refreshedBalance.exceptional,
+          updatedAt: Timestamp.fromDate(new Date()),
+        });
+
+        return refreshedBalance;
       }
 
       const balanceData = snapshot.docs[0].data();
