@@ -196,10 +196,10 @@ export class UsersController {
   }
 
   @Post(':id/reset-password')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.RESPONSABLE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Réinitialiser le mot de passe d\'un utilisateur (Admin uniquement)',
+    summary: 'Réinitialiser le mot de passe d\'un utilisateur (Admin/Responsable)',
   })
   @ApiResponse({
     status: 200,

@@ -198,6 +198,9 @@ importers:
       '@radix-ui/react-tabs':
         specifier: ^1.1.13
         version: 1.1.13(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      '@rsagiev/gantt-task-react-19':
+        specifier: ^0.3.9
+        version: 0.3.9(react@19.2.0)
       '@tanstack/react-query':
         specifier: ^5.90.6
         version: 5.90.6(react@19.2.0)
@@ -1688,6 +1691,12 @@ packages:
 
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
+
+  '@rsagiev/gantt-task-react-19@0.3.9':
+    resolution: {integrity: sha512-GNiWYDuagVUapVhbfwlqFxe1GvOby7opGQ0OTKjPHexFwnYfrXI+prsJEc00EcXl2tNFjqBGRwiKXtM6uLCUkQ==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      react: ^19.0.0
 
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
@@ -7045,6 +7054,10 @@ snapshots:
       '@types/react-dom': 19.2.2(@types/react@19.2.2)
 
   '@radix-ui/rect@1.1.1': {}
+
+  '@rsagiev/gantt-task-react-19@0.3.9(react@19.2.0)':
+    dependencies:
+      react: 19.2.0
 
   '@rtsao/scc@1.1.0': {}
 

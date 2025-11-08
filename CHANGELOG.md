@@ -1,5 +1,100 @@
 # Changelog - ORCHESTR'A V2
 
+## [2.2.0] - 2025-11-08
+
+### Ajouté
+
+#### Diagramme de Gantt pour les projets
+- Installation de la librairie `@rsagiev/gantt-task-react-19`
+- Création du composant `GanttChart` (`apps/web/src/components/GanttChart.tsx`)
+  - Affichage des tâches et jalons sur une timeline interactive
+  - Groupement automatique des tâches sous leurs jalons respectifs
+  - Sélecteur de vue: Jour/Semaine/Mois
+  - Code couleur par statut:
+    - DONE: vert (#10b981)
+    - IN_PROGRESS: orange (#f59e0b)
+    - BLOCKED: rouge (#ef4444)
+    - Défaut: bleu (#3b82f6)
+  - Gestion des tâches sans jalon (affichées à la fin)
+  - Dynamic import pour optimisation (client-side only)
+- Ajout d'un nouvel onglet "📊 Gantt" dans la page détail projet
+- Création du fichier CSS personnalisé `apps/web/src/gantt-custom.css` pour améliorer la lisibilité du texte
+
+#### Gestion des membres d'équipe projet - Suppression
+- Bouton de suppression avec icône corbeille pour chaque membre
+- Confirmation avant suppression
+- Rechargement automatique des données après suppression
+- Mise à jour du service `projects.service.ts` (méthode `removeMember`)
+
+### Modifié
+
+#### API - Gestion des membres projet
+**Fichier**: `apps/api/src/projects/dto/add-member.dto.ts`
+
+Extension du DTO avec champs optionnels:
+- `allocation?: number` - Pourcentage d'allocation (0-100) avec validation
+- `startDate?: string` - Date de début dans le projet (ISO 8601)
+- `endDate?: string` - Date de fin dans le projet (ISO 8601)
+
+**Fichier**: `apps/api/src/projects/projects.service.ts`
+
+Méthode `addMember` mise à jour pour gérer les nouveaux champs:
+```typescript
+const member = await this.prisma.projectMember.create({
+  data: {
+    projectId,
+    userId,
+    role: role || 'Membre',
+    ...(allocation !== undefined && { allocation }),
+    ...(startDate && { startDate: new Date(startDate) }),
+    ...(endDate && { endDate: new Date(endDate) }),
+  },
+  include: { user: { select: {...} } },
+});
+```
+
+#### Frontend - Interface d'ajout de membre projet
+**Fichier**: `apps/web/app/projects/[id]/page.tsx`
+
+- Remplacement du champ texte libre "Rôle" par un menu déroulant avec 17 rôles prédéfinis:
+  - **Direction**: Sponsor, Chef de projet
+  - **Technique**: Responsable technique, Architecte, Tech Lead
+  - **Développement**: Développeur Senior, Développeur, Développeur Junior
+  - **Opérations**: DevOps
+  - **Qualité**: QA Lead, Testeur
+  - **Design**: UX/UI Designer
+  - **Produit**: Product Owner, Scrum Master, Analyste métier
+  - **Autres**: Membre, Observateur
+
+- Amélioration de la lisibilité avec `text-gray-900` pour tous les labels et textes
+
+### Corrigé
+
+- Erreur HTTP 400 lors de l'ajout de membres (champs `allocation`, `startDate`, `endDate` manquants dans le DTO)
+- Problème de lisibilité dans les modales (texte gris trop clair)
+- Problème de lisibilité dans le diagramme de Gantt (texte trop clair)
+  - Solution: CSS personnalisé avec `!important` pour forcer `color: #111827` (gray-900)
+  - Sélecteurs ciblant tous les éléments texte et SVG de la librairie Gantt
+
+### Technique
+
+- Utilisation de `dynamic(() => import('@/components/GanttChart'), { ssr: false })` pour le composant Gantt
+- CSS avec `!important` pour surcharger les styles de la librairie tierce
+- Rebuild Docker avec `--no-cache` pour forcer la prise en compte des modifications CSS
+- Validation des dates et allocation côté backend avec class-validator
+
+### Fichiers modifiés (Backend)
+1. `apps/api/src/projects/dto/add-member.dto.ts`
+2. `apps/api/src/projects/projects.service.ts`
+
+### Fichiers modifiés/créés (Frontend)
+1. `apps/web/app/projects/[id]/page.tsx` - Ajout onglet Gantt, suppression membres, rôles prédéfinis
+2. `apps/web/src/components/GanttChart.tsx` - Nouveau composant
+3. `apps/web/src/gantt-custom.css` - Nouveau fichier CSS
+4. `apps/web/package.json` - Ajout de @rsagiev/gantt-task-react-19
+
+---
+
 ## [2.1.0] - 2025-11-08
 
 ### Feature: Affectation multi-services pour les utilisateurs

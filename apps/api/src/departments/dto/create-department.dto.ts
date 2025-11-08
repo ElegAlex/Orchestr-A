@@ -5,6 +5,7 @@ import {
   IsOptional,
   MaxLength,
   MinLength,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateDepartmentDto {
@@ -28,4 +29,13 @@ export class CreateDepartmentDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @ApiProperty({
+    description: 'ID du responsable du département',
+    example: 'uuid-here',
+    required: false,
+  })
+  @IsUUID()
+  @IsOptional()
+  managerId?: string;
 }

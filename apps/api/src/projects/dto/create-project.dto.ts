@@ -66,35 +66,10 @@ export class CreateProjectDto {
   endDate: string;
 
   @ApiProperty({
-    description: 'ID du responsable du projet',
-    example: 'uuid-here',
-  })
-  @IsUUID()
-  @IsNotEmpty()
-  managerId: string;
-
-  @ApiProperty({
-    description: 'ID du département porteur',
-    example: 'uuid-here',
-    required: false,
-  })
-  @IsUUID()
-  @IsOptional()
-  departmentId?: string;
-
-  @ApiProperty({
-    description: 'Budget alloué (en euros)',
-    example: 50000,
-    required: false,
-  })
-  @IsOptional()
-  budget?: number;
-
-  @ApiProperty({
-    description: 'Charge estimée (en heures)',
+    description: 'Budget en heures',
     example: 1000,
     required: false,
   })
   @IsOptional()
-  estimatedHours?: number;
+  budgetHours?: number;
 }

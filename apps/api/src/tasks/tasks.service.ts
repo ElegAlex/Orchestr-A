@@ -25,7 +25,7 @@ export class TasksService {
       milestoneId,
       assigneeId,
       startDate,
-      dueDate,
+      endDate,
       ...taskData
     } = createTaskDto;
 
@@ -86,8 +86,8 @@ export class TasksService {
     // Vérifier les dates si fournies
     if (
       startDate &&
-      dueDate &&
-      new Date(dueDate) <= new Date(startDate)
+      endDate &&
+      new Date(endDate) <= new Date(startDate)
     ) {
       throw new BadRequestException(
         'La date de fin doit être postérieure à la date de début',
@@ -104,7 +104,7 @@ export class TasksService {
         assigneeId,
         status: createTaskDto.status || TaskStatus.TODO,
         ...(startDate && { startDate: new Date(startDate) }),
-        ...(dueDate && { dueDate: new Date(dueDate) }),
+        ...(endDate && { endDate: new Date(endDate) }),
       },
       include: {
         project: {
@@ -333,7 +333,7 @@ export class TasksService {
       milestoneId,
       assigneeId,
       startDate,
-      dueDate,
+      endDate,
       ...taskData
     } = updateTaskDto;
 
@@ -383,7 +383,7 @@ export class TasksService {
         ...(milestoneId && { milestoneId }),
         ...(assigneeId && { assigneeId }),
         ...(startDate && { startDate: new Date(startDate) }),
-        ...(dueDate && { dueDate: new Date(dueDate) }),
+        ...(endDate && { endDate: new Date(endDate) }),
       },
       include: {
         project: {

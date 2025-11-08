@@ -114,7 +114,7 @@ export class CreateTaskDto {
   })
   @IsDateString()
   @IsOptional()
-  dueDate?: string;
+  endDate?: string;
 
   @ApiProperty({
     description: 'Tags pour catégoriser la tâche',

@@ -281,7 +281,7 @@ export class ProjectsService {
    * Ajouter un membre au projet
    */
   async addMember(projectId: string, addMemberDto: AddMemberDto) {
-    const { userId, role } = addMemberDto;
+    const { userId, role, allocation, startDate, endDate } = addMemberDto;
 
     // Vérifier que le projet existe
     const project = await this.prisma.project.findUnique({
@@ -320,7 +320,10 @@ export class ProjectsService {
       data: {
         projectId,
         userId,
-        role: role || "Membre",
+        role: role || 'Membre',
+        ...(allocation !== undefined && { allocation }),
+        ...(startDate && { startDate: new Date(startDate) }),
+        ...(endDate && { endDate: new Date(endDate) }),
       },
       include: {
         user: {

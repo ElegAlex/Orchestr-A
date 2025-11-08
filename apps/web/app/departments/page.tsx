@@ -5,7 +5,8 @@ import { MainLayout } from '@/components/MainLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { departmentsService } from '@/services/departments.service';
 import { servicesService } from '@/services/services.service';
-import { Department, Service, Role, CreateDepartmentDto, CreateServiceDto } from '@/types';
+import { usersService } from '@/services/users.service';
+import { Department, Service, Role, CreateDepartmentDto, CreateServiceDto, User } from '@/types';
 import toast from 'react-hot-toast';
 
 export default function DepartmentsPage() {
@@ -13,6 +14,7 @@ export default function DepartmentsPage() {
   const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
@@ -32,8 +34,8 @@ export default function DepartmentsPage() {
     managerId: '',
   });
 
-  // Check if user is admin
-  const isAdmin = user?.role === Role.ADMIN;
+  // Check if user is admin or responsable
+  const isAdmin = user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE;
 
   const fetchData = async () => {
     try {
@@ -46,9 +48,14 @@ export default function DepartmentsPage() {
       // Fetch all services
       const servicesData = await servicesService.getAll();
       setServices(Array.isArray(servicesData) ? servicesData : []);
+
+      // Fetch all users for manager selection
+      const usersData = await usersService.getAll();
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (error: any) {
       setDepartments([]);
       setServices([]);
+      setUsers([]);
       if (error.response?.status !== 404) {
         toast.error('Erreur lors du chargement des données');
         console.error(error);
@@ -199,7 +206,7 @@ export default function DepartmentsPage() {
               Accès restreint
             </h2>
             <p className="text-gray-600">
-              Cette page est réservée aux administrateurs
+              Cette page est réservée aux administrateurs et responsables
             </p>
           </div>
         </div>
@@ -517,6 +524,31 @@ export default function DepartmentsPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Responsable du département (optionnel)
+                </label>
+                <select
+                  value={departmentForm.managerId}
+                  onChange={(e) =>
+                    setDepartmentForm({
+                      ...departmentForm,
+                      managerId: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Aucun responsable</option>
+                  {users
+                    .filter((u) => u.role === Role.ADMIN || u.role === Role.RESPONSABLE || u.role === Role.MANAGER)
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.firstName} {u.lastName} ({u.role})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
                 <button
                   type="button"
@@ -604,6 +636,31 @@ export default function DepartmentsPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Description du service..."
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Manager du service (optionnel)
+                </label>
+                <select
+                  value={serviceForm.managerId}
+                  onChange={(e) =>
+                    setServiceForm({
+                      ...serviceForm,
+                      managerId: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="">Aucun manager</option>
+                  {users
+                    .filter((u) => u.role === Role.ADMIN || u.role === Role.RESPONSABLE || u.role === Role.MANAGER)
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.firstName} {u.lastName} ({u.role})
+                      </option>
+                    ))}
+                </select>
               </div>
 
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">

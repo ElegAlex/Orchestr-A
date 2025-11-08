@@ -37,4 +37,13 @@ export class CreateServiceDto {
   @IsUUID()
   @IsNotEmpty()
   departmentId: string;
+
+  @ApiProperty({
+    description: 'ID du manager du service',
+    example: 'uuid-here',
+    required: false,
+  })
+  @IsUUID()
+  @IsOptional()
+  managerId?: string;
 }
