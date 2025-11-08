@@ -3,8 +3,12 @@ import { Service, CreateServiceDto } from '@/types';
 
 export const servicesService = {
   async getAll(): Promise<Service[]> {
-    const response = await api.get<Service[]>('/services');
-    return response.data;
+    const response = await api.get<any>('/services');
+    // API returns {data: [], meta: {}} - extract the array
+    if (response.data && 'data' in response.data) {
+      return response.data.data;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   async getById(id: string): Promise<Service> {

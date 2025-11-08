@@ -50,12 +50,14 @@ export default function TasksPage() {
       let projectsData: Project[] = [];
       if (user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE) {
         const response = await projectsService.getAll();
-        projectsData = response.data;
+        projectsData = Array.isArray(response.data) ? response.data : [];
       } else if (user?.id) {
         try {
           projectsData = await projectsService.getByUser(user.id);
+          projectsData = Array.isArray(projectsData) ? projectsData : [];
         } catch (error: any) {
-          if (error.response?.status !== 404) throw error;
+          projectsData = [];
+          if (error.response?.status !== 404) console.error('Error fetching projects:', error);
         }
       }
       setProjects(projectsData);
@@ -65,8 +67,10 @@ export default function TasksPage() {
       if (user?.id) {
         try {
           tasksData = await tasksService.getByAssignee(user.id);
+          tasksData = Array.isArray(tasksData) ? tasksData : [];
         } catch (error: any) {
-          if (error.response?.status !== 404) throw error;
+          tasksData = [];
+          if (error.response?.status !== 404) console.error('Error fetching tasks:', error);
         }
       }
       setTasks(tasksData);

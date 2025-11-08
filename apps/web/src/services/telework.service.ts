@@ -3,8 +3,12 @@ import { TeleworkSchedule, CreateTeleworkDto } from '@/types';
 
 export const teleworkService = {
   async getAll(): Promise<TeleworkSchedule[]> {
-    const response = await api.get<TeleworkSchedule[]>('/telework');
-    return response.data;
+    const response = await api.get<any>('/telework');
+    // API returns {data: [], meta: {}} - extract the array
+    if (response.data && 'data' in response.data) {
+      return response.data.data;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   async getByUser(userId: string): Promise<TeleworkSchedule[]> {

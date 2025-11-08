@@ -34,22 +34,24 @@ export default function DashboardPage() {
 
           try {
             projects = await projectsService.getByUser(user.id);
-            setMyProjects(projects);
+            setMyProjects(Array.isArray(projects) ? projects : []);
           } catch (error: any) {
-            // Si 404, c'est juste qu'il n'y a pas de projets
+            // Si 404 ou autre erreur, on met un tableau vide
+            setMyProjects([]);
             if (error.response?.status !== 404) {
-              throw error;
+              console.error('Error fetching projects:', error);
             }
           }
 
           // Fetch user's tasks
           try {
             tasks = await tasksService.getByAssignee(user.id);
-            setMyTasks(tasks);
+            setMyTasks(Array.isArray(tasks) ? tasks : []);
           } catch (error: any) {
-            // Si 404, c'est juste qu'il n'y a pas de tâches
+            // Si 404 ou autre erreur, on met un tableau vide
+            setMyTasks([]);
             if (error.response?.status !== 404) {
-              throw error;
+              console.error('Error fetching tasks:', error);
             }
           }
 

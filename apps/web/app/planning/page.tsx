@@ -61,12 +61,16 @@ export default function PlanningPage() {
         teleworkService.getByDateRange(startDate.toISOString(), endDate.toISOString()),
       ]);
 
-      const usersList = Array.isArray(usersData) ? usersData : usersData.data;
-      setUsers(usersList.filter((u) => u.isActive));
+      const usersList = Array.isArray(usersData) ? usersData : (Array.isArray(usersData?.data) ? usersData.data : []);
+      setUsers(Array.isArray(usersList) ? usersList.filter((u) => u.isActive) : []);
       setTasks(Array.isArray(tasksData) ? tasksData : []);
       setLeaves(Array.isArray(leavesData) ? leavesData : []);
       setTeleworkSchedules(Array.isArray(teleworkData) ? teleworkData : []);
     } catch (error: any) {
+      setUsers([]);
+      setTasks([]);
+      setLeaves([]);
+      setTeleworkSchedules([]);
       toast.error('Erreur lors du chargement des données');
       console.error(error);
     } finally {

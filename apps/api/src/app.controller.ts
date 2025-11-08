@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { Public } from './auth/decorators/public.decorator';
 
 @Controller()
 export class AppController {
@@ -17,6 +18,16 @@ export class AppController {
         tasks: '/api/tasks',
       },
       message: 'API is running. Access endpoints via /api/*',
+    };
+  }
+
+  @Public()
+  @Get('health')
+  getHealth() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
     };
   }
 }

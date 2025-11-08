@@ -5,12 +5,16 @@ import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/MainLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { projectsService } from '@/services/projects.service';
+import { usersService } from '@/services/users.service';
+import { departmentsService } from '@/services/departments.service';
 import {
   Project,
   ProjectStatus,
   Priority,
   CreateProjectDto,
   Role,
+  User,
+  Department,
 } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -26,6 +30,8 @@ export default function ProjectsPage() {
   );
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [managers, setManagers] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
 
   const [formData, setFormData] = useState<CreateProjectDto>({
     name: '',
@@ -34,7 +40,10 @@ export default function ProjectsPage() {
     priority: Priority.NORMAL,
     startDate: '',
     endDate: '',
-    budgetHours: undefined,
+    managerId: user?.id || '',
+    departmentId: user?.departmentId || '',
+    budget: undefined,
+    estimatedHours: undefined,
   });
 
   const fetchProjects = async () => {
@@ -63,6 +72,8 @@ export default function ProjectsPage() {
       setProjects(projectsData);
       setFilteredProjects(projectsData);
     } catch (error: any) {
+      setProjects([]);
+      setFilteredProjects([]);
       toast.error('Erreur lors du chargement des projets');
       console.error(error);
     } finally {
@@ -116,6 +127,30 @@ export default function ProjectsPage() {
     }
   };
 
+  const fetchManagersAndDepartments = async () => {
+    try {
+      const [usersResponse, departments] = await Promise.all([
+        usersService.getAll(),
+        departmentsService.getAll(),
+      ]);
+
+      // Filtrer les users qui peuvent être managers (ADMIN, RESPONSABLE, MANAGER)
+      const usersData = Array.isArray(usersResponse)
+        ? usersResponse
+        : usersResponse.data;
+
+      const managersList = usersData.filter((u: User) =>
+        [Role.ADMIN, Role.RESPONSABLE, Role.MANAGER].includes(u.role)
+      );
+      setManagers(managersList);
+      setDepartments(departments);
+    } catch (error) {
+      setManagers([]);
+      setDepartments([]);
+      console.error('Error loading managers and departments:', error);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -124,7 +159,10 @@ export default function ProjectsPage() {
       priority: Priority.NORMAL,
       startDate: '',
       endDate: '',
-      budgetHours: undefined,
+      managerId: user?.id || '',
+      departmentId: user?.departmentId || '',
+      budget: undefined,
+      estimatedHours: undefined,
     });
   };
 
@@ -228,7 +266,10 @@ export default function ProjectsPage() {
           </div>
           {canCreateProject() && (
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => {
+                setShowCreateModal(true);
+                fetchManagersAndDepartments();
+              }}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
             >
               <span>+</span>
@@ -457,10 +498,11 @@ export default function ProjectsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date de début
+                    Date de début *
                   </label>
                   <input
                     type="date"
+                    required
                     value={formData.startDate}
                     onChange={(e) =>
                       setFormData({ ...formData, startDate: e.target.value })
@@ -471,10 +513,11 @@ export default function ProjectsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date de fin
+                    Date de fin *
                   </label>
                   <input
                     type="date"
+                    required
                     value={formData.endDate}
                     onChange={(e) =>
                       setFormData({ ...formData, endDate: e.target.value })
@@ -484,25 +527,94 @@ export default function ProjectsPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Budget en heures
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.budgetHours || ''}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      budgetHours: e.target.value
-                        ? parseInt(e.target.value)
-                        : undefined,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Ex: 500"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Responsable du projet *
+                  </label>
+                  <select
+                    required
+                    value={formData.managerId}
+                    onChange={(e) =>
+                      setFormData({ ...formData, managerId: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">-- Sélectionner --</option>
+                    {managers.map((manager) => (
+                      <option key={manager.id} value={manager.id}>
+                        {manager.firstName} {manager.lastName} ({manager.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Département
+                  </label>
+                  <select
+                    value={formData.departmentId || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        departmentId: e.target.value || undefined,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">-- Aucun --</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Budget (€)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.budget || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        budget: e.target.value
+                          ? parseInt(e.target.value)
+                          : undefined,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ex: 50000"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Charge estimée (heures)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.estimatedHours || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        estimatedHours: e.target.value
+                          ? parseInt(e.target.value)
+                          : undefined,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ex: 500"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">

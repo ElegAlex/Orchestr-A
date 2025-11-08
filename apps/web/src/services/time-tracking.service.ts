@@ -3,8 +3,12 @@ import { TimeEntry, CreateTimeEntryDto, ActivityType } from '@/types';
 
 export const timeTrackingService = {
   async getAll(): Promise<TimeEntry[]> {
-    const response = await api.get<TimeEntry[]>('/time-tracking');
-    return response.data;
+    const response = await api.get<any>('/time-tracking');
+    // API returns {data: [], meta: {}} - extract the array
+    if (response.data && 'data' in response.data) {
+      return response.data.data;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   async getById(id: string): Promise<TimeEntry> {

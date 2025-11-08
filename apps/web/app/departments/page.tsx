@@ -41,12 +41,14 @@ export default function DepartmentsPage() {
 
       // Fetch departments
       const depsData = await departmentsService.getAll();
-      setDepartments(depsData);
+      setDepartments(Array.isArray(depsData) ? depsData : []);
 
       // Fetch all services
       const servicesData = await servicesService.getAll();
-      setServices(servicesData);
+      setServices(Array.isArray(servicesData) ? servicesData : []);
     } catch (error: any) {
+      setDepartments([]);
+      setServices([]);
       if (error.response?.status !== 404) {
         toast.error('Erreur lors du chargement des données');
         console.error(error);

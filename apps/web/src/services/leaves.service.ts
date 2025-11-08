@@ -3,8 +3,12 @@ import { Leave, CreateLeaveDto, LeaveType, LeaveStatus } from '@/types';
 
 export const leavesService = {
   async getAll(): Promise<Leave[]> {
-    const response = await api.get<Leave[]>('/leaves');
-    return response.data;
+    const response = await api.get<any>('/leaves');
+    // API returns {data: [], meta: {}} - extract the array
+    if (response.data && 'data' in response.data) {
+      return response.data.data;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   async getById(id: string): Promise<Leave> {

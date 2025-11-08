@@ -77,6 +77,16 @@ export class TasksController {
     return this.tasksService.findAll(page, limit, status, projectId, assigneeId);
   }
 
+  @Get('assignee/:userId')
+  @ApiOperation({ summary: 'Récupérer toutes les tâches assignées à un utilisateur' })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des tâches assignées à l\'utilisateur',
+  })
+  getTasksByAssignee(@Param('userId', ParseUUIDPipe) userId: string) {
+    return this.tasksService.getTasksByAssignee(userId);
+  }
+
   @Get('project/:projectId')
   @ApiOperation({ summary: 'Récupérer toutes les tâches d\'un projet' })
   @ApiResponse({

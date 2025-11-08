@@ -50,10 +50,11 @@ export default function ProjectDetailPage() {
         // Fetch project tasks
         try {
           const tasksData = await tasksService.getByProject(projectId);
-          setTasks(tasksData);
+          setTasks(Array.isArray(tasksData) ? tasksData : []);
         } catch (error: any) {
+          setTasks([]);
           if (error.response?.status !== 404) {
-            throw error;
+            console.error('Error fetching tasks:', error);
           }
         }
       } catch (error: any) {

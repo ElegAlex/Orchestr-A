@@ -628,6 +628,44 @@ export class TasksService {
   }
 
   /**
+   * Récupérer toutes les tâches assignées à un utilisateur
+   */
+  async getTasksByAssignee(userId: string) {
+    const tasks = await this.prisma.task.findMany({
+      where: { assigneeId: userId },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            dependencies: true,
+            dependents: true,
+            raci: true,
+            comments: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return tasks;
+  }
+
+  /**
    * Récupérer les tâches d'un projet
    */
   async getTasksByProject(projectId: string) {

@@ -15,11 +15,16 @@ export const usersService = {
     const response = await api.get<any>(
       `/users?${params.toString()}`
     );
-    // Si pas de pagination demandée, retourner le tableau directement
-    if (page === undefined && Array.isArray(response.data)) {
-      return response.data as User[];
+    // API returns {data: [], meta: {}} - extract based on usage
+    if (response.data && 'data' in response.data) {
+      // Si pas de pagination demandée, retourner le tableau directement
+      if (page === undefined) {
+        return response.data.data as User[];
+      }
+      return response.data as PaginatedResponse<User>;
     }
-    return response.data as PaginatedResponse<User>;
+    // Fallback for direct array response
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   async getById(id: string): Promise<User> {

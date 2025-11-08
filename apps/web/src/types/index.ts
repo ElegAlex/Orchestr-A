@@ -227,9 +227,12 @@ export interface CreateProjectDto {
   description?: string;
   status?: ProjectStatus;
   priority?: Priority;
-  startDate?: string;
-  endDate?: string;
-  budgetHours?: number;
+  startDate: string;
+  endDate: string;
+  managerId: string;
+  departmentId?: string;
+  budget?: number;
+  estimatedHours?: number;
 }
 
 export interface UpdateProjectDto {
@@ -239,7 +242,10 @@ export interface UpdateProjectDto {
   priority?: Priority;
   startDate?: string;
   endDate?: string;
-  budgetHours?: number;
+  managerId?: string;
+  departmentId?: string;
+  budget?: number;
+  estimatedHours?: number;
 }
 
 export interface AddMemberDto {

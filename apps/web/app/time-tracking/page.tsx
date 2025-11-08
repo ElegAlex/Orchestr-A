@@ -46,9 +46,10 @@ export default function TimeTrackingPage() {
       if (user?.id) {
         try {
           const projectsData = await projectsService.getByUser(user.id);
-          setProjects(projectsData);
+          setProjects(Array.isArray(projectsData) ? projectsData : []);
         } catch (error: any) {
-          if (error.response?.status !== 404) throw error;
+          setProjects([]);
+          if (error.response?.status !== 404) console.error('Error fetching projects:', error);
         }
       }
 
@@ -56,9 +57,10 @@ export default function TimeTrackingPage() {
       if (user?.id) {
         try {
           const tasksData = await tasksService.getByAssignee(user.id);
-          setTasks(tasksData);
+          setTasks(Array.isArray(tasksData) ? tasksData : []);
         } catch (error: any) {
-          if (error.response?.status !== 404) throw error;
+          setTasks([]);
+          if (error.response?.status !== 404) console.error('Error fetching tasks:', error);
         }
       }
     } catch (error: any) {

@@ -3,8 +3,12 @@ import { Department, CreateDepartmentDto } from '@/types';
 
 export const departmentsService = {
   async getAll(): Promise<Department[]> {
-    const response = await api.get<Department[]>('/departments');
-    return response.data;
+    const response = await api.get<any>('/departments');
+    // API returns {data: [], meta: {}} - extract the array
+    if (response.data && 'data' in response.data) {
+      return response.data.data;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   async getById(id: string): Promise<Department> {
