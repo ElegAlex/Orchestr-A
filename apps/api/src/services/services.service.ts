@@ -16,7 +16,7 @@ export class ServicesService {
    * Créer un nouveau service
    */
   async create(createServiceDto: CreateServiceDto) {
-    const { name, description, departmentId } = createServiceDto;
+    const { name, description, departmentId, managerId } = createServiceDto;
 
     // Vérifier que le département existe
     const department = await this.prisma.department.findUnique({
@@ -46,6 +46,7 @@ export class ServicesService {
         name,
         description,
         departmentId,
+        managerId,
       },
       include: {
         department: {
@@ -54,9 +55,18 @@ export class ServicesService {
             name: true,
           },
         },
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        },
         _count: {
           select: {
-            users: true,
+            userServices: true,
           },
         },
       },
@@ -85,9 +95,18 @@ export class ServicesService {
               name: true,
             },
           },
+          manager: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              role: true,
+            },
+          },
           _count: {
             select: {
-              users: true,
+              userServices: true,
             },
           },
         },
@@ -123,22 +142,33 @@ export class ServicesService {
             description: true,
           },
         },
-        users: {
+        manager: {
           select: {
             id: true,
             firstName: true,
             lastName: true,
             email: true,
             role: true,
-            avatarUrl: true,
           },
-          where: {
-            isActive: true,
+        },
+        userServices: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                role: true,
+                avatarUrl: true,
+                isActive: true,
+              },
+            },
           },
         },
         _count: {
           select: {
-            users: true,
+            userServices: true,
           },
         },
       },
@@ -163,7 +193,7 @@ export class ServicesService {
       throw new NotFoundException('Service introuvable');
     }
 
-    const { name, description, departmentId } = updateServiceDto;
+    const { name, description, departmentId, managerId } = updateServiceDto;
 
     // Vérifier le département si modifié
     if (departmentId && departmentId !== existingService.departmentId) {
@@ -203,6 +233,7 @@ export class ServicesService {
         ...(name && { name }),
         ...(description !== undefined && { description }),
         ...(departmentId && { departmentId }),
+        ...(managerId !== undefined && { managerId }),
       },
       include: {
         department: {
@@ -211,9 +242,18 @@ export class ServicesService {
             name: true,
           },
         },
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        },
         _count: {
           select: {
-            users: true,
+            userServices: true,
           },
         },
       },
@@ -231,7 +271,7 @@ export class ServicesService {
       include: {
         _count: {
           select: {
-            users: true,
+            userServices: true,
           },
         },
       },
@@ -242,7 +282,7 @@ export class ServicesService {
     }
 
     // Vérifier qu'il n'y a pas d'utilisateurs liés
-    if (service._count.users > 0) {
+    if (service._count.userServices > 0) {
       throw new BadRequestException(
         'Impossible de supprimer un service qui contient des utilisateurs. Veuillez d\'abord les réaffecter.',
       );
@@ -270,9 +310,18 @@ export class ServicesService {
     return this.prisma.service.findMany({
       where: { departmentId },
       include: {
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        },
         _count: {
           select: {
-            users: true,
+            userServices: true,
           },
         },
       },
@@ -295,10 +344,14 @@ export class ServicesService {
             name: true,
           },
         },
-        users: {
+        userServices: {
           select: {
-            role: true,
-            isActive: true,
+            user: {
+              select: {
+                role: true,
+                isActive: true,
+              },
+            },
           },
         },
       },
@@ -309,10 +362,11 @@ export class ServicesService {
     }
 
     // Calculer les statistiques
-    const activeUsers = service.users.filter((u) => u.isActive).length;
-    const inactiveUsers = service.users.filter((u) => !u.isActive).length;
+    const users = service.userServices.map((us) => us.user);
+    const activeUsers = users.filter((u) => u.isActive).length;
+    const inactiveUsers = users.filter((u) => !u.isActive).length;
 
-    const usersByRole = service.users
+    const usersByRole = users
       .filter((u) => u.isActive)
       .reduce(
         (acc, user) => {
@@ -330,7 +384,7 @@ export class ServicesService {
         name: service.department.name,
       },
       users: {
-        total: service.users.length,
+        total: users.length,
         active: activeUsers,
         inactive: inactiveUsers,
         byRole: usersByRole,

@@ -65,7 +65,6 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         departmentId: user.departmentId,
-        serviceId: user.serviceId,
       },
     };
   }
@@ -98,14 +97,14 @@ export class AuthService {
       }
     }
 
-    // Vérifier que le service existe si fourni
-    if (registerDto.serviceId) {
-      const service = await this.prisma.service.findUnique({
-        where: { id: registerDto.serviceId },
+    // Vérifier que les services existent si fournis
+    if (registerDto.serviceIds && registerDto.serviceIds.length > 0) {
+      const services = await this.prisma.service.findMany({
+        where: { id: { in: registerDto.serviceIds } },
       });
 
-      if (!service) {
-        throw new BadRequestException('Service introuvable');
+      if (services.length !== registerDto.serviceIds.length) {
+        throw new BadRequestException('Un ou plusieurs services introuvables');
       }
     }
 
@@ -122,7 +121,6 @@ export class AuthService {
         lastName: registerDto.lastName,
         role: registerDto.role || Role.CONTRIBUTEUR,
         departmentId: registerDto.departmentId,
-        serviceId: registerDto.serviceId,
         isActive: true,
       },
       select: {
@@ -133,10 +131,19 @@ export class AuthService {
         lastName: true,
         role: true,
         departmentId: true,
-        serviceId: true,
         createdAt: true,
       },
     });
+
+    // Créer les associations de services
+    if (registerDto.serviceIds && registerDto.serviceIds.length > 0) {
+      await this.prisma.userService.createMany({
+        data: registerDto.serviceIds.map((serviceId) => ({
+          userId: user.id,
+          serviceId,
+        })),
+      });
+    }
 
     // Générer un token JWT
     const payload = {
@@ -162,7 +169,6 @@ export class AuthService {
         lastName: true,
         role: true,
         departmentId: true,
-        serviceId: true,
         avatarUrl: true,
         isActive: true,
         createdAt: true,
@@ -173,10 +179,14 @@ export class AuthService {
             name: true,
           },
         },
-        service: {
+        userServices: {
           select: {
-            id: true,
-            name: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },

@@ -124,10 +124,14 @@ export class TeleworkService {
                   name: true,
                 },
               },
-              service: {
+              userServices: {
                 select: {
-                  id: true,
-                  name: true,
+                  service: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
                 },
               },
             },
@@ -403,10 +407,14 @@ export class TeleworkService {
                 name: true,
               },
             },
-            service: {
+            userServices: {
               select: {
-                id: true,
-                name: true,
+                service: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },

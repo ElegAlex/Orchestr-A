@@ -93,6 +93,10 @@ export enum SkillLevel {
 // USERS & AUTHENTICATION
 // ===========================
 
+export interface UserService {
+  service: Service;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -101,13 +105,12 @@ export interface User {
   lastName: string;
   role: Role;
   departmentId?: string;
-  serviceId?: string;
   isActive: boolean;
   avatarUrl?: string;
   createdAt: string;
   updatedAt: string;
   department?: Department;
-  service?: Service;
+  userServices?: UserService[];
 }
 
 export interface AuthResponse {
@@ -128,7 +131,7 @@ export interface RegisterDto {
   lastName: string;
   role?: Role;
   departmentId?: string;
-  serviceId?: string;
+  serviceIds?: string[];
 }
 
 // ===========================

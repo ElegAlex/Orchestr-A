@@ -23,22 +23,23 @@ model User {
   lastName      String
   role          Role      @default(CONTRIBUTEUR)
   departmentId  String?
-  serviceId     String?
   isActive      Boolean   @default(true)
   avatarUrl     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  department    Department?       @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  service       Service?          @relation(fields: [serviceId], references: [id], onDelete: SetNull)
-  projectMembers ProjectMember[]
-  tasks         Task[]
-  leaves        Leave[]
-  telework      TeleworkSchedule[]
-  skills        UserSkill[]
-  timeEntries   TimeEntry[]
-  comments      Comment[]
+  department        Department?       @relation("DepartmentUsers", fields: [departmentId], references: [id], onDelete: SetNull)
+  userServices      UserService[]
+  managedDepartments Department[]     @relation("DepartmentManager")
+  managedServices   Service[]         @relation("ServiceManager")
+  projectMembers    ProjectMember[]
+  tasks             Task[]
+  leaves            Leave[]
+  telework          TeleworkSchedule[]
+  skills            UserSkill[]
+  timeEntries       TimeEntry[]
+  comments          Comment[]
 
   @@map("users")
 }
@@ -60,11 +61,13 @@ model Department {
   id          String    @id @default(uuid())
   name        String
   description String?
+  managerId   String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   // Relations
-  users       User[]
+  manager     User?     @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
+  users       User[]    @relation("DepartmentUsers")
   services    Service[]
 
   @@map("departments")
@@ -75,14 +78,30 @@ model Service {
   name          String
   description   String?
   departmentId  String
+  managerId     String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
   // Relations
   department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  users         User[]
+  manager       User?      @relation("ServiceManager", fields: [managerId], references: [id], onDelete: SetNull)
+  userServices  UserService[]
 
   @@map("services")
+}
+
+model UserService {
+  id        String   @id @default(uuid())
+  userId    String
+  serviceId String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serviceId])
+  @@map("user_services")
 }
 
 // ===========================

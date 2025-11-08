@@ -46,13 +46,13 @@ export class UsersService {
       }
     }
 
-    // Vérifier service si fourni
-    if (createUserDto.serviceId) {
-      const service = await this.prisma.service.findUnique({
-        where: { id: createUserDto.serviceId },
+    // Vérifier services si fournis
+    if (createUserDto.serviceIds && createUserDto.serviceIds.length > 0) {
+      const services = await this.prisma.service.findMany({
+        where: { id: { in: createUserDto.serviceIds } },
       });
-      if (!service) {
-        throw new BadRequestException('Service introuvable');
+      if (services.length !== createUserDto.serviceIds.length) {
+        throw new BadRequestException('Un ou plusieurs services introuvables');
       }
     }
 
@@ -69,7 +69,6 @@ export class UsersService {
         lastName: createUserDto.lastName,
         role: createUserDto.role,
         departmentId: createUserDto.departmentId,
-        serviceId: createUserDto.serviceId,
         avatarUrl: createUserDto.avatarUrl,
         isActive: createUserDto.isActive ?? true,
       },
@@ -81,7 +80,6 @@ export class UsersService {
         lastName: true,
         role: true,
         departmentId: true,
-        serviceId: true,
         avatarUrl: true,
         isActive: true,
         createdAt: true,
@@ -91,14 +89,28 @@ export class UsersService {
             name: true,
           },
         },
-        service: {
+        userServices: {
           select: {
-            id: true,
-            name: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
     });
+
+    // Créer les associations de services
+    if (createUserDto.serviceIds && createUserDto.serviceIds.length > 0) {
+      await this.prisma.userService.createMany({
+        data: createUserDto.serviceIds.map((serviceId) => ({
+          userId: user.id,
+          serviceId,
+        })),
+      });
+    }
 
     return user;
   }
@@ -121,7 +133,6 @@ export class UsersService {
           lastName: true,
           role: true,
           departmentId: true,
-          serviceId: true,
           avatarUrl: true,
           isActive: true,
           createdAt: true,
@@ -131,10 +142,14 @@ export class UsersService {
               name: true,
             },
           },
-          service: {
+          userServices: {
             select: {
-              id: true,
-              name: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
         },
@@ -167,7 +182,6 @@ export class UsersService {
         lastName: true,
         role: true,
         departmentId: true,
-        serviceId: true,
         avatarUrl: true,
         isActive: true,
         createdAt: true,
@@ -179,11 +193,15 @@ export class UsersService {
             description: true,
           },
         },
-        service: {
+        userServices: {
           select: {
-            id: true,
-            name: true,
-            description: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+              },
+            },
           },
         },
         skills: {
@@ -268,19 +286,47 @@ export class UsersService {
       }
     }
 
-    // Vérifier service si fourni
-    if (updateUserDto.serviceId) {
-      const service = await this.prisma.service.findUnique({
-        where: { id: updateUserDto.serviceId },
+    // Vérifier services si fournis
+    if (updateUserDto.serviceIds && updateUserDto.serviceIds.length > 0) {
+      const services = await this.prisma.service.findMany({
+        where: { id: { in: updateUserDto.serviceIds } },
       });
-      if (!service) {
-        throw new BadRequestException('Service introuvable');
+      if (services.length !== updateUserDto.serviceIds.length) {
+        throw new BadRequestException('Un ou plusieurs services introuvables');
+      }
+    }
+
+    // Préparer les données de mise à jour
+    const updateData: any = { ...updateUserDto };
+    delete updateData.serviceIds; // On gère les services séparément
+
+    // Hasher le mot de passe si fourni
+    if (updateUserDto.password) {
+      updateData.passwordHash = await bcrypt.hash(updateUserDto.password, 10);
+      delete updateData.password; // Supprimer le mot de passe en clair
+    }
+
+    // Mettre à jour les services si fournis
+    if (updateUserDto.serviceIds !== undefined) {
+      // Supprimer toutes les associations existantes
+      await this.prisma.userService.deleteMany({
+        where: { userId: id },
+      });
+
+      // Créer les nouvelles associations
+      if (updateUserDto.serviceIds.length > 0) {
+        await this.prisma.userService.createMany({
+          data: updateUserDto.serviceIds.map((serviceId) => ({
+            userId: id,
+            serviceId,
+          })),
+        });
       }
     }
 
     const user = await this.prisma.user.update({
       where: { id },
-      data: updateUserDto,
+      data: updateData,
       select: {
         id: true,
         email: true,
@@ -289,7 +335,6 @@ export class UsersService {
         lastName: true,
         role: true,
         departmentId: true,
-        serviceId: true,
         avatarUrl: true,
         isActive: true,
         updatedAt: true,
@@ -299,10 +344,14 @@ export class UsersService {
             name: true,
           },
         },
-        service: {
+        userServices: {
           select: {
-            id: true,
-            name: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -409,11 +458,14 @@ export class UsersService {
         lastName: true,
         email: true,
         role: true,
-        serviceId: true,
-        service: {
+        userServices: {
           select: {
-            id: true,
-            name: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -423,7 +475,11 @@ export class UsersService {
   async getUsersByService(serviceId: string) {
     return this.prisma.user.findMany({
       where: {
-        serviceId,
+        userServices: {
+          some: {
+            serviceId,
+          },
+        },
         isActive: true,
       },
       select: {
@@ -448,7 +504,6 @@ export class UsersService {
         lastName: true,
         email: true,
         departmentId: true,
-        serviceId: true,
       },
     });
   }

@@ -16,7 +16,7 @@ export class DepartmentsService {
    * Créer un nouveau département
    */
   async create(createDepartmentDto: CreateDepartmentDto) {
-    const { name, description } = createDepartmentDto;
+    const { name, description, managerId } = createDepartmentDto;
 
     // Vérifier l'unicité du nom
     const existingName = await this.prisma.department.findFirst({
@@ -31,8 +31,18 @@ export class DepartmentsService {
       data: {
         name,
         description,
+        managerId,
       },
       include: {
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        },
         _count: {
           select: {
             users: true,
@@ -56,6 +66,15 @@ export class DepartmentsService {
         skip,
         take: limit,
         include: {
+          manager: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              role: true,
+            },
+          },
           _count: {
             select: {
               users: true,
@@ -88,6 +107,15 @@ export class DepartmentsService {
     const department = await this.prisma.department.findUnique({
       where: { id },
       include: {
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        },
         users: {
           select: {
             id: true,
@@ -107,7 +135,7 @@ export class DepartmentsService {
             name: true,
             _count: {
               select: {
-                users: true,
+                userServices: true,
               },
             },
           },
@@ -140,7 +168,7 @@ export class DepartmentsService {
       throw new NotFoundException('Département introuvable');
     }
 
-    const { name, description } = updateDepartmentDto;
+    const { name, description, managerId } = updateDepartmentDto;
 
     // Vérifier l'unicité du nom si modifié
     if (name && name !== existingDepartment.name) {
@@ -158,8 +186,18 @@ export class DepartmentsService {
       data: {
         ...(name && { name }),
         ...(description !== undefined && { description }),
+        ...(managerId !== undefined && { managerId }),
       },
       include: {
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        },
         _count: {
           select: {
             users: true,
@@ -225,9 +263,13 @@ export class DepartmentsService {
         services: {
           select: {
             id: true,
-            users: {
+            userServices: {
               select: {
-                id: true,
+                user: {
+                  select: {
+                    id: true,
+                  },
+                },
               },
             },
           },

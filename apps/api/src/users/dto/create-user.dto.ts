@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsBoolean,
   IsUUID,
+  IsArray,
 } from 'class-validator';
 import { Role } from 'database';
 
@@ -68,12 +69,14 @@ export class CreateUserDto {
   departmentId?: string;
 
   @ApiProperty({
-    description: 'ID du service',
+    description: 'IDs des services',
     required: false,
+    type: [String],
   })
   @IsOptional()
-  @IsUUID()
-  serviceId?: string;
+  @IsArray()
+  @IsUUID('4', { each: true })
+  serviceIds?: string[];
 
   @ApiProperty({
     description: 'URL de l\'avatar',

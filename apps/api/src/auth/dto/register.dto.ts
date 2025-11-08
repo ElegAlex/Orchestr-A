@@ -5,6 +5,8 @@ import {
   MinLength,
   IsEnum,
   IsOptional,
+  IsArray,
+  IsUUID,
 } from 'class-validator';
 import { Role } from 'database';
 
@@ -67,10 +69,12 @@ export class RegisterDto {
   departmentId?: string;
 
   @ApiProperty({
-    description: 'ID du service',
+    description: 'IDs des services',
     required: false,
+    type: [String],
   })
   @IsOptional()
-  @IsString()
-  serviceId?: string;
+  @IsArray()
+  @IsUUID('4', { each: true })
+  serviceIds?: string[];
 }

@@ -171,10 +171,14 @@ export class LeavesService {
                 name: true,
               },
             },
-            service: {
+            userServices: {
               select: {
-                id: true,
-                name: true,
+                service: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },

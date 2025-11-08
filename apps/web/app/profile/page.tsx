@@ -224,12 +224,21 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {user.service && (
+              {user.userServices && user.userServices.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Service
+                    Services
                   </label>
-                  <p className="text-gray-900">{user.service.name}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {user.userServices.map((us) => (
+                      <span
+                        key={us.service.id}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+                      >
+                        {us.service.name}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 
