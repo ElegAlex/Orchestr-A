@@ -3,7 +3,19 @@
     "allow": [
       "Bash(npm run build:*)",
       "Bash(export GOOGLE_APPLICATION_CREDENTIALS=\"./service-account-real.json\")",
-      "Bash(firebase deploy:*)"
+      "Bash(firebase deploy:*)",
+      "Bash(firebase --version:*)",
+      "Bash(node --version:*)",
+      "Bash(npm:*)",
+      "Bash(cat:*)",
+      "Bash(curl:*)",
+      "Bash(bash)",
+      "Bash(export NVM_DIR=\"$HOME/.var/app/com.visualstudio.code/config/nvm\")",
+      "Bash([ -s \"$NVM_DIR/nvm.sh\" ])",
+      "Bash(. \"$NVM_DIR/nvm.sh\")",
+      "Bash(nvm install:*)",
+      "Bash(node check-telework-profile.js:*)",
+      "Bash(node debug-telework-validation.js:*)"
     ],
     "deny": [],
     "ask": []

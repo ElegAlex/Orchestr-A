@@ -1,52 +1,120 @@
-# Dependencies
+# ===========================
+# DEPENDENCIES
+# ===========================
 node_modules/
-orchestra-app/node_modules/
-functions/node_modules/
+.pnpm-store/
+.pnpm-debug.log*
 
-# Production builds
-orchestra-app/build/
-functions/lib/
+# ===========================
+# BUILD OUTPUTS
+# ===========================
+dist/
+build/
+.next/
+out/
+.turbo/
 
-# Environment variables
+# ===========================
+# ENVIRONMENT VARIABLES
+# ===========================
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env*.local
 
-# Firebase
-.firebase/
-.firebaserc
+# ===========================
+# DATABASE
+# ===========================
+*.db
+*.sqlite
+*.sqlite3
 
-# Debug files
-debug*.js
-debug*.html
-test-*.js
-test-*.html
-call-*.js
-clean-*.js
-restore-*.js
-setup-*.js
-update-*.js
-rebuild-*.js
-fix-*.sh
-
-# Exports & backups
-users*.json
-current-indexes.json
-
-# IDE
-.vscode/
-.idea/
-
-# Logs
+# ===========================
+# LOGS
+# ===========================
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Temporary files
-temp_*.json
+# ===========================
+# TESTING
+# ===========================
+coverage/
+*.lcov
+.nyc_output/
+junit.xml
 
+# ===========================
+# IDE & EDITORS
+# ===========================
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# ===========================
 # OS
+# ===========================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
+
+# ===========================
+# TEMPORARY FILES
+# ===========================
+*.tmp
+*.temp
+*.cache
+.cache/
+
+# ===========================
+# DOCKER
+# ===========================
+docker-compose.override.yml
+
+# ===========================
+# MISC
+# ===========================
+.vercel
+.nuxt
+.output
+.serverless
+.fusebox
+.dynamodb
+.tern-port
+.yarn/install-state.gz
+.pnp.*
+
+# ===========================
+# FIREBASE (old)
+# ===========================
+.firebase/
+.firebaserc
+
+# ===========================
+# PRISMA
+# ===========================
+packages/database/node_modules/.prisma/
+.env.production
+Ochestra_V1/
