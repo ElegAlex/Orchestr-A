@@ -140,6 +140,7 @@ export class UsersService {
             select: {
               id: true,
               name: true,
+              managerId: true,
             },
           },
           userServices: {
@@ -152,9 +153,15 @@ export class UsersService {
               },
             },
           },
+          managedServices: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: 'desc',
+          lastName: 'asc',
         },
       }),
       this.prisma.user.count({ where }),

@@ -17,10 +17,14 @@ export const teleworkService = {
   },
 
   async getByDateRange(startDate: string, endDate: string): Promise<TeleworkSchedule[]> {
-    const response = await api.get<TeleworkSchedule[]>(
+    const response = await api.get<any>(
       `/telework?startDate=${startDate}&endDate=${endDate}`
     );
-    return response.data;
+    // API returns {data: [], meta: {}} - extract the array
+    if (response.data && 'data' in response.data) {
+      return response.data.data;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   async create(data: CreateTeleworkDto): Promise<TeleworkSchedule> {

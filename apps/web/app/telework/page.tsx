@@ -3,21 +3,43 @@
 import { useEffect, useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { useAuthStore } from '@/stores/auth.store';
+import { teleworkService } from '@/services/telework.service';
+import { TeleworkSchedule } from '@/types';
 import toast from 'react-hot-toast';
-
-interface TeleworkDay {
-  date: string;
-  isTelework: boolean;
-  isException: boolean;
-}
+import { format, isSameDay } from 'date-fns';
 
 export default function TeleworkPage() {
   const user = useAuthStore((state) => state.user);
-  const [loading, setLoading] = useState(false);
-  const [teleworkDays, setTeleworkDays] = useState<TeleworkDay[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [teleworkDays, setTeleworkDays] = useState<TeleworkSchedule[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+
+  // Charger les données de télétravail
+  const fetchTeleworkData = async () => {
+    try {
+      setLoading(true);
+      // Récupérer les 6 prochains mois de données
+      const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 6, 0);
+
+      const data = await teleworkService.getByDateRange(
+        format(startDate, 'yyyy-MM-dd'),
+        format(endDate, 'yyyy-MM-dd')
+      );
+      setTeleworkDays(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      console.error('Erreur chargement télétravail:', error);
+      toast.error('Erreur lors du chargement des données');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeleworkData();
+  }, [currentMonth]);
 
   // Générer les 3 prochains mois
   const getMonthsToDisplay = () => {
@@ -56,7 +78,7 @@ export default function TeleworkPage() {
   };
 
   const formatDate = (date: Date): string => {
-    return date.toISOString().split('T')[0];
+    return format(date, 'yyyy-MM-dd');
   };
 
   const isWeekend = (date: Date): boolean => {
@@ -64,66 +86,60 @@ export default function TeleworkPage() {
     return day === 0 || day === 6;
   };
 
-  const isPast = (date: Date): boolean => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date < today;
-  };
-
-  const getTeleworkStatus = (date: Date): TeleworkDay | undefined => {
-    const dateStr = formatDate(date);
-    return teleworkDays.find((d) => d.date === dateStr);
+  const getTeleworkStatus = (date: Date): TeleworkSchedule | undefined => {
+    if (!user) return undefined;
+    return teleworkDays.find((d) => d.userId === user.id && isSameDay(new Date(d.date), date));
   };
 
   const handleDayClick = (date: Date) => {
-    if (isWeekend(date) || isPast(date)) return;
+    if (isWeekend(date)) return;
     setSelectedDate(formatDate(date));
     setShowModal(true);
   };
 
   const handleToggleTelework = async (isTelework: boolean) => {
-    if (!selectedDate) return;
+    if (!selectedDate || !user) return;
 
     try {
-      const existingDay = teleworkDays.find((d) => d.date === selectedDate);
+      const selectedDateObj = new Date(selectedDate + 'T12:00:00');
+      const existingDay = teleworkDays.find((d) => d.userId === user.id && isSameDay(new Date(d.date), selectedDateObj));
 
       if (existingDay) {
         // Mise à jour
-        setTeleworkDays(
-          teleworkDays.map((d) =>
-            d.date === selectedDate
-              ? { ...d, isTelework, isException: true }
-              : d
-          )
-        );
+        await teleworkService.update(existingDay.id, { isTelework });
+        toast.success(isTelework ? 'Télétravail enregistré' : 'Bureau enregistré');
       } else {
-        // Ajout
-        setTeleworkDays([
-          ...teleworkDays,
-          { date: selectedDate, isTelework, isException: true },
-        ]);
+        // Création
+        await teleworkService.create({
+          date: selectedDate,
+          isTelework,
+          isException: false,
+          userId: user.id
+        });
+        toast.success(isTelework ? 'Jour de télétravail enregistré' : 'Jour en présentiel enregistré');
       }
 
-      toast.success(
-        isTelework
-          ? 'Jour de télétravail enregistré'
-          : 'Jour en présentiel enregistré'
-      );
       setShowModal(false);
       setSelectedDate(null);
+      fetchTeleworkData();
     } catch (error: any) {
-      toast.error("Erreur lors de l'enregistrement");
+      toast.error(error.response?.data?.message || "Erreur lors de l'enregistrement");
     }
   };
 
   const handleRemoveTelework = async () => {
-    if (!selectedDate) return;
+    if (!selectedDate || !user) return;
 
     try {
-      setTeleworkDays(teleworkDays.filter((d) => d.date !== selectedDate));
-      toast.success('Jour réinitialisé');
+      const selectedDateObj = new Date(selectedDate + 'T12:00:00');
+      const existingDay = teleworkDays.find((d) => d.userId === user.id && isSameDay(new Date(d.date), selectedDateObj));
+      if (existingDay) {
+        await teleworkService.delete(existingDay.id);
+        toast.success('Jour supprimé');
+      }
       setShowModal(false);
       setSelectedDate(null);
+      fetchTeleworkData();
     } catch (error: any) {
       toast.error('Erreur lors de la suppression');
     }
@@ -134,13 +150,13 @@ export default function TeleworkPage() {
       return 'bg-gray-50 text-gray-400 cursor-not-allowed';
     }
 
-    if (isPast(date)) {
-      return 'bg-gray-50 text-gray-500 cursor-not-allowed';
-    }
-
     const status = getTeleworkStatus(date);
     if (status?.isTelework) {
       return 'bg-blue-100 text-blue-900 border-blue-300 hover:bg-blue-200 cursor-pointer';
+    }
+
+    if (status && !status.isTelework) {
+      return 'bg-gray-100 text-gray-900 border-gray-300 hover:bg-gray-200 cursor-pointer';
     }
 
     return 'bg-white text-gray-900 hover:bg-gray-100 cursor-pointer border-gray-200';
@@ -154,11 +170,8 @@ export default function TeleworkPage() {
   };
 
   const getTeleworkStats = () => {
-    const futureTeleworkDays = teleworkDays.filter((d) => {
-      const date = new Date(d.date);
-      return d.isTelework && !isPast(date);
-    });
-    return futureTeleworkDays.length;
+    if (!user) return 0;
+    return teleworkDays.filter((d) => d.userId === user.id && d.isTelework).length;
   };
 
   const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -192,7 +205,7 @@ export default function TeleworkPage() {
         {/* Info Card */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start space-x-3">
-            <div className="text-2xl">💡</div>
+            <div className="text-2xl">ℹ️</div>
             <div>
               <h3 className="font-semibold text-blue-900">
                 Comment ça marche ?
@@ -215,12 +228,16 @@ export default function TeleworkPage() {
               <span className="text-sm text-gray-700">Télétravail</span>
             </div>
             <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-gray-100 border border-gray-300 rounded"></div>
+              <span className="text-sm text-gray-700">Bureau (déclaré)</span>
+            </div>
+            <div className="flex items-center space-x-2">
               <div className="w-6 h-6 bg-white border border-gray-200 rounded"></div>
-              <span className="text-sm text-gray-700">Bureau</span>
+              <span className="text-sm text-gray-700">Non déclaré</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-6 h-6 bg-gray-50 border border-gray-200 rounded"></div>
-              <span className="text-sm text-gray-700">Week-end / Passé</span>
+              <span className="text-sm text-gray-700">Week-end</span>
             </div>
           </div>
         </div>
@@ -314,7 +331,7 @@ export default function TeleworkPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {new Date(selectedDate).toLocaleDateString('fr-FR', {
+              {new Date(selectedDate + 'T12:00:00').toLocaleDateString('fr-FR', {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
@@ -343,12 +360,12 @@ export default function TeleworkPage() {
                 <span>Bureau</span>
               </button>
 
-              {getTeleworkStatus(new Date(selectedDate)) && (
+              {getTeleworkStatus(new Date(selectedDate + 'T12:00:00')) && (
                 <button
                   onClick={handleRemoveTelework}
                   className="w-full px-4 py-3 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition"
                 >
-                  Réinitialiser
+                  Supprimer
                 </button>
               )}
             </div>

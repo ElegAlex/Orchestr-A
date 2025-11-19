@@ -8,6 +8,7 @@ import {
   IsBoolean,
   IsUUID,
   IsArray,
+  ValidateIf,
 } from 'class-validator';
 import { Role } from 'database';
 
@@ -65,7 +66,7 @@ export class CreateUserDto {
     required: false,
   })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   departmentId?: string;
 
   @ApiProperty({
@@ -75,7 +76,7 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsString({ each: true })
   serviceIds?: string[];
 
   @ApiProperty({

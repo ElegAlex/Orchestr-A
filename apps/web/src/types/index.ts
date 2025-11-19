@@ -97,6 +97,11 @@ export interface UserService {
   service: Service;
 }
 
+export interface ManagedService {
+  id: string;
+  name: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -111,6 +116,7 @@ export interface User {
   updatedAt: string;
   department?: Department;
   userServices?: UserService[];
+  managedServices?: ManagedService[];
 }
 
 export interface AuthResponse {
@@ -148,6 +154,13 @@ export interface Department {
   manager?: User;
   services?: Service[];
   users?: User[];
+}
+
+// Version simplifiée pour les inclusions dans User
+export interface DepartmentBasic {
+  id: string;
+  name: string;
+  managerId?: string;
 }
 
 export interface Service {
@@ -232,10 +245,7 @@ export interface CreateProjectDto {
   priority?: Priority;
   startDate: string;
   endDate: string;
-  managerId: string;
-  departmentId?: string;
-  budget?: number;
-  estimatedHours?: number;
+  budgetHours?: number;
 }
 
 export interface UpdateProjectDto {
@@ -427,6 +437,7 @@ export interface CreateTeleworkDto {
   date: string;
   isTelework: boolean;
   isException?: boolean;
+  userId?: string;
 }
 
 // ===========================

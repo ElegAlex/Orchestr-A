@@ -15,8 +15,11 @@ export class TeleworkService {
   /**
    * Créer une journée de télétravail
    */
-  async create(userId: string, createTeleworkDto: CreateTeleworkDto) {
-    const { date, isTelework = true, isException = false } = createTeleworkDto;
+  async create(currentUserId: string, createTeleworkDto: CreateTeleworkDto) {
+    const { date, isTelework = true, isException = false, userId: targetUserId } = createTeleworkDto;
+
+    // Utiliser le userId du DTO si fourni (admin/manager), sinon l'utilisateur connecté
+    const userId = targetUserId || currentUserId;
 
     // Vérifier que l'utilisateur existe
     const user = await this.prisma.user.findUnique({
@@ -28,16 +31,6 @@ export class TeleworkService {
     }
 
     const teleworkDate = new Date(date);
-
-    // Vérifier que la date n'est pas dans le passé
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (teleworkDate < today) {
-      throw new BadRequestException(
-        'Impossible de déclarer un télétravail dans le passé',
-      );
-    }
 
     // Vérifier qu'il n'y a pas déjà un télétravail pour cette date
     const existing = await this.prisma.teleworkSchedule.findUnique({
@@ -84,24 +77,22 @@ export class TeleworkService {
   async findAll(
     page = 1,
     limit = 50,
+    userId?: string,
     startDate?: string,
     endDate?: string,
-    departmentId?: string,
   ) {
     const skip = (page - 1) * limit;
 
     const where: any = {};
 
+    if (userId) {
+      where.userId = userId;
+    }
+
     if (startDate || endDate) {
       where.date = {};
       if (startDate) where.date.gte = new Date(startDate);
       if (endDate) where.date.lte = new Date(endDate);
-    }
-
-    if (departmentId) {
-      where.user = {
-        departmentId,
-      };
     }
 
     const [teleworks, total] = await Promise.all([

@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsBoolean,
+  IsString,
 } from 'class-validator';
 
 export class CreateTeleworkDto {
@@ -14,6 +15,14 @@ export class CreateTeleworkDto {
   @IsDateString()
   @IsNotEmpty()
   date: string;
+
+  @ApiProperty({
+    description: 'ID de l\'utilisateur (optionnel, pour admin/manager)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  userId?: string;
 
   @ApiProperty({
     description: 'Est en télétravail ce jour',
