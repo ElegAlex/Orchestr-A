@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/MainLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { tasksService } from '@/services/tasks.service';
@@ -16,12 +17,12 @@ import {
 import toast from 'react-hot-toast';
 
 export default function TasksPage() {
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>('ALL');
   const [selectedPriority, setSelectedPriority] = useState<Priority | 'ALL'>(
     'ALL'
@@ -227,9 +228,9 @@ export default function TasksPage() {
   };
 
   const handleTaskClick = (task: Task) => {
-    // Only open modal if not dragging
+    // Only navigate if not dragging
     if (!isDragging) {
-      setSelectedTask(task);
+      router.push(`/tasks/${task.id}`);
     }
   };
 
@@ -689,105 +690,6 @@ export default function TasksPage() {
         </div>
       )}
 
-      {/* Task Detail Modal */}
-      {selectedTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">
-                {selectedTask.title}
-              </h2>
-              <button
-                onClick={() => setSelectedTask(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityBadgeColor(
-                    selectedTask.priority
-                  )}`}
-                >
-                  {getPriorityLabel(selectedTask.priority)}
-                </span>
-              </div>
-
-              {selectedTask.description && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    Description
-                  </h3>
-                  <p className="text-gray-700">{selectedTask.description}</p>
-                </div>
-              )}
-
-              {selectedTask.project && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Projet</h3>
-                  <p className="text-gray-700">{selectedTask.project.name}</p>
-                </div>
-              )}
-
-              {selectedTask.assignee && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    Assigné à
-                  </h3>
-                  <p className="text-gray-700">
-                    {selectedTask.assignee.firstName}{' '}
-                    {selectedTask.assignee.lastName}
-                  </p>
-                </div>
-              )}
-
-              {selectedTask.estimatedHours && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    Estimation
-                  </h3>
-                  <p className="text-gray-700">
-                    {selectedTask.estimatedHours}h
-                  </p>
-                </div>
-              )}
-
-              {selectedTask.progress > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    Progression
-                  </h3>
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-1">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full transition-all"
-                          style={{ width: `${selectedTask.progress}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <span className="text-sm text-gray-600">
-                      {selectedTask.progress}%
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
-              <button
-                onClick={() => setSelectedTask(null)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </MainLayout>
   );
 }
