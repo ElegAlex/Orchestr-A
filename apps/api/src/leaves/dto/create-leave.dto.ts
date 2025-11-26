@@ -1,22 +1,31 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsNotEmpty,
   IsDateString,
   IsOptional,
   IsString,
+  IsUUID,
 } from 'class-validator';
 import { LeaveType, HalfDay } from 'database';
 
 export class CreateLeaveDto {
   @ApiProperty({
-    description: 'Type de congé',
+    description: 'ID du type de congé',
+    example: 'lt-cp-001',
+  })
+  @IsString()
+  @IsNotEmpty()
+  leaveTypeId: string;
+
+  @ApiPropertyOptional({
+    description: 'Type de congé (déprécié, utiliser leaveTypeId)',
     enum: LeaveType,
     example: LeaveType.CP,
   })
   @IsEnum(LeaveType)
-  @IsNotEmpty()
-  type: LeaveType;
+  @IsOptional()
+  type?: LeaveType;
 
   @ApiProperty({
     description: 'Date de début du congé',

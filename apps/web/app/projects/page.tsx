@@ -33,7 +33,7 @@ export default function ProjectsPage() {
   const [managers, setManagers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
 
-  const [formData, setFormData] = useState<CreateProjectDto>({
+  const [formData, setFormData] = useState<CreateProjectDto & { managerId?: string; departmentId?: string; estimatedHours?: number }>({
     name: '',
     description: '',
     status: ProjectStatus.DRAFT,
@@ -42,7 +42,7 @@ export default function ProjectsPage() {
     endDate: '',
     managerId: user?.id || '',
     departmentId: user?.departmentId || '',
-    budget: undefined,
+    budgetHours: undefined,
     estimatedHours: undefined,
   });
 
@@ -115,7 +115,22 @@ export default function ProjectsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await projectsService.create(formData);
+      // Préparer les données selon le DTO backend
+      const projectData: any = {
+        name: formData.name,
+        description: formData.description,
+        status: formData.status,
+        priority: formData.priority,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+      };
+
+      // Ajouter budgetHours s'il existe
+      if (formData.estimatedHours) {
+        projectData.budgetHours = formData.estimatedHours;
+      }
+
+      await projectsService.create(projectData);
       toast.success('Projet créé avec succès');
       setShowCreateModal(false);
       resetForm();
@@ -161,7 +176,7 @@ export default function ProjectsPage() {
       endDate: '',
       managerId: user?.id || '',
       departmentId: user?.departmentId || '',
-      budget: undefined,
+      budgetHours: undefined,
       estimatedHours: undefined,
     });
   };
@@ -234,7 +249,8 @@ export default function ProjectsPage() {
     return (
       user?.role === Role.ADMIN ||
       user?.role === Role.RESPONSABLE ||
-      user?.role === Role.MANAGER
+      user?.role === Role.MANAGER ||
+      user?.role === Role.REFERENT_TECHNIQUE
     );
   };
 
@@ -576,43 +592,22 @@ export default function ProjectsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Budget (€)
+                    Budget en heures
                   </label>
                   <input
                     type="number"
                     min="0"
-                    value={formData.budget || ''}
+                    value={formData.budgetHours || ''}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        budget: e.target.value
+                        budgetHours: e.target.value
                           ? parseInt(e.target.value)
                           : undefined,
                       })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Ex: 50000"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Charge estimée (heures)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.estimatedHours || ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        estimatedHours: e.target.value
-                          ? parseInt(e.target.value)
-                          : undefined,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Ex: 500"
                   />
                 </div>
               </div>

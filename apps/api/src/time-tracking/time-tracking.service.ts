@@ -301,6 +301,66 @@ export class TimeTrackingService {
   }
 
   /**
+   * Récupérer les entrées de temps d'un utilisateur
+   */
+  async getUserEntries(
+    userId: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    const where: any = { userId };
+
+    if (startDate && endDate) {
+      where.date = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      };
+    } else if (startDate) {
+      where.date = { gte: new Date(startDate) };
+    } else if (endDate) {
+      where.date = { lte: new Date(endDate) };
+    }
+
+    const entries = await this.prisma.timeEntry.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        task: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        date: 'desc',
+      },
+    });
+
+    return entries;
+  }
+
+  /**
    * Récupérer le rapport de temps d'un utilisateur
    */
   async getUserReport(

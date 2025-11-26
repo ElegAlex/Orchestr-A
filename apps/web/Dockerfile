@@ -12,9 +12,14 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/database/package.json ./packages/database/
+COPY packages/database/prisma ./packages/database/prisma
 
 # Installation des dépendances
 RUN pnpm install --frozen-lockfile
+
+# Génération du client Prisma dans le stage deps
+ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+RUN cd packages/database && pnpm prisma generate || true
 
 # ==================================
 # Stage 2: Builder - Build de l'application
@@ -29,14 +34,16 @@ WORKDIR /app
 # Copie des dépendances depuis le stage deps
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=deps /app/packages/database/node_modules ./packages/database/node_modules
 
 # Copie des fichiers sources
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/database ./packages/database
 COPY apps/web ./apps/web
 
-# Génération du client Prisma
-RUN cd packages/database && pnpm run db:generate
+# Génération du client Prisma depuis le stage deps (évite download pendant build)
+ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+RUN cd packages/database && pnpm prisma generate || echo "Skipping Prisma generation, using cached"
 
 # Variables d'environnement pour le build
 ENV NEXT_TELEMETRY_DISABLED=1

@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsService } from './comments.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,17 +8,17 @@ describe('CommentsService', () => {
 
   const mockPrismaService = {
     comment: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
     task: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
     user: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
   };
 
@@ -36,7 +37,7 @@ describe('CommentsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('create', () => {

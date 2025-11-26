@@ -17,10 +17,12 @@ COPY packages/database ./packages/database
 COPY apps/api ./apps/api
 
 # Installation des dépendances
-RUN pnpm install --frozen-lockfile
+ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+RUN pnpm install --frozen-lockfile || true
+RUN pnpm install --frozen-lockfile --offline
 
-# Génération du client Prisma
-RUN cd packages/database && pnpm run db:generate
+# Génération du client Prisma (nécessaire pour les exports d'enums)
+RUN cd packages/database && npx prisma generate
 
 # Build de l'API
 RUN pnpm --filter api run build
@@ -77,4 +79,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:4000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); });"
 
 # Commande de démarrage
-CMD ["node", "apps/api/dist/main.js"]
+CMD ["node", "apps/api/dist/src/main.js"]

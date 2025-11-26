@@ -142,10 +142,10 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.RESPONSABLE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Désactiver un utilisateur (soft delete, Admin uniquement)',
+    summary: 'Désactiver un utilisateur (soft delete, Admin/Responsable)',
   })
   @ApiResponse({
     status: 200,

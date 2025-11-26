@@ -6,8 +6,15 @@ import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { Role } from '@/types';
 
-const navigation = [
-  { name: 'Tableau de bord', href: '/dashboard', icon: '📊' },
+interface NavItem {
+  name: string;
+  href: string;
+  icon: string;
+  adminOnly?: boolean;
+}
+
+const navigation: NavItem[] = [
+  { name: 'Tableau de bord', href: '/dashboard', icon: '🎯' },
   { name: 'Projets', href: '/projects', icon: '📁' },
   { name: 'Tâches', href: '/tasks', icon: '✓' },
   { name: 'Planning', href: '/planning', icon: '📅' },
@@ -16,10 +23,12 @@ const navigation = [
   { name: 'Télétravail', href: '/telework', icon: '🏠' },
 ];
 
-const adminNavigation = [
+const adminNavigation: NavItem[] = [
+  { name: 'Rapports & Analytics', href: '/reports', icon: '📊' },
   { name: 'Utilisateurs', href: '/users', icon: '👥' },
   { name: 'Départements', href: '/departments', icon: '🏢' },
-  { name: 'Compétences', href: '/skills', icon: '🎯' },
+  { name: 'Compétences', href: '/skills', icon: '⭐' },
+  { name: 'Paramètres', href: '/settings', icon: '⚙️', adminOnly: true },
 ];
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
@@ -27,8 +36,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const isAdmin =
-    user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE;
+  const isManager =
+    user?.role === Role.ADMIN ||
+    user?.role === Role.RESPONSABLE ||
+    user?.role === Role.MANAGER;
+
+  const isAdmin = user?.role === Role.ADMIN;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -71,7 +84,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             );
           })}
 
-          {isAdmin && (
+          {isManager && (
             <>
               <div className="pt-4 pb-2">
                 {sidebarOpen && (
@@ -80,23 +93,25 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                   </p>
                 )}
               </div>
-              {adminNavigation.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span className="text-xl mr-3">{item.icon}</span>
-                    {sidebarOpen && <span>{item.name}</span>}
-                  </Link>
-                );
-              })}
+              {adminNavigation
+                .filter((item) => !item.adminOnly || isAdmin)
+                .map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-600'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className="text-xl mr-3">{item.icon}</span>
+                      {sidebarOpen && <span>{item.name}</span>}
+                    </Link>
+                  );
+                })}
             </>
           )}
         </nav>
