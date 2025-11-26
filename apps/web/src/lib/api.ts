@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+// Use relative path to leverage Next.js rewrites
+const API_URL = '/api';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -37,3 +38,5 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export default api;

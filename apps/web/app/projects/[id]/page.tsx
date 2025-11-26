@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/MainLayout';
+import { MilestoneRoadmap } from '@/components/MilestoneRoadmap';
+import { MilestoneModal } from '@/components/MilestoneModal';
+import { TaskModal } from '@/components/TaskModal';
 import { projectsService } from '@/services/projects.service';
 import { tasksService } from '@/services/tasks.service';
 import { milestonesService } from '@/services/milestones.service';
@@ -44,6 +47,11 @@ export default function ProjectDetailPage() {
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showMilestoneModal, setShowMilestoneModal] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -297,6 +305,98 @@ export default function ProjectDetailPage() {
     }
   };
 
+  // Milestone handlers
+  const handleCreateMilestone = () => {
+    setEditingMilestone(null);
+    setShowMilestoneModal(true);
+  };
+
+  const handleEditMilestone = (milestone: Milestone) => {
+    setEditingMilestone(milestone);
+    setShowMilestoneModal(true);
+  };
+
+  const handleSaveMilestone = async (data: Partial<Milestone>) => {
+    try {
+      if (editingMilestone) {
+        await milestonesService.update(editingMilestone.id, data);
+        toast.success('Jalon mis à jour avec succès');
+      } else {
+        // Ensure required fields are present for creation
+        if (!data.name || !data.projectId) {
+          toast.error('Les champs obligatoires sont manquants');
+          return;
+        }
+        await milestonesService.create({
+          name: data.name,
+          description: data.description,
+          dueDate: data.dueDate || new Date().toISOString(),
+          projectId: data.projectId,
+        });
+        toast.success('Jalon créé avec succès');
+      }
+
+      // Refresh milestones
+      const milestonesData = await milestonesService.getAll();
+      const projectMilestones = milestonesData.data.filter(
+        (m: Milestone) => m.projectId === projectId
+      );
+      setMilestones(projectMilestones);
+      setShowMilestoneModal(false);
+      setEditingMilestone(null);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erreur lors de l\'enregistrement');
+      throw error;
+    }
+  };
+
+  const handleCreateTask = async () => {
+    setEditingTask(null);
+    // Load all users when opening the task modal
+    try {
+      const usersResponse = await usersService.getAll();
+      const users = Array.isArray(usersResponse)
+        ? usersResponse
+        : (usersResponse as any).data || [];
+      setAllUsers(users);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      setAllUsers([]);
+    }
+    setShowTaskModal(true);
+  };
+
+  const handleSaveTask = async (data: any) => {
+    try {
+      if (editingTask) {
+        await tasksService.update(editingTask.id, data);
+        toast.success('Tâche mise à jour avec succès');
+      } else {
+        await tasksService.create(data);
+        toast.success('Tâche créée avec succès');
+      }
+
+      // Refresh tasks
+      const tasksData = await tasksService.getByProject(projectId);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+
+      setShowTaskModal(false);
+      setEditingTask(null);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erreur lors de la sauvegarde');
+    }
+  };
+
+  const handleTaskUpdate = async () => {
+    try {
+      // Refresh tasks
+      const tasksData = await tasksService.getByProject(projectId);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+    } catch (error: any) {
+      console.error('Error refreshing tasks:', error);
+    }
+  };
+
   if (loading || !project) {
     return (
       <MainLayout>
@@ -544,6 +644,19 @@ export default function ProjectDetailPage() {
 
         {activeTab === 'tasks' && (
           <div className="space-y-4">
+            {/* Header with Add Task Button */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Tableau des tâches
+              </h2>
+              <button
+                onClick={handleCreateTask}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+              >
+                + Nouvelle tâche
+              </button>
+            </div>
+
             {/* Kanban Board */}
             <div className="overflow-x-auto pb-4">
               <div className="flex space-x-4 min-w-max">
@@ -679,67 +792,13 @@ export default function ProjectDetailPage() {
         )}
 
         {activeTab === 'milestones' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Jalons du projet
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {milestones.length === 0 ? (
-                <div className="col-span-full bg-white rounded-lg shadow-sm border border-gray-200 text-center py-12">
-                  <div className="text-6xl mb-4">🎯</div>
-                  <p className="text-gray-500">Aucun jalon</p>
-                </div>
-              ) : (
-                milestones.map((milestone) => (
-                  <div
-                    key={milestone.id}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <h3 className="font-semibold text-gray-900 flex-1">
-                        {milestone.name}
-                      </h3>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          milestone.status === 'COMPLETED'
-                            ? 'bg-green-100 text-green-800'
-                            : milestone.status === 'IN_PROGRESS'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {milestone.status === 'COMPLETED'
-                          ? 'Terminé'
-                          : milestone.status === 'IN_PROGRESS'
-                          ? 'En cours'
-                          : 'En attente'}
-                      </span>
-                    </div>
-
-                    {milestone.description && (
-                      <p className="text-sm text-gray-600 mb-4">
-                        {milestone.description}
-                      </p>
-                    )}
-
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Échéance:</span>
-                        <span className="font-medium text-gray-900">
-                          {milestone.dueDate
-                            ? new Date(milestone.dueDate).toLocaleDateString('fr-FR')
-                            : '-'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <MilestoneRoadmap
+            milestones={milestones}
+            tasks={tasks}
+            onCreateMilestone={handleCreateMilestone}
+            onEditMilestone={handleEditMilestone}
+            onTaskUpdate={handleTaskUpdate}
+          />
         )}
 
         {activeTab === 'team' && (
@@ -928,6 +987,32 @@ export default function ProjectDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Milestone Modal */}
+        <MilestoneModal
+          isOpen={showMilestoneModal}
+          onClose={() => {
+            setShowMilestoneModal(false);
+            setEditingMilestone(null);
+          }}
+          onSave={handleSaveMilestone}
+          milestone={editingMilestone}
+          projectId={projectId}
+        />
+
+        {/* Task Modal */}
+        <TaskModal
+          isOpen={showTaskModal}
+          onClose={() => {
+            setShowTaskModal(false);
+            setEditingTask(null);
+          }}
+          onSave={handleSaveTask}
+          task={editingTask}
+          projectId={projectId}
+          milestones={milestones}
+          users={allUsers}
+        />
       </div>
     </MainLayout>
   );

@@ -37,9 +37,9 @@ export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.REFERENT_TECHNIQUE)
   @ApiOperation({
-    summary: 'Créer un nouveau projet (Admin/Responsable/Manager uniquement)',
+    summary: 'Créer un nouveau projet (Admin/Responsable/Manager/Référent Technique)',
   })
   @ApiResponse({
     status: 201,

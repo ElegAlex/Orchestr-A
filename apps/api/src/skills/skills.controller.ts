@@ -269,4 +269,28 @@ export class SkillsController {
   getMySkills(@CurrentUser('id') userId: string) {
     return this.skillsService.getUserSkills(userId);
   }
+
+  @Patch('user/:userId/skill/:skillId')
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @ApiOperation({
+    summary: 'Mettre à jour le niveau d\'une compétence d\'un utilisateur (Admin/Responsable/Manager)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Niveau de la compétence mis à jour',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Utilisateur ou compétence introuvable',
+  })
+  updateUserSkill(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('skillId', ParseUUIDPipe) skillId: string,
+    @Body() data: { level: SkillLevel },
+  ) {
+    return this.skillsService.assignSkillToUser(userId, {
+      skillId,
+      level: data.level,
+    });
+  }
 }

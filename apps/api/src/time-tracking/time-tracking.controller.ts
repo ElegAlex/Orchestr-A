@@ -92,6 +92,22 @@ export class TimeTrackingController {
     );
   }
 
+  @Get('me')
+  @ApiOperation({ summary: 'Récupérer mes entrées de temps' })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste de mes entrées de temps',
+  })
+  getMyEntries(
+    @CurrentUser('id') userId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.timeTrackingService.getUserEntries(userId, startDate, endDate);
+  }
+
   @Get('me/report')
   @ApiOperation({ summary: 'Récupérer mon rapport de temps pour une période' })
   @ApiQuery({ name: 'startDate', required: true, type: String })

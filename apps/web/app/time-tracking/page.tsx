@@ -22,7 +22,8 @@ export default function TimeTrackingPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [selectedProject, setSelectedProject] = useState<string>('ALL');
 
   const [formData, setFormData] = useState<CreateTimeEntryDto>({
@@ -122,8 +123,18 @@ export default function TimeTrackingPage() {
       filtered = filtered.filter((e) => e.projectId === selectedProject);
     }
 
-    if (selectedDate) {
-      filtered = filtered.filter((e) => e.date.split('T')[0] === selectedDate);
+    if (startDate) {
+      filtered = filtered.filter((e) => {
+        const entryDate = e.date.split('T')[0];
+        return entryDate >= startDate;
+      });
+    }
+
+    if (endDate) {
+      filtered = filtered.filter((e) => {
+        const entryDate = e.date.split('T')[0];
+        return entryDate <= endDate;
+      });
     }
 
     return filtered.sort(
@@ -210,7 +221,22 @@ export default function TimeTrackingPage() {
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-700">Filtres</h3>
+            {(selectedProject !== 'ALL' || startDate || endDate) && (
+              <button
+                onClick={() => {
+                  setSelectedProject('ALL');
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className="text-xs text-blue-600 hover:text-blue-800 transition"
+              >
+                Réinitialiser les filtres
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Project Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -230,16 +256,31 @@ export default function TimeTrackingPage() {
               </select>
             </div>
 
-            {/* Date Filter */}
+            {/* Start Date Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date
+                Date de début
               </label>
               <input
                 type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Toutes les dates"
+              />
+            </div>
+
+            {/* End Date Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date de fin
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Toutes les dates"
               />
             </div>
           </div>

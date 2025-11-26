@@ -108,4 +108,10 @@ export const skillsService = {
     const response = await api.get(`/skills/search/${skillId}?${params.toString()}`);
     return response.data;
   },
+
+  // Mettre à jour le niveau d'une compétence utilisateur
+  async updateUserSkill(userId: string, skillId: string, data: { level: SkillLevel }) {
+    const response = await api.patch(`/skills/user/${userId}/skill/${skillId}`, data);
+    return response.data;
+  },
 };

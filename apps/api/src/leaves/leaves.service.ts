@@ -3,11 +3,12 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
-import { LeaveStatus, LeaveType } from 'database';
+import { LeaveStatus, LeaveType, Role } from 'database';
 
 @Injectable()
 export class LeavesService {
@@ -18,6 +19,7 @@ export class LeavesService {
    */
   async create(userId: string, createLeaveDto: CreateLeaveDto) {
     const {
+      leaveTypeId,
       type,
       startDate,
       endDate,
@@ -29,10 +31,26 @@ export class LeavesService {
     // Vérifier que l'utilisateur existe
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: {
+        department: true,
+      },
     });
 
     if (!user) {
       throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    // Vérifier que le type de congé existe et est actif
+    const leaveTypeConfig = await this.prisma.leaveTypeConfig.findUnique({
+      where: { id: leaveTypeId },
+    });
+
+    if (!leaveTypeConfig) {
+      throw new NotFoundException('Type de congé introuvable');
+    }
+
+    if (!leaveTypeConfig.isActive) {
+      throw new BadRequestException('Ce type de congé n\'est plus disponible');
     }
 
     // Vérifier que la date de fin est après la date de début
@@ -57,8 +75,8 @@ export class LeavesService {
       );
     }
 
-    // Vérifier le solde pour les congés payés
-    if (type === LeaveType.CP) {
+    // Vérifier le solde pour les congés payés (code CP)
+    if (leaveTypeConfig.code === 'CP') {
       const balance = await this.getLeaveBalance(userId);
 
       if (balance.available < days) {
@@ -68,20 +86,58 @@ export class LeavesService {
       }
     }
 
+    // Vérifier la limite annuelle si définie
+    if (leaveTypeConfig.maxDaysPerYear) {
+      const usedDays = await this.getUsedDaysForType(userId, leaveTypeId);
+      if (usedDays + days > leaveTypeConfig.maxDaysPerYear) {
+        throw new BadRequestException(
+          `Limite annuelle dépassée pour ${leaveTypeConfig.name}. Disponible: ${leaveTypeConfig.maxDaysPerYear - usedDays} jours, Demandé: ${days} jours`,
+        );
+      }
+    }
+
+    // Trouver le validateur approprié (manager du département ou délégué actif)
+    const validatorId = leaveTypeConfig.requiresApproval
+      ? await this.findValidatorForUser(userId)
+      : null;
+
+    // Statut initial selon si validation requise
+    const initialStatus = leaveTypeConfig.requiresApproval
+      ? LeaveStatus.PENDING
+      : LeaveStatus.APPROVED;
+
+    // Déterminer le type enum à utiliser (pour rétrocompatibilité)
+    // Si le code correspond à un type enum existant, l'utiliser, sinon utiliser OTHER
+    const validEnumTypes = Object.values(LeaveType);
+    const enumType = type || (validEnumTypes.includes(leaveTypeConfig.code as LeaveType)
+      ? (leaveTypeConfig.code as LeaveType)
+      : LeaveType.OTHER);
+
     // Créer la demande de congé
     const leave = await this.prisma.leave.create({
       data: {
         userId,
-        type,
+        leaveTypeId,
+        type: enumType,
         startDate: start,
         endDate: end,
         halfDay: startHalfDay || undefined,
         days,
         comment: reason,
-        status: LeaveStatus.PENDING,
+        status: initialStatus,
+        validatorId,
       },
       include: {
         user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        leaveType: true,
+        validator: {
           select: {
             id: true,
             firstName: true,
@@ -96,6 +152,83 @@ export class LeavesService {
   }
 
   /**
+   * Récupérer le nombre de jours utilisés pour un type de congé cette année
+   */
+  private async getUsedDaysForType(userId: string, leaveTypeId: string): Promise<number> {
+    const currentYear = new Date().getFullYear();
+    const yearStart = new Date(currentYear, 0, 1);
+    const yearEnd = new Date(currentYear, 11, 31);
+
+    const leaves = await this.prisma.leave.findMany({
+      where: {
+        userId,
+        leaveTypeId,
+        status: { in: [LeaveStatus.APPROVED, LeaveStatus.PENDING] },
+        startDate: { gte: yearStart, lte: yearEnd },
+      },
+    });
+
+    return leaves.reduce((sum, l) => sum + l.days, 0);
+  }
+
+  /**
+   * Trouver le validateur approprié pour un utilisateur
+   */
+  private async findValidatorForUser(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        department: {
+          include: {
+            manager: true,
+          },
+        },
+      },
+    });
+
+    if (!user) return null;
+
+    // Chercher d'abord un délégué actif
+    const today = new Date();
+    const activeDelegate = await this.prisma.leaveValidationDelegate.findFirst({
+      where: {
+        delegator: {
+          OR: [
+            { role: Role.MANAGER },
+            { role: Role.RESPONSABLE },
+          ],
+        },
+        isActive: true,
+        startDate: { lte: today },
+        endDate: { gte: today },
+      },
+      include: {
+        delegate: true,
+      },
+    });
+
+    if (activeDelegate) {
+      return activeDelegate.delegateId;
+    }
+
+    // Sinon, utiliser le manager du département
+    if (user.department?.managerId) {
+      return user.department.managerId;
+    }
+
+    // En dernier recours, chercher un responsable ou admin
+    const validator = await this.prisma.user.findFirst({
+      where: {
+        role: { in: [Role.RESPONSABLE, Role.ADMIN] },
+        isActive: true,
+        id: { not: userId }, // Ne pas s'auto-valider
+      },
+    });
+
+    return validator?.id || null;
+  }
+
+  /**
    * Récupérer toutes les demandes de congé avec pagination et filtres
    */
   async findAll(
@@ -104,6 +237,8 @@ export class LeavesService {
     userId?: string,
     status?: LeaveStatus,
     type?: LeaveType,
+    startDate?: string,
+    endDate?: string,
   ) {
     const skip = (page - 1) * limit;
 
@@ -111,6 +246,21 @@ export class LeavesService {
     if (userId) where.userId = userId;
     if (status) where.status = status;
     if (type) where.type = type;
+
+    // Filtrer par plage de dates (congés qui chevauchent la période demandée)
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      // Un congé chevauche la période si: leave.startDate <= endDate ET leave.endDate >= startDate
+      where.AND = [
+        { startDate: { lte: end } },
+        { endDate: { gte: start } },
+      ];
+    } else if (startDate) {
+      where.endDate = { gte: new Date(startDate) };
+    } else if (endDate) {
+      where.startDate = { lte: new Date(endDate) };
+    }
 
     const [leaves, total] = await Promise.all([
       this.prisma.leave.findMany({
@@ -132,6 +282,21 @@ export class LeavesService {
               },
             },
           },
+          leaveType: true,
+          validator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          validatedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
         },
         orderBy: {
           startDate: 'desc',
@@ -139,6 +304,11 @@ export class LeavesService {
       }),
       this.prisma.leave.count({ where }),
     ]);
+
+    // Si on filtre par dates, retourner directement un tableau pour la compatibilité avec le planning
+    if (startDate || endDate) {
+      return leaves;
+    }
 
     return {
       data: leaves,
@@ -149,6 +319,127 @@ export class LeavesService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  /**
+   * Récupérer les demandes de congé en attente de validation pour un validateur
+   */
+  async getPendingForValidator(validatorId: string) {
+    // Vérifier si l'utilisateur est un délégué actif
+    const today = new Date();
+    const activeDelegation = await this.prisma.leaveValidationDelegate.findFirst({
+      where: {
+        delegateId: validatorId,
+        isActive: true,
+        startDate: { lte: today },
+        endDate: { gte: today },
+      },
+    });
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: validatorId },
+    });
+
+    // Un utilisateur peut valider si:
+    // 1. Il est ADMIN, RESPONSABLE ou MANAGER
+    // 2. Il est un délégué actif
+    // 3. Il est assigné comme validateur d'une demande
+    const canValidate =
+      user?.role === Role.ADMIN ||
+      user?.role === Role.RESPONSABLE ||
+      user?.role === Role.MANAGER ||
+      activeDelegation !== null;
+
+    if (!canValidate) {
+      return [];
+    }
+
+    const leaves = await this.prisma.leave.findMany({
+      where: {
+        status: LeaveStatus.PENDING,
+        OR: [
+          { validatorId },
+          // Les ADMIN et RESPONSABLE peuvent voir toutes les demandes en attente
+          ...(user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE
+            ? [{ validatorId: { not: null } }, { validatorId: null }]
+            : []),
+        ],
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            department: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        validator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    return leaves;
+  }
+
+  /**
+   * Récupérer les demandes de congé d'un utilisateur
+   */
+  async getUserLeaves(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    const leaves = await this.prisma.leave.findMany({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        validator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        validatedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: {
+        startDate: 'desc',
+      },
+    });
+
+    return leaves;
   }
 
   /**
@@ -181,6 +472,22 @@ export class LeavesService {
                 },
               },
             },
+          },
+        },
+        validator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        validatedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
           },
         },
       },
@@ -277,7 +584,7 @@ export class LeavesService {
         ...(endDate && { endDate: end }),
         ...(startHalfDay && { startHalfDay }),
         ...(endHalfDay && { endHalfDay }),
-        ...(reason !== undefined && { reason }),
+        ...(reason !== undefined && { comment: reason }),
         days,
       },
       include: {
@@ -287,6 +594,13 @@ export class LeavesService {
             firstName: true,
             lastName: true,
             email: true,
+          },
+        },
+        validator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },
@@ -325,9 +639,49 @@ export class LeavesService {
   }
 
   /**
+   * Vérifier si l'utilisateur peut valider une demande
+   */
+  async canValidate(leaveId: string, validatorId: string): Promise<boolean> {
+    const leave = await this.prisma.leave.findUnique({
+      where: { id: leaveId },
+    });
+
+    if (!leave) return false;
+
+    const validator = await this.prisma.user.findUnique({
+      where: { id: validatorId },
+    });
+
+    if (!validator) return false;
+
+    // ADMIN et RESPONSABLE peuvent tout valider
+    if (validator.role === Role.ADMIN || validator.role === Role.RESPONSABLE) {
+      return true;
+    }
+
+    // Le validateur assigné peut valider
+    if (leave.validatorId === validatorId) {
+      return true;
+    }
+
+    // Vérifier les délégations actives
+    const today = new Date();
+    const activeDelegation = await this.prisma.leaveValidationDelegate.findFirst({
+      where: {
+        delegateId: validatorId,
+        isActive: true,
+        startDate: { lte: today },
+        endDate: { gte: today },
+      },
+    });
+
+    return activeDelegation !== null;
+  }
+
+  /**
    * Approuver une demande de congé
    */
-  async approve(id: string) {
+  async approve(id: string, validatorId: string, comment?: string) {
     const leave = await this.prisma.leave.findUnique({
       where: { id },
     });
@@ -342,9 +696,22 @@ export class LeavesService {
       );
     }
 
+    // Vérifier les droits de validation
+    const canValidateLeave = await this.canValidate(id, validatorId);
+    if (!canValidateLeave) {
+      throw new ForbiddenException(
+        'Vous n\'êtes pas autorisé à valider cette demande',
+      );
+    }
+
     const updatedLeave = await this.prisma.leave.update({
       where: { id },
-      data: { status: LeaveStatus.APPROVED },
+      data: {
+        status: LeaveStatus.APPROVED,
+        validatedById: validatorId,
+        validatedAt: new Date(),
+        validationComment: comment,
+      },
       include: {
         user: {
           select: {
@@ -352,6 +719,13 @@ export class LeavesService {
             firstName: true,
             lastName: true,
             email: true,
+          },
+        },
+        validatedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },
@@ -363,7 +737,7 @@ export class LeavesService {
   /**
    * Refuser une demande de congé
    */
-  async reject(id: string, reason?: string) {
+  async reject(id: string, validatorId: string, reason?: string) {
     const leave = await this.prisma.leave.findUnique({
       where: { id },
     });
@@ -378,11 +752,21 @@ export class LeavesService {
       );
     }
 
+    // Vérifier les droits de validation
+    const canValidateLeave = await this.canValidate(id, validatorId);
+    if (!canValidateLeave) {
+      throw new ForbiddenException(
+        'Vous n\'êtes pas autorisé à valider cette demande',
+      );
+    }
+
     const updatedLeave = await this.prisma.leave.update({
       where: { id },
       data: {
         status: LeaveStatus.REJECTED,
-        ...(reason && { reason }),
+        validatedById: validatorId,
+        validatedAt: new Date(),
+        validationComment: reason,
       },
       include: {
         user: {
@@ -391,6 +775,13 @@ export class LeavesService {
             firstName: true,
             lastName: true,
             email: true,
+          },
+        },
+        validatedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },
@@ -433,6 +824,159 @@ export class LeavesService {
     });
 
     return updatedLeave;
+  }
+
+  // ===========================
+  // GESTION DES DÉLÉGATIONS
+  // ===========================
+
+  /**
+   * Créer une délégation de validation
+   */
+  async createDelegation(
+    delegatorId: string,
+    delegateId: string,
+    startDate: Date,
+    endDate: Date,
+  ) {
+    // Vérifier que le délégateur a le droit de déléguer
+    const delegator = await this.prisma.user.findUnique({
+      where: { id: delegatorId },
+    });
+
+    if (!delegator) {
+      throw new NotFoundException('Utilisateur délégateur introuvable');
+    }
+
+    if (
+      delegator.role !== Role.ADMIN &&
+      delegator.role !== Role.RESPONSABLE &&
+      delegator.role !== Role.MANAGER
+    ) {
+      throw new ForbiddenException(
+        'Seuls les Admin, Responsables et Managers peuvent déléguer',
+      );
+    }
+
+    // Vérifier que le délégué existe
+    const delegate = await this.prisma.user.findUnique({
+      where: { id: delegateId },
+    });
+
+    if (!delegate) {
+      throw new NotFoundException('Utilisateur délégué introuvable');
+    }
+
+    if (!delegate.isActive) {
+      throw new BadRequestException(
+        'L\'utilisateur délégué doit être actif',
+      );
+    }
+
+    // Vérifier les dates
+    if (endDate < startDate) {
+      throw new BadRequestException(
+        'La date de fin doit être postérieure à la date de début',
+      );
+    }
+
+    // Créer la délégation
+    const delegation = await this.prisma.leaveValidationDelegate.create({
+      data: {
+        delegatorId,
+        delegateId,
+        startDate,
+        endDate,
+        isActive: true,
+      },
+      include: {
+        delegator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        delegate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    return delegation;
+  }
+
+  /**
+   * Récupérer les délégations d'un utilisateur
+   */
+  async getDelegations(userId: string) {
+    const [given, received] = await Promise.all([
+      this.prisma.leaveValidationDelegate.findMany({
+        where: { delegatorId: userId },
+        include: {
+          delegate: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { startDate: 'desc' },
+      }),
+      this.prisma.leaveValidationDelegate.findMany({
+        where: { delegateId: userId },
+        include: {
+          delegator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { startDate: 'desc' },
+      }),
+    ]);
+
+    return { given, received };
+  }
+
+  /**
+   * Désactiver une délégation
+   */
+  async deactivateDelegation(delegationId: string, userId: string) {
+    const delegation = await this.prisma.leaveValidationDelegate.findUnique({
+      where: { id: delegationId },
+    });
+
+    if (!delegation) {
+      throw new NotFoundException('Délégation introuvable');
+    }
+
+    // Seul le délégateur ou un admin peut désactiver
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (delegation.delegatorId !== userId && user?.role !== Role.ADMIN) {
+      throw new ForbiddenException(
+        'Vous n\'êtes pas autorisé à désactiver cette délégation',
+      );
+    }
+
+    const updated = await this.prisma.leaveValidationDelegate.update({
+      where: { id: delegationId },
+      data: { isActive: false },
+    });
+
+    return updated;
   }
 
   /**

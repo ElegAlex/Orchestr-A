@@ -35,11 +35,16 @@ model User {
   managedServices   Service[]         @relation("ServiceManager")
   projectMembers    ProjectMember[]
   tasks             Task[]
-  leaves            Leave[]
+  leaves            Leave[]           @relation("UserLeaves")
+  leavesToValidate  Leave[]           @relation("LeaveValidator")
+  leavesValidated   Leave[]           @relation("LeaveValidatedBy")
+  delegationsGiven  LeaveValidationDelegate[] @relation("DelegatorUser")
+  delegationsReceived LeaveValidationDelegate[] @relation("DelegateUser")
   telework          TeleworkSchedule[]
   skills            UserSkill[]
   timeEntries       TimeEntry[]
   comments          Comment[]
+  personalTodos     PersonalTodo[]
 
   @@map("users")
 }
@@ -324,25 +329,78 @@ enum ActivityType {
 // HR - LEAVES
 // ===========================
 
-model Leave {
-  id          String      @id @default(uuid())
-  userId      String
-  type        LeaveType
-  startDate   DateTime    @db.Date
-  endDate     DateTime    @db.Date
-  halfDay     HalfDay?
-  days        Float       // Jours ouvrés calculés
-  status      LeaveStatus @default(APPROVED)
-  comment     String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+// Configuration des types de congés (modifiable par admin/responsable)
+model LeaveTypeConfig {
+  id              String    @id @default(uuid())
+  code            String    @unique  // Code technique (ex: CP, RTT, SICK_LEAVE)
+  name            String              // Nom affiché (ex: "Congés payés")
+  description     String?             // Description optionnelle
+  color           String    @default("#10B981")  // Couleur pour l'affichage
+  icon            String    @default("🌴")       // Emoji/icône
+  isPaid          Boolean   @default(true)       // Congé rémunéré ou non
+  requiresApproval Boolean  @default(true)       // Nécessite validation
+  maxDaysPerYear  Int?                           // Limite annuelle (null = illimité)
+  isActive        Boolean   @default(true)       // Type actif ou archivé
+  isSystem        Boolean   @default(false)      // Type système (non supprimable)
+  sortOrder       Int       @default(0)          // Ordre d'affichage
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relations
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaves          Leave[]
+
+  @@map("leave_type_configs")
+}
+
+model Leave {
+  id              String      @id @default(uuid())
+  userId          String
+  leaveTypeId     String      @map("leave_type_id")  // Référence au type de congé
+  type            LeaveType?  // Gardé pour rétrocompatibilité (sera supprimé plus tard)
+  startDate       DateTime    @db.Date
+  endDate         DateTime    @db.Date
+  halfDay         HalfDay?
+  days            Float       // Jours ouvrés calculés
+  status          LeaveStatus @default(PENDING)
+  comment         String?
+
+  // Champs de validation
+  validatorId       String?     @map("validator_id")    // Qui doit valider (manager, responsable ou délégué)
+  validatedById     String?     @map("validated_by_id") // Qui a effectivement validé/rejeté
+  validatedAt       DateTime?   @map("validated_at")    // Date de validation/rejet
+  validationComment String?     @map("validation_comment") // Commentaire du validateur (motif de refus, etc.)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  user            User        @relation("UserLeaves", fields: [userId], references: [id], onDelete: Cascade)
+  leaveType       LeaveTypeConfig @relation(fields: [leaveTypeId], references: [id])
+  validator       User?       @relation("LeaveValidator", fields: [validatorId], references: [id], onDelete: SetNull)
+  validatedBy     User?       @relation("LeaveValidatedBy", fields: [validatedById], references: [id], onDelete: SetNull)
 
   @@map("leaves")
 }
 
+// Table de délégation de validation des congés
+model LeaveValidationDelegate {
+  id              String    @id @default(uuid())
+  delegatorId     String    @map("delegator_id")  // Qui délègue (manager/responsable)
+  delegateId      String    @map("delegate_id")   // À qui on délègue
+  startDate       DateTime  @db.Date @map("start_date")
+  endDate         DateTime  @db.Date @map("end_date")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  delegator       User      @relation("DelegatorUser", fields: [delegatorId], references: [id], onDelete: Cascade)
+  delegate        User      @relation("DelegateUser", fields: [delegateId], references: [id], onDelete: Cascade)
+
+  @@map("leave_validation_delegates")
+}
+
+// Enum gardé pour rétrocompatibilité (sera supprimé après migration complète)
 enum LeaveType {
   CP          // Congés payés
   RTT
@@ -467,4 +525,40 @@ model Comment {
   author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("comments")
+}
+
+// ===========================
+// PERSONAL TODO LIST
+// ===========================
+
+model PersonalTodo {
+  id          String    @id @default(uuid())
+  userId      String
+  text        String
+  completed   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, completed, createdAt])
+  @@map("personal_todos")
+}
+
+// ===========================
+// APPLICATION SETTINGS
+// ===========================
+
+model AppSettings {
+  id            String    @id @default(uuid())
+  key           String    @unique
+  value         String    // JSON stringified value
+  category      String    @default("general") // general, display, notifications, etc.
+  description   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("app_settings")
 }

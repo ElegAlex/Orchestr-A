@@ -406,17 +406,39 @@ export interface Leave {
   days: number;
   status: LeaveStatus;
   comment?: string;
+
+  // Champs de validation
+  validatorId?: string;
+  validatedById?: string;
+  validatedAt?: string;
+  validationComment?: string;
+
   createdAt: string;
   updatedAt: string;
+
+  // Relations
   user?: User;
+  validator?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+  };
+  validatedBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+  };
 }
 
 export interface CreateLeaveDto {
-  type: LeaveType;
+  leaveTypeId: string;
+  type?: LeaveType; // Déprécié, utiliser leaveTypeId
   startDate: string;
   endDate: string;
   halfDay?: HalfDay;
-  comment?: string;
+  reason?: string;
 }
 
 // ===========================

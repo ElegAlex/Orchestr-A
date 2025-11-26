@@ -121,9 +121,15 @@ export default function UsersPage() {
         firstName: formData.firstName,
         lastName: formData.lastName,
         role: formData.role,
-        departmentId: formData.departmentId || undefined,
         serviceIds: formData.serviceIds.length > 0 ? formData.serviceIds : [],
       };
+
+      // Ajouter departmentId seulement s'il est renseigné (UUID valide)
+      // Ne pas inclure du tout si vide pour éviter la validation UUID
+      if (formData.departmentId && formData.departmentId.trim() !== '') {
+        updateData.departmentId = formData.departmentId;
+      }
+      // Si pas de departmentId, on ne l'inclut pas dans la requête
 
       // Ajouter le mot de passe seulement s'il est renseigné
       if (formData.password && formData.password.trim() !== '') {
