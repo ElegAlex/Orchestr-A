@@ -25,6 +25,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { AddDependencyDto } from './dto/add-dependency.dto';
 import { AssignRACIDto } from './dto/assign-raci.dto';
+import { ImportTasksDto, ImportTasksResultDto, TasksValidationPreviewDto } from './dto/import-tasks.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -242,5 +243,53 @@ export class TasksController {
     @Param('role') role: string,
   ) {
     return this.tasksService.removeRACI(taskId, userId, role);
+  }
+
+  @Post('project/:projectId/import/validate')
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @ApiOperation({ summary: 'Valider des tâches avant import (dry-run)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Prévisualisation de l\'import',
+    type: TasksValidationPreviewDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Projet introuvable',
+  })
+  validateImport(
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Body() importTasksDto: ImportTasksDto,
+  ) {
+    return this.tasksService.validateImport(projectId, importTasksDto.tasks);
+  }
+
+  @Post('project/:projectId/import')
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @ApiOperation({ summary: 'Importer des tâches en masse via CSV' })
+  @ApiResponse({
+    status: 201,
+    description: 'Résultat de l\'import',
+    type: ImportTasksResultDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Projet introuvable',
+  })
+  importTasks(
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Body() importTasksDto: ImportTasksDto,
+  ) {
+    return this.tasksService.importTasks(projectId, importTasksDto.tasks);
+  }
+
+  @Get('project/:projectId/import-template')
+  @ApiOperation({ summary: 'Télécharger le template CSV pour l\'import de tâches' })
+  @ApiResponse({
+    status: 200,
+    description: 'Template CSV',
+  })
+  getImportTemplate() {
+    return { template: this.tasksService.getImportTemplate() };
   }
 }

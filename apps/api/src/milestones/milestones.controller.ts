@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 import { MilestonesService } from './milestones.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
+import { ImportMilestonesDto, ImportMilestonesResultDto, MilestonesValidationPreviewDto } from './dto/import-milestones.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -65,5 +66,53 @@ export class MilestonesController {
   @ApiOperation({ summary: 'Supprimer un milestone' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.milestonesService.remove(id);
+  }
+
+  @Post('project/:projectId/import/validate')
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @ApiOperation({ summary: 'Valider des jalons avant import (dry-run)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Prévisualisation de l\'import',
+    type: MilestonesValidationPreviewDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Projet introuvable',
+  })
+  validateImport(
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Body() importMilestonesDto: ImportMilestonesDto,
+  ) {
+    return this.milestonesService.validateImport(projectId, importMilestonesDto.milestones);
+  }
+
+  @Post('project/:projectId/import')
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @ApiOperation({ summary: 'Importer des jalons en masse via CSV' })
+  @ApiResponse({
+    status: 201,
+    description: 'Résultat de l\'import',
+    type: ImportMilestonesResultDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Projet introuvable',
+  })
+  importMilestones(
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Body() importMilestonesDto: ImportMilestonesDto,
+  ) {
+    return this.milestonesService.importMilestones(projectId, importMilestonesDto.milestones);
+  }
+
+  @Get('project/:projectId/import-template')
+  @ApiOperation({ summary: 'Télécharger le template CSV pour l\'import de jalons' })
+  @ApiResponse({
+    status: 200,
+    description: 'Template CSV',
+  })
+  getImportTemplate() {
+    return { template: this.milestonesService.getImportTemplate() };
   }
 }

@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { ImportUserDto, ImportUsersResultDto } from './dto/import-users.dto';
+import { ImportUserDto, ImportUsersResultDto, UsersValidationPreviewDto, UserPreviewItemDto, UserPreviewStatus } from './dto/import-users.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from 'database';
 
@@ -654,8 +654,185 @@ export class UsersService {
     return result;
   }
 
+  /**
+   * Valider les utilisateurs avant import (dry-run)
+   */
+  async validateImport(users: ImportUserDto[]): Promise<UsersValidationPreviewDto> {
+    const result: UsersValidationPreviewDto = {
+      valid: [],
+      duplicates: [],
+      errors: [],
+      warnings: [],
+      summary: {
+        total: users.length,
+        valid: 0,
+        duplicates: 0,
+        errors: 0,
+        warnings: 0,
+      },
+    };
+
+    // Charger tous les départements et services pour la résolution des noms
+    const [departments, services, existingUsers] = await Promise.all([
+      this.prisma.department.findMany({
+        select: { id: true, name: true },
+      }),
+      this.prisma.service.findMany({
+        select: { id: true, name: true, departmentId: true },
+      }),
+      this.prisma.user.findMany({
+        select: { email: true, login: true },
+      }),
+    ]);
+
+    const departmentMap = new Map(
+      departments.map((d) => [d.name.toLowerCase().trim(), { id: d.id, name: d.name }]),
+    );
+    const serviceMap = new Map(
+      services.map((s) => [s.name.toLowerCase().trim(), { id: s.id, name: s.name, departmentId: s.departmentId }]),
+    );
+    const existingEmails = new Set(existingUsers.map((u) => u.email.toLowerCase()));
+    const existingLogins = new Set(existingUsers.map((u) => u.login.toLowerCase()));
+
+    for (let i = 0; i < users.length; i++) {
+      const userData = users[i];
+      const lineNum = i + 2; // +2 car ligne 1 = header, index commence à 0
+
+      const previewItem: UserPreviewItemDto = {
+        lineNumber: lineNum,
+        user: userData,
+        status: 'valid' as UserPreviewStatus,
+        messages: [],
+      };
+
+      // Vérifier les champs obligatoires
+      if (!userData.email || userData.email.trim() === '') {
+        previewItem.status = 'error';
+        previewItem.messages.push('L\'email est obligatoire');
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      if (!userData.login || userData.login.trim() === '') {
+        previewItem.status = 'error';
+        previewItem.messages.push('Le login est obligatoire');
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      if (!userData.password || userData.password.length < 6) {
+        previewItem.status = 'error';
+        previewItem.messages.push('Le mot de passe doit contenir au moins 6 caractères');
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      if (!userData.firstName || userData.firstName.trim() === '') {
+        previewItem.status = 'error';
+        previewItem.messages.push('Le prénom est obligatoire');
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      if (!userData.lastName || userData.lastName.trim() === '') {
+        previewItem.status = 'error';
+        previewItem.messages.push('Le nom est obligatoire');
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      // Vérifier les doublons
+      if (existingEmails.has(userData.email.toLowerCase())) {
+        previewItem.status = 'duplicate';
+        previewItem.messages.push(`L'email "${userData.email}" existe déjà`);
+        result.duplicates.push(previewItem);
+        result.summary.duplicates++;
+        continue;
+      }
+
+      if (existingLogins.has(userData.login.toLowerCase())) {
+        previewItem.status = 'duplicate';
+        previewItem.messages.push(`Le login "${userData.login}" existe déjà`);
+        result.duplicates.push(previewItem);
+        result.summary.duplicates++;
+        continue;
+      }
+
+      // Valider le rôle
+      if (userData.role && !Object.values(Role).includes(userData.role as Role)) {
+        previewItem.status = 'error';
+        previewItem.messages.push(`Rôle "${userData.role}" non reconnu. Valeurs possibles: ${Object.values(Role).join(', ')}`);
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      // Résoudre le département par nom si fourni
+      if (userData.departmentName) {
+        const department = departmentMap.get(userData.departmentName.toLowerCase().trim());
+        if (!department) {
+          previewItem.status = 'error';
+          previewItem.messages.push(`Département "${userData.departmentName}" introuvable`);
+          result.errors.push(previewItem);
+          result.summary.errors++;
+          continue;
+        }
+        previewItem.resolvedDepartment = department;
+      }
+
+      // Résoudre les services par noms si fournis
+      if (userData.serviceNames) {
+        const serviceNamesList = userData.serviceNames
+          .split(',')
+          .map((s) => s.trim().toLowerCase())
+          .filter((s) => s);
+
+        const resolvedServices: Array<{ id: string; name: string }> = [];
+        let hasServiceError = false;
+
+        for (const serviceName of serviceNamesList) {
+          const service = serviceMap.get(serviceName);
+          if (!service) {
+            previewItem.status = 'warning';
+            previewItem.messages.push(`Service "${serviceName}" introuvable (ignoré)`);
+          } else if (previewItem.resolvedDepartment && service.departmentId !== previewItem.resolvedDepartment.id) {
+            previewItem.status = 'warning';
+            previewItem.messages.push(`Service "${service.name}" n'appartient pas au département (ignoré)`);
+          } else {
+            resolvedServices.push({ id: service.id, name: service.name });
+          }
+        }
+
+        if (resolvedServices.length > 0) {
+          previewItem.resolvedServices = resolvedServices;
+        }
+      }
+
+      // Ajouter aux résultats selon le statut
+      if (previewItem.status === 'warning') {
+        result.warnings.push(previewItem);
+        result.summary.warnings++;
+      } else {
+        previewItem.messages.push('Prêt à être importé');
+        result.valid.push(previewItem);
+        result.summary.valid++;
+      }
+
+      // Ajouter pour éviter les doublons dans le même fichier
+      existingEmails.add(userData.email.toLowerCase());
+      existingLogins.add(userData.login.toLowerCase());
+    }
+
+    return result;
+  }
+
   async getImportTemplate(): Promise<string> {
-    // Générer un template CSV avec les en-têtes et des exemples
+    // Générer un template CSV avec les en-têtes et des commentaires d'exemple
     const headers = [
       'email',
       'login',
@@ -666,17 +843,18 @@ export class UsersService {
       'departmentName',
       'serviceNames',
     ];
-    const exampleRow = [
-      'marie.martin@example.com',
-      'marie.martin',
-      'password123',
-      'Marie',
-      'Martin',
-      'CONTRIBUTEUR',
-      'Direction Générale',
-      'Service Comptabilité, Service RH',
+    // Template sans faux emails - juste des commentaires explicatifs
+    const exampleComment = [
+      '# email@domaine.com',
+      '# prenom.nom',
+      '# motdepasse (min 6 car.)',
+      '# Prénom',
+      '# Nom',
+      '# ADMIN|RESPONSABLE|MANAGER|CONTRIBUTEUR|OBSERVATEUR',
+      '# Nom département existant',
+      '# Service1, Service2',
     ];
 
-    return [headers.join(';'), exampleRow.join(';')].join('\n');
+    return [headers.join(';'), exampleComment.join(';')].join('\n');
   }
 }

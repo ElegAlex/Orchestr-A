@@ -24,7 +24,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { ImportUsersDto } from './dto/import-users.dto';
+import { ImportUsersDto, UsersValidationPreviewDto } from './dto/import-users.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -55,6 +55,28 @@ export class UsersController {
   })
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
+  }
+
+  @Post('import/validate')
+  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @ApiOperation({
+    summary: 'Valider des utilisateurs avant import (dry-run)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Prévisualisation de l\'import',
+    type: UsersValidationPreviewDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Accès interdit',
+  })
+  validateImport(@Body() importUsersDto: ImportUsersDto) {
+    return this.usersService.validateImport(importUsersDto.users);
   }
 
   @Post('import')

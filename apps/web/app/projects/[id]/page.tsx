@@ -7,8 +7,9 @@ import { MilestoneRoadmap } from '@/components/MilestoneRoadmap';
 import { MilestoneModal } from '@/components/MilestoneModal';
 import { TaskModal } from '@/components/TaskModal';
 import { projectsService } from '@/services/projects.service';
-import { tasksService } from '@/services/tasks.service';
-import { milestonesService } from '@/services/milestones.service';
+import { tasksService, TasksValidationPreview, TaskPreviewItem } from '@/services/tasks.service';
+import { milestonesService, MilestonesValidationPreview, MilestonePreviewItem } from '@/services/milestones.service';
+import { ImportPreviewModal } from '@/components/ImportPreviewModal';
 import { usersService } from '@/services/users.service';
 import {
   Project,
@@ -52,6 +53,17 @@ export default function ProjectDetailPage() {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [showImportTasksModal, setShowImportTasksModal] = useState(false);
+  const [showImportMilestonesModal, setShowImportMilestonesModal] = useState(false);
+  const [importingTasks, setImportingTasks] = useState(false);
+  const [importingMilestones, setImportingMilestones] = useState(false);
+  // Pre-validation states
+  const [tasksPreview, setTasksPreview] = useState<TasksValidationPreview | null>(null);
+  const [milestonesPreview, setMilestonesPreview] = useState<MilestonesValidationPreview | null>(null);
+  const [showTasksPreview, setShowTasksPreview] = useState(false);
+  const [showMilestonesPreview, setShowMilestonesPreview] = useState(false);
+  const [pendingTasksImport, setPendingTasksImport] = useState<any[]>([]);
+  const [pendingMilestonesImport, setPendingMilestonesImport] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -397,6 +409,213 @@ export default function ProjectDetailPage() {
     }
   };
 
+  // Import CSV handlers
+  const parseCSV = (content: string): Record<string, string>[] => {
+    const lines = content.split('\n').filter((line) => line.trim());
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(';').map((h) => h.trim());
+    const data: Record<string, string>[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(';').map((v) => v.trim());
+      const row: Record<string, string> = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+      data.push(row);
+    }
+
+    return data;
+  };
+
+  const handleImportTasksFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportingTasks(true);
+    try {
+      const content = await file.text();
+      const rows = parseCSV(content);
+
+      // Filter out comment lines (starting with #)
+      const filteredRows = rows.filter(row => {
+        const firstValue = Object.values(row)[0];
+        return firstValue && !firstValue.toString().startsWith('#');
+      });
+
+      if (filteredRows.length === 0) {
+        toast.error('Le fichier CSV est vide ou invalide');
+        setImportingTasks(false);
+        e.target.value = '';
+        return;
+      }
+
+      const tasksToImport = filteredRows.map((row) => ({
+        title: row.title || '',
+        description: row.description || undefined,
+        status: row.status || undefined,
+        priority: row.priority || undefined,
+        assigneeEmail: row.assigneeEmail || undefined,
+        milestoneName: row.milestoneName || undefined,
+        estimatedHours: row.estimatedHours ? parseFloat(row.estimatedHours) : undefined,
+        startDate: row.startDate || undefined,
+        endDate: row.endDate || undefined,
+      }));
+
+      // Validate first (dry-run)
+      const preview = await tasksService.validateImport(projectId, tasksToImport);
+      setTasksPreview(preview);
+      setPendingTasksImport(tasksToImport);
+      setShowImportTasksModal(false);
+      setShowTasksPreview(true);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erreur lors de la validation');
+      console.error('Validation error:', error);
+    } finally {
+      setImportingTasks(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleConfirmTasksImport = async () => {
+    setImportingTasks(true);
+    try {
+      const result = await tasksService.importTasks(projectId, pendingTasksImport);
+
+      if (result.created > 0) {
+        toast.success(`${result.created} tache(s) importee(s) avec succes`);
+      }
+      if (result.skipped > 0) {
+        toast(`${result.skipped} tache(s) ignoree(s) (doublons)`);
+      }
+      if (result.errors > 0) {
+        toast.error(`${result.errors} erreur(s) lors de l'import`);
+        console.error('Import errors:', result.errorDetails);
+      }
+
+      // Refresh tasks
+      const tasksData = await tasksService.getByProject(projectId);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+
+      setShowTasksPreview(false);
+      setTasksPreview(null);
+      setPendingTasksImport([]);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erreur lors de l\'import');
+      console.error('Import error:', error);
+    } finally {
+      setImportingTasks(false);
+    }
+  };
+
+  const handleImportMilestonesFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportingMilestones(true);
+    try {
+      const content = await file.text();
+      const rows = parseCSV(content);
+
+      // Filter out comment lines (starting with #)
+      const filteredRows = rows.filter(row => {
+        const firstValue = Object.values(row)[0];
+        return firstValue && !firstValue.toString().startsWith('#');
+      });
+
+      if (filteredRows.length === 0) {
+        toast.error('Le fichier CSV est vide ou invalide');
+        setImportingMilestones(false);
+        e.target.value = '';
+        return;
+      }
+
+      const milestonesToImport = filteredRows.map((row) => ({
+        name: row.name || '',
+        description: row.description || undefined,
+        dueDate: row.dueDate || '',
+      }));
+
+      // Validate first (dry-run)
+      const preview = await milestonesService.validateImport(projectId, milestonesToImport);
+      setMilestonesPreview(preview);
+      setPendingMilestonesImport(milestonesToImport);
+      setShowImportMilestonesModal(false);
+      setShowMilestonesPreview(true);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erreur lors de la validation');
+      console.error('Validation error:', error);
+    } finally {
+      setImportingMilestones(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleConfirmMilestonesImport = async () => {
+    setImportingMilestones(true);
+    try {
+      const result = await milestonesService.importMilestones(projectId, pendingMilestonesImport);
+
+      if (result.created > 0) {
+        toast.success(`${result.created} jalon(s) importe(s) avec succes`);
+      }
+      if (result.skipped > 0) {
+        toast(`${result.skipped} jalon(s) ignore(s) (doublons)`);
+      }
+      if (result.errors > 0) {
+        toast.error(`${result.errors} erreur(s) lors de l'import`);
+        console.error('Import errors:', result.errorDetails);
+      }
+
+      // Refresh milestones
+      const milestonesData = await milestonesService.getAll();
+      const projectMilestones = milestonesData.data.filter(
+        (m: Milestone) => m.projectId === projectId
+      );
+      setMilestones(projectMilestones);
+
+      setShowMilestonesPreview(false);
+      setMilestonesPreview(null);
+      setPendingMilestonesImport([]);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erreur lors de l\'import');
+      console.error('Import error:', error);
+    } finally {
+      setImportingMilestones(false);
+    }
+  };
+
+  const downloadTasksTemplate = async () => {
+    try {
+      const template = await tasksService.getImportTemplate(projectId);
+      const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'template_taches.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error('Erreur lors du téléchargement du template');
+    }
+  };
+
+  const downloadMilestonesTemplate = async () => {
+    try {
+      const template = await milestonesService.getImportTemplate(projectId);
+      const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'template_jalons.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error('Erreur lors du téléchargement du template');
+    }
+  };
+
   if (loading || !project) {
     return (
       <MainLayout>
@@ -649,12 +868,20 @@ export default function ProjectDetailPage() {
               <h2 className="text-xl font-semibold text-gray-900">
                 Tableau des tâches
               </h2>
-              <button
-                onClick={handleCreateTask}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-              >
-                + Nouvelle tâche
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowImportTasksModal(true)}
+                  className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
+                >
+                  Importer CSV
+                </button>
+                <button
+                  onClick={handleCreateTask}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                >
+                  + Nouvelle tâche
+                </button>
+              </div>
             </div>
 
             {/* Kanban Board */}
@@ -798,6 +1025,7 @@ export default function ProjectDetailPage() {
             onCreateMilestone={handleCreateMilestone}
             onEditMilestone={handleEditMilestone}
             onTaskUpdate={handleTaskUpdate}
+            onImportMilestones={() => setShowImportMilestonesModal(true)}
           />
         )}
 
@@ -1013,6 +1241,227 @@ export default function ProjectDetailPage() {
           milestones={milestones}
           users={allUsers}
         />
+
+        {/* Import Tasks Modal */}
+        {showImportTasksModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-lg w-full p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                Importer des tâches (CSV)
+              </h2>
+              <div className="space-y-4">
+                <p className="text-gray-600 text-sm">
+                  Importez vos tâches depuis un fichier CSV. Le fichier doit utiliser le point-virgule (;) comme séparateur.
+                </p>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-blue-900 mb-2">Colonnes disponibles :</h3>
+                  <p className="text-blue-800 text-sm">
+                    title*, description, status, priority, assigneeEmail, milestoneName, estimatedHours, startDate, endDate
+                  </p>
+                  <p className="text-blue-600 text-xs mt-2">* Champ obligatoire</p>
+                </div>
+                <button
+                  onClick={downloadTasksTemplate}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  Télécharger le template CSV
+                </button>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleImportTasksFile}
+                    disabled={importingTasks}
+                    className="hidden"
+                    id="tasks-csv-input"
+                  />
+                  <label
+                    htmlFor="tasks-csv-input"
+                    className={`cursor-pointer ${importingTasks ? 'opacity-50' : ''}`}
+                  >
+                    <div className="text-4xl mb-2">📄</div>
+                    <p className="text-gray-600">
+                      {importingTasks
+                        ? 'Import en cours...'
+                        : 'Cliquez pour sélectionner un fichier CSV'}
+                    </p>
+                  </label>
+                </div>
+              </div>
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setShowImportTasksModal(false)}
+                  disabled={importingTasks}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Import Milestones Modal */}
+        {showImportMilestonesModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-lg w-full p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                Importer des jalons (CSV)
+              </h2>
+              <div className="space-y-4">
+                <p className="text-gray-600 text-sm">
+                  Importez vos jalons depuis un fichier CSV. Le fichier doit utiliser le point-virgule (;) comme séparateur.
+                </p>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-blue-900 mb-2">Colonnes disponibles :</h3>
+                  <p className="text-blue-800 text-sm">
+                    name*, description, dueDate*
+                  </p>
+                  <p className="text-blue-600 text-xs mt-2">* Champs obligatoires (dueDate au format YYYY-MM-DD)</p>
+                </div>
+                <button
+                  onClick={downloadMilestonesTemplate}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  Télécharger le template CSV
+                </button>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleImportMilestonesFile}
+                    disabled={importingMilestones}
+                    className="hidden"
+                    id="milestones-csv-input"
+                  />
+                  <label
+                    htmlFor="milestones-csv-input"
+                    className={`cursor-pointer ${importingMilestones ? 'opacity-50' : ''}`}
+                  >
+                    <div className="text-4xl mb-2">📄</div>
+                    <p className="text-gray-600">
+                      {importingMilestones
+                        ? 'Import en cours...'
+                        : 'Cliquez pour sélectionner un fichier CSV'}
+                    </p>
+                  </label>
+                </div>
+              </div>
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setShowImportMilestonesModal(false)}
+                  disabled={importingMilestones}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tasks Preview Modal */}
+        {tasksPreview && (
+          <ImportPreviewModal
+            isOpen={showTasksPreview}
+            onClose={() => {
+              setShowTasksPreview(false);
+              setTasksPreview(null);
+              setPendingTasksImport([]);
+            }}
+            onConfirm={handleConfirmTasksImport}
+            title="Previsualisation de l'import des taches"
+            items={{
+              valid: tasksPreview.valid.map(item => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.task,
+                resolvedFields: {
+                  ...(item.resolvedAssignee && { Assignee: item.resolvedAssignee }),
+                  ...(item.resolvedMilestone && { Jalon: item.resolvedMilestone }),
+                },
+              })),
+              duplicates: tasksPreview.duplicates.map(item => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.task,
+              })),
+              errors: tasksPreview.errors.map(item => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.task,
+              })),
+              warnings: tasksPreview.warnings.map(item => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.task,
+                resolvedFields: {
+                  ...(item.resolvedAssignee && { Assignee: item.resolvedAssignee }),
+                  ...(item.resolvedMilestone && { Jalon: item.resolvedMilestone }),
+                },
+              })),
+            }}
+            summary={tasksPreview.summary}
+            columns={[
+              { key: 'title', label: 'Titre' },
+              { key: 'status', label: 'Statut' },
+              { key: 'priority', label: 'Priorite' },
+              { key: 'assigneeEmail', label: 'Assignee' },
+            ]}
+            isImporting={importingTasks}
+          />
+        )}
+
+        {/* Milestones Preview Modal */}
+        {milestonesPreview && (
+          <ImportPreviewModal
+            isOpen={showMilestonesPreview}
+            onClose={() => {
+              setShowMilestonesPreview(false);
+              setMilestonesPreview(null);
+              setPendingMilestonesImport([]);
+            }}
+            onConfirm={handleConfirmMilestonesImport}
+            title="Previsualisation de l'import des jalons"
+            items={{
+              valid: milestonesPreview.valid.map(item => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.milestone,
+              })),
+              duplicates: milestonesPreview.duplicates.map(item => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.milestone,
+              })),
+              errors: milestonesPreview.errors.map(item => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.milestone,
+              })),
+              warnings: milestonesPreview.warnings.map(item => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.milestone,
+              })),
+            }}
+            summary={milestonesPreview.summary}
+            columns={[
+              { key: 'name', label: 'Nom' },
+              { key: 'description', label: 'Description' },
+              { key: 'dueDate', label: 'Echeance' },
+            ]}
+            isImporting={importingMilestones}
+          />
+        )}
       </div>
     </MainLayout>
   );

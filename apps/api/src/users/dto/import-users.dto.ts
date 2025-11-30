@@ -116,3 +116,49 @@ export class ImportUsersResultDto {
   })
   createdUsers: any[];
 }
+
+// Types de statut pour la prévisualisation
+export type UserPreviewStatus = 'valid' | 'duplicate' | 'error' | 'warning';
+
+export class UserPreviewItemDto {
+  @ApiProperty({ description: 'Index de la ligne dans le CSV' })
+  lineNumber: number;
+
+  @ApiProperty({ description: 'Données de l\'utilisateur' })
+  user: ImportUserDto;
+
+  @ApiProperty({ description: 'Statut de validation', enum: ['valid', 'duplicate', 'error', 'warning'] })
+  status: UserPreviewStatus;
+
+  @ApiProperty({ description: 'Messages de validation' })
+  messages: string[];
+
+  @ApiProperty({ description: 'Département résolu', required: false })
+  resolvedDepartment?: { id: string; name: string };
+
+  @ApiProperty({ description: 'Services résolus', required: false })
+  resolvedServices?: Array<{ id: string; name: string }>;
+}
+
+export class UsersValidationPreviewDto {
+  @ApiProperty({ description: 'Éléments valides prêts à être importés', type: [UserPreviewItemDto] })
+  valid: UserPreviewItemDto[];
+
+  @ApiProperty({ description: 'Éléments qui seront ignorés (doublons)', type: [UserPreviewItemDto] })
+  duplicates: UserPreviewItemDto[];
+
+  @ApiProperty({ description: 'Éléments avec erreurs', type: [UserPreviewItemDto] })
+  errors: UserPreviewItemDto[];
+
+  @ApiProperty({ description: 'Éléments avec avertissements (seront importés)', type: [UserPreviewItemDto] })
+  warnings: UserPreviewItemDto[];
+
+  @ApiProperty({ description: 'Résumé de la validation' })
+  summary: {
+    total: number;
+    valid: number;
+    duplicates: number;
+    errors: number;
+    warnings: number;
+  };
+}

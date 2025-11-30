@@ -99,4 +99,94 @@ export const tasksService = {
   async removeRaci(taskId: string, raciId: string): Promise<void> {
     await api.delete(`/tasks/${taskId}/raci/${raciId}`);
   },
+
+  async getImportTemplate(projectId: string): Promise<string> {
+    const response = await api.get<{ template: string }>(
+      `/tasks/project/${projectId}/import-template`
+    );
+    return response.data.template;
+  },
+
+  async validateImport(
+    projectId: string,
+    tasks: Array<{
+      title: string;
+      description?: string;
+      status?: string;
+      priority?: string;
+      assigneeEmail?: string;
+      milestoneName?: string;
+      estimatedHours?: number;
+      startDate?: string;
+      endDate?: string;
+    }>
+  ): Promise<TasksValidationPreview> {
+    const response = await api.post<TasksValidationPreview>(
+      `/tasks/project/${projectId}/import/validate`,
+      { tasks }
+    );
+    return response.data;
+  },
+
+  async importTasks(
+    projectId: string,
+    tasks: Array<{
+      title: string;
+      description?: string;
+      status?: string;
+      priority?: string;
+      assigneeEmail?: string;
+      milestoneName?: string;
+      estimatedHours?: number;
+      startDate?: string;
+      endDate?: string;
+    }>
+  ): Promise<{
+    created: number;
+    skipped: number;
+    errors: number;
+    errorDetails: string[];
+  }> {
+    const response = await api.post<{
+      created: number;
+      skipped: number;
+      errors: number;
+      errorDetails: string[];
+    }>(`/tasks/project/${projectId}/import`, { tasks });
+    return response.data;
+  },
 };
+
+// Types pour la prévisualisation d'import
+export interface TaskPreviewItem {
+  lineNumber: number;
+  task: {
+    title: string;
+    description?: string;
+    status?: string;
+    priority?: string;
+    assigneeEmail?: string;
+    milestoneName?: string;
+    estimatedHours?: number;
+    startDate?: string;
+    endDate?: string;
+  };
+  status: 'valid' | 'duplicate' | 'error' | 'warning';
+  messages: string[];
+  resolvedAssignee?: { id: string; email: string; name: string };
+  resolvedMilestone?: { id: string; name: string };
+}
+
+export interface TasksValidationPreview {
+  valid: TaskPreviewItem[];
+  duplicates: TaskPreviewItem[];
+  errors: TaskPreviewItem[];
+  warnings: TaskPreviewItem[];
+  summary: {
+    total: number;
+    valid: number;
+    duplicates: number;
+    errors: number;
+    warnings: number;
+  };
+}

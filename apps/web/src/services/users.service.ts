@@ -77,6 +77,11 @@ export const usersService = {
     return response.data;
   },
 
+  async validateImport(users: ImportUserData[]): Promise<UsersValidationPreview> {
+    const response = await api.post<UsersValidationPreview>('/users/import/validate', { users });
+    return response.data;
+  },
+
   async importUsers(users: ImportUserData[]): Promise<ImportUsersResult> {
     const response = await api.post<ImportUsersResult>('/users/import', { users });
     return response.data;
@@ -100,4 +105,28 @@ export interface ImportUsersResult {
   errors: number;
   errorDetails: string[];
   createdUsers: User[];
+}
+
+// Types pour la prévisualisation d'import
+export interface UserPreviewItem {
+  lineNumber: number;
+  user: ImportUserData;
+  status: 'valid' | 'duplicate' | 'error' | 'warning';
+  messages: string[];
+  resolvedDepartment?: { id: string; name: string };
+  resolvedServices?: Array<{ id: string; name: string }>;
+}
+
+export interface UsersValidationPreview {
+  valid: UserPreviewItem[];
+  duplicates: UserPreviewItem[];
+  errors: UserPreviewItem[];
+  warnings: UserPreviewItem[];
+  summary: {
+    total: number;
+    valid: number;
+    duplicates: number;
+    errors: number;
+    warnings: number;
+  };
 }

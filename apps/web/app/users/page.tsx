@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { useAuthStore } from '@/stores/auth.store';
-import { usersService, ImportUserData, ImportUsersResult } from '@/services/users.service';
+import { usersService, ImportUserData, ImportUsersResult, UsersValidationPreview, UserPreviewItem } from '@/services/users.service';
+import { ImportPreviewModal } from '@/components/ImportPreviewModal';
 import { departmentsService } from '@/services/departments.service';
 import { servicesService } from '@/services/services.service';
 import { User, Role, Department, Service } from '@/types';
@@ -22,6 +23,10 @@ export default function UsersPage() {
   const [importResult, setImportResult] = useState<ImportUsersResult | null>(null);
   const [importing, setImporting] = useState(false);
   const [csvPreview, setCsvPreview] = useState<ImportUserData[]>([]);
+  // Pre-validation states
+  const [usersPreview, setUsersPreview] = useState<UsersValidationPreview | null>(null);
+  const [showUsersPreview, setShowUsersPreview] = useState(false);
+  const [pendingUsersImport, setPendingUsersImport] = useState<ImportUserData[]>([]);
   const [formData, setFormData] = useState({
     email: '',
     login: '',
@@ -268,25 +273,46 @@ export default function UsersPage() {
 
   const handleImport = async () => {
     if (csvPreview.length === 0) {
-      toast.error('Aucun utilisateur valide à importer');
+      toast.error('Aucun utilisateur valide a importer');
       return;
     }
 
     try {
       setImporting(true);
-      const result = await usersService.importUsers(csvPreview);
+      // Validate first (dry-run)
+      const preview = await usersService.validateImport(csvPreview);
+      setUsersPreview(preview);
+      setPendingUsersImport(csvPreview);
+      setShowImportModal(false);
+      setShowUsersPreview(true);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erreur lors de la validation');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleConfirmUsersImport = async () => {
+    setImporting(true);
+    try {
+      const result = await usersService.importUsers(pendingUsersImport);
       setImportResult(result);
 
       if (result.created > 0) {
-        toast.success(`${result.created} utilisateur(s) créé(s) avec succès`);
+        toast.success(`${result.created} utilisateur(s) cree(s) avec succes`);
         fetchUsers();
       }
       if (result.skipped > 0) {
-        toast(`${result.skipped} utilisateur(s) ignoré(s) (existants)`, { icon: 'i' });
+        toast(`${result.skipped} utilisateur(s) ignore(s) (existants)`);
       }
       if (result.errors > 0) {
         toast.error(`${result.errors} erreur(s) lors de l'import`);
       }
+
+      setShowUsersPreview(false);
+      setUsersPreview(null);
+      setPendingUsersImport([]);
+      setCsvPreview([]);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Erreur lors de l\'import');
     } finally {
@@ -295,7 +321,8 @@ export default function UsersPage() {
   };
 
   const downloadTemplate = () => {
-    const template = 'email;login;password;firstName;lastName;role;departmentName;serviceNames\nmarie.martin@example.com;marie.martin;password123;Marie;Martin;CONTRIBUTEUR;Direction Générale;Service Comptabilité';
+    // Template without fake data - just headers and explanatory comments
+    const template = 'email;login;password;firstName;lastName;role;departmentName;serviceNames\n# email@domaine.com;# prenom.nom;# motdepasse (min 6 car.);# Prenom;# Nom;# ADMIN|RESPONSABLE|MANAGER|CONTRIBUTEUR|OBSERVATEUR;# Nom departement existant;# Service1, Service2';
     const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -949,6 +976,66 @@ export default function UsersPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Users Import Preview Modal */}
+      {usersPreview && (
+        <ImportPreviewModal
+          isOpen={showUsersPreview}
+          onClose={() => {
+            setShowUsersPreview(false);
+            setUsersPreview(null);
+            setPendingUsersImport([]);
+          }}
+          onConfirm={handleConfirmUsersImport}
+          title="Previsualisation de l'import des utilisateurs"
+          items={{
+            valid: usersPreview.valid.map(item => ({
+              lineNumber: item.lineNumber,
+              status: item.status,
+              messages: item.messages,
+              data: item.user,
+              resolvedFields: {
+                ...(item.resolvedDepartment && { Departement: item.resolvedDepartment }),
+                ...(item.resolvedServices && item.resolvedServices.length > 0 && {
+                  Services: { id: '', name: item.resolvedServices.map(s => s.name).join(', ') }
+                }),
+              },
+            })),
+            duplicates: usersPreview.duplicates.map(item => ({
+              lineNumber: item.lineNumber,
+              status: item.status,
+              messages: item.messages,
+              data: item.user,
+            })),
+            errors: usersPreview.errors.map(item => ({
+              lineNumber: item.lineNumber,
+              status: item.status,
+              messages: item.messages,
+              data: item.user,
+            })),
+            warnings: usersPreview.warnings.map(item => ({
+              lineNumber: item.lineNumber,
+              status: item.status,
+              messages: item.messages,
+              data: item.user,
+              resolvedFields: {
+                ...(item.resolvedDepartment && { Departement: item.resolvedDepartment }),
+                ...(item.resolvedServices && item.resolvedServices.length > 0 && {
+                  Services: { id: '', name: item.resolvedServices.map(s => s.name).join(', ') }
+                }),
+              },
+            })),
+          }}
+          summary={usersPreview.summary}
+          columns={[
+            { key: 'email', label: 'Email' },
+            { key: 'login', label: 'Login' },
+            { key: 'firstName', label: 'Prenom' },
+            { key: 'lastName', label: 'Nom' },
+          ]}
+          isImporting={importing}
+        />
       )}
     </MainLayout>
   );
