@@ -64,7 +64,6 @@ describe('DocumentsService', () => {
       };
       const userId = 'user-1';
 
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-1' });
       mockPrismaService.document.create.mockResolvedValue(mockDocument);
 
       const result = await service.create(userId, createDto);
@@ -72,20 +71,6 @@ describe('DocumentsService', () => {
       expect(result).toBeDefined();
       expect(result.name).toBe(createDto.name);
       expect(mockPrismaService.document.create).toHaveBeenCalled();
-    });
-
-    it('should throw error when project not found', async () => {
-      const createDto = {
-        name: 'Test Document',
-        url: 'https://example.com/doc.pdf',
-        type: 'PDF',
-        size: 1024,
-        projectId: 'nonexistent-project',
-      };
-
-      mockPrismaService.project.findUnique.mockResolvedValue(null);
-
-      await expect(service.create('user-1', createDto)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -95,7 +80,7 @@ describe('DocumentsService', () => {
       mockPrismaService.document.findMany.mockResolvedValue(mockDocuments);
       mockPrismaService.document.count.mockResolvedValue(1);
 
-      const result = await service.findAll({ page: 1, limit: 10 });
+      const result = await service.findAll(1, 10);
 
       expect(result.data).toHaveLength(1);
       expect(result.meta.total).toBe(1);
@@ -105,7 +90,7 @@ describe('DocumentsService', () => {
       mockPrismaService.document.findMany.mockResolvedValue([mockDocument]);
       mockPrismaService.document.count.mockResolvedValue(1);
 
-      await service.findAll({ projectId: 'project-1' });
+      await service.findAll(1, 10, 'project-1');
 
       expect(mockPrismaService.document.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

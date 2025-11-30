@@ -56,22 +56,22 @@ const mockServices = [
 // Mock des services
 jest.mock('@/services/users.service', () => ({
   usersService: {
-    getAll: jest.fn().mockResolvedValue(mockUsers),
-    create: jest.fn().mockResolvedValue({ id: 'new-user' }),
-    update: jest.fn().mockResolvedValue({}),
-    remove: jest.fn().mockResolvedValue({}),
+    getAll: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
   },
 }));
 
 jest.mock('@/services/departments.service', () => ({
   departmentsService: {
-    getAll: jest.fn().mockResolvedValue(mockDepartments),
+    getAll: jest.fn(),
   },
 }));
 
 jest.mock('@/services/services.service', () => ({
   servicesService: {
-    getAll: jest.fn().mockResolvedValue(mockServices),
+    getAll: jest.fn(),
   },
 }));
 
@@ -93,11 +93,19 @@ jest.mock('@/components/MainLayout', () => ({
 
 import UsersPage from '../page';
 import { usersService } from '@/services/users.service';
+import { departmentsService } from '@/services/departments.service';
+import { servicesService } from '@/services/services.service';
 import toast from 'react-hot-toast';
 
 describe('UsersPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (usersService.getAll as jest.Mock).mockResolvedValue(mockUsers);
+    (usersService.create as jest.Mock).mockResolvedValue({ id: 'new-user' });
+    (usersService.update as jest.Mock).mockResolvedValue({});
+    (usersService.remove as jest.Mock).mockResolvedValue({});
+    (departmentsService.getAll as jest.Mock).mockResolvedValue(mockDepartments);
+    (servicesService.getAll as jest.Mock).mockResolvedValue(mockServices);
   });
 
   it('should render the page title', async () => {

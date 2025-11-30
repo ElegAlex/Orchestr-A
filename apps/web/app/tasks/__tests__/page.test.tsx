@@ -60,16 +60,16 @@ const mockProjects = [
 
 jest.mock('@/services/tasks.service', () => ({
   tasksService: {
-    getByAssignee: jest.fn().mockResolvedValue(mockTasks),
-    create: jest.fn().mockResolvedValue({ id: 'new-task' }),
-    update: jest.fn().mockResolvedValue({}),
+    getByAssignee: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
   },
 }));
 
 jest.mock('@/services/projects.service', () => ({
   projectsService: {
-    getAll: jest.fn().mockResolvedValue({ data: mockProjects }),
-    getByUser: jest.fn().mockResolvedValue(mockProjects),
+    getAll: jest.fn(),
+    getByUser: jest.fn(),
   },
 }));
 
@@ -91,11 +91,17 @@ jest.mock('@/components/MainLayout', () => ({
 
 import TasksPage from '../page';
 import { tasksService } from '@/services/tasks.service';
+import { projectsService } from '@/services/projects.service';
 import toast from 'react-hot-toast';
 
 describe('TasksPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (tasksService.getByAssignee as jest.Mock).mockResolvedValue(mockTasks);
+    (tasksService.create as jest.Mock).mockResolvedValue({ id: 'new-task' });
+    (tasksService.update as jest.Mock).mockResolvedValue({});
+    (projectsService.getAll as jest.Mock).mockResolvedValue({ data: mockProjects });
+    (projectsService.getByUser as jest.Mock).mockResolvedValue(mockProjects);
   });
 
   it('should render the page title', async () => {

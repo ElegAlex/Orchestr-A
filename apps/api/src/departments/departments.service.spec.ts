@@ -11,8 +11,10 @@ describe('DepartmentsService', () => {
       create: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+      count: vi.fn(),
     },
   };
 
@@ -48,6 +50,7 @@ describe('DepartmentsService', () => {
         updatedAt: new Date(),
       };
 
+      mockPrismaService.department.findFirst.mockResolvedValue(null);
       mockPrismaService.department.create.mockResolvedValue(mockDepartment);
 
       const result = await service.create(createDto);
@@ -65,10 +68,11 @@ describe('DepartmentsService', () => {
       ];
 
       mockPrismaService.department.findMany.mockResolvedValue(mockDepartments);
+      mockPrismaService.department.count.mockResolvedValue(2);
 
       const result = await service.findAll();
 
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
     });
   });
 
@@ -87,8 +91,8 @@ describe('DepartmentsService', () => {
 
   describe('update', () => {
     it('should update a department successfully', async () => {
-      const updateDto = { name: 'Updated IT' };
-      const existingDept = { id: '1', name: 'IT' };
+      const updateDto = { description: 'Updated description' };
+      const existingDept = { id: '1', name: 'IT', description: 'Old' };
       const updatedDept = { ...existingDept, ...updateDto };
 
       mockPrismaService.department.findUnique.mockResolvedValue(existingDept);
@@ -96,13 +100,17 @@ describe('DepartmentsService', () => {
 
       const result = await service.update('1', updateDto);
 
-      expect(result.name).toBe('Updated IT');
+      expect(result.description).toBe('Updated description');
     });
   });
 
   describe('remove', () => {
     it('should delete a department', async () => {
-      const mockDepartment = { id: '1', name: 'IT' };
+      const mockDepartment = {
+        id: '1',
+        name: 'IT',
+        _count: { users: 0, services: 0 },
+      };
 
       mockPrismaService.department.findUnique.mockResolvedValue(mockDepartment);
       mockPrismaService.department.delete.mockResolvedValue(mockDepartment);

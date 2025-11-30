@@ -13,6 +13,7 @@ describe('CommentsService', () => {
       findUnique: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+      count: vi.fn(),
     },
     task: {
       findUnique: vi.fn(),
@@ -78,23 +79,24 @@ describe('CommentsService', () => {
       ];
 
       mockPrismaService.comment.findMany.mockResolvedValue(mockComments);
+      mockPrismaService.comment.count.mockResolvedValue(2);
 
-      const result = await service.findAll({ taskId: 'task-1' });
+      const result = await service.findAll(1, 10, 'task-1');
 
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
     });
   });
 
   describe('update', () => {
     it('should update a comment successfully', async () => {
       const updateDto = { content: 'Updated comment' };
-      const existing = { id: '1', content: 'Old', userId: 'user-1' };
+      const existing = { id: '1', content: 'Old', authorId: 'user-1' };
       const updated = { ...existing, ...updateDto };
 
       mockPrismaService.comment.findUnique.mockResolvedValue(existing);
       mockPrismaService.comment.update.mockResolvedValue(updated);
 
-      const result = await service.update('1', updateDto);
+      const result = await service.update('1', 'user-1', updateDto);
 
       expect(result.content).toBe('Updated comment');
     });
