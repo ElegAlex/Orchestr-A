@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ImportUserDto, ImportUsersResultDto } from './dto/import-users.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from 'database';
 
@@ -513,5 +514,169 @@ export class UsersService {
         departmentId: true,
       },
     });
+  }
+
+  async importUsers(users: ImportUserDto[]): Promise<ImportUsersResultDto> {
+    const result: ImportUsersResultDto = {
+      created: 0,
+      skipped: 0,
+      errors: 0,
+      errorDetails: [],
+      createdUsers: [],
+    };
+
+    // Charger tous les départements et services pour la résolution des noms
+    const [departments, services] = await Promise.all([
+      this.prisma.department.findMany({
+        select: { id: true, name: true },
+      }),
+      this.prisma.service.findMany({
+        select: { id: true, name: true, departmentId: true },
+      }),
+    ]);
+
+    const departmentMap = new Map(
+      departments.map((d) => [d.name.toLowerCase().trim(), d.id]),
+    );
+    const serviceMap = new Map(
+      services.map((s) => [s.name.toLowerCase().trim(), s]),
+    );
+
+    for (let i = 0; i < users.length; i++) {
+      const userData = users[i];
+      const rowNum = i + 2; // +2 car ligne 1 = entêtes, et indexation 0
+
+      try {
+        // Vérifier si l'utilisateur existe déjà
+        const existingUser = await this.prisma.user.findFirst({
+          where: {
+            OR: [{ email: userData.email }, { login: userData.login }],
+          },
+        });
+
+        if (existingUser) {
+          result.skipped++;
+          result.errorDetails.push(
+            `Ligne ${rowNum}: Utilisateur ${userData.email} ou login ${userData.login} existe déjà`,
+          );
+          continue;
+        }
+
+        // Résoudre le département par nom si fourni
+        let departmentId: string | undefined;
+        if (userData.departmentName) {
+          departmentId = departmentMap.get(
+            userData.departmentName.toLowerCase().trim(),
+          );
+          if (!departmentId) {
+            result.errors++;
+            result.errorDetails.push(
+              `Ligne ${rowNum}: Département "${userData.departmentName}" introuvable`,
+            );
+            continue;
+          }
+        }
+
+        // Résoudre les services par noms si fournis
+        const serviceIds: string[] = [];
+        if (userData.serviceNames) {
+          const serviceNamesList = userData.serviceNames
+            .split(',')
+            .map((s) => s.trim().toLowerCase())
+            .filter((s) => s);
+
+          for (const serviceName of serviceNamesList) {
+            const service = serviceMap.get(serviceName);
+            if (!service) {
+              result.errors++;
+              result.errorDetails.push(
+                `Ligne ${rowNum}: Service "${serviceName}" introuvable`,
+              );
+              continue;
+            }
+            // Vérifier que le service appartient au département si département spécifié
+            if (departmentId && service.departmentId !== departmentId) {
+              result.errorDetails.push(
+                `Ligne ${rowNum}: Le service "${serviceName}" n'appartient pas au département spécifié (ignoré)`,
+              );
+              continue;
+            }
+            serviceIds.push(service.id);
+          }
+        }
+
+        // Hasher le mot de passe
+        const passwordHash = await bcrypt.hash(userData.password, 12);
+
+        // Créer l'utilisateur
+        const user = await this.prisma.user.create({
+          data: {
+            email: userData.email,
+            login: userData.login,
+            passwordHash,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            role: userData.role,
+            departmentId,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            email: true,
+            login: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            departmentId: true,
+          },
+        });
+
+        // Créer les associations de services
+        if (serviceIds.length > 0) {
+          await this.prisma.userService.createMany({
+            data: serviceIds.map((serviceId) => ({
+              userId: user.id,
+              serviceId,
+            })),
+          });
+        }
+
+        result.created++;
+        result.createdUsers.push(user);
+      } catch (error: any) {
+        result.errors++;
+        result.errorDetails.push(
+          `Ligne ${rowNum}: Erreur lors de la création - ${error.message}`,
+        );
+      }
+    }
+
+    return result;
+  }
+
+  async getImportTemplate(): Promise<string> {
+    // Générer un template CSV avec les en-têtes et des exemples
+    const headers = [
+      'email',
+      'login',
+      'password',
+      'firstName',
+      'lastName',
+      'role',
+      'departmentName',
+      'serviceNames',
+    ];
+    const exampleRow = [
+      'marie.martin@example.com',
+      'marie.martin',
+      'password123',
+      'Marie',
+      'Martin',
+      'CONTRIBUTEUR',
+      'Direction Générale',
+      'Service Comptabilité, Service RH',
+    ];
+
+    return [headers.join(';'), exampleRow.join(';')].join('\n');
   }
 }

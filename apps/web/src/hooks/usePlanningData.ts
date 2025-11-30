@@ -33,6 +33,7 @@ interface UsePlanningDataOptions {
   currentDate: Date;
   viewMode: 'week' | 'month';
   filterUserId?: string; // Filtrer pour un seul utilisateur
+  filterServiceIds?: string[]; // Filtrer pour un ou plusieurs services
   viewFilter?: ViewFilter; // Filtre d'affichage (default: 'all')
 }
 
@@ -55,6 +56,7 @@ export const usePlanningData = ({
   currentDate,
   viewMode,
   filterUserId,
+  filterServiceIds,
   viewFilter = 'all',
 }: UsePlanningDataOptions): UsePlanningDataReturn => {
   const [loading, setLoading] = useState(true);
@@ -214,17 +216,27 @@ export const usePlanningData = ({
     return groups;
   }, [users, services]);
 
-  // Filtrer les groupes selon filterUserId
+  // Filtrer les groupes selon filterUserId et/ou filterServiceIds
   const filteredGroups = useMemo(() => {
-    if (!filterUserId) return groupedUsers;
+    let result = groupedUsers;
 
-    return groupedUsers
-      .map((group) => ({
-        ...group,
-        users: group.users.filter((u) => u.id === filterUserId),
-      }))
-      .filter((group) => group.users.length > 0);
-  }, [groupedUsers, filterUserId]);
+    // Filtrer par services si spécifié (tableau de IDs)
+    if (filterServiceIds && filterServiceIds.length > 0) {
+      result = result.filter((group) => filterServiceIds.includes(group.id));
+    }
+
+    // Filtrer par utilisateur si spécifié
+    if (filterUserId) {
+      result = result
+        .map((group) => ({
+          ...group,
+          users: group.users.filter((u) => u.id === filterUserId),
+        }))
+        .filter((group) => group.users.length > 0);
+    }
+
+    return result;
+  }, [groupedUsers, filterUserId, filterServiceIds]);
 
   // Obtenir les données d'une cellule (avec filtrage selon viewFilter)
   const getDayCell = useCallback(

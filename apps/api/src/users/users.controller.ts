@@ -24,6 +24,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ImportUsersDto } from './dto/import-users.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -56,6 +57,27 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
+  @Post('import')
+  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @ApiOperation({
+    summary: 'Importer des utilisateurs depuis un CSV (Admin/Responsable)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Résultat de l\'import',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Accès interdit',
+  })
+  importUsers(@Body() importUsersDto: ImportUsersDto) {
+    return this.usersService.importUsers(importUsersDto.users);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Récupérer tous les utilisateurs (avec pagination)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
@@ -71,6 +93,19 @@ export class UsersController {
     @Query('role') role?: Role,
   ) {
     return this.usersService.findAll(page, limit, role);
+  }
+
+  @Get('import/template')
+  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @ApiOperation({
+    summary: 'Télécharger le template CSV pour l\'import (Admin/Responsable)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Template CSV',
+  })
+  getImportTemplate() {
+    return this.usersService.getImportTemplate();
   }
 
   @Get('department/:departmentId')
@@ -115,6 +150,24 @@ export class UsersController {
   })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.findOne(id);
+  }
+
+  @Patch('me/change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Changer son propre mot de passe' })
+  @ApiResponse({
+    status: 200,
+    description: 'Mot de passe modifié avec succès',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Mot de passe actuel incorrect',
+  })
+  changePassword(
+    @CurrentUser('id') userId: string,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    return this.usersService.changePassword(userId, changePasswordDto);
   }
 
   @Patch(':id')
@@ -175,24 +228,6 @@ export class UsersController {
   })
   hardDelete(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.hardDelete(id);
-  }
-
-  @Patch('me/change-password')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Changer son propre mot de passe' })
-  @ApiResponse({
-    status: 200,
-    description: 'Mot de passe modifié avec succès',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Mot de passe actuel incorrect',
-  })
-  changePassword(
-    @CurrentUser('id') userId: string,
-    @Body() changePasswordDto: ChangePasswordDto,
-  ) {
-    return this.usersService.changePassword(userId, changePasswordDto);
   }
 
   @Post(':id/reset-password')
