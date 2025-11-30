@@ -18,6 +18,7 @@ interface PlanningGridProps {
   currentDate: Date;
   viewMode: 'week' | 'month';
   filterUserId?: string; // Pour filtrer sur un utilisateur (dashboard)
+  filterServiceIds?: string[]; // Pour filtrer sur un ou plusieurs services
   viewFilter?: ViewFilter; // Filtre d'affichage (default: 'all')
   showGroupHeaders?: boolean; // Afficher les headers de groupes (default: true)
 }
@@ -26,6 +27,7 @@ export const PlanningGrid = ({
   currentDate,
   viewMode,
   filterUserId,
+  filterServiceIds,
   viewFilter = 'all',
   showGroupHeaders = true,
 }: PlanningGridProps) => {
@@ -40,6 +42,7 @@ export const PlanningGrid = ({
     currentDate,
     viewMode,
     filterUserId,
+    filterServiceIds,
     viewFilter,
   });
 

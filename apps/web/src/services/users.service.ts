@@ -71,4 +71,33 @@ export const usersService = {
   async resetPassword(id: string, newPassword: string): Promise<void> {
     await api.post(`/users/${id}/reset-password`, { newPassword });
   },
+
+  async getImportTemplate(): Promise<string> {
+    const response = await api.get<string>('/users/import/template');
+    return response.data;
+  },
+
+  async importUsers(users: ImportUserData[]): Promise<ImportUsersResult> {
+    const response = await api.post<ImportUsersResult>('/users/import', { users });
+    return response.data;
+  },
 };
+
+export interface ImportUserData {
+  email: string;
+  login: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  departmentName?: string;
+  serviceNames?: string;
+}
+
+export interface ImportUsersResult {
+  created: number;
+  skipped: number;
+  errors: number;
+  errorDetails: string[];
+  createdUsers: User[];
+}

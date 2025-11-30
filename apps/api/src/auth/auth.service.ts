@@ -49,6 +49,43 @@ export class AuthService {
       throw new UnauthorizedException('Login ou mot de passe incorrect');
     }
 
+    // Récupérer les informations complètes de l'utilisateur avec ses services
+    const fullUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        login: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        departmentId: true,
+        avatarUrl: true,
+        department: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        userServices: {
+          select: {
+            service: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        managedServices: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
     const payload = {
       sub: user.id,
       login: user.login,
@@ -57,15 +94,7 @@ export class AuthService {
 
     return {
       access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        email: user.email,
-        login: user.login,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        departmentId: user.departmentId,
-      },
+      user: fullUser,
     };
   }
 
