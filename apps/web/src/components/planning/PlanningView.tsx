@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { addWeeks, subWeeks, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { PlanningGrid } from './PlanningGrid';
 import { usePlanningData } from '@/hooks/usePlanningData';
+import { useAuthStore } from '@/stores/auth.store';
 
 type ViewFilter = 'all' | 'availability' | 'activity';
 
@@ -30,17 +31,90 @@ export const PlanningView = ({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'month'>(initialViewMode);
   const [selectedUser, setSelectedUser] = useState<string>('ALL');
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
+  const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+  const [hasInitializedServices, setHasInitializedServices] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const { user: currentUser } = useAuthStore();
 
   // Utiliser filterUserId si fourni, sinon utiliser le filtre de l'interface
   const effectiveFilterUserId = filterUserId || (selectedUser !== 'ALL' ? selectedUser : undefined);
+  // Si aucun service n'est sélectionné, ne pas filtrer (afficher tous)
+  const effectiveFilterServiceIds = selectedServices.length > 0 ? selectedServices : undefined;
 
-  const { displayDays, users } = usePlanningData({
+  const { displayDays, users, groupedUsers } = usePlanningData({
     currentDate,
     viewMode,
     filterUserId: effectiveFilterUserId,
+    filterServiceIds: effectiveFilterServiceIds,
     viewFilter,
   });
+
+  // Initialiser la sélection de services avec les services de l'utilisateur connecté par défaut
+  useEffect(() => {
+    if (groupedUsers.length > 0 && !hasInitializedServices) {
+      // Récupérer les IDs des services de l'utilisateur connecté
+      const userServiceIds = currentUser?.userServices?.map((us) => us.service.id) || [];
+
+      // Si l'utilisateur est manager, inclure aussi le groupe "management"
+      const isManager = currentUser?.role === 'MANAGER' || currentUser?.role === 'RESPONSABLE' ||
+        (currentUser?.managedServices && currentUser.managedServices.length > 0);
+
+      if (userServiceIds.length > 0 || isManager) {
+        // Filtrer pour ne garder que les services qui existent dans groupedUsers
+        const validServiceIds = userServiceIds.filter((id) =>
+          groupedUsers.some((g) => g.id === id)
+        );
+
+        // Ajouter "management" si l'utilisateur est manager
+        if (isManager && groupedUsers.some((g) => g.id === 'management')) {
+          validServiceIds.push('management');
+        }
+
+        // Si des services valides ont été trouvés, les utiliser
+        if (validServiceIds.length > 0) {
+          setSelectedServices(validServiceIds);
+        } else {
+          // Sinon, sélectionner tous les services
+          setSelectedServices(groupedUsers.map((g) => g.id));
+        }
+      } else {
+        // Utilisateur sans service assigné : afficher tous les services
+        setSelectedServices(groupedUsers.map((g) => g.id));
+      }
+
+      setHasInitializedServices(true);
+    }
+  }, [groupedUsers, currentUser, hasInitializedServices]);
+
+  // Fermer le dropdown quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowServiceDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleService = (serviceId: string) => {
+    setSelectedServices((prev) =>
+      prev.includes(serviceId) ? prev.filter((id) => id !== serviceId) : [...prev, serviceId]
+    );
+  };
+
+  const selectAllServices = () => {
+    setSelectedServices(groupedUsers.map((g) => g.id));
+  };
+
+  const deselectAllServices = () => {
+    setSelectedServices([]);
+  };
+
+  const allServicesSelected = groupedUsers.length > 0 && selectedServices.length === groupedUsers.length;
 
   return (
     <div className="space-y-6">
@@ -112,19 +186,82 @@ export const PlanningView = ({
       {showFilters && !filterUserId && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center space-x-4 flex-wrap gap-y-2">
-            <label className="text-sm font-medium text-gray-700">Ressource :</label>
-            <select
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="ALL">Toutes les ressources</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.firstName} {u.lastName}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center space-x-2 relative" ref={dropdownRef}>
+              <label className="text-sm font-medium text-gray-700">Services :</label>
+              <button
+                onClick={() => setShowServiceDropdown(!showServiceDropdown)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[200px] text-left flex items-center justify-between"
+              >
+                <span className="truncate">
+                  {selectedServices.length === 0
+                    ? 'Aucun service'
+                    : selectedServices.length === groupedUsers.length
+                    ? 'Tous les services'
+                    : `${selectedServices.length} service${selectedServices.length > 1 ? 's' : ''}`}
+                </span>
+                <span className="ml-2">{showServiceDropdown ? '\u25B2' : '\u25BC'}</span>
+              </button>
+              {showServiceDropdown && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[250px]">
+                  <div className="p-2 border-b border-gray-200 flex gap-2">
+                    <button
+                      onClick={selectAllServices}
+                      className={`px-3 py-1 text-xs rounded ${
+                        allServicesSelected
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Tout
+                    </button>
+                    <button
+                      onClick={deselectAllServices}
+                      className={`px-3 py-1 text-xs rounded ${
+                        selectedServices.length === 0
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Aucun
+                    </button>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {groupedUsers.map((group) => (
+                      <label
+                        key={group.id}
+                        className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedServices.includes(group.id)}
+                          onChange={() => toggleService(group.id)}
+                          className="mr-3 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="mr-2">{group.icon}</span>
+                        <span className="flex-1">{group.name}</span>
+                        <span className="text-gray-500 text-sm">({group.users.length})</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Ressource :</label>
+              <select
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="ALL">Toutes les ressources</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.firstName} {u.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="flex items-center space-x-2">
               <label className="text-sm font-medium text-gray-700">Affichage :</label>
@@ -161,6 +298,7 @@ export const PlanningView = ({
         currentDate={currentDate}
         viewMode={viewMode}
         filterUserId={effectiveFilterUserId}
+        filterServiceIds={effectiveFilterServiceIds}
         viewFilter={viewFilter}
         showGroupHeaders={showGroupHeaders}
       />
