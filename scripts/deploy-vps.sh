@@ -11,7 +11,7 @@ set -e
 
 # === CONFIGURATION PAR DEFAUT ===
 INSTALL_DIR="/opt/ORCHESTRA"
-REPO_URL="https://gitlab.ersm-idf.cnamts.fr/DRSM_IDF/ORCHESTRA.git"
+REPO_URL="https://github.com/ElegAlex/Orchestr-A.git"
 NODE_VERSION="22"
 API_PORT="4000"
 FRONTEND_PORT="3000"
@@ -94,7 +94,7 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --domain DOMAIN       Nom de domaine (ex: orchestr-a.example.com)"
-    echo "  --repo URL            URL du depot Git (defaut: GitLab CNAM)"
+    echo "  --repo URL            URL du depot Git (defaut: GitHub)"
     echo "  --db-password PWD     Mot de passe PostgreSQL (genere si absent)"
     echo "  --jwt-secret SECRET   Secret JWT (genere si absent)"
     echo "  --enable-ssl          Activer SSL avec Let's Encrypt"
