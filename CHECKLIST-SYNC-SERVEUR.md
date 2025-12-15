@@ -186,4 +186,4 @@ pnpm install
 
 En cas de probleme :
 - Documentation : `/opt/ORCHESTRA/OPERATIONS.md`
-- GitLab : https://gitlab.ersm-idf.cnamts.fr/DRSM_IDF/ORCHESTRA
+- GitHub : https://github.com/ElegAlex/Orchestr-A

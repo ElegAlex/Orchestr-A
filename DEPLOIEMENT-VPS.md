@@ -1,6 +1,6 @@
 # Guide de Deploiement VPS - ORCHESTR'A
 
-Ce guide detaille le deploiement d'ORCHESTR'A sur un VPS standard (OVH, Scaleway, DigitalOcean, etc.) pour valider la configuration avant deploiement sur l'infrastructure CNAM.
+Ce guide detaille le deploiement d'ORCHESTR'A sur un VPS standard (OVH, Scaleway, DigitalOcean, etc.).
 
 ## Pre-requis
 
@@ -30,7 +30,7 @@ Ce guide detaille le deploiement d'ORCHESTR'A sur un VPS standard (OVH, Scaleway
 ssh root@<IP_VPS>
 
 # Telecharger et executer le script
-curl -fsSL https://raw.githubusercontent.com/DRSM_IDF/ORCHESTRA/main/scripts/deploy-vps.sh -o deploy.sh
+curl -fsSL https://raw.githubusercontent.com/ElegAlex/Orchestr-A/master/scripts/deploy-vps.sh -o deploy.sh
 chmod +x deploy.sh
 
 # Deploiement simple (sans SSL)
@@ -105,7 +105,7 @@ systemctl enable nginx
 
 ```bash
 cd /opt
-git clone https://gitlab.ersm-idf.cnamts.fr/DRSM_IDF/ORCHESTRA.git
+git clone https://github.com/ElegAlex/Orchestr-A.git ORCHESTRA
 cd ORCHESTRA
 ```
 
@@ -437,7 +437,6 @@ Apres deploiement, verifier :
 | `scripts/deploy-vps.sh` | Script de deploiement automatique |
 | `scripts/configure-ssl.sh` | Configuration SSL separee |
 | `scripts/pre-deploy-check.sh` | Verification pre-deploiement |
-| `NOTE-HEBERGEMENT-CNAM.md` | Documentation CNAM specifique |
 | `CHECKLIST-SYNC-SERVEUR.md` | Checklist de synchronisation |
 
 ---
