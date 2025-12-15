@@ -1,0 +1,11 @@
+{
+  "name": "config",
+  "version": "2.0.0",
+  "description": "ORCHESTR'A V2 - config package",
+  "main": "index.ts",
+  "types": "index.ts",
+  "private": true,
+  "dependencies": {
+    "typescript": "^5.7.2"
+  }
+}

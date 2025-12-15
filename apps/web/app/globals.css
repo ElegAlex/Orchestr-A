@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --tw-prose-body: #374151;
+  --tw-prose-headings: #111827;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Amélioration du contraste des placeholders pour navigateurs anciens */
+::placeholder {
+  color: #6b7280;
+  opacity: 1;
+}
+
+::-webkit-input-placeholder {
+  color: #6b7280;
+  opacity: 1;
+}
+
+::-moz-placeholder {
+  color: #6b7280;
+  opacity: 1;
+}
+
+:-ms-input-placeholder {
+  color: #6b7280;
+}
+
+::-ms-input-placeholder {
+  color: #6b7280;
+}
+
+/* Couleur du texte des options de select pour navigateurs anciens */
+select,
+select option {
+  color: #374151;
+}
+
+select:invalid,
+select option[value=""] {
+  color: #6b7280;
+}
+
+input,
+textarea {
+  color: #374151;
+}

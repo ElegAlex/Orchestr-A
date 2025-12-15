@@ -1,0 +1,304 @@
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { startOfWeek, addDays, startOfDay, endOfDay, format, isSameDay, isWithinInterval, parseISO } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { tasksService } from '@/services/tasks.service';
+import { usersService } from '@/services/users.service';
+import { leavesService } from '@/services/leaves.service';
+import { teleworkService } from '@/services/telework.service';
+import { servicesService } from '@/services/services.service';
+import { Task, User, Leave, TeleworkSchedule, Service, Role } from '@/types';
+import { getServiceStyle } from '@/lib/planning-utils';
+import toast from 'react-hot-toast';
+
+export type ViewFilter = 'all' | 'availability' | 'activity';
+
+export interface DayCell {
+  date: Date;
+  tasks: Task[];
+  leaves: Leave[];
+  isTelework: boolean;
+  teleworkSchedule: TeleworkSchedule | null;
+}
+
+export interface ServiceGroup {
+  id: string;
+  name: string;
+  icon: string;
+  isManagement: boolean;
+  users: User[];
+  color: string;
+}
+
+interface UsePlanningDataOptions {
+  currentDate: Date;
+  viewMode: 'week' | 'month';
+  filterUserId?: string; // Filtrer pour un seul utilisateur
+  filterServiceIds?: string[]; // Filtrer pour un ou plusieurs services
+  viewFilter?: ViewFilter; // Filtre d'affichage (default: 'all')
+}
+
+interface UsePlanningDataReturn {
+  loading: boolean;
+  displayDays: Date[];
+  users: User[];
+  services: Service[];
+  tasks: Task[];
+  leaves: Leave[];
+  teleworkSchedules: TeleworkSchedule[];
+  groupedUsers: ServiceGroup[];
+  filteredGroups: ServiceGroup[];
+  getDayCell: (userId: string, date: Date) => DayCell;
+  refetch: () => Promise<void>;
+  getGroupTaskCount: (groupUsers: User[]) => number;
+}
+
+export const usePlanningData = ({
+  currentDate,
+  viewMode,
+  filterUserId,
+  filterServiceIds,
+  viewFilter = 'all',
+}: UsePlanningDataOptions): UsePlanningDataReturn => {
+  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<User[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [leaves, setLeaves] = useState<Leave[]>([]);
+  const [teleworkSchedules, setTeleworkSchedules] = useState<TeleworkSchedule[]>([]);
+
+  // Calculer les jours à afficher
+  const displayDays = useMemo(() => {
+    if (viewMode === 'week') {
+      const start = startOfWeek(currentDate, { locale: fr, weekStartsOn: 1 });
+      return Array.from({ length: 5 }, (_, i) => addDays(start, i));
+    } else {
+      const start = startOfWeek(
+        new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
+        { locale: fr, weekStartsOn: 1 }
+      );
+      const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+      const totalDays = Math.ceil((daysInMonth + start.getDay()) / 7) * 7;
+      return Array.from({ length: totalDays }, (_, i) => addDays(start, i))
+        .filter((d) => d.getMonth() === currentDate.getMonth() && d.getDay() !== 0 && d.getDay() !== 6);
+    }
+  }, [currentDate, viewMode]);
+
+  // Fetch data
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const startDate = startOfDay(displayDays[0]);
+      const endDate = endOfDay(displayDays[displayDays.length - 1]);
+
+      // Format YYYY-MM-DD pour telework (évite les problèmes de timezone)
+      const teleworkStartDate = format(startDate, 'yyyy-MM-dd');
+      const teleworkEndDate = format(endDate, 'yyyy-MM-dd');
+
+      const [usersData, tasksData, leavesData, teleworkData, servicesData] = await Promise.all([
+        usersService.getAll(),
+        tasksService.getByDateRange(startDate.toISOString(), endDate.toISOString()),
+        leavesService.getByDateRange(startDate.toISOString(), endDate.toISOString()),
+        teleworkService.getByDateRange(teleworkStartDate, teleworkEndDate),
+        servicesService.getAll(),
+      ]);
+
+      const usersList = Array.isArray(usersData)
+        ? usersData
+        : Array.isArray(usersData?.data)
+        ? usersData.data
+        : [];
+
+      setUsers(Array.isArray(usersList) ? usersList.filter((u) => u.isActive) : []);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+      setLeaves(Array.isArray(leavesData) ? leavesData : []);
+      setTeleworkSchedules(Array.isArray(teleworkData) ? teleworkData : []);
+      setServices(Array.isArray(servicesData) ? servicesData : []);
+    } catch (error: any) {
+      setUsers([]);
+      setTasks([]);
+      setLeaves([]);
+      setTeleworkSchedules([]);
+      setServices([]);
+      toast.error('Erreur lors du chargement des données');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (displayDays.length > 0) {
+      fetchData();
+    }
+  }, [currentDate, viewMode]);
+
+  // Identifier les managers (encadrement)
+  const isManager = (u: User): boolean => {
+    // Par rôle
+    if (u.role === Role.MANAGER || u.role === Role.RESPONSABLE) return true;
+    // Est manager d'au moins un service
+    if (u.managedServices && u.managedServices.length > 0) return true;
+    // Est manager du département
+    if (u.department?.managerId === u.id) return true;
+    return false;
+  };
+
+  // Regrouper les utilisateurs par service avec section Encadrement
+  const groupedUsers = useMemo((): ServiceGroup[] => {
+    if (users.length === 0) return [];
+
+    const managementUsers = users.filter(isManager);
+    const nonManagers = users.filter((u) => !isManager(u));
+
+    const groups: ServiceGroup[] = [];
+
+    // 1. Section Encadrement en premier (si des managers existent)
+    if (managementUsers.length > 0) {
+      groups.push({
+        id: 'management',
+        name: 'Encadrement',
+        icon: '',
+        isManagement: true,
+        users: managementUsers.sort((a, b) => a.lastName.localeCompare(b.lastName)),
+        color: 'amber',
+      });
+    }
+
+    // 2. Regrouper les non-managers par service
+    const serviceMap = new Map<string, User[]>();
+    const usersWithoutService: User[] = [];
+
+    for (const u of nonManagers) {
+      if (u.userServices && u.userServices.length > 0) {
+        // Prendre le premier service de l'utilisateur
+        const firstService = u.userServices[0].service;
+        if (!serviceMap.has(firstService.id)) {
+          serviceMap.set(firstService.id, []);
+        }
+        serviceMap.get(firstService.id)!.push(u);
+      } else {
+        usersWithoutService.push(u);
+      }
+    }
+
+    // Trier les services par nom et créer les groupes
+    const sortedServices = services
+      .filter((s) => serviceMap.has(s.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    for (const service of sortedServices) {
+      const serviceUsers = serviceMap.get(service.id) || [];
+      if (serviceUsers.length > 0) {
+        const style = getServiceStyle(service.name);
+        groups.push({
+          id: service.id,
+          name: service.name,
+          icon: style.icon,
+          isManagement: false,
+          users: serviceUsers.sort((a, b) => a.lastName.localeCompare(b.lastName)),
+          color: style.color,
+        });
+      }
+    }
+
+    // 3. Section "Sans service" pour les orphelins
+    if (usersWithoutService.length > 0) {
+      groups.push({
+        id: 'unassigned',
+        name: 'Sans service',
+        icon: '',
+        isManagement: false,
+        users: usersWithoutService.sort((a, b) => a.lastName.localeCompare(b.lastName)),
+        color: 'gray',
+      });
+    }
+
+    return groups;
+  }, [users, services]);
+
+  // Filtrer les groupes selon filterUserId et/ou filterServiceIds
+  const filteredGroups = useMemo(() => {
+    let result = groupedUsers;
+
+    // Filtrer par services si spécifié (tableau de IDs)
+    if (filterServiceIds && filterServiceIds.length > 0) {
+      result = result.filter((group) => filterServiceIds.includes(group.id));
+    }
+
+    // Filtrer par utilisateur si spécifié
+    if (filterUserId) {
+      result = result
+        .map((group) => ({
+          ...group,
+          users: group.users.filter((u) => u.id === filterUserId),
+        }))
+        .filter((group) => group.users.length > 0);
+    }
+
+    return result;
+  }, [groupedUsers, filterUserId, filterServiceIds]);
+
+  // Obtenir les données d'une cellule (avec filtrage selon viewFilter)
+  const getDayCell = useCallback(
+    (userId: string, date: Date): DayCell => {
+      const dayTasks = tasks.filter(
+        (t) => t.assigneeId === userId && t.endDate && isSameDay(new Date(t.endDate), date)
+      );
+      // Vérifier si la date est dans la plage du congé (startDate <= date <= endDate)
+      // Inclure tous les congés sauf les rejetés (PENDING et APPROVED)
+      const dayLeaves = leaves.filter((l) => {
+        if (l.userId !== userId || l.status === 'REJECTED') return false;
+        const leaveStart = startOfDay(parseISO(l.startDate));
+        const leaveEnd = startOfDay(parseISO(l.endDate));
+        const checkDate = startOfDay(date);
+        return isWithinInterval(checkDate, { start: leaveStart, end: leaveEnd });
+      });
+      const teleworkSchedule = teleworkSchedules.find(
+        (ts) => ts.userId === userId && isSameDay(new Date(ts.date), date)
+      );
+
+      // Appliquer le filtre d'affichage
+      let filteredTasks = dayTasks;
+      let filteredLeaves = dayLeaves;
+      let filteredIsTelework = teleworkSchedule?.isTelework || false;
+
+      if (viewFilter === 'availability') {
+        // Mode "Disponibilités" : afficher uniquement les congés et télétravail
+        filteredTasks = []; // Masquer toutes les tâches
+      } else if (viewFilter === 'activity') {
+        // Mode "Activités" : afficher uniquement les tâches
+        filteredLeaves = []; // Masquer les congés
+        filteredIsTelework = false; // Masquer le télétravail
+      }
+
+      return {
+        date,
+        tasks: filteredTasks,
+        leaves: filteredLeaves,
+        isTelework: filteredIsTelework,
+        teleworkSchedule: teleworkSchedule || null,
+      };
+    },
+    [tasks, leaves, teleworkSchedules, viewFilter]
+  );
+
+  // Compter les tâches par groupe
+  const getGroupTaskCount = (groupUsers: User[]): number => {
+    return tasks.filter((t) => groupUsers.some((u) => u.id === t.assigneeId)).length;
+  };
+
+  return {
+    loading,
+    displayDays,
+    users,
+    services,
+    tasks,
+    leaves,
+    teleworkSchedules,
+    groupedUsers,
+    filteredGroups,
+    getDayCell,
+    refetch: fetchData,
+    getGroupTaskCount,
+  };
+};

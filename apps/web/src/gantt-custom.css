@@ -1,0 +1,22 @@
+/* Force dark text in Gantt chart */
+.gantt-chart * {
+  color: #111827 !important;
+}
+
+.gantt-chart .gantt_task_list_item,
+.gantt-chart .gantt_task_content,
+.gantt-chart .gantt_task_line,
+.gantt-chart .gantt_task_link,
+.gantt-chart .gantt_grid_scale,
+.gantt-chart .gantt_grid_data,
+.gantt-chart .gantt_task_row,
+.gantt-chart text,
+.gantt-chart span,
+.gantt-chart div {
+  color: #111827 !important;
+}
+
+/* Target all possible text elements */
+.gantt-chart svg text {
+  fill: #111827 !important;
+}
