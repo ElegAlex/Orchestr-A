@@ -1,0 +1,564 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================
+// USERS & AUTHENTICATION
+// ===========================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  login         String    @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  role          Role      @default(CONTRIBUTEUR)
+  departmentId  String?
+  isActive      Boolean   @default(true)
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  department        Department?       @relation("DepartmentUsers", fields: [departmentId], references: [id], onDelete: SetNull)
+  userServices      UserService[]
+  managedDepartments Department[]     @relation("DepartmentManager")
+  managedServices   Service[]         @relation("ServiceManager")
+  projectMembers    ProjectMember[]
+  tasks             Task[]
+  leaves            Leave[]           @relation("UserLeaves")
+  leavesToValidate  Leave[]           @relation("LeaveValidator")
+  leavesValidated   Leave[]           @relation("LeaveValidatedBy")
+  delegationsGiven  LeaveValidationDelegate[] @relation("DelegatorUser")
+  delegationsReceived LeaveValidationDelegate[] @relation("DelegateUser")
+  telework          TeleworkSchedule[]
+  skills            UserSkill[]
+  timeEntries       TimeEntry[]
+  comments          Comment[]
+  personalTodos     PersonalTodo[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  RESPONSABLE
+  MANAGER
+  REFERENT_TECHNIQUE
+  CONTRIBUTEUR
+  OBSERVATEUR
+}
+
+// ===========================
+// ORGANIZATION
+// ===========================
+
+model Department {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  managerId   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  manager     User?     @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
+  users       User[]    @relation("DepartmentUsers")
+  services    Service[]
+
+  @@map("departments")
+}
+
+model Service {
+  id            String     @id @default(uuid())
+  name          String
+  description   String?
+  departmentId  String
+  managerId     String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  manager       User?      @relation("ServiceManager", fields: [managerId], references: [id], onDelete: SetNull)
+  userServices  UserService[]
+
+  @@map("services")
+}
+
+model UserService {
+  id        String   @id @default(uuid())
+  userId    String
+  serviceId String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serviceId])
+  @@map("user_services")
+}
+
+// ===========================
+// PROJECTS
+// ===========================
+
+model Project {
+  id            String        @id @default(uuid())
+  name          String
+  description   String?
+  status        ProjectStatus @default(DRAFT)
+  priority      Priority      @default(NORMAL)
+  startDate     DateTime?
+  endDate       DateTime?
+  budgetHours   Int?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  members       ProjectMember[]
+  epics         Epic[]
+  milestones    Milestone[]
+  tasks         Task[]
+  documents     Document[]
+  timeEntries   TimeEntry[]
+
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  COMPLETED
+  CANCELLED
+}
+
+model ProjectMember {
+  id            String   @id @default(uuid())
+  projectId     String
+  userId        String
+  role          String   // Chef de projet, Membre, Observateur...
+  allocation    Int?     // Pourcentage d'allocation (0-100)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+// ===========================
+// EPICS & MILESTONES
+// ===========================
+
+model Epic {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  projectId     String
+  progress      Int      @default(0) // 0-100%
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks         Task[]
+
+  @@map("epics")
+}
+
+model Milestone {
+  id            String          @id @default(uuid())
+  name          String
+  description   String?
+  projectId     String
+  dueDate       DateTime
+  status        MilestoneStatus @default(PENDING)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks         Task[]
+
+  @@map("milestones")
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+}
+
+// ===========================
+// TASKS
+// ===========================
+
+model Task {
+  id              String     @id @default(uuid())
+  title           String
+  description     String?
+  status          TaskStatus @default(TODO)
+  priority        Priority   @default(NORMAL)
+  projectId       String
+  epicId          String?
+  milestoneId     String?
+  assigneeId      String?
+  estimatedHours  Float?
+  progress        Int        @default(0) // 0-100%
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // Relations
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  epic            Epic?            @relation(fields: [epicId], references: [id], onDelete: SetNull)
+  milestone       Milestone?       @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  assignee        User?            @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  dependencies    TaskDependency[] @relation("TaskDependencies")
+  dependents      TaskDependency[] @relation("DependentTasks")
+  timeEntries     TimeEntry[]
+  comments        Comment[]
+  raci            TaskRACI[]
+
+  @@map("tasks")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  BLOCKED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+model TaskDependency {
+  id              String   @id @default(uuid())
+  taskId          String
+  dependsOnTaskId String
+  createdAt       DateTime @default(now())
+
+  // Relations
+  task            Task     @relation("TaskDependencies", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTask   Task     @relation("DependentTasks", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnTaskId])
+  @@map("task_dependencies")
+}
+
+model TaskRACI {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  role      RACIRole
+  createdAt DateTime @default(now())
+
+  // Relations
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId, role])
+  @@map("task_raci")
+}
+
+enum RACIRole {
+  RESPONSIBLE  // Réalisateur
+  ACCOUNTABLE  // Approbateur
+  CONSULTED    // Consulté
+  INFORMED     // Informé
+}
+
+// ===========================
+// TIME TRACKING
+// ===========================
+
+model TimeEntry {
+  id            String       @id @default(uuid())
+  userId        String
+  projectId     String?
+  taskId        String?
+  date          DateTime     @db.Date
+  hours         Float
+  description   String?
+  activityType  ActivityType
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project       Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  task          Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@map("time_entries")
+}
+
+enum ActivityType {
+  DEVELOPMENT
+  MEETING
+  SUPPORT
+  TRAINING
+  OTHER
+}
+
+// ===========================
+// HR - LEAVES
+// ===========================
+
+// Configuration des types de congés (modifiable par admin/responsable)
+model LeaveTypeConfig {
+  id              String    @id @default(uuid())
+  code            String    @unique  // Code technique (ex: CP, RTT, SICK_LEAVE)
+  name            String              // Nom affiché (ex: "Congés payés")
+  description     String?             // Description optionnelle
+  color           String    @default("#10B981")  // Couleur pour l'affichage
+  icon            String    @default("🌴")       // Emoji/icône
+  isPaid          Boolean   @default(true)       // Congé rémunéré ou non
+  requiresApproval Boolean  @default(true)       // Nécessite validation
+  maxDaysPerYear  Int?                           // Limite annuelle (null = illimité)
+  isActive        Boolean   @default(true)       // Type actif ou archivé
+  isSystem        Boolean   @default(false)      // Type système (non supprimable)
+  sortOrder       Int       @default(0)          // Ordre d'affichage
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  leaves          Leave[]
+
+  @@map("leave_type_configs")
+}
+
+model Leave {
+  id              String      @id @default(uuid())
+  userId          String
+  leaveTypeId     String      @map("leave_type_id")  // Référence au type de congé
+  type            LeaveType?  // Gardé pour rétrocompatibilité (sera supprimé plus tard)
+  startDate       DateTime    @db.Date
+  endDate         DateTime    @db.Date
+  halfDay         HalfDay?
+  days            Float       // Jours ouvrés calculés
+  status          LeaveStatus @default(PENDING)
+  comment         String?
+
+  // Champs de validation
+  validatorId       String?     @map("validator_id")    // Qui doit valider (manager, responsable ou délégué)
+  validatedById     String?     @map("validated_by_id") // Qui a effectivement validé/rejeté
+  validatedAt       DateTime?   @map("validated_at")    // Date de validation/rejet
+  validationComment String?     @map("validation_comment") // Commentaire du validateur (motif de refus, etc.)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  user            User        @relation("UserLeaves", fields: [userId], references: [id], onDelete: Cascade)
+  leaveType       LeaveTypeConfig @relation(fields: [leaveTypeId], references: [id])
+  validator       User?       @relation("LeaveValidator", fields: [validatorId], references: [id], onDelete: SetNull)
+  validatedBy     User?       @relation("LeaveValidatedBy", fields: [validatedById], references: [id], onDelete: SetNull)
+
+  @@map("leaves")
+}
+
+// Table de délégation de validation des congés
+model LeaveValidationDelegate {
+  id              String    @id @default(uuid())
+  delegatorId     String    @map("delegator_id")  // Qui délègue (manager/responsable)
+  delegateId      String    @map("delegate_id")   // À qui on délègue
+  startDate       DateTime  @db.Date @map("start_date")
+  endDate         DateTime  @db.Date @map("end_date")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  delegator       User      @relation("DelegatorUser", fields: [delegatorId], references: [id], onDelete: Cascade)
+  delegate        User      @relation("DelegateUser", fields: [delegateId], references: [id], onDelete: Cascade)
+
+  @@map("leave_validation_delegates")
+}
+
+// Enum gardé pour rétrocompatibilité (sera supprimé après migration complète)
+enum LeaveType {
+  CP          // Congés payés
+  RTT
+  SICK_LEAVE  // Maladie
+  UNPAID      // Sans solde
+  OTHER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum HalfDay {
+  MORNING
+  AFTERNOON
+}
+
+// ===========================
+// HR - TELEWORK
+// ===========================
+
+model TeleworkSchedule {
+  id          String   @id @default(uuid())
+  userId      String
+  date        DateTime @db.Date
+  isTelework  Boolean
+  isException Boolean  @default(false) // Exception au planning récurrent
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("telework_schedules")
+}
+
+// ===========================
+// HR - SKILLS
+// ===========================
+
+model Skill {
+  id          String        @id @default(uuid())
+  name        String        @unique
+  category    SkillCategory
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  users       UserSkill[]
+
+  @@map("skills")
+}
+
+enum SkillCategory {
+  TECHNICAL
+  METHODOLOGY
+  SOFT_SKILL
+  BUSINESS
+}
+
+model UserSkill {
+  userId      String
+  skillId     String
+  level       SkillLevel
+  validatedBy String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill       Skill      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([userId, skillId])
+  @@map("user_skills")
+}
+
+enum SkillLevel {
+  BEGINNER      // Débutant
+  INTERMEDIATE  // Intermédiaire
+  EXPERT        // Expert
+  MASTER        // Maître
+}
+
+// ===========================
+// DOCUMENTS
+// ===========================
+
+model Document {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  url         String
+  mimeType    String
+  size        Int      // Size in bytes
+  projectId   String
+  uploadedBy  String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+// ===========================
+// COMMENTS
+// ===========================
+
+model Comment {
+  id          String   @id @default(uuid())
+  content     String
+  taskId      String
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+// ===========================
+// PERSONAL TODO LIST
+// ===========================
+
+model PersonalTodo {
+  id          String    @id @default(uuid())
+  userId      String
+  text        String
+  completed   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, completed, createdAt])
+  @@map("personal_todos")
+}
+
+// ===========================
+// APPLICATION SETTINGS
+// ===========================
+
+model AppSettings {
+  id            String    @id @default(uuid())
+  key           String    @unique
+  value         String    // JSON stringified value
+  category      String    @default("general") // general, display, notifications, etc.
+  description   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("app_settings")
+}

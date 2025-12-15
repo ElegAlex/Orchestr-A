@@ -1,0 +1,124 @@
+name: Deploy to Production
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types:
+      - completed
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  NODE_VERSION: '22.x'
+  PNPM_VERSION: '9.15.9'
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry (if using one)
+        # Décommentez et configurez si vous utilisez Docker Hub, GitHub Container Registry, etc.
+        # uses: docker/login-action@v3
+        # with:
+        #   registry: ghcr.io
+        #   username: ${{ github.actor }}
+        #   password: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "Skipping registry login - using local deployment"
+
+      - name: Build and Tag Docker Images
+        run: |
+          # Build API image
+          docker build -f apps/api/Dockerfile -t orchestr-a-api:${{ github.sha }} -t orchestr-a-api:latest .
+
+          # Build Web image
+          docker build -f apps/web/Dockerfile -t orchestr-a-web:${{ github.sha }} -t orchestr-a-web:latest .
+
+          echo "✅ Docker images built successfully"
+
+      - name: Save Docker Images as Artifacts
+        run: |
+          docker save orchestr-a-api:latest | gzip > api-image.tar.gz
+          docker save orchestr-a-web:latest | gzip > web-image.tar.gz
+
+      - name: Upload Docker Images
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images
+          path: |
+            api-image.tar.gz
+            web-image.tar.gz
+          retention-days: 7
+
+      - name: Deploy to Server (SSH)
+        # Cette étape nécessite la configuration de secrets GitHub :
+        # - DEPLOY_HOST: IP ou hostname du serveur
+        # - DEPLOY_USER: Utilisateur SSH
+        # - DEPLOY_KEY: Clé privée SSH
+        #
+        # Décommentez et configurez selon votre infrastructure
+        run: |
+          echo "🚀 Deployment process"
+          echo "For production deployment, configure the following:"
+          echo "1. Set up GitHub Secrets (DEPLOY_HOST, DEPLOY_USER, DEPLOY_KEY)"
+          echo "2. Ensure Docker and Docker Compose are installed on target server"
+          echo "3. Configure environment variables on target server"
+          echo ""
+          echo "Manual deployment steps:"
+          echo "1. SSH to your server"
+          echo "2. Pull latest code: git pull origin master"
+          echo "3. Build images: docker-compose -f docker-compose.prod.yml build"
+          echo "4. Deploy: docker-compose -f docker-compose.prod.yml up -d"
+
+      - name: Health Check
+        run: |
+          echo "⏳ Waiting for services to be healthy..."
+          echo "After deployment, verify:"
+          echo "  - API Health: curl http://your-domain:3001/health"
+          echo "  - Web Health: curl http://your-domain:3000"
+          echo "  - Check logs: docker-compose -f docker-compose.prod.yml logs"
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** \`${{ github.event.inputs.environment || 'production' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Status" >> $GITHUB_STEP_SUMMARY
+          echo "Docker images built successfully and ready for deployment." >> $GITHUB_STEP_SUMMARY
+
+  notify:
+    name: Send Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always()
+
+    steps:
+      - name: Deployment Status
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "✅ Deployment completed successfully!"
+          else
+            echo "❌ Deployment failed. Check logs for details."
+            exit 1
+          fi

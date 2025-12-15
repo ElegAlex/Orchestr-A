@@ -1,0 +1,607 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { MainLayout } from '@/components/MainLayout';
+import { useAuthStore } from '@/stores/auth.store';
+import { tasksService } from '@/services/tasks.service';
+import { leavesService } from '@/services/leaves.service';
+import { Task, Leave, TaskStatus, LeaveStatus, Priority, Role } from '@/types';
+import toast from 'react-hot-toast';
+
+type ViewMode = 'month' | 'week';
+
+interface CalendarEvent {
+  id: string;
+  type: 'task' | 'leave' | 'telework';
+  title: string;
+  date: Date;
+  endDate?: Date;
+  color: string;
+  priority?: Priority;
+  status?: TaskStatus | LeaveStatus;
+  data: Task | Leave | any;
+}
+
+export default function PlanningPage() {
+  const user = useAuthStore((state) => state.user);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [leaves, setLeaves] = useState<Leave[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | 'task' | 'leave' | 'telework'>('all');
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch tasks
+      if (user?.id) {
+        try {
+          let tasksData: Task[] = [];
+          if (user.role === Role.ADMIN || user.role === Role.RESPONSABLE) {
+            const response = await tasksService.getAll();
+            tasksData = response.data;
+          } else {
+            tasksData = await tasksService.getByAssignee(user.id);
+          }
+          setTasks(tasksData);
+        } catch (error: any) {
+          if (error.response?.status !== 404) throw error;
+        }
+      }
+
+      // Fetch leaves
+      try {
+        const leavesData = await leavesService.getMyLeaves();
+        setLeaves(leavesData);
+      } catch (error: any) {
+        if (error.response?.status !== 404) throw error;
+      }
+    } catch (error: any) {
+      if (error.response?.status !== 404) {
+        toast.error('Erreur lors du chargement des données');
+        console.error(error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
+
+  useEffect(() => {
+    // Convert data to calendar events
+    const calendarEvents: CalendarEvent[] = [];
+
+    // Add tasks with due dates
+    tasks
+      .filter((task) => task.endDate && task.status !== TaskStatus.DONE)
+      .forEach((task) => {
+        calendarEvents.push({
+          id: task.id,
+          type: 'task',
+          title: task.title,
+          date: new Date(task.endDate!),
+          color: getPriorityColor(task.priority),
+          priority: task.priority,
+          status: task.status,
+          data: task,
+        });
+      });
+
+    // Add leaves
+    leaves.forEach((leave) => {
+      calendarEvents.push({
+        id: leave.id,
+        type: 'leave',
+        title: `${getLeaveTypeLabel(leave.type)}`,
+        date: new Date(leave.startDate),
+        endDate: new Date(leave.endDate),
+        color: 'bg-orange-500',
+        status: leave.status,
+        data: leave,
+      });
+    });
+
+    setEvents(calendarEvents);
+  }, [tasks, leaves]);
+
+  const getPriorityColor = (priority: Priority) => {
+    switch (priority) {
+      case Priority.CRITICAL:
+        return 'bg-red-600';
+      case Priority.HIGH:
+        return 'bg-orange-500';
+      case Priority.NORMAL:
+        return 'bg-yellow-500';
+      case Priority.LOW:
+        return 'bg-green-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  const getLeaveTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      CP: 'Congés Payés',
+      RTT: 'RTT',
+      SICK_LEAVE: 'Maladie',
+      UNPAID: 'Sans solde',
+      OTHER: 'Autre',
+    };
+    return labels[type] || type;
+  };
+
+  const getMonthName = (date: Date) => {
+    return date.toLocaleDateString('fr-FR', {
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  const getWeekNumber = (date: Date) => {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  };
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const days = [];
+
+    // Add empty cells for alignment
+    const startPadding = (firstDay.getDay() + 6) % 7; // Monday = 0
+    for (let i = 0; i < startPadding; i++) {
+      days.push(null);
+    }
+
+    // Add all days of the month
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      days.push(new Date(year, month, day));
+    }
+
+    return days;
+  };
+
+  const getWeekDays = () => {
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - ((currentDate.getDay() + 6) % 7));
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      days.push(day);
+    }
+    return days;
+  };
+
+  const getEventsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return events.filter((event) => {
+      const eventDateStr = event.date.toISOString().split('T')[0];
+
+      // For leaves with duration
+      if (event.endDate) {
+        const endDateStr = event.endDate.toISOString().split('T')[0];
+        return dateStr >= eventDateStr && dateStr <= endDateStr;
+      }
+
+      return eventDateStr === dateStr;
+    }).filter((event) => {
+      if (filterType === 'all') return true;
+      return event.type === filterType;
+    });
+  };
+
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setShowEventModal(true);
+  };
+
+  const handlePreviousPeriod = () => {
+    if (viewMode === 'month') {
+      setCurrentDate(
+        new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
+      );
+    } else {
+      const newDate = new Date(currentDate);
+      newDate.setDate(currentDate.getDate() - 7);
+      setCurrentDate(newDate);
+    }
+  };
+
+  const handleNextPeriod = () => {
+    if (viewMode === 'month') {
+      setCurrentDate(
+        new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
+      );
+    } else {
+      const newDate = new Date(currentDate);
+      newDate.setDate(currentDate.getDate() + 7);
+      setCurrentDate(newDate);
+    }
+  };
+
+  const handleToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+  const getFilteredEventsCount = () => {
+    if (filterType === 'all') return events.length;
+    return events.filter((e) => e.type === filterType).length;
+  };
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-gray-600">Chargement...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Planning {viewMode === 'month' ? 'mensuel' : 'hebdomadaire'}
+            </h1>
+            <p className="text-gray-600 mt-1">
+              {getFilteredEventsCount()} événement(s) affiché(s)
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            {/* View mode toggle */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-4 py-2 rounded-md transition ${
+                  viewMode === 'month'
+                    ? 'bg-white text-blue-600 shadow'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Mois
+              </button>
+              <button
+                onClick={() => setViewMode('week')}
+                className={`px-4 py-2 rounded-md transition ${
+                  viewMode === 'week'
+                    ? 'bg-white text-blue-600 shadow'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Semaine
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <label className="text-sm font-medium text-gray-700">
+                Afficher :
+              </label>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as any)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">Tous les événements</option>
+                <option value="task">Tâches uniquement</option>
+                <option value="leave">Congés uniquement</option>
+                <option value="telework">Télétravail uniquement</option>
+              </select>
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-red-600 rounded"></div>
+                <span className="text-sm text-gray-600">Critique</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-orange-500 rounded"></div>
+                <span className="text-sm text-gray-600">Haute/Congés</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                <span className="text-sm text-gray-600">Normale</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-green-500 rounded"></div>
+                <span className="text-sm text-gray-600">Basse</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={handlePreviousPeriod}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+          >
+            ← {viewMode === 'month' ? 'Mois' : 'Semaine'} précédent(e)
+          </button>
+
+          <div className="flex items-center space-x-3">
+            <h2 className="text-xl font-semibold text-gray-900 capitalize">
+              {viewMode === 'month'
+                ? getMonthName(currentDate)
+                : `Semaine ${getWeekNumber(currentDate)} - ${currentDate.getFullYear()}`}
+            </h2>
+            <button
+              onClick={handleToday}
+              className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              Aujourd'hui
+            </button>
+          </div>
+
+          <button
+            onClick={handleNextPeriod}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+          >
+            {viewMode === 'month' ? 'Mois' : 'Semaine'} suivant(e) →
+          </button>
+        </div>
+
+        {/* Calendar */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {/* Week days header */}
+          <div className="grid grid-cols-7 gap-px bg-gray-200 border-b border-gray-200">
+            {weekDays.map((day) => (
+              <div
+                key={day}
+                className="bg-gray-50 text-center py-3 text-sm font-semibold text-gray-700"
+              >
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar grid */}
+          {viewMode === 'month' ? (
+            <div className="grid grid-cols-7 gap-px bg-gray-200">
+              {getDaysInMonth(currentDate).map((day, index) => (
+                <div
+                  key={index}
+                  className={`min-h-32 bg-white p-2 ${
+                    day && isToday(day)
+                      ? 'bg-blue-50 ring-2 ring-blue-500 ring-inset'
+                      : ''
+                  }`}
+                >
+                  {day && (
+                    <>
+                      <div
+                        className={`text-sm font-semibold mb-2 ${
+                          isToday(day) ? 'text-blue-600' : 'text-gray-900'
+                        }`}
+                      >
+                        {day.getDate()}
+                      </div>
+                      <div className="space-y-1">
+                        {getEventsForDate(day).slice(0, 3).map((event) => (
+                          <button
+                            key={event.id}
+                            onClick={() => handleEventClick(event)}
+                            className={`w-full text-left px-2 py-1 rounded text-xs font-medium text-white truncate hover:opacity-80 transition ${event.color}`}
+                          >
+                            {event.type === 'task' ? '✓' : event.type === 'leave' ? '🏖️' : '🏠'}{' '}
+                            {event.title}
+                          </button>
+                        ))}
+                        {getEventsForDate(day).length > 3 && (
+                          <div className="text-xs text-gray-500 px-2">
+                            +{getEventsForDate(day).length - 3} autre(s)
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-7 gap-px bg-gray-200">
+              {getWeekDays().map((day, index) => (
+                <div
+                  key={index}
+                  className={`min-h-96 bg-white p-3 ${
+                    isToday(day)
+                      ? 'bg-blue-50 ring-2 ring-blue-500 ring-inset'
+                      : ''
+                  }`}
+                >
+                  <div
+                    className={`text-center mb-3 ${
+                      isToday(day) ? 'text-blue-600' : 'text-gray-900'
+                    }`}
+                  >
+                    <div className="text-lg font-bold">{day.getDate()}</div>
+                    <div className="text-xs text-gray-500">
+                      {day.toLocaleDateString('fr-FR', { month: 'short' })}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {getEventsForDate(day).map((event) => (
+                      <button
+                        key={event.id}
+                        onClick={() => handleEventClick(event)}
+                        className={`w-full text-left px-3 py-2 rounded text-xs font-medium text-white hover:opacity-80 transition ${event.color}`}
+                      >
+                        <div className="font-semibold mb-1">
+                          {event.type === 'task' ? '✓' : event.type === 'leave' ? '🏖️' : '🏠'}
+                        </div>
+                        <div className="truncate">{event.title}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Empty state */}
+        {events.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📅</div>
+            <p className="text-gray-500">Aucun événement à afficher</p>
+            <p className="text-sm text-gray-400 mt-2">
+              Les tâches avec échéances et vos congés apparaîtront ici
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Event Detail Modal */}
+      {showEventModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <div className="flex items-center space-x-2 mb-2">
+                  <span className="text-2xl">
+                    {selectedEvent.type === 'task' ? '✓' : selectedEvent.type === 'leave' ? '🏖️' : '🏠'}
+                  </span>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    {selectedEvent.title}
+                  </h2>
+                </div>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-medium text-white ${selectedEvent.color}`}
+                >
+                  {selectedEvent.type === 'task'
+                    ? 'Tâche'
+                    : selectedEvent.type === 'leave'
+                    ? 'Congé'
+                    : 'Télétravail'}
+                </span>
+              </div>
+            </div>
+
+            {selectedEvent.type === 'task' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date d'échéance
+                  </label>
+                  <p className="text-gray-900">
+                    {selectedEvent.date.toLocaleDateString('fr-FR', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </p>
+                </div>
+
+                {(selectedEvent.data as Task).description && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <p className="text-gray-900">
+                      {(selectedEvent.data as Task).description}
+                    </p>
+                  </div>
+                )}
+
+                {(selectedEvent.data as Task).project && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Projet
+                    </label>
+                    <p className="text-gray-900">
+                      {(selectedEvent.data as Task).project?.name}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedEvent.type === 'leave' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Période
+                  </label>
+                  <p className="text-gray-900">
+                    Du {selectedEvent.date.toLocaleDateString('fr-FR')} au{' '}
+                    {selectedEvent.endDate?.toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Durée
+                  </label>
+                  <p className="text-gray-900">
+                    {(selectedEvent.data as Leave).days} jour(s)
+                  </p>
+                </div>
+
+                {(selectedEvent.data as Leave).comment && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Commentaire
+                    </label>
+                    <p className="text-gray-900">
+                      {(selectedEvent.data as Leave).comment}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowEventModal(false);
+                  setSelectedEvent(null);
+                }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </MainLayout>
+  );
+}

@@ -1,0 +1,52 @@
+{
+  "name": "orchestr-a-v2",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Application de gestion de projets et RH pour collectivités territoriales",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "test": "turbo run test",
+    "test:cov": "turbo run test:cov",
+    "test:e2e": "turbo run test:e2e",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "docker:dev": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:clean": "docker-compose down -v",
+    "db:migrate": "pnpm --filter database run db:migrate",
+    "db:migrate:deploy": "pnpm --filter database run db:migrate:deploy",
+    "db:studio": "pnpm --filter database run db:studio",
+    "db:seed": "pnpm --filter database run db:seed",
+    "db:reset": "pnpm --filter database run db:reset",
+    "pre-deploy": "bash scripts/pre-deploy-check.sh",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "eslint": "^9.17.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "keywords": [
+    "project-management",
+    "hr-management",
+    "collectivite",
+    "monorepo",
+    "turborepo"
+  ],
+  "author": "ORCHESTR'A Team",
+  "license": "UNLICENSED"
+}
