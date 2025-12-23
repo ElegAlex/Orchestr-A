@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { addWeeks, subWeeks, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { PlanningGrid } from './PlanningGrid';
 import { usePlanningData } from '@/hooks/usePlanningData';
 import { useAuthStore } from '@/stores/auth.store';
+import { usePlanningViewStore } from '@/stores/planningView.store';
 
 type ViewFilter = 'all' | 'availability' | 'activity';
 
@@ -51,6 +52,28 @@ export const PlanningView = ({
     filterServiceIds: effectiveFilterServiceIds,
     viewFilter,
   });
+
+  // Store pour les services collapsibles
+  const { collapsedServices, collapseAll, expandAll } = usePlanningViewStore();
+
+  // Calculer les IDs des services visibles
+  const serviceIds = useMemo(
+    () => groupedUsers.map((g) => g.id),
+    [groupedUsers]
+  );
+
+  // Vérifier si tous les services sont repliés ou dépliés
+  const allCollapsed = useMemo(
+    () => serviceIds.length > 0 && serviceIds.every((id) => collapsedServices[id]),
+    [serviceIds, collapsedServices]
+  );
+  const allExpanded = useMemo(
+    () => serviceIds.every((id) => !collapsedServices[id]),
+    [serviceIds, collapsedServices]
+  );
+
+  const handleCollapseAll = () => collapseAll(serviceIds);
+  const handleExpandAll = () => expandAll();
 
   // Initialiser la sélection de services avec les services de l'utilisateur connecté par défaut
   useEffect(() => {
@@ -277,6 +300,32 @@ export const PlanningView = ({
             </div>
 
             <div className="flex items-center space-x-3 ml-auto">
+              {/* Boutons Replier/Déplier tous les services */}
+              <div className="flex items-center space-x-2 border-r border-gray-300 pr-3">
+                <button
+                  onClick={handleCollapseAll}
+                  disabled={allCollapsed}
+                  className="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1"
+                  title="Replier tous les services"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+                  Replier
+                </button>
+                <button
+                  onClick={handleExpandAll}
+                  disabled={allExpanded}
+                  className="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1"
+                  title="Déplier tous les services"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+                  Déplier
+                </button>
+              </div>
+
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <span className="flex items-center">
                   <span className="w-3 h-3 bg-blue-500 rounded mr-1"></span>Tâche
