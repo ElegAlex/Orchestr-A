@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { useAuthStore } from '@/stores/auth.store';
-import { usersService, ImportUserData, ImportUsersResult, UsersValidationPreview, UserPreviewItem } from '@/services/users.service';
+import { usersService, ImportUserData, ImportUsersResult, UsersValidationPreview, UserPreviewItem, UserDependenciesResponse } from '@/services/users.service';
 import { ImportPreviewModal } from '@/components/ImportPreviewModal';
 import { departmentsService } from '@/services/departments.service';
 import { servicesService } from '@/services/services.service';
@@ -27,6 +27,13 @@ export default function UsersPage() {
   const [usersPreview, setUsersPreview] = useState<UsersValidationPreview | null>(null);
   const [showUsersPreview, setShowUsersPreview] = useState(false);
   const [pendingUsersImport, setPendingUsersImport] = useState<ImportUserData[]>([]);
+
+  // Delete user states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [checkingDependencies, setCheckingDependencies] = useState(false);
+  const [userDependencies, setUserDependencies] = useState<UserDependenciesResponse | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     login: '',
@@ -180,6 +187,51 @@ export default function UsersPage() {
         error.response?.data?.message || 'Erreur lors de la suppression'
       );
     }
+  };
+
+  // Ouvrir la modal de suppression définitive
+  const openDeleteModal = async (user: User) => {
+    setUserToDelete(user);
+    setUserDependencies(null);
+    setShowDeleteModal(true);
+    setCheckingDependencies(true);
+
+    try {
+      const dependencies = await usersService.checkDependencies(user.id);
+      setUserDependencies(dependencies);
+    } catch (error: any) {
+      toast.error('Erreur lors de la vérification des dépendances');
+      setShowDeleteModal(false);
+    } finally {
+      setCheckingDependencies(false);
+    }
+  };
+
+  // Confirmer la suppression définitive
+  const handleHardDelete = async () => {
+    if (!userToDelete) return;
+
+    setDeleting(true);
+    try {
+      await usersService.hardDelete(userToDelete.id);
+      toast.success('Utilisateur supprimé définitivement');
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+      setUserDependencies(null);
+      fetchUsers();
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Erreur lors de la suppression';
+      toast.error(message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Fermer la modal de suppression
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
+    setUserDependencies(null);
   };
 
   const toggleService = (serviceId: string) => {
@@ -473,11 +525,21 @@ export default function UsersPage() {
                       {canManageUsers && (
                         <button
                           onClick={() => handleDelete(user.id)}
-                          className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="text-orange-600 hover:text-orange-900 disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={user.id === currentUser?.id}
-                          title={user.id === currentUser?.id ? 'Vous ne pouvez pas vous désactiver vous-même' : ''}
+                          title={user.id === currentUser?.id ? 'Vous ne pouvez pas vous désactiver vous-même' : 'Désactiver (soft delete)'}
                         >
                           Désactiver
+                        </button>
+                      )}
+                      {currentUser?.role === Role.ADMIN && (
+                        <button
+                          onClick={() => openDeleteModal(user)}
+                          className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={user.id === currentUser?.id}
+                          title={user.id === currentUser?.id ? 'Vous ne pouvez pas vous supprimer vous-même' : 'Supprimer définitivement'}
+                        >
+                          Supprimer
                         </button>
                       )}
                     </div>
@@ -1036,6 +1098,96 @@ export default function UsersPage() {
           ]}
           isImporting={importing}
         />
+      )}
+
+      {/* Modal de suppression définitive */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Supprimer définitivement
+              </h2>
+            </div>
+
+            {userToDelete && (
+              <p className="text-gray-600 mb-4">
+                Êtes-vous sûr de vouloir supprimer définitivement l'utilisateur{' '}
+                <strong>{userToDelete.firstName} {userToDelete.lastName}</strong> ({userToDelete.email}) ?
+              </p>
+            )}
+
+            {/* Chargement des dépendances */}
+            {checkingDependencies && (
+              <div className="flex items-center justify-center py-4">
+                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-gray-600">Vérification des dépendances...</span>
+              </div>
+            )}
+
+            {/* Affichage des dépendances */}
+            {!checkingDependencies && userDependencies && !userDependencies.canDelete && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <h3 className="font-semibold text-red-800 mb-2">
+                  Impossible de supprimer cet utilisateur
+                </h3>
+                <p className="text-sm text-red-700 mb-2">
+                  Des dépendances actives empêchent la suppression :
+                </p>
+                <ul className="text-sm text-red-700 list-disc list-inside space-y-1">
+                  {userDependencies.dependencies.map((dep, index) => (
+                    <li key={index}>{dep.description}</li>
+                  ))}
+                </ul>
+                <p className="text-sm text-red-600 mt-3">
+                  Veuillez d'abord réassigner ou terminer ces éléments.
+                </p>
+              </div>
+            )}
+
+            {/* Message de confirmation si suppression possible */}
+            {!checkingDependencies && userDependencies?.canDelete && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Attention :</strong> Cette action est <strong>irréversible</strong>.
+                  Toutes les données associées à cet utilisateur (historique, commentaires, entrées de temps, etc.)
+                  seront définitivement supprimées.
+                </p>
+              </div>
+            )}
+
+            {/* Boutons */}
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deleting}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleHardDelete}
+                disabled={!userDependencies?.canDelete || deleting || checkingDependencies}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                {deleting ? (
+                  <>
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Suppression...
+                  </>
+                ) : (
+                  'Supprimer définitivement'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </MainLayout>
   );

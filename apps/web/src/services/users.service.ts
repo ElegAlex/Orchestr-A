@@ -61,6 +61,22 @@ export const usersService = {
     await api.delete(`/users/${id}`);
   },
 
+  /**
+   * Vérifier les dépendances d'un utilisateur avant suppression définitive
+   */
+  async checkDependencies(id: string): Promise<UserDependenciesResponse> {
+    const response = await api.get<UserDependenciesResponse>(`/users/${id}/dependencies`);
+    return response.data;
+  },
+
+  /**
+   * Supprimer définitivement un utilisateur (Admin uniquement)
+   */
+  async hardDelete(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.delete<{ success: boolean; message: string }>(`/users/${id}/hard`);
+    return response.data;
+  },
+
   async changePassword(data: {
     currentPassword: string;
     newPassword: string;
@@ -129,4 +145,17 @@ export interface UsersValidationPreview {
     errors: number;
     warnings: number;
   };
+}
+
+// Types pour la vérification des dépendances avant suppression
+export interface UserDependency {
+  type: string;
+  count: number;
+  description: string;
+}
+
+export interface UserDependenciesResponse {
+  userId: string;
+  canDelete: boolean;
+  dependencies: UserDependency[];
 }

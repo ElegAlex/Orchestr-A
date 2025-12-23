@@ -2,17 +2,80 @@
 
 import React, { useState } from 'react';
 import { Task } from '@/types';
-import { usePlanningData } from '@/hooks/usePlanningData';
+import { usePlanningData, ServiceGroup, DayCell } from '@/hooks/usePlanningData';
 import { GroupHeader } from './GroupHeader';
 import { UserRow } from './UserRow';
 import { TaskModal } from './TaskModal';
 import { teleworkService } from '@/services/telework.service';
 import { tasksService } from '@/services/tasks.service';
+import { usePlanningViewStore } from '@/stores/planningView.store';
 import { format, isToday, getDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
 type ViewFilter = 'all' | 'availability' | 'activity';
+
+/** Composant interne pour gérer les sections collapsibles */
+interface CollapsibleServiceSectionProps {
+  group: ServiceGroup;
+  taskCount: number;
+  displayDays: Date[];
+  viewMode: 'week' | 'month';
+  showGroupHeaders: boolean;
+  getDayCell: (userId: string, date: Date) => DayCell;
+  onTeleworkToggle: (userId: string, date: Date) => void;
+  onDragStart: (task: Task) => void;
+  onDragEnd: () => void;
+  onDrop: (userId: string, date: Date) => void;
+  onTaskClick: (task: Task) => void;
+}
+
+const CollapsibleServiceSection = ({
+  group,
+  taskCount,
+  displayDays,
+  viewMode,
+  showGroupHeaders,
+  getDayCell,
+  onTeleworkToggle,
+  onDragStart,
+  onDragEnd,
+  onDrop,
+  onTaskClick,
+}: CollapsibleServiceSectionProps) => {
+  const { collapsedServices } = usePlanningViewStore();
+  const isCollapsed = collapsedServices[group.id] ?? false;
+
+  return (
+    <React.Fragment>
+      {/* Group Header */}
+      {showGroupHeaders && (
+        <GroupHeader
+          group={group}
+          taskCount={taskCount}
+          colSpan={displayDays.length + 1}
+        />
+      )}
+      {/* User Rows - masquées si le groupe est replié */}
+      {!isCollapsed &&
+        group.users.map((user) => (
+          <UserRow
+            key={user.id}
+            user={user}
+            group={group}
+            displayDays={displayDays}
+            viewMode={viewMode}
+            getDayCell={getDayCell}
+            onTeleworkToggle={onTeleworkToggle}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onDrop={onDrop}
+            onTaskClick={onTaskClick}
+          />
+        ))}
+    </React.Fragment>
+  );
+};
 
 interface PlanningGridProps {
   currentDate: Date;
@@ -155,32 +218,20 @@ export const PlanningGrid = ({
                     const taskCount = getGroupTaskCount(group.users);
 
                     return (
-                      <React.Fragment key={group.id}>
-                        {/* Group Header */}
-                        {showGroupHeaders && (
-                          <GroupHeader
-                            group={group}
-                            taskCount={taskCount}
-                            colSpan={displayDays.length + 1}
-                          />
-                        )}
-                        {/* User Rows */}
-                        {group.users.map((user) => (
-                          <UserRow
-                            key={user.id}
-                            user={user}
-                            group={group}
-                            displayDays={displayDays}
-                            viewMode={viewMode}
-                            getDayCell={getDayCell}
-                            onTeleworkToggle={handleTeleworkToggle}
-                            onDragStart={handleDragStart}
-                            onDragEnd={handleDragEnd}
-                            onDrop={handleDrop}
-                            onTaskClick={handleTaskClick}
-                          />
-                        ))}
-                      </React.Fragment>
+                      <CollapsibleServiceSection
+                        key={group.id}
+                        group={group}
+                        taskCount={taskCount}
+                        displayDays={displayDays}
+                        viewMode={viewMode}
+                        showGroupHeaders={showGroupHeaders}
+                        getDayCell={getDayCell}
+                        onTeleworkToggle={handleTeleworkToggle}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        onDrop={handleDrop}
+                        onTaskClick={handleTaskClick}
+                      />
                     );
                   })}
                 </>

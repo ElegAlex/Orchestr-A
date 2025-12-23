@@ -2,15 +2,25 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111827; /* Renforcé de #171717 à #111827 pour meilleur contraste */
   --tw-prose-body: #374151;
   --tw-prose-headings: #111827;
+
+  /* Variables de contraste pour inputs - WCAG AA compliant */
+  --input-text: #111827; /* Texte saisi - contraste 15.3:1 sur blanc */
+  --input-placeholder: #6b7280; /* Placeholder - contraste 5.0:1 sur blanc (WCAG AA) */
+  --input-border: #d1d5db;
+  --input-disabled: #9ca3af;
+  --muted-foreground: #4b5563; /* Renforcé de #6b7280 à #4b5563 - contraste 7.0:1 */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground: #f3f4f6; /* Renforcé pour dark mode */
+    --input-text: #f3f4f6;
+    --input-placeholder: #9ca3af;
+    --muted-foreground: #d1d5db;
   }
 }
 
@@ -20,42 +30,92 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Amélioration du contraste des placeholders pour navigateurs anciens */
+/* ============================================
+   AMÉLIORATION DU CONTRASTE - WCAG AA COMPLIANT
+   Ratio minimum: 4.5:1 pour texte normal, 3:1 pour placeholder
+   ============================================ */
+
+/* Styles globaux pour inputs - compatibilité navigateurs */
+input,
+textarea {
+  color: var(--input-text);
+  background-color: var(--background);
+  -webkit-text-fill-color: var(--input-text); /* Safari/iOS fix */
+}
+
+/* Placeholders avec contraste suffisant */
 ::placeholder {
-  color: #6b7280;
-  opacity: 1;
+  color: var(--input-placeholder);
+  opacity: 1; /* Firefox fix - Firefox réduit l'opacité par défaut */
+  -webkit-text-fill-color: var(--input-placeholder);
 }
 
 ::-webkit-input-placeholder {
-  color: #6b7280;
+  color: var(--input-placeholder);
   opacity: 1;
+  -webkit-text-fill-color: var(--input-placeholder);
 }
 
 ::-moz-placeholder {
-  color: #6b7280;
+  color: var(--input-placeholder);
   opacity: 1;
 }
 
 :-ms-input-placeholder {
-  color: #6b7280;
+  color: var(--input-placeholder);
 }
 
 ::-ms-input-placeholder {
-  color: #6b7280;
+  color: var(--input-placeholder);
 }
 
-/* Couleur du texte des options de select pour navigateurs anciens */
-select,
+/* Selects avec contraste suffisant */
+select {
+  color: var(--input-text);
+  background-color: var(--background);
+}
+
 select option {
-  color: #374151;
+  color: var(--input-text);
+  background-color: var(--background);
 }
 
 select:invalid,
 select option[value=""] {
-  color: #6b7280;
+  color: var(--input-placeholder);
 }
 
-input,
-textarea {
-  color: #374151;
+/* États désactivés avec contraste suffisant */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  color: var(--input-disabled);
+  opacity: 1;
+  -webkit-text-fill-color: var(--input-disabled);
+  cursor: not-allowed;
+}
+
+/* Autofill fix pour Chrome/Edge - préserver le contraste */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--input-text) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--background) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Fix pour Firefox ESR - forcer la couleur du texte */
+@-moz-document url-prefix() {
+  input,
+  textarea,
+  select {
+    color: var(--input-text) !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--input-placeholder) !important;
+    opacity: 1 !important;
+  }
 }

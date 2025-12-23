@@ -234,6 +234,23 @@ export class UsersController {
     return this.usersService.remove(id);
   }
 
+  @Get(':id/dependencies')
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Vérifier les dépendances d\'un utilisateur avant suppression (Admin uniquement)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des dépendances de l\'utilisateur',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Utilisateur introuvable',
+  })
+  checkDependencies(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.checkDependencies(id);
+  }
+
   @Delete(':id/hard')
   @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.OK)
@@ -248,8 +265,15 @@ export class UsersController {
     status: 404,
     description: 'Utilisateur introuvable',
   })
-  hardDelete(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.hardDelete(id);
+  @ApiResponse({
+    status: 409,
+    description: 'Impossible de supprimer - dépendances actives',
+  })
+  hardDelete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') requestingUserId: string,
+  ) {
+    return this.usersService.hardDelete(id, requestingUserId);
   }
 
   @Post(':id/reset-password')

@@ -13,6 +13,20 @@ import { ImportUserDto, ImportUsersResultDto, UsersValidationPreviewDto, UserPre
 import * as bcrypt from 'bcrypt';
 import { Role } from 'database';
 
+/** Type de dépendance utilisateur */
+export interface UserDependency {
+  type: string;
+  count: number;
+  description: string;
+}
+
+/** Réponse de la vérification des dépendances */
+export interface UserDependenciesResponse {
+  userId: string;
+  canDelete: boolean;
+  dependencies: UserDependency[];
+}
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -386,7 +400,114 @@ export class UsersService {
     return { message: 'Utilisateur désactivé avec succès' };
   }
 
-  async hardDelete(id: string) {
+  /**
+   * Vérifie les dépendances d'un utilisateur avant suppression définitive
+   */
+  async checkDependencies(userId: string): Promise<UserDependenciesResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Utilisateur ${userId} non trouvé`);
+    }
+
+    const dependencies: UserDependency[] = [];
+
+    // Vérifier les tâches assignées non terminées (DONE est le seul statut "terminé")
+    const assignedTasks = await this.prisma.task.count({
+      where: {
+        assigneeId: userId,
+        status: { not: 'DONE' },
+      },
+    });
+    if (assignedTasks > 0) {
+      dependencies.push({
+        type: 'TASKS',
+        count: assignedTasks,
+        description: `${assignedTasks} tâche(s) assignée(s) en cours`,
+      });
+    }
+
+    // Vérifier les projets où l'utilisateur est membre actif
+    const projectMemberships = await this.prisma.projectMember.count({
+      where: {
+        userId,
+        project: {
+          status: { notIn: ['COMPLETED', 'CANCELLED'] },
+        },
+      },
+    });
+    if (projectMemberships > 0) {
+      dependencies.push({
+        type: 'PROJECTS',
+        count: projectMemberships,
+        description: `Membre de ${projectMemberships} projet(s) actif(s)`,
+      });
+    }
+
+    // Vérifier les demandes de congés en attente (PENDING uniquement)
+    const pendingLeaves = await this.prisma.leave.count({
+      where: {
+        userId,
+        status: 'PENDING',
+      },
+    });
+    if (pendingLeaves > 0) {
+      dependencies.push({
+        type: 'LEAVES',
+        count: pendingLeaves,
+        description: `${pendingLeaves} demande(s) de congé en attente`,
+      });
+    }
+
+    // Vérifier les congés en attente de validation par cet utilisateur
+    const leavesToValidate = await this.prisma.leave.count({
+      where: {
+        validatorId: userId,
+        status: 'PENDING',
+      },
+    });
+    if (leavesToValidate > 0) {
+      dependencies.push({
+        type: 'LEAVES_VALIDATION',
+        count: leavesToValidate,
+        description: `${leavesToValidate} congé(s) en attente de validation`,
+      });
+    }
+
+    // Vérifier si manager de département
+    const managedDepartments = await this.prisma.department.count({
+      where: { managerId: userId },
+    });
+    if (managedDepartments > 0) {
+      dependencies.push({
+        type: 'DEPARTMENTS',
+        count: managedDepartments,
+        description: `Manager de ${managedDepartments} département(s)`,
+      });
+    }
+
+    // Vérifier si manager de service
+    const managedServices = await this.prisma.service.count({
+      where: { managerId: userId },
+    });
+    if (managedServices > 0) {
+      dependencies.push({
+        type: 'SERVICES',
+        count: managedServices,
+        description: `Manager de ${managedServices} service(s)`,
+      });
+    }
+
+    return {
+      userId,
+      canDelete: dependencies.length === 0,
+      dependencies,
+    };
+  }
+
+  async hardDelete(id: string, requestingUserId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
     });
@@ -395,11 +516,90 @@ export class UsersService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    await this.prisma.user.delete({
-      where: { id },
+    // Empêcher l'auto-suppression si requestingUserId est fourni
+    if (requestingUserId && id === requestingUserId) {
+      throw new BadRequestException('Vous ne pouvez pas supprimer votre propre compte');
+    }
+
+    // Vérifier les dépendances
+    const { canDelete, dependencies } = await this.checkDependencies(id);
+
+    if (!canDelete) {
+      throw new ConflictException({
+        message: 'Impossible de supprimer cet utilisateur en raison de dépendances actives',
+        dependencies,
+      });
+    }
+
+    // Supprimer dans une transaction
+    await this.prisma.$transaction(async (tx) => {
+      // Supprimer les données liées qui peuvent l'être
+
+      // Supprimer les todos personnels
+      await tx.personalTodo.deleteMany({
+        where: { userId: id },
+      });
+
+      // Supprimer les entrées de temps (historique)
+      await tx.timeEntry.deleteMany({
+        where: { userId: id },
+      });
+
+      // Supprimer les commentaires
+      await tx.comment.deleteMany({
+        where: { authorId: id },
+      });
+
+      // Supprimer les compétences utilisateur
+      await tx.userSkill.deleteMany({
+        where: { userId: id },
+      });
+
+      // Supprimer les télétravails
+      await tx.teleworkSchedule.deleteMany({
+        where: { userId: id },
+      });
+
+      // Supprimer les délégations de validation
+      await tx.leaveValidationDelegate.deleteMany({
+        where: {
+          OR: [{ delegatorId: id }, { delegateId: id }],
+        },
+      });
+
+      // Supprimer les associations projet
+      await tx.projectMember.deleteMany({
+        where: { userId: id },
+      });
+
+      // Supprimer les associations service
+      await tx.userService.deleteMany({
+        where: { userId: id },
+      });
+
+      // Supprimer les congés terminés
+      await tx.leave.deleteMany({
+        where: {
+          userId: id,
+          status: { in: ['APPROVED', 'REJECTED'] },
+        },
+      });
+
+      // Supprimer les tâches terminées uniquement
+      await tx.task.deleteMany({
+        where: {
+          assigneeId: id,
+          status: 'DONE',
+        },
+      });
+
+      // Finalement, supprimer l'utilisateur
+      await tx.user.delete({
+        where: { id },
+      });
     });
 
-    return { message: 'Utilisateur supprimé définitivement' };
+    return { success: true, message: 'Utilisateur supprimé définitivement' };
   }
 
   async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
