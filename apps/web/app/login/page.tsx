@@ -106,13 +106,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="mt-8 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-          <p className="text-xs font-semibold text-yellow-900 mb-1">
-            Compte de test
-          </p>
-          <p className="text-xs text-gray-600">Login: admin</p>
-          <p className="text-xs text-gray-600">Password: Admin123!</p>
-        </div>
       </div>
     </div>
   );
