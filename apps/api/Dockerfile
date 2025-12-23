@@ -55,7 +55,7 @@ COPY --chown=nestjs:nodejs packages/database/tsconfig.json ./packages/database/
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Installation de prisma CLI globalement pour la génération du client
-RUN npm install -g prisma@6.16.0
+RUN npm install -g prisma@6.19.1
 
 # Génération du client Prisma en production
 RUN cd packages/database && prisma generate

@@ -15,12 +15,15 @@ import { APP_GUARD } from '@nestjs/core';
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '8h',
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const expiresIn = configService.get<string>('JWT_EXPIRES_IN') || '8h';
+        return {
+          secret: configService.get<string>('JWT_SECRET'),
+          signOptions: {
+            expiresIn: expiresIn as `${number}${'s' | 'm' | 'h' | 'd'}`,
+          },
+        };
+      },
     }),
   ],
   controllers: [AuthController],
