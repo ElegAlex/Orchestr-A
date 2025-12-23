@@ -1,8 +1,8 @@
 # 🚀 STACK TECHNIQUE - ORCHESTR'A V2
 
 > **Architecture technique et choix technologiques**
-> Version 2.0 - From Scratch
-> Date : 05 novembre 2025
+> Version 2.1 - Mise à jour versions réelles
+> Date : 23 décembre 2025
 > Statut : **Validé**
 
 ---
@@ -42,9 +42,9 @@ Refonte complète (**from scratch**) de l'application ORCHESTR'A pour les collec
 
 ```
 ┌─────────────────────────────────────────────┐
-│         FRONTEND (Next.js 15.5)             │
-│  • React 19.1 + TypeScript 5.7              │
-│  • TanStack Query 5 + Zustand 5             │
+│         FRONTEND (Next.js 16.1)             │
+│  • React 19.2 + TypeScript 5.7              │
+│  • TanStack Query 5.90 + Zustand 5.0        │
 │  • Tailwind CSS 4 + shadcn/ui               │
 │  • Gantt: @rsagiev/gantt-task-react-19     │
 │  • Charts: Recharts 3                       │
@@ -54,9 +54,9 @@ Refonte complète (**from scratch**) de l'application ORCHESTR'A pour les collec
                    │ REST API (JWT)
 ┌──────────────────┴──────────────────────────┐
 │         BACKEND (NestJS 11.1)               │
-│  • Node.js 22.20.0 LTS + TypeScript 5.7     │
+│  • Node.js 22 LTS + TypeScript 5.7          │
 │  • Fastify 5 (performance)                  │
-│  • Prisma 6.16 (Rust-free)                  │
+│  • Prisma 6.19 (Rust-free)                  │
 │  • Passport.js + bcrypt + Helmet            │
 │  • class-validator + rate-limiter           │
 └──────────────────┬──────────────────────────┘
@@ -99,16 +99,16 @@ Refonte complète (**from scratch**) de l'application ORCHESTR'A pour les collec
 
 | Composant | Version | Justification |
 |-----------|---------|---------------|
-| **Node.js** | **22.20.0 LTS** | Support LTS jusqu'en 2027, support natif TypeScript, performances optimisées |
-| **TypeScript** | **5.7+** | Isolated Declarations (parallélisation builds), type-safety complète |
-| **NestJS** | **11.1.x** | Architecture modulaire, DI native, perfect pour projets enterprise |
+| **Node.js** | **≥22.0.0** | Support LTS jusqu'en 2027, support natif TypeScript, performances optimisées |
+| **TypeScript** | **5.7** | Isolated Declarations (parallélisation builds), type-safety complète |
+| **NestJS** | **11.1.10** | Architecture modulaire, DI native, perfect pour projets enterprise |
 | **Fastify** | **5.x** | 2.7x plus rapide qu'Express, meilleur pour objectif <200ms API |
 
 ### ORM & Validation
 
 | Composant | Version | Justification |
 |-----------|---------|---------------|
-| **Prisma** | **6.16.0+** | Query Compiler Rust-free (90% plus léger), queries 3.4x plus rapides, type-safety |
+| **Prisma** | **6.19.1** | Query Compiler Rust-free (90% plus léger), queries 3.4x plus rapides, type-safety |
 | **class-validator** | **0.14+** | Validation déclarative avec decorators, intégration parfaite NestJS |
 | **class-transformer** | **0.5+** | Transformation et serialization objets |
 
@@ -180,16 +180,16 @@ api/
 
 | Composant | Version | Justification |
 |-----------|---------|---------------|
-| **React** | **19.1.0** | Server Components, Actions, dernière version stable (Mars 2025) |
-| **Next.js** | **15.5+** | SSR/SSG, App Router, optimisations automatiques, SEO |
-| **TypeScript** | **5.7+** | Cohérence avec backend, type-safety end-to-end |
+| **React** | **19.2.3** | Server Components, Actions, dernière version stable |
+| **Next.js** | **16.1.1** | SSR/SSG, App Router, optimisations automatiques, SEO |
+| **TypeScript** | **5.7** | Cohérence avec backend, type-safety end-to-end |
 
 ### State Management
 
 | Composant | Version | Justification |
 |-----------|---------|---------------|
-| **TanStack Query** | **5.x** | État serveur, cache intelligent, mutations, synchronisation automatique |
-| **Zustand** | **5.x** | État client léger (1.2kb), simple, parfait pour UI state |
+| **TanStack Query** | **5.90.6** | État serveur, cache intelligent, mutations, synchronisation automatique |
+| **Zustand** | **5.0.8** | État client léger (1.2kb), simple, parfait pour UI state |
 
 ### UI & Styling
 
@@ -319,9 +319,9 @@ web/
 
 | Composant | Version | Justification |
 |-----------|---------|---------------|
-| **Prisma** | **6.16.0+** | Query Compiler Rust-free (bundle 1.6MB vs 14MB), queries 3.4x plus rapides, multi-schema GA |
+| **Prisma** | **6.19.1** | Query Compiler Rust-free (bundle 1.6MB vs 14MB), queries 3.4x plus rapides, multi-schema GA |
 
-### Nouvelles fonctionnalités Prisma 6.16
+### Nouvelles fonctionnalités Prisma 6.19
 
 1. **Architecture Rust-free**
    - Bundle 90% plus léger (14MB → 1.6MB)
@@ -1465,23 +1465,27 @@ pm2 logs orchestr-a-web
 
 ## 📅 CHANGELOG
 
+### Version 2.1 - 23/12/2025
+- ✅ Mise à jour versions réelles depuis package.json
+- ✅ Next.js 15.5 → **16.1.1**
+- ✅ React 19.1 → **19.2.3**
+- ✅ Prisma 6.16 → **6.19.1**
+- ✅ TanStack Query → **5.90.6**
+- ✅ Zustand → **5.0.8**
+- ✅ NestJS → **11.1.10**
+
 ### Version 1.0 - 05/11/2025
 - ✅ Définition stack technique complète
-- ✅ Versions validées au 05/11/2025
 - ✅ Architecture monorepo Turborepo
-- ✅ Stack backend : NestJS 11 + Fastify 5 + Prisma 6.16 + PostgreSQL 18
-- ✅ Stack frontend : Next.js 15 + React 19 + Tailwind 4
+- ✅ Stack backend : NestJS 11 + Fastify 5 + Prisma 6 + PostgreSQL 18
+- ✅ Stack frontend : Next.js + React 19 + Tailwind 4
 - ✅ Gantt : @rsagiev/gantt-task-react-19 (éprouvé V1)
-- ✅ Pas de 2FA (simplifié)
 - ✅ 100% Open Source
 - ✅ Configuration Docker Compose
 - ✅ Pipeline CI/CD GitHub Actions
-- ✅ Stratégie de tests
-- ✅ Monitoring & observabilité
 
 ---
 
-**Document version 1.0**
-**Date : 05 novembre 2025**
+**Document version 2.1**
+**Date : 23 décembre 2025**
 **Statut : Validé**
-**Prochaine revue : Avant Phase 1 (MVP)**
