@@ -77,8 +77,8 @@ orchestr-a-v2/
 
 1. **Cloner le repository**
 ```bash
-git clone https://github.com/org/orchestr-a-v2.git
-cd orchestr-a-v2
+git clone https://github.com/ElegAlex/Orchestr-A.git
+cd Orchestr-A
 ```
 
 2. **Installer pnpm** (si pas déjà installé)
@@ -119,7 +119,7 @@ pnpm run dev
 
 L'application sera disponible sur :
 - 🌐 **Frontend** : http://localhost:3000
-- 🔌 **API** : http://localhost:3001
+- 🔌 **API** : http://localhost:4000
 - 📊 **Prisma Studio** : `pnpm run db:studio`
 
 ## 📝 Scripts disponibles
@@ -159,10 +159,10 @@ pnpm run test:e2e   # Tests E2E
 
 ## 📚 Documentation
 
+- [Déploiement Docker](./DOCKER-DEPLOY.md) - Guide de déploiement Docker (3 étapes)
 - [Cahier des charges](./REFONTE.md) - Spécifications fonctionnelles complètes
 - [Stack technique](./STACK-TECHNIQUE.md) - Architecture et technologies détaillées
 - [Ce qui a été fait](./WHAT-HAS-BEEN-DONE.md) - État d'avancement complet
-- [Dernière mise à jour frontend](./FRONTEND-LATEST-UPDATE.md) - Session du 07/11/2025
 - [Spécifications Planning](./PLANNING-VIEW-SPECS.md) - Vue planning d'équipe
 
 ## 🔐 Utilisateurs par défaut (après seed)
@@ -188,7 +188,7 @@ pnpm run test:e2e
 
 - **Logs** : `docker-compose logs -f`
 - **Prisma Studio** : `pnpm run db:studio`
-- **API Health** : http://localhost:3001/health
+- **API Health** : http://localhost:4000/api/health
 
 ## 🐛 Debugging
 
@@ -216,7 +216,7 @@ docker logs orchestr-a-redis -f
 
 ```bash
 # 1. Cloner
-git clone https://github.com/org/orchestr-a-v2.git && cd orchestr-a-v2
+git clone https://github.com/ElegAlex/Orchestr-A.git && cd Orchestr-A
 
 # 2. Générer la configuration (secrets auto-générés)
 ./scripts/init-env.sh
@@ -276,7 +276,8 @@ docker compose -f docker-compose.prod.yml down
 
 ### Documentation détaillée
 
-Voir [docs/docker-production-audit.md](./docs/docker-production-audit.md) pour la documentation complète.
+- **[DOCKER-DEPLOY.md](./DOCKER-DEPLOY.md)** - Guide de déploiement Docker simplifié
+- **[docs/Déploiement.md](./docs/Déploiement.md)** - Déploiement VPS complet (hybride)
 
 ## 🤝 Contribution
 

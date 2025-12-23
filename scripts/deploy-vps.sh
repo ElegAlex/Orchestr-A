@@ -10,7 +10,7 @@
 set -e
 
 # === CONFIGURATION PAR DEFAUT ===
-INSTALL_DIR="/opt/ORCHESTRA"
+INSTALL_DIR="/opt/orchestra"
 REPO_URL="https://github.com/ElegAlex/Orchestr-A.git"
 NODE_VERSION="22"
 API_PORT="4000"
@@ -273,14 +273,8 @@ clone_repository() {
 
     if [ -d "$INSTALL_DIR" ]; then
         log_warning "Le repertoire $INSTALL_DIR existe deja"
-        read -p "Supprimer et recloner? (o/N) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[OoYy]$ ]]; then
-            rm -rf "$INSTALL_DIR"
-        else
-            log_info "Conservation du repertoire existant"
-            return
-        fi
+        log_info "Conservation du repertoire existant (utilisez --force-clone pour recloner)"
+        return
     fi
 
     log_info "Clonage depuis $REPO_URL..."
@@ -435,6 +429,15 @@ build_application() {
     log_info "Build en cours (peut prendre quelques minutes)..."
     pnpm run build
 
+    # Copier les fichiers statiques pour Next.js standalone
+    log_info "Copie des assets statiques Next.js..."
+    cd "$INSTALL_DIR/apps/web"
+    cp -r .next/static .next/standalone/apps/web/.next/static
+    if [ -d "public" ]; then
+        cp -r public .next/standalone/apps/web/public
+    fi
+    cd "$INSTALL_DIR"
+
     log_success "Build termine"
 }
 
@@ -452,7 +455,7 @@ Requires=docker.service
 Type=simple
 User=root
 WorkingDirectory=${INSTALL_DIR}/apps/api
-ExecStart=/usr/bin/node dist/main.js
+ExecStart=/usr/bin/node dist/src/main.js
 Restart=on-failure
 RestartSec=10
 Environment=NODE_ENV=production
@@ -462,7 +465,7 @@ EnvironmentFile=${INSTALL_DIR}/.env
 WantedBy=multi-user.target
 EOF
 
-    # Service Frontend
+    # Service Frontend (WorkingDirectory = standalone folder pour que Next.js trouve les assets)
     cat > /etc/systemd/system/orchestr-a-web.service << EOF
 [Unit]
 Description=ORCHESTR'A Frontend (Next.js)
@@ -471,8 +474,8 @@ After=network.target orchestr-a-api.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=${INSTALL_DIR}/apps/web
-ExecStart=/usr/bin/node .next/standalone/server.js
+WorkingDirectory=${INSTALL_DIR}/apps/web/.next/standalone/apps/web
+ExecStart=/usr/bin/node server.js
 Restart=on-failure
 RestartSec=10
 Environment=NODE_ENV=production

@@ -94,6 +94,14 @@ Desktop.ini
 docker-compose.override.yml
 
 # ===========================
+# SSL CERTIFICATES
+# ===========================
+nginx/ssl/*.pem
+nginx/ssl/*.crt
+nginx/ssl/*.key
+!nginx/ssl/.gitkeep
+
+# ===========================
 # MISC
 # ===========================
 .vercel
