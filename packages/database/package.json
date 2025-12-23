@@ -15,10 +15,10 @@
     "db:push": "prisma db push"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.0"
+    "@prisma/client": "^6.19.1"
   },
   "devDependencies": {
-    "prisma": "^6.19.0",
+    "prisma": "^6.19.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   }
