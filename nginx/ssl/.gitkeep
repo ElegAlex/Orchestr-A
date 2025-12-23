@@ -1,0 +1,6 @@
+# This folder should contain SSL certificates for HTTPS
+# Place your certificates here:
+#   - fullchain.pem (or orchestr-a.crt)
+#   - privkey.pem (or orchestr-a.key)
+#
+# See DOCKER-DEPLOY.md for instructions on SSL setup
