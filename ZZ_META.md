@@ -14,6 +14,8 @@ cd /opt/orchestra
 git pull origin master
 pnpm install
 pnpm run build
+# Copier les assets statiques Next.js (obligatoire pour standalone)
+cp -r apps/web/.next/static apps/web/.next/standalone/apps/web/.next/
 sudo systemctl restart orchestr-a-api orchestr-a-web
 ```
 
