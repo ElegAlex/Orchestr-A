@@ -6,7 +6,8 @@ import { usersService } from '@/services/users.service';
 import { leavesService } from '@/services/leaves.service';
 import { teleworkService } from '@/services/telework.service';
 import { servicesService } from '@/services/services.service';
-import { Task, User, Leave, TeleworkSchedule, Service, Role } from '@/types';
+import { holidaysService } from '@/services/holidays.service';
+import { Task, User, Leave, TeleworkSchedule, Service, Role, Holiday } from '@/types';
 import { getServiceStyle } from '@/lib/planning-utils';
 import toast from 'react-hot-toast';
 
@@ -18,6 +19,8 @@ export interface DayCell {
   leaves: Leave[];
   isTelework: boolean;
   teleworkSchedule: TeleworkSchedule | null;
+  isHoliday: boolean;
+  holidayName?: string;
 }
 
 export interface ServiceGroup {
@@ -45,9 +48,11 @@ interface UsePlanningDataReturn {
   tasks: Task[];
   leaves: Leave[];
   teleworkSchedules: TeleworkSchedule[];
+  holidays: Holiday[];
   groupedUsers: ServiceGroup[];
   filteredGroups: ServiceGroup[];
   getDayCell: (userId: string, date: Date) => DayCell;
+  getHolidayForDate: (date: Date) => Holiday | undefined;
   refetch: () => Promise<void>;
   getGroupTaskCount: (groupUsers: User[]) => number;
 }
@@ -65,6 +70,7 @@ export const usePlanningData = ({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [teleworkSchedules, setTeleworkSchedules] = useState<TeleworkSchedule[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
 
   // Calculer les jours à afficher
   const displayDays = useMemo(() => {
@@ -94,12 +100,13 @@ export const usePlanningData = ({
       const teleworkStartDate = format(startDate, 'yyyy-MM-dd');
       const teleworkEndDate = format(endDate, 'yyyy-MM-dd');
 
-      const [usersData, tasksData, leavesData, teleworkData, servicesData] = await Promise.all([
+      const [usersData, tasksData, leavesData, teleworkData, servicesData, holidaysData] = await Promise.all([
         usersService.getAll(),
         tasksService.getByDateRange(startDate.toISOString(), endDate.toISOString()),
         leavesService.getByDateRange(startDate.toISOString(), endDate.toISOString()),
         teleworkService.getByDateRange(teleworkStartDate, teleworkEndDate),
         servicesService.getAll(),
+        holidaysService.getByRange(teleworkStartDate, teleworkEndDate),
       ]);
 
       const usersList = Array.isArray(usersData)
@@ -113,12 +120,14 @@ export const usePlanningData = ({
       setLeaves(Array.isArray(leavesData) ? leavesData : []);
       setTeleworkSchedules(Array.isArray(teleworkData) ? teleworkData : []);
       setServices(Array.isArray(servicesData) ? servicesData : []);
+      setHolidays(Array.isArray(holidaysData) ? holidaysData : []);
     } catch (error: any) {
       setUsers([]);
       setTasks([]);
       setLeaves([]);
       setTeleworkSchedules([]);
       setServices([]);
+      setHolidays([]);
       toast.error('Erreur lors du chargement des données');
       console.error(error);
     } finally {
@@ -257,6 +266,10 @@ export const usePlanningData = ({
         (ts) => ts.userId === userId && isSameDay(new Date(ts.date), date)
       );
 
+      // Vérifier si c'est un jour férié
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const holiday = holidays.find((h) => h.date === dateStr);
+
       // Appliquer le filtre d'affichage
       let filteredTasks = dayTasks;
       let filteredLeaves = dayLeaves;
@@ -277,15 +290,26 @@ export const usePlanningData = ({
         leaves: filteredLeaves,
         isTelework: filteredIsTelework,
         teleworkSchedule: teleworkSchedule || null,
+        isHoliday: !!holiday,
+        holidayName: holiday?.name,
       };
     },
-    [tasks, leaves, teleworkSchedules, viewFilter]
+    [tasks, leaves, teleworkSchedules, holidays, viewFilter]
   );
 
   // Compter les tâches par groupe
   const getGroupTaskCount = (groupUsers: User[]): number => {
     return tasks.filter((t) => groupUsers.some((u) => u.id === t.assigneeId)).length;
   };
+
+  // Obtenir le jour férié pour une date donnée
+  const getHolidayForDate = useCallback(
+    (date: Date): Holiday | undefined => {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      return holidays.find((h) => h.date === dateStr);
+    },
+    [holidays]
+  );
 
   return {
     loading,
@@ -295,9 +319,11 @@ export const usePlanningData = ({
     tasks,
     leaves,
     teleworkSchedules,
+    holidays,
     groupedUsers,
     filteredGroups,
     getDayCell,
+    getHolidayForDate,
     refetch: fetchData,
     getGroupTaskCount,
   };
