@@ -99,7 +99,15 @@ export const DayCell = ({
         </div>
       )}
 
-      <div className={`space-y-0.5 ${viewMode === 'month' ? 'min-h-[40px]' : 'min-h-[100px]'}`}>
+      {/* Telework Background Overlay - en arrière-plan pour que les tâches restent visibles */}
+      {cell.isTelework && !hasLeave && !cell.isHoliday && (
+        <div
+          className="absolute inset-0 z-0 bg-orange-100/40 border-2 border-orange-300 rounded-sm pointer-events-none"
+          aria-hidden="true"
+        />
+      )}
+
+      <div className={`relative z-10 space-y-0.5 ${viewMode === 'month' ? 'min-h-[40px]' : 'min-h-[100px]'}`}>
         {/* Telework toggle - visible uniquement si pas de congé */}
         {!hasLeave && (
           <div className="flex items-center justify-center">
