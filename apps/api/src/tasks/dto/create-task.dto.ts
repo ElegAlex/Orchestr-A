@@ -64,7 +64,7 @@ export class CreateTaskDto {
     nullable: true,
   })
   @ValidateIf(
-    (o) =>
+    (o: CreateTaskDto) =>
       o.projectId !== null && o.projectId !== undefined && o.projectId !== '',
   )
   @IsUUID()

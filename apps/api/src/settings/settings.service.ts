@@ -1,11 +1,28 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Types for settings
+type SettingValue = string | number | boolean;
+
+interface SettingConfig {
+  value: SettingValue;
+  category: string;
+  description: string;
+}
+
+interface ParsedSetting {
+  id?: string;
+  key: string;
+  value: SettingValue;
+  category: string;
+  description?: string | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+  isDefault?: boolean;
+}
+
 // Paramètres par défaut de l'application
-const DEFAULT_SETTINGS: Record<
-  string,
-  { value: any; category: string; description: string }
-> = {
+const DEFAULT_SETTINGS: Record<string, SettingConfig> = {
   // Display settings
   dateFormat: {
     value: 'dd/MM/yyyy',
@@ -103,19 +120,23 @@ export class SettingsService implements OnModuleInit {
     });
 
     // Convertir en objet pour faciliter l'utilisation côté client
-    const settingsMap: Record<string, any> = {};
-    const settingsList: any[] = [];
+    const settingsMap: Record<string, SettingValue> = {};
+    const settingsList: ParsedSetting[] = [];
 
     for (const setting of settings) {
       try {
-        settingsMap[setting.key] = JSON.parse(setting.value);
+        const parsedValue = JSON.parse(setting.value) as SettingValue;
+        settingsMap[setting.key] = parsedValue;
         settingsList.push({
           ...setting,
-          value: JSON.parse(setting.value),
+          value: parsedValue,
         });
       } catch {
         settingsMap[setting.key] = setting.value;
-        settingsList.push(setting);
+        settingsList.push({
+          ...setting,
+          value: setting.value,
+        });
       }
     }
 
@@ -171,7 +192,7 @@ export class SettingsService implements OnModuleInit {
   /**
    * Récupérer la valeur d'un paramètre
    */
-  async getValue<T = any>(key: string, defaultValue?: T): Promise<T> {
+  async getValue<T = SettingValue>(key: string, defaultValue?: T): Promise<T> {
     const setting = await this.findOne(key);
     if (!setting) {
       return defaultValue as T;
@@ -182,7 +203,7 @@ export class SettingsService implements OnModuleInit {
   /**
    * Mettre à jour un paramètre
    */
-  async update(key: string, value: any, description?: string) {
+  async update(key: string, value: unknown, description?: string) {
     const stringValue =
       typeof value === 'string' ? value : JSON.stringify(value);
 
@@ -209,8 +230,8 @@ export class SettingsService implements OnModuleInit {
   /**
    * Mettre à jour plusieurs paramètres en une fois
    */
-  async bulkUpdate(settings: Record<string, any>) {
-    const results: any[] = [];
+  async bulkUpdate(settings: Record<string, unknown>) {
+    const results: ParsedSetting[] = [];
 
     for (const [key, value] of Object.entries(settings)) {
       const result = await this.update(key, value);
@@ -265,9 +286,9 @@ export class SettingsService implements OnModuleInit {
   /**
    * Parser une valeur JSON
    */
-  private parseValue(value: string): any {
+  private parseValue(value: string): SettingValue {
     try {
-      return JSON.parse(value);
+      return JSON.parse(value) as SettingValue;
     } catch {
       return value;
     }

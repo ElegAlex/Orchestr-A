@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   UseGuards,
-  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SettingsService } from './settings.service';
@@ -57,9 +56,9 @@ export class SettingsController {
     @Body() updateSettingDto: UpdateSettingDto,
   ) {
     // Parse la valeur si c'est du JSON
-    let value: any;
+    let value: unknown;
     try {
-      value = JSON.parse(updateSettingDto.value);
+      value = JSON.parse(updateSettingDto.value) as unknown;
     } catch {
       value = updateSettingDto.value;
     }

@@ -322,13 +322,13 @@ export class UsersService {
     }
 
     // Préparer les données de mise à jour
-    const updateData: any = { ...updateUserDto };
-    delete updateData.serviceIds; // On gère les services séparément
+    const { serviceIds: _, password, ...restDto } = updateUserDto;
+    void _; // Intentionally unused - handled separately below
+    const updateData: Record<string, unknown> = { ...restDto };
 
     // Hasher le mot de passe si fourni
-    if (updateUserDto.password) {
-      updateData.passwordHash = await bcrypt.hash(updateUserDto.password, 10);
-      delete updateData.password; // Supprimer le mot de passe en clair
+    if (password) {
+      updateData.passwordHash = await bcrypt.hash(password, 10);
     }
 
     // Mettre à jour les services si fournis
@@ -849,10 +849,12 @@ export class UsersService {
 
         result.created++;
         result.createdUsers.push(user);
-      } catch (error: any) {
+      } catch (err) {
         result.errors++;
+        const errorMessage =
+          err instanceof Error ? err.message : 'Erreur inconnue';
         result.errorDetails.push(
-          `Ligne ${rowNum}: Erreur lors de la création - ${error.message}`,
+          `Ligne ${rowNum}: Erreur lors de la création - ${errorMessage}`,
         );
       }
     }
@@ -1063,7 +1065,7 @@ export class UsersService {
     return result;
   }
 
-  async getImportTemplate(): Promise<string> {
+  getImportTemplate(): string {
     // Générer un template CSV avec les en-têtes et des commentaires d'exemple
     const headers = [
       'email',

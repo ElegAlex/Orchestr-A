@@ -349,12 +349,12 @@ export class SkillsService {
    * Récupérer la matrice de compétences (tous les utilisateurs)
    */
   async getSkillsMatrix(departmentId?: string, skillCategory?: SkillCategory) {
-    const whereUser: any = { isActive: true };
+    const whereUser: Prisma.UserWhereInput = { isActive: true };
     if (departmentId) {
       whereUser.departmentId = departmentId;
     }
 
-    const whereSkill: any = {};
+    const whereSkill: Prisma.SkillWhereInput = {};
     if (skillCategory) {
       whereSkill.category = skillCategory;
     }

@@ -1042,9 +1042,8 @@ export class LeavesService {
     endHalfDay?: string | null,
   ): number {
     // Calculer le nombre de jours calendaires
-    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-    // Note: diffDays calculates total calendar days but we count work days below
-    Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    // Note: diffTime is used for potential debugging, but we count work days below
+    void Math.abs(endDate.getTime() - startDate.getTime());
 
     // Comptabiliser uniquement les jours ouvrés (lundi à vendredi)
     let workDays = 0;

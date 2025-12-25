@@ -5,7 +5,6 @@ import {
   IsDateString,
   IsOptional,
   IsString,
-  IsUUID,
 } from 'class-validator';
 import { LeaveType, HalfDay } from 'database';
 

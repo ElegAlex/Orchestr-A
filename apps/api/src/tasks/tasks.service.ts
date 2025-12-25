@@ -16,7 +16,7 @@ import {
   TaskPreviewItemDto,
   TaskPreviewStatus,
 } from './dto/import-tasks.dto';
-import { TaskStatus, Priority } from 'database';
+import { TaskStatus, Priority, RACIRole } from 'database';
 import { Prisma } from 'database';
 
 @Injectable()
@@ -759,13 +759,13 @@ export class TasksService {
   /**
    * Retirer une assignation RACI
    */
-  async removeRACI(taskId: string, userId: string, role: string) {
+  async removeRACI(taskId: string, userId: string, role: RACIRole) {
     const assignment = await this.prisma.taskRACI.findUnique({
       where: {
         taskId_userId_role: {
           taskId,
           userId,
-          role: role as any,
+          role,
         },
       },
     });
@@ -779,7 +779,7 @@ export class TasksService {
         taskId_userId_role: {
           taskId,
           userId,
-          role: role as any,
+          role,
         },
       },
     });
@@ -1052,11 +1052,11 @@ export class TasksService {
         });
 
         result.created++;
-      } catch (error: any) {
+      } catch (err) {
         result.errors++;
-        result.errorDetails.push(
-          `Ligne ${lineNum}: ${error.message || 'Erreur inconnue'}`,
-        );
+        const errorMessage =
+          err instanceof Error ? err.message : 'Erreur inconnue';
+        result.errorDetails.push(`Ligne ${lineNum}: ${errorMessage}`);
       }
     }
 
