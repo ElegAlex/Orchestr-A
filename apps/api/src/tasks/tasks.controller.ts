@@ -64,6 +64,8 @@ export class TasksController {
   @ApiQuery({ name: 'status', required: false, enum: TaskStatus })
   @ApiQuery({ name: 'projectId', required: false, type: String })
   @ApiQuery({ name: 'assigneeId', required: false, type: String })
+  @ApiQuery({ name: 'startDate', required: false, type: String, description: 'Date de début (ISO 8601)' })
+  @ApiQuery({ name: 'endDate', required: false, type: String, description: 'Date de fin (ISO 8601)' })
   @ApiResponse({
     status: 200,
     description: 'Liste des tâches',
@@ -74,8 +76,10 @@ export class TasksController {
     @Query('status') status?: TaskStatus,
     @Query('projectId') projectId?: string,
     @Query('assigneeId') assigneeId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
-    return this.tasksService.findAll(page, limit, status, projectId, assigneeId);
+    return this.tasksService.findAll(page, limit, status, projectId, assigneeId, startDate, endDate);
   }
 
   @Get('assignee/:userId')

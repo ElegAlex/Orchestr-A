@@ -94,14 +94,14 @@ export class TasksService {
       }
     }
 
-    // Vérifier les dates si fournies
+    // Vérifier les dates si fournies (dates égales autorisées pour les tâches d'une journée)
     if (
       startDate &&
       endDate &&
-      new Date(endDate) <= new Date(startDate)
+      new Date(endDate) < new Date(startDate)
     ) {
       throw new BadRequestException(
-        'La date de fin doit être postérieure à la date de début',
+        'La date de fin ne peut pas être antérieure à la date de début',
       );
     }
 
@@ -159,6 +159,8 @@ export class TasksService {
     status?: TaskStatus,
     projectId?: string,
     assigneeId?: string,
+    startDate?: string,
+    endDate?: string,
   ) {
     const skip = (page - 1) * limit;
 
@@ -167,11 +169,24 @@ export class TasksService {
     if (projectId) where.projectId = projectId;
     if (assigneeId) where.assigneeId = assigneeId;
 
+    // Filtrage par plage de dates : on récupère les tâches dont la endDate est dans la plage
+    const hasDateFilter = startDate || endDate;
+    if (startDate && endDate) {
+      where.endDate = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      };
+    } else if (startDate) {
+      where.endDate = { gte: new Date(startDate) };
+    } else if (endDate) {
+      where.endDate = { lte: new Date(endDate) };
+    }
+
     const [tasks, total] = await Promise.all([
       this.prisma.task.findMany({
         where,
-        skip,
-        take: limit,
+        // Pas de pagination si filtre par date (pour le planning)
+        ...(hasDateFilter ? {} : { skip, take: limit }),
         include: {
           project: {
             select: {
