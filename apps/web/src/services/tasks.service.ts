@@ -53,7 +53,7 @@ export const tasksService = {
   },
 
   async getByDateRange(startDate: string, endDate: string): Promise<Task[]> {
-    const response = await api.get<any>(
+    const response = await api.get<PaginatedResponse<Task> | Task[]>(
       `/tasks?startDate=${startDate}&endDate=${endDate}`
     );
     // L'API retourne {data: [], meta: {}} - extraire le tableau

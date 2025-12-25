@@ -23,13 +23,30 @@ export interface LeaveValidationDelegate {
   };
 }
 
+interface LeavesResponse {
+  data: Leave[];
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+interface LeaveBalance {
+  paid: number;
+  unpaid: number;
+  sick: number;
+  remaining: number;
+  used: number;
+}
+
 export const leavesService = {
-  async getAll(page = 1, limit = 100, userId?: string, status?: LeaveStatus, type?: LeaveType): Promise<any> {
+  async getAll(page = 1, limit = 100, userId?: string, status?: LeaveStatus, type?: LeaveType): Promise<LeavesResponse> {
     let url = `/leaves?page=${page}&limit=${limit}`;
     if (userId) url += `&userId=${userId}`;
     if (status) url += `&status=${status}`;
     if (type) url += `&type=${type}`;
-    const response = await api.get<any>(url);
+    const response = await api.get<LeavesResponse>(url);
     return response.data;
   },
 
@@ -89,13 +106,13 @@ export const leavesService = {
     await api.delete(`/leaves/${id}`);
   },
 
-  async getBalance(userId: string): Promise<any> {
-    const response = await api.get(`/leaves/balance/${userId}`);
+  async getBalance(userId: string): Promise<LeaveBalance> {
+    const response = await api.get<LeaveBalance>(`/leaves/balance/${userId}`);
     return response.data;
   },
 
-  async getMyBalance(): Promise<any> {
-    const response = await api.get('/leaves/me/balance');
+  async getMyBalance(): Promise<LeaveBalance> {
+    const response = await api.get<LeaveBalance>('/leaves/me/balance');
     return response.data;
   },
 

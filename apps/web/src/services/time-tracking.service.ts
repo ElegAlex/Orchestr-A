@@ -1,9 +1,16 @@
 import { api } from '@/lib/api';
-import { TimeEntry, CreateTimeEntryDto, ActivityType } from '@/types';
+import { TimeEntry, CreateTimeEntryDto } from '@/types';
+
+interface TimeTrackingStats {
+  totalHours: number;
+  entriesCount: number;
+  byProject?: Record<string, number>;
+  byTask?: Record<string, number>;
+}
 
 export const timeTrackingService = {
   async getAll(): Promise<TimeEntry[]> {
-    const response = await api.get<any>('/time-tracking');
+    const response = await api.get<{ data: TimeEntry[] } | TimeEntry[]>('/time-tracking');
     // API returns {data: [], meta: {}} - extract the array
     if (response.data && 'data' in response.data) {
       return response.data.data;
@@ -68,12 +75,12 @@ export const timeTrackingService = {
     await api.delete(`/time-tracking/${id}`);
   },
 
-  async getStats(userId: string, startDate?: string, endDate?: string): Promise<any> {
+  async getStats(userId: string, startDate?: string, endDate?: string): Promise<TimeTrackingStats> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
 
-    const response = await api.get(
+    const response = await api.get<TimeTrackingStats>(
       `/time-tracking/user/${userId}/stats?${params.toString()}`
     );
     return response.data;

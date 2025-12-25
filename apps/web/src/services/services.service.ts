@@ -1,9 +1,9 @@
 import { api } from '@/lib/api';
-import { Service, CreateServiceDto } from '@/types';
+import { Service, CreateServiceDto, User } from '@/types';
 
 export const servicesService = {
   async getAll(): Promise<Service[]> {
-    const response = await api.get<any>('/services');
+    const response = await api.get<{ data: Service[] } | Service[]>('/services');
     // API returns {data: [], meta: {}} - extract the array
     if (response.data && 'data' in response.data) {
       return response.data.data;
@@ -35,8 +35,8 @@ export const servicesService = {
     await api.delete(`/services/${id}`);
   },
 
-  async getMembers(id: string): Promise<any[]> {
-    const response = await api.get<any[]>(`/services/${id}/members`);
+  async getMembers(id: string): Promise<User[]> {
+    const response = await api.get<User[]>(`/services/${id}/members`);
     return response.data;
   },
 };
