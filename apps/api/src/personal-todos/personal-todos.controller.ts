@@ -13,7 +13,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PersonalTodosService } from './personal-todos.service';
 import { CreatePersonalTodoDto } from './dto/create-personal-todo.dto';
 import { UpdatePersonalTodoDto } from './dto/update-personal-todo.dto';
-import { User } from '@prisma/client';
+import type { User } from '@prisma/client';
 
 @Controller('personal-todos')
 @UseGuards(JwtAuthGuard)

@@ -33,7 +33,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { Role, TaskStatus } from 'database';
+import { Role, TaskStatus, RACIRole } from 'database';
 
 @ApiTags('tasks')
 @Controller('tasks')
@@ -282,7 +282,7 @@ export class TasksController {
   removeRACI(
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Param('userId', ParseUUIDPipe) userId: string,
-    @Param('role') role: string,
+    @Param('role') role: RACIRole,
   ) {
     return this.tasksService.removeRACI(taskId, userId, role);
   }

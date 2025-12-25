@@ -19,7 +19,7 @@ import { RegisterDto } from './dto/register.dto';
 import { Public } from './decorators/public.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { User } from '@prisma/client';
+import type { User } from '@prisma/client';
 
 @ApiTags('auth')
 @Controller('auth')

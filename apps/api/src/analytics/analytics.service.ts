@@ -311,11 +311,11 @@ export class AnalyticsService {
         progress: project.progress || 0,
         totalTasks: projectTasks.length,
         completedTasks: completedTasks.length,
-        projectManager: project.projectManager || null,
+        projectManager: project.projectManager ?? undefined,
         loggedHours: totalLoggedHours,
         budgetHours: project.budgetHours || 0,
         startDate: project.startDate || project.createdAt,
-        dueDate: project.endDate || null,
+        dueDate: project.endDate ?? undefined,
         isOverdue: !!isOverdue,
       };
     });
