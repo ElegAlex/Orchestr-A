@@ -18,6 +18,7 @@ export class TasksService {
 
   /**
    * Créer une nouvelle tâche
+   * Le projectId est optionnel pour permettre les tâches orphelines (réunions, tâches transverses)
    */
   async create(createTaskDto: CreateTaskDto) {
     const {
@@ -30,13 +31,22 @@ export class TasksService {
       ...taskData
     } = createTaskDto;
 
-    // Vérifier que le projet existe
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-    });
+    // Vérifier que le projet existe si fourni
+    if (projectId) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+      });
 
-    if (!project) {
-      throw new NotFoundException('Projet introuvable');
+      if (!project) {
+        throw new NotFoundException('Projet introuvable');
+      }
+    }
+
+    // Validation : epicId et milestoneId requièrent un projectId
+    if ((epicId || milestoneId) && !projectId) {
+      throw new BadRequestException(
+        'Une tâche doit être liée à un projet pour être associée à une épopée ou un jalon',
+      );
     }
 
     // Vérifier l'epic si fourni
@@ -95,11 +105,11 @@ export class TasksService {
       );
     }
 
-    // Créer la tâche
+    // Créer la tâche (projectId peut être null pour les tâches orphelines)
     const task = await this.prisma.task.create({
       data: {
         ...taskData,
-        projectId,
+        projectId: projectId || null,
         epicId,
         milestoneId,
         assigneeId,
@@ -1068,5 +1078,109 @@ export class TasksService {
       '# 2025-01-20',
     ];
     return headers.join(';') + '\n' + exampleComment.join(';');
+  }
+
+  /**
+   * Récupérer uniquement les tâches orphelines (sans projet)
+   */
+  async findOrphans() {
+    return this.prisma.task.findMany({
+      where: {
+        projectId: null,
+      },
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            dependencies: true,
+            dependents: true,
+            comments: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  /**
+   * Rattache une tâche orpheline à un projet
+   */
+  async attachToProject(taskId: string, projectId: string) {
+    const task = await this.prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!task) {
+      throw new NotFoundException('Tâche introuvable');
+    }
+
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: { projectId },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Détache une tâche de son projet (la rend orpheline)
+   */
+  async detachFromProject(taskId: string) {
+    const task = await this.prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!task) {
+      throw new NotFoundException('Tâche introuvable');
+    }
+
+    // Retirer également l'épopée et le jalon
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        projectId: null,
+        epicId: null,
+        milestoneId: null,
+      },
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
   }
 }

@@ -13,7 +13,9 @@ import {
   CreateTaskDto,
   Project,
   Role,
+  User,
 } from '@/types';
+import { usersService } from '@/services/users.service';
 import toast from 'react-hot-toast';
 
 export default function TasksPage() {
@@ -22,8 +24,11 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [projectMembers, setProjectMembers] = useState<User[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string>('ALL');
+  const [orphanTasks, setOrphanTasks] = useState<Task[]>([]);
   const [selectedPriority, setSelectedPriority] = useState<Priority | 'ALL'>(
     'ALL'
   );
@@ -75,6 +80,28 @@ export default function TasksPage() {
         }
       }
       setTasks(tasksData);
+
+      // Fetch orphan tasks (only for admin/responsable/manager)
+      if (user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE || user?.role === Role.MANAGER) {
+        try {
+          const orphans = await tasksService.getOrphans();
+          setOrphanTasks(Array.isArray(orphans) ? orphans : []);
+        } catch (error: any) {
+          setOrphanTasks([]);
+          if (error.response?.status !== 404) console.error('Error fetching orphan tasks:', error);
+        }
+      }
+
+      // Fetch users for assignment
+      if (user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE || user?.role === Role.MANAGER) {
+        try {
+          const usersData = await usersService.getAll();
+          setUsers(Array.isArray(usersData) ? usersData : []);
+        } catch (error: any) {
+          setUsers([]);
+          if (error.response?.status !== 404) console.error('Error fetching users:', error);
+        }
+      }
     } catch (error: any) {
       toast.error('Erreur lors du chargement des données');
       console.error(error);
@@ -90,7 +117,19 @@ export default function TasksPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await tasksService.create(formData);
+      // Clean up empty strings before sending
+      const taskData: CreateTaskDto = {
+        title: formData.title,
+        description: formData.description || undefined,
+        status: formData.status,
+        priority: formData.priority,
+        projectId: formData.projectId || null,
+        assigneeId: formData.assigneeId || undefined,
+        estimatedHours: formData.estimatedHours || undefined,
+        startDate: formData.startDate || undefined,
+        endDate: formData.endDate || undefined,
+      };
+      await tasksService.create(taskData);
       toast.success('Tâche créée avec succès');
       setShowCreateModal(false);
       resetForm();
@@ -112,6 +151,32 @@ export default function TasksPage() {
     }
   };
 
+  // Fetch project members when a project is selected in the form
+  const handleFormProjectChange = async (projectId: string) => {
+    setFormData({ ...formData, projectId, assigneeId: '' }); // Reset assignee when project changes
+
+    if (projectId) {
+      try {
+        const project = await projectsService.getById(projectId);
+        const members = project.members?.map(m => m.user).filter(Boolean) as User[] || [];
+        setProjectMembers(members);
+      } catch (error) {
+        console.error('Error fetching project members:', error);
+        setProjectMembers([]);
+      }
+    } else {
+      setProjectMembers([]);
+    }
+  };
+
+  // Get available users for assignment (project members if project selected, all users otherwise)
+  const getAvailableAssignees = (): User[] => {
+    if (formData.projectId && projectMembers.length > 0) {
+      return projectMembers;
+    }
+    return users;
+  };
+
   const resetForm = () => {
     setFormData({
       title: '',
@@ -124,13 +189,20 @@ export default function TasksPage() {
       startDate: '',
       endDate: '',
     });
+    setProjectMembers([]);
   };
 
   const getFilteredTasks = () => {
-    let filtered = tasks;
+    let filtered: Task[] = [];
 
-    if (selectedProject !== 'ALL') {
-      filtered = filtered.filter((t) => t.projectId === selectedProject);
+    if (selectedProject === 'ORPHAN') {
+      // Show orphan tasks (tasks without project)
+      filtered = orphanTasks;
+    } else if (selectedProject === 'ALL') {
+      // Show all tasks including orphans
+      filtered = [...tasks, ...orphanTasks.filter(ot => !tasks.some(t => t.id === ot.id))];
+    } else {
+      filtered = tasks.filter((t) => t.projectId === selectedProject);
     }
 
     if (selectedPriority !== 'ALL') {
@@ -295,6 +367,7 @@ export default function TasksPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="ALL">Tous les projets</option>
+                <option value="ORPHAN">Taches sans projet</option>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
@@ -412,12 +485,17 @@ export default function TasksPage() {
                                 </p>
                               )}
 
-                              {task.project && (
+                              {task.project ? (
                                 <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
                                   <span>📁</span>
                                   <span className="truncate">
                                     {task.project.name}
                                   </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center space-x-2 text-xs text-orange-500 mb-2">
+                                  <span>📋</span>
+                                  <span>Tache independante</span>
                                 </div>
                               )}
 
@@ -551,23 +629,52 @@ export default function TasksPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Projet *
+                  Projet
                 </label>
                 <select
-                  required
-                  value={formData.projectId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, projectId: e.target.value })
-                  }
+                  value={formData.projectId || ''}
+                  onChange={(e) => handleFormProjectChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">Sélectionnez un projet</option>
+                  <option value="">Aucun projet (tache independante)</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id}>
                       {project.name}
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Laissez vide pour une tache hors projet (reunion, transverse...)
+                </p>
+              </div>
+
+              {/* Assignee selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Assigne a
+                  {formData.projectId && projectMembers.length > 0 && (
+                    <span className="text-xs text-blue-600 ml-2">(membres du projet)</span>
+                  )}
+                </label>
+                <select
+                  value={formData.assigneeId || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, assigneeId: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Non assigne</option>
+                  {getAvailableAssignees().map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.firstName} {u.lastName}
+                    </option>
+                  ))}
+                </select>
+                {formData.projectId && projectMembers.length === 0 && (
+                  <p className="text-xs text-orange-500 mt-1">
+                    Aucun membre dans ce projet - tous les utilisateurs sont affiches
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

@@ -21,6 +21,7 @@ import { CommentsModule } from './comments/comments.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { PersonalTodosModule } from './personal-todos/personal-todos.module';
 import { SettingsModule } from './settings/settings.module';
+import { HolidaysModule } from './holidays/holidays.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { SettingsModule } from './settings/settings.module';
     AnalyticsModule,
     PersonalTodosModule,
     SettingsModule,
+    HolidaysModule,
   ],
   controllers: [AppController],
   providers: [AppService],

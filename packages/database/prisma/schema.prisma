@@ -45,6 +45,7 @@ model User {
   timeEntries       TimeEntry[]
   comments          Comment[]
   personalTodos     PersonalTodo[]
+  createdHolidays   Holiday[]         @relation("HolidayCreator")
 
   @@map("users")
 }
@@ -218,7 +219,7 @@ model Task {
   description     String?
   status          TaskStatus @default(TODO)
   priority        Priority   @default(NORMAL)
-  projectId       String
+  projectId       String?    // Nullable pour permettre les tâches orphelines (réunions, tâches transverses)
   epicId          String?
   milestoneId     String?
   assigneeId      String?
@@ -230,7 +231,7 @@ model Task {
   updatedAt       DateTime   @updatedAt
 
   // Relations
-  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project         Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   epic            Epic?            @relation(fields: [epicId], references: [id], onDelete: SetNull)
   milestone       Milestone?       @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   assignee        User?            @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
@@ -240,6 +241,9 @@ model Task {
   comments        Comment[]
   raci            TaskRACI[]
 
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
   @@map("tasks")
 }
 
@@ -561,4 +565,35 @@ model AppSettings {
   updatedAt     DateTime  @updatedAt
 
   @@map("app_settings")
+}
+
+// ===========================
+// HOLIDAYS (JOURS FÉRIÉS)
+// ===========================
+
+model Holiday {
+  id          String      @id @default(uuid())
+  date        DateTime    @db.Date
+  name        String      @db.VarChar(100)
+  type        HolidayType @default(LEGAL)
+  isWorkDay   Boolean     @default(false)  // true = jour ouvré, false = non ouvré (chômé)
+  description String?     @db.VarChar(255)
+  recurring   Boolean     @default(false)  // Se répète chaque année à la même date
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  createdById String
+
+  // Relations
+  createdBy   User        @relation("HolidayCreator", fields: [createdById], references: [id])
+
+  @@unique([date])
+  @@index([date])
+  @@map("holidays")
+}
+
+enum HolidayType {
+  LEGAL        // Jour férié légal (1er janvier, 14 juillet, etc.)
+  BRIDGE       // Pont accordé
+  CLOSURE      // Fermeture exceptionnelle
+  CUSTOM       // Autre (personnalisé)
 }
