@@ -34,6 +34,8 @@ export default function TaskDetailPage() {
     projectId: '',
     startDate: '',
     endDate: '',
+    startTime: '',
+    endTime: '',
   });
 
   useEffect(() => {
@@ -101,6 +103,8 @@ export default function TaskDetailPage() {
           endDate: taskData.endDate
             ? new Date(taskData.endDate).toISOString().split('T')[0]
             : '',
+          startTime: taskData.startTime || '',
+          endTime: taskData.endTime || '',
         });
       } catch (error: any) {
         toast.error('Erreur lors du chargement de la tâche');
@@ -147,6 +151,16 @@ export default function TaskDetailPage() {
         updateData.endDate = new Date(formData.endDate).toISOString();
       }
 
+      // Ajouter startTime seulement si défini
+      if (formData.startTime) {
+        updateData.startTime = formData.startTime;
+      }
+
+      // Ajouter endTime seulement si défini
+      if (formData.endTime) {
+        updateData.endTime = formData.endTime;
+      }
+
       const updatedTask = await tasksService.update(taskId, updateData);
       setTask(updatedTask);
       setIsEditing(false);
@@ -178,6 +192,8 @@ export default function TaskDetailPage() {
         endDate: task.endDate
           ? new Date(task.endDate).toISOString().split('T')[0]
           : '',
+        startTime: task.startTime || '',
+        endTime: task.endTime || '',
       });
     }
     setIsEditing(false);
@@ -499,6 +515,32 @@ export default function TaskDetailPage() {
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
+
+                  {/* Start Time */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Heure de début
+                    </label>
+                    <input
+                      type="time"
+                      value={formData.startTime}
+                      onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* End Time */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Heure de fin
+                    </label>
+                    <input
+                      type="time"
+                      value={formData.endTime}
+                      onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -661,6 +703,14 @@ export default function TaskDetailPage() {
                     <span className="text-gray-600">Date de fin</span>
                     <span className="font-medium text-gray-900">
                       {new Date(task.endDate).toLocaleDateString('fr-FR')}
+                    </span>
+                  </div>
+                )}
+                {(task.startTime || task.endTime) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Horaires</span>
+                    <span className="font-medium text-gray-900">
+                      {task.startTime || '--:--'} - {task.endTime || '--:--'}
                     </span>
                   </div>
                 )}

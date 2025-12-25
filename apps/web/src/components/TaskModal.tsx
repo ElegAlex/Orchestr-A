@@ -37,6 +37,8 @@ export function TaskModal({
     estimatedHours: '',
     startDate: '',
     endDate: '',
+    startTime: '',
+    endTime: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,6 +65,8 @@ export function TaskModal({
         endDate: task.endDate
           ? new Date(task.endDate).toISOString().split('T')[0]
           : '',
+        startTime: task.startTime || '',
+        endTime: task.endTime || '',
       });
     } else {
       setFormData({
@@ -76,6 +80,8 @@ export function TaskModal({
         estimatedHours: '',
         startDate: '',
         endDate: '',
+        startTime: '',
+        endTime: '',
       });
     }
   }, [task, projectId]);
@@ -113,6 +119,8 @@ export function TaskModal({
       if (formData.estimatedHours) taskData.estimatedHours = parseFloat(formData.estimatedHours);
       if (formData.startDate) taskData.startDate = new Date(formData.startDate).toISOString();
       if (formData.endDate) taskData.endDate = new Date(formData.endDate).toISOString();
+      if (formData.startTime) taskData.startTime = formData.startTime;
+      if (formData.endTime) taskData.endTime = formData.endTime;
 
       await onSave(taskData);
       onClose();
@@ -328,6 +336,33 @@ export function TaskModal({
                 value={formData.endDate}
                 min={formData.startDate || undefined}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Horaires optionnels */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Heure de début
+              </label>
+              <input
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Heure de fin
+              </label>
+              <input
+                type="time"
+                value={formData.endTime}
+                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>

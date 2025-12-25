@@ -12,6 +12,7 @@ import {
   Min,
   ValidateIf,
   IsArray,
+  Matches,
 } from 'class-validator';
 import { TaskStatus, Priority } from 'database';
 
@@ -131,6 +132,30 @@ export class CreateTaskDto {
   @IsDateString()
   @IsOptional()
   endDate?: string;
+
+  @ApiProperty({
+    description: 'Horaire de début (format HH:MM)',
+    example: '09:00',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: 'startTime doit être au format HH:MM',
+  })
+  startTime?: string;
+
+  @ApiProperty({
+    description: 'Horaire de fin (format HH:MM)',
+    example: '17:00',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: 'endTime doit être au format HH:MM',
+  })
+  endTime?: string;
 
   @ApiProperty({
     description: 'Tags pour catégoriser la tâche',

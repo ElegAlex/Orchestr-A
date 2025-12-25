@@ -331,6 +331,8 @@ export interface Task {
   progress: number;
   startDate?: string;
   endDate?: string;
+  startTime?: string; // Horaire de début optionnel (format HH:MM)
+  endTime?: string; // Horaire de fin optionnel (format HH:MM)
   createdAt: string;
   updatedAt: string;
   project?: Project | null;
@@ -364,6 +366,8 @@ export interface CreateTaskDto {
   estimatedHours?: number;
   startDate?: string;
   endDate?: string;
+  startTime?: string; // Horaire de début optionnel (format HH:MM)
+  endTime?: string; // Horaire de fin optionnel (format HH:MM)
 }
 
 export interface UpdateTaskDto {
@@ -379,6 +383,8 @@ export interface UpdateTaskDto {
   progress?: number;
   startDate?: string;
   endDate?: string;
+  startTime?: string; // Horaire de début optionnel (format HH:MM)
+  endTime?: string; // Horaire de fin optionnel (format HH:MM)
 }
 
 // ===========================

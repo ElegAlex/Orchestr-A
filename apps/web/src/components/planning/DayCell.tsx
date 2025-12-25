@@ -146,9 +146,14 @@ export const DayCell = ({
                   <span className="text-xs">{getStatusIcon(task.status)}</span>
                   <span className="flex-1 font-medium line-clamp-2">{task.title}</span>
                 </div>
-                {task.estimatedHours && (
-                  <div className="text-[10px] text-gray-600 mt-1">⏱️ {task.estimatedHours}h</div>
-                )}
+                <div className="flex items-center space-x-2 text-[10px] text-gray-600 mt-1">
+                  {(task.startTime || task.endTime) && (
+                    <span>🕐 {task.startTime || '--:--'} - {task.endTime || '--:--'}</span>
+                  )}
+                  {task.estimatedHours && (
+                    <span>⏱️ {task.estimatedHours}h</span>
+                  )}
+                </div>
               </>
             )}
           </div>
