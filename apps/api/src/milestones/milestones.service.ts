@@ -9,7 +9,7 @@ import {
   MilestonePreviewItemDto,
   MilestonePreviewStatus,
 } from './dto/import-milestones.dto';
-import { MilestoneStatus } from 'database';
+import { MilestoneStatus, Prisma } from 'database';
 
 @Injectable()
 export class MilestonesService {
@@ -160,11 +160,11 @@ export class MilestonesService {
         });
 
         result.created++;
-      } catch (error: any) {
+      } catch (err) {
         result.errors++;
-        result.errorDetails.push(
-          `Ligne ${lineNum}: ${error.message || 'Erreur inconnue'}`,
-        );
+        const errorMessage =
+          err instanceof Error ? err.message : 'Erreur inconnue';
+        result.errorDetails.push(`Ligne ${lineNum}: ${errorMessage}`);
       }
     }
 

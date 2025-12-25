@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsEnum, IsUUID } from 'class-validator';
 import { SkillLevel } from 'database';
 
 export class AssignSkillDto {

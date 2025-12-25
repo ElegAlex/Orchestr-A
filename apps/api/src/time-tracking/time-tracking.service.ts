@@ -422,7 +422,10 @@ export class TimeTrackingService {
         }
         return acc;
       },
-      {} as Record<string, any>,
+      {} as Record<
+        string,
+        { projectId: string; projectName: string; hours: number }
+      >,
     );
 
     // Grouper par date
@@ -513,7 +516,7 @@ export class TimeTrackingService {
         acc[key].hours += entry.hours;
         return acc;
       },
-      {} as Record<string, any>,
+      {} as Record<string, { userId: string; userName: string; hours: number }>,
     );
 
     // Grouper par type

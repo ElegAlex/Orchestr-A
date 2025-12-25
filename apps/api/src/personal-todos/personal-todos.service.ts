@@ -59,7 +59,11 @@ export class PersonalTodosService {
       throw new ForbiddenException('Accès non autorisé');
     }
 
-    const data: any = {};
+    const data: {
+      text?: string;
+      completed?: boolean;
+      completedAt?: Date | null;
+    } = {};
 
     if (dto.text !== undefined) {
       data.text = dto.text;

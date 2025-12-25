@@ -386,7 +386,7 @@ describe('LeavesService', () => {
 
       expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ userId: 'user-1' }),
+          where: expect.objectContaining({ userId: 'user-1' }) as object,
         }),
       );
     });
@@ -399,7 +399,9 @@ describe('LeavesService', () => {
 
       expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ status: LeaveStatus.PENDING }),
+          where: expect.objectContaining({
+            status: LeaveStatus.PENDING,
+          }) as object,
         }),
       );
     });
@@ -412,7 +414,7 @@ describe('LeavesService', () => {
 
       expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ type: LeaveType.CP }),
+          where: expect.objectContaining({ type: LeaveType.CP }) as object,
         }),
       );
     });

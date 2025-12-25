@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTeleworkDto } from './dto/create-telework.dto';
 import { UpdateTeleworkDto } from './dto/update-telework.dto';
+import { Prisma } from 'database';
 
 @Injectable()
 export class TeleworkService {
@@ -86,7 +87,7 @@ export class TeleworkService {
   ) {
     const skip = (page - 1) * limit;
 
-    const where: Prisma.TeleworkWhereInput = {};
+    const where: Prisma.TeleworkScheduleWhereInput = {};
 
     if (userId) {
       where.userId = userId;
@@ -290,7 +291,7 @@ export class TeleworkService {
 
     const { date, isTelework, isException } = updateTeleworkDto;
 
-    const updateData: any = {};
+    const updateData: Prisma.TeleworkScheduleUpdateInput = {};
 
     // Si la date change, vérifier l'unicité
     if (date && date !== existingTelework.date.toISOString().split('T')[0]) {
@@ -374,7 +375,7 @@ export class TeleworkService {
     const targetDate = date ? new Date(date) : new Date();
     targetDate.setHours(0, 0, 0, 0);
 
-    const where: Prisma.TeleworkWhereInput = {
+    const where: Prisma.TeleworkScheduleWhereInput = {
       date: targetDate,
       isTelework: true,
     };

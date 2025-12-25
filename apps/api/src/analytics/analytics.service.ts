@@ -79,10 +79,7 @@ export class AnalyticsService {
     }
   }
 
-  private async getProjects(
-    startDate: Date,
-    projectId?: string,
-  ): Promise<ProjectWithDetails[]> {
+  private async getProjects(startDate: Date, projectId?: string) {
     const where: Prisma.ProjectWhereInput = {
       createdAt: { gte: startDate },
     };

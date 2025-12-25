@@ -92,7 +92,7 @@ describe('DocumentsService', () => {
 
       expect(mockPrismaService.document.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ projectId: 'project-1' }),
+          where: expect.objectContaining({ projectId: 'project-1' }) as object,
         }),
       );
     });
