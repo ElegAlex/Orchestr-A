@@ -1,7 +1,7 @@
 # Checklist de Synchronisation Serveur L51750100ORC
 
 **Date de generation**: 2025-12-12
-**Serveur cible**: L51750100ORC (55.169.64.192)
+**Serveur cible**: VPS OVH (92.222.35.25)
 **Projet**: Orchestr'a V2
 
 ---
@@ -31,7 +31,7 @@ Les fichiers suivants doivent etre copies/mis a jour sur le serveur :
 
 ```bash
 # Sur le serveur
-cd /opt/ORCHESTRA
+cd /opt/orchestra
 vi packages/database/prisma/schema.prisma
 ```
 
@@ -103,10 +103,10 @@ test: {
 
 ```bash
 # 1. Se connecter au serveur
-ssh root@55.169.64.192
+ssh debian@92.222.35.25
 
 # 2. Aller dans le repertoire du projet
-cd /opt/ORCHESTRA
+cd /opt/orchestra
 
 # 3. Sauvegarder les fichiers modifies localement
 cp .env .env.backup.$(date +%Y%m%d)
@@ -119,10 +119,10 @@ git pull origin main
 git stash pop  # Restaurer les modifications locales si necessaire
 
 # OU si pas de Git, transferer les fichiers manuellement :
-# scp -r ./package.json root@55.169.64.192:/opt/ORCHESTRA/
-# scp -r ./docker-compose*.yml root@55.169.64.192:/opt/ORCHESTRA/
-# scp -r ./apps/api/vitest.config.ts root@55.169.64.192:/opt/ORCHESTRA/apps/api/
-# scp -r ./scripts/pre-deploy-check.sh root@55.169.64.192:/opt/ORCHESTRA/scripts/
+# scp -r ./package.json debian@92.222.35.25:/opt/orchestra/
+# scp -r ./docker-compose*.yml debian@92.222.35.25:/opt/orchestra/
+# scp -r ./apps/api/vitest.config.ts debian@92.222.35.25:/opt/orchestra/apps/api/
+# scp -r ./scripts/pre-deploy-check.sh debian@92.222.35.25:/opt/orchestra/scripts/
 
 # 5. Restaurer le fichier .env (NE PAS ecraser avec la version du depot)
 cp .env.backup.$(date +%Y%m%d) .env
@@ -144,7 +144,7 @@ cd packages/database
 pnpm run db:migrate
 
 # 11. Retour racine et build
-cd /opt/ORCHESTRA
+cd /opt/orchestra
 pnpm run build
 ```
 
@@ -185,5 +185,5 @@ pnpm install
 ## Contacts
 
 En cas de probleme :
-- Documentation : `/opt/ORCHESTRA/OPERATIONS.md`
+- Documentation : `/opt/orchestra/OPERATIONS.md`
 - GitHub : https://github.com/ElegAlex/Orchestr-A

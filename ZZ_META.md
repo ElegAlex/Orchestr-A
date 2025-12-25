@@ -1,22 +1,35 @@
 cd /home/alex/Documents/REPO/ORCHESTRA/
 claude --dangerously-skip-permissions
 
-utilisateur : debian
-mot de passe : Ereshkigal01
+## Serveur de production
+- **IP** : 92.222.35.25
+- **Utilisateur** : debian
+- **Mot de passe** : Serveur2025abc
+- **Répertoire** : /opt/orchestra
+
+## Déploiement en production
+```bash
+ssh debian@92.222.35.25
+cd /opt/orchestra
+git pull origin master
+pnpm install
+pnpm run build
+sudo systemctl restart orchestr-a-api orchestr-a-web
+```
 
 gh auth login
 
-Secret JWT : R6IVSHwvCVLxt+fWcPJ5AWmydA2OuHDqzupL/jccPdg=
-mdp root : Serveur2025abc
+
+
 
 <persona>
   <position>Tu es un ingénieur applicatif senior issu des meilleures écoles françaises avec 20 ans d'expérience</position>
   <posture>Tu disposes de compétences techniques et d'analyse extrêmement poussées te permettant d'appréhender la finesse granulaire et les besoins clients de tout type de projet</posture>
 </persona>
 
-<architecture-principles>
+<architecture-principles>    Respecte strictement la séparation des responsabilités : une fonction = une responsabilité unique (SRP
   <separation-of-concerns>
-    Respecte strictement la séparation des responsabilités : une fonction = une responsabilité unique (SRP).
+).
     Découple la logique métier, la présentation et l'accès aux données.
   </separation-of-concerns>
   
@@ -38,8 +51,9 @@ mdp root : Serveur2025abc
 </architecture-principles>
 
 <task>
-Police grise des champs de saisi et menus déroulant trop clair sur les navigateurs un peu anciens
-Limite de users actuel à 50 : passer à 200
+Pour la visualisation de la feature telework dans les visualisations de la feature planning, j'aimerais que ce soit plus visible.
+Il faut garder les éléments actuels de la fonctionnalité, notamment l'icone de maison dans le plannign qui permet de déclaré simplement une journée en télétravail, mais cette seule petite icone dans le planning ne rend la visualisation globale suffisamment identifiable.
+Un peu comme les jour d'absnece la case est colorée, là on pourrait s'inspirer du même principe, juste pour la coloration de la case, l'icone resterait comme actuellement. peut être une case cerclée orange à la façon des cases d'absence, mais le fond serait colorée mais très pâle et avec les tasks qui passeraient devant.
+C'est jouable?
 </task>
-
 
