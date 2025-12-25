@@ -8,8 +8,9 @@ import { settingsService, AppSetting } from '@/services/settings.service';
 import { Role } from '@/types';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { HolidaysManager } from '@/components/holidays/HolidaysManager';
 
-type CategoryTab = 'display' | 'notifications';
+type CategoryTab = 'display' | 'notifications' | 'holidays';
 
 const DATE_FORMAT_OPTIONS = [
   { value: 'dd/MM/yyyy', label: 'JJ/MM/AAAA (31/12/2025)', example: '31/12/2025' },
@@ -193,6 +194,16 @@ export default function SettingsPage() {
             >
               Notifications
             </button>
+            <button
+              onClick={() => setActiveTab('holidays')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'holidays'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Jours feries
+            </button>
           </nav>
         </div>
 
@@ -334,6 +345,13 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Holidays Settings */}
+          {activeTab === 'holidays' && (
+            <div className="p-6">
+              <HolidaysManager />
             </div>
           )}
         </div>
