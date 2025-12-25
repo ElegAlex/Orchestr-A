@@ -268,7 +268,10 @@ export const usePlanningData = ({
 
       // Vérifier si c'est un jour férié
       const dateStr = format(date, 'yyyy-MM-dd');
-      const holiday = holidays.find((h) => h.date === dateStr);
+      const holiday = holidays.find((h) => {
+        const holidayDateStr = typeof h.date === 'string' ? h.date.slice(0, 10) : format(new Date(h.date), 'yyyy-MM-dd');
+        return holidayDateStr === dateStr;
+      });
 
       // Appliquer le filtre d'affichage
       let filteredTasks = dayTasks;
@@ -306,7 +309,10 @@ export const usePlanningData = ({
   const getHolidayForDate = useCallback(
     (date: Date): Holiday | undefined => {
       const dateStr = format(date, 'yyyy-MM-dd');
-      return holidays.find((h) => h.date === dateStr);
+      return holidays.find((h) => {
+        const holidayDateStr = typeof h.date === 'string' ? h.date.slice(0, 10) : format(new Date(h.date), 'yyyy-MM-dd');
+        return holidayDateStr === dateStr;
+      });
     },
     [holidays]
   );
