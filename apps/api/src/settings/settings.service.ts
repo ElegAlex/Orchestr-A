@@ -10,7 +10,7 @@ interface SettingConfig {
   description: string;
 }
 
-interface ParsedSetting {
+export interface ParsedSetting {
   id?: string;
   key: string;
   value: SettingValue;

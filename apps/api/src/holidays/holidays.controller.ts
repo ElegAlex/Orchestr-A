@@ -29,7 +29,7 @@ import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { HolidayRangeQueryDto } from './dto/holiday-range-query.dto';
 import { Role } from 'database';
-import { User } from '@prisma/client';
+import type { User } from '@prisma/client';
 
 @ApiTags('Holidays')
 @ApiBearerAuth()
