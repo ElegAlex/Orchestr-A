@@ -231,12 +231,9 @@ export class DepartmentsService {
     }
 
     // Vérifier qu'il n'y a pas d'utilisateurs ou services liés
-    if (
-      department._count.users > 0 ||
-      department._count.services > 0
-    ) {
+    if (department._count.users > 0 || department._count.services > 0) {
       throw new BadRequestException(
-        'Impossible de supprimer un département qui contient des utilisateurs ou services. Veuillez d\'abord les réaffecter.',
+        "Impossible de supprimer un département qui contient des utilisateurs ou services. Veuillez d'abord les réaffecter.",
       );
     }
 

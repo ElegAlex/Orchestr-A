@@ -50,7 +50,7 @@ export class LeavesService {
     }
 
     if (!leaveTypeConfig.isActive) {
-      throw new BadRequestException('Ce type de congé n\'est plus disponible');
+      throw new BadRequestException("Ce type de congé n'est plus disponible");
     }
 
     // Vérifier que la date de fin est après la date de début
@@ -109,9 +109,11 @@ export class LeavesService {
     // Déterminer le type enum à utiliser (pour rétrocompatibilité)
     // Si le code correspond à un type enum existant, l'utiliser, sinon utiliser OTHER
     const validEnumTypes = Object.values(LeaveType);
-    const enumType = type || (validEnumTypes.includes(leaveTypeConfig.code as LeaveType)
-      ? (leaveTypeConfig.code as LeaveType)
-      : LeaveType.OTHER);
+    const enumType =
+      type ||
+      (validEnumTypes.includes(leaveTypeConfig.code as LeaveType)
+        ? (leaveTypeConfig.code as LeaveType)
+        : LeaveType.OTHER);
 
     // Créer la demande de congé
     const leave = await this.prisma.leave.create({
@@ -154,7 +156,10 @@ export class LeavesService {
   /**
    * Récupérer le nombre de jours utilisés pour un type de congé cette année
    */
-  private async getUsedDaysForType(userId: string, leaveTypeId: string): Promise<number> {
+  private async getUsedDaysForType(
+    userId: string,
+    leaveTypeId: string,
+  ): Promise<number> {
     const currentYear = new Date().getFullYear();
     const yearStart = new Date(currentYear, 0, 1);
     const yearEnd = new Date(currentYear, 11, 31);
@@ -193,10 +198,7 @@ export class LeavesService {
     const activeDelegate = await this.prisma.leaveValidationDelegate.findFirst({
       where: {
         delegator: {
-          OR: [
-            { role: Role.MANAGER },
-            { role: Role.RESPONSABLE },
-          ],
+          OR: [{ role: Role.MANAGER }, { role: Role.RESPONSABLE }],
         },
         isActive: true,
         startDate: { lte: today },
@@ -252,10 +254,7 @@ export class LeavesService {
       const start = new Date(startDate);
       const end = new Date(endDate);
       // Un congé chevauche la période si: leave.startDate <= endDate ET leave.endDate >= startDate
-      where.AND = [
-        { startDate: { lte: end } },
-        { endDate: { gte: start } },
-      ];
+      where.AND = [{ startDate: { lte: end } }, { endDate: { gte: start } }];
     } else if (startDate) {
       where.endDate = { gte: new Date(startDate) };
     } else if (endDate) {
@@ -327,14 +326,15 @@ export class LeavesService {
   async getPendingForValidator(validatorId: string) {
     // Vérifier si l'utilisateur est un délégué actif
     const today = new Date();
-    const activeDelegation = await this.prisma.leaveValidationDelegate.findFirst({
-      where: {
-        delegateId: validatorId,
-        isActive: true,
-        startDate: { lte: today },
-        endDate: { gte: today },
-      },
-    });
+    const activeDelegation =
+      await this.prisma.leaveValidationDelegate.findFirst({
+        where: {
+          delegateId: validatorId,
+          isActive: true,
+          startDate: { lte: today },
+          endDate: { gte: today },
+        },
+      });
 
     const user = await this.prisma.user.findUnique({
       where: { id: validatorId },
@@ -519,14 +519,8 @@ export class LeavesService {
       );
     }
 
-    const {
-      type,
-      startDate,
-      endDate,
-      startHalfDay,
-      endHalfDay,
-      reason,
-    } = updateLeaveDto;
+    const { type, startDate, endDate, startHalfDay, endHalfDay, reason } =
+      updateLeaveDto;
 
     // Recalculer les jours si les dates changent
     const start = startDate ? new Date(startDate) : existingLeave.startDate;
@@ -666,14 +660,15 @@ export class LeavesService {
 
     // Vérifier les délégations actives
     const today = new Date();
-    const activeDelegation = await this.prisma.leaveValidationDelegate.findFirst({
-      where: {
-        delegateId: validatorId,
-        isActive: true,
-        startDate: { lte: today },
-        endDate: { gte: today },
-      },
-    });
+    const activeDelegation =
+      await this.prisma.leaveValidationDelegate.findFirst({
+        where: {
+          delegateId: validatorId,
+          isActive: true,
+          startDate: { lte: today },
+          endDate: { gte: today },
+        },
+      });
 
     return activeDelegation !== null;
   }
@@ -700,7 +695,7 @@ export class LeavesService {
     const canValidateLeave = await this.canValidate(id, validatorId);
     if (!canValidateLeave) {
       throw new ForbiddenException(
-        'Vous n\'êtes pas autorisé à valider cette demande',
+        "Vous n'êtes pas autorisé à valider cette demande",
       );
     }
 
@@ -756,7 +751,7 @@ export class LeavesService {
     const canValidateLeave = await this.canValidate(id, validatorId);
     if (!canValidateLeave) {
       throw new ForbiddenException(
-        'Vous n\'êtes pas autorisé à valider cette demande',
+        "Vous n'êtes pas autorisé à valider cette demande",
       );
     }
 
@@ -868,9 +863,7 @@ export class LeavesService {
     }
 
     if (!delegate.isActive) {
-      throw new BadRequestException(
-        'L\'utilisateur délégué doit être actif',
-      );
+      throw new BadRequestException("L'utilisateur délégué doit être actif");
     }
 
     // Vérifier les dates
@@ -967,7 +960,7 @@ export class LeavesService {
 
     if (delegation.delegatorId !== userId && user?.role !== Role.ADMIN) {
       throw new ForbiddenException(
-        'Vous n\'êtes pas autorisé à désactiver cette délégation',
+        "Vous n'êtes pas autorisé à désactiver cette délégation",
       );
     }
 
@@ -1008,10 +1001,7 @@ export class LeavesService {
       },
     });
 
-    const usedDays = approvedLeaves.reduce(
-      (sum, leave) => sum + leave.days,
-      0,
-    );
+    const usedDays = approvedLeaves.reduce((sum, leave) => sum + leave.days, 0);
 
     // En France, le droit légal est de 25 jours ouvrés (5 semaines)
     const totalDays = 25;

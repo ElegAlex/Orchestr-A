@@ -113,6 +113,7 @@ export interface ImportUserData {
   role: string;
   departmentName?: string;
   serviceNames?: string;
+  [key: string]: string | undefined;
 }
 
 export interface ImportUsersResult {

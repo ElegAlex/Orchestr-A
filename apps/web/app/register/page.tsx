@@ -33,14 +33,16 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const { confirmPassword, ...registerData } = formData;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { confirmPassword: _unused, ...registerData } = formData;
       const response = await authService.register(registerData);
       setUser(response.user);
       toast.success('Inscription réussie !');
       router.push('/dashboard');
-    } catch (error: any) {
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || 'Erreur lors de l\'inscription'
+        axiosError.response?.data?.message || 'Erreur lors de l\'inscription'
       );
     } finally {
       setLoading(false);
@@ -52,7 +54,7 @@ export default function RegisterPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            ORCHESTR'A V2
+            ORCHESTR&apos;A V2
           </h1>
           <p className="text-gray-600">Créer un compte</p>
         </div>

@@ -1,13 +1,3 @@
-// Mock functions must be declared before jest.mock calls due to hoisting
-const mockSave = jest.fn();
-const mockText = jest.fn();
-const mockSetFontSize = jest.fn();
-const mockSetFont = jest.fn();
-const mockSetTextColor = jest.fn();
-const mockSetPage = jest.fn();
-const mockAddPage = jest.fn();
-const mockWriteFile = jest.fn();
-
 jest.mock('jspdf', () => {
   return jest.fn().mockImplementation(() => ({
     internal: {

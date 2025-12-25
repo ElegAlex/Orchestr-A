@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
 
@@ -109,7 +113,10 @@ describe('AuthService', () => {
       (bcrypt.compare as any).mockResolvedValue(true);
       mockJwtService.sign.mockReturnValue('mock-jwt-token');
 
-      const result = await service.login({ login: 'testuser', password: 'password123' });
+      const result = await service.login({
+        login: 'testuser',
+        password: 'password123',
+      });
 
       expect(result.access_token).toBe('mock-jwt-token');
       expect(result.user.id).toBe(mockUser.id);
@@ -119,7 +126,7 @@ describe('AuthService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.login({ login: 'nonexistent', password: 'password123' })
+        service.login({ login: 'nonexistent', password: 'password123' }),
       ).rejects.toThrow(UnauthorizedException);
     });
   });
@@ -136,7 +143,10 @@ describe('AuthService', () => {
 
     it('should create a new user with hashed password', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
-      mockPrismaService.department.findUnique.mockResolvedValue({ id: 'dept-1', name: 'IT' });
+      mockPrismaService.department.findUnique.mockResolvedValue({
+        id: 'dept-1',
+        name: 'IT',
+      });
       (bcrypt.hash as any).mockResolvedValue('$2b$12$hashedpassword');
 
       const createdUser = {
@@ -165,14 +175,18 @@ describe('AuthService', () => {
         email: registerDto.email,
       });
 
-      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
+      await expect(service.register(registerDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should throw BadRequestException if department not found', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
       mockPrismaService.department.findUnique.mockResolvedValue(null);
 
-      await expect(service.register(registerDto)).rejects.toThrow(BadRequestException);
+      await expect(service.register(registerDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -194,7 +208,9 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException if user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getProfile('nonexistent')).rejects.toThrow(UnauthorizedException);
+      await expect(service.getProfile('nonexistent')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 });

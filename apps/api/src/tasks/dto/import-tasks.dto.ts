@@ -13,7 +13,10 @@ import { Type } from 'class-transformer';
 import { TaskStatus, Priority } from 'database';
 
 export class ImportTaskDto {
-  @ApiProperty({ description: 'Titre de la tâche', example: 'Développer le module Auth' })
+  @ApiProperty({
+    description: 'Titre de la tâche',
+    example: 'Développer le module Auth',
+  })
   @IsString()
   @IsNotEmpty()
   title: string;
@@ -33,7 +36,10 @@ export class ImportTaskDto {
   @IsOptional()
   priority?: Priority;
 
-  @ApiProperty({ description: 'Email de l\'utilisateur assigné', required: false })
+  @ApiProperty({
+    description: "Email de l'utilisateur assigné",
+    required: false,
+  })
   @IsString()
   @IsOptional()
   assigneeEmail?: string;
@@ -61,7 +67,10 @@ export class ImportTaskDto {
 }
 
 export class ImportTasksDto {
-  @ApiProperty({ description: 'Liste des tâches à importer', type: [ImportTaskDto] })
+  @ApiProperty({
+    description: 'Liste des tâches à importer',
+    type: [ImportTaskDto],
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ImportTaskDto)
@@ -75,7 +84,7 @@ export class ImportTasksResultDto {
   @ApiProperty({ description: 'Nombre de tâches ignorées (doublon)' })
   skipped: number;
 
-  @ApiProperty({ description: 'Nombre d\'erreurs' })
+  @ApiProperty({ description: "Nombre d'erreurs" })
   errors: number;
 
   @ApiProperty({ description: 'Détail des erreurs' })
@@ -92,7 +101,10 @@ export class TaskPreviewItemDto {
   @ApiProperty({ description: 'Données de la tâche' })
   task: ImportTaskDto;
 
-  @ApiProperty({ description: 'Statut de validation', enum: ['valid', 'duplicate', 'error', 'warning'] })
+  @ApiProperty({
+    description: 'Statut de validation',
+    enum: ['valid', 'duplicate', 'error', 'warning'],
+  })
   status: TaskPreviewStatus;
 
   @ApiProperty({ description: 'Messages de validation' })
@@ -106,16 +118,28 @@ export class TaskPreviewItemDto {
 }
 
 export class TasksValidationPreviewDto {
-  @ApiProperty({ description: 'Éléments valides prêts à être importés', type: [TaskPreviewItemDto] })
+  @ApiProperty({
+    description: 'Éléments valides prêts à être importés',
+    type: [TaskPreviewItemDto],
+  })
   valid: TaskPreviewItemDto[];
 
-  @ApiProperty({ description: 'Éléments qui seront ignorés (doublons)', type: [TaskPreviewItemDto] })
+  @ApiProperty({
+    description: 'Éléments qui seront ignorés (doublons)',
+    type: [TaskPreviewItemDto],
+  })
   duplicates: TaskPreviewItemDto[];
 
-  @ApiProperty({ description: 'Éléments avec erreurs', type: [TaskPreviewItemDto] })
+  @ApiProperty({
+    description: 'Éléments avec erreurs',
+    type: [TaskPreviewItemDto],
+  })
   errors: TaskPreviewItemDto[];
 
-  @ApiProperty({ description: 'Éléments avec avertissements (seront importés)', type: [TaskPreviewItemDto] })
+  @ApiProperty({
+    description: 'Éléments avec avertissements (seront importés)',
+    type: [TaskPreviewItemDto],
+  })
   warnings: TaskPreviewItemDto[];
 
   @ApiProperty({ description: 'Résumé de la validation' })

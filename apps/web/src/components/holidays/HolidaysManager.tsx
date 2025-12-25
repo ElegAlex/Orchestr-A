@@ -26,7 +26,7 @@ export function HolidaysManager() {
       setLoading(true);
       const data = await holidaysService.getByYear(selectedYear);
       setHolidays(data);
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors du chargement des jours feries');
     } finally {
       setLoading(false);
@@ -58,7 +58,8 @@ export function HolidaysManager() {
       await holidaysService.delete(id);
       toast.success('Jour ferie supprime');
       fetchHolidays();
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
       toast.error(
         error.response?.data?.message || 'Erreur lors de la suppression'
       );
@@ -74,7 +75,8 @@ export function HolidaysManager() {
         `Import termine : ${result.created} cree(s), ${result.skipped} deja existant(s)`
       );
       fetchHolidays();
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
       toast.error(error.response?.data?.message || "Erreur lors de l'import");
     } finally {
       setIsImporting(false);
@@ -88,7 +90,7 @@ export function HolidaysManager() {
       });
       toast.success('Statut mis a jour');
       fetchHolidays();
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors de la mise a jour');
     }
   };

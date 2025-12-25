@@ -63,7 +63,7 @@ export class CreateLeaveDto {
 
   @ApiProperty({
     description: 'Raison du congé',
-    example: 'Vacances d\'été',
+    example: "Vacances d'été",
     required: false,
   })
   @IsString()

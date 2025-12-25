@@ -466,7 +466,7 @@ export class ProjectsService {
     );
 
     // Calculer les heures réelles depuis les TimeEntry
-    const taskIds = project.tasks.map(t => t.id);
+    const taskIds = project.tasks.map((t) => t.id);
     const timeEntries = await this.prisma.timeEntry.findMany({
       where: { taskId: { in: taskIds } },
       select: { hours: true },

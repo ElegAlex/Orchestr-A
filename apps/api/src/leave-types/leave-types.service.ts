@@ -22,7 +22,9 @@ export class LeaveTypesService {
     });
 
     if (existing) {
-      throw new ConflictException(`Un type de congé avec le code "${createLeaveTypeDto.code}" existe déjà`);
+      throw new ConflictException(
+        `Un type de congé avec le code "${createLeaveTypeDto.code}" existe déjà`,
+      );
     }
 
     const leaveType = await this.prisma.leaveTypeConfig.create({
@@ -52,10 +54,7 @@ export class LeaveTypesService {
 
     const leaveTypes = await this.prisma.leaveTypeConfig.findMany({
       where,
-      orderBy: [
-        { sortOrder: 'asc' },
-        { name: 'asc' },
-      ],
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: {
         _count: {
           select: { leaves: true },
@@ -95,7 +94,9 @@ export class LeaveTypesService {
     });
 
     if (!leaveType) {
-      throw new NotFoundException(`Type de congé avec le code "${code}" introuvable`);
+      throw new NotFoundException(
+        `Type de congé avec le code "${code}" introuvable`,
+      );
     }
 
     return leaveType;
@@ -115,13 +116,21 @@ export class LeaveTypesService {
 
     // Les types système ne peuvent pas être modifiés (sauf nom, description, couleur, icône)
     if (existing.isSystem) {
-      const allowedFieldsForSystem = ['name', 'description', 'color', 'icon', 'sortOrder'];
+      const allowedFieldsForSystem = [
+        'name',
+        'description',
+        'color',
+        'icon',
+        'sortOrder',
+      ];
       const providedFields = Object.keys(updateLeaveTypeDto);
-      const forbiddenFields = providedFields.filter(f => !allowedFieldsForSystem.includes(f));
+      const forbiddenFields = providedFields.filter(
+        (f) => !allowedFieldsForSystem.includes(f),
+      );
 
       if (forbiddenFields.length > 0) {
         throw new BadRequestException(
-          `Les types système ne peuvent pas modifier: ${forbiddenFields.join(', ')}`
+          `Les types système ne peuvent pas modifier: ${forbiddenFields.join(', ')}`,
         );
       }
     }
@@ -153,7 +162,9 @@ export class LeaveTypesService {
 
     // Les types système ne peuvent pas être supprimés
     if (existing.isSystem) {
-      throw new BadRequestException('Les types de congé système ne peuvent pas être supprimés');
+      throw new BadRequestException(
+        'Les types de congé système ne peuvent pas être supprimés',
+      );
     }
 
     // Si des congés utilisent ce type, on le désactive plutôt que de le supprimer
@@ -184,7 +195,7 @@ export class LeaveTypesService {
       this.prisma.leaveTypeConfig.update({
         where: { id },
         data: { sortOrder: index },
-      })
+      }),
     );
 
     await this.prisma.$transaction(updates);

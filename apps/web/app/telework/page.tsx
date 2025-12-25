@@ -29,8 +29,8 @@ export default function TeleworkPage() {
         format(endDate, 'yyyy-MM-dd')
       );
       setTeleworkDays(Array.isArray(data) ? data : []);
-    } catch (error: any) {
-      console.error('Erreur chargement télétravail:', error);
+    } catch (err) {
+      console.error('Erreur chargement télétravail:', err);
       toast.error('Erreur lors du chargement des données');
     } finally {
       setLoading(false);
@@ -122,8 +122,9 @@ export default function TeleworkPage() {
       setShowModal(false);
       setSelectedDate(null);
       fetchTeleworkData();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Erreur lors de l'enregistrement");
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || "Erreur lors de l'enregistrement");
     }
   };
 
@@ -140,7 +141,7 @@ export default function TeleworkPage() {
       setShowModal(false);
       setSelectedDate(null);
       fetchTeleworkData();
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors de la suppression');
     }
   };

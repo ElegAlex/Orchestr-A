@@ -8,7 +8,7 @@ interface PreviewItem {
   lineNumber: number;
   status: PreviewStatus;
   messages: string[];
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   resolvedFields?: Record<string, { id: string; name: string } | { id: string; email: string; name: string }>;
 }
 
@@ -229,7 +229,7 @@ export function ImportPreviewModal({
                     <div className="text-sm text-green-700 mb-2">
                       {Object.entries(item.resolvedFields).map(([key, value]) => (
                         <span key={key} className="mr-3">
-                          {key}: <strong>{(value as any).name || (value as any).email}</strong>
+                          {key}: <strong>{(value as { name?: string; email?: string }).name || (value as { name?: string; email?: string }).email}</strong>
                         </span>
                       ))}
                     </div>
@@ -304,7 +304,7 @@ export function ImportPreviewModal({
                   <span>Import en cours...</span>
                 </>
               ) : (
-                <span>Confirmer l'import ({importCount})</span>
+                <span>Confirmer l&apos;import ({importCount})</span>
               )}
             </button>
           </div>

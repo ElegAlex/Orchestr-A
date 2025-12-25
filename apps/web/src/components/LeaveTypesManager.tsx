@@ -68,8 +68,9 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
       resetForm();
       fetchLeaveTypes();
       onTypeChange?.();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la création');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la création');
     }
   };
 
@@ -100,8 +101,9 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
       resetForm();
       fetchLeaveTypes();
       onTypeChange?.();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la modification');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la modification');
     }
   };
 
@@ -122,8 +124,9 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
       toast.success(result.message);
       fetchLeaveTypes();
       onTypeChange?.();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la suppression');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la suppression');
     }
   };
 
@@ -133,8 +136,9 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
       toast.success(type.isActive ? 'Type désactivé' : 'Type réactivé');
       fetchLeaveTypes();
       onTypeChange?.();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur');
     }
   };
 
@@ -459,7 +463,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
               <h3 className="text-lg font-semibold">Modifier le type de congé</h3>
               {editingType.isSystem && (
                 <p className="text-sm text-yellow-600 mt-1">
-                  Type système : seuls le nom, la description, l'icône et la couleur peuvent être modifiés.
+                  Type système : seuls le nom, la description, l&apos;icône et la couleur peuvent être modifiés.
                 </p>
               )}
             </div>

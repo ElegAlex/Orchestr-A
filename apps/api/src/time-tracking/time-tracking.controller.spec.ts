@@ -80,28 +80,35 @@ describe('TimeTrackingController', () => {
       const result = await controller.create('user-id-1', createTimeEntryDto);
 
       expect(result).toEqual(mockTimeEntry);
-      expect(mockTimeTrackingService.create).toHaveBeenCalledWith('user-id-1', createTimeEntryDto);
+      expect(mockTimeTrackingService.create).toHaveBeenCalledWith(
+        'user-id-1',
+        createTimeEntryDto,
+      );
       expect(mockTimeTrackingService.create).toHaveBeenCalledTimes(1);
     });
 
     it('should throw BadRequestException when neither task nor project specified', async () => {
       mockTimeTrackingService.create.mockRejectedValue(
-        new BadRequestException('Une tâche ou un projet doit être spécifié')
+        new BadRequestException('Une tâche ou un projet doit être spécifié'),
       );
 
       await expect(
-        controller.create('user-id-1', { ...createTimeEntryDto, projectId: undefined, taskId: undefined })
+        controller.create('user-id-1', {
+          ...createTimeEntryDto,
+          projectId: undefined,
+          taskId: undefined,
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when task not found', async () => {
       mockTimeTrackingService.create.mockRejectedValue(
-        new NotFoundException('Tâche introuvable')
+        new NotFoundException('Tâche introuvable'),
       );
 
-      await expect(controller.create('user-id-1', createTimeEntryDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.create('user-id-1', createTimeEntryDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -123,7 +130,13 @@ describe('TimeTrackingController', () => {
 
       expect(result).toEqual(paginatedResult);
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
-        1, 10, undefined, undefined, undefined, undefined, undefined
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
       );
     });
 
@@ -136,7 +149,13 @@ describe('TimeTrackingController', () => {
       await controller.findAll(1, 10, 'user-id-1');
 
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
-        1, 10, 'user-id-1', undefined, undefined, undefined, undefined
+        1,
+        10,
+        'user-id-1',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
       );
     });
 
@@ -149,7 +168,13 @@ describe('TimeTrackingController', () => {
       await controller.findAll(1, 10, undefined, 'project-id-1');
 
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
-        1, 10, undefined, 'project-id-1', undefined, undefined, undefined
+        1,
+        10,
+        undefined,
+        'project-id-1',
+        undefined,
+        undefined,
+        undefined,
       );
     });
 
@@ -159,10 +184,24 @@ describe('TimeTrackingController', () => {
         meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
       });
 
-      await controller.findAll(1, 10, undefined, undefined, undefined, '2025-01-01', '2025-01-31');
+      await controller.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        '2025-01-01',
+        '2025-01-31',
+      );
 
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
-        1, 10, undefined, undefined, undefined, '2025-01-01', '2025-01-31'
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        '2025-01-01',
+        '2025-01-31',
       );
     });
   });
@@ -174,15 +213,19 @@ describe('TimeTrackingController', () => {
       const result = await controller.findOne('entry-id-1');
 
       expect(result).toEqual(mockTimeEntry);
-      expect(mockTimeTrackingService.findOne).toHaveBeenCalledWith('entry-id-1');
+      expect(mockTimeTrackingService.findOne).toHaveBeenCalledWith(
+        'entry-id-1',
+      );
     });
 
     it('should throw NotFoundException when entry not found', async () => {
       mockTimeTrackingService.findOne.mockRejectedValue(
-        new NotFoundException('Entrée de temps introuvable')
+        new NotFoundException('Entrée de temps introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -195,7 +238,9 @@ describe('TimeTrackingController', () => {
 
       expect(result).toEqual(userEntries);
       expect(mockTimeTrackingService.getUserEntries).toHaveBeenCalledWith(
-        'user-id-1', undefined, undefined
+        'user-id-1',
+        undefined,
+        undefined,
       );
     });
 
@@ -205,7 +250,9 @@ describe('TimeTrackingController', () => {
       await controller.getMyEntries('user-id-1', '2025-01-01', '2025-01-31');
 
       expect(mockTimeTrackingService.getUserEntries).toHaveBeenCalledWith(
-        'user-id-1', '2025-01-01', '2025-01-31'
+        'user-id-1',
+        '2025-01-01',
+        '2025-01-31',
       );
     });
   });
@@ -221,18 +268,22 @@ describe('TimeTrackingController', () => {
         byProject: [
           { projectId: 'project-id-1', name: 'Main Project', hours: 40 },
         ],
-        byDate: [
-          { date: '2025-01-15', hours: 8 },
-        ],
+        byDate: [{ date: '2025-01-15', hours: 8 }],
       };
 
       mockTimeTrackingService.getUserReport.mockResolvedValue(report);
 
-      const result = await controller.getMyReport('user-id-1', '2025-01-01', '2025-01-31');
+      const result = await controller.getMyReport(
+        'user-id-1',
+        '2025-01-01',
+        '2025-01-31',
+      );
 
       expect(result).toEqual(report);
       expect(mockTimeTrackingService.getUserReport).toHaveBeenCalledWith(
-        'user-id-1', '2025-01-01', '2025-01-31'
+        'user-id-1',
+        '2025-01-01',
+        '2025-01-31',
       );
     });
   });
@@ -242,11 +293,17 @@ describe('TimeTrackingController', () => {
       const report = { totalHours: 40 };
       mockTimeTrackingService.getUserReport.mockResolvedValue(report);
 
-      const result = await controller.getUserReport('user-id-2', '2025-01-01', '2025-01-31');
+      const result = await controller.getUserReport(
+        'user-id-2',
+        '2025-01-01',
+        '2025-01-31',
+      );
 
       expect(result).toEqual(report);
       expect(mockTimeTrackingService.getUserReport).toHaveBeenCalledWith(
-        'user-id-2', '2025-01-01', '2025-01-31'
+        'user-id-2',
+        '2025-01-01',
+        '2025-01-31',
       );
     });
   });
@@ -271,26 +328,38 @@ describe('TimeTrackingController', () => {
 
       expect(result).toEqual(report);
       expect(mockTimeTrackingService.getProjectReport).toHaveBeenCalledWith(
-        'project-id-1', undefined, undefined
+        'project-id-1',
+        undefined,
+        undefined,
       );
     });
 
     it('should filter by date range', async () => {
-      mockTimeTrackingService.getProjectReport.mockResolvedValue({ totalHours: 100 });
+      mockTimeTrackingService.getProjectReport.mockResolvedValue({
+        totalHours: 100,
+      });
 
-      await controller.getProjectReport('project-id-1', '2025-01-01', '2025-01-31');
+      await controller.getProjectReport(
+        'project-id-1',
+        '2025-01-01',
+        '2025-01-31',
+      );
 
       expect(mockTimeTrackingService.getProjectReport).toHaveBeenCalledWith(
-        'project-id-1', '2025-01-01', '2025-01-31'
+        'project-id-1',
+        '2025-01-01',
+        '2025-01-31',
       );
     });
 
     it('should throw NotFoundException when project not found', async () => {
       mockTimeTrackingService.getProjectReport.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.getProjectReport('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.getProjectReport('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -308,23 +377,28 @@ describe('TimeTrackingController', () => {
 
       expect(result.hours).toBe(6);
       expect(result.description).toBe('Updated description');
-      expect(mockTimeTrackingService.update).toHaveBeenCalledWith('entry-id-1', updateTimeEntryDto);
+      expect(mockTimeTrackingService.update).toHaveBeenCalledWith(
+        'entry-id-1',
+        updateTimeEntryDto,
+      );
     });
 
     it('should throw NotFoundException when entry not found', async () => {
       mockTimeTrackingService.update.mockRejectedValue(
-        new NotFoundException('Entrée de temps introuvable')
+        new NotFoundException('Entrée de temps introuvable'),
       );
 
-      await expect(controller.update('nonexistent', updateTimeEntryDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.update('nonexistent', updateTimeEntryDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('remove', () => {
     it('should delete a time entry successfully', async () => {
-      mockTimeTrackingService.remove.mockResolvedValue({ message: 'Entrée de temps supprimée' });
+      mockTimeTrackingService.remove.mockResolvedValue({
+        message: 'Entrée de temps supprimée',
+      });
 
       const result = await controller.remove('entry-id-1');
 
@@ -334,10 +408,12 @@ describe('TimeTrackingController', () => {
 
     it('should throw NotFoundException when entry not found', async () => {
       mockTimeTrackingService.remove.mockRejectedValue(
-        new NotFoundException('Entrée de temps introuvable')
+        new NotFoundException('Entrée de temps introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

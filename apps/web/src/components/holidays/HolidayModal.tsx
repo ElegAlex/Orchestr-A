@@ -94,7 +94,8 @@ export function HolidayModal({
       }
       onSuccess();
       onClose();
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
       const message =
         error.response?.data?.message || 'Erreur lors de l\'enregistrement';
       toast.error(message);

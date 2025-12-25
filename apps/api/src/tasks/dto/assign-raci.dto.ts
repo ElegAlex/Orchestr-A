@@ -4,7 +4,7 @@ import { RACIRole } from 'database';
 
 export class AssignRACIDto {
   @ApiProperty({
-    description: 'ID de l\'utilisateur à assigner',
+    description: "ID de l'utilisateur à assigner",
     example: 'uuid-here',
   })
   @IsUUID()
@@ -12,7 +12,7 @@ export class AssignRACIDto {
   userId: string;
 
   @ApiProperty({
-    description: 'Rôle RACI de l\'utilisateur',
+    description: "Rôle RACI de l'utilisateur",
     enum: RACIRole,
     example: RACIRole.RESPONSIBLE,
   })

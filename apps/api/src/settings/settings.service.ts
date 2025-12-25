@@ -2,7 +2,10 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 // Paramètres par défaut de l'application
-const DEFAULT_SETTINGS: Record<string, { value: any; category: string; description: string }> = {
+const DEFAULT_SETTINGS: Record<
+  string,
+  { value: any; category: string; description: string }
+> = {
   // Display settings
   dateFormat: {
     value: 'dd/MM/yyyy',
@@ -12,7 +15,7 @@ const DEFAULT_SETTINGS: Record<string, { value: any; category: string; descripti
   timeFormat: {
     value: 'HH:mm',
     category: 'display',
-    description: 'Format d\'heure (ex: HH:mm, hh:mm a)',
+    description: "Format d'heure (ex: HH:mm, hh:mm a)",
   },
   dateTimeFormat: {
     value: 'dd/MM/yyyy HH:mm',
@@ -31,9 +34,9 @@ const DEFAULT_SETTINGS: Record<string, { value: any; category: string; descripti
   },
   // General settings
   appName: {
-    value: 'ORCHESTR\'A',
+    value: "ORCHESTR'A",
     category: 'general',
-    description: 'Nom de l\'application',
+    description: "Nom de l'application",
   },
   defaultLeaveDays: {
     value: 25,
@@ -180,7 +183,8 @@ export class SettingsService implements OnModuleInit {
    * Mettre à jour un paramètre
    */
   async update(key: string, value: any, description?: string) {
-    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+    const stringValue =
+      typeof value === 'string' ? value : JSON.stringify(value);
 
     const setting = await this.prisma.appSettings.upsert({
       where: { key },

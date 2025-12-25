@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Milestone, Task, MilestoneStatus, TaskStatus } from '@/types';
 import { MilestoneCard } from './MilestoneCard';
 
@@ -11,7 +11,6 @@ interface MilestoneRoadmapProps {
   onEditMilestone?: (milestone: Milestone) => void;
   onCreateTask?: () => void;
   onTaskUpdate?: () => void;
-  onImportMilestones?: () => void;
 }
 
 export function MilestoneRoadmap({
@@ -21,7 +20,6 @@ export function MilestoneRoadmap({
   onEditMilestone,
   onCreateTask,
   onTaskUpdate,
-  onImportMilestones,
 }: MilestoneRoadmapProps) {
   // Trier les jalons par date de début
   const sortedMilestones = useMemo(() => {

@@ -13,7 +13,9 @@ export class MetricDto {
   @ApiProperty({ enum: ['up', 'down', 'stable'], required: false })
   trend?: 'up' | 'down' | 'stable';
 
-  @ApiProperty({ enum: ['primary', 'secondary', 'success', 'warning', 'error', 'info'] })
+  @ApiProperty({
+    enum: ['primary', 'secondary', 'success', 'warning', 'error', 'info'],
+  })
   color: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
 }
 

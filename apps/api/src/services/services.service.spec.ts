@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ServicesService } from './services.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 
 describe('ServicesService', () => {
   let service: ServicesService;
@@ -31,7 +35,13 @@ describe('ServicesService', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     department: { id: 'dept-1', name: 'IT' },
-    manager: { id: 'manager-1', firstName: 'John', lastName: 'Doe', email: 'john@test.com', role: 'MANAGER' },
+    manager: {
+      id: 'manager-1',
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@test.com',
+      role: 'MANAGER',
+    },
     _count: { userServices: 5 },
   };
 
@@ -80,7 +90,9 @@ describe('ServicesService', () => {
 
       mockPrismaService.department.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(createDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create(createDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw conflict when service name already exists in department', async () => {
@@ -89,10 +101,17 @@ describe('ServicesService', () => {
         departmentId: 'dept-1',
       };
 
-      mockPrismaService.department.findUnique.mockResolvedValue({ id: 'dept-1' });
-      mockPrismaService.service.findFirst.mockResolvedValue({ id: 'existing', name: 'Backend' });
+      mockPrismaService.department.findUnique.mockResolvedValue({
+        id: 'dept-1',
+      });
+      mockPrismaService.service.findFirst.mockResolvedValue({
+        id: 'existing',
+        name: 'Backend',
+      });
 
-      await expect(service.create(createDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(createDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -136,7 +155,9 @@ describe('ServicesService', () => {
     it('should throw error when service not found', async () => {
       mockPrismaService.service.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -144,7 +165,10 @@ describe('ServicesService', () => {
     it('should update a service successfully', async () => {
       const updateDto = { description: 'Updated description' };
       const existingService = { ...mockService };
-      const updatedService = { ...existingService, description: 'Updated description' };
+      const updatedService = {
+        ...existingService,
+        description: 'Updated description',
+      };
 
       mockPrismaService.service.findUnique.mockResolvedValue(existingService);
       mockPrismaService.service.update.mockResolvedValue(updatedService);
@@ -157,7 +181,9 @@ describe('ServicesService', () => {
     it('should throw error when service not found', async () => {
       mockPrismaService.service.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('invalid', { name: 'Test' })).rejects.toThrow(NotFoundException);
+      await expect(service.update('invalid', { name: 'Test' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should verify new department when changing departmentId', async () => {
@@ -167,7 +193,9 @@ describe('ServicesService', () => {
       mockPrismaService.service.findUnique.mockResolvedValue(existingService);
       mockPrismaService.department.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('service-1', updateDto)).rejects.toThrow(NotFoundException);
+      await expect(service.update('service-1', updateDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw conflict when new name already exists in department', async () => {
@@ -175,9 +203,14 @@ describe('ServicesService', () => {
       const existingService = { ...mockService, name: 'Backend' };
 
       mockPrismaService.service.findUnique.mockResolvedValue(existingService);
-      mockPrismaService.service.findFirst.mockResolvedValue({ id: 'other-service', name: 'Frontend' });
+      mockPrismaService.service.findFirst.mockResolvedValue({
+        id: 'other-service',
+        name: 'Frontend',
+      });
 
-      await expect(service.update('service-1', updateDto)).rejects.toThrow(ConflictException);
+      await expect(service.update('service-1', updateDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should allow update when name is the same', async () => {
@@ -185,7 +218,10 @@ describe('ServicesService', () => {
       const existingService = { ...mockService };
 
       mockPrismaService.service.findUnique.mockResolvedValue(existingService);
-      mockPrismaService.service.update.mockResolvedValue({ ...existingService, description: 'Updated' });
+      mockPrismaService.service.update.mockResolvedValue({
+        ...existingService,
+        description: 'Updated',
+      });
 
       const result = await service.update('service-1', updateDto);
 
@@ -200,7 +236,9 @@ describe('ServicesService', () => {
         _count: { userServices: 0 },
       };
 
-      mockPrismaService.service.findUnique.mockResolvedValue(mockServiceNoUsers);
+      mockPrismaService.service.findUnique.mockResolvedValue(
+        mockServiceNoUsers,
+      );
       mockPrismaService.service.delete.mockResolvedValue(mockServiceNoUsers);
 
       const result = await service.remove('service-1');
@@ -214,7 +252,9 @@ describe('ServicesService', () => {
     it('should throw error when service not found', async () => {
       mockPrismaService.service.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error when service has users', async () => {
@@ -222,9 +262,13 @@ describe('ServicesService', () => {
         ...mockService,
         _count: { userServices: 5 },
       };
-      mockPrismaService.service.findUnique.mockResolvedValue(mockServiceWithUsers);
+      mockPrismaService.service.findUnique.mockResolvedValue(
+        mockServiceWithUsers,
+      );
 
-      await expect(service.remove('service-1')).rejects.toThrow(BadRequestException);
+      await expect(service.remove('service-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -244,7 +288,9 @@ describe('ServicesService', () => {
     it('should throw error when department not found', async () => {
       mockPrismaService.department.findUnique.mockResolvedValue(null);
 
-      await expect(service.getServicesByDepartment('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.getServicesByDepartment('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -260,7 +306,9 @@ describe('ServicesService', () => {
         ],
       };
 
-      mockPrismaService.service.findUnique.mockResolvedValue(mockServiceWithUsers);
+      mockPrismaService.service.findUnique.mockResolvedValue(
+        mockServiceWithUsers,
+      );
 
       const result = await service.getServiceStats('service-1');
 
@@ -275,7 +323,9 @@ describe('ServicesService', () => {
     it('should throw error when service not found', async () => {
       mockPrismaService.service.findUnique.mockResolvedValue(null);
 
-      await expect(service.getServiceStats('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.getServiceStats('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

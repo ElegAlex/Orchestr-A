@@ -26,7 +26,8 @@ export class CreateProjectDto {
 
   @ApiProperty({
     description: 'Description détaillée du projet',
-    example: 'Refonte complète de l\'application de gestion RH avec migration vers une architecture moderne',
+    example:
+      "Refonte complète de l'application de gestion RH avec migration vers une architecture moderne",
     required: false,
   })
   @IsString()

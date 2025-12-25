@@ -7,8 +7,8 @@ import { MilestoneRoadmap } from '@/components/MilestoneRoadmap';
 import { MilestoneModal } from '@/components/MilestoneModal';
 import { TaskModal } from '@/components/TaskModal';
 import { projectsService } from '@/services/projects.service';
-import { tasksService, TasksValidationPreview, TaskPreviewItem } from '@/services/tasks.service';
-import { milestonesService, MilestonesValidationPreview, MilestonePreviewItem } from '@/services/milestones.service';
+import { tasksService, TasksValidationPreview } from '@/services/tasks.service';
+import { milestonesService, MilestonesValidationPreview } from '@/services/milestones.service';
 import { ImportPreviewModal } from '@/components/ImportPreviewModal';
 import { usersService } from '@/services/users.service';
 import {
@@ -20,7 +20,6 @@ import {
   TaskStatus,
   Milestone,
   User,
-  ProjectMember,
 } from '@/types';
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
@@ -62,8 +61,22 @@ export default function ProjectDetailPage() {
   const [milestonesPreview, setMilestonesPreview] = useState<MilestonesValidationPreview | null>(null);
   const [showTasksPreview, setShowTasksPreview] = useState(false);
   const [showMilestonesPreview, setShowMilestonesPreview] = useState(false);
-  const [pendingTasksImport, setPendingTasksImport] = useState<any[]>([]);
-  const [pendingMilestonesImport, setPendingMilestonesImport] = useState<any[]>([]);
+  const [pendingTasksImport, setPendingTasksImport] = useState<Array<{
+    title: string;
+    description?: string;
+    status?: string;
+    priority?: string;
+    assigneeEmail?: string;
+    milestoneName?: string;
+    estimatedHours?: number;
+    startDate?: string;
+    endDate?: string;
+  }>>([]);
+  const [pendingMilestonesImport, setPendingMilestonesImport] = useState<Array<{
+    name: string;
+    description?: string;
+    dueDate: string;
+  }>>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,9 +91,10 @@ export default function ProjectDetailPage() {
         try {
           const statsData = await projectsService.getStats(projectId);
           setStats(statsData);
-        } catch (error: any) {
-          if (error.response?.status !== 404) {
-            throw error;
+        } catch (err) {
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) {
+            throw err;
           }
         }
 
@@ -88,10 +102,11 @@ export default function ProjectDetailPage() {
         try {
           const tasksData = await tasksService.getByProject(projectId);
           setTasks(Array.isArray(tasksData) ? tasksData : []);
-        } catch (error: any) {
+        } catch (err) {
           setTasks([]);
-          if (error.response?.status !== 404) {
-            console.error('Error fetching tasks:', error);
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) {
+            console.error('Error fetching tasks:', err);
           }
         }
 
@@ -102,15 +117,16 @@ export default function ProjectDetailPage() {
             (m: Milestone) => m.projectId === projectId
           );
           setMilestones(projectMilestones);
-        } catch (error: any) {
+        } catch (err) {
           setMilestones([]);
-          if (error.response?.status !== 404) {
-            console.error('Error fetching milestones:', error);
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) {
+            console.error('Error fetching milestones:', err);
           }
         }
-      } catch (error: any) {
+      } catch (err) {
         toast.error('Erreur lors du chargement du projet');
-        console.error(error);
+        console.error(err);
         router.push('/projects');
       } finally {
         setLoading(false);
@@ -184,40 +200,6 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const getTaskStatusBadgeColor = (status: TaskStatus) => {
-    switch (status) {
-      case TaskStatus.TODO:
-        return 'bg-gray-200 text-gray-800';
-      case TaskStatus.IN_PROGRESS:
-        return 'bg-blue-100 text-blue-800';
-      case TaskStatus.IN_REVIEW:
-        return 'bg-yellow-100 text-yellow-800';
-      case TaskStatus.DONE:
-        return 'bg-green-100 text-green-800';
-      case TaskStatus.BLOCKED:
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getTaskStatusLabel = (status: TaskStatus) => {
-    switch (status) {
-      case TaskStatus.TODO:
-        return 'À faire';
-      case TaskStatus.IN_PROGRESS:
-        return 'En cours';
-      case TaskStatus.IN_REVIEW:
-        return 'En revue';
-      case TaskStatus.DONE:
-        return 'Terminé';
-      case TaskStatus.BLOCKED:
-        return 'Bloqué';
-      default:
-        return status;
-    }
-  };
-
   // Drag and Drop handlers
   const handleDragStart = (e: React.DragEvent, task: Task) => {
     setDraggedTask(task);
@@ -254,7 +236,7 @@ export default function ProjectDetailPage() {
         // Refresh tasks
         const tasksData = await tasksService.getByProject(projectId);
         setTasks(Array.isArray(tasksData) ? tasksData : []);
-      } catch (error: any) {
+      } catch {
         toast.error('Erreur lors de la mise à jour du statut');
       }
     }
@@ -280,13 +262,13 @@ export default function ProjectDetailPage() {
       // Handle both array and paginated response
       const users = Array.isArray(usersResponse)
         ? usersResponse
-        : (usersResponse as any).data || [];
+        : (usersResponse as { data?: User[] }).data || [];
       // Filter out users already in the project
       const existingMemberIds = project?.members?.map(m => m.userId) || [];
-      const available = users.filter((u: any) => !existingMemberIds.includes(u.id));
+      const available = users.filter((u: User) => !existingMemberIds.includes(u.id));
       setAvailableUsers(available);
       setShowAddMemberModal(true);
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors du chargement des utilisateurs');
     }
   };
@@ -312,8 +294,9 @@ export default function ProjectDetailPage() {
       // Refresh project data
       const projectData = await projectsService.getById(projectId);
       setProject(projectData);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'ajout du membre');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de l\'ajout du membre');
     }
   };
 
@@ -356,9 +339,10 @@ export default function ProjectDetailPage() {
       setMilestones(projectMilestones);
       setShowMilestoneModal(false);
       setEditingMilestone(null);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'enregistrement');
-      throw error;
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de l\'enregistrement');
+      throw err;
     }
   };
 
@@ -369,22 +353,22 @@ export default function ProjectDetailPage() {
       const usersResponse = await usersService.getAll();
       const users = Array.isArray(usersResponse)
         ? usersResponse
-        : (usersResponse as any).data || [];
+        : (usersResponse as { data?: User[] }).data || [];
       setAllUsers(users);
-    } catch (error) {
-      console.error('Error loading users:', error);
+    } catch (err) {
+      console.error('Error loading users:', err);
       setAllUsers([]);
     }
     setShowTaskModal(true);
   };
 
-  const handleSaveTask = async (data: any) => {
+  const handleSaveTask = async (data: Record<string, unknown>) => {
     try {
       if (editingTask) {
         await tasksService.update(editingTask.id, data);
         toast.success('Tâche mise à jour avec succès');
       } else {
-        await tasksService.create(data);
+        await tasksService.create(data as { title: string; [key: string]: unknown });
         toast.success('Tâche créée avec succès');
       }
 
@@ -394,8 +378,9 @@ export default function ProjectDetailPage() {
 
       setShowTaskModal(false);
       setEditingTask(null);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la sauvegarde');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la sauvegarde');
     }
   };
 
@@ -404,8 +389,8 @@ export default function ProjectDetailPage() {
       // Refresh tasks
       const tasksData = await tasksService.getByProject(projectId);
       setTasks(Array.isArray(tasksData) ? tasksData : []);
-    } catch (error: any) {
-      console.error('Error refreshing tasks:', error);
+    } catch (err) {
+      console.error('Error refreshing tasks:', err);
     }
   };
 
@@ -469,9 +454,10 @@ export default function ProjectDetailPage() {
       setPendingTasksImport(tasksToImport);
       setShowImportTasksModal(false);
       setShowTasksPreview(true);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la validation');
-      console.error('Validation error:', error);
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la validation');
+      console.error('Validation error:', err);
     } finally {
       setImportingTasks(false);
       e.target.value = '';
@@ -501,9 +487,10 @@ export default function ProjectDetailPage() {
       setShowTasksPreview(false);
       setTasksPreview(null);
       setPendingTasksImport([]);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'import');
-      console.error('Import error:', error);
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de l\'import');
+      console.error('Import error:', err);
     } finally {
       setImportingTasks(false);
     }
@@ -543,9 +530,10 @@ export default function ProjectDetailPage() {
       setPendingMilestonesImport(milestonesToImport);
       setShowImportMilestonesModal(false);
       setShowMilestonesPreview(true);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la validation');
-      console.error('Validation error:', error);
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la validation');
+      console.error('Validation error:', err);
     } finally {
       setImportingMilestones(false);
       e.target.value = '';
@@ -578,9 +566,10 @@ export default function ProjectDetailPage() {
       setShowMilestonesPreview(false);
       setMilestonesPreview(null);
       setPendingMilestonesImport([]);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'import');
-      console.error('Import error:', error);
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de l\'import');
+      console.error('Import error:', err);
     } finally {
       setImportingMilestones(false);
     }
@@ -596,7 +585,7 @@ export default function ProjectDetailPage() {
       link.download = 'template_taches.csv';
       link.click();
       URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors du téléchargement du template');
     }
   };
@@ -611,7 +600,7 @@ export default function ProjectDetailPage() {
       link.download = 'template_jalons.csv';
       link.click();
       URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors du téléchargement du template');
     }
   };
@@ -679,7 +668,7 @@ export default function ProjectDetailPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
             >
-              Vue d'ensemble
+              Vue d&apos;ensemble
             </button>
             <button
               onClick={() => setActiveTab('tasks')}
@@ -1051,7 +1040,6 @@ export default function ProjectDetailPage() {
             onCreateMilestone={handleCreateMilestone}
             onEditMilestone={handleEditMilestone}
             onTaskUpdate={handleTaskUpdate}
-            onImportMilestones={() => setShowImportMilestonesModal(true)}
           />
         )}
 
@@ -1059,7 +1047,7 @@ export default function ProjectDetailPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
-                Membres de l'équipe
+                Membres de l&apos;équipe
               </h2>
               <button
                 onClick={handleOpenAddMemberModal}
@@ -1111,9 +1099,8 @@ export default function ProjectDetailPage() {
                                   // Reload project data
                                   const updated = await projectsService.getById(project.id);
                                   setProject(updated);
-                                } catch (error: any) {
+                                } catch {
                                   toast.error('Erreur lors du retrait du membre');
-                                  console.error(error);
                                 }
                               }
                             }}

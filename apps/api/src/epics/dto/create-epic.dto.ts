@@ -1,9 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsUUID, IsEnum, MaxLength, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  IsEnum,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { Priority } from 'database';
 
 export class CreateEpicDto {
-  @ApiProperty({ description: 'Nom de l\'epic', example: 'Module Authentification' })
+  @ApiProperty({
+    description: "Nom de l'epic",
+    example: 'Module Authentification',
+  })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
@@ -20,7 +31,11 @@ export class CreateEpicDto {
   @IsNotEmpty()
   projectId: string;
 
-  @ApiProperty({ description: 'Priorité', enum: Priority, default: Priority.NORMAL })
+  @ApiProperty({
+    description: 'Priorité',
+    enum: Priority,
+    default: Priority.NORMAL,
+  })
   @IsEnum(Priority)
   @IsOptional()
   priority?: Priority;

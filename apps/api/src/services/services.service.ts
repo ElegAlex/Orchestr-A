@@ -284,7 +284,7 @@ export class ServicesService {
     // Vérifier qu'il n'y a pas d'utilisateurs liés
     if (service._count.userServices > 0) {
       throw new BadRequestException(
-        'Impossible de supprimer un service qui contient des utilisateurs. Veuillez d\'abord les réaffecter.',
+        "Impossible de supprimer un service qui contient des utilisateurs. Veuillez d'abord les réaffecter.",
       );
     }
 

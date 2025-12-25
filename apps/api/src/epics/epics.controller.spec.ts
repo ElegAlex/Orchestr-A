@@ -73,10 +73,12 @@ describe('EpicsController', () => {
 
     it('should throw NotFoundException when project not found', async () => {
       mockEpicsService.create.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.create(createEpicDto)).rejects.toThrow(NotFoundException);
+      await expect(controller.create(createEpicDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -110,7 +112,11 @@ describe('EpicsController', () => {
 
       await controller.findAll(1, 10, 'project-id-1');
 
-      expect(mockEpicsService.findAll).toHaveBeenCalledWith(1, 10, 'project-id-1');
+      expect(mockEpicsService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        'project-id-1',
+      );
     });
   });
 
@@ -126,10 +132,12 @@ describe('EpicsController', () => {
 
     it('should throw NotFoundException when epic not found', async () => {
       mockEpicsService.findOne.mockRejectedValue(
-        new NotFoundException('Epic introuvable')
+        new NotFoundException('Epic introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -147,17 +155,20 @@ describe('EpicsController', () => {
 
       expect(result.name).toBe('User Authentication v2');
       expect(result.progress).toBe(75);
-      expect(mockEpicsService.update).toHaveBeenCalledWith('epic-id-1', updateEpicDto);
+      expect(mockEpicsService.update).toHaveBeenCalledWith(
+        'epic-id-1',
+        updateEpicDto,
+      );
     });
 
     it('should throw NotFoundException when epic not found', async () => {
       mockEpicsService.update.mockRejectedValue(
-        new NotFoundException('Epic introuvable')
+        new NotFoundException('Epic introuvable'),
       );
 
-      await expect(controller.update('nonexistent', updateEpicDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.update('nonexistent', updateEpicDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -173,10 +184,12 @@ describe('EpicsController', () => {
 
     it('should throw NotFoundException when epic not found', async () => {
       mockEpicsService.remove.mockRejectedValue(
-        new NotFoundException('Epic introuvable')
+        new NotFoundException('Epic introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

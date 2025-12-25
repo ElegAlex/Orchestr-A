@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectsService } from './projects.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { ProjectStatus } from '../__mocks__/database';
 
 describe('ProjectsService', () => {
@@ -107,7 +111,9 @@ describe('ProjectsService', () => {
         endDate: '2025-01-01',
       };
 
-      await expect(service.create(invalidDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create(invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should create project without dates', async () => {
@@ -117,7 +123,11 @@ describe('ProjectsService', () => {
         code: 'TEST-001',
       };
 
-      mockPrismaService.project.create.mockResolvedValue({ ...mockProject, startDate: null, endDate: null });
+      mockPrismaService.project.create.mockResolvedValue({
+        ...mockProject,
+        startDate: null,
+        endDate: null,
+      });
 
       const result = await service.create(dtoWithoutDates);
 
@@ -126,7 +136,10 @@ describe('ProjectsService', () => {
 
     it('should use DRAFT status by default', async () => {
       const dtoWithoutStatus = { ...createProjectDto };
-      mockPrismaService.project.create.mockResolvedValue({ ...mockProject, status: ProjectStatus.DRAFT });
+      mockPrismaService.project.create.mockResolvedValue({
+        ...mockProject,
+        status: ProjectStatus.DRAFT,
+      });
 
       await service.create(dtoWithoutStatus);
 
@@ -138,8 +151,14 @@ describe('ProjectsService', () => {
     });
 
     it('should use provided status', async () => {
-      const dtoWithStatus = { ...createProjectDto, status: ProjectStatus.ACTIVE };
-      mockPrismaService.project.create.mockResolvedValue({ ...mockProject, status: ProjectStatus.ACTIVE });
+      const dtoWithStatus = {
+        ...createProjectDto,
+        status: ProjectStatus.ACTIVE,
+      };
+      mockPrismaService.project.create.mockResolvedValue({
+        ...mockProject,
+        status: ProjectStatus.ACTIVE,
+      });
 
       await service.create(dtoWithStatus);
 
@@ -226,7 +245,9 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -249,7 +270,9 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('nonexistent', updateDto)).rejects.toThrow(NotFoundException);
+      await expect(service.update('nonexistent', updateDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when end date is before start date', async () => {
@@ -260,7 +283,9 @@ describe('ProjectsService', () => {
         endDate: '2025-01-01',
       };
 
-      await expect(service.update('project-1', invalidDto)).rejects.toThrow(BadRequestException);
+      await expect(service.update('project-1', invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should update dates successfully', async () => {
@@ -283,9 +308,14 @@ describe('ProjectsService', () => {
 
     it('should update without dates', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
-      mockPrismaService.project.update.mockResolvedValue({ ...mockProject, description: 'Updated' });
+      mockPrismaService.project.update.mockResolvedValue({
+        ...mockProject,
+        description: 'Updated',
+      });
 
-      const result = await service.update('project-1', { description: 'Updated' });
+      const result = await service.update('project-1', {
+        description: 'Updated',
+      });
 
       expect(result).toBeDefined();
     });
@@ -296,7 +326,10 @@ describe('ProjectsService', () => {
   // ============================================
   describe('remove', () => {
     it('should update project status to CANCELLED', async () => {
-      const cancelledProject = { ...mockProject, status: ProjectStatus.CANCELLED };
+      const cancelledProject = {
+        ...mockProject,
+        status: ProjectStatus.CANCELLED,
+      };
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.project.update.mockResolvedValue(cancelledProject);
 
@@ -312,7 +345,9 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -335,7 +370,9 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.hardDelete('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.hardDelete('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -371,28 +408,45 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.addMember('nonexistent', addMemberDto)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.addMember('nonexistent', addMemberDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException when user not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.addMember('project-1', addMemberDto)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.addMember('project-1', addMemberDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException when user is already a member', async () => {
-      const existingMember = { id: 'member-1', projectId: 'project-1', userId: 'user-1' };
+      const existingMember = {
+        id: 'member-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+      };
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.projectMember.findUnique.mockResolvedValue(existingMember);
+      mockPrismaService.projectMember.findUnique.mockResolvedValue(
+        existingMember,
+      );
 
-      await expect(service.addMember('project-1', addMemberDto)).rejects.toThrow(ConflictException);
+      await expect(
+        service.addMember('project-1', addMemberDto),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should add member with default role', async () => {
       const dtoWithoutRole = { userId: 'user-1' };
-      const mockMember = { id: 'member-1', projectId: 'project-1', userId: 'user-1', role: 'Membre' };
+      const mockMember = {
+        id: 'member-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+        role: 'Membre',
+      };
 
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
@@ -433,7 +487,11 @@ describe('ProjectsService', () => {
   // ============================================
   describe('removeMember', () => {
     it('should remove a member from project', async () => {
-      const mockMember = { id: 'member-1', projectId: 'project-1', userId: 'user-1' };
+      const mockMember = {
+        id: 'member-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+      };
       mockPrismaService.projectMember.findUnique.mockResolvedValue(mockMember);
       mockPrismaService.projectMember.delete.mockResolvedValue(mockMember);
 
@@ -453,7 +511,9 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when member not found', async () => {
       mockPrismaService.projectMember.findUnique.mockResolvedValue(null);
 
-      await expect(service.removeMember('project-1', 'nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.removeMember('project-1', 'nonexistent'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -482,7 +542,9 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getProjectsByUser('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.getProjectsByUser('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -494,17 +556,22 @@ describe('ProjectsService', () => {
       ...mockProject,
       tasks: [
         { id: 'task-1', status: 'DONE', estimatedHours: 10, priority: 'HIGH' },
-        { id: 'task-2', status: 'IN_PROGRESS', estimatedHours: 8, priority: 'MEDIUM' },
+        {
+          id: 'task-2',
+          status: 'IN_PROGRESS',
+          estimatedHours: 8,
+          priority: 'MEDIUM',
+        },
         { id: 'task-3', status: 'TODO', estimatedHours: 5, priority: 'LOW' },
       ],
       members: [{ id: 'member-1' }, { id: 'member-2' }],
-      epics: [
-        { progress: 100 },
-        { progress: 50 },
-      ],
+      epics: [{ progress: 100 }, { progress: 50 }],
       milestones: [
         { status: 'COMPLETED', dueDate: new Date('2025-01-15') },
-        { status: 'IN_PROGRESS', dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) }, // 3 days from now
+        {
+          status: 'IN_PROGRESS',
+          dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        }, // 3 days from now
         { status: 'TODO', dueDate: new Date('2025-12-31') },
       ],
     };
@@ -536,7 +603,9 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.getProjectStats('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.getProjectStats('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should handle project with no tasks', async () => {
@@ -588,8 +657,18 @@ describe('ProjectsService', () => {
       const projectHalfDone = {
         ...mockProject,
         tasks: [
-          { id: 'task-1', status: 'DONE', estimatedHours: 10, priority: 'HIGH' },
-          { id: 'task-2', status: 'DONE', estimatedHours: 10, priority: 'HIGH' },
+          {
+            id: 'task-1',
+            status: 'DONE',
+            estimatedHours: 10,
+            priority: 'HIGH',
+          },
+          {
+            id: 'task-2',
+            status: 'DONE',
+            estimatedHours: 10,
+            priority: 'HIGH',
+          },
           { id: 'task-3', status: 'TODO', estimatedHours: 10, priority: 'LOW' },
           { id: 'task-4', status: 'TODO', estimatedHours: 10, priority: 'LOW' },
         ],
@@ -610,7 +689,12 @@ describe('ProjectsService', () => {
       const projectNullHours = {
         ...mockProject,
         tasks: [
-          { id: 'task-1', status: 'TODO', estimatedHours: null, priority: 'HIGH' },
+          {
+            id: 'task-1',
+            status: 'TODO',
+            estimatedHours: null,
+            priority: 'HIGH',
+          },
           { id: 'task-2', status: 'TODO', estimatedHours: 5, priority: 'LOW' },
         ],
         members: [],
@@ -629,7 +713,14 @@ describe('ProjectsService', () => {
     it('should return 0 remaining hours when actual exceeds estimated', async () => {
       const projectOverBudget = {
         ...mockProject,
-        tasks: [{ id: 'task-1', status: 'DONE', estimatedHours: 10, priority: 'HIGH' }],
+        tasks: [
+          {
+            id: 'task-1',
+            status: 'DONE',
+            estimatedHours: 10,
+            priority: 'HIGH',
+          },
+        ],
         members: [],
         epics: [],
         milestones: [],

@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DepartmentsController } from './departments.controller';
 import { DepartmentsService } from './departments.service';
-import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 
 describe('DepartmentsController', () => {
   let controller: DepartmentsController;
@@ -65,16 +69,20 @@ describe('DepartmentsController', () => {
       const result = await controller.create(createDepartmentDto);
 
       expect(result).toEqual(mockDepartment);
-      expect(mockDepartmentsService.create).toHaveBeenCalledWith(createDepartmentDto);
+      expect(mockDepartmentsService.create).toHaveBeenCalledWith(
+        createDepartmentDto,
+      );
       expect(mockDepartmentsService.create).toHaveBeenCalledTimes(1);
     });
 
     it('should throw ConflictException when name already exists', async () => {
       mockDepartmentsService.create.mockRejectedValue(
-        new ConflictException('Nom de département déjà utilisé')
+        new ConflictException('Nom de département déjà utilisé'),
       );
 
-      await expect(controller.create(createDepartmentDto)).rejects.toThrow(ConflictException);
+      await expect(controller.create(createDepartmentDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -108,7 +116,10 @@ describe('DepartmentsController', () => {
 
       await controller.findAll(undefined, undefined);
 
-      expect(mockDepartmentsService.findAll).toHaveBeenCalledWith(undefined, undefined);
+      expect(mockDepartmentsService.findAll).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+      );
     });
   });
 
@@ -124,10 +135,12 @@ describe('DepartmentsController', () => {
 
     it('should throw NotFoundException when department not found', async () => {
       mockDepartmentsService.findOne.mockRejectedValue(
-        new NotFoundException('Département introuvable')
+        new NotFoundException('Département introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -152,15 +165,19 @@ describe('DepartmentsController', () => {
       const result = await controller.getStats('dept-id-1');
 
       expect(result).toEqual(stats);
-      expect(mockDepartmentsService.getDepartmentStats).toHaveBeenCalledWith('dept-id-1');
+      expect(mockDepartmentsService.getDepartmentStats).toHaveBeenCalledWith(
+        'dept-id-1',
+      );
     });
 
     it('should throw NotFoundException when department not found', async () => {
       mockDepartmentsService.getDepartmentStats.mockRejectedValue(
-        new NotFoundException('Département introuvable')
+        new NotFoundException('Département introuvable'),
       );
 
-      await expect(controller.getStats('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.getStats('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -177,33 +194,38 @@ describe('DepartmentsController', () => {
       const result = await controller.update('dept-id-1', updateDepartmentDto);
 
       expect(result.name).toBe('IT & Digital');
-      expect(mockDepartmentsService.update).toHaveBeenCalledWith('dept-id-1', updateDepartmentDto);
+      expect(mockDepartmentsService.update).toHaveBeenCalledWith(
+        'dept-id-1',
+        updateDepartmentDto,
+      );
     });
 
     it('should throw NotFoundException when department not found', async () => {
       mockDepartmentsService.update.mockRejectedValue(
-        new NotFoundException('Département introuvable')
+        new NotFoundException('Département introuvable'),
       );
 
-      await expect(controller.update('nonexistent', updateDepartmentDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.update('nonexistent', updateDepartmentDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException when name already exists', async () => {
       mockDepartmentsService.update.mockRejectedValue(
-        new ConflictException('Nom de département déjà utilisé')
+        new ConflictException('Nom de département déjà utilisé'),
       );
 
-      await expect(controller.update('dept-id-1', { name: 'Existing' })).rejects.toThrow(
-        ConflictException
-      );
+      await expect(
+        controller.update('dept-id-1', { name: 'Existing' }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
   describe('remove', () => {
     it('should delete a department successfully', async () => {
-      mockDepartmentsService.remove.mockResolvedValue({ message: 'Département supprimé' });
+      mockDepartmentsService.remove.mockResolvedValue({
+        message: 'Département supprimé',
+      });
 
       const result = await controller.remove('dept-id-1');
 
@@ -213,26 +235,36 @@ describe('DepartmentsController', () => {
 
     it('should throw BadRequestException when department has users', async () => {
       mockDepartmentsService.remove.mockRejectedValue(
-        new BadRequestException('Impossible de supprimer (contient des utilisateurs)')
+        new BadRequestException(
+          'Impossible de supprimer (contient des utilisateurs)',
+        ),
       );
 
-      await expect(controller.remove('dept-id-1')).rejects.toThrow(BadRequestException);
+      await expect(controller.remove('dept-id-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when department has services', async () => {
       mockDepartmentsService.remove.mockRejectedValue(
-        new BadRequestException('Impossible de supprimer (contient des services)')
+        new BadRequestException(
+          'Impossible de supprimer (contient des services)',
+        ),
       );
 
-      await expect(controller.remove('dept-id-1')).rejects.toThrow(BadRequestException);
+      await expect(controller.remove('dept-id-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException when department not found', async () => {
       mockDepartmentsService.remove.mockRejectedValue(
-        new NotFoundException('Département introuvable')
+        new NotFoundException('Département introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

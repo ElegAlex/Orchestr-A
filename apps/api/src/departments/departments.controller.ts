@@ -57,7 +57,9 @@ export class DepartmentsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Récupérer tous les départements (avec pagination)' })
+  @ApiOperation({
+    summary: 'Récupérer tous les départements (avec pagination)',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({
@@ -88,7 +90,7 @@ export class DepartmentsController {
   }
 
   @Get(':id/stats')
-  @ApiOperation({ summary: 'Récupérer les statistiques d\'un département' })
+  @ApiOperation({ summary: "Récupérer les statistiques d'un département" })
   @ApiResponse({
     status: 200,
     description:

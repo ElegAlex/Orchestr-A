@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
-import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 
 describe('TasksController', () => {
   let controller: TasksController;
@@ -89,10 +93,12 @@ describe('TasksController', () => {
 
     it('should throw NotFoundException when project not found', async () => {
       mockTasksService.create.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.create(createTaskDto)).rejects.toThrow(NotFoundException);
+      await expect(controller.create(createTaskDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should create task with assignee', async () => {
@@ -141,7 +147,13 @@ describe('TasksController', () => {
       const result = await controller.findAll(1, 10);
 
       expect(result).toEqual(paginatedResult);
-      expect(mockTasksService.findAll).toHaveBeenCalledWith(1, 10, undefined, undefined, undefined);
+      expect(mockTasksService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+      );
     });
 
     it('should filter tasks by status', async () => {
@@ -156,7 +168,13 @@ describe('TasksController', () => {
       const result = await controller.findAll(1, 10, 'TODO' as any);
 
       expect(result.data[0].status).toBe('TODO');
-      expect(mockTasksService.findAll).toHaveBeenCalledWith(1, 10, 'TODO', undefined, undefined);
+      expect(mockTasksService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        'TODO',
+        undefined,
+        undefined,
+      );
     });
 
     it('should filter tasks by projectId', async () => {
@@ -169,7 +187,13 @@ describe('TasksController', () => {
 
       await controller.findAll(1, 10, undefined, 'project-id-1');
 
-      expect(mockTasksService.findAll).toHaveBeenCalledWith(1, 10, undefined, 'project-id-1', undefined);
+      expect(mockTasksService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        'project-id-1',
+        undefined,
+      );
     });
 
     it('should filter tasks by assigneeId', async () => {
@@ -182,7 +206,13 @@ describe('TasksController', () => {
 
       await controller.findAll(1, 10, undefined, undefined, 'user-id-1');
 
-      expect(mockTasksService.findAll).toHaveBeenCalledWith(1, 10, undefined, undefined, 'user-id-1');
+      expect(mockTasksService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        undefined,
+        'user-id-1',
+      );
     });
 
     it('should combine multiple filters', async () => {
@@ -193,9 +223,21 @@ describe('TasksController', () => {
 
       mockTasksService.findAll.mockResolvedValue(paginatedResult);
 
-      await controller.findAll(1, 10, 'IN_PROGRESS' as any, 'project-id-1', 'user-id-1');
+      await controller.findAll(
+        1,
+        10,
+        'IN_PROGRESS' as any,
+        'project-id-1',
+        'user-id-1',
+      );
 
-      expect(mockTasksService.findAll).toHaveBeenCalledWith(1, 10, 'IN_PROGRESS', 'project-id-1', 'user-id-1');
+      expect(mockTasksService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        'IN_PROGRESS',
+        'project-id-1',
+        'user-id-1',
+      );
     });
   });
 
@@ -211,10 +253,12 @@ describe('TasksController', () => {
 
     it('should throw NotFoundException when task not found', async () => {
       mockTasksService.findOne.mockRejectedValue(
-        new NotFoundException('Tâche introuvable')
+        new NotFoundException('Tâche introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -226,7 +270,9 @@ describe('TasksController', () => {
       const result = await controller.getTasksByAssignee('user-id-1');
 
       expect(result).toEqual(userTasks);
-      expect(mockTasksService.getTasksByAssignee).toHaveBeenCalledWith('user-id-1');
+      expect(mockTasksService.getTasksByAssignee).toHaveBeenCalledWith(
+        'user-id-1',
+      );
     });
 
     it('should return empty array when user has no tasks', async () => {
@@ -246,15 +292,19 @@ describe('TasksController', () => {
       const result = await controller.getTasksByProject('project-id-1');
 
       expect(result).toEqual(projectTasks);
-      expect(mockTasksService.getTasksByProject).toHaveBeenCalledWith('project-id-1');
+      expect(mockTasksService.getTasksByProject).toHaveBeenCalledWith(
+        'project-id-1',
+      );
     });
 
     it('should throw NotFoundException when project not found', async () => {
       mockTasksService.getTasksByProject.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.getTasksByProject('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.getTasksByProject('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -274,24 +324,30 @@ describe('TasksController', () => {
       expect(result).toEqual(updatedTask);
       expect(result.title).toBe('Updated Task Title');
       expect(result.status).toBe('IN_PROGRESS');
-      expect(mockTasksService.update).toHaveBeenCalledWith('task-id-1', updateTaskDto);
+      expect(mockTasksService.update).toHaveBeenCalledWith(
+        'task-id-1',
+        updateTaskDto,
+      );
     });
 
     it('should throw NotFoundException when task not found', async () => {
       mockTasksService.update.mockRejectedValue(
-        new NotFoundException('Tâche introuvable')
+        new NotFoundException('Tâche introuvable'),
       );
 
-      await expect(controller.update('nonexistent', updateTaskDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.update('nonexistent', updateTaskDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should update task to DONE with 100% progress', async () => {
       const completedTask = { ...mockTask, status: 'DONE', progress: 100 };
       mockTasksService.update.mockResolvedValue(completedTask);
 
-      const result = await controller.update('task-id-1', { status: 'DONE', progress: 100 });
+      const result = await controller.update('task-id-1', {
+        status: 'DONE',
+        progress: 100,
+      });
 
       expect(result.status).toBe('DONE');
       expect(result.progress).toBe(100);
@@ -310,18 +366,24 @@ describe('TasksController', () => {
 
     it('should throw NotFoundException when task not found', async () => {
       mockTasksService.remove.mockRejectedValue(
-        new NotFoundException('Tâche introuvable')
+        new NotFoundException('Tâche introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when task has dependents', async () => {
       mockTasksService.remove.mockRejectedValue(
-        new BadRequestException('Impossible de supprimer: cette tâche a des dépendances')
+        new BadRequestException(
+          'Impossible de supprimer: cette tâche a des dépendances',
+        ),
       );
 
-      await expect(controller.remove('task-with-dependents')).rejects.toThrow(BadRequestException);
+      await expect(controller.remove('task-with-dependents')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -339,71 +401,85 @@ describe('TasksController', () => {
 
       mockTasksService.addDependency.mockResolvedValue(dependency);
 
-      const result = await controller.addDependency('task-id-1', addDependencyDto);
+      const result = await controller.addDependency(
+        'task-id-1',
+        addDependencyDto,
+      );
 
       expect(result).toEqual(dependency);
-      expect(mockTasksService.addDependency).toHaveBeenCalledWith('task-id-1', addDependencyDto);
+      expect(mockTasksService.addDependency).toHaveBeenCalledWith(
+        'task-id-1',
+        addDependencyDto,
+      );
     });
 
     it('should throw NotFoundException when task not found', async () => {
       mockTasksService.addDependency.mockRejectedValue(
-        new NotFoundException('Tâche introuvable')
+        new NotFoundException('Tâche introuvable'),
       );
 
-      await expect(controller.addDependency('nonexistent', addDependencyDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.addDependency('nonexistent', addDependencyDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException for circular dependency', async () => {
       mockTasksService.addDependency.mockRejectedValue(
-        new BadRequestException('Dépendance circulaire détectée')
+        new BadRequestException('Dépendance circulaire détectée'),
       );
 
-      await expect(controller.addDependency('task-id-1', addDependencyDto)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        controller.addDependency('task-id-1', addDependencyDto),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when tasks are from different projects', async () => {
       mockTasksService.addDependency.mockRejectedValue(
-        new BadRequestException('Les tâches doivent appartenir au même projet')
+        new BadRequestException('Les tâches doivent appartenir au même projet'),
       );
 
-      await expect(controller.addDependency('task-id-1', addDependencyDto)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        controller.addDependency('task-id-1', addDependencyDto),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ConflictException when dependency already exists', async () => {
       mockTasksService.addDependency.mockRejectedValue(
-        new ConflictException('Cette dépendance existe déjà')
+        new ConflictException('Cette dépendance existe déjà'),
       );
 
-      await expect(controller.addDependency('task-id-1', addDependencyDto)).rejects.toThrow(
-        ConflictException
-      );
+      await expect(
+        controller.addDependency('task-id-1', addDependencyDto),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
   describe('removeDependency', () => {
     it('should remove a dependency', async () => {
-      mockTasksService.removeDependency.mockResolvedValue({ message: 'Dépendance supprimée' });
+      mockTasksService.removeDependency.mockResolvedValue({
+        message: 'Dépendance supprimée',
+      });
 
-      const result = await controller.removeDependency('task-id-1', 'task-id-2');
+      const result = await controller.removeDependency(
+        'task-id-1',
+        'task-id-2',
+      );
 
       expect(result.message).toBe('Dépendance supprimée');
-      expect(mockTasksService.removeDependency).toHaveBeenCalledWith('task-id-1', 'task-id-2');
+      expect(mockTasksService.removeDependency).toHaveBeenCalledWith(
+        'task-id-1',
+        'task-id-2',
+      );
     });
 
     it('should throw NotFoundException when dependency not found', async () => {
       mockTasksService.removeDependency.mockRejectedValue(
-        new NotFoundException('Dépendance introuvable')
+        new NotFoundException('Dépendance introuvable'),
       );
 
-      await expect(controller.removeDependency('task-id-1', 'nonexistent')).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.removeDependency('task-id-1', 'nonexistent'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -426,58 +502,71 @@ describe('TasksController', () => {
       const result = await controller.assignRACI('task-id-1', assignRACIDto);
 
       expect(result).toEqual(raciAssignment);
-      expect(mockTasksService.assignRACI).toHaveBeenCalledWith('task-id-1', assignRACIDto);
+      expect(mockTasksService.assignRACI).toHaveBeenCalledWith(
+        'task-id-1',
+        assignRACIDto,
+      );
     });
 
     it('should throw NotFoundException when task not found', async () => {
       mockTasksService.assignRACI.mockRejectedValue(
-        new NotFoundException('Tâche introuvable')
+        new NotFoundException('Tâche introuvable'),
       );
 
-      await expect(controller.assignRACI('nonexistent', assignRACIDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.assignRACI('nonexistent', assignRACIDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException when user not found', async () => {
       mockTasksService.assignRACI.mockRejectedValue(
-        new NotFoundException('Utilisateur introuvable')
+        new NotFoundException('Utilisateur introuvable'),
       );
 
-      await expect(controller.assignRACI('task-id-1', assignRACIDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.assignRACI('task-id-1', assignRACIDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException when RACI assignment already exists', async () => {
       mockTasksService.assignRACI.mockRejectedValue(
-        new ConflictException('Cette assignation RACI existe déjà')
+        new ConflictException('Cette assignation RACI existe déjà'),
       );
 
-      await expect(controller.assignRACI('task-id-1', assignRACIDto)).rejects.toThrow(
-        ConflictException
-      );
+      await expect(
+        controller.assignRACI('task-id-1', assignRACIDto),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
   describe('removeRACI', () => {
     it('should remove RACI assignment', async () => {
-      mockTasksService.removeRACI.mockResolvedValue({ message: 'Assignation RACI supprimée' });
+      mockTasksService.removeRACI.mockResolvedValue({
+        message: 'Assignation RACI supprimée',
+      });
 
-      const result = await controller.removeRACI('task-id-1', 'user-id-1', 'RESPONSIBLE');
+      const result = await controller.removeRACI(
+        'task-id-1',
+        'user-id-1',
+        'RESPONSIBLE',
+      );
 
       expect(result.message).toBe('Assignation RACI supprimée');
-      expect(mockTasksService.removeRACI).toHaveBeenCalledWith('task-id-1', 'user-id-1', 'RESPONSIBLE');
+      expect(mockTasksService.removeRACI).toHaveBeenCalledWith(
+        'task-id-1',
+        'user-id-1',
+        'RESPONSIBLE',
+      );
     });
 
     it('should throw NotFoundException when RACI assignment not found', async () => {
       mockTasksService.removeRACI.mockRejectedValue(
-        new NotFoundException('Assignation RACI introuvable')
+        new NotFoundException('Assignation RACI introuvable'),
       );
 
-      await expect(controller.removeRACI('task-id-1', 'user-id-1', 'RESPONSIBLE')).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.removeRACI('task-id-1', 'user-id-1', 'RESPONSIBLE'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

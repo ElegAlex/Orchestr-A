@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeleworkController } from './telework.controller';
 import { TeleworkService } from './telework.service';
-import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 
 describe('TeleworkController', () => {
   let controller: TeleworkController;
@@ -65,28 +69,34 @@ describe('TeleworkController', () => {
       const result = await controller.create('user-id-1', createTeleworkDto);
 
       expect(result).toEqual(mockTelework);
-      expect(mockTeleworkService.create).toHaveBeenCalledWith('user-id-1', createTeleworkDto);
+      expect(mockTeleworkService.create).toHaveBeenCalledWith(
+        'user-id-1',
+        createTeleworkDto,
+      );
       expect(mockTeleworkService.create).toHaveBeenCalledTimes(1);
     });
 
     it('should throw ConflictException when telework already exists for date', async () => {
       mockTeleworkService.create.mockRejectedValue(
-        new ConflictException('Un télétravail existe déjà pour cette date')
+        new ConflictException('Un télétravail existe déjà pour cette date'),
       );
 
-      await expect(controller.create('user-id-1', createTeleworkDto)).rejects.toThrow(
-        ConflictException
-      );
+      await expect(
+        controller.create('user-id-1', createTeleworkDto),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw BadRequestException for invalid date', async () => {
       mockTeleworkService.create.mockRejectedValue(
-        new BadRequestException('Date invalide')
+        new BadRequestException('Date invalide'),
       );
 
-      await expect(controller.create('user-id-1', { ...createTeleworkDto, date: 'invalid' })).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        controller.create('user-id-1', {
+          ...createTeleworkDto,
+          date: 'invalid',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -108,7 +118,11 @@ describe('TeleworkController', () => {
 
       expect(result).toEqual(paginatedResult);
       expect(mockTeleworkService.findAll).toHaveBeenCalledWith(
-        1, 10, undefined, undefined, undefined
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
       );
     });
 
@@ -123,7 +137,11 @@ describe('TeleworkController', () => {
       await controller.findAll(1, 10, 'user-id-1');
 
       expect(mockTeleworkService.findAll).toHaveBeenCalledWith(
-        1, 10, 'user-id-1', undefined, undefined
+        1,
+        10,
+        'user-id-1',
+        undefined,
+        undefined,
       );
     });
 
@@ -136,7 +154,11 @@ describe('TeleworkController', () => {
       await controller.findAll(1, 10, undefined, '2025-01-01', '2025-01-31');
 
       expect(mockTeleworkService.findAll).toHaveBeenCalledWith(
-        1, 10, undefined, '2025-01-01', '2025-01-31'
+        1,
+        10,
+        undefined,
+        '2025-01-01',
+        '2025-01-31',
       );
     });
   });
@@ -153,10 +175,12 @@ describe('TeleworkController', () => {
 
     it('should throw NotFoundException when telework not found', async () => {
       mockTeleworkService.findOne.mockRejectedValue(
-        new NotFoundException('Télétravail introuvable')
+        new NotFoundException('Télétravail introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -176,10 +200,16 @@ describe('TeleworkController', () => {
 
       mockTeleworkService.getWeeklySchedule.mockResolvedValue(weeklySchedule);
 
-      const result = await controller.getMyWeeklySchedule('user-id-1', '2025-01-13');
+      const result = await controller.getMyWeeklySchedule(
+        'user-id-1',
+        '2025-01-13',
+      );
 
       expect(result).toEqual(weeklySchedule);
-      expect(mockTeleworkService.getWeeklySchedule).toHaveBeenCalledWith('user-id-1', '2025-01-13');
+      expect(mockTeleworkService.getWeeklySchedule).toHaveBeenCalledWith(
+        'user-id-1',
+        '2025-01-13',
+      );
     });
   });
 
@@ -201,7 +231,10 @@ describe('TeleworkController', () => {
       const result = await controller.getMyStats('user-id-1', 2025);
 
       expect(result).toEqual(stats);
-      expect(mockTeleworkService.getUserStats).toHaveBeenCalledWith('user-id-1', 2025);
+      expect(mockTeleworkService.getUserStats).toHaveBeenCalledWith(
+        'user-id-1',
+        2025,
+      );
     });
 
     it('should use current year when not specified', async () => {
@@ -210,15 +243,28 @@ describe('TeleworkController', () => {
 
       await controller.getMyStats('user-id-1', undefined);
 
-      expect(mockTeleworkService.getUserStats).toHaveBeenCalledWith('user-id-1', undefined);
+      expect(mockTeleworkService.getUserStats).toHaveBeenCalledWith(
+        'user-id-1',
+        undefined,
+      );
     });
   });
 
   describe('getTeamTelework', () => {
     it('should return team telework for a specific date', async () => {
       const teamSchedule = [
-        { userId: 'user-1', firstName: 'John', lastName: 'Doe', isTelework: true },
-        { userId: 'user-2', firstName: 'Jane', lastName: 'Smith', isTelework: false },
+        {
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          isTelework: true,
+        },
+        {
+          userId: 'user-2',
+          firstName: 'Jane',
+          lastName: 'Smith',
+          isTelework: false,
+        },
       ];
 
       mockTeleworkService.getTeamSchedule.mockResolvedValue(teamSchedule);
@@ -226,19 +272,30 @@ describe('TeleworkController', () => {
       const result = await controller.getTeamTelework('2025-01-15');
 
       expect(result).toEqual(teamSchedule);
-      expect(mockTeleworkService.getTeamSchedule).toHaveBeenCalledWith('2025-01-15', undefined);
+      expect(mockTeleworkService.getTeamSchedule).toHaveBeenCalledWith(
+        '2025-01-15',
+        undefined,
+      );
     });
 
     it('should filter by department', async () => {
       const departmentSchedule = [
-        { userId: 'user-1', firstName: 'John', lastName: 'Doe', isTelework: true },
+        {
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          isTelework: true,
+        },
       ];
 
       mockTeleworkService.getTeamSchedule.mockResolvedValue(departmentSchedule);
 
       await controller.getTeamTelework('2025-01-15', 'dept-1');
 
-      expect(mockTeleworkService.getTeamSchedule).toHaveBeenCalledWith('2025-01-15', 'dept-1');
+      expect(mockTeleworkService.getTeamSchedule).toHaveBeenCalledWith(
+        '2025-01-15',
+        'dept-1',
+      );
     });
   });
 
@@ -252,10 +309,16 @@ describe('TeleworkController', () => {
 
       mockTeleworkService.getWeeklySchedule.mockResolvedValue(weeklySchedule);
 
-      const result = await controller.getUserWeeklySchedule('user-id-2', '2025-01-13');
+      const result = await controller.getUserWeeklySchedule(
+        'user-id-2',
+        '2025-01-13',
+      );
 
       expect(result).toEqual(weeklySchedule);
-      expect(mockTeleworkService.getWeeklySchedule).toHaveBeenCalledWith('user-id-2', '2025-01-13');
+      expect(mockTeleworkService.getWeeklySchedule).toHaveBeenCalledWith(
+        'user-id-2',
+        '2025-01-13',
+      );
     });
   });
 
@@ -267,7 +330,10 @@ describe('TeleworkController', () => {
       const result = await controller.getUserStats('user-id-2', 2025);
 
       expect(result).toEqual(stats);
-      expect(mockTeleworkService.getUserStats).toHaveBeenCalledWith('user-id-2', 2025);
+      expect(mockTeleworkService.getUserStats).toHaveBeenCalledWith(
+        'user-id-2',
+        2025,
+      );
     });
   });
 
@@ -280,55 +346,64 @@ describe('TeleworkController', () => {
       const updatedTelework = { ...mockTelework, isTelework: false };
       mockTeleworkService.update.mockResolvedValue(updatedTelework);
 
-      const result = await controller.update('telework-id-1', 'user-id-1', updateTeleworkDto);
+      const result = await controller.update(
+        'telework-id-1',
+        'user-id-1',
+        updateTeleworkDto,
+      );
 
       expect(result.isTelework).toBe(false);
       expect(mockTeleworkService.update).toHaveBeenCalledWith(
         'telework-id-1',
         'user-id-1',
-        updateTeleworkDto
+        updateTeleworkDto,
       );
     });
 
     it('should throw NotFoundException when telework not found', async () => {
       mockTeleworkService.update.mockRejectedValue(
-        new NotFoundException('Télétravail introuvable')
+        new NotFoundException('Télétravail introuvable'),
       );
 
       await expect(
-        controller.update('nonexistent', 'user-id-1', updateTeleworkDto)
+        controller.update('nonexistent', 'user-id-1', updateTeleworkDto),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException on date conflict', async () => {
       mockTeleworkService.update.mockRejectedValue(
-        new ConflictException('Conflit avec un télétravail existant')
+        new ConflictException('Conflit avec un télétravail existant'),
       );
 
       await expect(
-        controller.update('telework-id-1', 'user-id-1', { date: '2025-01-20' })
+        controller.update('telework-id-1', 'user-id-1', { date: '2025-01-20' }),
       ).rejects.toThrow(ConflictException);
     });
   });
 
   describe('remove', () => {
     it('should delete a telework entry', async () => {
-      mockTeleworkService.remove.mockResolvedValue({ message: 'Télétravail supprimé' });
+      mockTeleworkService.remove.mockResolvedValue({
+        message: 'Télétravail supprimé',
+      });
 
       const result = await controller.remove('telework-id-1', 'user-id-1');
 
       expect(result.message).toBe('Télétravail supprimé');
-      expect(mockTeleworkService.remove).toHaveBeenCalledWith('telework-id-1', 'user-id-1');
+      expect(mockTeleworkService.remove).toHaveBeenCalledWith(
+        'telework-id-1',
+        'user-id-1',
+      );
     });
 
     it('should throw NotFoundException when telework not found', async () => {
       mockTeleworkService.remove.mockRejectedValue(
-        new NotFoundException('Télétravail introuvable')
+        new NotFoundException('Télétravail introuvable'),
       );
 
-      await expect(controller.remove('nonexistent', 'user-id-1')).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.remove('nonexistent', 'user-id-1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

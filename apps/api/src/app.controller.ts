@@ -6,7 +6,7 @@ export class AppController {
   @Get()
   getRoot() {
     return {
-      name: 'ORCHESTR\'A V2 API',
+      name: "ORCHESTR'A V2 API",
       version: '2.0.0',
       status: 'operational',
       endpoints: {

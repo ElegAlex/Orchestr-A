@@ -23,7 +23,7 @@ export class CreateServiceDto {
 
   @ApiProperty({
     description: 'Description du service',
-    example: 'Service en charge du recrutement et de l\'intégration',
+    example: "Service en charge du recrutement et de l'intégration",
     required: false,
   })
   @IsString()

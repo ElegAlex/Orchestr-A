@@ -14,7 +14,7 @@ import { Role } from 'database';
 
 export class ImportUserDto {
   @ApiProperty({
-    description: 'Email de l\'utilisateur',
+    description: "Email de l'utilisateur",
     example: 'marie.martin@orchestr-a.internal',
   })
   @IsEmail()
@@ -53,7 +53,7 @@ export class ImportUserDto {
   lastName: string;
 
   @ApiProperty({
-    description: 'Rôle de l\'utilisateur',
+    description: "Rôle de l'utilisateur",
     enum: Role,
     example: Role.CONTRIBUTEUR,
     default: Role.CONTRIBUTEUR,
@@ -91,17 +91,17 @@ export class ImportUsersDto {
 
 export class ImportUsersResultDto {
   @ApiProperty({
-    description: 'Nombre d\'utilisateurs créés avec succès',
+    description: "Nombre d'utilisateurs créés avec succès",
   })
   created: number;
 
   @ApiProperty({
-    description: 'Nombre d\'utilisateurs ignorés (existants)',
+    description: "Nombre d'utilisateurs ignorés (existants)",
   })
   skipped: number;
 
   @ApiProperty({
-    description: 'Nombre d\'erreurs',
+    description: "Nombre d'erreurs",
   })
   errors: number;
 
@@ -124,10 +124,13 @@ export class UserPreviewItemDto {
   @ApiProperty({ description: 'Index de la ligne dans le CSV' })
   lineNumber: number;
 
-  @ApiProperty({ description: 'Données de l\'utilisateur' })
+  @ApiProperty({ description: "Données de l'utilisateur" })
   user: ImportUserDto;
 
-  @ApiProperty({ description: 'Statut de validation', enum: ['valid', 'duplicate', 'error', 'warning'] })
+  @ApiProperty({
+    description: 'Statut de validation',
+    enum: ['valid', 'duplicate', 'error', 'warning'],
+  })
   status: UserPreviewStatus;
 
   @ApiProperty({ description: 'Messages de validation' })
@@ -141,16 +144,28 @@ export class UserPreviewItemDto {
 }
 
 export class UsersValidationPreviewDto {
-  @ApiProperty({ description: 'Éléments valides prêts à être importés', type: [UserPreviewItemDto] })
+  @ApiProperty({
+    description: 'Éléments valides prêts à être importés',
+    type: [UserPreviewItemDto],
+  })
   valid: UserPreviewItemDto[];
 
-  @ApiProperty({ description: 'Éléments qui seront ignorés (doublons)', type: [UserPreviewItemDto] })
+  @ApiProperty({
+    description: 'Éléments qui seront ignorés (doublons)',
+    type: [UserPreviewItemDto],
+  })
   duplicates: UserPreviewItemDto[];
 
-  @ApiProperty({ description: 'Éléments avec erreurs', type: [UserPreviewItemDto] })
+  @ApiProperty({
+    description: 'Éléments avec erreurs',
+    type: [UserPreviewItemDto],
+  })
   errors: UserPreviewItemDto[];
 
-  @ApiProperty({ description: 'Éléments avec avertissements (seront importés)', type: [UserPreviewItemDto] })
+  @ApiProperty({
+    description: 'Éléments avec avertissements (seront importés)',
+    type: [UserPreviewItemDto],
+  })
   warnings: UserPreviewItemDto[];
 
   @ApiProperty({ description: 'Résumé de la validation' })

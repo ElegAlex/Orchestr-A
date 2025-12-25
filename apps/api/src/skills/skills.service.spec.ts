@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SkillsService } from './skills.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 describe('SkillsService', () => {
@@ -83,7 +87,9 @@ describe('SkillsService', () => {
 
       mockPrismaService.skill.findFirst.mockResolvedValue(mockSkill);
 
-      await expect(service.create(createDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(createDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -126,7 +132,9 @@ describe('SkillsService', () => {
     it('should throw error when skill not found', async () => {
       mockPrismaService.skill.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -148,14 +156,21 @@ describe('SkillsService', () => {
     it('should throw error when skill not found', async () => {
       mockPrismaService.skill.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('invalid', { name: 'Test' })).rejects.toThrow(NotFoundException);
+      await expect(service.update('invalid', { name: 'Test' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ConflictException when new name already exists', async () => {
       mockPrismaService.skill.findUnique.mockResolvedValue(mockSkill);
-      mockPrismaService.skill.findFirst.mockResolvedValue({ id: 'other-skill', name: 'Existing' });
+      mockPrismaService.skill.findFirst.mockResolvedValue({
+        id: 'other-skill',
+        name: 'Existing',
+      });
 
-      await expect(service.update('skill-1', { name: 'Existing' })).rejects.toThrow(ConflictException);
+      await expect(
+        service.update('skill-1', { name: 'Existing' }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
@@ -178,7 +193,9 @@ describe('SkillsService', () => {
     it('should throw error when skill not found', async () => {
       mockPrismaService.skill.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error when skill has users', async () => {
@@ -188,7 +205,9 @@ describe('SkillsService', () => {
       };
       mockPrismaService.skill.findUnique.mockResolvedValue(mockSkillWithUsers);
 
-      await expect(service.remove('skill-1')).rejects.toThrow(BadRequestException);
+      await expect(service.remove('skill-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -251,7 +270,9 @@ describe('SkillsService', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.assignSkillToUser(userId, assignDto)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.assignSkillToUser(userId, assignDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw error when skill not found', async () => {
@@ -264,7 +285,9 @@ describe('SkillsService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
       mockPrismaService.skill.findUnique.mockResolvedValue(null);
 
-      await expect(service.assignSkillToUser(userId, assignDto)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.assignSkillToUser(userId, assignDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -284,16 +307,27 @@ describe('SkillsService', () => {
     it('should throw error when user skill not found', async () => {
       mockPrismaService.userSkill.findUnique.mockResolvedValue(null);
 
-      await expect(service.removeSkillFromUser('user-1', 'skill-1'))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.removeSkillFromUser('user-1', 'skill-1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('getUserSkills', () => {
     it('should return user skills grouped by category', async () => {
       const mockUserSkills = [
-        { userId: 'user-1', skillId: 'skill-1', level: 'EXPERT', skill: { ...mockSkill, category: 'TECHNICAL' } },
-        { userId: 'user-1', skillId: 'skill-2', level: 'INTERMEDIATE', skill: { id: 'skill-2', name: 'React', category: 'TECHNICAL' } },
+        {
+          userId: 'user-1',
+          skillId: 'skill-1',
+          level: 'EXPERT',
+          skill: { ...mockSkill, category: 'TECHNICAL' },
+        },
+        {
+          userId: 'user-1',
+          skillId: 'skill-2',
+          level: 'INTERMEDIATE',
+          skill: { id: 'skill-2', name: 'React', category: 'TECHNICAL' },
+        },
       ];
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
       mockPrismaService.userSkill.findMany.mockResolvedValue(mockUserSkills);
@@ -309,7 +343,9 @@ describe('SkillsService', () => {
     it('should throw error when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getUserSkills('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.getUserSkills('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -401,7 +437,9 @@ describe('SkillsService', () => {
     it('should throw error when skill not found', async () => {
       mockPrismaService.skill.findUnique.mockResolvedValue(null);
 
-      await expect(service.findUsersBySkill('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.findUsersBySkill('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should filter by minimum level', async () => {
@@ -409,22 +447,48 @@ describe('SkillsService', () => {
         {
           userId: 'user-1',
           level: 'EXPERT',
-          user: { id: 'user-1', isActive: true, firstName: 'John', lastName: 'Doe' },
+          user: {
+            id: 'user-1',
+            isActive: true,
+            firstName: 'John',
+            lastName: 'Doe',
+          },
         },
       ];
 
       mockPrismaService.skill.findUnique.mockResolvedValue(mockSkill);
       mockPrismaService.userSkill.findMany.mockResolvedValue(mockUserSkills);
 
-      const result = await service.findUsersBySkill('skill-1', 'INTERMEDIATE' as any);
+      const result = await service.findUsersBySkill(
+        'skill-1',
+        'INTERMEDIATE' as any,
+      );
 
       expect(result.users).toHaveLength(1);
     });
 
     it('should only return active users', async () => {
       const mockUserSkills = [
-        { userId: 'user-1', level: 'EXPERT', user: { id: 'user-1', isActive: true, firstName: 'John', lastName: 'Doe' } },
-        { userId: 'user-2', level: 'EXPERT', user: { id: 'user-2', isActive: false, firstName: 'Jane', lastName: 'Doe' } },
+        {
+          userId: 'user-1',
+          level: 'EXPERT',
+          user: {
+            id: 'user-1',
+            isActive: true,
+            firstName: 'John',
+            lastName: 'Doe',
+          },
+        },
+        {
+          userId: 'user-2',
+          level: 'EXPERT',
+          user: {
+            id: 'user-2',
+            isActive: false,
+            firstName: 'Jane',
+            lastName: 'Doe',
+          },
+        },
       ];
 
       mockPrismaService.skill.findUnique.mockResolvedValue(mockSkill);

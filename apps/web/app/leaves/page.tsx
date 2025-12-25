@@ -12,7 +12,6 @@ import {
   LeaveType,
   LeaveStatus,
   HalfDay,
-  CreateLeaveDto,
   User,
   Role,
 } from '@/types';
@@ -74,9 +73,10 @@ export default function LeavesPage() {
     try {
       const data = await leavesService.getMyLeaves();
       setLeaves(Array.isArray(data) ? data : []);
-    } catch (error: any) {
-      if (error.response?.status !== 404) {
-        console.error(error);
+    } catch (err) {
+      const axiosError = err as { response?: { status?: number } };
+      if (axiosError.response?.status !== 404) {
+        console.error(err);
       }
       setLeaves([]);
     }
@@ -87,8 +87,8 @@ export default function LeavesPage() {
     try {
       const data = await leavesService.getPendingForValidation();
       setPendingLeaves(Array.isArray(data) ? data : []);
-    } catch (error: any) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       setPendingLeaves([]);
     }
   };
@@ -96,11 +96,11 @@ export default function LeavesPage() {
   const fetchAllLeaves = async () => {
     if (!isAdmin) return;
     try {
-      let url = selectedUserId ? selectedUserId : undefined;
+      const url = selectedUserId ? selectedUserId : undefined;
       const data = await leavesService.getAll(1, 100, url);
       setAllLeaves(Array.isArray(data.data) ? data.data : []);
-    } catch (error: any) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       setAllLeaves([]);
     }
   };
@@ -110,8 +110,8 @@ export default function LeavesPage() {
     try {
       const data = await leavesService.getMyDelegations();
       setDelegations(data);
-    } catch (error: any) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       setDelegations({ given: [], received: [] });
     }
   };
@@ -124,8 +124,8 @@ export default function LeavesPage() {
       if (data.length > 0 && !formData.leaveTypeId) {
         setFormData(prev => ({ ...prev, leaveTypeId: data[0].id }));
       }
-    } catch (error: any) {
-      console.error('Error fetching leave types:', error);
+    } catch (err) {
+      console.error('Error fetching leave types:', err);
       setLeaveTypes([]);
     }
   };
@@ -144,13 +144,17 @@ export default function LeavesPage() {
   };
 
   useEffect(() => {
+     
     fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (activeTab === 'all-leaves') {
+       
       fetchAllLeaves();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUserId]);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -161,8 +165,9 @@ export default function LeavesPage() {
       setShowCreateModal(false);
       resetForm();
       fetchAll();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la création');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la création');
     }
   };
 
@@ -176,8 +181,9 @@ export default function LeavesPage() {
       setEditingLeave(null);
       resetForm();
       fetchAll();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la modification');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la modification');
     }
   };
 
@@ -187,8 +193,9 @@ export default function LeavesPage() {
       await leavesService.delete(leaveId);
       toast.success('Demande supprimée');
       fetchAll();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la suppression');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la suppression');
     }
   };
 
@@ -197,8 +204,9 @@ export default function LeavesPage() {
       await leavesService.approve(leaveId);
       toast.success('Demande approuvée');
       fetchAll();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'approbation');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de l\'approbation');
     }
   };
 
@@ -217,8 +225,9 @@ export default function LeavesPage() {
       setRejectingLeaveId(null);
       setRejectReason('');
       fetchAll();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors du refus');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors du refus');
     }
   };
 
@@ -234,8 +243,9 @@ export default function LeavesPage() {
       setShowDelegationModal(false);
       setDelegationForm({ delegateId: '', startDate: '', endDate: '' });
       fetchDelegations();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la création de la délégation');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la création de la délégation');
     }
   };
 
@@ -245,15 +255,16 @@ export default function LeavesPage() {
       await leavesService.deactivateDelegation(delegationId);
       toast.success('Délégation désactivée');
       fetchDelegations();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la désactivation');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la désactivation');
     }
   };
 
   const openEditModal = (leave: Leave) => {
     setEditingLeave(leave);
     setFormData({
-      leaveTypeId: (leave as any).leaveTypeId || leaveTypes.find(t => t.code === leave.type)?.id || '',
+      leaveTypeId: (leave as Leave & { leaveTypeId?: string }).leaveTypeId || leaveTypes.find(t => t.code === leave.type)?.id || '',
       startDate: new Date(leave.startDate).toISOString().split('T')[0],
       endDate: new Date(leave.endDate).toISOString().split('T')[0],
       halfDay: leave.halfDay || undefined,
@@ -274,7 +285,7 @@ export default function LeavesPage() {
 
   // Trouver le type de congé pour un leave (utilise leaveType ou type)
   const getLeaveTypeInfo = (leave: Leave): LeaveTypeConfig | undefined => {
-    const leaveWithType = leave as any;
+    const leaveWithType = leave as Leave & { leaveType?: LeaveTypeConfig };
     if (leaveWithType.leaveType) {
       return leaveWithType.leaveType;
     }
@@ -385,7 +396,7 @@ export default function LeavesPage() {
           </div>
 
           {leave.comment && (
-            <p className="text-sm text-gray-600 mt-2 italic">"{leave.comment}"</p>
+            <p className="text-sm text-gray-600 mt-2 italic">&quot;{leave.comment}&quot;</p>
           )}
 
           {/* Validation info */}
@@ -965,7 +976,7 @@ export default function LeavesPage() {
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800">
-                  Durant cette période, l'utilisateur sélectionné pourra valider les demandes de congé à votre place.
+                  Durant cette période, l&apos;utilisateur sélectionné pourra valider les demandes de congé à votre place.
                 </p>
               </div>
               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">

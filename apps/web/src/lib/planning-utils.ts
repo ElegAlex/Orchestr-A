@@ -30,7 +30,7 @@ export const getGroupColors = (color: string, isManagement: boolean) => {
     };
   }
 
-  const colorMap: Record<string, any> = {
+  const colorMap: Record<string, { header: string; text: string; badge: string; border: string; avatar: string }> = {
     blue: {
       header: 'bg-gradient-to-r from-blue-100 to-blue-50 border-l-4 border-blue-500',
       text: 'text-blue-900',

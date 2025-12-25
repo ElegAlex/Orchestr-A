@@ -45,18 +45,32 @@ export class HolidaysController {
   }
 
   @Get('year/:year')
-  @ApiOperation({ summary: 'Récupérer les jours fériés d\'une année' })
+  @ApiOperation({ summary: "Récupérer les jours fériés d'une année" })
   @ApiParam({ name: 'year', description: 'Année', example: 2025 })
-  @ApiResponse({ status: 200, description: 'Liste des jours fériés de l\'année' })
+  @ApiResponse({
+    status: 200,
+    description: "Liste des jours fériés de l'année",
+  })
   async findByYear(@Param('year', ParseIntPipe) year: number) {
     return this.holidaysService.findByYear(year);
   }
 
   @Get('range')
   @ApiOperation({ summary: 'Récupérer les jours fériés sur une période' })
-  @ApiQuery({ name: 'startDate', description: 'Date de début', example: '2025-01-01' })
-  @ApiQuery({ name: 'endDate', description: 'Date de fin', example: '2025-12-31' })
-  @ApiResponse({ status: 200, description: 'Liste des jours fériés de la période' })
+  @ApiQuery({
+    name: 'startDate',
+    description: 'Date de début',
+    example: '2025-01-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    description: 'Date de fin',
+    example: '2025-12-31',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des jours fériés de la période',
+  })
   async findByRange(@Query() query: HolidayRangeQueryDto) {
     return this.holidaysService.findByRange(query.startDate, query.endDate);
   }
@@ -74,7 +88,10 @@ export class HolidaysController {
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Créer un nouveau jour férié (Admin uniquement)' })
   @ApiResponse({ status: 201, description: 'Jour férié créé' })
-  @ApiResponse({ status: 409, description: 'Un jour férié existe déjà à cette date' })
+  @ApiResponse({
+    status: 409,
+    description: 'Un jour férié existe déjà à cette date',
+  })
   async create(
     @Body() createHolidayDto: CreateHolidayDto,
     @CurrentUser() user: any,
@@ -84,7 +101,9 @@ export class HolidaysController {
 
   @Post('import-french')
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Importer les jours fériés français (Admin uniquement)' })
+  @ApiOperation({
+    summary: 'Importer les jours fériés français (Admin uniquement)',
+  })
   @ApiQuery({ name: 'year', description: 'Année à importer', required: false })
   @ApiResponse({
     status: 201,
@@ -92,8 +111,14 @@ export class HolidaysController {
     schema: {
       type: 'object',
       properties: {
-        created: { type: 'number', description: 'Nombre de jours fériés créés' },
-        skipped: { type: 'number', description: 'Nombre de jours fériés ignorés (déjà existants)' },
+        created: {
+          type: 'number',
+          description: 'Nombre de jours fériés créés',
+        },
+        skipped: {
+          type: 'number',
+          description: 'Nombre de jours fériés ignorés (déjà existants)',
+        },
       },
     },
   })
@@ -111,7 +136,10 @@ export class HolidaysController {
   @ApiParam({ name: 'id', description: 'ID du jour férié' })
   @ApiResponse({ status: 200, description: 'Jour férié mis à jour' })
   @ApiResponse({ status: 404, description: 'Jour férié non trouvé' })
-  @ApiResponse({ status: 409, description: 'Un jour férié existe déjà à cette date' })
+  @ApiResponse({
+    status: 409,
+    description: 'Un jour férié existe déjà à cette date',
+  })
   async update(
     @Param('id') id: string,
     @Body() updateHolidayDto: UpdateHolidayDto,
@@ -132,8 +160,16 @@ export class HolidaysController {
 
   @Get('working-days/count')
   @ApiOperation({ summary: 'Compter les jours ouvrés entre deux dates' })
-  @ApiQuery({ name: 'startDate', description: 'Date de début', example: '2025-01-01' })
-  @ApiQuery({ name: 'endDate', description: 'Date de fin', example: '2025-01-31' })
+  @ApiQuery({
+    name: 'startDate',
+    description: 'Date de début',
+    example: '2025-01-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    description: 'Date de fin',
+    example: '2025-01-31',
+  })
   @ApiResponse({
     status: 200,
     description: 'Nombre de jours ouvrés',

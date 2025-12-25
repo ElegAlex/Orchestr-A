@@ -59,7 +59,8 @@ export class TimeTrackingController {
 
   @Get()
   @ApiOperation({
-    summary: 'Récupérer toutes les entrées de temps (avec pagination et filtres)',
+    summary:
+      'Récupérer toutes les entrées de temps (avec pagination et filtres)',
   })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -127,7 +128,8 @@ export class TimeTrackingController {
   @Get('user/:userId/report')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @ApiOperation({
-    summary: 'Récupérer le rapport de temps d\'un utilisateur (Admin/Responsable/Manager)',
+    summary:
+      "Récupérer le rapport de temps d'un utilisateur (Admin/Responsable/Manager)",
   })
   @ApiQuery({ name: 'startDate', required: true, type: String })
   @ApiQuery({ name: 'endDate', required: true, type: String })
@@ -150,7 +152,8 @@ export class TimeTrackingController {
   @Get('project/:projectId/report')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @ApiOperation({
-    summary: 'Récupérer le rapport de temps d\'un projet (Admin/Responsable/Manager)',
+    summary:
+      "Récupérer le rapport de temps d'un projet (Admin/Responsable/Manager)",
   })
   @ApiQuery({ name: 'startDate', required: false, type: String })
   @ApiQuery({ name: 'endDate', required: false, type: String })
@@ -178,7 +181,7 @@ export class TimeTrackingController {
   @ApiOperation({ summary: 'Récupérer une entrée de temps par ID' })
   @ApiResponse({
     status: 200,
-    description: 'Détails de l\'entrée de temps',
+    description: "Détails de l'entrée de temps",
   })
   @ApiResponse({
     status: 404,

@@ -72,7 +72,9 @@ describe('EpicsService', () => {
     it('should throw error when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(createEpicDto)).rejects.toThrow('Projet introuvable');
+      await expect(service.create(createEpicDto)).rejects.toThrow(
+        'Projet introuvable',
+      );
     });
   });
 
@@ -121,7 +123,9 @@ describe('EpicsService', () => {
     it('should throw error when epic not found', async () => {
       mockPrismaService.epic.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow('Epic introuvable');
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        'Epic introuvable',
+      );
     });
   });
 

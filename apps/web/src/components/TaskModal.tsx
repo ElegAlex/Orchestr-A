@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: Record<string, unknown>) => Promise<void>;
   task?: Task | null;
   projectId?: string | null; // Rendu optionnel pour les taches orphelines
   projects?: Project[]; // Liste des projets disponibles
@@ -97,7 +97,7 @@ export function TaskModal({
     setIsSubmitting(true);
 
     try {
-      const taskData: any = {
+      const taskData: Record<string, unknown> = {
         title: formData.title,
         description: formData.description,
         status: formData.status,
@@ -124,8 +124,8 @@ export function TaskModal({
 
       await onSave(taskData);
       onClose();
-    } catch (error: any) {
-      console.error('Error saving task:', error);
+    } catch (err) {
+      console.error('Error saving task:', err);
     } finally {
       setIsSubmitting(false);
     }

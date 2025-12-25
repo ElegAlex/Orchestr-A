@@ -52,13 +52,14 @@ export default function DepartmentsPage() {
       // Fetch all users for manager selection
       const usersData = await usersService.getAll();
       setUsers(Array.isArray(usersData) ? usersData : []);
-    } catch (error: any) {
+    } catch (err) {
       setDepartments([]);
       setServices([]);
       setUsers([]);
-      if (error.response?.status !== 404) {
+      const axiosError = err as { response?: { status?: number } };
+      if (axiosError.response?.status !== 404) {
         toast.error('Erreur lors du chargement des données');
-        console.error(error);
+        console.error(err);
       }
     } finally {
       setLoading(false);
@@ -82,9 +83,10 @@ export default function DepartmentsPage() {
       setShowDepartmentModal(false);
       resetDepartmentForm();
       fetchData();
-    } catch (error: any) {
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message ||
+        axiosError.response?.data?.message ||
           `Erreur lors de ${editingDepartment ? 'la modification' : 'la création'}`
       );
     }
@@ -103,9 +105,10 @@ export default function DepartmentsPage() {
       setShowServiceModal(false);
       resetServiceForm();
       fetchData();
-    } catch (error: any) {
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message ||
+        axiosError.response?.data?.message ||
           `Erreur lors de ${editingService ? 'la modification' : 'la création'}`
       );
     }
@@ -123,7 +126,7 @@ export default function DepartmentsPage() {
       await departmentsService.delete(id);
       toast.success('Département supprimé');
       fetchData();
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors de la suppression');
     }
   };
@@ -135,7 +138,7 @@ export default function DepartmentsPage() {
       await servicesService.delete(id);
       toast.success('Service supprimé');
       fetchData();
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors de la suppression');
     }
   };
@@ -274,7 +277,7 @@ export default function DepartmentsPage() {
               </h3>
               <p className="text-sm text-blue-800 mt-1">
                 Les départements représentent les grandes divisions de
-                l'entreprise. Chaque département peut contenir plusieurs
+                l&apos;entreprise. Chaque département peut contenir plusieurs
                 services. Les managers peuvent être assignés aux départements et
                 services pour gérer leurs équipes.
               </p>

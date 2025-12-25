@@ -12,7 +12,7 @@ import {
 
 export class AddMemberDto {
   @ApiProperty({
-    description: 'ID de l\'utilisateur à ajouter',
+    description: "ID de l'utilisateur à ajouter",
     example: 'uuid-here',
   })
   @IsUUID()
@@ -29,7 +29,7 @@ export class AddMemberDto {
   role?: string;
 
   @ApiProperty({
-    description: 'Pourcentage d\'allocation (0-100)',
+    description: "Pourcentage d'allocation (0-100)",
     example: 80,
     required: false,
   })

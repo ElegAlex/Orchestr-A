@@ -5,9 +5,26 @@ import { Gantt, Task, ViewMode } from '@rsagiev/gantt-task-react-19';
 import '@rsagiev/gantt-task-react-19/dist/index.css';
 import '../gantt-custom.css';
 
+interface GanttTask {
+  id: string;
+  title: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  progress?: number;
+  milestoneId?: string;
+}
+
+interface GanttMilestone {
+  id: string;
+  name: string;
+  dueDate?: string;
+  status?: string;
+}
+
 interface GanttChartProps {
-  tasks: any[];
-  milestones: any[];
+  tasks: GanttTask[];
+  milestones: GanttMilestone[];
   projectStartDate?: Date;
   projectEndDate?: Date;
 }
@@ -28,8 +45,8 @@ export default function GanttChart({
     const defaultEnd = projectEndDate || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     // Grouper les tâches par milestone
-    const tasksByMilestone = new Map<string, any[]>();
-    const tasksWithoutMilestone: any[] = [];
+    const tasksByMilestone = new Map<string, GanttTask[]>();
+    const tasksWithoutMilestone: GanttTask[] = [];
 
     tasks.forEach((task) => {
       if (task.milestoneId) {
@@ -43,7 +60,7 @@ export default function GanttChart({
     });
 
     // Fonction pour convertir une tâche
-    const convertTask = (task: any) => {
+    const convertTask = (task: GanttTask) => {
       const start = task.startDate ? new Date(task.startDate) : defaultStart;
       const end = task.endDate ? new Date(task.endDate) : new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
 
@@ -96,6 +113,7 @@ export default function GanttChart({
       convertedTasks.push(convertTask(task));
     });
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGanttTasks(convertedTasks);
   }, [tasks, milestones, projectStartDate, projectEndDate]);
 

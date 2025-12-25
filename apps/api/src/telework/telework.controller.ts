@@ -87,7 +87,9 @@ export class TeleworkController {
   }
 
   @Get('me/week')
-  @ApiOperation({ summary: 'Récupérer mon planning de télétravail pour une semaine' })
+  @ApiOperation({
+    summary: 'Récupérer mon planning de télétravail pour une semaine',
+  })
   @ApiQuery({ name: 'weekStart', required: true, type: String })
   @ApiResponse({
     status: 200,
@@ -105,7 +107,8 @@ export class TeleworkController {
   @ApiQuery({ name: 'year', required: false, type: Number })
   @ApiResponse({
     status: 200,
-    description: 'Statistiques de télétravail (jours complets, demi-journées, par mois)',
+    description:
+      'Statistiques de télétravail (jours complets, demi-journées, par mois)',
   })
   getMyStats(
     @CurrentUser('id') userId: string,
@@ -117,7 +120,8 @@ export class TeleworkController {
   @Get('team/:date')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @ApiOperation({
-    summary: 'Voir qui est en télétravail pour une date (Admin/Responsable/Manager)',
+    summary:
+      'Voir qui est en télétravail pour une date (Admin/Responsable/Manager)',
   })
   @ApiQuery({ name: 'departmentId', required: false, type: String })
   @ApiResponse({
@@ -134,7 +138,8 @@ export class TeleworkController {
   @Get('user/:userId/week')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @ApiOperation({
-    summary: 'Récupérer le planning de télétravail d\'un utilisateur (Admin/Responsable/Manager)',
+    summary:
+      "Récupérer le planning de télétravail d'un utilisateur (Admin/Responsable/Manager)",
   })
   @ApiQuery({ name: 'weekStart', required: true, type: String })
   @ApiResponse({
@@ -155,7 +160,8 @@ export class TeleworkController {
   @Get('user/:userId/stats')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @ApiOperation({
-    summary: 'Récupérer les statistiques de télétravail d\'un utilisateur (Admin/Responsable/Manager)',
+    summary:
+      "Récupérer les statistiques de télétravail d'un utilisateur (Admin/Responsable/Manager)",
   })
   @ApiQuery({ name: 'year', required: false, type: Number })
   @ApiResponse({

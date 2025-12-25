@@ -60,15 +60,26 @@ export class LeavesController {
 
   @Get()
   @ApiOperation({
-    summary: 'Récupérer toutes les demandes de congé (avec pagination et filtres)',
+    summary:
+      'Récupérer toutes les demandes de congé (avec pagination et filtres)',
   })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'userId', required: false, type: String })
   @ApiQuery({ name: 'status', required: false, enum: LeaveStatus })
   @ApiQuery({ name: 'type', required: false, enum: LeaveType })
-  @ApiQuery({ name: 'startDate', required: false, type: String, description: 'Date de début (ISO)' })
-  @ApiQuery({ name: 'endDate', required: false, type: String, description: 'Date de fin (ISO)' })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Date de début (ISO)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Date de fin (ISO)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Liste des demandes de congé',
@@ -82,7 +93,15 @@ export class LeavesController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.leavesService.findAll(page, limit, userId, status, type, startDate, endDate);
+    return this.leavesService.findAll(
+      page,
+      limit,
+      userId,
+      status,
+      type,
+      startDate,
+      endDate,
+    );
   }
 
   @Get('me')
@@ -120,7 +139,8 @@ export class LeavesController {
   @Get('balance/:userId')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @ApiOperation({
-    summary: 'Récupérer le solde de congés d\'un utilisateur (Admin/Responsable/Manager)',
+    summary:
+      "Récupérer le solde de congés d'un utilisateur (Admin/Responsable/Manager)",
   })
   @ApiResponse({
     status: 200,
@@ -149,7 +169,9 @@ export class LeavesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Mettre à jour une demande de congé (en attente uniquement)' })
+  @ApiOperation({
+    summary: 'Mettre à jour une demande de congé (en attente uniquement)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Demande de congé mise à jour',
@@ -172,7 +194,8 @@ export class LeavesController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Supprimer une demande de congé (en attente ou refusée uniquement)',
+    summary:
+      'Supprimer une demande de congé (en attente ou refusée uniquement)',
   })
   @ApiResponse({
     status: 200,
@@ -193,7 +216,8 @@ export class LeavesController {
   @Post(':id/approve')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Approuver une demande de congé (validateur assigné, délégué ou Admin/Responsable)',
+    summary:
+      'Approuver une demande de congé (validateur assigné, délégué ou Admin/Responsable)',
   })
   @ApiBody({
     schema: {
@@ -214,7 +238,7 @@ export class LeavesController {
   })
   @ApiResponse({
     status: 403,
-    description: 'Vous n\'êtes pas autorisé à valider cette demande',
+    description: "Vous n'êtes pas autorisé à valider cette demande",
   })
   @ApiResponse({
     status: 404,
@@ -231,7 +255,8 @@ export class LeavesController {
   @Post(':id/reject')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Refuser une demande de congé (validateur assigné, délégué ou Admin/Responsable)',
+    summary:
+      'Refuser une demande de congé (validateur assigné, délégué ou Admin/Responsable)',
   })
   @ApiBody({
     schema: {
@@ -252,7 +277,7 @@ export class LeavesController {
   })
   @ApiResponse({
     status: 403,
-    description: 'Vous n\'êtes pas autorisé à valider cette demande',
+    description: "Vous n'êtes pas autorisé à valider cette demande",
   })
   @ApiResponse({
     status: 404,
@@ -270,7 +295,8 @@ export class LeavesController {
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Annuler une demande de congé approuvée (Admin/Responsable/Manager)',
+    summary:
+      'Annuler une demande de congé approuvée (Admin/Responsable/Manager)',
   })
   @ApiResponse({
     status: 200,
@@ -302,8 +328,15 @@ export class LeavesController {
       type: 'object',
       required: ['delegateId', 'startDate', 'endDate'],
       properties: {
-        delegateId: { type: 'string', description: 'ID de l\'utilisateur délégué' },
-        startDate: { type: 'string', format: 'date', description: 'Date de début' },
+        delegateId: {
+          type: 'string',
+          description: "ID de l'utilisateur délégué",
+        },
+        startDate: {
+          type: 'string',
+          format: 'date',
+          description: 'Date de début',
+        },
         endDate: { type: 'string', format: 'date', description: 'Date de fin' },
       },
     },
@@ -357,7 +390,7 @@ export class LeavesController {
   })
   @ApiResponse({
     status: 403,
-    description: 'Vous n\'êtes pas autorisé à désactiver cette délégation',
+    description: "Vous n'êtes pas autorisé à désactiver cette délégation",
   })
   @ApiResponse({
     status: 404,

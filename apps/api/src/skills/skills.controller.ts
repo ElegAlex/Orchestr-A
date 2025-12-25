@@ -55,7 +55,9 @@ export class SkillsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Récupérer toutes les compétences (avec pagination)' })
+  @ApiOperation({
+    summary: 'Récupérer toutes les compétences (avec pagination)',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'category', required: false, enum: SkillCategory })
@@ -92,7 +94,8 @@ export class SkillsController {
   @Get('search/:skillId')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @ApiOperation({
-    summary: 'Rechercher des utilisateurs par compétence (Admin/Responsable/Manager)',
+    summary:
+      'Rechercher des utilisateurs par compétence (Admin/Responsable/Manager)',
   })
   @ApiQuery({ name: 'minLevel', required: false, enum: SkillLevel })
   @ApiResponse({
@@ -111,7 +114,9 @@ export class SkillsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Récupérer une compétence par ID avec ses utilisateurs' })
+  @ApiOperation({
+    summary: 'Récupérer une compétence par ID avec ses utilisateurs',
+  })
   @ApiResponse({
     status: 200,
     description: 'Détails de la compétence',
@@ -190,7 +195,8 @@ export class SkillsController {
   @Post('user/:userId/assign')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @ApiOperation({
-    summary: 'Assigner une compétence à un utilisateur (Admin/Responsable/Manager)',
+    summary:
+      'Assigner une compétence à un utilisateur (Admin/Responsable/Manager)',
   })
   @ApiResponse({
     status: 201,
@@ -229,7 +235,8 @@ export class SkillsController {
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Retirer une compétence d\'un utilisateur (Admin/Responsable/Manager)',
+    summary:
+      "Retirer une compétence d'un utilisateur (Admin/Responsable/Manager)",
   })
   @ApiResponse({
     status: 200,
@@ -247,10 +254,11 @@ export class SkillsController {
   }
 
   @Get('user/:userId')
-  @ApiOperation({ summary: 'Récupérer les compétences d\'un utilisateur' })
+  @ApiOperation({ summary: "Récupérer les compétences d'un utilisateur" })
   @ApiResponse({
     status: 200,
-    description: 'Liste des compétences de l\'utilisateur groupées par catégorie',
+    description:
+      "Liste des compétences de l'utilisateur groupées par catégorie",
   })
   @ApiResponse({
     status: 404,
@@ -273,7 +281,8 @@ export class SkillsController {
   @Patch('user/:userId/skill/:skillId')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @ApiOperation({
-    summary: 'Mettre à jour le niveau d\'une compétence d\'un utilisateur (Admin/Responsable/Manager)',
+    summary:
+      "Mettre à jour le niveau d'une compétence d'un utilisateur (Admin/Responsable/Manager)",
   })
   @ApiResponse({
     status: 200,

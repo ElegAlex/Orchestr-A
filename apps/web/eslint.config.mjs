@@ -16,12 +16,11 @@ const eslintConfig = defineConfig([
   // Custom rules
   {
     rules: {
-      // Downgrade to warnings to allow gradual migration
-      "@typescript-eslint/no-explicit-any": "warn",
-      "react/no-unescaped-entities": "warn",
-      "@typescript-eslint/no-unused-vars": "warn",
-      "@typescript-eslint/no-require-imports": "warn",
-      "react-hooks/set-state-in-effect": "warn",
+      // Strict rules - all errors must be fixed
+      "@typescript-eslint/no-explicit-any": "error",
+      "react/no-unescaped-entities": "error",
+      "@typescript-eslint/no-unused-vars": "error",
+      "@typescript-eslint/no-require-imports": "error",
     },
   },
 ]);

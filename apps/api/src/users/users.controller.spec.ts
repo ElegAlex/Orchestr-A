@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { NotFoundException, ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -82,26 +86,32 @@ describe('UsersController', () => {
 
     it('should throw ConflictException when email already exists', async () => {
       mockUsersService.create.mockRejectedValue(
-        new ConflictException('Cet email est déjà utilisé')
+        new ConflictException('Cet email est déjà utilisé'),
       );
 
-      await expect(controller.create(createUserDto)).rejects.toThrow(ConflictException);
+      await expect(controller.create(createUserDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should throw ConflictException when login already exists', async () => {
       mockUsersService.create.mockRejectedValue(
-        new ConflictException('Ce login est déjà utilisé')
+        new ConflictException('Ce login est déjà utilisé'),
       );
 
-      await expect(controller.create(createUserDto)).rejects.toThrow(ConflictException);
+      await expect(controller.create(createUserDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should throw NotFoundException when department does not exist', async () => {
       mockUsersService.create.mockRejectedValue(
-        new NotFoundException('Département introuvable')
+        new NotFoundException('Département introuvable'),
       );
 
-      await expect(controller.create(createUserDto)).rejects.toThrow(NotFoundException);
+      await expect(controller.create(createUserDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -150,7 +160,11 @@ describe('UsersController', () => {
 
       await controller.findAll(undefined, undefined);
 
-      expect(mockUsersService.findAll).toHaveBeenCalledWith(undefined, undefined, undefined);
+      expect(mockUsersService.findAll).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        undefined,
+      );
     });
   });
 
@@ -166,10 +180,12 @@ describe('UsersController', () => {
 
     it('should throw NotFoundException when user not found', async () => {
       mockUsersService.findOne.mockRejectedValue(
-        new NotFoundException('Utilisateur introuvable')
+        new NotFoundException('Utilisateur introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -181,7 +197,9 @@ describe('UsersController', () => {
       const result = await controller.getUsersByDepartment('dept-1');
 
       expect(result).toEqual(departmentUsers);
-      expect(mockUsersService.getUsersByDepartment).toHaveBeenCalledWith('dept-1');
+      expect(mockUsersService.getUsersByDepartment).toHaveBeenCalledWith(
+        'dept-1',
+      );
     });
   });
 
@@ -193,7 +211,9 @@ describe('UsersController', () => {
       const result = await controller.getUsersByService('service-1');
 
       expect(result).toEqual(serviceUsers);
-      expect(mockUsersService.getUsersByService).toHaveBeenCalledWith('service-1');
+      expect(mockUsersService.getUsersByService).toHaveBeenCalledWith(
+        'service-1',
+      );
     });
   });
 
@@ -223,26 +243,29 @@ describe('UsersController', () => {
 
       expect(result).toEqual(updatedUser);
       expect(result.firstName).toBe('Updated');
-      expect(mockUsersService.update).toHaveBeenCalledWith('user-id-1', updateUserDto);
+      expect(mockUsersService.update).toHaveBeenCalledWith(
+        'user-id-1',
+        updateUserDto,
+      );
     });
 
     it('should throw NotFoundException when user not found', async () => {
       mockUsersService.update.mockRejectedValue(
-        new NotFoundException('Utilisateur introuvable')
+        new NotFoundException('Utilisateur introuvable'),
       );
 
-      await expect(controller.update('nonexistent', updateUserDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.update('nonexistent', updateUserDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException when email already used', async () => {
       mockUsersService.update.mockRejectedValue(
-        new ConflictException('Cet email est déjà utilisé')
+        new ConflictException('Cet email est déjà utilisé'),
       );
 
       await expect(
-        controller.update('user-id-1', { email: 'existing@example.com' })
+        controller.update('user-id-1', { email: 'existing@example.com' }),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -260,16 +283,20 @@ describe('UsersController', () => {
 
     it('should throw NotFoundException when user not found', async () => {
       mockUsersService.remove.mockRejectedValue(
-        new NotFoundException('Utilisateur introuvable')
+        new NotFoundException('Utilisateur introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('hardDelete', () => {
     it('should permanently delete a user', async () => {
-      mockUsersService.hardDelete.mockResolvedValue({ message: 'Utilisateur supprimé définitivement' });
+      mockUsersService.hardDelete.mockResolvedValue({
+        message: 'Utilisateur supprimé définitivement',
+      });
 
       const result = await controller.hardDelete('user-id-1');
 
@@ -279,10 +306,12 @@ describe('UsersController', () => {
 
     it('should throw NotFoundException when user not found', async () => {
       mockUsersService.hardDelete.mockRejectedValue(
-        new NotFoundException('Utilisateur introuvable')
+        new NotFoundException('Utilisateur introuvable'),
       );
 
-      await expect(controller.hardDelete('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.hardDelete('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -297,19 +326,25 @@ describe('UsersController', () => {
         message: 'Mot de passe modifié avec succès',
       });
 
-      const result = await controller.changePassword('user-id-1', changePasswordDto);
+      const result = await controller.changePassword(
+        'user-id-1',
+        changePasswordDto,
+      );
 
       expect(result.message).toBe('Mot de passe modifié avec succès');
-      expect(mockUsersService.changePassword).toHaveBeenCalledWith('user-id-1', changePasswordDto);
+      expect(mockUsersService.changePassword).toHaveBeenCalledWith(
+        'user-id-1',
+        changePasswordDto,
+      );
     });
 
     it('should throw UnauthorizedException when current password is incorrect', async () => {
       mockUsersService.changePassword.mockRejectedValue(
-        new UnauthorizedException('Mot de passe actuel incorrect')
+        new UnauthorizedException('Mot de passe actuel incorrect'),
       );
 
       await expect(
-        controller.changePassword('user-id-1', changePasswordDto)
+        controller.changePassword('user-id-1', changePasswordDto),
       ).rejects.toThrow(UnauthorizedException);
     });
   });
@@ -320,19 +355,25 @@ describe('UsersController', () => {
         message: 'Mot de passe réinitialisé',
       });
 
-      const result = await controller.resetPassword('user-id-1', 'newpassword123');
+      const result = await controller.resetPassword(
+        'user-id-1',
+        'newpassword123',
+      );
 
       expect(result.message).toBe('Mot de passe réinitialisé');
-      expect(mockUsersService.resetPassword).toHaveBeenCalledWith('user-id-1', 'newpassword123');
+      expect(mockUsersService.resetPassword).toHaveBeenCalledWith(
+        'user-id-1',
+        'newpassword123',
+      );
     });
 
     it('should throw NotFoundException when user not found', async () => {
       mockUsersService.resetPassword.mockRejectedValue(
-        new NotFoundException('Utilisateur introuvable')
+        new NotFoundException('Utilisateur introuvable'),
       );
 
       await expect(
-        controller.resetPassword('nonexistent', 'newpassword123')
+        controller.resetPassword('nonexistent', 'newpassword123'),
       ).rejects.toThrow(NotFoundException);
     });
   });

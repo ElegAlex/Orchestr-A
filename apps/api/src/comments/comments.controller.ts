@@ -1,5 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, HttpCode, HttpStatus, ParseIntPipe, ParseUUIDPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  ParseIntPipe,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
@@ -17,7 +37,10 @@ export class CommentsController {
   @Post()
   @ApiOperation({ summary: 'Créer un commentaire' })
   @ApiResponse({ status: 201, description: 'Commentaire créé' })
-  create(@CurrentUser('id') userId: string, @Body() createCommentDto: CreateCommentDto) {
+  create(
+    @CurrentUser('id') userId: string,
+    @Body() createCommentDto: CreateCommentDto,
+  ) {
     return this.commentsService.create(userId, createCommentDto);
   }
 
@@ -35,7 +58,7 @@ export class CommentsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Détails d\'un commentaire' })
+  @ApiOperation({ summary: "Détails d'un commentaire" })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.commentsService.findOne(id);
   }

@@ -12,6 +12,26 @@ import { UserMultiSelect } from '@/components/UserMultiSelect';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/stores/auth.store';
 
+interface TaskDependency {
+  id: string;
+  dependsOnTask?: { title: string; status: TaskStatus };
+}
+
+interface TaskMilestone {
+  name: string;
+  dueDate?: string;
+}
+
+interface TaskEpic {
+  name: string;
+}
+
+interface TaskWithRelations extends Omit<Task, 'epic' | 'milestone'> {
+  dependencies?: TaskDependency[];
+  milestone?: TaskMilestone;
+  epic?: TaskEpic;
+}
+
 export default function TaskDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -19,7 +39,7 @@ export default function TaskDetailPage() {
   const { user } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
-  const [task, setTask] = useState<Task | null>(null);
+  const [task, setTask] = useState<TaskWithRelations | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -64,7 +84,7 @@ export default function TaskDetailPage() {
           const usersResponse = await usersService.getAll();
           const allUsers = Array.isArray(usersResponse)
             ? usersResponse
-            : (usersResponse as any).data || [];
+            : (usersResponse as { data?: User[] }).data || [];
           setUsers(allUsers);
         } catch (error) {
           console.error('Error fetching users:', error);
@@ -76,7 +96,7 @@ export default function TaskDetailPage() {
           const projectsData = await projectsService.getAll();
           const allProjects = Array.isArray(projectsData)
             ? projectsData
-            : (projectsData as any).data || [];
+            : (projectsData as { data?: Project[] }).data || [];
           setProjects(allProjects);
         } catch (error) {
           console.error('Error fetching projects:', error);
@@ -85,7 +105,8 @@ export default function TaskDetailPage() {
 
         // Initialize form data
         // Extraire les IDs des assignés depuis la relation assignees
-        const taskAssigneeIds = taskData.assignees?.map((a: any) => a.user?.id || a.userId).filter(Boolean) as string[] || [];
+        type TaskAssignee = { user?: { id: string }; userId?: string };
+        const taskAssigneeIds = taskData.assignees?.map((a: TaskAssignee) => a.user?.id || a.userId).filter(Boolean) as string[] || [];
         // Si pas d'assignees multiples mais un assigneeId, l'utiliser
         const assigneeIds = taskAssigneeIds.length > 0 ? taskAssigneeIds : (taskData.assigneeId ? [taskData.assigneeId] : []);
 
@@ -106,9 +127,9 @@ export default function TaskDetailPage() {
           startTime: taskData.startTime || '',
           endTime: taskData.endTime || '',
         });
-      } catch (error: any) {
+      } catch (err) {
         toast.error('Erreur lors du chargement de la tâche');
-        console.error(error);
+        console.error(err);
         router.push('/tasks');
       } finally {
         setLoading(false);
@@ -121,7 +142,7 @@ export default function TaskDetailPage() {
   const handleSave = async () => {
     try {
       // Préparer les données à envoyer (nettoyer les chaînes vides)
-      const updateData: any = {
+      const updateData: Partial<Task> & { assigneeIds?: string[] } = {
         title: formData.title,
         description: formData.description,
         status: formData.status,
@@ -165,9 +186,10 @@ export default function TaskDetailPage() {
       setTask(updatedTask);
       setIsEditing(false);
       toast.success('Tâche mise à jour avec succès');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour');
-      console.error(error);
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la mise à jour');
+      console.error(err);
     }
   };
 
@@ -208,9 +230,10 @@ export default function TaskDetailPage() {
       await tasksService.delete(taskId);
       toast.success('Tâche supprimée avec succès');
       router.push('/tasks');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la suppression');
-      console.error(error);
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la suppression');
+      console.error(err);
     }
   };
 
@@ -569,13 +592,13 @@ export default function TaskDetailPage() {
             )}
 
             {/* Dependencies */}
-            {(task as any).dependencies && (task as any).dependencies.length > 0 && (
+            {task.dependencies && task.dependencies.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   Dépendances
                 </h2>
                 <div className="space-y-2">
-                  {(task as any).dependencies.map((dep: any) => (
+                  {task.dependencies.map((dep) => (
                     <div
                       key={dep.id}
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -655,24 +678,24 @@ export default function TaskDetailPage() {
             )}
 
             {/* Milestone */}
-            {(task as any).milestone && (
+            {task.milestone && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Jalon</h2>
-                <p className="font-medium text-gray-900">{(task as any).milestone.name}</p>
-                {(task as any).milestone.dueDate && (
+                <p className="font-medium text-gray-900">{task.milestone.name}</p>
+                {task.milestone.dueDate && (
                   <p className="text-sm text-gray-600 mt-1">
                     Échéance:{' '}
-                    {new Date((task as any).milestone.dueDate).toLocaleDateString('fr-FR')}
+                    {new Date(task.milestone.dueDate).toLocaleDateString('fr-FR')}
                   </p>
                 )}
               </div>
             )}
 
             {/* Epic */}
-            {(task as any).epic && (
+            {task.epic && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Epic</h2>
-                <p className="font-medium text-gray-900">{(task as any).epic.name}</p>
+                <p className="font-medium text-gray-900">{task.epic.name}</p>
               </div>
             )}
 

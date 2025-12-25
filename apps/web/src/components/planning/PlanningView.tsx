@@ -98,16 +98,20 @@ export const PlanningView = ({
 
         // Si des services valides ont été trouvés, les utiliser
         if (validServiceIds.length > 0) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setSelectedServices(validServiceIds);
         } else {
           // Sinon, sélectionner tous les services
+           
           setSelectedServices(groupedUsers.map((g) => g.id));
         }
       } else {
         // Utilisateur sans service assigné : afficher tous les services
+         
         setSelectedServices(groupedUsers.map((g) => g.id));
       }
 
+       
       setHasInitializedServices(true);
     }
   }, [groupedUsers, currentUser, hasInitializedServices]);
@@ -189,7 +193,7 @@ export const PlanningView = ({
               onClick={() => setCurrentDate(new Date())}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
             >
-              Aujourd'hui
+              Aujourd&apos;hui
             </button>
             <button
               onClick={() =>

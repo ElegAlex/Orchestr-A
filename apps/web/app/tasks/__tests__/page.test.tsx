@@ -22,7 +22,7 @@ const mockUser = {
 };
 
 jest.mock('@/stores/auth.store', () => ({
-  useAuthStore: (selector: any) => selector({ user: mockUser }),
+  useAuthStore: (selector: (state: { user: typeof mockUser }) => unknown) => selector({ user: mockUser }),
 }));
 
 // Mock des services

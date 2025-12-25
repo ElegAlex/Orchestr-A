@@ -127,7 +127,7 @@ export const PlanningGrid = ({
       }
       toast.success('Télétravail mis à jour');
       refetch();
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors de la mise à jour du télétravail');
     }
   };
@@ -144,7 +144,7 @@ export const PlanningGrid = ({
       });
       toast.success('Tâche déplacée');
       refetch();
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors du déplacement de la tâche');
     }
     setDraggedTask(null);

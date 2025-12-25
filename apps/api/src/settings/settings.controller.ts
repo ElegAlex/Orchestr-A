@@ -11,7 +11,10 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SettingsService } from './settings.service';
-import { UpdateSettingDto, BulkUpdateSettingsDto } from './dto/update-setting.dto';
+import {
+  UpdateSettingDto,
+  BulkUpdateSettingsDto,
+} from './dto/update-setting.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -61,13 +64,19 @@ export class SettingsController {
       value = updateSettingDto.value;
     }
 
-    return this.settingsService.update(key, value, updateSettingDto.description);
+    return this.settingsService.update(
+      key,
+      value,
+      updateSettingDto.description,
+    );
   }
 
   @Post('bulk')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Mettre à jour plusieurs paramètres (Admin uniquement)' })
+  @ApiOperation({
+    summary: 'Mettre à jour plusieurs paramètres (Admin uniquement)',
+  })
   @ApiBearerAuth()
   async bulkUpdate(@Body() bulkUpdateDto: BulkUpdateSettingsDto) {
     return this.settingsService.bulkUpdate(bulkUpdateDto.settings);
@@ -76,7 +85,10 @@ export class SettingsController {
   @Post(':key/reset')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Réinitialiser un paramètre à sa valeur par défaut (Admin uniquement)' })
+  @ApiOperation({
+    summary:
+      'Réinitialiser un paramètre à sa valeur par défaut (Admin uniquement)',
+  })
   @ApiBearerAuth()
   async resetToDefault(@Param('key') key: string) {
     return this.settingsService.resetToDefault(key);
@@ -85,7 +97,9 @@ export class SettingsController {
   @Post('reset-all')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Réinitialiser tous les paramètres (Admin uniquement)' })
+  @ApiOperation({
+    summary: 'Réinitialiser tous les paramètres (Admin uniquement)',
+  })
   @ApiBearerAuth()
   async resetAllToDefaults() {
     return this.settingsService.resetAllToDefaults();
@@ -94,7 +108,9 @@ export class SettingsController {
   @Delete(':key')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Supprimer un paramètre personnalisé (Admin uniquement)' })
+  @ApiOperation({
+    summary: 'Supprimer un paramètre personnalisé (Admin uniquement)',
+  })
   @ApiBearerAuth()
   async remove(@Param('key') key: string) {
     return this.settingsService.remove(key);

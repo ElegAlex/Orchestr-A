@@ -9,7 +9,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { ImportUserDto, ImportUsersResultDto, UsersValidationPreviewDto, UserPreviewItemDto, UserPreviewStatus } from './dto/import-users.dto';
+import {
+  ImportUserDto,
+  ImportUsersResultDto,
+  UsersValidationPreviewDto,
+  UserPreviewItemDto,
+  UserPreviewStatus,
+} from './dto/import-users.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from 'database';
 
@@ -35,10 +41,7 @@ export class UsersService {
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await this.prisma.user.findFirst({
       where: {
-        OR: [
-          { email: createUserDto.email },
-          { login: createUserDto.login },
-        ],
+        OR: [{ email: createUserDto.email }, { login: createUserDto.login }],
       },
     });
 
@@ -518,7 +521,9 @@ export class UsersService {
 
     // Empêcher l'auto-suppression si requestingUserId est fourni
     if (requestingUserId && id === requestingUserId) {
-      throw new BadRequestException('Vous ne pouvez pas supprimer votre propre compte');
+      throw new BadRequestException(
+        'Vous ne pouvez pas supprimer votre propre compte',
+      );
     }
 
     // Vérifier les dépendances
@@ -526,7 +531,8 @@ export class UsersService {
 
     if (!canDelete) {
       throw new ConflictException({
-        message: 'Impossible de supprimer cet utilisateur en raison de dépendances actives',
+        message:
+          'Impossible de supprimer cet utilisateur en raison de dépendances actives',
         dependencies,
       });
     }
@@ -857,7 +863,9 @@ export class UsersService {
   /**
    * Valider les utilisateurs avant import (dry-run)
    */
-  async validateImport(users: ImportUserDto[]): Promise<UsersValidationPreviewDto> {
+  async validateImport(
+    users: ImportUserDto[],
+  ): Promise<UsersValidationPreviewDto> {
     const result: UsersValidationPreviewDto = {
       valid: [],
       duplicates: [],
@@ -886,13 +894,23 @@ export class UsersService {
     ]);
 
     const departmentMap = new Map(
-      departments.map((d) => [d.name.toLowerCase().trim(), { id: d.id, name: d.name }]),
+      departments.map((d) => [
+        d.name.toLowerCase().trim(),
+        { id: d.id, name: d.name },
+      ]),
     );
     const serviceMap = new Map(
-      services.map((s) => [s.name.toLowerCase().trim(), { id: s.id, name: s.name, departmentId: s.departmentId }]),
+      services.map((s) => [
+        s.name.toLowerCase().trim(),
+        { id: s.id, name: s.name, departmentId: s.departmentId },
+      ]),
     );
-    const existingEmails = new Set(existingUsers.map((u) => u.email.toLowerCase()));
-    const existingLogins = new Set(existingUsers.map((u) => u.login.toLowerCase()));
+    const existingEmails = new Set(
+      existingUsers.map((u) => u.email.toLowerCase()),
+    );
+    const existingLogins = new Set(
+      existingUsers.map((u) => u.login.toLowerCase()),
+    );
 
     for (let i = 0; i < users.length; i++) {
       const userData = users[i];
@@ -908,7 +926,7 @@ export class UsersService {
       // Vérifier les champs obligatoires
       if (!userData.email || userData.email.trim() === '') {
         previewItem.status = 'error';
-        previewItem.messages.push('L\'email est obligatoire');
+        previewItem.messages.push("L'email est obligatoire");
         result.errors.push(previewItem);
         result.summary.errors++;
         continue;
@@ -924,7 +942,9 @@ export class UsersService {
 
       if (!userData.password || userData.password.length < 6) {
         previewItem.status = 'error';
-        previewItem.messages.push('Le mot de passe doit contenir au moins 6 caractères');
+        previewItem.messages.push(
+          'Le mot de passe doit contenir au moins 6 caractères',
+        );
         result.errors.push(previewItem);
         result.summary.errors++;
         continue;
@@ -964,9 +984,11 @@ export class UsersService {
       }
 
       // Valider le rôle
-      if (userData.role && !Object.values(Role).includes(userData.role as Role)) {
+      if (userData.role && !Object.values(Role).includes(userData.role)) {
         previewItem.status = 'error';
-        previewItem.messages.push(`Rôle "${userData.role}" non reconnu. Valeurs possibles: ${Object.values(Role).join(', ')}`);
+        previewItem.messages.push(
+          `Rôle "${userData.role}" non reconnu. Valeurs possibles: ${Object.values(Role).join(', ')}`,
+        );
         result.errors.push(previewItem);
         result.summary.errors++;
         continue;
@@ -974,10 +996,14 @@ export class UsersService {
 
       // Résoudre le département par nom si fourni
       if (userData.departmentName) {
-        const department = departmentMap.get(userData.departmentName.toLowerCase().trim());
+        const department = departmentMap.get(
+          userData.departmentName.toLowerCase().trim(),
+        );
         if (!department) {
           previewItem.status = 'error';
-          previewItem.messages.push(`Département "${userData.departmentName}" introuvable`);
+          previewItem.messages.push(
+            `Département "${userData.departmentName}" introuvable`,
+          );
           result.errors.push(previewItem);
           result.summary.errors++;
           continue;
@@ -993,16 +1019,23 @@ export class UsersService {
           .filter((s) => s);
 
         const resolvedServices: Array<{ id: string; name: string }> = [];
-        let hasServiceError = false;
+        const hasServiceError = false;
 
         for (const serviceName of serviceNamesList) {
           const service = serviceMap.get(serviceName);
           if (!service) {
             previewItem.status = 'warning';
-            previewItem.messages.push(`Service "${serviceName}" introuvable (ignoré)`);
-          } else if (previewItem.resolvedDepartment && service.departmentId !== previewItem.resolvedDepartment.id) {
+            previewItem.messages.push(
+              `Service "${serviceName}" introuvable (ignoré)`,
+            );
+          } else if (
+            previewItem.resolvedDepartment &&
+            service.departmentId !== previewItem.resolvedDepartment.id
+          ) {
             previewItem.status = 'warning';
-            previewItem.messages.push(`Service "${service.name}" n'appartient pas au département (ignoré)`);
+            previewItem.messages.push(
+              `Service "${service.name}" n'appartient pas au département (ignoré)`,
+            );
           } else {
             resolvedServices.push({ id: service.id, name: service.name });
           }

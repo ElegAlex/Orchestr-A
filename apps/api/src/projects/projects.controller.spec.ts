@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
-import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 
 describe('ProjectsController', () => {
   let controller: ProjectsController;
@@ -67,7 +71,11 @@ describe('ProjectsController', () => {
     };
 
     it('should create a new project successfully', async () => {
-      const expectedProject = { ...mockProject, ...createProjectDto, id: 'new-project-id' };
+      const expectedProject = {
+        ...mockProject,
+        ...createProjectDto,
+        id: 'new-project-id',
+      };
       mockProjectsService.create.mockResolvedValue(expectedProject);
 
       const result = await controller.create(createProjectDto);
@@ -79,14 +87,18 @@ describe('ProjectsController', () => {
 
     it('should throw BadRequestException when end date is before start date', async () => {
       mockProjectsService.create.mockRejectedValue(
-        new BadRequestException('La date de fin doit être postérieure à la date de début')
+        new BadRequestException(
+          'La date de fin doit être postérieure à la date de début',
+        ),
       );
 
-      await expect(controller.create({
-        ...createProjectDto,
-        startDate: '2025-12-31',
-        endDate: '2025-01-01',
-      })).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.create({
+          ...createProjectDto,
+          startDate: '2025-12-31',
+          endDate: '2025-01-01',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should create project with minimal data', async () => {
@@ -118,7 +130,11 @@ describe('ProjectsController', () => {
       const result = await controller.findAll(1, 10);
 
       expect(result).toEqual(paginatedResult);
-      expect(mockProjectsService.findAll).toHaveBeenCalledWith(1, 10, undefined);
+      expect(mockProjectsService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+      );
     });
 
     it('should filter projects by status', async () => {
@@ -163,10 +179,12 @@ describe('ProjectsController', () => {
 
     it('should throw NotFoundException when project not found', async () => {
       mockProjectsService.findOne.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -178,13 +196,17 @@ describe('ProjectsController', () => {
       const result = await controller.getProjectsByUser('user-id-1');
 
       expect(result).toEqual(userProjects);
-      expect(mockProjectsService.getProjectsByUser).toHaveBeenCalledWith('user-id-1');
+      expect(mockProjectsService.getProjectsByUser).toHaveBeenCalledWith(
+        'user-id-1',
+      );
     });
 
     it('should return empty array when user has no projects', async () => {
       mockProjectsService.getProjectsByUser.mockResolvedValue([]);
 
-      const result = await controller.getProjectsByUser('user-without-projects');
+      const result = await controller.getProjectsByUser(
+        'user-without-projects',
+      );
 
       expect(result).toEqual([]);
     });
@@ -209,15 +231,19 @@ describe('ProjectsController', () => {
 
       expect(result).toEqual(projectStats);
       expect(result.progress).toBe(50);
-      expect(mockProjectsService.getProjectStats).toHaveBeenCalledWith('project-id-1');
+      expect(mockProjectsService.getProjectStats).toHaveBeenCalledWith(
+        'project-id-1',
+      );
     });
 
     it('should throw NotFoundException when project not found', async () => {
       mockProjectsService.getProjectStats.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.getStats('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.getStats('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -235,17 +261,20 @@ describe('ProjectsController', () => {
 
       expect(result).toEqual(updatedProject);
       expect(result.name).toBe('Updated Project Name');
-      expect(mockProjectsService.update).toHaveBeenCalledWith('project-id-1', updateProjectDto);
+      expect(mockProjectsService.update).toHaveBeenCalledWith(
+        'project-id-1',
+        updateProjectDto,
+      );
     });
 
     it('should throw NotFoundException when project not found', async () => {
       mockProjectsService.update.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.update('nonexistent', updateProjectDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.update('nonexistent', updateProjectDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should update project status', async () => {
@@ -272,29 +301,37 @@ describe('ProjectsController', () => {
 
     it('should throw NotFoundException when project not found', async () => {
       mockProjectsService.remove.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('hardDelete', () => {
     it('should permanently delete a project', async () => {
-      mockProjectsService.hardDelete.mockResolvedValue({ message: 'Projet supprimé définitivement' });
+      mockProjectsService.hardDelete.mockResolvedValue({
+        message: 'Projet supprimé définitivement',
+      });
 
       const result = await controller.hardDelete('project-id-1');
 
       expect(result.message).toBe('Projet supprimé définitivement');
-      expect(mockProjectsService.hardDelete).toHaveBeenCalledWith('project-id-1');
+      expect(mockProjectsService.hardDelete).toHaveBeenCalledWith(
+        'project-id-1',
+      );
     });
 
     it('should throw NotFoundException when project not found', async () => {
       mockProjectsService.hardDelete.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.hardDelete('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.hardDelete('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -320,58 +357,66 @@ describe('ProjectsController', () => {
       const result = await controller.addMember('project-id-1', addMemberDto);
 
       expect(result).toEqual(newMember);
-      expect(mockProjectsService.addMember).toHaveBeenCalledWith('project-id-1', addMemberDto);
+      expect(mockProjectsService.addMember).toHaveBeenCalledWith(
+        'project-id-1',
+        addMemberDto,
+      );
     });
 
     it('should throw NotFoundException when project not found', async () => {
       mockProjectsService.addMember.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.addMember('nonexistent', addMemberDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.addMember('nonexistent', addMemberDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException when user not found', async () => {
       mockProjectsService.addMember.mockRejectedValue(
-        new NotFoundException('Utilisateur introuvable')
+        new NotFoundException('Utilisateur introuvable'),
       );
 
-      await expect(controller.addMember('project-id-1', addMemberDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.addMember('project-id-1', addMemberDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException when user is already a member', async () => {
       mockProjectsService.addMember.mockRejectedValue(
-        new ConflictException("L'utilisateur est déjà membre du projet")
+        new ConflictException("L'utilisateur est déjà membre du projet"),
       );
 
-      await expect(controller.addMember('project-id-1', addMemberDto)).rejects.toThrow(
-        ConflictException
-      );
+      await expect(
+        controller.addMember('project-id-1', addMemberDto),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
   describe('removeMember', () => {
     it('should remove a member from project', async () => {
-      mockProjectsService.removeMember.mockResolvedValue({ message: 'Membre retiré du projet' });
+      mockProjectsService.removeMember.mockResolvedValue({
+        message: 'Membre retiré du projet',
+      });
 
       const result = await controller.removeMember('project-id-1', 'user-id-1');
 
       expect(result.message).toBe('Membre retiré du projet');
-      expect(mockProjectsService.removeMember).toHaveBeenCalledWith('project-id-1', 'user-id-1');
+      expect(mockProjectsService.removeMember).toHaveBeenCalledWith(
+        'project-id-1',
+        'user-id-1',
+      );
     });
 
     it('should throw NotFoundException when member not found in project', async () => {
       mockProjectsService.removeMember.mockRejectedValue(
-        new NotFoundException('Membre introuvable dans ce projet')
+        new NotFoundException('Membre introuvable dans ce projet'),
       );
 
-      await expect(controller.removeMember('project-id-1', 'nonexistent')).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.removeMember('project-id-1', 'nonexistent'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

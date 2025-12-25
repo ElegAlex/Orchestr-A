@@ -67,18 +67,21 @@ describe('DocumentsController', () => {
       const result = await controller.create('user-id-1', createDocumentDto);
 
       expect(result).toEqual(mockDocument);
-      expect(mockDocumentsService.create).toHaveBeenCalledWith('user-id-1', createDocumentDto);
+      expect(mockDocumentsService.create).toHaveBeenCalledWith(
+        'user-id-1',
+        createDocumentDto,
+      );
       expect(mockDocumentsService.create).toHaveBeenCalledTimes(1);
     });
 
     it('should throw NotFoundException when project not found', async () => {
       mockDocumentsService.create.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.create('user-id-1', createDocumentDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.create('user-id-1', createDocumentDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -99,7 +102,11 @@ describe('DocumentsController', () => {
       const result = await controller.findAll(1, 10);
 
       expect(result).toEqual(paginatedResult);
-      expect(mockDocumentsService.findAll).toHaveBeenCalledWith(1, 10, undefined);
+      expect(mockDocumentsService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+      );
     });
 
     it('should filter by projectId', async () => {
@@ -112,7 +119,11 @@ describe('DocumentsController', () => {
 
       await controller.findAll(1, 10, 'project-id-1');
 
-      expect(mockDocumentsService.findAll).toHaveBeenCalledWith(1, 10, 'project-id-1');
+      expect(mockDocumentsService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        'project-id-1',
+      );
     });
   });
 
@@ -128,10 +139,12 @@ describe('DocumentsController', () => {
 
     it('should throw NotFoundException when document not found', async () => {
       mockDocumentsService.findOne.mockRejectedValue(
-        new NotFoundException('Document introuvable')
+        new NotFoundException('Document introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -149,23 +162,28 @@ describe('DocumentsController', () => {
 
       expect(result.name).toBe('Requirements_v2.pdf');
       expect(result.description).toBe('Updated project requirements');
-      expect(mockDocumentsService.update).toHaveBeenCalledWith('doc-id-1', updateDocumentDto);
+      expect(mockDocumentsService.update).toHaveBeenCalledWith(
+        'doc-id-1',
+        updateDocumentDto,
+      );
     });
 
     it('should throw NotFoundException when document not found', async () => {
       mockDocumentsService.update.mockRejectedValue(
-        new NotFoundException('Document introuvable')
+        new NotFoundException('Document introuvable'),
       );
 
-      await expect(controller.update('nonexistent', updateDocumentDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.update('nonexistent', updateDocumentDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('remove', () => {
     it('should delete a document successfully', async () => {
-      mockDocumentsService.remove.mockResolvedValue({ message: 'Document supprimé' });
+      mockDocumentsService.remove.mockResolvedValue({
+        message: 'Document supprimé',
+      });
 
       const result = await controller.remove('doc-id-1');
 
@@ -175,10 +193,12 @@ describe('DocumentsController', () => {
 
     it('should throw NotFoundException when document not found', async () => {
       mockDocumentsService.remove.mockRejectedValue(
-        new NotFoundException('Document introuvable')
+        new NotFoundException('Document introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

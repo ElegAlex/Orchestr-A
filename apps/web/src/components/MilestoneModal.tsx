@@ -60,7 +60,7 @@ export function MilestoneModal({
 
     try {
       // Envoyer uniquement les champs acceptés par le backend
-      const milestoneData: any = {
+      const milestoneData: Partial<Milestone> & { projectId: string; dueDate?: string } = {
         name: formData.name,
         description: formData.description,
         projectId,
@@ -72,8 +72,8 @@ export function MilestoneModal({
 
       await onSave(milestoneData);
       onClose();
-    } catch (error: any) {
-      console.error('Error saving milestone:', error);
+    } catch (err) {
+      console.error('Error saving milestone:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -133,7 +133,7 @@ export function MilestoneModal({
           {/* Date d'échéance */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Date d'échéance
+              Date d&apos;échéance
             </label>
             <input
               type="date"
@@ -158,7 +158,7 @@ export function MilestoneModal({
                     Statut calculé automatiquement
                   </p>
                   <p className="text-xs text-blue-700 mt-1">
-                    Le statut du jalon est déterminé automatiquement en fonction de l'avancement des tâches qui lui sont associées.
+                    Le statut du jalon est déterminé automatiquement en fonction de l&apos;avancement des tâches qui lui sont associées.
                   </p>
                 </div>
               </div>

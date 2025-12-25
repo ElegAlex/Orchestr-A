@@ -76,7 +76,7 @@ export default function ProfilePage() {
         newPassword: '',
         confirmPassword: '',
       });
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors du changement de mot de passe');
     }
   };

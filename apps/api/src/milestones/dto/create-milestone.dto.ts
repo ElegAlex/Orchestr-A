@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsUUID, IsDateString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  IsDateString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateMilestoneDto {
   @ApiProperty({ description: 'Nom du milestone', example: 'Alpha Release' })
@@ -19,7 +27,10 @@ export class CreateMilestoneDto {
   @IsNotEmpty()
   projectId: string;
 
-  @ApiProperty({ description: 'Date d\'échéance', example: '2025-12-31T00:00:00Z' })
+  @ApiProperty({
+    description: "Date d'échéance",
+    example: '2025-12-31T00:00:00Z',
+  })
   @IsDateString()
   @IsNotEmpty()
   dueDate: string;

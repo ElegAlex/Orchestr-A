@@ -10,22 +10,33 @@ import {
 } from 'class-validator';
 
 export class UpdateLeaveTypeDto {
-  @ApiPropertyOptional({ description: 'Nom affiché', example: 'Formation professionnelle' })
+  @ApiPropertyOptional({
+    description: 'Nom affiché',
+    example: 'Formation professionnelle',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(100)
   name?: string;
 
-  @ApiPropertyOptional({ description: 'Description', example: 'Congé pour formation professionnelle' })
+  @ApiPropertyOptional({
+    description: 'Description',
+    example: 'Congé pour formation professionnelle',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   description?: string;
 
-  @ApiPropertyOptional({ description: 'Couleur hexadécimale', example: '#10B981' })
+  @ApiPropertyOptional({
+    description: 'Couleur hexadécimale',
+    example: '#10B981',
+  })
   @IsOptional()
   @IsString()
-  @Matches(/^#[0-9A-Fa-f]{6}$/, { message: 'La couleur doit être au format hexadécimal (#RRGGBB)' })
+  @Matches(/^#[0-9A-Fa-f]{6}$/, {
+    message: 'La couleur doit être au format hexadécimal (#RRGGBB)',
+  })
   color?: string;
 
   @ApiPropertyOptional({ description: 'Icône/Emoji', example: '📚' })
@@ -55,7 +66,7 @@ export class UpdateLeaveTypeDto {
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiPropertyOptional({ description: 'Ordre d\'affichage', example: 6 })
+  @ApiPropertyOptional({ description: "Ordre d'affichage", example: 6 })
   @IsOptional()
   @IsInt()
   @Min(0)
