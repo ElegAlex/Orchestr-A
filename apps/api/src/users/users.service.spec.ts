@@ -6,7 +6,6 @@ import * as bcrypt from 'bcrypt';
 
 describe('UsersService', () => {
   let service: UsersService;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     user: {
@@ -42,7 +41,6 @@ describe('UsersService', () => {
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    prismaService = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {

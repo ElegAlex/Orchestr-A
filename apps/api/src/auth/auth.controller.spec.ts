@@ -3,10 +3,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UnauthorizedException, ConflictException } from '@nestjs/common';
+import { User } from '@prisma/client';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let authService: AuthService;
 
   const mockUser = {
     id: 'user-id-1',
@@ -39,7 +39,6 @@ describe('AuthController', () => {
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
-    authService = module.get<AuthService>(AuthService);
   });
 
   afterEach(() => {
@@ -207,7 +206,7 @@ describe('AuthController', () => {
         email: 'test@example.com',
         login: 'testuser',
         role: 'CONTRIBUTEUR',
-      };
+      } as unknown as User;
 
       const result = controller.getCurrentUser(jwtPayload);
 
@@ -223,7 +222,7 @@ describe('AuthController', () => {
         lastName: 'User',
         role: 'ADMIN',
         departmentId: 'dept-1',
-      };
+      } as unknown as User;
 
       const result = controller.getCurrentUser(fullUser);
 

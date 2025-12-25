@@ -6,7 +6,6 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
 describe('CommentsController', () => {
   let controller: CommentsController;
-  let commentsService: CommentsService;
 
   const mockComment = {
     id: 'comment-id-1',
@@ -46,7 +45,6 @@ describe('CommentsController', () => {
     }).compile();
 
     controller = module.get<CommentsController>(CommentsController);
-    commentsService = module.get<CommentsService>(CommentsService);
   });
 
   afterEach(() => {

@@ -9,6 +9,30 @@ import {
   ProjectDetailDto,
 } from './dto/analytics-response.dto';
 import { subDays, startOfWeek } from 'date-fns';
+import { Prisma, Task, User, ProjectStatus } from '@prisma/client';
+
+// Types for analytics data
+interface ProjectMember {
+  role: string;
+  user: {
+    firstName: string;
+    lastName: string;
+  };
+}
+
+interface ProjectWithDetails {
+  id: string;
+  name: string;
+  status: ProjectStatus;
+  startDate: Date | null;
+  endDate: Date | null;
+  createdAt: Date;
+  budgetHours: number | null;
+  progress: number;
+  projectManager: string | null;
+  _count: { tasks: number };
+  members: ProjectMember[];
+}
 
 @Injectable()
 export class AnalyticsService {
@@ -55,8 +79,11 @@ export class AnalyticsService {
     }
   }
 
-  private async getProjects(startDate: Date, projectId?: string) {
-    const where: any = {
+  private async getProjects(
+    startDate: Date,
+    projectId?: string,
+  ): Promise<ProjectWithDetails[]> {
+    const where: Prisma.ProjectWhereInput = {
       createdAt: { gte: startDate },
     };
 
@@ -123,8 +150,8 @@ export class AnalyticsService {
     return totalHours > 0 ? Math.round((completedHours / totalHours) * 100) : 0;
   }
 
-  private async getTasks(startDate: Date, projectId?: string) {
-    const where: any = {
+  private async getTasks(startDate: Date, projectId?: string): Promise<Task[]> {
+    const where: Prisma.TaskWhereInput = {
       createdAt: { gte: startDate },
     };
 
@@ -135,16 +162,16 @@ export class AnalyticsService {
     return this.prisma.task.findMany({ where });
   }
 
-  private async getActiveUsers() {
+  private async getActiveUsers(): Promise<User[]> {
     return this.prisma.user.findMany({
       where: { isActive: true },
     });
   }
 
   private calculateMetrics(
-    projects: any[],
-    tasks: any[],
-    users: any[],
+    projects: ProjectWithDetails[],
+    tasks: Task[],
+    users: User[],
   ): MetricDto[] {
     const totalProjects = projects.length;
     const activeProjects = projects.filter((p) => p.status === 'ACTIVE').length;
@@ -157,7 +184,7 @@ export class AnalyticsService {
     const completedTasks = tasks.filter((t) => t.status === 'DONE').length;
     const overdueTasks = tasks.filter(
       (t) =>
-        t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'DONE',
+        t.endDate && new Date(t.endDate) < new Date() && t.status !== 'DONE',
     ).length;
 
     const activeUsers = users.length;
@@ -207,8 +234,8 @@ export class AnalyticsService {
   }
 
   private getProjectProgressData(
-    projects: any[],
-    tasks: any[],
+    projects: ProjectWithDetails[],
+    tasks: Task[],
   ): ProjectProgressDataDto[] {
     return projects.map((project) => ({
       name:
@@ -221,7 +248,7 @@ export class AnalyticsService {
     }));
   }
 
-  private getTaskStatusData(tasks: any[]): TaskStatusDataDto[] {
+  private getTaskStatusData(tasks: Task[]): TaskStatusDataDto[] {
     // All tasks (no subtask concept in schema)
     const statusCounts = {
       'À faire': tasks.filter((t) => t.status === 'TODO').length,
@@ -245,8 +272,8 @@ export class AnalyticsService {
   }
 
   private async getProjectDetails(
-    projects: any[],
-    tasks: any[],
+    projects: ProjectWithDetails[],
+    tasks: Task[],
   ): Promise<ProjectDetailDto[]> {
     // Fetch all time entries for these projects
     const projectIds = projects.map((p) => p.id);

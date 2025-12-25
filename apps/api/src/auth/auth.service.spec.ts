@@ -14,8 +14,6 @@ vi.mock('bcrypt');
 
 describe('AuthService', () => {
   let service: AuthService;
-  let prismaService: PrismaService;
-  let jwtService: JwtService;
 
   const mockUser = {
     id: 'user-id-1',
@@ -68,8 +66,6 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    prismaService = module.get<PrismaService>(PrismaService);
-    jwtService = module.get<JwtService>(JwtService);
   });
 
   afterEach(() => {
@@ -79,7 +75,7 @@ describe('AuthService', () => {
   describe('validateUser', () => {
     it('should return user without password if credentials are valid', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      (bcrypt.compare as any).mockResolvedValue(true);
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
 
       const result = await service.validateUser('testuser', 'password123');
 
@@ -99,7 +95,7 @@ describe('AuthService', () => {
 
     it('should return null if password is incorrect', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      (bcrypt.compare as any).mockResolvedValue(false);
+      vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
 
       const result = await service.validateUser('testuser', 'wrongpassword');
 
@@ -110,7 +106,7 @@ describe('AuthService', () => {
   describe('login', () => {
     it('should return access token for valid credentials', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      (bcrypt.compare as any).mockResolvedValue(true);
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
       mockJwtService.sign.mockReturnValue('mock-jwt-token');
 
       const result = await service.login({
@@ -147,7 +143,9 @@ describe('AuthService', () => {
         id: 'dept-1',
         name: 'IT',
       });
-      (bcrypt.hash as any).mockResolvedValue('$2b$12$hashedpassword');
+      vi.mocked(bcrypt.hash).mockResolvedValue(
+        '$2b$12$hashedpassword' as never,
+      );
 
       const createdUser = {
         id: 'new-user-id',

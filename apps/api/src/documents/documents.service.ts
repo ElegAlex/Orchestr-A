@@ -21,7 +21,7 @@ export class DocumentsService {
 
   async findAll(page = 1, limit = 10, projectId?: string) {
     const skip = (page - 1) * limit;
-    const where: any = {};
+    const where: Prisma.DocumentWhereInput = {};
     if (projectId) where.projectId = projectId;
 
     const [data, total] = await Promise.all([

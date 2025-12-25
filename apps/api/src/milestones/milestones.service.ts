@@ -40,7 +40,7 @@ export class MilestonesService {
     status?: MilestoneStatus,
   ) {
     const skip = (page - 1) * limit;
-    const where: any = {};
+    const where: Prisma.MilestoneWhereInput = {};
     if (projectId) where.projectId = projectId;
     if (status) where.status = status;
 

@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
-import { LeaveStatus, LeaveType, Role } from 'database';
+import { LeaveStatus, LeaveType, Role, Prisma } from 'database';
 
 @Injectable()
 export class LeavesService {
@@ -244,7 +244,7 @@ export class LeavesService {
   ) {
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.LeaveWhereInput = {};
     if (userId) where.userId = userId;
     if (status) where.status = status;
     if (type) where.type = type;
@@ -1043,7 +1043,8 @@ export class LeavesService {
   ): number {
     // Calculer le nombre de jours calendaires
     const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    // Note: diffDays calculates total calendar days but we count work days below
+    Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
     // Comptabiliser uniquement les jours ouvrés (lundi à vendredi)
     let workDays = 0;
@@ -1091,7 +1092,7 @@ export class LeavesService {
     endDate: Date,
     excludeId?: string,
   ): Promise<boolean> {
-    const where: any = {
+    const where: Prisma.LeaveWhereInput = {
       userId,
       status: {
         in: [LeaveStatus.PENDING, LeaveStatus.APPROVED],

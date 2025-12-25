@@ -10,7 +10,6 @@ import {
 
 describe('DepartmentsController', () => {
   let controller: DepartmentsController;
-  let departmentsService: DepartmentsService;
 
   const mockDepartment = {
     id: 'dept-id-1',
@@ -49,7 +48,6 @@ describe('DepartmentsController', () => {
     }).compile();
 
     controller = module.get<DepartmentsController>(DepartmentsController);
-    departmentsService = module.get<DepartmentsService>(DepartmentsService);
   });
 
   afterEach(() => {

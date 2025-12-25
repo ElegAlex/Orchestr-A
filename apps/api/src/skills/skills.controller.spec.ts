@@ -10,7 +10,6 @@ import {
 
 describe('SkillsController', () => {
   let controller: SkillsController;
-  let skillsService: SkillsService;
 
   const mockSkill = {
     id: 'skill-id-1',
@@ -54,7 +53,6 @@ describe('SkillsController', () => {
     }).compile();
 
     controller = module.get<SkillsController>(SkillsController);
-    skillsService = module.get<SkillsService>(SkillsService);
   });
 
   afterEach(() => {

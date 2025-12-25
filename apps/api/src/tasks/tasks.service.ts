@@ -17,6 +17,7 @@ import {
   TaskPreviewStatus,
 } from './dto/import-tasks.dto';
 import { TaskStatus, Priority } from 'database';
+import { Prisma } from 'database';
 
 @Injectable()
 export class TasksService {
@@ -204,7 +205,7 @@ export class TasksService {
   ) {
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.TaskWhereInput = {};
     if (status) where.status = status;
     if (projectId) where.projectId = projectId;
     if (assigneeId) where.assigneeId = assigneeId;

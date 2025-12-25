@@ -86,7 +86,7 @@ export class TeleworkService {
   ) {
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.TeleworkWhereInput = {};
 
     if (userId) {
       where.userId = userId;
@@ -374,7 +374,7 @@ export class TeleworkService {
     const targetDate = date ? new Date(date) : new Date();
     targetDate.setHours(0, 0, 0, 0);
 
-    const where: any = {
+    const where: Prisma.TeleworkWhereInput = {
       date: targetDate,
       isTelework: true,
     };

@@ -9,6 +9,7 @@ import { CreateSkillDto } from './dto/create-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
 import { AssignSkillDto } from './dto/assign-skill.dto';
 import { SkillCategory, SkillLevel } from 'database';
+import { Prisma } from 'database';
 
 @Injectable()
 export class SkillsService {
@@ -435,7 +436,7 @@ export class SkillsService {
       throw new NotFoundException('Compétence introuvable');
     }
 
-    const where: any = {
+    const where: Prisma.UserSkillWhereInput = {
       skillId,
     };
 
@@ -452,8 +453,8 @@ export class SkillsService {
 
       where.level = {
         in: Object.entries(levelOrder)
-          .filter(([_, value]) => value >= minLevelValue)
-          .map(([key, _]) => key as SkillLevel),
+          .filter(([, value]) => value >= minLevelValue)
+          .map(([key]) => key as SkillLevel),
       };
     }
 

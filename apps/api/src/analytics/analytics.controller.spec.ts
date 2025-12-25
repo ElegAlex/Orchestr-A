@@ -6,7 +6,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('AnalyticsController', () => {
   let controller: AnalyticsController;
-  let service: AnalyticsService;
 
   const mockAnalyticsService = {
     getAnalytics: vi.fn(),
@@ -25,7 +24,6 @@ describe('AnalyticsController', () => {
     }).compile();
 
     controller = module.get<AnalyticsController>(AnalyticsController);
-    service = module.get<AnalyticsService>(AnalyticsService);
   });
 
   it('should be defined', () => {
@@ -46,7 +44,7 @@ describe('AnalyticsController', () => {
 
       const result = await controller.getAnalytics(query);
 
-      expect(service.getAnalytics).toHaveBeenCalledWith(query);
+      expect(mockAnalyticsService.getAnalytics).toHaveBeenCalledWith(query);
       expect(result).toEqual(mockResult);
     });
   });
@@ -67,7 +65,7 @@ describe('AnalyticsController', () => {
 
       const result = await controller.exportAnalytics(query);
 
-      expect(service.exportAnalytics).toHaveBeenCalledWith(query);
+      expect(mockAnalyticsService.exportAnalytics).toHaveBeenCalledWith(query);
       expect(result).toEqual(mockExport);
     });
   });

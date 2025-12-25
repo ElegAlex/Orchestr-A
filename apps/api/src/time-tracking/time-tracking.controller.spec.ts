@@ -6,7 +6,6 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 describe('TimeTrackingController', () => {
   let controller: TimeTrackingController;
-  let timeTrackingService: TimeTrackingService;
 
   const mockTimeEntry = {
     id: 'entry-id-1',
@@ -57,7 +56,6 @@ describe('TimeTrackingController', () => {
     }).compile();
 
     controller = module.get<TimeTrackingController>(TimeTrackingController);
-    timeTrackingService = module.get<TimeTrackingService>(TimeTrackingService);
   });
 
   afterEach(() => {

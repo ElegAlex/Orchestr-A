@@ -6,9 +6,7 @@ import {
   IsEnum,
   IsOptional,
   IsBoolean,
-  IsUUID,
   IsArray,
-  ValidateIf,
 } from 'class-validator';
 import { Role } from 'database';
 

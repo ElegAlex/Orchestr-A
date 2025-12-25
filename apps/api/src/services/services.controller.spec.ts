@@ -10,7 +10,6 @@ import {
 
 describe('ServicesController', () => {
   let controller: ServicesController;
-  let servicesService: ServicesService;
 
   const mockService = {
     id: 'service-id-1',
@@ -54,7 +53,6 @@ describe('ServicesController', () => {
     }).compile();
 
     controller = module.get<ServicesController>(ServicesController);
-    servicesService = module.get<ServicesService>(ServicesService);
   });
 
   afterEach(() => {
