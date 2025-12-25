@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  BarChart,
   Bar,
   XAxis,
   YAxis,
@@ -30,7 +29,7 @@ export function VelocityChart() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">Vélocité d'Équipe</h3>
+      <h3 className="text-lg font-semibold mb-4">Vélocité d&apos;Équipe</h3>
       <ResponsiveContainer width="100%" height={300}>
         <ComposedChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />

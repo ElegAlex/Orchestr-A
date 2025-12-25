@@ -66,16 +66,20 @@ describe('MilestonesController', () => {
       const result = await controller.create(createMilestoneDto);
 
       expect(result).toEqual(mockMilestone);
-      expect(mockMilestonesService.create).toHaveBeenCalledWith(createMilestoneDto);
+      expect(mockMilestonesService.create).toHaveBeenCalledWith(
+        createMilestoneDto,
+      );
       expect(mockMilestonesService.create).toHaveBeenCalledTimes(1);
     });
 
     it('should throw NotFoundException when project not found', async () => {
       mockMilestonesService.create.mockRejectedValue(
-        new NotFoundException('Projet introuvable')
+        new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.create(createMilestoneDto)).rejects.toThrow(NotFoundException);
+      await expect(controller.create(createMilestoneDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -96,7 +100,12 @@ describe('MilestonesController', () => {
       const result = await controller.findAll(1, 10);
 
       expect(result).toEqual(paginatedResult);
-      expect(mockMilestonesService.findAll).toHaveBeenCalledWith(1, 10, undefined, undefined);
+      expect(mockMilestonesService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        undefined,
+      );
     });
 
     it('should filter by projectId', async () => {
@@ -109,7 +118,12 @@ describe('MilestonesController', () => {
 
       await controller.findAll(1, 10, 'project-id-1');
 
-      expect(mockMilestonesService.findAll).toHaveBeenCalledWith(1, 10, 'project-id-1', undefined);
+      expect(mockMilestonesService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        'project-id-1',
+        undefined,
+      );
     });
 
     it('should filter by status', async () => {
@@ -122,7 +136,12 @@ describe('MilestonesController', () => {
 
       await controller.findAll(1, 10, undefined, 'PENDING' as any);
 
-      expect(mockMilestonesService.findAll).toHaveBeenCalledWith(1, 10, undefined, 'PENDING');
+      expect(mockMilestonesService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        'PENDING',
+      );
     });
   });
 
@@ -133,15 +152,19 @@ describe('MilestonesController', () => {
       const result = await controller.findOne('milestone-id-1');
 
       expect(result).toEqual(mockMilestone);
-      expect(mockMilestonesService.findOne).toHaveBeenCalledWith('milestone-id-1');
+      expect(mockMilestonesService.findOne).toHaveBeenCalledWith(
+        'milestone-id-1',
+      );
     });
 
     it('should throw NotFoundException when milestone not found', async () => {
       mockMilestonesService.findOne.mockRejectedValue(
-        new NotFoundException('Milestone introuvable')
+        new NotFoundException('Milestone introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -155,21 +178,27 @@ describe('MilestonesController', () => {
       const updatedMilestone = { ...mockMilestone, ...updateMilestoneDto };
       mockMilestonesService.update.mockResolvedValue(updatedMilestone);
 
-      const result = await controller.update('milestone-id-1', updateMilestoneDto);
+      const result = await controller.update(
+        'milestone-id-1',
+        updateMilestoneDto,
+      );
 
       expect(result.name).toBe('Phase 1 Complete - Updated');
       expect(result.status).toBe('IN_PROGRESS');
-      expect(mockMilestonesService.update).toHaveBeenCalledWith('milestone-id-1', updateMilestoneDto);
+      expect(mockMilestonesService.update).toHaveBeenCalledWith(
+        'milestone-id-1',
+        updateMilestoneDto,
+      );
     });
 
     it('should throw NotFoundException when milestone not found', async () => {
       mockMilestonesService.update.mockRejectedValue(
-        new NotFoundException('Milestone introuvable')
+        new NotFoundException('Milestone introuvable'),
       );
 
-      await expect(controller.update('nonexistent', updateMilestoneDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.update('nonexistent', updateMilestoneDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -181,42 +210,54 @@ describe('MilestonesController', () => {
       const result = await controller.complete('milestone-id-1');
 
       expect(result.status).toBe('COMPLETED');
-      expect(mockMilestonesService.complete).toHaveBeenCalledWith('milestone-id-1');
+      expect(mockMilestonesService.complete).toHaveBeenCalledWith(
+        'milestone-id-1',
+      );
     });
 
     it('should throw NotFoundException when milestone not found', async () => {
       mockMilestonesService.complete.mockRejectedValue(
-        new NotFoundException('Milestone introuvable')
+        new NotFoundException('Milestone introuvable'),
       );
 
-      await expect(controller.complete('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.complete('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when milestone is already completed', async () => {
       mockMilestonesService.complete.mockRejectedValue(
-        new BadRequestException('Milestone déjà complété')
+        new BadRequestException('Milestone déjà complété'),
       );
 
-      await expect(controller.complete('milestone-id-1')).rejects.toThrow(BadRequestException);
+      await expect(controller.complete('milestone-id-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
   describe('remove', () => {
     it('should delete a milestone successfully', async () => {
-      mockMilestonesService.remove.mockResolvedValue({ message: 'Milestone supprimé' });
+      mockMilestonesService.remove.mockResolvedValue({
+        message: 'Milestone supprimé',
+      });
 
       const result = await controller.remove('milestone-id-1');
 
       expect(result.message).toBe('Milestone supprimé');
-      expect(mockMilestonesService.remove).toHaveBeenCalledWith('milestone-id-1');
+      expect(mockMilestonesService.remove).toHaveBeenCalledWith(
+        'milestone-id-1',
+      );
     });
 
     it('should throw NotFoundException when milestone not found', async () => {
       mockMilestonesService.remove.mockRejectedValue(
-        new NotFoundException('Milestone introuvable')
+        new NotFoundException('Milestone introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

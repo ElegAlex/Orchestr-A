@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ServicesController } from './services.controller';
 import { ServicesService } from './services.service';
-import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 
 describe('ServicesController', () => {
   let controller: ServicesController;
@@ -77,18 +81,22 @@ describe('ServicesController', () => {
 
     it('should throw NotFoundException when department not found', async () => {
       mockServicesService.create.mockRejectedValue(
-        new NotFoundException('Département introuvable')
+        new NotFoundException('Département introuvable'),
       );
 
-      await expect(controller.create(createServiceDto)).rejects.toThrow(NotFoundException);
+      await expect(controller.create(createServiceDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ConflictException when service name already exists in department', async () => {
       mockServicesService.create.mockRejectedValue(
-        new ConflictException('Nom déjà utilisé dans ce département')
+        new ConflictException('Nom déjà utilisé dans ce département'),
       );
 
-      await expect(controller.create(createServiceDto)).rejects.toThrow(ConflictException);
+      await expect(controller.create(createServiceDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -109,7 +117,11 @@ describe('ServicesController', () => {
       const result = await controller.findAll(1, 10);
 
       expect(result).toEqual(paginatedResult);
-      expect(mockServicesService.findAll).toHaveBeenCalledWith(1, 10, undefined);
+      expect(mockServicesService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+      );
     });
 
     it('should filter by departmentId', async () => {
@@ -122,29 +134,37 @@ describe('ServicesController', () => {
 
       await controller.findAll(1, 10, 'dept-id-1');
 
-      expect(mockServicesService.findAll).toHaveBeenCalledWith(1, 10, 'dept-id-1');
+      expect(mockServicesService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        'dept-id-1',
+      );
     });
   });
 
   describe('getServicesByDepartment', () => {
     it('should return services for a department', async () => {
       const departmentServices = [mockService];
-      mockServicesService.getServicesByDepartment.mockResolvedValue(departmentServices);
+      mockServicesService.getServicesByDepartment.mockResolvedValue(
+        departmentServices,
+      );
 
       const result = await controller.getServicesByDepartment('dept-id-1');
 
       expect(result).toEqual(departmentServices);
-      expect(mockServicesService.getServicesByDepartment).toHaveBeenCalledWith('dept-id-1');
+      expect(mockServicesService.getServicesByDepartment).toHaveBeenCalledWith(
+        'dept-id-1',
+      );
     });
 
     it('should throw NotFoundException when department not found', async () => {
       mockServicesService.getServicesByDepartment.mockRejectedValue(
-        new NotFoundException('Département introuvable')
+        new NotFoundException('Département introuvable'),
       );
 
-      await expect(controller.getServicesByDepartment('nonexistent')).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.getServicesByDepartment('nonexistent'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -160,10 +180,12 @@ describe('ServicesController', () => {
 
     it('should throw NotFoundException when service not found', async () => {
       mockServicesService.findOne.mockRejectedValue(
-        new NotFoundException('Service introuvable')
+        new NotFoundException('Service introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -182,15 +204,19 @@ describe('ServicesController', () => {
       const result = await controller.getStats('service-id-1');
 
       expect(result).toEqual(stats);
-      expect(mockServicesService.getServiceStats).toHaveBeenCalledWith('service-id-1');
+      expect(mockServicesService.getServiceStats).toHaveBeenCalledWith(
+        'service-id-1',
+      );
     });
 
     it('should throw NotFoundException when service not found', async () => {
       mockServicesService.getServiceStats.mockRejectedValue(
-        new NotFoundException('Service introuvable')
+        new NotFoundException('Service introuvable'),
       );
 
-      await expect(controller.getStats('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.getStats('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -207,33 +233,38 @@ describe('ServicesController', () => {
       const result = await controller.update('service-id-1', updateServiceDto);
 
       expect(result.name).toBe('Development & DevOps Team');
-      expect(mockServicesService.update).toHaveBeenCalledWith('service-id-1', updateServiceDto);
+      expect(mockServicesService.update).toHaveBeenCalledWith(
+        'service-id-1',
+        updateServiceDto,
+      );
     });
 
     it('should throw NotFoundException when service not found', async () => {
       mockServicesService.update.mockRejectedValue(
-        new NotFoundException('Service introuvable')
+        new NotFoundException('Service introuvable'),
       );
 
-      await expect(controller.update('nonexistent', updateServiceDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.update('nonexistent', updateServiceDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException when name already exists in department', async () => {
       mockServicesService.update.mockRejectedValue(
-        new ConflictException('Nom déjà utilisé dans ce département')
+        new ConflictException('Nom déjà utilisé dans ce département'),
       );
 
-      await expect(controller.update('service-id-1', { name: 'Existing' })).rejects.toThrow(
-        ConflictException
-      );
+      await expect(
+        controller.update('service-id-1', { name: 'Existing' }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
   describe('remove', () => {
     it('should delete a service successfully', async () => {
-      mockServicesService.remove.mockResolvedValue({ message: 'Service supprimé' });
+      mockServicesService.remove.mockResolvedValue({
+        message: 'Service supprimé',
+      });
 
       const result = await controller.remove('service-id-1');
 
@@ -243,18 +274,24 @@ describe('ServicesController', () => {
 
     it('should throw BadRequestException when service has users', async () => {
       mockServicesService.remove.mockRejectedValue(
-        new BadRequestException('Impossible de supprimer (contient des utilisateurs)')
+        new BadRequestException(
+          'Impossible de supprimer (contient des utilisateurs)',
+        ),
       );
 
-      await expect(controller.remove('service-id-1')).rejects.toThrow(BadRequestException);
+      await expect(controller.remove('service-id-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException when service not found', async () => {
       mockServicesService.remove.mockRejectedValue(
-        new NotFoundException('Service introuvable')
+        new NotFoundException('Service introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

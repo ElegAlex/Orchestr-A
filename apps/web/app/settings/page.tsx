@@ -39,12 +39,12 @@ const WEEK_START_OPTIONS = [
 export default function SettingsPage() {
   const user = useAuthStore((state) => state.user);
   const router = useRouter();
-  const { settings: globalSettings, fetchSettings } = useSettingsStore();
+  const { fetchSettings } = useSettingsStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<CategoryTab>('display');
-  const [settings, setSettings] = useState<Record<string, any>>({});
-  const [settingsList, setSettingsList] = useState<AppSetting[]>([]);
+  const [settings, setSettings] = useState<Record<string, unknown>>({});
+  const [, setSettingsList] = useState<AppSetting[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
 
   const isAdmin = user?.role === Role.ADMIN;
@@ -63,15 +63,15 @@ export default function SettingsPage() {
       const response = await settingsService.getAll();
       setSettings(response.settings);
       setSettingsList(response.list);
-    } catch (error: any) {
-      console.error('Error loading settings:', error);
+    } catch (err) {
+      console.error('Error loading settings:', err);
       toast.error('Erreur lors du chargement des paramètres');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (key: string, value: any) => {
+  const handleChange = (key: string, value: unknown) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
     setHasChanges(true);
   };
@@ -83,9 +83,10 @@ export default function SettingsPage() {
       await fetchSettings(); // Refresh global settings
       setHasChanges(false);
       toast.success('Paramètres enregistrés avec succès');
-    } catch (error: any) {
-      console.error('Error saving settings:', error);
-      toast.error(error.response?.data?.message || 'Erreur lors de la sauvegarde');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      console.error('Error saving settings:', err);
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
     }
@@ -104,8 +105,8 @@ export default function SettingsPage() {
       await fetchSettings();
       setHasChanges(false);
       toast.success('Paramètres réinitialisés');
-    } catch (error: any) {
-      console.error('Error resetting settings:', error);
+    } catch (err) {
+      console.error('Error resetting settings:', err);
       toast.error('Erreur lors de la réinitialisation');
     } finally {
       setSaving(false);
@@ -136,7 +137,7 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
-            <p className="text-gray-600 mt-1">Configuration globale de l'application</p>
+            <p className="text-gray-600 mt-1">Configuration globale de l&apos;application</p>
           </div>
           <div className="flex items-center space-x-3">
             <button
@@ -212,7 +213,7 @@ export default function SettingsPage() {
           {/* Display Settings */}
           {activeTab === 'display' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Paramètres d'affichage</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Paramètres d&apos;affichage</h2>
 
               {/* Date Format */}
               <div>
@@ -220,7 +221,7 @@ export default function SettingsPage() {
                   Format de date
                 </label>
                 <select
-                  value={settings.dateFormat || 'dd/MM/yyyy'}
+                  value={(settings.dateFormat as string) || 'dd/MM/yyyy'}
                   onChange={(e) => handleChange('dateFormat', e.target.value)}
                   className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
@@ -231,17 +232,17 @@ export default function SettingsPage() {
                   ))}
                 </select>
                 <p className="text-sm text-gray-500 mt-1">
-                  Exemple : {DATE_FORMAT_OPTIONS.find((o) => o.value === settings.dateFormat)?.example || '31/12/2025'}
+                  Exemple : {DATE_FORMAT_OPTIONS.find((o) => o.value === settings.dateFormat as string)?.example || '31/12/2025'}
                 </p>
               </div>
 
               {/* Time Format */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Format d'heure
+                  Format d&apos;heure
                 </label>
                 <select
-                  value={settings.timeFormat || 'HH:mm'}
+                  value={(settings.timeFormat as string) || 'HH:mm'}
                   onChange={(e) => handleChange('timeFormat', e.target.value)}
                   className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
@@ -259,7 +260,7 @@ export default function SettingsPage() {
                   Langue / Région
                 </label>
                 <select
-                  value={settings.locale || 'fr-FR'}
+                  value={(settings.locale as string) || 'fr-FR'}
                   onChange={(e) => handleChange('locale', e.target.value)}
                   className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
@@ -280,7 +281,7 @@ export default function SettingsPage() {
                   Premier jour de la semaine
                 </label>
                 <select
-                  value={settings.weekStartsOn ?? 1}
+                  value={(settings.weekStartsOn as number) ?? 1}
                   onChange={(e) => handleChange('weekStartsOn', parseInt(e.target.value))}
                   className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
@@ -303,12 +304,12 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between py-3 border-b border-gray-200">
                 <div>
                   <p className="font-medium text-gray-900">Notifications par email</p>
-                  <p className="text-sm text-gray-500">Activer l'envoi de notifications par email</p>
+                  <p className="text-sm text-gray-500">Activer l&apos;envoi de notifications par email</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={settings.emailNotifications ?? true}
+                    checked={(settings.emailNotifications as boolean) ?? true}
                     onChange={(e) => handleChange('emailNotifications', e.target.checked)}
                     className="sr-only peer"
                   />
@@ -325,7 +326,7 @@ export default function SettingsPage() {
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={settings.leaveRequestNotifications ?? true}
+                    checked={(settings.leaveRequestNotifications as boolean) ?? true}
                     onChange={(e) => handleChange('leaveRequestNotifications', e.target.checked)}
                     className="sr-only peer"
                   />
@@ -340,7 +341,7 @@ export default function SettingsPage() {
                     <p className="font-medium text-blue-800">Note</p>
                     <p className="text-sm text-blue-700">
                       Les notifications par email nécessitent une configuration SMTP.
-                      Contactez l'administrateur système pour activer cette fonctionnalité.
+                      Contactez l&apos;administrateur système pour activer cette fonctionnalité.
                     </p>
                   </div>
                 </div>

@@ -12,7 +12,7 @@ export class UpdateSettingDto {
 
   @ApiPropertyOptional({
     description: 'Description du paramètre',
-    example: 'Format de date utilisé dans l\'application',
+    example: "Format de date utilisé dans l'application",
   })
   @IsString()
   @IsOptional()

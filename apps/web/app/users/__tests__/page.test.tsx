@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // Mock du store auth
@@ -12,7 +12,7 @@ const mockCurrentUser = {
 };
 
 jest.mock('@/stores/auth.store', () => ({
-  useAuthStore: (selector: any) => selector({ user: mockCurrentUser }),
+  useAuthStore: (selector: (state: { user: typeof mockCurrentUser }) => unknown) => selector({ user: mockCurrentUser }),
 }));
 
 // Mock des données
@@ -339,7 +339,9 @@ describe('UsersPage', () => {
 describe('UsersPage - Permissions', () => {
   it('should hide create button for non-admin users', async () => {
     // Modifier le mock pour un utilisateur non-admin
-    jest.spyOn(require('@/stores/auth.store'), 'useAuthStore').mockImplementation((selector: any) =>
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const authStore = require('@/stores/auth.store');
+    jest.spyOn(authStore, 'useAuthStore').mockImplementation((selector: (state: { user: typeof mockCurrentUser }) => unknown) =>
       selector({ user: { ...mockCurrentUser, role: 'CONTRIBUTEUR' } })
     );
 
@@ -376,7 +378,6 @@ describe('UsersPage - Empty State', () => {
     render(<UsersPage />);
 
     await waitFor(() => {
-      const emptyMessage = screen.queryByText(/aucun utilisateur/i);
       // Le comportement peut varier selon l'implémentation
       expect(screen.getByTestId('main-layout')).toBeInTheDocument();
     });

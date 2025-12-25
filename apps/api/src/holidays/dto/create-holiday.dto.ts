@@ -49,7 +49,7 @@ export class CreateHolidayDto {
 
   @ApiProperty({
     description: 'Description ou notes additionnelles',
-    example: 'Premier jour de l\'année',
+    example: "Premier jour de l'année",
     required: false,
     maxLength: 255,
   })

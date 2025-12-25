@@ -121,7 +121,7 @@ export const usePlanningData = ({
       setTeleworkSchedules(Array.isArray(teleworkData) ? teleworkData : []);
       setServices(Array.isArray(servicesData) ? servicesData : []);
       setHolidays(Array.isArray(holidaysData) ? holidaysData : []);
-    } catch (error: any) {
+    } catch (err) {
       setUsers([]);
       setTasks([]);
       setLeaves([]);
@@ -129,7 +129,7 @@ export const usePlanningData = ({
       setServices([]);
       setHolidays([]);
       toast.error('Erreur lors du chargement des données');
-      console.error(error);
+      console.error(err);
     } finally {
       setLoading(false);
     }

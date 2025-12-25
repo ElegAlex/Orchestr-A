@@ -2,7 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
-import { ImportMilestoneDto, ImportMilestonesResultDto, MilestonesValidationPreviewDto, MilestonePreviewItemDto, MilestonePreviewStatus } from './dto/import-milestones.dto';
+import {
+  ImportMilestoneDto,
+  ImportMilestonesResultDto,
+  MilestonesValidationPreviewDto,
+  MilestonePreviewItemDto,
+  MilestonePreviewStatus,
+} from './dto/import-milestones.dto';
 import { MilestoneStatus } from 'database';
 
 @Injectable()
@@ -27,7 +33,12 @@ export class MilestonesService {
     });
   }
 
-  async findAll(page = 1, limit = 10, projectId?: string, status?: MilestoneStatus) {
+  async findAll(
+    page = 1,
+    limit = 10,
+    projectId?: string,
+    status?: MilestoneStatus,
+  ) {
     const skip = (page - 1) * limit;
     const where: any = {};
     if (projectId) where.projectId = projectId;
@@ -47,7 +58,10 @@ export class MilestonesService {
       this.prisma.milestone.count({ where }),
     ]);
 
-    return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async findOne(id: string) {
@@ -192,7 +206,9 @@ export class MilestonesService {
       where: { projectId },
       select: { name: true },
     });
-    const existingNames = new Set(existingMilestones.map((m) => m.name.toLowerCase()));
+    const existingNames = new Set(
+      existingMilestones.map((m) => m.name.toLowerCase()),
+    );
 
     for (let i = 0; i < milestones.length; i++) {
       const milestoneData = milestones[i];
@@ -216,7 +232,7 @@ export class MilestonesService {
 
       if (!milestoneData.dueDate || milestoneData.dueDate.trim() === '') {
         previewItem.status = 'error';
-        previewItem.messages.push('La date d\'échéance est obligatoire');
+        previewItem.messages.push("La date d'échéance est obligatoire");
         result.errors.push(previewItem);
         result.summary.errors++;
         continue;
@@ -235,7 +251,9 @@ export class MilestonesService {
       const dueDate = new Date(milestoneData.dueDate);
       if (isNaN(dueDate.getTime())) {
         previewItem.status = 'error';
-        previewItem.messages.push(`Date d'échéance invalide: ${milestoneData.dueDate}`);
+        previewItem.messages.push(
+          `Date d'échéance invalide: ${milestoneData.dueDate}`,
+        );
         result.errors.push(previewItem);
         result.summary.errors++;
         continue;
@@ -244,7 +262,7 @@ export class MilestonesService {
       // Avertissement si la date est dans le passé
       if (dueDate < new Date()) {
         previewItem.status = 'warning';
-        previewItem.messages.push('La date d\'échéance est dans le passé');
+        previewItem.messages.push("La date d'échéance est dans le passé");
       }
 
       // Ajouter aux résultats selon le statut
@@ -270,7 +288,11 @@ export class MilestonesService {
   getImportTemplate(): string {
     const headers = ['name', 'description', 'dueDate'];
     // Template sans données d'exemple - juste les commentaires explicatifs
-    const exampleComment = ['# Nom du jalon', '# Description optionnelle', '# YYYY-MM-DD'];
+    const exampleComment = [
+      '# Nom du jalon',
+      '# Description optionnelle',
+      '# YYYY-MM-DD',
+    ];
     return headers.join(';') + '\n' + exampleComment.join(';');
   }
 }

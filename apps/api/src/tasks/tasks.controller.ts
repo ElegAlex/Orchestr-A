@@ -25,7 +25,11 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { AddDependencyDto } from './dto/add-dependency.dto';
 import { AssignRACIDto } from './dto/assign-raci.dto';
-import { ImportTasksDto, ImportTasksResultDto, TasksValidationPreviewDto } from './dto/import-tasks.dto';
+import {
+  ImportTasksDto,
+  ImportTasksResultDto,
+  TasksValidationPreviewDto,
+} from './dto/import-tasks.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -58,14 +62,26 @@ export class TasksController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Récupérer toutes les tâches (avec pagination et filtres)' })
+  @ApiOperation({
+    summary: 'Récupérer toutes les tâches (avec pagination et filtres)',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'status', required: false, enum: TaskStatus })
   @ApiQuery({ name: 'projectId', required: false, type: String })
   @ApiQuery({ name: 'assigneeId', required: false, type: String })
-  @ApiQuery({ name: 'startDate', required: false, type: String, description: 'Date de début (ISO 8601)' })
-  @ApiQuery({ name: 'endDate', required: false, type: String, description: 'Date de fin (ISO 8601)' })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Date de début (ISO 8601)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Date de fin (ISO 8601)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Liste des tâches',
@@ -79,21 +95,31 @@ export class TasksController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.tasksService.findAll(page, limit, status, projectId, assigneeId, startDate, endDate);
+    return this.tasksService.findAll(
+      page,
+      limit,
+      status,
+      projectId,
+      assigneeId,
+      startDate,
+      endDate,
+    );
   }
 
   @Get('assignee/:userId')
-  @ApiOperation({ summary: 'Récupérer toutes les tâches assignées à un utilisateur' })
+  @ApiOperation({
+    summary: 'Récupérer toutes les tâches assignées à un utilisateur',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Liste des tâches assignées à l\'utilisateur',
+    description: "Liste des tâches assignées à l'utilisateur",
   })
   getTasksByAssignee(@Param('userId', ParseUUIDPipe) userId: string) {
     return this.tasksService.getTasksByAssignee(userId);
   }
 
   @Get('project/:projectId')
-  @ApiOperation({ summary: 'Récupérer toutes les tâches d\'un projet' })
+  @ApiOperation({ summary: "Récupérer toutes les tâches d'un projet" })
   @ApiResponse({
     status: 200,
     description: 'Liste des tâches du projet',
@@ -219,7 +245,9 @@ export class TasksController {
 
   @Post(':id/raci')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
-  @ApiOperation({ summary: 'Assigner un rôle RACI à un utilisateur pour une tâche' })
+  @ApiOperation({
+    summary: 'Assigner un rôle RACI à un utilisateur pour une tâche',
+  })
   @ApiResponse({
     status: 201,
     description: 'Rôle RACI assigné avec succès',
@@ -264,7 +292,7 @@ export class TasksController {
   @ApiOperation({ summary: 'Valider des tâches avant import (dry-run)' })
   @ApiResponse({
     status: 200,
-    description: 'Prévisualisation de l\'import',
+    description: "Prévisualisation de l'import",
     type: TasksValidationPreviewDto,
   })
   @ApiResponse({
@@ -283,7 +311,7 @@ export class TasksController {
   @ApiOperation({ summary: 'Importer des tâches en masse via CSV' })
   @ApiResponse({
     status: 201,
-    description: 'Résultat de l\'import',
+    description: "Résultat de l'import",
     type: ImportTasksResultDto,
   })
   @ApiResponse({
@@ -298,7 +326,9 @@ export class TasksController {
   }
 
   @Get('project/:projectId/import-template')
-  @ApiOperation({ summary: 'Télécharger le template CSV pour l\'import de tâches' })
+  @ApiOperation({
+    summary: "Télécharger le template CSV pour l'import de tâches",
+  })
   @ApiResponse({
     status: 200,
     description: 'Template CSV',
@@ -327,7 +357,9 @@ export class TasksController {
 
   @Post(':id/detach-project')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.REFERENT_TECHNIQUE)
-  @ApiOperation({ summary: 'Détacher une tâche de son projet (rend la tâche orpheline)' })
+  @ApiOperation({
+    summary: 'Détacher une tâche de son projet (rend la tâche orpheline)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Tâche détachée du projet',

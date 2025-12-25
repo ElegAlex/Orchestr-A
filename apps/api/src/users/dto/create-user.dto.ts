@@ -14,7 +14,7 @@ import { Role } from 'database';
 
 export class CreateUserDto {
   @ApiProperty({
-    description: 'Email de l\'utilisateur',
+    description: "Email de l'utilisateur",
     example: 'marie.martin@orchestr-a.internal',
   })
   @IsEmail()
@@ -53,7 +53,7 @@ export class CreateUserDto {
   lastName: string;
 
   @ApiProperty({
-    description: 'Rôle de l\'utilisateur',
+    description: "Rôle de l'utilisateur",
     enum: Role,
     example: Role.CONTRIBUTEUR,
     default: Role.CONTRIBUTEUR,
@@ -80,7 +80,7 @@ export class CreateUserDto {
   serviceIds?: string[];
 
   @ApiProperty({
-    description: 'URL de l\'avatar',
+    description: "URL de l'avatar",
     required: false,
   })
   @IsOptional()

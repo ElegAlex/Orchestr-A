@@ -27,7 +27,8 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
       if (onTaskUpdate) {
         onTaskUpdate();
       }
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
       toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour');
     } finally {
       setUpdatingTaskId(null);

@@ -39,7 +39,8 @@ export class ProjectsController {
   @Post()
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.REFERENT_TECHNIQUE)
   @ApiOperation({
-    summary: 'Créer un nouveau projet (Admin/Responsable/Manager/Référent Technique)',
+    summary:
+      'Créer un nouveau projet (Admin/Responsable/Manager/Référent Technique)',
   })
   @ApiResponse({
     status: 201,
@@ -79,18 +80,16 @@ export class ProjectsController {
   }
 
   @Get('user/:userId')
-  @ApiOperation({ summary: 'Récupérer les projets d\'un utilisateur' })
+  @ApiOperation({ summary: "Récupérer les projets d'un utilisateur" })
   @ApiResponse({
     status: 200,
-    description: 'Liste des projets de l\'utilisateur',
+    description: "Liste des projets de l'utilisateur",
   })
   @ApiResponse({
     status: 404,
     description: 'Utilisateur introuvable',
   })
-  getProjectsByUser(
-    @Param('userId', ParseUUIDPipe) userId: string,
-  ) {
+  getProjectsByUser(@Param('userId', ParseUUIDPipe) userId: string) {
     return this.projectsService.getProjectsByUser(userId);
   }
 
@@ -109,7 +108,7 @@ export class ProjectsController {
   }
 
   @Get(':id/stats')
-  @ApiOperation({ summary: 'Récupérer les statistiques d\'un projet' })
+  @ApiOperation({ summary: "Récupérer les statistiques d'un projet" })
   @ApiResponse({
     status: 200,
     description: 'Statistiques du projet (progression, heures, budget, etc.)',
@@ -150,8 +149,7 @@ export class ProjectsController {
   @Roles(Role.ADMIN, Role.RESPONSABLE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary:
-      'Annuler un projet (soft delete, Admin/Responsable uniquement)',
+    summary: 'Annuler un projet (soft delete, Admin/Responsable uniquement)',
   })
   @ApiResponse({
     status: 200,
@@ -198,7 +196,7 @@ export class ProjectsController {
   })
   @ApiResponse({
     status: 409,
-    description: 'L\'utilisateur est déjà membre du projet',
+    description: "L'utilisateur est déjà membre du projet",
   })
   addMember(
     @Param('id', ParseUUIDPipe) id: string,

@@ -24,7 +24,10 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { ImportUsersDto, UsersValidationPreviewDto } from './dto/import-users.dto';
+import {
+  ImportUsersDto,
+  UsersValidationPreviewDto,
+} from './dto/import-users.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -40,7 +43,9 @@ export class UsersController {
 
   @Post()
   @Roles(Role.ADMIN, Role.RESPONSABLE)
-  @ApiOperation({ summary: 'Créer un nouvel utilisateur (Admin/Responsable uniquement)' })
+  @ApiOperation({
+    summary: 'Créer un nouvel utilisateur (Admin/Responsable uniquement)',
+  })
   @ApiResponse({
     status: 201,
     description: 'Utilisateur créé avec succès',
@@ -64,7 +69,7 @@ export class UsersController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Prévisualisation de l\'import',
+    description: "Prévisualisation de l'import",
     type: UsersValidationPreviewDto,
   })
   @ApiResponse({
@@ -86,7 +91,7 @@ export class UsersController {
   })
   @ApiResponse({
     status: 201,
-    description: 'Résultat de l\'import',
+    description: "Résultat de l'import",
   })
   @ApiResponse({
     status: 400,
@@ -101,7 +106,9 @@ export class UsersController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Récupérer tous les utilisateurs (avec pagination)' })
+  @ApiOperation({
+    summary: 'Récupérer tous les utilisateurs (avec pagination)',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'role', required: false, enum: Role })
@@ -120,7 +127,7 @@ export class UsersController {
   @Get('import/template')
   @Roles(Role.ADMIN, Role.RESPONSABLE)
   @ApiOperation({
-    summary: 'Télécharger le template CSV pour l\'import (Admin/Responsable)',
+    summary: "Télécharger le template CSV pour l'import (Admin/Responsable)",
   })
   @ApiResponse({
     status: 200,
@@ -131,17 +138,19 @@ export class UsersController {
   }
 
   @Get('department/:departmentId')
-  @ApiOperation({ summary: 'Récupérer les utilisateurs d\'un département' })
+  @ApiOperation({ summary: "Récupérer les utilisateurs d'un département" })
   @ApiResponse({
     status: 200,
     description: 'Liste des utilisateurs du département',
   })
-  getUsersByDepartment(@Param('departmentId', ParseUUIDPipe) departmentId: string) {
+  getUsersByDepartment(
+    @Param('departmentId', ParseUUIDPipe) departmentId: string,
+  ) {
     return this.usersService.getUsersByDepartment(departmentId);
   }
 
   @Get('service/:serviceId')
-  @ApiOperation({ summary: 'Récupérer les utilisateurs d\'un service' })
+  @ApiOperation({ summary: "Récupérer les utilisateurs d'un service" })
   @ApiResponse({
     status: 200,
     description: 'Liste des utilisateurs du service',
@@ -164,7 +173,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Récupérer un utilisateur par ID' })
   @ApiResponse({
     status: 200,
-    description: 'Détails de l\'utilisateur',
+    description: "Détails de l'utilisateur",
   })
   @ApiResponse({
     status: 404,
@@ -237,11 +246,12 @@ export class UsersController {
   @Get(':id/dependencies')
   @Roles(Role.ADMIN)
   @ApiOperation({
-    summary: 'Vérifier les dépendances d\'un utilisateur avant suppression (Admin uniquement)',
+    summary:
+      "Vérifier les dépendances d'un utilisateur avant suppression (Admin uniquement)",
   })
   @ApiResponse({
     status: 200,
-    description: 'Liste des dépendances de l\'utilisateur',
+    description: "Liste des dépendances de l'utilisateur",
   })
   @ApiResponse({
     status: 404,
@@ -280,7 +290,8 @@ export class UsersController {
   @Roles(Role.ADMIN, Role.RESPONSABLE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Réinitialiser le mot de passe d\'un utilisateur (Admin/Responsable)',
+    summary:
+      "Réinitialiser le mot de passe d'un utilisateur (Admin/Responsable)",
   })
   @ApiResponse({
     status: 200,

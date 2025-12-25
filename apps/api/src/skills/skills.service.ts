@@ -284,9 +284,7 @@ export class SkillsService {
     });
 
     if (!userSkill) {
-      throw new NotFoundException(
-        'Cet utilisateur n\'a pas cette compétence',
-      );
+      throw new NotFoundException("Cet utilisateur n'a pas cette compétence");
     }
 
     await this.prisma.userSkill.delete({

@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SkillsController } from './skills.controller';
 import { SkillsService } from './skills.service';
-import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 
 describe('SkillsController', () => {
   let controller: SkillsController;
@@ -76,10 +80,12 @@ describe('SkillsController', () => {
 
     it('should throw ConflictException when skill name already exists', async () => {
       mockSkillsService.create.mockRejectedValue(
-        new ConflictException('Une compétence avec ce nom existe déjà')
+        new ConflictException('Une compétence avec ce nom existe déjà'),
       );
 
-      await expect(controller.create(createSkillDto)).rejects.toThrow(ConflictException);
+      await expect(controller.create(createSkillDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -114,7 +120,11 @@ describe('SkillsController', () => {
       const result = await controller.findAll(1, 10, 'TECHNICAL' as any);
 
       expect(result.data[0].category).toBe('TECHNICAL');
-      expect(mockSkillsService.findAll).toHaveBeenCalledWith(1, 10, 'TECHNICAL');
+      expect(mockSkillsService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        'TECHNICAL',
+      );
     });
   });
 
@@ -130,10 +140,12 @@ describe('SkillsController', () => {
 
     it('should throw NotFoundException when skill not found', async () => {
       mockSkillsService.findOne.mockRejectedValue(
-        new NotFoundException('Compétence introuvable')
+        new NotFoundException('Compétence introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -142,9 +154,7 @@ describe('SkillsController', () => {
       const matrix = {
         users: [{ id: 'user-1', name: 'John Doe' }],
         skills: [mockSkill],
-        data: [
-          { userId: 'user-1', skillId: 'skill-id-1', level: 'EXPERT' },
-        ],
+        data: [{ userId: 'user-1', skillId: 'skill-id-1', level: 'EXPERT' }],
       };
 
       mockSkillsService.getSkillsMatrix.mockResolvedValue(matrix);
@@ -152,7 +162,10 @@ describe('SkillsController', () => {
       const result = await controller.getMatrix();
 
       expect(result).toEqual(matrix);
-      expect(mockSkillsService.getSkillsMatrix).toHaveBeenCalledWith(undefined, undefined);
+      expect(mockSkillsService.getSkillsMatrix).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+      );
     });
 
     it('should filter matrix by department', async () => {
@@ -161,7 +174,10 @@ describe('SkillsController', () => {
 
       await controller.getMatrix('dept-1');
 
-      expect(mockSkillsService.getSkillsMatrix).toHaveBeenCalledWith('dept-1', undefined);
+      expect(mockSkillsService.getSkillsMatrix).toHaveBeenCalledWith(
+        'dept-1',
+        undefined,
+      );
     });
 
     it('should filter matrix by category', async () => {
@@ -170,14 +186,22 @@ describe('SkillsController', () => {
 
       await controller.getMatrix(undefined, 'TECHNICAL' as any);
 
-      expect(mockSkillsService.getSkillsMatrix).toHaveBeenCalledWith(undefined, 'TECHNICAL');
+      expect(mockSkillsService.getSkillsMatrix).toHaveBeenCalledWith(
+        undefined,
+        'TECHNICAL',
+      );
     });
   });
 
   describe('findUsersBySkill', () => {
     it('should return users with a specific skill', async () => {
       const usersWithSkill = [
-        { userId: 'user-1', firstName: 'John', lastName: 'Doe', level: 'EXPERT' },
+        {
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          level: 'EXPERT',
+        },
       ];
 
       mockSkillsService.findUsersBySkill.mockResolvedValue(usersWithSkill);
@@ -185,7 +209,10 @@ describe('SkillsController', () => {
       const result = await controller.findUsersBySkill('skill-id-1');
 
       expect(result).toEqual(usersWithSkill);
-      expect(mockSkillsService.findUsersBySkill).toHaveBeenCalledWith('skill-id-1', undefined);
+      expect(mockSkillsService.findUsersBySkill).toHaveBeenCalledWith(
+        'skill-id-1',
+        undefined,
+      );
     });
 
     it('should filter by minimum level', async () => {
@@ -194,7 +221,10 @@ describe('SkillsController', () => {
 
       await controller.findUsersBySkill('skill-id-1', 'EXPERT' as any);
 
-      expect(mockSkillsService.findUsersBySkill).toHaveBeenCalledWith('skill-id-1', 'EXPERT');
+      expect(mockSkillsService.findUsersBySkill).toHaveBeenCalledWith(
+        'skill-id-1',
+        'EXPERT',
+      );
     });
   });
 
@@ -210,33 +240,38 @@ describe('SkillsController', () => {
       const result = await controller.update('skill-id-1', updateSkillDto);
 
       expect(result.name).toBe('TypeScript Advanced');
-      expect(mockSkillsService.update).toHaveBeenCalledWith('skill-id-1', updateSkillDto);
+      expect(mockSkillsService.update).toHaveBeenCalledWith(
+        'skill-id-1',
+        updateSkillDto,
+      );
     });
 
     it('should throw NotFoundException when skill not found', async () => {
       mockSkillsService.update.mockRejectedValue(
-        new NotFoundException('Compétence introuvable')
+        new NotFoundException('Compétence introuvable'),
       );
 
-      await expect(controller.update('nonexistent', updateSkillDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.update('nonexistent', updateSkillDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException when name already exists', async () => {
       mockSkillsService.update.mockRejectedValue(
-        new ConflictException('Une compétence avec ce nom existe déjà')
+        new ConflictException('Une compétence avec ce nom existe déjà'),
       );
 
-      await expect(controller.update('skill-id-1', { name: 'Existing' })).rejects.toThrow(
-        ConflictException
-      );
+      await expect(
+        controller.update('skill-id-1', { name: 'Existing' }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
   describe('remove', () => {
     it('should delete a skill successfully', async () => {
-      mockSkillsService.remove.mockResolvedValue({ message: 'Compétence supprimée' });
+      mockSkillsService.remove.mockResolvedValue({
+        message: 'Compétence supprimée',
+      });
 
       const result = await controller.remove('skill-id-1');
 
@@ -246,18 +281,24 @@ describe('SkillsController', () => {
 
     it('should throw BadRequestException when skill is assigned to users', async () => {
       mockSkillsService.remove.mockRejectedValue(
-        new BadRequestException('Impossible de supprimer (assignée à des utilisateurs)')
+        new BadRequestException(
+          'Impossible de supprimer (assignée à des utilisateurs)',
+        ),
       );
 
-      await expect(controller.remove('skill-id-1')).rejects.toThrow(BadRequestException);
+      await expect(controller.remove('skill-id-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException when skill not found', async () => {
       mockSkillsService.remove.mockRejectedValue(
-        new NotFoundException('Compétence introuvable')
+        new NotFoundException('Compétence introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -273,17 +314,20 @@ describe('SkillsController', () => {
       const result = await controller.assignToMe('user-id-1', assignSkillDto);
 
       expect(result).toEqual(mockUserSkill);
-      expect(mockSkillsService.assignSkillToUser).toHaveBeenCalledWith('user-id-1', assignSkillDto);
+      expect(mockSkillsService.assignSkillToUser).toHaveBeenCalledWith(
+        'user-id-1',
+        assignSkillDto,
+      );
     });
 
     it('should throw NotFoundException when skill not found', async () => {
       mockSkillsService.assignSkillToUser.mockRejectedValue(
-        new NotFoundException('Compétence introuvable')
+        new NotFoundException('Compétence introuvable'),
       );
 
-      await expect(controller.assignToMe('user-id-1', assignSkillDto)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.assignToMe('user-id-1', assignSkillDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -299,39 +343,52 @@ describe('SkillsController', () => {
       const result = await controller.assignToUser('user-id-2', assignSkillDto);
 
       expect(result).toEqual(mockUserSkill);
-      expect(mockSkillsService.assignSkillToUser).toHaveBeenCalledWith('user-id-2', assignSkillDto);
+      expect(mockSkillsService.assignSkillToUser).toHaveBeenCalledWith(
+        'user-id-2',
+        assignSkillDto,
+      );
     });
   });
 
   describe('removeFromMe', () => {
     it('should remove skill from current user', async () => {
-      mockSkillsService.removeSkillFromUser.mockResolvedValue({ message: 'Compétence retirée' });
+      mockSkillsService.removeSkillFromUser.mockResolvedValue({
+        message: 'Compétence retirée',
+      });
 
       const result = await controller.removeFromMe('user-id-1', 'skill-id-1');
 
       expect(result.message).toBe('Compétence retirée');
-      expect(mockSkillsService.removeSkillFromUser).toHaveBeenCalledWith('user-id-1', 'skill-id-1');
+      expect(mockSkillsService.removeSkillFromUser).toHaveBeenCalledWith(
+        'user-id-1',
+        'skill-id-1',
+      );
     });
 
     it('should throw NotFoundException when user does not have skill', async () => {
       mockSkillsService.removeSkillFromUser.mockRejectedValue(
-        new NotFoundException('Compétence non trouvée pour cet utilisateur')
+        new NotFoundException('Compétence non trouvée pour cet utilisateur'),
       );
 
-      await expect(controller.removeFromMe('user-id-1', 'skill-id-1')).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.removeFromMe('user-id-1', 'skill-id-1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('removeFromUser', () => {
     it('should remove skill from specified user (admin)', async () => {
-      mockSkillsService.removeSkillFromUser.mockResolvedValue({ message: 'Compétence retirée' });
+      mockSkillsService.removeSkillFromUser.mockResolvedValue({
+        message: 'Compétence retirée',
+      });
 
       const result = await controller.removeFromUser('user-id-2', 'skill-id-1');
 
       expect(result.message).toBe('Compétence retirée');
-      expect(mockSkillsService.removeSkillFromUser).toHaveBeenCalledWith('user-id-2', 'skill-id-1');
+      expect(mockSkillsService.removeSkillFromUser).toHaveBeenCalledWith(
+        'user-id-2',
+        'skill-id-1',
+      );
     });
   });
 
@@ -371,15 +428,22 @@ describe('SkillsController', () => {
       const updatedSkill = { ...mockUserSkill, level: 'MASTER' };
       mockSkillsService.assignSkillToUser.mockResolvedValue(updatedSkill);
 
-      const result = await controller.updateUserSkill('user-id-1', 'skill-id-1', {
-        level: 'MASTER' as any,
-      });
+      const result = await controller.updateUserSkill(
+        'user-id-1',
+        'skill-id-1',
+        {
+          level: 'MASTER' as any,
+        },
+      );
 
       expect(result.level).toBe('MASTER');
-      expect(mockSkillsService.assignSkillToUser).toHaveBeenCalledWith('user-id-1', {
-        skillId: 'skill-id-1',
-        level: 'MASTER',
-      });
+      expect(mockSkillsService.assignSkillToUser).toHaveBeenCalledWith(
+        'user-id-1',
+        {
+          skillId: 'skill-id-1',
+          level: 'MASTER',
+        },
+      );
     });
   });
 });

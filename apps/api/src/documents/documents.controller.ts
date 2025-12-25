@@ -1,5 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, HttpCode, HttpStatus, ParseIntPipe, ParseUUIDPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  ParseIntPipe,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
@@ -19,7 +39,10 @@ export class DocumentsController {
   @Post()
   @ApiOperation({ summary: 'Uploader un document' })
   @ApiResponse({ status: 201, description: 'Document créé' })
-  create(@CurrentUser('id') userId: string, @Body() createDocumentDto: CreateDocumentDto) {
+  create(
+    @CurrentUser('id') userId: string,
+    @Body() createDocumentDto: CreateDocumentDto,
+  ) {
     return this.documentsService.create(userId, createDocumentDto);
   }
 
@@ -37,14 +60,17 @@ export class DocumentsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Détails d\'un document' })
+  @ApiOperation({ summary: "Détails d'un document" })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.documentsService.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Modifier un document' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateDocumentDto: UpdateDocumentDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateDocumentDto: UpdateDocumentDto,
+  ) {
     return this.documentsService.update(id, updateDocumentDto);
   }
 

@@ -78,9 +78,9 @@ export default function DashboardPage() {
           tasksBlocked: tasks.filter((t: Task) => t.status === 'BLOCKED').length,
         }));
       }
-    } catch (error: any) {
+    } catch (err) {
       toast.error('Erreur lors de la mise à jour du statut');
-      console.error(error);
+      console.error(err);
     }
   };
 
@@ -90,8 +90,8 @@ export default function DashboardPage() {
       setLoadingTodos(true);
       const data = await personalTodosService.getAll();
       setTodos(data);
-    } catch (error: any) {
-      console.error('Error fetching todos:', error);
+    } catch (err) {
+      console.error('Error fetching todos:', err);
     } finally {
       setLoadingTodos(false);
     }
@@ -106,8 +106,9 @@ export default function DashboardPage() {
       setTodos([newTodo, ...todos]);
       setNewTodoText('');
       toast.success('To-do ajoutée');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'ajout');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de l\'ajout');
     } finally {
       setAddingTodo(false);
     }
@@ -117,7 +118,7 @@ export default function DashboardPage() {
     try {
       const updated = await personalTodosService.update(todo.id, { completed: !todo.completed });
       setTodos(todos.map(t => (t.id === todo.id ? updated : t)));
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors de la mise à jour');
     }
   };
@@ -127,7 +128,7 @@ export default function DashboardPage() {
       await personalTodosService.delete(id);
       setTodos(todos.filter(t => t.id !== id));
       toast.success('To-do supprimée');
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors de la suppression');
     }
   };
@@ -147,7 +148,7 @@ export default function DashboardPage() {
       setTodos(todos.map(t => (t.id === id ? updated : t)));
       setEditingTodoId(null);
       toast.success('To-do modifiée');
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors de la modification');
     }
   };
@@ -165,11 +166,12 @@ export default function DashboardPage() {
           try {
             projects = await projectsService.getByUser(user.id);
             setMyProjects(Array.isArray(projects) ? projects : []);
-          } catch (error: any) {
+          } catch (err) {
             // Si 404 ou autre erreur, on met un tableau vide
             setMyProjects([]);
-            if (error.response?.status !== 404) {
-              console.error('Error fetching projects:', error);
+            const axiosError = err as { response?: { status?: number } };
+            if (axiosError.response?.status !== 404) {
+              console.error('Error fetching projects:', err);
             }
           }
 
@@ -195,11 +197,12 @@ export default function DashboardPage() {
             }) : [];
 
             setMyTasks(filteredTasks);
-          } catch (error: any) {
+          } catch (err) {
             // Si 404 ou autre erreur, on met un tableau vide
             setMyTasks([]);
-            if (error.response?.status !== 404) {
-              console.error('Error fetching tasks:', error);
+            const axiosError = err as { response?: { status?: number } };
+            if (axiosError.response?.status !== 404) {
+              console.error('Error fetching tasks:', err);
             }
           }
 
@@ -215,9 +218,9 @@ export default function DashboardPage() {
             tasksBlocked: tasks.filter((t) => t.status === 'BLOCKED').length,
           });
         }
-      } catch (error: any) {
+      } catch (err) {
         toast.error('Erreur lors du chargement des données');
-        console.error(error);
+        console.error(err);
       } finally {
         setLoading(false);
       }

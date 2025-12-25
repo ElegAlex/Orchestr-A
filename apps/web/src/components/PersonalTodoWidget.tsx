@@ -26,9 +26,9 @@ export const PersonalTodoWidget = () => {
       setLoading(true);
       const data = await personalTodosService.getAll();
       setTodos(data);
-    } catch (error: any) {
+    } catch (err) {
       toast.error('Erreur lors du chargement des to-dos');
-      console.error(error);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -47,9 +47,10 @@ export const PersonalTodoWidget = () => {
       setTodos([newTodo, ...todos]);
       setNewTodoText('');
       toast.success('To-do ajoutée');
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
       toast.error(error.response?.data?.message || 'Erreur lors de l\'ajout');
-      console.error(error);
+      console.error(err);
     } finally {
       setAdding(false);
     }
@@ -61,9 +62,9 @@ export const PersonalTodoWidget = () => {
         completed: !todo.completed,
       });
       setTodos(todos.map(t => (t.id === todo.id ? updated : t)));
-    } catch (error: any) {
+    } catch (err) {
       toast.error('Erreur lors de la mise à jour');
-      console.error(error);
+      console.error(err);
     }
   };
 
@@ -72,9 +73,9 @@ export const PersonalTodoWidget = () => {
       await personalTodosService.delete(id);
       setTodos(todos.filter(t => t.id !== id));
       toast.success('To-do supprimée');
-    } catch (error: any) {
+    } catch (err) {
       toast.error('Erreur lors de la suppression');
-      console.error(error);
+      console.error(err);
     }
   };
 
@@ -94,9 +95,9 @@ export const PersonalTodoWidget = () => {
       setTodos(todos.map(t => (t.id === id ? updated : t)));
       setEditingId(null);
       toast.success('To-do modifiée');
-    } catch (error: any) {
+    } catch (err) {
       toast.error('Erreur lors de la modification');
-      console.error(error);
+      console.error(err);
     }
   };
 

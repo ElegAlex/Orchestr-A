@@ -24,7 +24,8 @@ export class CreateSkillDto {
 
   @ApiProperty({
     description: 'Description de la compétence',
-    example: 'Bibliothèque JavaScript pour construire des interfaces utilisateur',
+    example:
+      'Bibliothèque JavaScript pour construire des interfaces utilisateur',
     required: false,
   })
   @IsString()

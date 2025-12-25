@@ -93,7 +93,6 @@ export default function ReportsPage() {
           await ExportService.exportToExcel(
             data,
             dateRange,
-            selectedProject !== 'all' ? selectedProject : undefined,
           );
           break;
 
@@ -180,7 +179,7 @@ export default function ReportsPage() {
                   : 'text-gray-900 hover:text-gray-900'
               }`}
             >
-              📊 Vue d'ensemble
+              📊 Vue d&apos;ensemble
             </button>
             <button
               onClick={() => setActiveTab(1)}

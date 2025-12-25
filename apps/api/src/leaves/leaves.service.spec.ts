@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { LeavesService } from './leaves.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { LeaveStatus, LeaveType, Role } from '../__mocks__/database';
 
 describe('LeavesService', () => {
@@ -110,11 +115,18 @@ describe('LeavesService', () => {
     it('should create a leave request successfully', async () => {
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(mockUser) // First call for user check
-        .mockResolvedValueOnce({ ...mockUser, department: { ...mockUser.department, manager: { id: 'manager-1' } } }); // For findValidatorForUser
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(mockLeaveTypeConfig);
+        .mockResolvedValueOnce({
+          ...mockUser,
+          department: { ...mockUser.department, manager: { id: 'manager-1' } },
+        }); // For findValidatorForUser
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
       mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap
       mockPrismaService.leave.create.mockResolvedValue(mockLeave);
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
 
       const result = await service.create('user-1', createLeaveDto);
 
@@ -126,14 +138,18 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.create('nonexistent', createLeaveDto)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.create('nonexistent', createLeaveDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException when leave type not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(null);
 
-      await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when leave type is inactive', async () => {
@@ -143,12 +159,16 @@ describe('LeavesService', () => {
         isActive: false,
       });
 
-      await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when end date is before start date', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(mockLeaveTypeConfig);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
 
       const invalidDto = {
         ...createLeaveDto,
@@ -156,45 +176,72 @@ describe('LeavesService', () => {
         endDate: '2025-06-05',
       };
 
-      await expect(service.create('user-1', invalidDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create('user-1', invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw ConflictException when there is overlap with existing leave', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(mockLeaveTypeConfig);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]); // Overlap exists
 
-      await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(ConflictException);
+      await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should throw BadRequestException when CP balance is insufficient', async () => {
       const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(cpLeaveType);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        cpLeaveType,
+      );
       mockPrismaService.leave.findMany
         .mockResolvedValueOnce([]) // No overlap
         .mockResolvedValueOnce([{ days: 24 }]); // 24 days already used, only 1 available
 
-      await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when annual limit is exceeded', async () => {
-      const limitedLeaveType = { ...mockLeaveTypeConfig, code: 'RTT', maxDaysPerYear: 10 };
+      const limitedLeaveType = {
+        ...mockLeaveTypeConfig,
+        code: 'RTT',
+        maxDaysPerYear: 10,
+      };
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(limitedLeaveType);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        limitedLeaveType,
+      );
       mockPrismaService.leave.findMany
         .mockResolvedValueOnce([]) // No overlap
         .mockResolvedValueOnce([{ days: 8 }]); // 8 days already used, requesting 5, limit is 10
 
-      await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should create leave without approval when not required', async () => {
-      const noApprovalLeaveType = { ...mockLeaveTypeConfig, requiresApproval: false };
-      const autoApprovedLeave = { ...mockLeave, status: LeaveStatus.APPROVED, validatorId: null };
+      const noApprovalLeaveType = {
+        ...mockLeaveTypeConfig,
+        requiresApproval: false,
+      };
+      const autoApprovedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        validatorId: null,
+      };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(noApprovalLeaveType);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        noApprovalLeaveType,
+      );
       mockPrismaService.leave.findMany.mockResolvedValue([]);
       mockPrismaService.leave.create.mockResolvedValue(autoApprovedLeave);
 
@@ -217,10 +264,17 @@ describe('LeavesService', () => {
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(mockUser)
         .mockResolvedValueOnce(mockUser);
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(mockLeaveTypeConfig);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
       mockPrismaService.leave.findMany.mockResolvedValue([]);
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(activeDelegate);
-      mockPrismaService.leave.create.mockResolvedValue({ ...mockLeave, validatorId: 'delegate-1' });
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        activeDelegate,
+      );
+      mockPrismaService.leave.create.mockResolvedValue({
+        ...mockLeave,
+        validatorId: 'delegate-1',
+      });
 
       const result = await service.create('user-1', createLeaveDto);
 
@@ -228,17 +282,31 @@ describe('LeavesService', () => {
     });
 
     it('should find fallback validator when no manager or delegate', async () => {
-      const userWithoutManager = { ...mockUser, department: { ...mockUser.department, managerId: null } };
-      const fallbackValidator = { id: 'admin-1', role: Role.ADMIN, isActive: true };
+      const userWithoutManager = {
+        ...mockUser,
+        department: { ...mockUser.department, managerId: null },
+      };
+      const fallbackValidator = {
+        id: 'admin-1',
+        role: Role.ADMIN,
+        isActive: true,
+      };
 
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(userWithoutManager)
         .mockResolvedValueOnce(userWithoutManager);
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(mockLeaveTypeConfig);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
       mockPrismaService.leave.findMany.mockResolvedValue([]);
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
       mockPrismaService.user.findFirst.mockResolvedValue(fallbackValidator);
-      mockPrismaService.leave.create.mockResolvedValue({ ...mockLeave, validatorId: 'admin-1' });
+      mockPrismaService.leave.create.mockResolvedValue({
+        ...mockLeave,
+        validatorId: 'admin-1',
+      });
 
       const result = await service.create('user-1', createLeaveDto);
 
@@ -254,10 +322,17 @@ describe('LeavesService', () => {
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(mockLeaveTypeConfig);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
       mockPrismaService.leave.findMany.mockResolvedValue([]);
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
-      mockPrismaService.leave.create.mockResolvedValue({ ...mockLeave, days: 0.5 });
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.leave.create.mockResolvedValue({
+        ...mockLeave,
+        days: 0.5,
+      });
 
       const result = await service.create('user-1', halfDayDto);
 
@@ -272,8 +347,13 @@ describe('LeavesService', () => {
         code: 'OTHER',
       });
       mockPrismaService.leave.findMany.mockResolvedValue([]);
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
-      mockPrismaService.leave.create.mockResolvedValue({ ...mockLeave, type: LeaveType.RTT });
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.leave.create.mockResolvedValue({
+        ...mockLeave,
+        type: LeaveType.RTT,
+      });
 
       const result = await service.create('user-1', dtoWithType);
 
@@ -341,7 +421,15 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
       mockPrismaService.leave.count.mockResolvedValue(1);
 
-      const result = await service.findAll(1, 10, undefined, undefined, undefined, '2025-06-01', '2025-06-30');
+      const result = await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        '2025-06-01',
+        '2025-06-30',
+      );
 
       // Returns array directly when filtering by dates
       expect(Array.isArray(result)).toBe(true);
@@ -351,7 +439,14 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
       mockPrismaService.leave.count.mockResolvedValue(1);
 
-      const result = await service.findAll(1, 10, undefined, undefined, undefined, '2025-06-01');
+      const result = await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        '2025-06-01',
+      );
 
       expect(Array.isArray(result)).toBe(true);
     });
@@ -360,7 +455,15 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
       mockPrismaService.leave.count.mockResolvedValue(1);
 
-      const result = await service.findAll(1, 10, undefined, undefined, undefined, undefined, '2025-06-30');
+      const result = await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        '2025-06-30',
+      );
 
       expect(Array.isArray(result)).toBe(true);
     });
@@ -372,7 +475,9 @@ describe('LeavesService', () => {
   describe('getPendingForValidator', () => {
     it('should return pending leaves for ADMIN', async () => {
       const adminUser = { ...mockUser, role: Role.ADMIN };
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
       mockPrismaService.user.findUnique.mockResolvedValue(adminUser);
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
 
@@ -383,7 +488,9 @@ describe('LeavesService', () => {
 
     it('should return pending leaves for RESPONSABLE', async () => {
       const responsableUser = { ...mockUser, role: Role.RESPONSABLE };
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
       mockPrismaService.user.findUnique.mockResolvedValue(responsableUser);
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
 
@@ -394,7 +501,9 @@ describe('LeavesService', () => {
 
     it('should return pending leaves for MANAGER', async () => {
       const managerUser = { ...mockUser, role: Role.MANAGER };
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
       mockPrismaService.user.findUnique.mockResolvedValue(managerUser);
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
 
@@ -412,8 +521,13 @@ describe('LeavesService', () => {
         endDate: new Date(today.getTime() + 86400000),
       };
 
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(activeDelegation);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.CONTRIBUTEUR });
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        activeDelegation,
+      );
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.CONTRIBUTEUR,
+      });
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
 
       const result = await service.getPendingForValidator('delegate-1');
@@ -422,8 +536,13 @@ describe('LeavesService', () => {
     });
 
     it('should return empty array for user without validation rights', async () => {
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.CONTRIBUTEUR });
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.CONTRIBUTEUR,
+      });
 
       const result = await service.getPendingForValidator('user-1');
 
@@ -447,7 +566,9 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getUserLeaves('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.getUserLeaves('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -467,7 +588,9 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when leave not found', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -478,7 +601,11 @@ describe('LeavesService', () => {
     const updateDto = { reason: 'Updated reason' };
 
     it('should update a pending leave request', async () => {
-      const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING, type: LeaveType.RTT };
+      const pendingLeave = {
+        ...mockLeave,
+        status: LeaveStatus.PENDING,
+        type: LeaveType.RTT,
+      };
       const updatedLeave = { ...pendingLeave, comment: 'Updated reason' };
 
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
@@ -493,14 +620,18 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when leave not found', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('nonexistent', updateDto)).rejects.toThrow(NotFoundException);
+      await expect(service.update('nonexistent', updateDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when leave is not pending', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
 
-      await expect(service.update('leave-1', updateDto)).rejects.toThrow(BadRequestException);
+      await expect(service.update('leave-1', updateDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when end date is before start date', async () => {
@@ -509,21 +640,32 @@ describe('LeavesService', () => {
 
       const invalidDto = { startDate: '2025-06-10', endDate: '2025-06-05' };
 
-      await expect(service.update('leave-1', invalidDto)).rejects.toThrow(BadRequestException);
+      await expect(service.update('leave-1', invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw ConflictException when update causes overlap', async () => {
       const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING };
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
-      mockPrismaService.leave.findMany.mockResolvedValue([{ id: 'other-leave' }]); // Overlap
+      mockPrismaService.leave.findMany.mockResolvedValue([
+        { id: 'other-leave' },
+      ]); // Overlap
 
       const dateDto = { startDate: '2025-06-10', endDate: '2025-06-15' };
 
-      await expect(service.update('leave-1', dateDto)).rejects.toThrow(ConflictException);
+      await expect(service.update('leave-1', dateDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should throw BadRequestException when CP balance is insufficient for additional days', async () => {
-      const cpLeave = { ...mockLeave, status: LeaveStatus.PENDING, type: LeaveType.CP, days: 3 };
+      const cpLeave = {
+        ...mockLeave,
+        status: LeaveStatus.PENDING,
+        type: LeaveType.CP,
+        days: 3,
+      };
       mockPrismaService.leave.findUnique.mockResolvedValue(cpLeave);
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.leave.findMany
@@ -532,7 +674,9 @@ describe('LeavesService', () => {
 
       const dateDto = { startDate: '2025-06-02', endDate: '2025-06-20' }; // More days requested
 
-      await expect(service.update('leave-1', dateDto)).rejects.toThrow(BadRequestException);
+      await expect(service.update('leave-1', dateDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should update dates successfully', async () => {
@@ -547,7 +691,10 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap
       mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
 
-      const result = await service.update('leave-1', { startDate: '2025-06-09', endDate: '2025-06-13' });
+      const result = await service.update('leave-1', {
+        startDate: '2025-06-09',
+        endDate: '2025-06-13',
+      });
 
       expect(result).toBeDefined();
     });
@@ -580,14 +727,18 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when leave not found', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when leave is approved', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
 
-      await expect(service.remove('leave-1')).rejects.toThrow(BadRequestException);
+      await expect(service.remove('leave-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -597,7 +748,10 @@ describe('LeavesService', () => {
   describe('canValidate', () => {
     it('should return true for ADMIN', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(mockLeave);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.ADMIN });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
 
       const result = await service.canValidate('leave-1', 'admin-1');
 
@@ -606,7 +760,10 @@ describe('LeavesService', () => {
 
     it('should return true for RESPONSABLE', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(mockLeave);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.RESPONSABLE });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.RESPONSABLE,
+      });
 
       const result = await service.canValidate('leave-1', 'responsable-1');
 
@@ -614,8 +771,14 @@ describe('LeavesService', () => {
     });
 
     it('should return true for assigned validator', async () => {
-      mockPrismaService.leave.findUnique.mockResolvedValue({ ...mockLeave, validatorId: 'validator-1' });
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.CONTRIBUTEUR });
+      mockPrismaService.leave.findUnique.mockResolvedValue({
+        ...mockLeave,
+        validatorId: 'validator-1',
+      });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.CONTRIBUTEUR,
+      });
 
       const result = await service.canValidate('leave-1', 'validator-1');
 
@@ -625,7 +788,10 @@ describe('LeavesService', () => {
     it('should return true for active delegate', async () => {
       const today = new Date();
       mockPrismaService.leave.findUnique.mockResolvedValue(mockLeave);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.CONTRIBUTEUR });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.CONTRIBUTEUR,
+      });
       mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue({
         id: 'delegation-1',
         delegateId: 'delegate-1',
@@ -658,8 +824,13 @@ describe('LeavesService', () => {
 
     it('should return false for unauthorized user', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(mockLeave);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.CONTRIBUTEUR });
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.CONTRIBUTEUR,
+      });
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
 
       const result = await service.canValidate('leave-1', 'random-user');
 
@@ -676,7 +847,10 @@ describe('LeavesService', () => {
       const approvedLeave = { ...pendingLeave, status: LeaveStatus.APPROVED };
 
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.ADMIN });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
       mockPrismaService.leave.update.mockResolvedValue(approvedLeave);
 
       const result = await service.approve('leave-1', 'admin-1');
@@ -686,10 +860,17 @@ describe('LeavesService', () => {
 
     it('should approve with comment', async () => {
       const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING };
-      const approvedLeave = { ...pendingLeave, status: LeaveStatus.APPROVED, validationComment: 'Approved' };
+      const approvedLeave = {
+        ...pendingLeave,
+        status: LeaveStatus.APPROVED,
+        validationComment: 'Approved',
+      };
 
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.ADMIN });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
       mockPrismaService.leave.update.mockResolvedValue(approvedLeave);
 
       const result = await service.approve('leave-1', 'admin-1', 'Approved');
@@ -700,23 +881,34 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when leave not found', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(null);
 
-      await expect(service.approve('nonexistent', 'admin-1')).rejects.toThrow(NotFoundException);
+      await expect(service.approve('nonexistent', 'admin-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when leave is not pending', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
 
-      await expect(service.approve('leave-1', 'admin-1')).rejects.toThrow(BadRequestException);
+      await expect(service.approve('leave-1', 'admin-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw ForbiddenException when user cannot validate', async () => {
       const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING };
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.CONTRIBUTEUR });
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.CONTRIBUTEUR,
+      });
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
 
-      await expect(service.approve('leave-1', 'random-user')).rejects.toThrow(ForbiddenException);
+      await expect(service.approve('leave-1', 'random-user')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -729,10 +921,17 @@ describe('LeavesService', () => {
       const rejectedLeave = { ...pendingLeave, status: LeaveStatus.REJECTED };
 
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.ADMIN });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
       mockPrismaService.leave.update.mockResolvedValue(rejectedLeave);
 
-      const result = await service.reject('leave-1', 'admin-1', 'Not enough staff');
+      const result = await service.reject(
+        'leave-1',
+        'admin-1',
+        'Not enough staff',
+      );
 
       expect(result.status).toBe(LeaveStatus.REJECTED);
     });
@@ -740,23 +939,34 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when leave not found', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(null);
 
-      await expect(service.reject('nonexistent', 'admin-1')).rejects.toThrow(NotFoundException);
+      await expect(service.reject('nonexistent', 'admin-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when leave is not pending', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
 
-      await expect(service.reject('leave-1', 'admin-1')).rejects.toThrow(BadRequestException);
+      await expect(service.reject('leave-1', 'admin-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw ForbiddenException when user cannot validate', async () => {
       const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING };
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.CONTRIBUTEUR });
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.CONTRIBUTEUR,
+      });
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
 
-      await expect(service.reject('leave-1', 'random-user')).rejects.toThrow(ForbiddenException);
+      await expect(service.reject('leave-1', 'random-user')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -779,14 +989,18 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when leave not found', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(null);
 
-      await expect(service.cancel('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.cancel('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when leave is not approved', async () => {
       const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING };
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
 
-      await expect(service.cancel('leave-1')).rejects.toThrow(BadRequestException);
+      await expect(service.cancel('leave-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -814,9 +1028,16 @@ describe('LeavesService', () => {
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(delegator)
         .mockResolvedValueOnce(delegate);
-      mockPrismaService.leaveValidationDelegate.create.mockResolvedValue(delegation);
+      mockPrismaService.leaveValidationDelegate.create.mockResolvedValue(
+        delegation,
+      );
 
-      const result = await service.createDelegation('manager-1', 'delegate-1', startDate, endDate);
+      const result = await service.createDelegation(
+        'manager-1',
+        'delegate-1',
+        startDate,
+        endDate,
+      );
 
       expect(result).toBeDefined();
       expect(result.delegatorId).toBe('manager-1');
@@ -825,14 +1046,23 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when delegator not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.createDelegation('nonexistent', 'delegate-1', startDate, endDate)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.createDelegation(
+          'nonexistent',
+          'delegate-1',
+          startDate,
+          endDate,
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ForbiddenException when delegator is not authorized', async () => {
       const contributeur = { ...mockUser, role: Role.CONTRIBUTEUR };
       mockPrismaService.user.findUnique.mockResolvedValue(contributeur);
 
-      await expect(service.createDelegation('user-1', 'delegate-1', startDate, endDate)).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.createDelegation('user-1', 'delegate-1', startDate, endDate),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw NotFoundException when delegate not found', async () => {
@@ -841,7 +1071,14 @@ describe('LeavesService', () => {
         .mockResolvedValueOnce(manager)
         .mockResolvedValueOnce(null);
 
-      await expect(service.createDelegation('manager-1', 'nonexistent', startDate, endDate)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.createDelegation(
+          'manager-1',
+          'nonexistent',
+          startDate,
+          endDate,
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when delegate is inactive', async () => {
@@ -851,7 +1088,14 @@ describe('LeavesService', () => {
         .mockResolvedValueOnce(manager)
         .mockResolvedValueOnce(inactiveDelegate);
 
-      await expect(service.createDelegation('manager-1', 'inactive-user', startDate, endDate)).rejects.toThrow(BadRequestException);
+      await expect(
+        service.createDelegation(
+          'manager-1',
+          'inactive-user',
+          startDate,
+          endDate,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when end date is before start date', async () => {
@@ -861,20 +1105,33 @@ describe('LeavesService', () => {
         .mockResolvedValueOnce(manager)
         .mockResolvedValueOnce(delegate);
 
-      await expect(service.createDelegation('manager-1', 'delegate-1', endDate, startDate)).rejects.toThrow(BadRequestException);
+      await expect(
+        service.createDelegation('manager-1', 'delegate-1', endDate, startDate),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should allow ADMIN to create delegation', async () => {
       const admin = { ...mockUser, role: Role.ADMIN };
       const delegate = { ...mockUser, isActive: true };
-      const delegation = { id: 'delegation-1', delegatorId: 'admin-1', delegateId: 'delegate-1' };
+      const delegation = {
+        id: 'delegation-1',
+        delegatorId: 'admin-1',
+        delegateId: 'delegate-1',
+      };
 
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(admin)
         .mockResolvedValueOnce(delegate);
-      mockPrismaService.leaveValidationDelegate.create.mockResolvedValue(delegation);
+      mockPrismaService.leaveValidationDelegate.create.mockResolvedValue(
+        delegation,
+      );
 
-      const result = await service.createDelegation('admin-1', 'delegate-1', startDate, endDate);
+      const result = await service.createDelegation(
+        'admin-1',
+        'delegate-1',
+        startDate,
+        endDate,
+      );
 
       expect(result).toBeDefined();
     });
@@ -882,14 +1139,25 @@ describe('LeavesService', () => {
     it('should allow RESPONSABLE to create delegation', async () => {
       const responsable = { ...mockUser, role: Role.RESPONSABLE };
       const delegate = { ...mockUser, isActive: true };
-      const delegation = { id: 'delegation-1', delegatorId: 'responsable-1', delegateId: 'delegate-1' };
+      const delegation = {
+        id: 'delegation-1',
+        delegatorId: 'responsable-1',
+        delegateId: 'delegate-1',
+      };
 
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(responsable)
         .mockResolvedValueOnce(delegate);
-      mockPrismaService.leaveValidationDelegate.create.mockResolvedValue(delegation);
+      mockPrismaService.leaveValidationDelegate.create.mockResolvedValue(
+        delegation,
+      );
 
-      const result = await service.createDelegation('responsable-1', 'delegate-1', startDate, endDate);
+      const result = await service.createDelegation(
+        'responsable-1',
+        'delegate-1',
+        startDate,
+        endDate,
+      );
 
       expect(result).toBeDefined();
     });
@@ -919,43 +1187,86 @@ describe('LeavesService', () => {
   // ============================================
   describe('deactivateDelegation', () => {
     it('should deactivate a delegation by delegator', async () => {
-      const delegation = { id: 'delegation-1', delegatorId: 'manager-1', isActive: true };
+      const delegation = {
+        id: 'delegation-1',
+        delegatorId: 'manager-1',
+        isActive: true,
+      };
       const deactivatedDelegation = { ...delegation, isActive: false };
 
-      mockPrismaService.leaveValidationDelegate.findUnique.mockResolvedValue(delegation);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.MANAGER });
-      mockPrismaService.leaveValidationDelegate.update.mockResolvedValue(deactivatedDelegation);
+      mockPrismaService.leaveValidationDelegate.findUnique.mockResolvedValue(
+        delegation,
+      );
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.MANAGER,
+      });
+      mockPrismaService.leaveValidationDelegate.update.mockResolvedValue(
+        deactivatedDelegation,
+      );
 
-      const result = await service.deactivateDelegation('delegation-1', 'manager-1');
+      const result = await service.deactivateDelegation(
+        'delegation-1',
+        'manager-1',
+      );
 
       expect(result.isActive).toBe(false);
     });
 
     it('should allow ADMIN to deactivate any delegation', async () => {
-      const delegation = { id: 'delegation-1', delegatorId: 'manager-1', isActive: true };
+      const delegation = {
+        id: 'delegation-1',
+        delegatorId: 'manager-1',
+        isActive: true,
+      };
       const deactivatedDelegation = { ...delegation, isActive: false };
 
-      mockPrismaService.leaveValidationDelegate.findUnique.mockResolvedValue(delegation);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.ADMIN });
-      mockPrismaService.leaveValidationDelegate.update.mockResolvedValue(deactivatedDelegation);
+      mockPrismaService.leaveValidationDelegate.findUnique.mockResolvedValue(
+        delegation,
+      );
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
+      mockPrismaService.leaveValidationDelegate.update.mockResolvedValue(
+        deactivatedDelegation,
+      );
 
-      const result = await service.deactivateDelegation('delegation-1', 'admin-1');
+      const result = await service.deactivateDelegation(
+        'delegation-1',
+        'admin-1',
+      );
 
       expect(result.isActive).toBe(false);
     });
 
     it('should throw NotFoundException when delegation not found', async () => {
-      mockPrismaService.leaveValidationDelegate.findUnique.mockResolvedValue(null);
+      mockPrismaService.leaveValidationDelegate.findUnique.mockResolvedValue(
+        null,
+      );
 
-      await expect(service.deactivateDelegation('nonexistent', 'user-1')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.deactivateDelegation('nonexistent', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ForbiddenException when user is not authorized', async () => {
-      const delegation = { id: 'delegation-1', delegatorId: 'manager-1', isActive: true };
-      mockPrismaService.leaveValidationDelegate.findUnique.mockResolvedValue(delegation);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, role: Role.CONTRIBUTEUR });
+      const delegation = {
+        id: 'delegation-1',
+        delegatorId: 'manager-1',
+        isActive: true,
+      };
+      mockPrismaService.leaveValidationDelegate.findUnique.mockResolvedValue(
+        delegation,
+      );
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.CONTRIBUTEUR,
+      });
 
-      await expect(service.deactivateDelegation('delegation-1', 'random-user')).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.deactivateDelegation('delegation-1', 'random-user'),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -965,7 +1276,10 @@ describe('LeavesService', () => {
   describe('getLeaveBalance', () => {
     it('should return leave balance for user', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.leave.findMany.mockResolvedValue([{ days: 10 }, { days: 5 }]);
+      mockPrismaService.leave.findMany.mockResolvedValue([
+        { days: 10 },
+        { days: 5 },
+      ]);
 
       const result = await service.getLeaveBalance('user-1');
 
@@ -978,7 +1292,9 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getLeaveBalance('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.getLeaveBalance('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should return 0 available when all days used', async () => {

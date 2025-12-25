@@ -62,20 +62,21 @@ export default function ProjectsPage() {
         // Autres rôles voient uniquement leurs projets
         try {
           projectsData = await projectsService.getByUser(user.id);
-        } catch (error: any) {
-          if (error.response?.status !== 404) {
-            throw error;
+        } catch (err) {
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) {
+            throw err;
           }
         }
       }
 
       setProjects(projectsData);
       setFilteredProjects(projectsData);
-    } catch (error: any) {
+    } catch (err) {
       setProjects([]);
       setFilteredProjects([]);
       toast.error('Erreur lors du chargement des projets');
-      console.error(error);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -116,7 +117,15 @@ export default function ProjectsPage() {
     e.preventDefault();
     try {
       // Préparer les données selon le DTO backend
-      const projectData: any = {
+      const projectData: {
+        name: string;
+        description?: string;
+        status?: ProjectStatus;
+        priority?: Priority;
+        startDate: string;
+        endDate: string;
+        budgetHours?: number;
+      } = {
         name: formData.name,
         description: formData.description,
         status: formData.status,
@@ -135,9 +144,10 @@ export default function ProjectsPage() {
       setShowCreateModal(false);
       resetForm();
       fetchProjects();
-    } catch (error: any) {
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || 'Erreur lors de la création'
+        axiosError.response?.data?.message || 'Erreur lors de la création'
       );
     }
   };

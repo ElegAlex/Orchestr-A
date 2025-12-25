@@ -1,5 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, HttpCode, HttpStatus, ParseIntPipe, ParseUUIDPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  ParseIntPipe,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { EpicsService } from './epics.service';
 import { CreateEpicDto } from './dto/create-epic.dto';
 import { UpdateEpicDto } from './dto/update-epic.dto';
@@ -37,7 +57,7 @@ export class EpicsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Détails d\'un epic' })
+  @ApiOperation({ summary: "Détails d'un epic" })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.epicsService.findOne(id);
   }
@@ -45,7 +65,10 @@ export class EpicsController {
   @Patch(':id')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @ApiOperation({ summary: 'Modifier un epic' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateEpicDto: UpdateEpicDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateEpicDto: UpdateEpicDto,
+  ) {
     return this.epicsService.update(id, updateEpicDto);
   }
 

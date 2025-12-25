@@ -25,9 +25,10 @@ export default function LoginPage() {
       setUser(response.user);
       toast.success('Connexion réussie !');
       router.push('/dashboard');
-    } catch (error: any) {
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || 'Erreur lors de la connexion'
+        axiosError.response?.data?.message || 'Erreur lors de la connexion'
       );
     } finally {
       setLoading(false);
@@ -39,7 +40,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            ORCHESTR'A V2
+            ORCHESTR&apos;A V2
           </h1>
           <p className="text-gray-600">Gestion de projets et RH</p>
         </div>
@@ -101,7 +102,7 @@ export default function LoginPage() {
               href="/register"
               className="text-blue-600 hover:text-blue-700 font-medium"
             >
-              S'inscrire
+              S&apos;inscrire
             </Link>
           </p>
         </div>

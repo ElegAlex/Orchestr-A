@@ -1,9 +1,33 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, HttpCode, HttpStatus, ParseIntPipe, ParseUUIDPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  ParseIntPipe,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { MilestonesService } from './milestones.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
-import { ImportMilestonesDto, ImportMilestonesResultDto, MilestonesValidationPreviewDto } from './dto/import-milestones.dto';
+import {
+  ImportMilestonesDto,
+  ImportMilestonesResultDto,
+  MilestonesValidationPreviewDto,
+} from './dto/import-milestones.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -40,7 +64,7 @@ export class MilestonesController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Détails d\'un milestone' })
+  @ApiOperation({ summary: "Détails d'un milestone" })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.milestonesService.findOne(id);
   }
@@ -48,7 +72,10 @@ export class MilestonesController {
   @Patch(':id')
   @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
   @ApiOperation({ summary: 'Modifier un milestone' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateMilestoneDto: UpdateMilestoneDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateMilestoneDto: UpdateMilestoneDto,
+  ) {
     return this.milestonesService.update(id, updateMilestoneDto);
   }
 
@@ -73,7 +100,7 @@ export class MilestonesController {
   @ApiOperation({ summary: 'Valider des jalons avant import (dry-run)' })
   @ApiResponse({
     status: 200,
-    description: 'Prévisualisation de l\'import',
+    description: "Prévisualisation de l'import",
     type: MilestonesValidationPreviewDto,
   })
   @ApiResponse({
@@ -84,7 +111,10 @@ export class MilestonesController {
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Body() importMilestonesDto: ImportMilestonesDto,
   ) {
-    return this.milestonesService.validateImport(projectId, importMilestonesDto.milestones);
+    return this.milestonesService.validateImport(
+      projectId,
+      importMilestonesDto.milestones,
+    );
   }
 
   @Post('project/:projectId/import')
@@ -92,7 +122,7 @@ export class MilestonesController {
   @ApiOperation({ summary: 'Importer des jalons en masse via CSV' })
   @ApiResponse({
     status: 201,
-    description: 'Résultat de l\'import',
+    description: "Résultat de l'import",
     type: ImportMilestonesResultDto,
   })
   @ApiResponse({
@@ -103,11 +133,16 @@ export class MilestonesController {
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Body() importMilestonesDto: ImportMilestonesDto,
   ) {
-    return this.milestonesService.importMilestones(projectId, importMilestonesDto.milestones);
+    return this.milestonesService.importMilestones(
+      projectId,
+      importMilestonesDto.milestones,
+    );
   }
 
   @Get('project/:projectId/import-template')
-  @ApiOperation({ summary: 'Télécharger le template CSV pour l\'import de jalons' })
+  @ApiOperation({
+    summary: "Télécharger le template CSV pour l'import de jalons",
+  })
   @ApiResponse({
     status: 200,
     description: 'Template CSV',

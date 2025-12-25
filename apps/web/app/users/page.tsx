@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { useAuthStore } from '@/stores/auth.store';
-import { usersService, ImportUserData, ImportUsersResult, UsersValidationPreview, UserPreviewItem, UserDependenciesResponse } from '@/services/users.service';
+import { usersService, ImportUserData, ImportUsersResult, UsersValidationPreview, UserDependenciesResponse } from '@/services/users.service';
 import { ImportPreviewModal } from '@/components/ImportPreviewModal';
 import { departmentsService } from '@/services/departments.service';
 import { servicesService } from '@/services/services.service';
@@ -55,9 +55,9 @@ export default function UsersPage() {
       const response = await usersService.getAll();
       const usersList = Array.isArray(response) ? response : response.data;
       setUsers(usersList);
-    } catch (error: any) {
+    } catch (err) {
       toast.error('Erreur lors du chargement des utilisateurs');
-      console.error(error);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -69,12 +69,12 @@ export default function UsersPage() {
         departmentsService.getAll(),
         servicesService.getAll(),
       ]);
-      const depts = Array.isArray(deptResponse) ? deptResponse : (deptResponse as any).data || [];
-      const servs = Array.isArray(servResponse) ? servResponse : (servResponse as any).data || [];
+      const depts = Array.isArray(deptResponse) ? deptResponse : (deptResponse as { data?: Department[] }).data || [];
+      const servs = Array.isArray(servResponse) ? servResponse : (servResponse as { data?: Service[] }).data || [];
       setDepartments(depts);
       setServices(servs);
-    } catch (error: any) {
-      console.error('Erreur lors du chargement des départements/services:', error);
+    } catch (err) {
+      console.error('Erreur lors du chargement des départements/services:', err);
     }
   };
 
@@ -86,7 +86,16 @@ export default function UsersPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const createData: any = {
+      const createData: {
+        email: string;
+        login: string;
+        password: string;
+        firstName: string;
+        lastName: string;
+        role: Role;
+        departmentId?: string;
+        serviceIds?: string[];
+      } = {
         ...formData,
         departmentId: formData.departmentId || undefined,
         serviceIds: formData.serviceIds.length > 0 ? formData.serviceIds : undefined,
@@ -105,9 +114,10 @@ export default function UsersPage() {
         serviceIds: [],
       });
       fetchUsers();
-    } catch (error: any) {
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || 'Erreur lors de la création'
+        axiosError.response?.data?.message || 'Erreur lors de la création'
       );
     }
   };
@@ -132,7 +142,15 @@ export default function UsersPage() {
     if (!editingUser) return;
 
     try {
-      const updateData: any = {
+      const updateData: {
+        email: string;
+        firstName: string;
+        lastName: string;
+        role: Role;
+        serviceIds: string[];
+        departmentId?: string;
+        password?: string;
+      } = {
         email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -167,9 +185,10 @@ export default function UsersPage() {
         serviceIds: [],
       });
       fetchUsers();
-    } catch (error: any) {
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || 'Erreur lors de la modification'
+        axiosError.response?.data?.message || 'Erreur lors de la modification'
       );
     }
   };
@@ -182,9 +201,10 @@ export default function UsersPage() {
       await usersService.delete(id);
       toast.success('Utilisateur désactivé');
       fetchUsers();
-    } catch (error: any) {
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || 'Erreur lors de la suppression'
+        axiosError.response?.data?.message || 'Erreur lors de la suppression'
       );
     }
   };
@@ -199,7 +219,7 @@ export default function UsersPage() {
     try {
       const dependencies = await usersService.checkDependencies(user.id);
       setUserDependencies(dependencies);
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors de la vérification des dépendances');
       setShowDeleteModal(false);
     } finally {
@@ -219,8 +239,9 @@ export default function UsersPage() {
       setUserToDelete(null);
       setUserDependencies(null);
       fetchUsers();
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Erreur lors de la suppression';
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      const message = axiosError.response?.data?.message || 'Erreur lors de la suppression';
       toast.error(message);
     } finally {
       setDeleting(false);
@@ -337,8 +358,9 @@ export default function UsersPage() {
       setPendingUsersImport(csvPreview);
       setShowImportModal(false);
       setShowUsersPreview(true);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la validation');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la validation');
     } finally {
       setImporting(false);
     }
@@ -365,8 +387,9 @@ export default function UsersPage() {
       setUsersPreview(null);
       setPendingUsersImport([]);
       setCsvPreview([]);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'import');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de l\'import');
     } finally {
       setImporting(false);
     }
@@ -683,7 +706,7 @@ export default function UsersPage() {
                 </label>
                 <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
                   {!formData.departmentId ? (
-                    <p className="text-sm text-gray-500">Sélectionnez d'abord un département</p>
+                    <p className="text-sm text-gray-500">Sélectionnez d&apos;abord un département</p>
                   ) : services.filter((service) => service.departmentId === formData.departmentId).length === 0 ? (
                     <p className="text-sm text-gray-500">Aucun service disponible</p>
                   ) : (
@@ -740,7 +763,7 @@ export default function UsersPage() {
                   Le fichier doit contenir les colonnes suivantes (séparées par des points-virgules) :
                 </p>
                 <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
-                  <li><strong>email</strong> - Email de l'utilisateur (requis)</li>
+                  <li><strong>email</strong> - Email de l&apos;utilisateur (requis)</li>
                   <li><strong>login</strong> - Login unique (requis)</li>
                   <li><strong>password</strong> - Mot de passe initial (requis, min 6 caractères)</li>
                   <li><strong>firstName</strong> - Prénom (requis)</li>
@@ -812,7 +835,7 @@ export default function UsersPage() {
               {importResult && (
                 <div className={`rounded-lg p-4 ${importResult.errors > 0 ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200'}`}>
                   <h3 className={`font-medium mb-2 ${importResult.errors > 0 ? 'text-yellow-800' : 'text-green-800'}`}>
-                    Résultat de l'import
+                    Résultat de l&apos;import
                   </h3>
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
@@ -868,7 +891,7 @@ export default function UsersPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Modifier l'utilisateur
+              Modifier l&apos;utilisateur
             </h2>
             <form onSubmit={handleEdit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -996,7 +1019,7 @@ export default function UsersPage() {
                 </label>
                 <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
                   {!formData.departmentId ? (
-                    <p className="text-sm text-gray-500">Sélectionnez d'abord un département</p>
+                    <p className="text-sm text-gray-500">Sélectionnez d&apos;abord un département</p>
                   ) : services.filter((service) => service.departmentId === formData.departmentId).length === 0 ? (
                     <p className="text-sm text-gray-500">Aucun service disponible</p>
                   ) : (
@@ -1117,7 +1140,7 @@ export default function UsersPage() {
 
             {userToDelete && (
               <p className="text-gray-600 mb-4">
-                Êtes-vous sûr de vouloir supprimer définitivement l'utilisateur{' '}
+                Êtes-vous sûr de vouloir supprimer définitivement l&apos;utilisateur{' '}
                 <strong>{userToDelete.firstName} {userToDelete.lastName}</strong> ({userToDelete.email}) ?
               </p>
             )}
@@ -1145,7 +1168,7 @@ export default function UsersPage() {
                   ))}
                 </ul>
                 <p className="text-sm text-red-600 mt-3">
-                  Veuillez d'abord réassigner ou terminer ces éléments.
+                  Veuillez d&apos;abord réassigner ou terminer ces éléments.
                 </p>
               </div>
             )}

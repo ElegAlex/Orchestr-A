@@ -17,7 +17,7 @@ export class CreateTeleworkDto {
   date: string;
 
   @ApiProperty({
-    description: 'ID de l\'utilisateur (optionnel, pour admin/manager)',
+    description: "ID de l'utilisateur (optionnel, pour admin/manager)",
     required: false,
   })
   @IsOptional()

@@ -64,9 +64,10 @@ export default function TasksPage() {
         try {
           projectsData = await projectsService.getByUser(user.id);
           projectsData = Array.isArray(projectsData) ? projectsData : [];
-        } catch (error: any) {
+        } catch (err) {
           projectsData = [];
-          if (error.response?.status !== 404) console.error('Error fetching projects:', error);
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) console.error('Error fetching projects:', err);
         }
       }
       setProjects(projectsData);
@@ -77,9 +78,10 @@ export default function TasksPage() {
         try {
           tasksData = await tasksService.getByAssignee(user.id);
           tasksData = Array.isArray(tasksData) ? tasksData : [];
-        } catch (error: any) {
+        } catch (err) {
           tasksData = [];
-          if (error.response?.status !== 404) console.error('Error fetching tasks:', error);
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) console.error('Error fetching tasks:', err);
         }
       }
       setTasks(tasksData);
@@ -89,9 +91,10 @@ export default function TasksPage() {
         try {
           const orphans = await tasksService.getOrphans();
           setOrphanTasks(Array.isArray(orphans) ? orphans : []);
-        } catch (error: any) {
+        } catch (err) {
           setOrphanTasks([]);
-          if (error.response?.status !== 404) console.error('Error fetching orphan tasks:', error);
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) console.error('Error fetching orphan tasks:', err);
         }
       }
 
@@ -100,14 +103,15 @@ export default function TasksPage() {
         try {
           const usersData = await usersService.getAll();
           setUsers(Array.isArray(usersData) ? usersData : []);
-        } catch (error: any) {
+        } catch (err) {
           setUsers([]);
-          if (error.response?.status !== 404) console.error('Error fetching users:', error);
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) console.error('Error fetching users:', err);
         }
       }
-    } catch (error: any) {
+    } catch (err) {
       toast.error('Erreur lors du chargement des données');
-      console.error(error);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -139,9 +143,10 @@ export default function TasksPage() {
       setShowCreateModal(false);
       resetForm();
       fetchData();
-    } catch (error: any) {
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || 'Erreur lors de la création'
+        axiosError.response?.data?.message || 'Erreur lors de la création'
       );
     }
   };
@@ -151,7 +156,7 @@ export default function TasksPage() {
       await tasksService.update(taskId, { status: newStatus });
       toast.success('Statut mis à jour');
       fetchData();
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors de la mise à jour du statut');
     }
   };
@@ -297,7 +302,7 @@ export default function TasksPage() {
         await tasksService.update(draggedTask.id, { status: newStatus });
         toast.success('Statut mis à jour');
         fetchData();
-      } catch (error: any) {
+      } catch {
         toast.error('Erreur lors de la mise à jour du statut');
       }
     }

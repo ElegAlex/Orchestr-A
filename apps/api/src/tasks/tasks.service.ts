@@ -9,7 +9,13 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { AddDependencyDto } from './dto/add-dependency.dto';
 import { AssignRACIDto } from './dto/assign-raci.dto';
-import { ImportTaskDto, ImportTasksResultDto, TasksValidationPreviewDto, TaskPreviewItemDto, TaskPreviewStatus } from './dto/import-tasks.dto';
+import {
+  ImportTaskDto,
+  ImportTasksResultDto,
+  TasksValidationPreviewDto,
+  TaskPreviewItemDto,
+  TaskPreviewStatus,
+} from './dto/import-tasks.dto';
 import { TaskStatus, Priority } from 'database';
 
 @Injectable()
@@ -61,9 +67,7 @@ export class TasksService {
       }
 
       if (epic.projectId !== projectId) {
-        throw new BadRequestException(
-          'L\'epic n\'appartient pas au même projet',
-        );
+        throw new BadRequestException("L'epic n'appartient pas au même projet");
       }
     }
 
@@ -79,7 +83,7 @@ export class TasksService {
 
       if (milestone.projectId !== projectId) {
         throw new BadRequestException(
-          'Le milestone n\'appartient pas au même projet',
+          "Le milestone n'appartient pas au même projet",
         );
       }
     }
@@ -103,16 +107,14 @@ export class TasksService {
       });
 
       if (users.length !== assigneeIds.length) {
-        throw new NotFoundException('Un ou plusieurs utilisateurs assignés introuvables');
+        throw new NotFoundException(
+          'Un ou plusieurs utilisateurs assignés introuvables',
+        );
       }
     }
 
     // Vérifier les dates si fournies (dates égales autorisées pour les tâches d'une journée)
-    if (
-      startDate &&
-      endDate &&
-      new Date(endDate) < new Date(startDate)
-    ) {
+    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
       throw new BadRequestException(
         'La date de fin ne peut pas être antérieure à la date de début',
       );
@@ -120,7 +122,9 @@ export class TasksService {
 
     // Créer la tâche (projectId peut être null pour les tâches orphelines)
     // Si assigneeIds est fourni, on utilise le premier comme assigneeId principal (rétrocompatibilité)
-    const primaryAssigneeId = assigneeId || (assigneeIds && assigneeIds.length > 0 ? assigneeIds[0] : null);
+    const primaryAssigneeId =
+      assigneeId ||
+      (assigneeIds && assigneeIds.length > 0 ? assigneeIds[0] : null);
 
     const task = await this.prisma.task.create({
       data: {
@@ -133,11 +137,12 @@ export class TasksService {
         ...(startDate && { startDate: new Date(startDate) }),
         ...(endDate && { endDate: new Date(endDate) }),
         // Créer les assignations multiples
-        ...(assigneeIds && assigneeIds.length > 0 && {
-          assignees: {
-            create: assigneeIds.map((userId) => ({ userId })),
-          },
-        }),
+        ...(assigneeIds &&
+          assigneeIds.length > 0 && {
+            assignees: {
+              create: assigneeIds.map((userId) => ({ userId })),
+            },
+          }),
       },
       include: {
         project: {
@@ -482,7 +487,9 @@ export class TasksService {
       });
 
       if (users.length !== assigneeIds.length) {
-        throw new NotFoundException('Un ou plusieurs utilisateurs assignés introuvables');
+        throw new NotFoundException(
+          'Un ou plusieurs utilisateurs assignés introuvables',
+        );
       }
     }
 
@@ -518,7 +525,9 @@ export class TasksService {
           ...(projectId && { projectId }),
           ...(epicId && { epicId }),
           ...(milestoneId && { milestoneId }),
-          ...(primaryAssigneeId !== undefined && { assigneeId: primaryAssigneeId }),
+          ...(primaryAssigneeId !== undefined && {
+            assigneeId: primaryAssigneeId,
+          }),
           ...(startDate && { startDate: new Date(startDate) }),
           ...(endDate && { endDate: new Date(endDate) }),
         },
@@ -573,7 +582,7 @@ export class TasksService {
     // Vérifier qu'aucune autre tâche ne dépend de celle-ci
     if (task.dependents.length > 0) {
       throw new BadRequestException(
-        'Impossible de supprimer une tâche dont d\'autres tâches dépendent',
+        "Impossible de supprimer une tâche dont d'autres tâches dépendent",
       );
     }
 
@@ -784,10 +793,7 @@ export class TasksService {
   async getTasksByAssignee(userId: string) {
     const tasks = await this.prisma.task.findMany({
       where: {
-        OR: [
-          { assigneeId: userId },
-          { assignees: { some: { userId } } },
-        ],
+        OR: [{ assigneeId: userId }, { assignees: { some: { userId } } }],
       },
       include: {
         project: {
@@ -957,7 +963,9 @@ export class TasksService {
     const users = await this.prisma.user.findMany({
       where: { isActive: true },
     });
-    const usersByEmail = new Map(users.map((u) => [u.email.toLowerCase(), u.id]));
+    const usersByEmail = new Map(
+      users.map((u) => [u.email.toLowerCase(), u.id]),
+    );
 
     for (let i = 0; i < tasks.length; i++) {
       const taskData = tasks[i];
@@ -996,7 +1004,9 @@ export class TasksService {
         // Résoudre le milestone par nom
         let milestoneId: string | undefined;
         if (taskData.milestoneName) {
-          milestoneId = milestonesByName.get(taskData.milestoneName.toLowerCase());
+          milestoneId = milestonesByName.get(
+            taskData.milestoneName.toLowerCase(),
+          );
           if (!milestoneId) {
             result.errors++;
             result.errorDetails.push(
@@ -1087,7 +1097,10 @@ export class TasksService {
       where: { projectId },
     });
     const milestonesByName = new Map(
-      projectMilestones.map((m) => [m.name.toLowerCase(), { id: m.id, name: m.name }]),
+      projectMilestones.map((m) => [
+        m.name.toLowerCase(),
+        { id: m.id, name: m.name },
+      ]),
     );
 
     // Récupérer tous les utilisateurs pour la résolution par email
@@ -1095,7 +1108,10 @@ export class TasksService {
       where: { isActive: true },
     });
     const usersByEmail = new Map(
-      users.map((u) => [u.email.toLowerCase(), { id: u.id, email: u.email, name: `${u.firstName} ${u.lastName}` }]),
+      users.map((u) => [
+        u.email.toLowerCase(),
+        { id: u.id, email: u.email, name: `${u.firstName} ${u.lastName}` },
+      ]),
     );
 
     // Récupérer les tâches existantes du projet pour détecter les doublons
@@ -1103,7 +1119,9 @@ export class TasksService {
       where: { projectId },
       select: { title: true },
     });
-    const existingTitles = new Set(existingTasks.map((t) => t.title.toLowerCase()));
+    const existingTitles = new Set(
+      existingTasks.map((t) => t.title.toLowerCase()),
+    );
 
     for (let i = 0; i < tasks.length; i++) {
       const taskData = tasks[i];
@@ -1136,10 +1154,14 @@ export class TasksService {
 
       // Résoudre l'assignee par email
       if (taskData.assigneeEmail) {
-        const resolvedUser = usersByEmail.get(taskData.assigneeEmail.toLowerCase());
+        const resolvedUser = usersByEmail.get(
+          taskData.assigneeEmail.toLowerCase(),
+        );
         if (!resolvedUser) {
           previewItem.status = 'error';
-          previewItem.messages.push(`Utilisateur "${taskData.assigneeEmail}" introuvable`);
+          previewItem.messages.push(
+            `Utilisateur "${taskData.assigneeEmail}" introuvable`,
+          );
           result.errors.push(previewItem);
           result.summary.errors++;
           continue;
@@ -1149,10 +1171,14 @@ export class TasksService {
 
       // Résoudre le milestone par nom
       if (taskData.milestoneName) {
-        const resolvedMilestone = milestonesByName.get(taskData.milestoneName.toLowerCase());
+        const resolvedMilestone = milestonesByName.get(
+          taskData.milestoneName.toLowerCase(),
+        );
         if (!resolvedMilestone) {
           previewItem.status = 'error';
-          previewItem.messages.push(`Jalon "${taskData.milestoneName}" introuvable`);
+          previewItem.messages.push(
+            `Jalon "${taskData.milestoneName}" introuvable`,
+          );
           result.errors.push(previewItem);
           result.summary.errors++;
           continue;
@@ -1165,7 +1191,9 @@ export class TasksService {
         const statusUpper = taskData.status.toUpperCase();
         if (!Object.values(TaskStatus).includes(statusUpper as TaskStatus)) {
           previewItem.status = 'warning';
-          previewItem.messages.push(`Statut "${taskData.status}" non reconnu, "TODO" sera utilisé`);
+          previewItem.messages.push(
+            `Statut "${taskData.status}" non reconnu, "TODO" sera utilisé`,
+          );
         }
       }
 
@@ -1174,7 +1202,9 @@ export class TasksService {
         const priorityUpper = taskData.priority.toUpperCase();
         if (!Object.values(Priority).includes(priorityUpper as Priority)) {
           previewItem.status = 'warning';
-          previewItem.messages.push(`Priorité "${taskData.priority}" non reconnue, "NORMAL" sera utilisée`);
+          previewItem.messages.push(
+            `Priorité "${taskData.priority}" non reconnue, "NORMAL" sera utilisée`,
+          );
         }
       }
 
@@ -1184,21 +1214,27 @@ export class TasksService {
         const end = new Date(taskData.endDate);
         if (isNaN(start.getTime())) {
           previewItem.status = 'error';
-          previewItem.messages.push(`Date de début invalide: ${taskData.startDate}`);
+          previewItem.messages.push(
+            `Date de début invalide: ${taskData.startDate}`,
+          );
           result.errors.push(previewItem);
           result.summary.errors++;
           continue;
         }
         if (isNaN(end.getTime())) {
           previewItem.status = 'error';
-          previewItem.messages.push(`Date de fin invalide: ${taskData.endDate}`);
+          previewItem.messages.push(
+            `Date de fin invalide: ${taskData.endDate}`,
+          );
           result.errors.push(previewItem);
           result.summary.errors++;
           continue;
         }
         if (end <= start) {
           previewItem.status = 'warning';
-          previewItem.messages.push('La date de fin est antérieure ou égale à la date de début');
+          previewItem.messages.push(
+            'La date de fin est antérieure ou égale à la date de début',
+          );
         }
       }
 

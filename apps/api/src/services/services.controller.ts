@@ -50,7 +50,8 @@ export class ServicesController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Code de service déjà utilisé ou nom déjà utilisé dans ce département',
+    description:
+      'Code de service déjà utilisé ou nom déjà utilisé dans ce département',
   })
   @ApiResponse({
     status: 403,
@@ -78,7 +79,7 @@ export class ServicesController {
   }
 
   @Get('department/:departmentId')
-  @ApiOperation({ summary: 'Récupérer les services d\'un département' })
+  @ApiOperation({ summary: "Récupérer les services d'un département" })
   @ApiResponse({
     status: 200,
     description: 'Liste des services du département',
@@ -110,7 +111,7 @@ export class ServicesController {
   }
 
   @Get(':id/stats')
-  @ApiOperation({ summary: 'Récupérer les statistiques d\'un service' })
+  @ApiOperation({ summary: "Récupérer les statistiques d'un service" })
   @ApiResponse({
     status: 200,
     description: 'Statistiques du service (utilisateurs par rôle)',
@@ -138,7 +139,8 @@ export class ServicesController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Code de service déjà utilisé ou nom déjà utilisé dans ce département',
+    description:
+      'Code de service déjà utilisé ou nom déjà utilisé dans ce département',
   })
   update(
     @Param('id', ParseUUIDPipe) id: string,

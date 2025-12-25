@@ -69,10 +69,12 @@ describe('AuthController', () => {
 
     it('should throw UnauthorizedException on invalid credentials', async () => {
       mockAuthService.login.mockRejectedValue(
-        new UnauthorizedException('Login ou mot de passe incorrect')
+        new UnauthorizedException('Login ou mot de passe incorrect'),
       );
 
-      await expect(controller.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
       expect(mockAuthService.login).toHaveBeenCalledWith(loginDto);
     });
 
@@ -129,19 +131,23 @@ describe('AuthController', () => {
 
     it('should throw ConflictException when email already exists', async () => {
       mockAuthService.register.mockRejectedValue(
-        new ConflictException('Cet email est déjà utilisé')
+        new ConflictException('Cet email est déjà utilisé'),
       );
 
-      await expect(controller.register(registerDto)).rejects.toThrow(ConflictException);
+      await expect(controller.register(registerDto)).rejects.toThrow(
+        ConflictException,
+      );
       expect(mockAuthService.register).toHaveBeenCalledWith(registerDto);
     });
 
     it('should throw ConflictException when login already exists', async () => {
       mockAuthService.register.mockRejectedValue(
-        new ConflictException('Ce login est déjà utilisé')
+        new ConflictException('Ce login est déjà utilisé'),
       );
 
-      await expect(controller.register(registerDto)).rejects.toThrow(ConflictException);
+      await expect(controller.register(registerDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should register user with optional serviceIds', async () => {
@@ -160,7 +166,9 @@ describe('AuthController', () => {
       const result = await controller.register(registerWithServicesDto);
 
       expect(result).toEqual(expectedResult);
-      expect(mockAuthService.register).toHaveBeenCalledWith(registerWithServicesDto);
+      expect(mockAuthService.register).toHaveBeenCalledWith(
+        registerWithServicesDto,
+      );
     });
   });
 
@@ -183,11 +191,11 @@ describe('AuthController', () => {
 
     it('should throw error when user not found', async () => {
       mockAuthService.getProfile.mockRejectedValue(
-        new Error('Utilisateur introuvable')
+        new Error('Utilisateur introuvable'),
       );
 
       await expect(controller.getProfile('nonexistent-id')).rejects.toThrow(
-        'Utilisateur introuvable'
+        'Utilisateur introuvable',
       );
     });
   });

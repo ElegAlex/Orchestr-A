@@ -87,7 +87,7 @@ export class ExportService {
       headStyles: { fillColor: [102, 126, 234] },
     });
 
-    currentY = (doc as any).lastAutoTable.finalY + 15;
+    currentY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
 
     // Projects Table
     if (currentY > 200) {
@@ -168,7 +168,6 @@ export class ExportService {
   static async exportToExcel(
     data: AnalyticsData,
     dateRange: string,
-    selectedProject?: string,
   ): Promise<void> {
     const workbook = XLSX.utils.book_new();
 

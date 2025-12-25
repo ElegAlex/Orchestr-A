@@ -36,7 +36,9 @@ export class LeaveTypesController {
 
   @Post()
   @Roles(Role.ADMIN, Role.RESPONSABLE)
-  @ApiOperation({ summary: 'Créer un nouveau type de congé (Admin/Responsable)' })
+  @ApiOperation({
+    summary: 'Créer un nouveau type de congé (Admin/Responsable)',
+  })
   @ApiResponse({ status: 201, description: 'Type de congé créé avec succès' })
   @ApiResponse({ status: 409, description: 'Un type avec ce code existe déjà' })
   create(@Body() createLeaveTypeDto: CreateLeaveTypeDto) {
@@ -45,7 +47,12 @@ export class LeaveTypesController {
 
   @Get()
   @ApiOperation({ summary: 'Récupérer tous les types de congés' })
-  @ApiQuery({ name: 'includeInactive', required: false, type: Boolean, description: 'Inclure les types inactifs' })
+  @ApiQuery({
+    name: 'includeInactive',
+    required: false,
+    type: Boolean,
+    description: 'Inclure les types inactifs',
+  })
   @ApiResponse({ status: 200, description: 'Liste des types de congés' })
   findAll(@Query('includeInactive') includeInactive?: string) {
     return this.leaveTypesService.findAll(includeInactive === 'true');
@@ -69,10 +76,15 @@ export class LeaveTypesController {
 
   @Patch(':id')
   @Roles(Role.ADMIN, Role.RESPONSABLE)
-  @ApiOperation({ summary: 'Mettre à jour un type de congé (Admin/Responsable)' })
+  @ApiOperation({
+    summary: 'Mettre à jour un type de congé (Admin/Responsable)',
+  })
   @ApiResponse({ status: 200, description: 'Type de congé mis à jour' })
   @ApiResponse({ status: 404, description: 'Type de congé introuvable' })
-  @ApiResponse({ status: 400, description: 'Modification non autorisée pour les types système' })
+  @ApiResponse({
+    status: 400,
+    description: 'Modification non autorisée pour les types système',
+  })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateLeaveTypeDto: UpdateLeaveTypeDto,
@@ -84,16 +96,24 @@ export class LeaveTypesController {
   @Roles(Role.ADMIN, Role.RESPONSABLE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un type de congé (Admin/Responsable)' })
-  @ApiResponse({ status: 200, description: 'Type de congé supprimé ou désactivé' })
+  @ApiResponse({
+    status: 200,
+    description: 'Type de congé supprimé ou désactivé',
+  })
   @ApiResponse({ status: 404, description: 'Type de congé introuvable' })
-  @ApiResponse({ status: 400, description: 'Les types système ne peuvent pas être supprimés' })
+  @ApiResponse({
+    status: 400,
+    description: 'Les types système ne peuvent pas être supprimés',
+  })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.leaveTypesService.remove(id);
   }
 
   @Post('reorder')
   @Roles(Role.ADMIN, Role.RESPONSABLE)
-  @ApiOperation({ summary: 'Réordonner les types de congés (Admin/Responsable)' })
+  @ApiOperation({
+    summary: 'Réordonner les types de congés (Admin/Responsable)',
+  })
   @ApiResponse({ status: 200, description: 'Types de congés réordonnés' })
   reorder(@Body() body: { orderedIds: string[] }) {
     return this.leaveTypesService.reorder(body.orderedIds);

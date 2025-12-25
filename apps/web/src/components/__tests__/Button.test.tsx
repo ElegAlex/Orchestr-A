@@ -1,7 +1,14 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 
+interface ButtonProps {
+  children: React.ReactNode;
+  onClick?: () => void;
+  variant?: string;
+  disabled?: boolean;
+}
+
 // Mock Button component
-const Button = ({ children, onClick, variant = 'default', disabled = false }: any) => {
+const Button = ({ children, onClick, variant = 'default', disabled = false }: ButtonProps) => {
   return (
     <button
       onClick={onClick}

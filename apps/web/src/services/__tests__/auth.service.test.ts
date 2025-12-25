@@ -115,9 +115,6 @@ describe('authService', () => {
 
   describe('logout', () => {
     it('should clear localStorage and redirect to login', () => {
-      // Store original href getter to reset
-      const originalHref = window.location.href;
-
       authService.logout();
 
       expect(localStorage.removeItem).toHaveBeenCalledWith('access_token');

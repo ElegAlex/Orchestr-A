@@ -3,7 +3,7 @@ import { IsString, MinLength } from 'class-validator';
 
 export class LoginDto {
   @ApiProperty({
-    description: 'Login de l\'utilisateur (format: prenom.nom)',
+    description: "Login de l'utilisateur (format: prenom.nom)",
     example: 'admin',
   })
   @IsString()

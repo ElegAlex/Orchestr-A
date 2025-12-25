@@ -31,7 +31,7 @@ export class CreateTaskDto {
 
   @ApiProperty({
     description: 'Description détaillée de la tâche',
-    example: 'Développer le module d\'authentification avec JWT et guards',
+    example: "Développer le module d'authentification avec JWT et guards",
     required: false,
   })
   @IsString()
@@ -57,18 +57,22 @@ export class CreateTaskDto {
   priority?: Priority;
 
   @ApiProperty({
-    description: 'ID du projet auquel appartient la tâche (optionnel pour les tâches orphelines)',
+    description:
+      'ID du projet auquel appartient la tâche (optionnel pour les tâches orphelines)',
     example: 'uuid-here',
     required: false,
     nullable: true,
   })
-  @ValidateIf((o) => o.projectId !== null && o.projectId !== undefined && o.projectId !== '')
+  @ValidateIf(
+    (o) =>
+      o.projectId !== null && o.projectId !== undefined && o.projectId !== '',
+  )
   @IsUUID()
   @IsOptional()
   projectId?: string | null;
 
   @ApiProperty({
-    description: 'ID de l\'epic parent (optionnel)',
+    description: "ID de l'epic parent (optionnel)",
     example: 'uuid-here',
     required: false,
   })
@@ -86,7 +90,8 @@ export class CreateTaskDto {
   milestoneId?: string;
 
   @ApiProperty({
-    description: 'ID de l\'utilisateur assigné principal (optionnel, rétrocompatibilité)',
+    description:
+      "ID de l'utilisateur assigné principal (optionnel, rétrocompatibilité)",
     example: 'uuid-here',
     required: false,
   })

@@ -1,4 +1,4 @@
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { usePlanningData } from '../usePlanningData';
 import { tasksService } from '@/services/tasks.service';
 import { usersService } from '@/services/users.service';

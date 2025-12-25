@@ -87,14 +87,18 @@ describe('TimeTrackingService', () => {
     it('should throw error when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(userId, createTimeEntryDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create(userId, createTimeEntryDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error when task not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
       mockPrismaService.task.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(userId, createTimeEntryDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create(userId, createTimeEntryDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error when project not found', async () => {
@@ -102,7 +106,9 @@ describe('TimeTrackingService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(userId, dtoWithProject)).rejects.toThrow(NotFoundException);
+      await expect(service.create(userId, dtoWithProject)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error when no task or project provided', async () => {
@@ -113,7 +119,9 @@ describe('TimeTrackingService', () => {
       };
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
 
-      await expect(service.create(userId, dtoNoTaskOrProject)).rejects.toThrow(BadRequestException);
+      await expect(service.create(userId, dtoNoTaskOrProject)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should use task projectId when no projectId provided', async () => {
@@ -127,7 +135,10 @@ describe('TimeTrackingService', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
       mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
-      mockPrismaService.timeEntry.create.mockResolvedValue({ id: '1', ...dtoNoProject });
+      mockPrismaService.timeEntry.create.mockResolvedValue({
+        id: '1',
+        ...dtoNoProject,
+      });
 
       const result = await service.create(userId, dtoNoProject);
       expect(result).toBeDefined();
@@ -136,9 +147,7 @@ describe('TimeTrackingService', () => {
 
   describe('findAll', () => {
     it('should return paginated time entries', async () => {
-      const mockEntries = [
-        { id: '1', userId: 'user-1', hours: 8 },
-      ];
+      const mockEntries = [{ id: '1', userId: 'user-1', hours: 8 }];
 
       mockPrismaService.timeEntry.findMany.mockResolvedValue(mockEntries);
       mockPrismaService.timeEntry.count.mockResolvedValue(1);
@@ -194,7 +203,15 @@ describe('TimeTrackingService', () => {
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.count.mockResolvedValue(0);
 
-      await service.findAll(1, 10, undefined, undefined, undefined, '2025-01-01', '2025-01-31');
+      await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        '2025-01-01',
+        '2025-01-31',
+      );
 
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -212,7 +229,14 @@ describe('TimeTrackingService', () => {
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.count.mockResolvedValue(0);
 
-      await service.findAll(1, 10, undefined, undefined, undefined, '2025-01-01');
+      await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        '2025-01-01',
+      );
 
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -227,7 +251,15 @@ describe('TimeTrackingService', () => {
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.count.mockResolvedValue(0);
 
-      await service.findAll(1, 10, undefined, undefined, undefined, undefined, '2025-01-31');
+      await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        '2025-01-31',
+      );
 
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -254,14 +286,22 @@ describe('TimeTrackingService', () => {
     it('should throw error when entry not found', async () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('update', () => {
     it('should update a time entry successfully', async () => {
       const updateDto = { hours: 6 };
-      const existingEntry = { id: '1', userId: 'user-1', hours: 8, taskId: 'task-1', projectId: 'project-1' };
+      const existingEntry = {
+        id: '1',
+        userId: 'user-1',
+        hours: 8,
+        taskId: 'task-1',
+        projectId: 'project-1',
+      };
       const updatedEntry = { ...existingEntry, ...updateDto };
 
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(existingEntry);
@@ -276,14 +316,23 @@ describe('TimeTrackingService', () => {
     it('should throw error when entry not found', async () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('1', { hours: 6 })).rejects.toThrow(NotFoundException);
+      await expect(service.update('1', { hours: 6 })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should update with new taskId', async () => {
-      const existingEntry = { id: '1', taskId: 'task-1', projectId: 'project-1' };
+      const existingEntry = {
+        id: '1',
+        taskId: 'task-1',
+        projectId: 'project-1',
+      };
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(existingEntry);
       mockPrismaService.task.findUnique.mockResolvedValue({ id: 'task-2' });
-      mockPrismaService.timeEntry.update.mockResolvedValue({ ...existingEntry, taskId: 'task-2' });
+      mockPrismaService.timeEntry.update.mockResolvedValue({
+        ...existingEntry,
+        taskId: 'task-2',
+      });
 
       const result = await service.update('1', { taskId: 'task-2' });
       expect(result.taskId).toBe('task-2');
@@ -294,14 +343,21 @@ describe('TimeTrackingService', () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(existingEntry);
       mockPrismaService.task.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('1', { taskId: 'invalid' })).rejects.toThrow(NotFoundException);
+      await expect(service.update('1', { taskId: 'invalid' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should update with new projectId', async () => {
       const existingEntry = { id: '1', projectId: 'project-1' };
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(existingEntry);
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-2' });
-      mockPrismaService.timeEntry.update.mockResolvedValue({ ...existingEntry, projectId: 'project-2' });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-2',
+      });
+      mockPrismaService.timeEntry.update.mockResolvedValue({
+        ...existingEntry,
+        projectId: 'project-2',
+      });
 
       const result = await service.update('1', { projectId: 'project-2' });
       expect(result.projectId).toBe('project-2');
@@ -312,7 +368,9 @@ describe('TimeTrackingService', () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(existingEntry);
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('1', { projectId: 'invalid' })).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update('1', { projectId: 'invalid' }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -352,7 +410,9 @@ describe('TimeTrackingService', () => {
     it('should throw error when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getUserEntries('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.getUserEntries('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should filter by date range', async () => {
@@ -408,13 +468,31 @@ describe('TimeTrackingService', () => {
   describe('getUserReport', () => {
     it('should return user report with totals', async () => {
       const mockEntries = [
-        { id: '1', userId: 'user-1', hours: 4, activityType: 'DEVELOPMENT', date: new Date('2025-01-01'), project: { id: 'p1', name: 'Project 1' } },
-        { id: '2', userId: 'user-1', hours: 4, activityType: 'MEETING', date: new Date('2025-01-01'), project: { id: 'p1', name: 'Project 1' } },
+        {
+          id: '1',
+          userId: 'user-1',
+          hours: 4,
+          activityType: 'DEVELOPMENT',
+          date: new Date('2025-01-01'),
+          project: { id: 'p1', name: 'Project 1' },
+        },
+        {
+          id: '2',
+          userId: 'user-1',
+          hours: 4,
+          activityType: 'MEETING',
+          date: new Date('2025-01-01'),
+          project: { id: 'p1', name: 'Project 1' },
+        },
       ];
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
       mockPrismaService.timeEntry.findMany.mockResolvedValue(mockEntries);
 
-      const result = await service.getUserReport('user-1', '2025-01-01', '2025-01-31');
+      const result = await service.getUserReport(
+        'user-1',
+        '2025-01-01',
+        '2025-01-31',
+      );
 
       expect(result.userId).toBe('user-1');
       expect(result.totalHours).toBe(8);
@@ -426,8 +504,9 @@ describe('TimeTrackingService', () => {
     it('should throw error when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getUserReport('invalid', '2025-01-01', '2025-01-31'))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.getUserReport('invalid', '2025-01-01', '2025-01-31'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -435,8 +514,18 @@ describe('TimeTrackingService', () => {
     it('should return project report with totals', async () => {
       const mockProject = { id: 'project-1', name: 'Test Project' };
       const mockEntries = [
-        { id: '1', hours: 4, activityType: 'DEVELOPMENT', user: { id: 'u1', firstName: 'John', lastName: 'Doe' } },
-        { id: '2', hours: 4, activityType: 'MEETING', user: { id: 'u1', firstName: 'John', lastName: 'Doe' } },
+        {
+          id: '1',
+          hours: 4,
+          activityType: 'DEVELOPMENT',
+          user: { id: 'u1', firstName: 'John', lastName: 'Doe' },
+        },
+        {
+          id: '2',
+          hours: 4,
+          activityType: 'MEETING',
+          user: { id: 'u1', firstName: 'John', lastName: 'Doe' },
+        },
       ];
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.timeEntry.findMany.mockResolvedValue(mockEntries);
@@ -454,15 +543,23 @@ describe('TimeTrackingService', () => {
     it('should throw error when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.getProjectReport('invalid'))
-        .rejects.toThrow(NotFoundException);
+      await expect(service.getProjectReport('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should filter by date range when provided', async () => {
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-1', name: 'Project' });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'Project',
+      });
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
 
-      const result = await service.getProjectReport('project-1', '2025-01-01', '2025-01-31');
+      const result = await service.getProjectReport(
+        'project-1',
+        '2025-01-01',
+        '2025-01-31',
+      );
 
       expect(result.period).not.toBeNull();
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(

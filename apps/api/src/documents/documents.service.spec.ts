@@ -113,7 +113,9 @@ describe('DocumentsService', () => {
     it('should throw error when document not found', async () => {
       mockPrismaService.document.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

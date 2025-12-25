@@ -49,7 +49,7 @@ async function bootstrap() {
   // Swagger documentation (only if enabled)
   if (process.env.SWAGGER_ENABLED === 'true') {
     const config = new DocumentBuilder()
-      .setTitle('ORCHESTR\'A V2 API')
+      .setTitle("ORCHESTR'A V2 API")
       .setDescription(
         'API de gestion de projets et de ressources humaines pour collectivités territoriales',
       )

@@ -117,7 +117,9 @@ describe('AnalyticsService', () => {
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
 
-      const result = await service.getAnalytics({ dateRange: DateRangeEnum.WEEK });
+      const result = await service.getAnalytics({
+        dateRange: DateRangeEnum.WEEK,
+      });
 
       expect(result).toBeDefined();
     });
@@ -128,7 +130,9 @@ describe('AnalyticsService', () => {
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
 
-      const result = await service.getAnalytics({ dateRange: DateRangeEnum.QUARTER });
+      const result = await service.getAnalytics({
+        dateRange: DateRangeEnum.QUARTER,
+      });
 
       expect(result).toBeDefined();
     });
@@ -139,7 +143,9 @@ describe('AnalyticsService', () => {
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
 
-      const result = await service.getAnalytics({ dateRange: DateRangeEnum.YEAR });
+      const result = await service.getAnalytics({
+        dateRange: DateRangeEnum.YEAR,
+      });
 
       expect(result).toBeDefined();
     });
@@ -151,13 +157,21 @@ describe('AnalyticsService', () => {
       ];
       const tasks = [
         { ...mockTask, status: 'DONE', dueDate: null },
-        { ...mockTask, id: 'task-2', status: 'TODO', dueDate: new Date('2024-01-01') }, // Overdue
+        {
+          ...mockTask,
+          id: 'task-2',
+          status: 'TODO',
+          dueDate: new Date('2024-01-01'),
+        }, // Overdue
         { ...mockTask, id: 'task-3', status: 'IN_PROGRESS', dueDate: null },
       ];
 
       mockPrismaService.project.findMany.mockResolvedValue(projects);
       mockPrismaService.task.findMany.mockResolvedValue(tasks);
-      mockPrismaService.user.findMany.mockResolvedValue([mockUser, { ...mockUser, id: 'user-2' }]);
+      mockPrismaService.user.findMany.mockResolvedValue([
+        mockUser,
+        { ...mockUser, id: 'user-2' },
+      ]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
 
       const result = await service.getAnalytics({});
@@ -178,7 +192,9 @@ describe('AnalyticsService', () => {
         name: 'This is a very long project name that should be truncated',
       };
 
-      mockPrismaService.project.findMany.mockResolvedValue([projectWithLongName]);
+      mockPrismaService.project.findMany.mockResolvedValue([
+        projectWithLongName,
+      ]);
       mockPrismaService.task.findMany.mockResolvedValue([mockTask]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
@@ -205,10 +221,18 @@ describe('AnalyticsService', () => {
       const result = await service.getAnalytics({});
 
       expect(result.taskStatusData).toHaveLength(4);
-      const todoStatus = result.taskStatusData.find((s) => s.name === 'À faire');
-      const inProgressStatus = result.taskStatusData.find((s) => s.name === 'En cours');
-      const doneStatus = result.taskStatusData.find((s) => s.name === 'Terminé');
-      const blockedStatus = result.taskStatusData.find((s) => s.name === 'Bloqué');
+      const todoStatus = result.taskStatusData.find(
+        (s) => s.name === 'À faire',
+      );
+      const inProgressStatus = result.taskStatusData.find(
+        (s) => s.name === 'En cours',
+      );
+      const doneStatus = result.taskStatusData.find(
+        (s) => s.name === 'Terminé',
+      );
+      const blockedStatus = result.taskStatusData.find(
+        (s) => s.name === 'Bloqué',
+      );
 
       expect(todoStatus?.value).toBe(1);
       expect(inProgressStatus?.value).toBe(1);
@@ -268,7 +292,9 @@ describe('AnalyticsService', () => {
         ],
       };
 
-      mockPrismaService.project.findMany.mockResolvedValue([projectWithManager]);
+      mockPrismaService.project.findMany.mockResolvedValue([
+        projectWithManager,
+      ]);
       mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
@@ -286,7 +312,9 @@ describe('AnalyticsService', () => {
         ],
       };
 
-      mockPrismaService.project.findMany.mockResolvedValue([projectWithoutManager]);
+      mockPrismaService.project.findMany.mockResolvedValue([
+        projectWithoutManager,
+      ]);
       mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
@@ -369,7 +397,9 @@ describe('AnalyticsService', () => {
 
       const result = await service.getAnalytics({});
 
-      const completionMetric = result.metrics.find((m) => m.title === 'Taux de Completion');
+      const completionMetric = result.metrics.find(
+        (m) => m.title === 'Taux de Completion',
+      );
       expect(completionMetric?.value).toBe('75%');
       expect(completionMetric?.trend).toBe('up');
       expect(completionMetric?.color).toBe('success');
@@ -388,7 +418,9 @@ describe('AnalyticsService', () => {
 
       const result = await service.getAnalytics({});
 
-      const completionMetric = result.metrics.find((m) => m.title === 'Taux de Completion');
+      const completionMetric = result.metrics.find(
+        (m) => m.title === 'Taux de Completion',
+      );
       expect(completionMetric?.color).toBe('warning');
       expect(completionMetric?.trend).toBe('stable');
     });
@@ -409,7 +441,9 @@ describe('AnalyticsService', () => {
 
       const result = await service.getAnalytics({});
 
-      const completionMetric = result.metrics.find((m) => m.title === 'Taux de Completion');
+      const completionMetric = result.metrics.find(
+        (m) => m.title === 'Taux de Completion',
+      );
       expect(completionMetric?.color).toBe('error');
       expect(completionMetric?.trend).toBe('down');
     });
@@ -434,7 +468,9 @@ describe('AnalyticsService', () => {
         startDate: null,
       };
 
-      mockPrismaService.project.findMany.mockResolvedValue([projectNoStartDate]);
+      mockPrismaService.project.findMany.mockResolvedValue([
+        projectNoStartDate,
+      ]);
       mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
@@ -496,7 +532,9 @@ describe('AnalyticsService', () => {
       mockPrismaService.user.findMany.mockResolvedValue([mockUser]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
 
-      const result = await service.exportAnalytics({ dateRange: DateRangeEnum.MONTH });
+      const result = await service.exportAnalytics({
+        dateRange: DateRangeEnum.MONTH,
+      });
 
       expect(result).toBeDefined();
       expect(result.generatedAt).toBeDefined();

@@ -53,9 +53,7 @@ gh auth login
 </architecture-principles>
 
 <task>
-Pour la visualisation de la feature telework dans les visualisations de la feature planning, j'aimerais que ce soit plus visible.
-Il faut garder les éléments actuels de la fonctionnalité, notamment l'icone de maison dans le plannign qui permet de déclaré simplement une journée en télétravail, mais cette seule petite icone dans le planning ne rend la visualisation globale suffisamment identifiable.
-Un peu comme les jour d'absnece la case est colorée, là on pourrait s'inspirer du même principe, juste pour la coloration de la case, l'icone resterait comme actuellement. peut être une case cerclée orange à la façon des cases d'absence, mais le fond serait colorée mais très pâle et avec les tasks qui passeraient devant.
-C'est jouable?
+	Pour les 2 modals de création de tâches, mais aussi pour la modal de modification d'une tâche, il faut pouvoir assigner plusieurs users à une même tâche.
+	Le plus simple pourrait être un menu déroulant qui permette de cocher plusieurs users.
 </task>
 

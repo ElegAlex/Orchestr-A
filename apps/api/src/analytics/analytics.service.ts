@@ -1,9 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  AnalyticsQueryDto,
-  DateRangeEnum,
-} from './dto/analytics-query.dto';
+import { AnalyticsQueryDto, DateRangeEnum } from './dto/analytics-query.dto';
 import {
   AnalyticsResponseDto,
   MetricDto,
@@ -85,8 +82,8 @@ export class AnalyticsService {
     return Promise.all(
       projects.map(async (project) => {
         const progress = await this.calculateProjectProgress(project.id);
-        const projectManager = project.members.find((m) =>
-          m.role === 'Chef de projet' || m.role === 'MANAGER'
+        const projectManager = project.members.find(
+          (m) => m.role === 'Chef de projet' || m.role === 'MANAGER',
         );
         return {
           ...project,
@@ -123,9 +120,7 @@ export class AnalyticsService {
       }
     });
 
-    return totalHours > 0
-      ? Math.round((completedHours / totalHours) * 100)
-      : 0;
+    return totalHours > 0 ? Math.round((completedHours / totalHours) * 100) : 0;
   }
 
   private async getTasks(startDate: Date, projectId?: string) {
@@ -162,9 +157,7 @@ export class AnalyticsService {
     const completedTasks = tasks.filter((t) => t.status === 'DONE').length;
     const overdueTasks = tasks.filter(
       (t) =>
-        t.dueDate &&
-        new Date(t.dueDate) < new Date() &&
-        t.status !== 'DONE',
+        t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'DONE',
     ).length;
 
     const activeUsers = users.length;
@@ -184,7 +177,11 @@ export class AnalyticsService {
         value: `${Math.round(completionRate)}%`,
         change: `${completedTasks}/${totalTasks} tâches`,
         trend:
-          completionRate >= 75 ? 'up' : completionRate >= 50 ? 'stable' : 'down',
+          completionRate >= 75
+            ? 'up'
+            : completionRate >= 50
+              ? 'stable'
+              : 'down',
         color:
           completionRate >= 75
             ? 'success'

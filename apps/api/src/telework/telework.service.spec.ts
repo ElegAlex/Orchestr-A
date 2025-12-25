@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeleworkService } from './telework.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 describe('TeleworkService', () => {
@@ -101,7 +105,9 @@ describe('TeleworkService', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.create('nonexistent', createDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create('nonexistent', createDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error when telework already exists for date', async () => {
@@ -111,16 +117,22 @@ describe('TeleworkService', () => {
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(mockTelework);
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(
+        mockTelework,
+      );
 
-      await expect(service.create('user-1', createDto)).rejects.toThrow(ConflictException);
+      await expect(service.create('user-1', createDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
   describe('findAll', () => {
     it('should return paginated telework requests', async () => {
       const mockTeleworks = [mockTelework];
-      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue(mockTeleworks);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue(
+        mockTeleworks,
+      );
       mockPrismaService.teleworkSchedule.count.mockResolvedValue(1);
 
       const result = await service.findAll(1, 10);
@@ -130,7 +142,9 @@ describe('TeleworkService', () => {
     });
 
     it('should filter telework by user', async () => {
-      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([mockTelework]);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
+        mockTelework,
+      ]);
       mockPrismaService.teleworkSchedule.count.mockResolvedValue(1);
 
       const result = await service.findAll(1, 10, 'user-1');
@@ -194,7 +208,9 @@ describe('TeleworkService', () => {
 
   describe('findOne', () => {
     it('should return a telework request by id', async () => {
-      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(mockTelework);
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(
+        mockTelework,
+      );
 
       const result = await service.findOne('telework-1');
 
@@ -205,7 +221,9 @@ describe('TeleworkService', () => {
     it('should throw error when telework not found', async () => {
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -238,7 +256,9 @@ describe('TeleworkService', () => {
     it('should throw error when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getWeeklySchedule('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.getWeeklySchedule('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -251,7 +271,9 @@ describe('TeleworkService', () => {
       ];
 
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue(mockTeleworks);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue(
+        mockTeleworks,
+      );
 
       const result = await service.getUserStats('user-1');
 
@@ -274,14 +296,18 @@ describe('TeleworkService', () => {
     it('should throw error when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getUserStats('invalid')).rejects.toThrow(NotFoundException);
+      await expect(service.getUserStats('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('update', () => {
     it('should update a telework request successfully', async () => {
       const updateDto = { isTelework: false };
-      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(mockTelework);
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(
+        mockTelework,
+      );
       mockPrismaService.teleworkSchedule.update.mockResolvedValue({
         ...mockTelework,
         isTelework: false,
@@ -295,13 +321,18 @@ describe('TeleworkService', () => {
     it('should throw error when telework not found', async () => {
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('invalid', 'user-1', {})).rejects.toThrow(NotFoundException);
+      await expect(service.update('invalid', 'user-1', {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should update date when provided', async () => {
       const updateDto = { date: '2025-11-25' };
       mockPrismaService.teleworkSchedule.findUnique
-        .mockResolvedValueOnce({ ...mockTelework, date: new Date('2025-11-20') })
+        .mockResolvedValueOnce({
+          ...mockTelework,
+          date: new Date('2025-11-20'),
+        })
         .mockResolvedValueOnce(null);
       mockPrismaService.teleworkSchedule.update.mockResolvedValue({
         ...mockTelework,
@@ -316,15 +347,22 @@ describe('TeleworkService', () => {
     it('should throw conflict when new date already has telework', async () => {
       const updateDto = { date: '2025-11-25' };
       mockPrismaService.teleworkSchedule.findUnique
-        .mockResolvedValueOnce({ ...mockTelework, date: new Date('2025-11-20') })
+        .mockResolvedValueOnce({
+          ...mockTelework,
+          date: new Date('2025-11-20'),
+        })
         .mockResolvedValueOnce({ id: 'other-telework' });
 
-      await expect(service.update('telework-1', 'user-1', updateDto)).rejects.toThrow(ConflictException);
+      await expect(
+        service.update('telework-1', 'user-1', updateDto),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should update isException', async () => {
       const updateDto = { isException: true };
-      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(mockTelework);
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(
+        mockTelework,
+      );
       mockPrismaService.teleworkSchedule.update.mockResolvedValue({
         ...mockTelework,
         isException: true,
@@ -338,7 +376,9 @@ describe('TeleworkService', () => {
 
   describe('remove', () => {
     it('should delete a telework request', async () => {
-      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(mockTelework);
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(
+        mockTelework,
+      );
       mockPrismaService.teleworkSchedule.delete.mockResolvedValue(mockTelework);
 
       const result = await service.remove('telework-1', 'user-1');
@@ -352,7 +392,9 @@ describe('TeleworkService', () => {
     it('should throw error when telework not found', async () => {
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('invalid', 'user-1')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('invalid', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error when user tries to delete another user telework', async () => {
@@ -361,14 +403,18 @@ describe('TeleworkService', () => {
         userId: 'other-user',
       });
 
-      await expect(service.remove('telework-1', 'user-1')).rejects.toThrow(BadRequestException);
+      await expect(service.remove('telework-1', 'user-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
   describe('getTeamSchedule', () => {
     it('should return team schedule for today', async () => {
       const mockTeleworks = [mockTelework];
-      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue(mockTeleworks);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue(
+        mockTeleworks,
+      );
 
       const result = await service.getTeamSchedule();
 

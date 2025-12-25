@@ -1,1 +1,1 @@
-export const cn = (...args: any[]) => args.join(' ');
+export const cn = (...args: (string | undefined | null | false)[]) => args.filter(Boolean).join(' ');

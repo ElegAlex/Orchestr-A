@@ -93,24 +93,38 @@ describe('UsersService', () => {
     });
 
     it('should throw error when email already exists', async () => {
-      const existingUser = { id: '1', email: createUserDto.email, login: 'otheruser' };
+      const existingUser = {
+        id: '1',
+        email: createUserDto.email,
+        login: 'otheruser',
+      };
       mockPrismaService.user.findFirst.mockResolvedValue(existingUser);
 
-      await expect(service.create(createUserDto)).rejects.toThrow('Cet email est déjà utilisé');
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        'Cet email est déjà utilisé',
+      );
     });
 
     it('should throw error when login already exists', async () => {
-      const existingUser = { id: '1', email: 'other@example.com', login: createUserDto.login };
+      const existingUser = {
+        id: '1',
+        email: 'other@example.com',
+        login: createUserDto.login,
+      };
       mockPrismaService.user.findFirst.mockResolvedValue(existingUser);
 
-      await expect(service.create(createUserDto)).rejects.toThrow('Ce login est déjà utilisé');
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        'Ce login est déjà utilisé',
+      );
     });
 
     it('should throw error when department does not exist', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
       mockPrismaService.department.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(createUserDto)).rejects.toThrow('Département introuvable');
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        'Département introuvable',
+      );
     });
 
     it('should throw error when services do not exist', async () => {
@@ -120,7 +134,9 @@ describe('UsersService', () => {
       mockPrismaService.department.findUnique.mockResolvedValue(mockDepartment);
       mockPrismaService.service.findMany.mockResolvedValue([]);
 
-      await expect(service.create(createUserDto)).rejects.toThrow('Un ou plusieurs services introuvables');
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        'Un ou plusieurs services introuvables',
+      );
     });
   });
 
@@ -182,7 +198,7 @@ describe('UsersService', () => {
       expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { role: 'ADMIN' },
-        })
+        }),
       );
     });
   });
@@ -215,7 +231,9 @@ describe('UsersService', () => {
     it('should throw error when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow('Utilisateur introuvable');
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        'Utilisateur introuvable',
+      );
     });
   });
 
@@ -256,7 +274,9 @@ describe('UsersService', () => {
     it('should throw error when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('nonexistent', updateUserDto)).rejects.toThrow('Utilisateur introuvable');
+      await expect(
+        service.update('nonexistent', updateUserDto),
+      ).rejects.toThrow('Utilisateur introuvable');
     });
   });
 
@@ -292,7 +312,9 @@ describe('UsersService', () => {
     it('should throw error when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('nonexistent')).rejects.toThrow('Utilisateur introuvable');
+      await expect(service.remove('nonexistent')).rejects.toThrow(
+        'Utilisateur introuvable',
+      );
     });
   });
 
@@ -319,7 +341,10 @@ describe('UsersService', () => {
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.update.mockResolvedValue({ ...mockUser, message: 'Mot de passe modifié avec succès' });
+      mockPrismaService.user.update.mockResolvedValue({
+        ...mockUser,
+        message: 'Mot de passe modifié avec succès',
+      });
 
       const result = await service.changePassword('1', changePasswordDto);
 
@@ -350,7 +375,9 @@ describe('UsersService', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      await expect(service.changePassword('1', changePasswordDto)).rejects.toThrow('Mot de passe actuel incorrect');
+      await expect(
+        service.changePassword('1', changePasswordDto),
+      ).rejects.toThrow('Mot de passe actuel incorrect');
     });
   });
 });

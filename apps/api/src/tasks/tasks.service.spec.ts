@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -95,7 +99,9 @@ describe('TasksService', () => {
     it('should throw error when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(createTaskDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create(createTaskDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should create task with epic', async () => {
@@ -114,18 +120,29 @@ describe('TasksService', () => {
 
     it('should throw error when epic not found', async () => {
       const dtoWithEpic = { ...createTaskDto, epicId: 'epic-1' };
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-1' });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
       mockPrismaService.epic.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(dtoWithEpic)).rejects.toThrow(NotFoundException);
+      await expect(service.create(dtoWithEpic)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error when epic belongs to different project', async () => {
       const dtoWithEpic = { ...createTaskDto, epicId: 'epic-1' };
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-1' });
-      mockPrismaService.epic.findUnique.mockResolvedValue({ id: 'epic-1', projectId: 'other-project' });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+      mockPrismaService.epic.findUnique.mockResolvedValue({
+        id: 'epic-1',
+        projectId: 'other-project',
+      });
 
-      await expect(service.create(dtoWithEpic)).rejects.toThrow(BadRequestException);
+      await expect(service.create(dtoWithEpic)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should create task with milestone', async () => {
@@ -144,25 +161,41 @@ describe('TasksService', () => {
 
     it('should throw error when milestone not found', async () => {
       const dtoWithMilestone = { ...createTaskDto, milestoneId: 'milestone-1' };
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-1' });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
       mockPrismaService.milestone.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(dtoWithMilestone)).rejects.toThrow(NotFoundException);
+      await expect(service.create(dtoWithMilestone)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error when milestone belongs to different project', async () => {
       const dtoWithMilestone = { ...createTaskDto, milestoneId: 'milestone-1' };
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-1' });
-      mockPrismaService.milestone.findUnique.mockResolvedValue({ id: 'milestone-1', projectId: 'other-project' });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+      mockPrismaService.milestone.findUnique.mockResolvedValue({
+        id: 'milestone-1',
+        projectId: 'other-project',
+      });
 
-      await expect(service.create(dtoWithMilestone)).rejects.toThrow(BadRequestException);
+      await expect(service.create(dtoWithMilestone)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should create task with assignee', async () => {
       const dtoWithAssignee = { ...createTaskDto, assigneeId: 'user-1' };
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-1' });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.task.create.mockResolvedValue({ id: '1', ...dtoWithAssignee });
+      mockPrismaService.task.create.mockResolvedValue({
+        id: '1',
+        ...dtoWithAssignee,
+      });
 
       const result = await service.create(dtoWithAssignee);
       expect(result.assigneeId).toBe('user-1');
@@ -170,10 +203,14 @@ describe('TasksService', () => {
 
     it('should throw error when assignee not found', async () => {
       const dtoWithAssignee = { ...createTaskDto, assigneeId: 'user-1' };
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-1' });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(dtoWithAssignee)).rejects.toThrow(NotFoundException);
+      await expect(service.create(dtoWithAssignee)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error when end date is before start date', async () => {
@@ -182,9 +219,13 @@ describe('TasksService', () => {
         startDate: '2025-12-01',
         endDate: '2025-11-01',
       };
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-1' });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
 
-      await expect(service.create(dtoWithDates)).rejects.toThrow(BadRequestException);
+      await expect(service.create(dtoWithDates)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should create task with valid dates', async () => {
@@ -193,8 +234,13 @@ describe('TasksService', () => {
         startDate: '2025-11-01',
         endDate: '2025-12-01',
       };
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-1' });
-      mockPrismaService.task.create.mockResolvedValue({ id: '1', ...dtoWithDates });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+      mockPrismaService.task.create.mockResolvedValue({
+        id: '1',
+        ...dtoWithDates,
+      });
 
       const result = await service.create(dtoWithDates);
       expect(result).toBeDefined();
@@ -279,7 +325,9 @@ describe('TasksService', () => {
     it('should throw error when task not found', async () => {
       mockPrismaService.task.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -314,14 +362,21 @@ describe('TasksService', () => {
     it('should throw error when task not found', async () => {
       mockPrismaService.task.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('1', { title: 'Updated' })).rejects.toThrow(NotFoundException);
+      await expect(service.update('1', { title: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should update task with new projectId', async () => {
       const existingTask = { id: '1', projectId: 'project-1' };
       mockPrismaService.task.findUnique.mockResolvedValue(existingTask);
-      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'project-2' });
-      mockPrismaService.task.update.mockResolvedValue({ ...existingTask, projectId: 'project-2' });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-2',
+      });
+      mockPrismaService.task.update.mockResolvedValue({
+        ...existingTask,
+        projectId: 'project-2',
+      });
 
       const result = await service.update('1', { projectId: 'project-2' });
       expect(result.projectId).toBe('project-2');
@@ -331,14 +386,19 @@ describe('TasksService', () => {
       mockPrismaService.task.findUnique.mockResolvedValue({ id: '1' });
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('1', { projectId: 'invalid' })).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update('1', { projectId: 'invalid' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should update task with new epicId', async () => {
       const existingTask = { id: '1', epicId: null };
       mockPrismaService.task.findUnique.mockResolvedValue(existingTask);
       mockPrismaService.epic.findUnique.mockResolvedValue({ id: 'epic-1' });
-      mockPrismaService.task.update.mockResolvedValue({ ...existingTask, epicId: 'epic-1' });
+      mockPrismaService.task.update.mockResolvedValue({
+        ...existingTask,
+        epicId: 'epic-1',
+      });
 
       const result = await service.update('1', { epicId: 'epic-1' });
       expect(result.epicId).toBe('epic-1');
@@ -348,14 +408,21 @@ describe('TasksService', () => {
       mockPrismaService.task.findUnique.mockResolvedValue({ id: '1' });
       mockPrismaService.epic.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('1', { epicId: 'invalid' })).rejects.toThrow(NotFoundException);
+      await expect(service.update('1', { epicId: 'invalid' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should update task with new milestoneId', async () => {
       const existingTask = { id: '1', milestoneId: null };
       mockPrismaService.task.findUnique.mockResolvedValue(existingTask);
-      mockPrismaService.milestone.findUnique.mockResolvedValue({ id: 'milestone-1' });
-      mockPrismaService.task.update.mockResolvedValue({ ...existingTask, milestoneId: 'milestone-1' });
+      mockPrismaService.milestone.findUnique.mockResolvedValue({
+        id: 'milestone-1',
+      });
+      mockPrismaService.task.update.mockResolvedValue({
+        ...existingTask,
+        milestoneId: 'milestone-1',
+      });
 
       const result = await service.update('1', { milestoneId: 'milestone-1' });
       expect(result.milestoneId).toBe('milestone-1');
@@ -365,14 +432,19 @@ describe('TasksService', () => {
       mockPrismaService.task.findUnique.mockResolvedValue({ id: '1' });
       mockPrismaService.milestone.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('1', { milestoneId: 'invalid' })).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update('1', { milestoneId: 'invalid' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should update task with new assigneeId', async () => {
       const existingTask = { id: '1', assigneeId: null };
       mockPrismaService.task.findUnique.mockResolvedValue(existingTask);
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.task.update.mockResolvedValue({ ...existingTask, assigneeId: 'user-1' });
+      mockPrismaService.task.update.mockResolvedValue({
+        ...existingTask,
+        assigneeId: 'user-1',
+      });
 
       const result = await service.update('1', { assigneeId: 'user-1' });
       expect(result.assigneeId).toBe('user-1');
@@ -382,7 +454,9 @@ describe('TasksService', () => {
       mockPrismaService.task.findUnique.mockResolvedValue({ id: '1' });
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('1', { assigneeId: 'invalid' })).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update('1', { assigneeId: 'invalid' }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -434,7 +508,9 @@ describe('TasksService', () => {
       mockPrismaService.taskDependency.findUnique.mockResolvedValue(null);
       mockPrismaService.taskDependency.create.mockResolvedValue(dependency);
 
-      const result = await service.addDependency('task-1', { dependsOnId: 'task-2' });
+      const result = await service.addDependency('task-1', {
+        dependsOnId: 'task-2',
+      });
 
       expect(result).toBeDefined();
       expect(mockPrismaService.taskDependency.create).toHaveBeenCalled();
@@ -443,8 +519,9 @@ describe('TasksService', () => {
     it('should throw error when task not found', async () => {
       mockPrismaService.task.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.addDependency('task-1', { dependsOnId: 'task-2' }))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.addDependency('task-1', { dependsOnId: 'task-2' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw error when depends on task not found', async () => {
@@ -452,8 +529,9 @@ describe('TasksService', () => {
         .mockResolvedValueOnce({ id: 'task-1', projectId: 'project-1' })
         .mockResolvedValueOnce(null);
 
-      await expect(service.addDependency('task-1', { dependsOnId: 'task-2' }))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.addDependency('task-1', { dependsOnId: 'task-2' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw error when tasks belong to different projects', async () => {
@@ -461,8 +539,9 @@ describe('TasksService', () => {
         .mockResolvedValueOnce({ id: 'task-1', projectId: 'project-1' })
         .mockResolvedValueOnce({ id: 'task-2', projectId: 'project-2' });
 
-      await expect(service.addDependency('task-1', { dependsOnId: 'task-2' }))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        service.addDependency('task-1', { dependsOnId: 'task-2' }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw error when dependency already exists', async () => {
@@ -473,10 +552,13 @@ describe('TasksService', () => {
         .mockResolvedValueOnce(task)
         .mockResolvedValueOnce(dependsOnTask);
       mockPrismaService.taskDependency.findMany.mockResolvedValue([]);
-      mockPrismaService.taskDependency.findUnique.mockResolvedValue({ id: 'existing' });
+      mockPrismaService.taskDependency.findUnique.mockResolvedValue({
+        id: 'existing',
+      });
 
-      await expect(service.addDependency('task-1', { dependsOnId: 'task-2' }))
-        .rejects.toThrow(ConflictException);
+      await expect(
+        service.addDependency('task-1', { dependsOnId: 'task-2' }),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should detect circular dependency', async () => {
@@ -491,8 +573,9 @@ describe('TasksService', () => {
         { taskId: 'task-2', dependsOnTaskId: 'task-1' },
       ]);
 
-      await expect(service.addDependency('task-1', { dependsOnId: 'task-2' }))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        service.addDependency('task-1', { dependsOnId: 'task-2' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -512,8 +595,9 @@ describe('TasksService', () => {
     it('should throw error when dependency not found', async () => {
       mockPrismaService.taskDependency.findUnique.mockResolvedValue(null);
 
-      await expect(service.removeDependency('task-1', 'task-2'))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.removeDependency('task-1', 'task-2'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -521,14 +605,21 @@ describe('TasksService', () => {
     it('should assign RACI role successfully', async () => {
       const task = { id: 'task-1' };
       const user = { id: 'user-1' };
-      const raciAssignment = { taskId: 'task-1', userId: 'user-1', role: 'RESPONSIBLE' };
+      const raciAssignment = {
+        taskId: 'task-1',
+        userId: 'user-1',
+        role: 'RESPONSIBLE',
+      };
 
       mockPrismaService.task.findUnique.mockResolvedValue(task);
       mockPrismaService.user.findUnique.mockResolvedValue(user);
       mockPrismaService.taskRACI.findUnique.mockResolvedValue(null);
       mockPrismaService.taskRACI.create.mockResolvedValue(raciAssignment);
 
-      const result = await service.assignRACI('task-1', { userId: 'user-1', role: 'RESPONSIBLE' as any });
+      const result = await service.assignRACI('task-1', {
+        userId: 'user-1',
+        role: 'RESPONSIBLE' as any,
+      });
 
       expect(result).toBeDefined();
       expect(result.role).toBe('RESPONSIBLE');
@@ -537,25 +628,39 @@ describe('TasksService', () => {
     it('should throw error when task not found', async () => {
       mockPrismaService.task.findUnique.mockResolvedValue(null);
 
-      await expect(service.assignRACI('task-1', { userId: 'user-1', role: 'RESPONSIBLE' as any }))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.assignRACI('task-1', {
+          userId: 'user-1',
+          role: 'RESPONSIBLE' as any,
+        }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw error when user not found', async () => {
       mockPrismaService.task.findUnique.mockResolvedValue({ id: 'task-1' });
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.assignRACI('task-1', { userId: 'user-1', role: 'RESPONSIBLE' as any }))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.assignRACI('task-1', {
+          userId: 'user-1',
+          role: 'RESPONSIBLE' as any,
+        }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw error when RACI assignment already exists', async () => {
       mockPrismaService.task.findUnique.mockResolvedValue({ id: 'task-1' });
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.taskRACI.findUnique.mockResolvedValue({ id: 'existing' });
+      mockPrismaService.taskRACI.findUnique.mockResolvedValue({
+        id: 'existing',
+      });
 
-      await expect(service.assignRACI('task-1', { userId: 'user-1', role: 'RESPONSIBLE' as any }))
-        .rejects.toThrow(ConflictException);
+      await expect(
+        service.assignRACI('task-1', {
+          userId: 'user-1',
+          role: 'RESPONSIBLE' as any,
+        }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
@@ -568,7 +673,11 @@ describe('TasksService', () => {
       });
       mockPrismaService.taskRACI.delete.mockResolvedValue({});
 
-      const result = await service.removeRACI('task-1', 'user-1', 'RESPONSIBLE');
+      const result = await service.removeRACI(
+        'task-1',
+        'user-1',
+        'RESPONSIBLE',
+      );
 
       expect(result.message).toBe('Assignation RACI supprimée avec succès');
     });
@@ -576,8 +685,9 @@ describe('TasksService', () => {
     it('should throw error when RACI assignment not found', async () => {
       mockPrismaService.taskRACI.findUnique.mockResolvedValue(null);
 
-      await expect(service.removeRACI('task-1', 'user-1', 'RESPONSIBLE'))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.removeRACI('task-1', 'user-1', 'RESPONSIBLE'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -620,8 +730,9 @@ describe('TasksService', () => {
     it('should throw error when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.getTasksByProject('invalid'))
-        .rejects.toThrow(NotFoundException);
+      await expect(service.getTasksByProject('invalid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

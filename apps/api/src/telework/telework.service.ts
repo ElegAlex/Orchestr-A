@@ -16,7 +16,12 @@ export class TeleworkService {
    * Créer une journée de télétravail
    */
   async create(currentUserId: string, createTeleworkDto: CreateTeleworkDto) {
-    const { date, isTelework = true, isException = false, userId: targetUserId } = createTeleworkDto;
+    const {
+      date,
+      isTelework = true,
+      isException = false,
+      userId: targetUserId,
+    } = createTeleworkDto;
 
     // Utiliser le userId du DTO si fourni (admin/manager), sinon l'utilisateur connecté
     const userId = targetUserId || currentUserId;
@@ -43,9 +48,7 @@ export class TeleworkService {
     });
 
     if (existing) {
-      throw new ConflictException(
-        'Un télétravail existe déjà pour cette date',
-      );
+      throw new ConflictException('Un télétravail existe déjà pour cette date');
     }
 
     const telework = await this.prisma.teleworkSchedule.create({

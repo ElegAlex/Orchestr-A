@@ -12,7 +12,7 @@ import { Role } from 'database';
 
 export class RegisterDto {
   @ApiProperty({
-    description: 'Email de l\'utilisateur',
+    description: "Email de l'utilisateur",
     example: 'jean.dupont@orchestr-a.internal',
   })
   @IsEmail()
@@ -51,7 +51,7 @@ export class RegisterDto {
   lastName: string;
 
   @ApiProperty({
-    description: 'Rôle de l\'utilisateur',
+    description: "Rôle de l'utilisateur",
     enum: Role,
     example: Role.CONTRIBUTEUR,
     required: false,

@@ -28,11 +28,6 @@ export default function SkillsPage() {
     description: '',
   });
 
-  const [assignForm, setAssignForm] = useState({
-    skillIds: [] as string[],
-    level: '' as SkillLevel | '',
-  });
-
   const [skillsToAssign, setSkillsToAssign] = useState<Array<{ skillId: string; level: SkillLevel }>>([]);
 
   const canManageSkills = currentUser?.role === Role.ADMIN || currentUser?.role === Role.RESPONSABLE;
@@ -57,8 +52,8 @@ export default function SkillsPage() {
         selectedCategory || undefined
       );
       setSkills(response.data || []);
-    } catch (error) {
-      console.error('Erreur lors du chargement des compétences:', error);
+    } catch (err) {
+      console.error('Erreur lors du chargement des compétences:', err);
     } finally {
       setLoading(false);
     }
@@ -72,19 +67,18 @@ export default function SkillsPage() {
       if (usersData.length > 0 && !selectedUser) {
         setSelectedUser(usersData[0].id);
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement des utilisateurs:', error);
+    } catch (err) {
+      console.error('Erreur lors du chargement des utilisateurs:', err);
     }
   };
 
   const fetchUserSkills = async (userId: string) => {
     try {
       const response = await skillsService.getUserSkills(userId);
-      // Le backend retourne { userId, total, skills, byCategory }
-      const skillsData = response?.skills || [];
-      setUserSkills(Array.isArray(skillsData) ? skillsData : []);
-    } catch (error) {
-      console.error('Erreur lors du chargement des compétences utilisateur:', error);
+      // Le service retourne directement UserSkill[]
+      setUserSkills(Array.isArray(response) ? response : []);
+    } catch (err) {
+      console.error('Erreur lors du chargement des compétences utilisateur:', err);
       setUserSkills([]);
     }
   };
@@ -101,7 +95,7 @@ export default function SkillsPage() {
       setShowCreateSkillModal(false);
       setSkillForm({ name: '', category: '', description: '' });
       fetchSkills();
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors de la création');
     }
   };
@@ -121,7 +115,7 @@ export default function SkillsPage() {
       setEditingSkill(null);
       setSkillForm({ name: '', category: '', description: '' });
       fetchSkills();
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors de la modification');
     }
   };
@@ -133,7 +127,7 @@ export default function SkillsPage() {
       await skillsService.delete(id);
       toast.success('Compétence supprimée');
       fetchSkills();
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors de la suppression');
     }
   };
@@ -180,7 +174,7 @@ export default function SkillsPage() {
       setShowAssignModal(false);
       setSkillsToAssign([]);
       await fetchUserSkills(selectedUser);
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors de l\'assignation');
     }
   };
@@ -192,7 +186,7 @@ export default function SkillsPage() {
       await skillsService.removeFromUser(userId, skillId);
       toast.success('Compétence retirée');
       fetchUserSkills(userId);
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors du retrait');
     }
   };
@@ -202,7 +196,7 @@ export default function SkillsPage() {
       await skillsService.updateUserSkill(userId, skillId, { level: newLevel });
       toast.success('Niveau mis à jour');
       fetchUserSkills(userId);
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors de la mise à jour');
     }
   };
@@ -225,16 +219,6 @@ export default function SkillsPage() {
       BUSINESS: 'bg-orange-100 text-orange-800',
     };
     return colors[category];
-  };
-
-  const getLevelLabel = (level: SkillLevel): string => {
-    const labels: Record<SkillLevel, string> = {
-      BEGINNER: 'Débutant',
-      INTERMEDIATE: 'Intermédiaire',
-      EXPERT: 'Expert',
-      MASTER: 'Maître',
-    };
-    return labels[level];
   };
 
   const getLevelColor = (level: SkillLevel): string => {

@@ -12,8 +12,8 @@ import {
 jest.mock('@/stores/settings.store', () => ({
   useSettingsStore: Object.assign(
     jest.fn(() => ({
-      getSetting: jest.fn((key: string, defaultValue: any) => {
-        const defaults: Record<string, any> = {
+      getSetting: jest.fn((key: string, defaultValue: string) => {
+        const defaults: Record<string, string> = {
           dateFormat: 'dd/MM/yyyy',
           timeFormat: 'HH:mm',
           dateTimeFormat: 'dd/MM/yyyy HH:mm',
@@ -24,8 +24,8 @@ jest.mock('@/stores/settings.store', () => ({
     })),
     {
       getState: jest.fn(() => ({
-        getSetting: (key: string, defaultValue: any) => {
-          const defaults: Record<string, any> = {
+        getSetting: (key: string, defaultValue: string) => {
+          const defaults: Record<string, string> = {
             dateFormat: 'dd/MM/yyyy',
             timeFormat: 'HH:mm',
             dateTimeFormat: 'dd/MM/yyyy HH:mm',

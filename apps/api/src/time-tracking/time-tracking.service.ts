@@ -303,11 +303,7 @@ export class TimeTrackingService {
   /**
    * Récupérer les entrées de temps d'un utilisateur
    */
-  async getUserEntries(
-    userId: string,
-    startDate?: string,
-    endDate?: string,
-  ) {
+  async getUserEntries(userId: string, startDate?: string, endDate?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -363,11 +359,7 @@ export class TimeTrackingService {
   /**
    * Récupérer le rapport de temps d'un utilisateur
    */
-  async getUserReport(
-    userId: string,
-    startDate: string,
-    endDate: string,
-  ) {
+  async getUserReport(userId: string, startDate: string, endDate: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -536,12 +528,13 @@ export class TimeTrackingService {
     return {
       projectId,
       projectName: project.name,
-      period: startDate && endDate
-        ? {
-            start: new Date(startDate),
-            end: new Date(endDate),
-          }
-        : null,
+      period:
+        startDate && endDate
+          ? {
+              start: new Date(startDate),
+              end: new Date(endDate),
+            }
+          : null,
       totalHours,
       totalEntries: entries.length,
       byUser: Object.values(byUser),
@@ -549,5 +542,4 @@ export class TimeTrackingService {
       entries,
     };
   }
-
 }

@@ -71,7 +71,9 @@ describe('MilestonesService', () => {
     it('should throw error when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(createMilestoneDto)).rejects.toThrow('Projet introuvable');
+      await expect(service.create(createMilestoneDto)).rejects.toThrow(
+        'Projet introuvable',
+      );
     });
   });
 
@@ -123,7 +125,9 @@ describe('MilestonesService', () => {
     it('should throw error when milestone not found', async () => {
       mockPrismaService.milestone.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow('Milestone introuvable');
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        'Milestone introuvable',
+      );
     });
   });
 
@@ -146,7 +150,9 @@ describe('MilestonesService', () => {
         ...updateDto,
       };
 
-      mockPrismaService.milestone.findUnique.mockResolvedValue(existingMilestone);
+      mockPrismaService.milestone.findUnique.mockResolvedValue(
+        existingMilestone,
+      );
       mockPrismaService.milestone.update.mockResolvedValue(updatedMilestone);
 
       const result = await service.update('1', updateDto);

@@ -48,9 +48,10 @@ export default function TimeTrackingPage() {
         try {
           const projectsData = await projectsService.getByUser(user.id);
           setProjects(Array.isArray(projectsData) ? projectsData : []);
-        } catch (error: any) {
+        } catch (err) {
           setProjects([]);
-          if (error.response?.status !== 404) console.error('Error fetching projects:', error);
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) console.error('Error fetching projects:', err);
         }
       }
 
@@ -59,15 +60,17 @@ export default function TimeTrackingPage() {
         try {
           const tasksData = await tasksService.getByAssignee(user.id);
           setTasks(Array.isArray(tasksData) ? tasksData : []);
-        } catch (error: any) {
+        } catch (err) {
           setTasks([]);
-          if (error.response?.status !== 404) console.error('Error fetching tasks:', error);
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) console.error('Error fetching tasks:', err);
         }
       }
-    } catch (error: any) {
-      if (error.response?.status !== 404) {
+    } catch (err) {
+      const axiosError = err as { response?: { status?: number } };
+      if (axiosError.response?.status !== 404) {
         toast.error('Erreur lors du chargement des données');
-        console.error(error);
+        console.error(err);
       }
     } finally {
       setLoading(false);
@@ -86,9 +89,10 @@ export default function TimeTrackingPage() {
       setShowCreateModal(false);
       resetForm();
       fetchData();
-    } catch (error: any) {
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || "Erreur lors de l'enregistrement"
+        axiosError.response?.data?.message || "Erreur lors de l'enregistrement"
       );
     }
   };
@@ -100,7 +104,7 @@ export default function TimeTrackingPage() {
       await timeTrackingService.delete(id);
       toast.success('Entrée supprimée');
       fetchData();
-    } catch (error: any) {
+    } catch {
       toast.error('Erreur lors de la suppression');
     }
   };
@@ -415,7 +419,7 @@ export default function TimeTrackingPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Type d'activité *
+                  Type d&apos;activité *
                 </label>
                 <select
                   required

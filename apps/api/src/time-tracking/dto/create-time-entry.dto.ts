@@ -14,7 +14,7 @@ import { ActivityType } from 'database';
 
 export class CreateTimeEntryDto {
   @ApiProperty({
-    description: 'Date de l\'entrée de temps',
+    description: "Date de l'entrée de temps",
     example: '2025-11-15T00:00:00Z',
   })
   @IsDateString()
@@ -22,7 +22,7 @@ export class CreateTimeEntryDto {
   date: string;
 
   @ApiProperty({
-    description: 'Nombre d\'heures',
+    description: "Nombre d'heures",
     example: 4.5,
     minimum: 0.25,
     maximum: 24,
@@ -34,7 +34,7 @@ export class CreateTimeEntryDto {
   hours: number;
 
   @ApiProperty({
-    description: 'Type d\'activité',
+    description: "Type d'activité",
     enum: ActivityType,
     example: ActivityType.DEVELOPMENT,
   })
@@ -61,7 +61,7 @@ export class CreateTimeEntryDto {
   projectId?: string;
 
   @ApiProperty({
-    description: 'Description de l\'activité',
+    description: "Description de l'activité",
     example: 'Développement du module Auth',
     required: false,
   })

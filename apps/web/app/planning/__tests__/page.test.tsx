@@ -6,7 +6,7 @@ jest.mock('@/components/MainLayout', () => ({
 }));
 
 jest.mock('@/components/planning/PlanningView', () => ({
-  PlanningView: (props: any) => (
+  PlanningView: (props: { showFilters: boolean; showControls: boolean; showGroupHeaders: boolean; showLegend: boolean }) => (
     <div data-testid="planning-view">
       <span data-testid="show-filters">{String(props.showFilters)}</span>
       <span data-testid="show-controls">{String(props.showControls)}</span>

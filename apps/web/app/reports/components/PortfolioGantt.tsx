@@ -11,7 +11,6 @@ import {
   startOfWeek,
   endOfWeek,
   addWeeks,
-  differenceInWeeks,
   getISOWeek
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -77,7 +76,7 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
   const visibleRange = getVisibleRange();
 
   // Calculer les colonnes de temps
-  const getTimeData = (): { totalUnits: number; columns: any[] } => {
+  const getTimeData = (): { totalUnits: number; columns: Array<{ date: Date; label: string; sublabel: string; width: number }> } => {
     switch (timeScale) {
       case 'day': {
         const totalDays = differenceInDays(visibleRange.end, visibleRange.start) + 1;
@@ -97,7 +96,6 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
       }
 
       case 'week': {
-        const totalWeeks = differenceInWeeks(visibleRange.end, visibleRange.start) + 1;
         const columns = [];
         let currentWeek = visibleRange.start;
 
@@ -224,7 +222,7 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
     <div className="bg-white rounded-lg shadow p-6 h-full flex flex-col">
       {/* En-tête avec contrôles */}
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold">Gantt Portfolio - Vue d'ensemble des Projets</h3>
+        <h3 className="text-lg font-semibold">Gantt Portfolio - Vue d&apos;ensemble des Projets</h3>
 
         <div className="flex items-center gap-4">
           {/* Sélecteur d'échelle */}
@@ -252,7 +250,7 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
               className="px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
               title="Aujourd'hui"
             >
-              Aujourd'hui
+              Aujourd&apos;hui
             </button>
             <button
               onClick={() => navigateTime('next')}
