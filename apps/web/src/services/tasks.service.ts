@@ -155,6 +155,32 @@ export const tasksService = {
     }>(`/tasks/project/${projectId}/import`, { tasks });
     return response.data;
   },
+
+  /**
+   * Recupere les taches orphelines (sans projet)
+   */
+  async getOrphans(): Promise<Task[]> {
+    const response = await api.get<Task[]>('/tasks/orphans');
+    return response.data;
+  },
+
+  /**
+   * Rattache une tache a un projet
+   */
+  async attachToProject(taskId: string, projectId: string): Promise<Task> {
+    const response = await api.post<Task>(`/tasks/${taskId}/attach-project`, {
+      projectId,
+    });
+    return response.data;
+  },
+
+  /**
+   * Detache une tache de son projet (la rend orpheline)
+   */
+  async detachFromProject(taskId: string): Promise<Task> {
+    const response = await api.post<Task>(`/tasks/${taskId}/detach-project`);
+    return response.data;
+  },
 };
 
 // Types pour la prévisualisation d'import

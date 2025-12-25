@@ -102,6 +102,16 @@ export class TasksController {
     return this.tasksService.getTasksByProject(projectId);
   }
 
+  @Get('orphans')
+  @ApiOperation({ summary: 'Récupérer les tâches orphelines (sans projet)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des tâches orphelines',
+  })
+  findOrphans() {
+    return this.tasksService.findOrphans();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Récupérer une tâche par ID avec tous les détails' })
   @ApiResponse({
@@ -291,5 +301,38 @@ export class TasksController {
   })
   getImportTemplate() {
     return { template: this.tasksService.getImportTemplate() };
+  }
+
+  @Post(':id/attach-project')
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.REFERENT_TECHNIQUE)
+  @ApiOperation({ summary: 'Rattacher une tâche orpheline à un projet' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tâche rattachée au projet',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Tâche ou projet introuvable',
+  })
+  attachToProject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('projectId', ParseUUIDPipe) projectId: string,
+  ) {
+    return this.tasksService.attachToProject(id, projectId);
+  }
+
+  @Post(':id/detach-project')
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.REFERENT_TECHNIQUE)
+  @ApiOperation({ summary: 'Détacher une tâche de son projet (rend la tâche orpheline)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tâche détachée du projet',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Tâche introuvable',
+  })
+  detachFromProject(@Param('id', ParseUUIDPipe) id: string) {
+    return this.tasksService.detachFromProject(id);
   }
 }

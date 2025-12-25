@@ -10,6 +10,7 @@ import {
   MaxLength,
   MinLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { TaskStatus, Priority } from 'database';
 
@@ -54,12 +55,15 @@ export class CreateTaskDto {
   priority?: Priority;
 
   @ApiProperty({
-    description: 'ID du projet auquel appartient la tâche',
+    description: 'ID du projet auquel appartient la tâche (optionnel pour les tâches orphelines)',
     example: 'uuid-here',
+    required: false,
+    nullable: true,
   })
+  @ValidateIf((o) => o.projectId !== null && o.projectId !== undefined && o.projectId !== '')
   @IsUUID()
-  @IsNotEmpty()
-  projectId: string;
+  @IsOptional()
+  projectId?: string | null;
 
   @ApiProperty({
     description: 'ID de l\'epic parent (optionnel)',

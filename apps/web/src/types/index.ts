@@ -89,6 +89,13 @@ export enum SkillLevel {
   MASTER = 'MASTER',
 }
 
+export enum HolidayType {
+  LEGAL = 'LEGAL',
+  BRIDGE = 'BRIDGE',
+  CLOSURE = 'CLOSURE',
+  CUSTOM = 'CUSTOM',
+}
+
 // ===========================
 // USERS & AUTHENTICATION
 // ===========================
@@ -308,7 +315,7 @@ export interface Task {
   description?: string;
   status: TaskStatus;
   priority: Priority;
-  projectId: string;
+  projectId?: string | null; // Nullable pour les tâches orphelines
   epicId?: string;
   milestoneId?: string;
   assigneeId?: string;
@@ -318,7 +325,7 @@ export interface Task {
   endDate?: string;
   createdAt: string;
   updatedAt: string;
-  project?: Project;
+  project?: Project | null;
   epic?: Epic;
   milestone?: Milestone;
   assignee?: User;
@@ -340,7 +347,7 @@ export interface CreateTaskDto {
   description?: string;
   status?: TaskStatus;
   priority?: Priority;
-  projectId: string;
+  projectId?: string | null; // Optionnel pour les tâches orphelines
   epicId?: string;
   milestoneId?: string;
   assigneeId?: string;
@@ -537,3 +544,61 @@ export interface ApiError {
   error?: string;
   statusCode: number;
 }
+
+// ===========================
+// HOLIDAYS (JOURS FERIES)
+// ===========================
+
+export interface Holiday {
+  id: string;
+  date: string;
+  name: string;
+  type: HolidayType;
+  isWorkDay: boolean;
+  description?: string;
+  recurring: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface CreateHolidayDto {
+  date: string;
+  name: string;
+  type?: HolidayType;
+  isWorkDay?: boolean;
+  description?: string;
+  recurring?: boolean;
+}
+
+export interface UpdateHolidayDto {
+  date?: string;
+  name?: string;
+  type?: HolidayType;
+  isWorkDay?: boolean;
+  description?: string;
+  recurring?: boolean;
+}
+
+export interface ImportFrenchHolidaysResult {
+  created: number;
+  skipped: number;
+}
+
+export const HOLIDAY_TYPE_LABELS: Record<HolidayType, string> = {
+  [HolidayType.LEGAL]: 'Ferie legal',
+  [HolidayType.BRIDGE]: 'Pont',
+  [HolidayType.CLOSURE]: 'Fermeture exceptionnelle',
+  [HolidayType.CUSTOM]: 'Personnalise',
+};
+
+export const HOLIDAY_TYPE_COLORS: Record<HolidayType, string> = {
+  [HolidayType.LEGAL]: 'bg-red-100 text-red-800',
+  [HolidayType.BRIDGE]: 'bg-orange-100 text-orange-800',
+  [HolidayType.CLOSURE]: 'bg-purple-100 text-purple-800',
+  [HolidayType.CUSTOM]: 'bg-gray-100 text-gray-800',
+};

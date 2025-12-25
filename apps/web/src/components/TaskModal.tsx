@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Task, TaskStatus, Priority, Milestone, User } from '@/types';
+import { Task, TaskStatus, Priority, Milestone, User, Project } from '@/types';
 import toast from 'react-hot-toast';
 
 interface TaskModalProps {
@@ -9,7 +9,8 @@ interface TaskModalProps {
   onClose: () => void;
   onSave: (data: any) => Promise<void>;
   task?: Task | null;
-  projectId: string;
+  projectId?: string | null; // Rendu optionnel pour les taches orphelines
+  projects?: Project[]; // Liste des projets disponibles
   milestones?: Milestone[];
   users?: User[];
 }
@@ -20,6 +21,7 @@ export function TaskModal({
   onSave,
   task,
   projectId,
+  projects = [],
   milestones = [],
   users = [],
 }: TaskModalProps) {
@@ -28,6 +30,7 @@ export function TaskModal({
     description: '',
     status: TaskStatus.TODO,
     priority: Priority.NORMAL,
+    projectId: projectId || '',
     milestoneId: '',
     assigneeId: '',
     estimatedHours: '',
@@ -44,6 +47,7 @@ export function TaskModal({
         description: task.description || '',
         status: task.status || TaskStatus.TODO,
         priority: task.priority || Priority.NORMAL,
+        projectId: task.projectId || '',
         milestoneId: task.milestoneId || '',
         assigneeId: task.assigneeId || '',
         estimatedHours: task.estimatedHours?.toString() || '',
@@ -60,6 +64,7 @@ export function TaskModal({
         description: '',
         status: TaskStatus.TODO,
         priority: Priority.NORMAL,
+        projectId: projectId || '',
         milestoneId: '',
         assigneeId: '',
         estimatedHours: '',
@@ -67,13 +72,13 @@ export function TaskModal({
         endDate: '',
       });
     }
-  }, [task]);
+  }, [task, projectId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.title.trim()) {
-      toast.error('Le titre de la tâche est obligatoire');
+      toast.error('Le titre de la tache est obligatoire');
       return;
     }
 
@@ -85,10 +90,14 @@ export function TaskModal({
         description: formData.description,
         status: formData.status,
         priority: formData.priority,
-        projectId,
+        // projectId peut etre null pour les taches orphelines
+        projectId: formData.projectId || null,
       };
 
-      if (formData.milestoneId) taskData.milestoneId = formData.milestoneId;
+      // milestoneId seulement si un projet est selectionne
+      if (formData.milestoneId && formData.projectId) {
+        taskData.milestoneId = formData.milestoneId;
+      }
       if (formData.assigneeId) taskData.assigneeId = formData.assigneeId;
       if (formData.estimatedHours) taskData.estimatedHours = parseFloat(formData.estimatedHours);
       if (formData.startDate) taskData.startDate = new Date(formData.startDate).toISOString();
@@ -102,6 +111,14 @@ export function TaskModal({
       setIsSubmitting(false);
     }
   };
+
+  // Filtrer les milestones par projet selectionne
+  const filteredMilestones = formData.projectId
+    ? milestones.filter((m) => m.projectId === formData.projectId)
+    : [];
+
+  // Indique si le selecteur de projet doit etre affiche
+  const showProjectSelector = projects.length > 0 && !projectId;
 
   if (!isOpen) return null;
 
@@ -150,9 +167,39 @@ export function TaskModal({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Décrivez la tâche..."
+              placeholder="Decrivez la tache..."
             />
           </div>
+
+          {/* Selecteur de projet (affiche uniquement si pas de projectId fixe) */}
+          {showProjectSelector && (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Projet
+              </label>
+              <select
+                value={formData.projectId}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    projectId: e.target.value,
+                    milestoneId: '', // Reset milestone when project changes
+                  });
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Aucun projet (tache independante)</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Laissez vide pour une tache hors projet (reunion, tache transverse...)
+              </p>
+            </div>
+          )}
 
           {/* Statut et Priorité */}
           <div className="grid grid-cols-2 gap-4">
@@ -200,9 +247,12 @@ export function TaskModal({
                 value={formData.milestoneId}
                 onChange={(e) => setFormData({ ...formData, milestoneId: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!formData.projectId}
               >
-                <option value="">Aucun jalon</option>
-                {milestones.map((milestone) => (
+                <option value="">
+                  {formData.projectId ? 'Aucun jalon' : 'Selectionnez un projet d\'abord'}
+                </option>
+                {filteredMilestones.map((milestone) => (
                   <option key={milestone.id} value={milestone.id}>
                     {milestone.name}
                   </option>
