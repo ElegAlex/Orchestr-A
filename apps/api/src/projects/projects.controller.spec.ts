@@ -7,6 +7,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { ProjectStatus } from 'database';
 
 describe('ProjectsController', () => {
   let controller: ProjectsController;
@@ -144,7 +145,7 @@ describe('ProjectsController', () => {
 
       mockProjectsService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10, 'ACTIVE' as any);
+      const result = await controller.findAll(1, 10, ProjectStatus.ACTIVE);
 
       expect(result.data[0].status).toBe('ACTIVE');
       expect(mockProjectsService.findAll).toHaveBeenCalledWith(1, 10, 'ACTIVE');

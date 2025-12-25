@@ -7,6 +7,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { TaskStatus, RACIRole } from 'database';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -269,11 +270,11 @@ describe('TasksService', () => {
       mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.task.count.mockResolvedValue(0);
 
-      await service.findAll(1, 10, 'TODO' as any);
+      await service.findAll(1, 10, TaskStatus.TODO);
 
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ status: 'TODO' }),
+          where: expect.objectContaining({ status: 'TODO' }) as object,
         }),
       );
     });
@@ -286,7 +287,7 @@ describe('TasksService', () => {
 
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ projectId: 'project-1' }),
+          where: expect.objectContaining({ projectId: 'project-1' }) as object,
         }),
       );
     });
@@ -299,7 +300,7 @@ describe('TasksService', () => {
 
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ assigneeId: 'user-1' }),
+          where: expect.objectContaining({ assigneeId: 'user-1' }) as object,
         }),
       );
     });
@@ -618,7 +619,7 @@ describe('TasksService', () => {
 
       const result = await service.assignRACI('task-1', {
         userId: 'user-1',
-        role: 'RESPONSIBLE' as any,
+        role: RACIRole.RESPONSIBLE,
       });
 
       expect(result).toBeDefined();
@@ -631,7 +632,7 @@ describe('TasksService', () => {
       await expect(
         service.assignRACI('task-1', {
           userId: 'user-1',
-          role: 'RESPONSIBLE' as any,
+          role: RACIRole.RESPONSIBLE,
         }),
       ).rejects.toThrow(NotFoundException);
     });
@@ -643,7 +644,7 @@ describe('TasksService', () => {
       await expect(
         service.assignRACI('task-1', {
           userId: 'user-1',
-          role: 'RESPONSIBLE' as any,
+          role: RACIRole.RESPONSIBLE,
         }),
       ).rejects.toThrow(NotFoundException);
     });
@@ -658,7 +659,7 @@ describe('TasksService', () => {
       await expect(
         service.assignRACI('task-1', {
           userId: 'user-1',
-          role: 'RESPONSIBLE' as any,
+          role: RACIRole.RESPONSIBLE,
         }),
       ).rejects.toThrow(ConflictException);
     });

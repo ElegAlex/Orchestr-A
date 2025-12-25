@@ -7,6 +7,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { SkillCategory, SkillLevel } from 'database';
 
 describe('SkillsController', () => {
   let controller: SkillsController;
@@ -115,7 +116,7 @@ describe('SkillsController', () => {
 
       mockSkillsService.findAll.mockResolvedValue(technicalSkills);
 
-      const result = await controller.findAll(1, 10, 'TECHNICAL' as any);
+      const result = await controller.findAll(1, 10, SkillCategory.TECHNICAL);
 
       expect(result.data[0].category).toBe('TECHNICAL');
       expect(mockSkillsService.findAll).toHaveBeenCalledWith(
@@ -182,7 +183,7 @@ describe('SkillsController', () => {
       const matrix = { users: [], skills: [], data: [] };
       mockSkillsService.getSkillsMatrix.mockResolvedValue(matrix);
 
-      await controller.getMatrix(undefined, 'TECHNICAL' as any);
+      await controller.getMatrix(undefined, SkillCategory.TECHNICAL);
 
       expect(mockSkillsService.getSkillsMatrix).toHaveBeenCalledWith(
         undefined,
@@ -217,7 +218,7 @@ describe('SkillsController', () => {
       const experts = [{ userId: 'user-1', level: 'EXPERT' }];
       mockSkillsService.findUsersBySkill.mockResolvedValue(experts);
 
-      await controller.findUsersBySkill('skill-id-1', 'EXPERT' as any);
+      await controller.findUsersBySkill('skill-id-1', SkillLevel.EXPERT);
 
       expect(mockSkillsService.findUsersBySkill).toHaveBeenCalledWith(
         'skill-id-1',
@@ -430,7 +431,7 @@ describe('SkillsController', () => {
         'user-id-1',
         'skill-id-1',
         {
-          level: 'MASTER' as any,
+          level: SkillLevel.MASTER,
         },
       );
 

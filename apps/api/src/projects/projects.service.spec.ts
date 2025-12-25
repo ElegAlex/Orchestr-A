@@ -145,7 +145,9 @@ describe('ProjectsService', () => {
 
       expect(mockPrismaService.project.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ status: ProjectStatus.DRAFT }),
+          data: expect.objectContaining({
+            status: ProjectStatus.DRAFT,
+          }) as object,
         }),
       );
     });
@@ -164,7 +166,9 @@ describe('ProjectsService', () => {
 
       expect(mockPrismaService.project.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ status: ProjectStatus.ACTIVE }),
+          data: expect.objectContaining({
+            status: ProjectStatus.ACTIVE,
+          }) as object,
         }),
       );
     });

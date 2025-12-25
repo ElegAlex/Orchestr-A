@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MilestonesController } from './milestones.controller';
 import { MilestonesService } from './milestones.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { MilestoneStatus } from 'database';
 
 describe('MilestonesController', () => {
   let controller: MilestonesController;
@@ -132,7 +133,7 @@ describe('MilestonesController', () => {
 
       mockMilestonesService.findAll.mockResolvedValue(pendingMilestones);
 
-      await controller.findAll(1, 10, undefined, 'PENDING' as any);
+      await controller.findAll(1, 10, undefined, MilestoneStatus.PENDING);
 
       expect(mockMilestonesService.findAll).toHaveBeenCalledWith(
         1,
