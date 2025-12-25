@@ -495,27 +495,28 @@ export class TasksService {
     }
 
     // Déterminer l'assigné principal
-    // Si assigneeIds est fourni, on utilise le premier comme assigneeId principal
+    // Si assigneeIds est fourni avec des valeurs, on utilise le premier comme assigneeId principal
+    // Vérifier que assigneeIds est EXPLICITEMENT présent dans le DTO original
+    const hasAssigneeIds = 'assigneeIds' in updateTaskDto && Array.isArray(assigneeIds) && assigneeIds.length > 0;
     let primaryAssigneeId: string | undefined = assigneeId;
-    if (assigneeIds !== undefined) {
-      primaryAssigneeId = assigneeIds.length > 0 ? assigneeIds[0] : undefined;
+    if (hasAssigneeIds) {
+      primaryAssigneeId = assigneeIds[0];
     }
 
     // Mise à jour de la tâche avec transaction pour gérer les assignations multiples
     const task = await this.prisma.$transaction(async (tx) => {
-      // Si assigneeIds est fourni, mettre à jour les assignations
-      if (assigneeIds !== undefined) {
+      // Si assigneeIds est EXPLICITEMENT fourni dans le body avec des valeurs non-vides,
+      // mettre à jour les assignations. Sinon, on ne touche pas aux assignations existantes.
+      if (hasAssigneeIds) {
         // Supprimer toutes les anciennes assignations
         await tx.taskAssignee.deleteMany({
           where: { taskId: id },
         });
 
         // Créer les nouvelles assignations
-        if (assigneeIds.length > 0) {
-          await tx.taskAssignee.createMany({
-            data: assigneeIds.map((userId) => ({ taskId: id, userId })),
-          });
-        }
+        await tx.taskAssignee.createMany({
+          data: assigneeIds.map((userId) => ({ taskId: id, userId })),
+        });
       }
 
       // Mettre à jour la tâche

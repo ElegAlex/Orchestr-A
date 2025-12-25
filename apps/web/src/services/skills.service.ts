@@ -88,8 +88,9 @@ export const skillsService = {
 
   // Récupérer les compétences d'un utilisateur
   async getUserSkills(userId: string): Promise<UserSkill[]> {
-    const response = await api.get<UserSkill[]>(`/skills/user/${userId}`);
-    return response.data;
+    // L'API retourne { userId, total, skills, byCategory } - on extrait le tableau skills
+    const response = await api.get<{ userId: string; total: number; skills: UserSkill[]; byCategory: Record<string, UserSkill[]> }>(`/skills/user/${userId}`);
+    return response.data.skills || [];
   },
 
   // Récupérer mes compétences

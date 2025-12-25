@@ -65,17 +65,6 @@ const DEFAULT_SETTINGS: Record<string, SettingConfig> = {
     category: 'general',
     description: 'Nombre maximum de jours de télétravail par semaine',
   },
-  // Notifications settings
-  emailNotifications: {
-    value: true,
-    category: 'notifications',
-    description: 'Activer les notifications par email',
-  },
-  leaveRequestNotifications: {
-    value: true,
-    category: 'notifications',
-    description: 'Notifier les managers des nouvelles demandes de congés',
-  },
 };
 
 @Injectable()

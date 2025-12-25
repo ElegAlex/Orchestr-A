@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { HolidaysManager } from '@/components/holidays/HolidaysManager';
 
-type CategoryTab = 'display' | 'notifications' | 'holidays';
+type CategoryTab = 'display' | 'holidays';
 
 const DATE_FORMAT_OPTIONS = [
   { value: 'dd/MM/yyyy', label: 'JJ/MM/AAAA (31/12/2025)', example: '31/12/2025' },
@@ -186,16 +186,6 @@ export default function SettingsPage() {
               Affichage
             </button>
             <button
-              onClick={() => setActiveTab('notifications')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'notifications'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Notifications
-            </button>
-            <button
               onClick={() => setActiveTab('holidays')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'holidays'
@@ -291,60 +281,6 @@ export default function SettingsPage() {
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
-          )}
-
-          {/* Notifications Settings */}
-          {activeTab === 'notifications' && (
-            <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Paramètres de notifications</h2>
-
-              {/* Email Notifications */}
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                <div>
-                  <p className="font-medium text-gray-900">Notifications par email</p>
-                  <p className="text-sm text-gray-500">Activer l&apos;envoi de notifications par email</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={(settings.emailNotifications as boolean) ?? true}
-                    onChange={(e) => handleChange('emailNotifications', e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-              {/* Leave Request Notifications */}
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                <div>
-                  <p className="font-medium text-gray-900">Demandes de congés</p>
-                  <p className="text-sm text-gray-500">Notifier les managers des nouvelles demandes de congés</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={(settings.leaveRequestNotifications as boolean) ?? true}
-                    onChange={(e) => handleChange('leaveRequestNotifications', e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-                <div className="flex items-start">
-                  <span className="text-blue-600 text-xl mr-3">ℹ️</span>
-                  <div>
-                    <p className="font-medium text-blue-800">Note</p>
-                    <p className="text-sm text-blue-700">
-                      Les notifications par email nécessitent une configuration SMTP.
-                      Contactez l&apos;administrateur système pour activer cette fonctionnalité.
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           )}
