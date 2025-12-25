@@ -9,7 +9,7 @@ interface DayCellProps {
   viewMode: 'week' | 'month';
   dayIndex: number;
   onTeleworkToggle: (userId: string, date: Date) => void;
-  onDragStart: (task: Task) => void;
+  onDragStart: (task: Task, sourceUserId: string) => void;
   onDragEnd: () => void;
   onDrop: (userId: string, date: Date) => void;
   onTaskClick: (task: Task) => void;
@@ -129,7 +129,7 @@ export const DayCell = ({
           <div
             key={task.id}
             draggable
-            onDragStart={() => onDragStart(task)}
+            onDragStart={() => onDragStart(task, userId)}
             onDragEnd={onDragEnd}
             onClick={() => onTaskClick(task)}
             className={`rounded border cursor-move hover:shadow-md transition ${getPriorityColor(

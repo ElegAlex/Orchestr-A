@@ -54,6 +54,7 @@ interface UsePlanningDataReturn {
   getDayCell: (userId: string, date: Date) => DayCell;
   getHolidayForDate: (date: Date) => Holiday | undefined;
   refetch: () => Promise<void>;
+  silentRefetch: () => Promise<void>;
   getGroupTaskCount: (groupUsers: User[]) => number;
 }
 
@@ -90,9 +91,9 @@ export const usePlanningData = ({
   }, [currentDate, viewMode]);
 
   // Fetch data
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const startDate = startOfDay(displayDays[0]);
       const endDate = endOfDay(displayDays[displayDays.length - 1]);
 
@@ -122,16 +123,18 @@ export const usePlanningData = ({
       setServices(Array.isArray(servicesData) ? servicesData : []);
       setHolidays(Array.isArray(holidaysData) ? holidaysData : []);
     } catch (err) {
-      setUsers([]);
-      setTasks([]);
-      setLeaves([]);
-      setTeleworkSchedules([]);
-      setServices([]);
-      setHolidays([]);
-      toast.error('Erreur lors du chargement des données');
+      if (!silent) {
+        setUsers([]);
+        setTasks([]);
+        setLeaves([]);
+        setTeleworkSchedules([]);
+        setServices([]);
+        setHolidays([]);
+        toast.error('Erreur lors du chargement des données');
+      }
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -352,6 +355,7 @@ export const usePlanningData = ({
     getDayCell,
     getHolidayForDate,
     refetch: fetchData,
+    silentRefetch: () => fetchData(true),
     getGroupTaskCount,
   };
 };

@@ -24,7 +24,7 @@ interface CollapsibleServiceSectionProps {
   showGroupHeaders: boolean;
   getDayCell: (userId: string, date: Date) => DayCell;
   onTeleworkToggle: (userId: string, date: Date) => void;
-  onDragStart: (task: Task) => void;
+  onDragStart: (task: Task, sourceUserId: string) => void;
   onDragEnd: () => void;
   onDrop: (userId: string, date: Date) => void;
   onTaskClick: (task: Task) => void;
@@ -101,6 +101,7 @@ export const PlanningGrid = ({
     getDayCell,
     getHolidayForDate,
     refetch,
+    silentRefetch,
     getGroupTaskCount,
   } = usePlanningData({
     currentDate,
@@ -111,6 +112,7 @@ export const PlanningGrid = ({
   });
 
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [dragSourceUserId, setDragSourceUserId] = useState<string | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -125,29 +127,83 @@ export const PlanningGrid = ({
       } else {
         await teleworkService.create({ date: dateStr, isTelework: true, isException: false, userId });
       }
-      toast.success('Télétravail mis à jour');
-      refetch();
+      silentRefetch();
     } catch {
       toast.error('Erreur lors de la mise à jour du télétravail');
     }
   };
 
-  const handleDragStart = (task: Task) => setDraggedTask(task);
-  const handleDragEnd = () => setDraggedTask(null);
+  const handleDragStart = (task: Task, sourceUserId: string) => {
+    setDraggedTask(task);
+    setDragSourceUserId(sourceUserId);
+  };
 
-  const handleDrop = async (userId: string, date: Date) => {
-    if (!draggedTask) return;
+  const handleDragEnd = () => {
+    setDraggedTask(null);
+    setDragSourceUserId(null);
+  };
+
+  const handleDrop = async (targetUserId: string, date: Date) => {
+    if (!draggedTask || !dragSourceUserId) return;
+
+    const currentAssigneeIds = draggedTask.assignees?.map(a => a.userId) || [];
+    const isSameUser = dragSourceUserId === targetUserId;
+    const targetAlreadyAssigned = currentAssigneeIds.includes(targetUserId);
+    const isSingleAssignee = currentAssigneeIds.length <= 1;
+
+    // Reset immédiatement pour UX fluide
+    setDraggedTask(null);
+    setDragSourceUserId(null);
+
     try {
-      await tasksService.update(draggedTask.id, {
-        assigneeIds: [userId],
-        endDate: date.toISOString(),
-      });
-      toast.success('Tâche déplacée');
-      refetch();
+      if (isSingleAssignee) {
+        // Tâche mono-assigné: on peut changer date ET assigné
+        const updateData: { startDate: string; endDate: string; assigneeIds?: string[] } = {
+          startDate: date.toISOString(),
+          endDate: date.toISOString(),
+        };
+        if (!isSameUser) {
+          updateData.assigneeIds = [targetUserId];
+        }
+        await tasksService.update(draggedTask.id, updateData);
+      } else {
+        // Tâche multi-assignés: on change seulement l'assignation (pas les dates)
+        if (isSameUser) {
+          toast('Tâche multi-assignée : changement de date impossible.\nModifiez les dates via le détail de la tâche.', {
+            icon: 'ℹ️',
+            duration: 3000,
+            id: `multi-assignee-${Date.now()}`,
+          });
+          return;
+        }
+        if (targetAlreadyAssigned) {
+          toast('Cet utilisateur est déjà assigné à cette tâche.', {
+            icon: 'ℹ️',
+            duration: 2000,
+            id: `already-assigned-${Date.now()}`,
+          });
+          return;
+        }
+        // Remplacer source par cible
+        const newAssigneeIds = currentAssigneeIds.map(id =>
+          id === dragSourceUserId ? targetUserId : id
+        );
+        await tasksService.update(draggedTask.id, {
+          assigneeIds: newAssigneeIds,
+        });
+
+        // Informer que seul l'assigné a changé (pas la date)
+        toast('Tâche multi-assignée : seul l\'assigné a été modifié.\nLa date reste inchangée pour tous les assignés.', {
+          icon: 'ℹ️',
+          duration: 3000,
+          id: `reassign-only-${Date.now()}`,
+        });
+      }
+
+      silentRefetch();
     } catch {
       toast.error('Erreur lors du déplacement de la tâche');
     }
-    setDraggedTask(null);
   };
 
   const handleTaskClick = (task: Task) => {

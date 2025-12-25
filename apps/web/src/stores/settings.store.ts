@@ -24,8 +24,6 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   appName: 'ORCHESTR\'A',
   defaultLeaveDays: 25,
   maxTeleworkDaysPerWeek: 3,
-  emailNotifications: true,
-  leaveRequestNotifications: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(

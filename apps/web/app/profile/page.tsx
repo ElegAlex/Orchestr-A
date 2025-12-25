@@ -329,43 +329,6 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  Notifications
-                </h3>
-                <div className="space-y-3">
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">
-                      Notifications de nouvelles tâches
-                    </span>
-                  </label>
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">
-                      Rappels de deadline
-                    </span>
-                  </label>
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">
-                      Notifications par email
-                    </span>
-                  </label>
-                </div>
-              </div>
-
               <div className="pt-6">
                 <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                   Enregistrer les préférences

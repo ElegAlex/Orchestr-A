@@ -10,7 +10,7 @@ interface UserRowProps {
   viewMode: 'week' | 'month';
   getDayCell: (userId: string, date: Date) => DayCellData;
   onTeleworkToggle: (userId: string, date: Date) => void;
-  onDragStart: (task: Task) => void;
+  onDragStart: (task: Task, sourceUserId: string) => void;
   onDragEnd: () => void;
   onDrop: (userId: string, date: Date) => void;
   onTaskClick: (task: Task) => void;
