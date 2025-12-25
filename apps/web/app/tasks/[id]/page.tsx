@@ -8,6 +8,7 @@ import { milestonesService } from '@/services/milestones.service';
 import { usersService } from '@/services/users.service';
 import { projectsService } from '@/services/projects.service';
 import { Task, TaskStatus, Priority, Milestone, User, Project } from '@/types';
+import { UserMultiSelect } from '@/components/UserMultiSelect';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -29,7 +30,7 @@ export default function TaskDetailPage() {
     status: TaskStatus.TODO,
     priority: Priority.NORMAL,
     milestoneId: '',
-    assigneeId: '',
+    assigneeIds: [] as string[],
     projectId: '',
     startDate: '',
     endDate: '',
@@ -81,13 +82,18 @@ export default function TaskDetailPage() {
         }
 
         // Initialize form data
+        // Extraire les IDs des assignés depuis la relation assignees
+        const taskAssigneeIds = taskData.assignees?.map((a: any) => a.user?.id || a.userId).filter(Boolean) as string[] || [];
+        // Si pas d'assignees multiples mais un assigneeId, l'utiliser
+        const assigneeIds = taskAssigneeIds.length > 0 ? taskAssigneeIds : (taskData.assigneeId ? [taskData.assigneeId] : []);
+
         setFormData({
           title: taskData.title,
           description: taskData.description || '',
           status: taskData.status,
           priority: taskData.priority,
           milestoneId: taskData.milestoneId || '',
-          assigneeId: taskData.assigneeId || '',
+          assigneeIds,
           projectId: taskData.projectId || '',
           startDate: taskData.startDate
             ? new Date(taskData.startDate).toISOString().split('T')[0]
@@ -123,10 +129,8 @@ export default function TaskDetailPage() {
         updateData.milestoneId = formData.milestoneId;
       }
 
-      // Ajouter assigneeId seulement s'il est défini
-      if (formData.assigneeId) {
-        updateData.assigneeId = formData.assigneeId;
-      }
+      // Ajouter assigneeIds pour l'assignation multiple
+      updateData.assigneeIds = formData.assigneeIds;
 
       // Ajouter projectId seulement s'il est défini
       if (formData.projectId) {
@@ -156,13 +160,17 @@ export default function TaskDetailPage() {
   const handleCancel = () => {
     // Reset form data to current task values
     if (task) {
+      // Extraire les IDs des assignés
+      const taskAssigneeIds = task.assignees?.map((a) => a.user?.id || a.userId).filter(Boolean) as string[] || [];
+      const assigneeIds = taskAssigneeIds.length > 0 ? taskAssigneeIds : (task.assigneeId ? [task.assigneeId] : []);
+
       setFormData({
         title: task.title,
         description: task.description || '',
         status: task.status,
         priority: task.priority,
         milestoneId: task.milestoneId || '',
-        assigneeId: task.assigneeId || '',
+        assigneeIds,
         projectId: task.projectId || '',
         startDate: task.startDate
           ? new Date(task.startDate).toISOString().split('T')[0]
@@ -438,24 +446,14 @@ export default function TaskDetailPage() {
                     </select>
                   </div>
 
-                  {/* Assignee */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Assigné à
-                    </label>
-                    <select
-                      value={formData.assigneeId}
-                      onChange={(e) => setFormData({ ...formData, assigneeId: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Non assigné</option>
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.firstName} {user.lastName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Assignees */}
+                  <UserMultiSelect
+                    label="Assignés"
+                    users={users}
+                    selectedIds={formData.assigneeIds}
+                    onChange={(ids) => setFormData({ ...formData, assigneeIds: ids })}
+                    placeholder="Selectionner les assignés"
+                  />
 
                   {/* Project */}
                   <div>
@@ -574,23 +572,42 @@ export default function TaskDetailPage() {
               </div>
             )}
 
-            {/* Assignee */}
-            {task.assignee && (
+            {/* Assignees - Multiple */}
+            {((task.assignees && task.assignees.length > 0) || task.assignee) && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Assigné à
+                  {(task.assignees && task.assignees.length > 1) ? 'Assignés' : 'Assigné à'}
                 </h2>
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
-                    {task.assignee.firstName[0]}
-                    {task.assignee.lastName[0]}
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {task.assignee.firstName} {task.assignee.lastName}
-                    </p>
-                    <p className="text-sm text-gray-600">{task.assignee.email}</p>
-                  </div>
+                <div className="space-y-3">
+                  {task.assignees && task.assignees.length > 0 ? (
+                    task.assignees.map((assignment) => (
+                      <div key={assignment.userId} className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
+                          {assignment.user?.firstName?.[0] || '?'}
+                          {assignment.user?.lastName?.[0] || ''}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {assignment.user?.firstName} {assignment.user?.lastName}
+                          </p>
+                          <p className="text-sm text-gray-600">{assignment.user?.email}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : task.assignee && (
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
+                        {task.assignee.firstName[0]}
+                        {task.assignee.lastName[0]}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {task.assignee.firstName} {task.assignee.lastName}
+                        </p>
+                        <p className="text-sm text-gray-600">{task.assignee.email}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
