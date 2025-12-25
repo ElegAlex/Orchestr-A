@@ -158,7 +158,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           <h2 className="text-lg font-semibold text-gray-900">
             {navigation.find((item) => item.href === pathname)?.name ||
               adminNavigation.find((item) => item.href === pathname)?.name ||
-              'ORCHESTR\'A V2'}
+              ''}
           </h2>
           <div className="flex items-center space-x-4">
             <button className="p-2 rounded-lg hover:bg-gray-100 transition text-gray-600">
