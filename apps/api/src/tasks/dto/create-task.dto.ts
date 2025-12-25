@@ -11,6 +11,7 @@ import {
   MinLength,
   Min,
   ValidateIf,
+  IsArray,
 } from 'class-validator';
 import { TaskStatus, Priority } from 'database';
 
@@ -84,13 +85,24 @@ export class CreateTaskDto {
   milestoneId?: string;
 
   @ApiProperty({
-    description: 'ID de l\'utilisateur assigné (optionnel)',
+    description: 'ID de l\'utilisateur assigné principal (optionnel, rétrocompatibilité)',
     example: 'uuid-here',
     required: false,
   })
   @IsUUID()
   @IsOptional()
   assigneeId?: string;
+
+  @ApiProperty({
+    description: 'Liste des IDs des utilisateurs assignés (optionnel)',
+    example: ['uuid-1', 'uuid-2'],
+    required: false,
+    type: [String],
+  })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  assigneeIds?: string[];
 
   @ApiProperty({
     description: 'Charge estimée en heures',

@@ -972,7 +972,33 @@ export default function ProjectDetailPage() {
                                     </p>
                                   )}
 
-                                  {task.assignee && (
+                                  {/* Affichage des assignés multiples */}
+                                  {(task.assignees && task.assignees.length > 0) ? (
+                                    <div className="flex items-center space-x-1 text-xs text-gray-500 mb-2">
+                                      <div className="flex -space-x-1">
+                                        {task.assignees.slice(0, 3).map((assignment, idx) => (
+                                          <div
+                                            key={assignment.userId || idx}
+                                            className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] border border-white"
+                                            title={`${assignment.user?.firstName || ''} ${assignment.user?.lastName || ''}`}
+                                          >
+                                            {assignment.user?.firstName?.[0] || '?'}
+                                            {assignment.user?.lastName?.[0] || ''}
+                                          </div>
+                                        ))}
+                                        {task.assignees.length > 3 && (
+                                          <div className="w-5 h-5 rounded-full bg-gray-400 text-white flex items-center justify-center text-[10px] border border-white">
+                                            +{task.assignees.length - 3}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className="ml-1">
+                                        {task.assignees.length === 1
+                                          ? `${task.assignees[0].user?.firstName} ${task.assignees[0].user?.lastName}`
+                                          : `${task.assignees.length} assignés`}
+                                      </span>
+                                    </div>
+                                  ) : task.assignee && (
                                     <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
                                       <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">
                                         {task.assignee.firstName[0]}

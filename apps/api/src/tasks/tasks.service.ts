@@ -26,6 +26,7 @@ export class TasksService {
       epicId,
       milestoneId,
       assigneeId,
+      assigneeIds,
       startDate,
       endDate,
       ...taskData
@@ -83,7 +84,7 @@ export class TasksService {
       }
     }
 
-    // Vérifier l'utilisateur assigné si fourni
+    // Vérifier l'utilisateur assigné principal si fourni
     if (assigneeId) {
       const user = await this.prisma.user.findUnique({
         where: { id: assigneeId },
@@ -91,6 +92,18 @@ export class TasksService {
 
       if (!user) {
         throw new NotFoundException('Utilisateur assigné introuvable');
+      }
+    }
+
+    // Vérifier les utilisateurs assignés multiples si fournis
+    if (assigneeIds && assigneeIds.length > 0) {
+      const users = await this.prisma.user.findMany({
+        where: { id: { in: assigneeIds } },
+        select: { id: true },
+      });
+
+      if (users.length !== assigneeIds.length) {
+        throw new NotFoundException('Un ou plusieurs utilisateurs assignés introuvables');
       }
     }
 
@@ -106,16 +119,25 @@ export class TasksService {
     }
 
     // Créer la tâche (projectId peut être null pour les tâches orphelines)
+    // Si assigneeIds est fourni, on utilise le premier comme assigneeId principal (rétrocompatibilité)
+    const primaryAssigneeId = assigneeId || (assigneeIds && assigneeIds.length > 0 ? assigneeIds[0] : null);
+
     const task = await this.prisma.task.create({
       data: {
         ...taskData,
         projectId: projectId || null,
         epicId,
         milestoneId,
-        assigneeId,
+        assigneeId: primaryAssigneeId,
         status: createTaskDto.status || TaskStatus.TODO,
         ...(startDate && { startDate: new Date(startDate) }),
         ...(endDate && { endDate: new Date(endDate) }),
+        // Créer les assignations multiples
+        ...(assigneeIds && assigneeIds.length > 0 && {
+          assignees: {
+            create: assigneeIds.map((userId) => ({ userId })),
+          },
+        }),
       },
       include: {
         project: {
@@ -144,6 +166,19 @@ export class TasksService {
             email: true,
           },
         },
+        assignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -169,17 +204,29 @@ export class TasksService {
     if (projectId) where.projectId = projectId;
     if (assigneeId) where.assigneeId = assigneeId;
 
-    // Filtrage par plage de dates : on récupère les tâches dont la endDate est dans la plage
+    // Filtrage par plage de dates : on récupère les tâches qui chevauchent la plage
+    // Une tâche chevauche si : startDate <= finPlage ET endDate >= débutPlage
     const hasDateFilter = startDate || endDate;
     if (startDate && endDate) {
-      where.endDate = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
+      // Tâches dont la plage [startDate, endDate] chevauche [startDate, endDate] du filtre
+      where.AND = [
+        {
+          endDate: { gte: new Date(startDate) }, // La tâche finit après le début de la plage
+        },
+        {
+          OR: [
+            { startDate: { lte: new Date(endDate) } }, // La tâche commence avant la fin de la plage
+            { startDate: null }, // Ou pas de startDate (on utilise endDate comme seul jour)
+          ],
+        },
+      ];
     } else if (startDate) {
       where.endDate = { gte: new Date(startDate) };
     } else if (endDate) {
-      where.endDate = { lte: new Date(endDate) };
+      where.OR = [
+        { startDate: { lte: new Date(endDate) } },
+        { startDate: null, endDate: { lte: new Date(endDate) } },
+      ];
     }
 
     const [tasks, total] = await Promise.all([
@@ -200,6 +247,18 @@ export class TasksService {
               firstName: true,
               lastName: true,
               avatarUrl: true,
+            },
+          },
+          assignees: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  avatarUrl: true,
+                },
+              },
             },
           },
           _count: {
@@ -266,6 +325,20 @@ export class TasksService {
             email: true,
             avatarUrl: true,
             role: true,
+          },
+        },
+        assignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                avatarUrl: true,
+                role: true,
+              },
+            },
           },
         },
         dependencies: {
@@ -358,6 +431,7 @@ export class TasksService {
       epicId,
       milestoneId,
       assigneeId,
+      assigneeIds,
       startDate,
       endDate,
       ...taskData
@@ -400,32 +474,82 @@ export class TasksService {
       }
     }
 
-    const task = await this.prisma.task.update({
-      where: { id },
-      data: {
-        ...taskData,
-        ...(projectId && { projectId }),
-        ...(epicId && { epicId }),
-        ...(milestoneId && { milestoneId }),
-        ...(assigneeId && { assigneeId }),
-        ...(startDate && { startDate: new Date(startDate) }),
-        ...(endDate && { endDate: new Date(endDate) }),
-      },
-      include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
+    // Vérifier les utilisateurs assignés multiples si fournis
+    if (assigneeIds && assigneeIds.length > 0) {
+      const users = await this.prisma.user.findMany({
+        where: { id: { in: assigneeIds } },
+        select: { id: true },
+      });
+
+      if (users.length !== assigneeIds.length) {
+        throw new NotFoundException('Un ou plusieurs utilisateurs assignés introuvables');
+      }
+    }
+
+    // Déterminer l'assigné principal
+    // Si assigneeIds est fourni, on utilise le premier comme assigneeId principal
+    let primaryAssigneeId: string | undefined = assigneeId;
+    if (assigneeIds !== undefined) {
+      primaryAssigneeId = assigneeIds.length > 0 ? assigneeIds[0] : undefined;
+    }
+
+    // Mise à jour de la tâche avec transaction pour gérer les assignations multiples
+    const task = await this.prisma.$transaction(async (tx) => {
+      // Si assigneeIds est fourni, mettre à jour les assignations
+      if (assigneeIds !== undefined) {
+        // Supprimer toutes les anciennes assignations
+        await tx.taskAssignee.deleteMany({
+          where: { taskId: id },
+        });
+
+        // Créer les nouvelles assignations
+        if (assigneeIds.length > 0) {
+          await tx.taskAssignee.createMany({
+            data: assigneeIds.map((userId) => ({ taskId: id, userId })),
+          });
+        }
+      }
+
+      // Mettre à jour la tâche
+      return tx.task.update({
+        where: { id },
+        data: {
+          ...taskData,
+          ...(projectId && { projectId }),
+          ...(epicId && { epicId }),
+          ...(milestoneId && { milestoneId }),
+          ...(primaryAssigneeId !== undefined && { assigneeId: primaryAssigneeId }),
+          ...(startDate && { startDate: new Date(startDate) }),
+          ...(endDate && { endDate: new Date(endDate) }),
+        },
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          assignee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          assignees: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  avatarUrl: true,
+                },
+              },
+            },
           },
         },
-        assignee: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
+      });
     });
 
     return task;
@@ -655,10 +779,16 @@ export class TasksService {
 
   /**
    * Récupérer toutes les tâches assignées à un utilisateur
+   * (soit en tant qu'assigné principal, soit dans la liste des assignés multiples)
    */
   async getTasksByAssignee(userId: string) {
     const tasks = await this.prisma.task.findMany({
-      where: { assigneeId: userId },
+      where: {
+        OR: [
+          { assigneeId: userId },
+          { assignees: { some: { userId } } },
+        ],
+      },
       include: {
         project: {
           select: {
@@ -672,6 +802,18 @@ export class TasksService {
             firstName: true,
             lastName: true,
             avatarUrl: true,
+          },
+        },
+        assignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+              },
+            },
           },
         },
         _count: {
@@ -712,6 +854,18 @@ export class TasksService {
             firstName: true,
             lastName: true,
             avatarUrl: true,
+          },
+        },
+        assignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+              },
+            },
           },
         },
         epic: {
@@ -1110,6 +1264,18 @@ export class TasksService {
             firstName: true,
             lastName: true,
             avatarUrl: true,
+          },
+        },
+        assignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+              },
+            },
           },
         },
         _count: {

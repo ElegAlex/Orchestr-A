@@ -16,6 +16,7 @@ import {
   User,
 } from '@/types';
 import { usersService } from '@/services/users.service';
+import { UserMultiSelect } from '@/components/UserMultiSelect';
 import toast from 'react-hot-toast';
 
 export default function TasksPage() {
@@ -36,13 +37,13 @@ export default function TasksPage() {
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const [formData, setFormData] = useState<CreateTaskDto>({
+  const [formData, setFormData] = useState<CreateTaskDto & { assigneeIds: string[] }>({
     title: '',
     description: '',
     status: TaskStatus.TODO,
     priority: Priority.NORMAL,
     projectId: '',
-    assigneeId: '',
+    assigneeIds: [],
     estimatedHours: undefined,
     startDate: '',
     endDate: '',
@@ -124,7 +125,7 @@ export default function TasksPage() {
         status: formData.status,
         priority: formData.priority,
         projectId: formData.projectId || null,
-        assigneeId: formData.assigneeId || undefined,
+        assigneeIds: formData.assigneeIds.length > 0 ? formData.assigneeIds : undefined,
         estimatedHours: formData.estimatedHours || undefined,
         startDate: formData.startDate || undefined,
         endDate: formData.endDate || undefined,
@@ -153,7 +154,7 @@ export default function TasksPage() {
 
   // Fetch project members when a project is selected in the form
   const handleFormProjectChange = async (projectId: string) => {
-    setFormData({ ...formData, projectId, assigneeId: '' }); // Reset assignee when project changes
+    setFormData({ ...formData, projectId, assigneeIds: [] }); // Reset assignees when project changes
 
     if (projectId) {
       try {
@@ -184,7 +185,7 @@ export default function TasksPage() {
       status: TaskStatus.TODO,
       priority: Priority.NORMAL,
       projectId: '',
-      assigneeId: '',
+      assigneeIds: [],
       estimatedHours: undefined,
       startDate: '',
       endDate: '',
@@ -499,7 +500,33 @@ export default function TasksPage() {
                                 </div>
                               )}
 
-                              {task.assignee && (
+                              {/* Affichage des assignés multiples */}
+                              {(task.assignees && task.assignees.length > 0) ? (
+                                <div className="flex items-center space-x-1 text-xs text-gray-500 mb-2">
+                                  <div className="flex -space-x-1">
+                                    {task.assignees.slice(0, 3).map((assignment, idx) => (
+                                      <div
+                                        key={assignment.userId || idx}
+                                        className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] border border-white"
+                                        title={`${assignment.user?.firstName || ''} ${assignment.user?.lastName || ''}`}
+                                      >
+                                        {assignment.user?.firstName?.[0] || '?'}
+                                        {assignment.user?.lastName?.[0] || ''}
+                                      </div>
+                                    ))}
+                                    {task.assignees.length > 3 && (
+                                      <div className="w-5 h-5 rounded-full bg-gray-400 text-white flex items-center justify-center text-[10px] border border-white">
+                                        +{task.assignees.length - 3}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="ml-1">
+                                    {task.assignees.length === 1
+                                      ? `${task.assignees[0].user?.firstName} ${task.assignees[0].user?.lastName}`
+                                      : `${task.assignees.length} assignés`}
+                                  </span>
+                                </div>
+                              ) : task.assignee && (
                                 <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
                                   <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">
                                     {task.assignee.firstName[0]}
@@ -648,34 +675,21 @@ export default function TasksPage() {
                 </p>
               </div>
 
-              {/* Assignee selector */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Assigne a
-                  {formData.projectId && projectMembers.length > 0 && (
-                    <span className="text-xs text-blue-600 ml-2">(membres du projet)</span>
-                  )}
-                </label>
-                <select
-                  value={formData.assigneeId || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, assigneeId: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Non assigne</option>
-                  {getAvailableAssignees().map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.firstName} {u.lastName}
-                    </option>
-                  ))}
-                </select>
-                {formData.projectId && projectMembers.length === 0 && (
-                  <p className="text-xs text-orange-500 mt-1">
-                    Aucun membre dans ce projet - tous les utilisateurs sont affiches
-                  </p>
-                )}
-              </div>
+              {/* Assignee multi-selector */}
+              <UserMultiSelect
+                label="Assignés"
+                users={getAvailableAssignees()}
+                selectedIds={formData.assigneeIds}
+                onChange={(ids) => setFormData({ ...formData, assigneeIds: ids })}
+                placeholder="Selectionner les assignés"
+                hint={
+                  formData.projectId && projectMembers.length > 0
+                    ? 'Membres du projet'
+                    : formData.projectId && projectMembers.length === 0
+                    ? 'Aucun membre dans ce projet - tous les utilisateurs sont affichés'
+                    : undefined
+                }
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

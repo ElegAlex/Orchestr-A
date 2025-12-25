@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Task, TaskStatus, Priority, Milestone, User, Project } from '@/types';
+import { UserMultiSelect } from './UserMultiSelect';
 import toast from 'react-hot-toast';
 
 interface TaskModalProps {
@@ -32,7 +33,7 @@ export function TaskModal({
     priority: Priority.NORMAL,
     projectId: projectId || '',
     milestoneId: '',
-    assigneeId: '',
+    assigneeIds: [] as string[],
     estimatedHours: '',
     startDate: '',
     endDate: '',
@@ -42,6 +43,11 @@ export function TaskModal({
 
   useEffect(() => {
     if (task) {
+      // Extraire les IDs des assignés depuis la relation assignees
+      const taskAssigneeIds = task.assignees?.map((a) => a.user?.id || a.userId).filter(Boolean) as string[] || [];
+      // Si pas d'assignees multiples mais un assigneeId, l'utiliser
+      const assigneeIds = taskAssigneeIds.length > 0 ? taskAssigneeIds : (task.assigneeId ? [task.assigneeId] : []);
+
       setFormData({
         title: task.title || '',
         description: task.description || '',
@@ -49,7 +55,7 @@ export function TaskModal({
         priority: task.priority || Priority.NORMAL,
         projectId: task.projectId || '',
         milestoneId: task.milestoneId || '',
-        assigneeId: task.assigneeId || '',
+        assigneeIds,
         estimatedHours: task.estimatedHours?.toString() || '',
         startDate: task.startDate
           ? new Date(task.startDate).toISOString().split('T')[0]
@@ -66,7 +72,7 @@ export function TaskModal({
         priority: Priority.NORMAL,
         projectId: projectId || '',
         milestoneId: '',
-        assigneeId: '',
+        assigneeIds: [],
         estimatedHours: '',
         startDate: '',
         endDate: '',
@@ -98,7 +104,12 @@ export function TaskModal({
       if (formData.milestoneId && formData.projectId) {
         taskData.milestoneId = formData.milestoneId;
       }
-      if (formData.assigneeId) taskData.assigneeId = formData.assigneeId;
+      // Utiliser assigneeIds pour l'assignation multiple
+      if (formData.assigneeIds.length > 0) {
+        taskData.assigneeIds = formData.assigneeIds;
+      } else {
+        taskData.assigneeIds = [];
+      }
       if (formData.estimatedHours) taskData.estimatedHours = parseFloat(formData.estimatedHours);
       if (formData.startDate) taskData.startDate = new Date(formData.startDate).toISOString();
       if (formData.endDate) taskData.endDate = new Date(formData.endDate).toISOString();
@@ -261,21 +272,13 @@ export function TaskModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Assigné à
-              </label>
-              <select
-                value={formData.assigneeId}
-                onChange={(e) => setFormData({ ...formData, assigneeId: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Non assigné</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName}
-                  </option>
-                ))}
-              </select>
+              <UserMultiSelect
+                label="Assignés"
+                users={users}
+                selectedIds={formData.assigneeIds}
+                onChange={(ids) => setFormData({ ...formData, assigneeIds: ids })}
+                placeholder="Selectionner les assignés"
+              />
             </div>
           </div>
 

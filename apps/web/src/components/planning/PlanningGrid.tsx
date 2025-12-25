@@ -139,7 +139,7 @@ export const PlanningGrid = ({
     if (!draggedTask) return;
     try {
       await tasksService.update(draggedTask.id, {
-        assigneeId: userId,
+        assigneeIds: [userId],
         endDate: date.toISOString(),
       });
       toast.success('Tâche déplacée');

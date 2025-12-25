@@ -309,6 +309,14 @@ export interface Milestone {
 // TASKS
 // ===========================
 
+export interface TaskAssignee {
+  id: string;
+  taskId: string;
+  userId: string;
+  createdAt: string;
+  user?: User;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -318,7 +326,7 @@ export interface Task {
   projectId?: string | null; // Nullable pour les tâches orphelines
   epicId?: string;
   milestoneId?: string;
-  assigneeId?: string;
+  assigneeId?: string; // Assigné principal (rétrocompatibilité)
   estimatedHours?: number;
   progress: number;
   startDate?: string;
@@ -328,7 +336,8 @@ export interface Task {
   project?: Project | null;
   epic?: Epic;
   milestone?: Milestone;
-  assignee?: User;
+  assignee?: User; // Assigné principal
+  assignees?: TaskAssignee[]; // Assignés multiples
   timeEntries?: TimeEntry[];
   comments?: Comment[];
   raci?: TaskRACI[];
@@ -350,7 +359,8 @@ export interface CreateTaskDto {
   projectId?: string | null; // Optionnel pour les tâches orphelines
   epicId?: string;
   milestoneId?: string;
-  assigneeId?: string;
+  assigneeId?: string; // Assigné principal (rétrocompatibilité)
+  assigneeIds?: string[]; // Assignés multiples
   estimatedHours?: number;
   startDate?: string;
   endDate?: string;
@@ -363,7 +373,8 @@ export interface UpdateTaskDto {
   priority?: Priority;
   epicId?: string;
   milestoneId?: string;
-  assigneeId?: string;
+  assigneeId?: string; // Assigné principal (rétrocompatibilité)
+  assigneeIds?: string[]; // Assignés multiples
   estimatedHours?: number;
   progress?: number;
   startDate?: string;

@@ -34,7 +34,8 @@ model User {
   managedDepartments Department[]     @relation("DepartmentManager")
   managedServices   Service[]         @relation("ServiceManager")
   projectMembers    ProjectMember[]
-  tasks             Task[]
+  tasks             Task[]            // Tâches où l'user est assigné principal
+  taskAssignments   TaskAssignee[]    // Tâches où l'user est co-assigné
   leaves            Leave[]           @relation("UserLeaves")
   leavesToValidate  Leave[]           @relation("LeaveValidator")
   leavesValidated   Leave[]           @relation("LeaveValidatedBy")
@@ -222,7 +223,7 @@ model Task {
   projectId       String?    // Nullable pour permettre les tâches orphelines (réunions, tâches transverses)
   epicId          String?
   milestoneId     String?
-  assigneeId      String?
+  assigneeId      String?    // Assigné principal (rétrocompatibilité)
   estimatedHours  Float?
   progress        Int        @default(0) // 0-100%
   startDate       DateTime?
@@ -235,6 +236,7 @@ model Task {
   epic            Epic?            @relation(fields: [epicId], references: [id], onDelete: SetNull)
   milestone       Milestone?       @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   assignee        User?            @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  assignees       TaskAssignee[]   // Relation many-to-many pour multiple assignés
   dependencies    TaskDependency[] @relation("TaskDependencies")
   dependents      TaskDependency[] @relation("DependentTasks")
   timeEntries     TimeEntry[]
@@ -245,6 +247,23 @@ model Task {
   @@index([assigneeId])
   @@index([status])
   @@map("tasks")
+}
+
+// Table de liaison pour assignation multiple de tâches
+model TaskAssignee {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  // Relations
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+  @@map("task_assignees")
 }
 
 enum TaskStatus {

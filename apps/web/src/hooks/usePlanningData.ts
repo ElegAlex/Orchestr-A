@@ -250,9 +250,24 @@ export const usePlanningData = ({
   // Obtenir les données d'une cellule (avec filtrage selon viewFilter)
   const getDayCell = useCallback(
     (userId: string, date: Date): DayCell => {
-      const dayTasks = tasks.filter(
-        (t) => t.assigneeId === userId && t.endDate && isSameDay(new Date(t.endDate), date)
-      );
+      const dayTasks = tasks.filter((t) => {
+        // Vérifier si la date est dans la plage de la tâche (startDate <= date <= endDate)
+        // Si pas de startDate, on utilise endDate comme seul jour
+        // Si pas de endDate, la tâche n'apparaît pas dans le planning
+        if (!t.endDate) return false;
+
+        const taskEnd = startOfDay(new Date(t.endDate));
+        const taskStart = t.startDate ? startOfDay(new Date(t.startDate)) : taskEnd;
+        const checkDate = startOfDay(date);
+
+        // Vérifier que la date est dans l'intervalle [startDate, endDate]
+        if (!isWithinInterval(checkDate, { start: taskStart, end: taskEnd })) return false;
+
+        // Vérifier si l'utilisateur est assigné (assigneeId principal ou dans assignees)
+        if (t.assigneeId === userId) return true;
+        if (t.assignees && t.assignees.some((a) => a.userId === userId || a.user?.id === userId)) return true;
+        return false;
+      });
       // Vérifier si la date est dans la plage du congé (startDate <= date <= endDate)
       // Inclure tous les congés sauf les rejetés (PENDING et APPROVED)
       const dayLeaves = leaves.filter((l) => {
@@ -302,7 +317,13 @@ export const usePlanningData = ({
 
   // Compter les tâches par groupe
   const getGroupTaskCount = (groupUsers: User[]): number => {
-    return tasks.filter((t) => groupUsers.some((u) => u.id === t.assigneeId)).length;
+    return tasks.filter((t) => {
+      // Vérifier assigneeId principal
+      if (groupUsers.some((u) => u.id === t.assigneeId)) return true;
+      // Vérifier dans assignees multiples
+      if (t.assignees && t.assignees.some((a) => groupUsers.some((u) => u.id === a.userId || u.id === a.user?.id))) return true;
+      return false;
+    }).length;
   };
 
   // Obtenir le jour férié pour une date donnée
