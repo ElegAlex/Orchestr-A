@@ -126,3 +126,4 @@ nginx/ssl/*.key
 packages/database/node_modules/.prisma/
 .env.production
 Ochestra_V1/
+ZZ_META.md
