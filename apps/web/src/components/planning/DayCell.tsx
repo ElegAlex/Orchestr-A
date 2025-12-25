@@ -35,15 +35,39 @@ export const DayCell = ({
   const leave = cell.leaves[0];
   const isPending = leave?.status === 'PENDING';
 
+  // Déterminer le background
+  let bgClass = '';
+  if (cell.isHoliday) {
+    bgClass = 'bg-red-50';
+  } else if (isToday(cell.date)) {
+    bgClass = 'bg-blue-50';
+  }
+
   return (
     <td
       key={cell.date.toISOString()}
-      className={`align-top relative ${viewMode === 'month' ? 'px-0.5 py-1' : 'px-2 py-2'} ${
-        isToday(cell.date) ? 'bg-blue-50' : ''
-      } ${showWeekSeparator ? 'border-l-2 border-l-indigo-400' : ''}`}
+      className={`align-top relative ${viewMode === 'month' ? 'px-0.5 py-1' : 'px-2 py-2'} ${bgClass} ${showWeekSeparator ? 'border-l-2 border-l-indigo-400' : ''}`}
       onDragOver={(e) => e.preventDefault()}
       onDrop={() => onDrop(userId, cell.date)}
+      title={cell.isHoliday ? cell.holidayName : undefined}
     >
+      {/* Holiday Overlay - couvre toute la cellule */}
+      {cell.isHoliday && !hasLeave && (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-red-100/80 border-2 border-red-300"
+          title={cell.holidayName}
+        >
+          <span className={`${viewMode === 'month' ? 'text-lg' : 'text-2xl'}`}>
+            🎉
+          </span>
+          {viewMode === 'week' && cell.holidayName && (
+            <span className="font-medium text-red-800 text-xs text-center px-1 truncate max-w-full">
+              {cell.holidayName}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Leave Overlay - couvre toute la cellule */}
       {hasLeave && (
         <div

@@ -99,6 +99,7 @@ export const PlanningGrid = ({
     displayDays,
     filteredGroups,
     getDayCell,
+    getHolidayForDate,
     refetch,
     getGroupTaskCount,
   } = usePlanningData({
@@ -184,15 +185,17 @@ export const PlanningGrid = ({
                   const isMonday = getDay(day) === 1;
                   const isFirstDay = index === 0;
                   const showWeekSeparator = viewMode === 'month' && isMonday && !isFirstDay;
+                  const holiday = getHolidayForDate(day);
 
                   return (
                     <th
                       key={day.toISOString()}
                       className={`text-center font-semibold ${
                         viewMode === 'month' ? 'px-1 py-1 min-w-[40px] max-w-[50px]' : 'px-4 py-3 min-w-[180px]'
-                      } ${isToday(day) ? 'bg-blue-50 text-blue-900' : 'text-gray-900'} ${
+                      } ${holiday ? 'bg-red-50 text-red-900' : isToday(day) ? 'bg-blue-50 text-blue-900' : 'text-gray-900'} ${
                         showWeekSeparator ? 'border-l-2 border-l-indigo-400' : ''
                       }`}
+                      title={holiday ? holiday.name : undefined}
                     >
                       <div className={viewMode === 'month' ? 'text-[9px] leading-tight' : 'text-sm'}>
                         {format(day, viewMode === 'month' ? 'EEEEE' : 'EEEE', { locale: fr })}
@@ -200,6 +203,11 @@ export const PlanningGrid = ({
                       <div className={viewMode === 'month' ? 'text-xs font-bold' : 'text-lg font-bold'}>
                         {format(day, 'dd')}
                       </div>
+                      {holiday && viewMode === 'week' && (
+                        <div className="text-[10px] text-red-600 font-normal truncate max-w-[150px]">
+                          {holiday.name}
+                        </div>
+                      )}
                     </th>
                   );
                 })}
