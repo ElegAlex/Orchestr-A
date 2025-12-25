@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { Role } from '@/types';
+import { Logo, LogoIcon } from '@/components/Logo';
 
 interface NavItem {
   name: string;
@@ -53,9 +54,13 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-          {sidebarOpen && (
-            <h1 className="text-xl font-bold text-blue-600">ORCHESTR&apos;A</h1>
-          )}
+          <Link href="/dashboard" className="flex items-center">
+            {sidebarOpen ? (
+              <Logo size="sm" showText className="hover:opacity-80 transition" />
+            ) : (
+              <LogoIcon size="sm" className="hover:opacity-80 transition" />
+            )}
+          </Link>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 rounded-lg hover:bg-gray-100 transition"
