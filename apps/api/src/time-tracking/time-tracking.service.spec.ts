@@ -168,7 +168,7 @@ describe('TimeTrackingService', () => {
 
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ userId: 'user-1' }),
+          where: expect.objectContaining({ userId: 'user-1' }) as object,
         }),
       );
     });
@@ -181,7 +181,7 @@ describe('TimeTrackingService', () => {
 
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ projectId: 'project-1' }),
+          where: expect.objectContaining({ projectId: 'project-1' }) as object,
         }),
       );
     });
@@ -194,7 +194,7 @@ describe('TimeTrackingService', () => {
 
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ taskId: 'task-1' }),
+          where: expect.objectContaining({ taskId: 'task-1' }) as object,
         }),
       );
     });
@@ -217,10 +217,10 @@ describe('TimeTrackingService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             date: expect.objectContaining({
-              gte: expect.any(Date),
-              lte: expect.any(Date),
-            }),
-          }),
+              gte: expect.any(Date) as Date,
+              lte: expect.any(Date) as Date,
+            }) as object,
+          }) as object,
         }),
       );
     });
@@ -241,8 +241,10 @@ describe('TimeTrackingService', () => {
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            date: expect.objectContaining({ gte: expect.any(Date) }),
-          }),
+            date: expect.objectContaining({
+              gte: expect.any(Date) as Date,
+            }) as object,
+          }) as object,
         }),
       );
     });
@@ -264,8 +266,10 @@ describe('TimeTrackingService', () => {
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            date: expect.objectContaining({ lte: expect.any(Date) }),
-          }),
+            date: expect.objectContaining({
+              lte: expect.any(Date) as Date,
+            }) as object,
+          }) as object,
         }),
       );
     });
@@ -426,10 +430,10 @@ describe('TimeTrackingService', () => {
           where: expect.objectContaining({
             userId: 'user-1',
             date: expect.objectContaining({
-              gte: expect.any(Date),
-              lte: expect.any(Date),
-            }),
-          }),
+              gte: expect.any(Date) as Date,
+              lte: expect.any(Date) as Date,
+            }) as object,
+          }) as object,
         }),
       );
     });
@@ -443,8 +447,10 @@ describe('TimeTrackingService', () => {
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            date: expect.objectContaining({ gte: expect.any(Date) }),
-          }),
+            date: expect.objectContaining({
+              gte: expect.any(Date) as Date,
+            }) as object,
+          }) as object,
         }),
       );
     });
@@ -458,8 +464,10 @@ describe('TimeTrackingService', () => {
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            date: expect.objectContaining({ lte: expect.any(Date) }),
-          }),
+            date: expect.objectContaining({
+              lte: expect.any(Date) as Date,
+            }) as object,
+          }) as object,
         }),
       );
     });
@@ -566,10 +574,10 @@ describe('TimeTrackingService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             date: expect.objectContaining({
-              gte: expect.any(Date),
-              lte: expect.any(Date),
-            }),
-          }),
+              gte: expect.any(Date) as Date,
+              lte: expect.any(Date) as Date,
+            }) as object,
+          }) as object,
         }),
       );
     });

@@ -152,7 +152,7 @@ describe('TeleworkService', () => {
       expect(result.data).toHaveLength(1);
       expect(mockPrismaService.teleworkSchedule.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ userId: 'user-1' }),
+          where: expect.objectContaining({ userId: 'user-1' }) as object,
         }),
       );
     });
@@ -167,10 +167,10 @@ describe('TeleworkService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             date: expect.objectContaining({
-              gte: expect.any(Date),
-              lte: expect.any(Date),
-            }),
-          }),
+              gte: expect.any(Date) as Date,
+              lte: expect.any(Date) as Date,
+            }) as object,
+          }) as object,
         }),
       );
     });
@@ -184,8 +184,10 @@ describe('TeleworkService', () => {
       expect(mockPrismaService.teleworkSchedule.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            date: expect.objectContaining({ gte: expect.any(Date) }),
-          }),
+            date: expect.objectContaining({
+              gte: expect.any(Date) as Date,
+            }) as object,
+          }) as object,
         }),
       );
     });
@@ -199,8 +201,10 @@ describe('TeleworkService', () => {
       expect(mockPrismaService.teleworkSchedule.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            date: expect.objectContaining({ lte: expect.any(Date) }),
-          }),
+            date: expect.objectContaining({
+              lte: expect.any(Date) as Date,
+            }) as object,
+          }) as object,
         }),
       );
     });
@@ -441,7 +445,7 @@ describe('TeleworkService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             user: { departmentId: 'dept-1' },
-          }),
+          }) as object,
         }),
       );
     });

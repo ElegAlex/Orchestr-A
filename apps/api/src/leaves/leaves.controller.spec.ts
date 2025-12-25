@@ -155,7 +155,7 @@ describe('LeavesController', () => {
 
       const result = await controller.findAll(1, 10, undefined, 'PENDING');
 
-      expect(result.data[0].status).toBe('PENDING');
+      expect((result.data as (typeof mockLeave)[])[0].status).toBe('PENDING');
       expect(mockLeavesService.findAll).toHaveBeenCalledWith(
         1,
         10,

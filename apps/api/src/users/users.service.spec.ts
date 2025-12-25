@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { Role } from 'database';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -191,7 +192,7 @@ describe('UsersService', () => {
       mockPrismaService.user.findMany.mockResolvedValue(mockAdmins);
       mockPrismaService.user.count.mockResolvedValue(1);
 
-      await service.findAll(1, 50, 'ADMIN' as any);
+      await service.findAll(1, 50, Role.ADMIN);
 
       expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

@@ -375,7 +375,7 @@ describe('LeavesService', () => {
       expect(result).toHaveProperty('data');
       expect(result).toHaveProperty('meta');
       expect(result.data).toHaveLength(1);
-      expect(result.meta.total).toBe(1);
+      expect((result.meta as { total: number }).total).toBe(1);
     });
 
     it('should filter by userId', async () => {

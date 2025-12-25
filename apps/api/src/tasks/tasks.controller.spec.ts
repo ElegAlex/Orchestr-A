@@ -7,6 +7,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { TaskStatus } from 'database';
 
 describe('TasksController', () => {
   let controller: TasksController;
@@ -163,7 +164,7 @@ describe('TasksController', () => {
 
       mockTasksService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10, 'TODO' as any);
+      const result = await controller.findAll(1, 10, TaskStatus.TODO);
 
       expect(result.data[0].status).toBe('TODO');
       expect(mockTasksService.findAll).toHaveBeenCalledWith(
@@ -224,7 +225,7 @@ describe('TasksController', () => {
       await controller.findAll(
         1,
         10,
-        'IN_PROGRESS' as any,
+        TaskStatus.IN_PROGRESS,
         'project-id-1',
         'user-id-1',
       );

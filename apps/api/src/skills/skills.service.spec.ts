@@ -7,6 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { SkillCategory, SkillLevel } from 'database';
 
 describe('SkillsService', () => {
   let service: SkillsService;
@@ -65,7 +66,7 @@ describe('SkillsService', () => {
     it('should create a skill successfully', async () => {
       const createDto = {
         name: 'TypeScript',
-        category: 'TECHNICAL' as any,
+        category: SkillCategory.TECHNICAL,
         description: 'TypeScript programming language',
       };
 
@@ -82,7 +83,7 @@ describe('SkillsService', () => {
     it('should throw ConflictException when skill name already exists', async () => {
       const createDto = {
         name: 'TypeScript',
-        category: 'TECHNICAL' as any,
+        category: SkillCategory.TECHNICAL,
       };
 
       mockPrismaService.skill.findFirst.mockResolvedValue(mockSkill);
@@ -109,11 +110,13 @@ describe('SkillsService', () => {
       mockPrismaService.skill.findMany.mockResolvedValue([mockSkill]);
       mockPrismaService.skill.count.mockResolvedValue(1);
 
-      await service.findAll(1, 10, 'TECHNICAL' as any);
+      await service.findAll(1, 10, SkillCategory.TECHNICAL);
 
       expect(mockPrismaService.skill.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ category: 'TECHNICAL' }),
+          where: expect.objectContaining({
+            category: SkillCategory.TECHNICAL,
+          }) as object,
         }),
       );
     });
@@ -384,7 +387,7 @@ describe('SkillsService', () => {
 
       expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ departmentId: 'dept-1' }),
+          where: expect.objectContaining({ departmentId: 'dept-1' }) as object,
         }),
       );
     });
@@ -393,11 +396,11 @@ describe('SkillsService', () => {
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.skill.findMany.mockResolvedValue([]);
 
-      await service.getSkillsMatrix(undefined, 'TECHNICAL' as any);
+      await service.getSkillsMatrix(undefined, SkillCategory.TECHNICAL);
 
       expect(mockPrismaService.skill.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ category: 'TECHNICAL' }),
+          where: expect.objectContaining({ category: 'TECHNICAL' }) as object,
         }),
       );
     });
@@ -461,7 +464,7 @@ describe('SkillsService', () => {
 
       const result = await service.findUsersBySkill(
         'skill-1',
-        'INTERMEDIATE' as any,
+        SkillLevel.INTERMEDIATE,
       );
 
       expect(result.users).toHaveLength(1);

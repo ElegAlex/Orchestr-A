@@ -7,6 +7,7 @@ import {
   ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Role } from 'database';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -142,7 +143,7 @@ describe('UsersController', () => {
 
       mockUsersService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10, 'ADMIN' as any);
+      const result = await controller.findAll(1, 10, Role.ADMIN);
 
       expect(result.data[0].role).toBe('ADMIN');
       expect(mockUsersService.findAll).toHaveBeenCalledWith(1, 10, 'ADMIN');
@@ -220,7 +221,7 @@ describe('UsersController', () => {
       const adminUsers = [{ ...mockUser, role: 'ADMIN' }];
       mockUsersService.getUsersByRole.mockResolvedValue(adminUsers);
 
-      const result = await controller.getUsersByRole('ADMIN' as any);
+      const result = await controller.getUsersByRole(Role.ADMIN);
 
       expect(result).toEqual(adminUsers);
       expect(mockUsersService.getUsersByRole).toHaveBeenCalledWith('ADMIN');
