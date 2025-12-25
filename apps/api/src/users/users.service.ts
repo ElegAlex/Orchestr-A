@@ -1019,7 +1019,6 @@ export class UsersService {
           .filter((s) => s);
 
         const resolvedServices: Array<{ id: string; name: string }> = [];
-        const hasServiceError = false;
 
         for (const serviceName of serviceNamesList) {
           const service = serviceMap.get(serviceName);

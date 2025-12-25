@@ -10,7 +10,6 @@ import {
 
 describe('TasksController', () => {
   let controller: TasksController;
-  let tasksService: TasksService;
 
   const mockTask = {
     id: 'task-id-1',
@@ -63,7 +62,6 @@ describe('TasksController', () => {
     }).compile();
 
     controller = module.get<TasksController>(TasksController);
-    tasksService = module.get<TasksService>(TasksService);
   });
 
   afterEach(() => {

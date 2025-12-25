@@ -6,7 +6,6 @@ import { NotFoundException } from '@nestjs/common';
 
 describe('DocumentsController', () => {
   let controller: DocumentsController;
-  let documentsService: DocumentsService;
 
   const mockDocument = {
     id: 'doc-id-1',
@@ -44,7 +43,6 @@ describe('DocumentsController', () => {
     }).compile();
 
     controller = module.get<DocumentsController>(DocumentsController);
-    documentsService = module.get<DocumentsService>(DocumentsService);
   });
 
   afterEach(() => {

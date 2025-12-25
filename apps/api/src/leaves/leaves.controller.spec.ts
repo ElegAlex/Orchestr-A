@@ -10,7 +10,6 @@ import {
 
 describe('LeavesController', () => {
   let controller: LeavesController;
-  let leavesService: LeavesService;
 
   const mockLeave = {
     id: 'leave-id-1',
@@ -70,7 +69,6 @@ describe('LeavesController', () => {
     }).compile();
 
     controller = module.get<LeavesController>(LeavesController);
-    leavesService = module.get<LeavesService>(LeavesService);
   });
 
   afterEach(() => {
@@ -88,7 +86,7 @@ describe('LeavesController', () => {
     it('should create a leave request successfully', async () => {
       mockLeavesService.create.mockResolvedValue(mockLeave);
 
-      const result = await controller.create('user-id-1', createLeaveDto);
+      await controller.create('user-id-1', createLeaveDto);
 
       expect(result).toEqual(mockLeave);
       expect(mockLeavesService.create).toHaveBeenCalledWith(
@@ -133,7 +131,7 @@ describe('LeavesController', () => {
 
       mockLeavesService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10);
+      await controller.findAll(1, 10);
 
       expect(result).toEqual(paginatedResult);
       expect(mockLeavesService.findAll).toHaveBeenCalledWith(
@@ -155,12 +153,7 @@ describe('LeavesController', () => {
 
       mockLeavesService.findAll.mockResolvedValue(pendingLeaves);
 
-      const result = await controller.findAll(
-        1,
-        10,
-        undefined,
-        'PENDING' as any,
-      );
+      await controller.findAll(1, 10, undefined, 'PENDING' as any);
 
       expect(result.data[0].status).toBe('PENDING');
       expect(mockLeavesService.findAll).toHaveBeenCalledWith(
@@ -227,7 +220,7 @@ describe('LeavesController', () => {
     it('should return a leave request by id', async () => {
       mockLeavesService.findOne.mockResolvedValue(mockLeave);
 
-      const result = await controller.findOne('leave-id-1');
+      await controller.findOne('leave-id-1');
 
       expect(result).toEqual(mockLeave);
       expect(mockLeavesService.findOne).toHaveBeenCalledWith('leave-id-1');
@@ -249,7 +242,7 @@ describe('LeavesController', () => {
       const userLeaves = [mockLeave];
       mockLeavesService.getUserLeaves.mockResolvedValue(userLeaves);
 
-      const result = await controller.getMyLeaves('user-id-1');
+      await controller.getMyLeaves('user-id-1');
 
       expect(result).toEqual(userLeaves);
       expect(mockLeavesService.getUserLeaves).toHaveBeenCalledWith('user-id-1');
@@ -268,7 +261,7 @@ describe('LeavesController', () => {
 
       mockLeavesService.getLeaveBalance.mockResolvedValue(balance);
 
-      const result = await controller.getMyBalance('user-id-1');
+      await controller.getMyBalance('user-id-1');
 
       expect(result).toEqual(balance);
       expect(mockLeavesService.getLeaveBalance).toHaveBeenCalledWith(
@@ -288,7 +281,7 @@ describe('LeavesController', () => {
 
       mockLeavesService.getLeaveBalance.mockResolvedValue(balance);
 
-      const result = await controller.getUserBalance('user-id-2');
+      await controller.getUserBalance('user-id-2');
 
       expect(result).toEqual(balance);
       expect(mockLeavesService.getLeaveBalance).toHaveBeenCalledWith(
@@ -302,7 +295,7 @@ describe('LeavesController', () => {
       const pendingLeaves = [mockLeave];
       mockLeavesService.getPendingForValidator.mockResolvedValue(pendingLeaves);
 
-      const result = await controller.getPendingForValidation('manager-id-1');
+      await controller.getPendingForValidation('manager-id-1');
 
       expect(result).toEqual(pendingLeaves);
       expect(mockLeavesService.getPendingForValidator).toHaveBeenCalledWith(
@@ -320,7 +313,7 @@ describe('LeavesController', () => {
       const updatedLeave = { ...mockLeave, comment: 'Updated comment' };
       mockLeavesService.update.mockResolvedValue(updatedLeave);
 
-      const result = await controller.update('leave-id-1', updateLeaveDto);
+      await controller.update('leave-id-1', updateLeaveDto);
 
       expect(result.comment).toBe('Updated comment');
       expect(mockLeavesService.update).toHaveBeenCalledWith(
@@ -358,7 +351,7 @@ describe('LeavesController', () => {
         message: 'Demande supprimée',
       });
 
-      const result = await controller.remove('leave-id-1');
+      await controller.remove('leave-id-1');
 
       expect(result.message).toBe('Demande supprimée');
       expect(mockLeavesService.remove).toHaveBeenCalledWith('leave-id-1');
@@ -384,11 +377,7 @@ describe('LeavesController', () => {
       };
       mockLeavesService.approve.mockResolvedValue(approvedLeave);
 
-      const result = await controller.approve(
-        'leave-id-1',
-        'manager-id-1',
-        'Approuvé',
-      );
+      await controller.approve('leave-id-1', 'manager-id-1', 'Approuvé');
 
       expect(result.status).toBe('APPROVED');
       expect(mockLeavesService.approve).toHaveBeenCalledWith(
@@ -432,11 +421,7 @@ describe('LeavesController', () => {
       };
       mockLeavesService.reject.mockResolvedValue(rejectedLeave);
 
-      const result = await controller.reject(
-        'leave-id-1',
-        'manager-id-1',
-        'Non disponible',
-      );
+      await controller.reject('leave-id-1', 'manager-id-1', 'Non disponible');
 
       expect(result.status).toBe('REJECTED');
       expect(mockLeavesService.reject).toHaveBeenCalledWith(
@@ -464,7 +449,7 @@ describe('LeavesController', () => {
       const cancelledLeave = { ...mockLeave, status: 'PENDING' };
       mockLeavesService.cancel.mockResolvedValue(cancelledLeave);
 
-      const result = await controller.cancel('leave-id-1');
+      await controller.cancel('leave-id-1');
 
       expect(mockLeavesService.cancel).toHaveBeenCalledWith('leave-id-1');
     });
@@ -495,7 +480,7 @@ describe('LeavesController', () => {
 
       mockLeavesService.createDelegation.mockResolvedValue(delegation);
 
-      const result = await controller.createDelegation(
+      await controller.createDelegation(
         'manager-id-1',
         'other-manager-id',
         '2025-01-01',
@@ -543,7 +528,7 @@ describe('LeavesController', () => {
 
       mockLeavesService.getDelegations.mockResolvedValue(delegations);
 
-      const result = await controller.getMyDelegations('manager-id-1');
+      await controller.getMyDelegations('manager-id-1');
 
       expect(result).toEqual(delegations);
       expect(mockLeavesService.getDelegations).toHaveBeenCalledWith(
@@ -558,10 +543,7 @@ describe('LeavesController', () => {
         message: 'Délégation désactivée',
       });
 
-      const result = await controller.deactivateDelegation(
-        'delegation-id-1',
-        'manager-id-1',
-      );
+      await controller.deactivateDelegation('delegation-id-1', 'manager-id-1');
 
       expect(result.message).toBe('Délégation désactivée');
       expect(mockLeavesService.deactivateDelegation).toHaveBeenCalledWith(

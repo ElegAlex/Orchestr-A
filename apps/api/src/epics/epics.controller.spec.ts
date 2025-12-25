@@ -6,7 +6,6 @@ import { NotFoundException } from '@nestjs/common';
 
 describe('EpicsController', () => {
   let controller: EpicsController;
-  let epicsService: EpicsService;
 
   const mockEpic = {
     id: 'epic-id-1',
@@ -45,7 +44,6 @@ describe('EpicsController', () => {
     }).compile();
 
     controller = module.get<EpicsController>(EpicsController);
-    epicsService = module.get<EpicsService>(EpicsService);
   });
 
   afterEach(() => {

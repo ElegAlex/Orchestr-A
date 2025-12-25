@@ -10,7 +10,6 @@ import {
 
 describe('TeleworkController', () => {
   let controller: TeleworkController;
-  let teleworkService: TeleworkService;
 
   const mockTelework = {
     id: 'telework-id-1',
@@ -49,7 +48,6 @@ describe('TeleworkController', () => {
     }).compile();
 
     controller = module.get<TeleworkController>(TeleworkController);
-    teleworkService = module.get<TeleworkService>(TeleworkService);
   });
 
   afterEach(() => {

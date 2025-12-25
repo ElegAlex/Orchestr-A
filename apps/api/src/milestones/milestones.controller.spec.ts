@@ -6,7 +6,6 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 describe('MilestonesController', () => {
   let controller: MilestonesController;
-  let milestonesService: MilestonesService;
 
   const mockMilestone = {
     id: 'milestone-id-1',
@@ -45,7 +44,6 @@ describe('MilestonesController', () => {
     }).compile();
 
     controller = module.get<MilestonesController>(MilestonesController);
-    milestonesService = module.get<MilestonesService>(MilestonesService);
   });
 
   afterEach(() => {

@@ -104,11 +104,10 @@ describe('AnalyticsService', () => {
 
       await service.getAnalytics({ projectId: 'project-1' });
 
-      expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ id: 'project-1' }),
-        }),
-      );
+      const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+        where: { id?: string };
+      };
+      expect(callArgs.where.id).toBe('project-1');
     });
 
     it('should handle WEEK date range', async () => {

@@ -13,6 +13,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PersonalTodosService } from './personal-todos.service';
 import { CreatePersonalTodoDto } from './dto/create-personal-todo.dto';
 import { UpdatePersonalTodoDto } from './dto/update-personal-todo.dto';
+import { User } from '@prisma/client';
 
 @Controller('personal-todos')
 @UseGuards(JwtAuthGuard)
@@ -20,18 +21,18 @@ export class PersonalTodosController {
   constructor(private readonly personalTodosService: PersonalTodosService) {}
 
   @Get()
-  findByUser(@CurrentUser() user: any) {
+  findByUser(@CurrentUser() user: User) {
     return this.personalTodosService.findByUser(user.id);
   }
 
   @Post()
-  create(@CurrentUser() user: any, @Body() dto: CreatePersonalTodoDto) {
+  create(@CurrentUser() user: User, @Body() dto: CreatePersonalTodoDto) {
     return this.personalTodosService.create(user.id, dto);
   }
 
   @Patch(':id')
   update(
-    @CurrentUser() user: any,
+    @CurrentUser() user: User,
     @Param('id') id: string,
     @Body() dto: UpdatePersonalTodoDto,
   ) {
@@ -39,7 +40,7 @@ export class PersonalTodosController {
   }
 
   @Delete(':id')
-  delete(@CurrentUser() user: any, @Param('id') id: string) {
+  delete(@CurrentUser() user: User, @Param('id') id: string) {
     return this.personalTodosService.delete(id, user.id);
   }
 }

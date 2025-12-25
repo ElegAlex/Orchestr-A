@@ -29,6 +29,7 @@ import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { HolidayRangeQueryDto } from './dto/holiday-range-query.dto';
 import { Role } from 'database';
+import { User } from '@prisma/client';
 
 @ApiTags('Holidays')
 @ApiBearerAuth()
@@ -94,7 +95,7 @@ export class HolidaysController {
   })
   async create(
     @Body() createHolidayDto: CreateHolidayDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: User,
   ) {
     return this.holidaysService.create(createHolidayDto, user.id);
   }
@@ -124,7 +125,7 @@ export class HolidaysController {
   })
   async importFrenchHolidays(
     @Query('year') year: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: User,
   ) {
     const targetYear = year ? parseInt(year, 10) : new Date().getFullYear();
     return this.holidaysService.importFrenchHolidays(targetYear, user.id);

@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
-import { ActivityType } from 'database';
+import { Prisma } from 'database';
 
 @Injectable()
 export class TimeTrackingService {
@@ -112,7 +112,7 @@ export class TimeTrackingService {
   ) {
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.TimeEntryWhereInput = {};
     if (userId) where.userId = userId;
     if (projectId) where.projectId = projectId;
     if (taskId) where.taskId = taskId;
@@ -312,7 +312,7 @@ export class TimeTrackingService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    const where: any = { userId };
+    const where: Prisma.TimeEntryWhereInput = { userId };
 
     if (startDate && endDate) {
       where.date = {
@@ -466,7 +466,7 @@ export class TimeTrackingService {
       throw new NotFoundException('Projet introuvable');
     }
 
-    const where: any = { projectId };
+    const where: Prisma.TimeEntryWhereInput = { projectId };
 
     if (startDate && endDate) {
       where.date = {

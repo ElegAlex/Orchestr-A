@@ -6,7 +6,6 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 describe('DocumentsService', () => {
   let service: DocumentsService;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     document: {
@@ -46,7 +45,6 @@ describe('DocumentsService', () => {
     }).compile();
 
     service = module.get<DocumentsService>(DocumentsService);
-    prismaService = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
