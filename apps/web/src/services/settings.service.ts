@@ -3,7 +3,7 @@ import { api } from '@/lib/api';
 export interface AppSetting {
   id: string;
   key: string;
-  value: any;
+  value: unknown;
   category: string;
   description?: string;
   createdAt: string;
@@ -11,7 +11,7 @@ export interface AppSetting {
 }
 
 export interface SettingsResponse {
-  settings: Record<string, any>;
+  settings: Record<string, unknown>;
   list: AppSetting[];
 }
 
@@ -31,7 +31,7 @@ export const settingsService = {
     return response.data;
   },
 
-  async update(key: string, value: any, description?: string): Promise<AppSetting> {
+  async update(key: string, value: unknown, description?: string): Promise<AppSetting> {
     const response = await api.put<AppSetting>(`/settings/${key}`, {
       value: JSON.stringify(value),
       description,
@@ -39,7 +39,7 @@ export const settingsService = {
     return response.data;
   },
 
-  async bulkUpdate(settings: Record<string, any>): Promise<AppSetting[]> {
+  async bulkUpdate(settings: Record<string, unknown>): Promise<AppSetting[]> {
     const response = await api.post<AppSetting[]>('/settings/bulk', { settings });
     return response.data;
   },

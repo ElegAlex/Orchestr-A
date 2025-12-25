@@ -3,7 +3,7 @@ import { TeleworkSchedule, CreateTeleworkDto } from '@/types';
 
 export const teleworkService = {
   async getAll(): Promise<TeleworkSchedule[]> {
-    const response = await api.get<any>('/telework');
+    const response = await api.get<{ data: TeleworkSchedule[] } | TeleworkSchedule[]>('/telework');
     // API returns {data: [], meta: {}} - extract the array
     if (response.data && 'data' in response.data) {
       return response.data.data;
@@ -17,7 +17,7 @@ export const teleworkService = {
   },
 
   async getByDateRange(startDate: string, endDate: string): Promise<TeleworkSchedule[]> {
-    const response = await api.get<any>(
+    const response = await api.get<{ data: TeleworkSchedule[] } | TeleworkSchedule[]>(
       `/telework?startDate=${startDate}&endDate=${endDate}`
     );
     // API returns {data: [], meta: {}} - extract the array

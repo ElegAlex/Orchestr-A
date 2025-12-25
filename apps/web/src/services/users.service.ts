@@ -12,7 +12,7 @@ export const usersService = {
     if (limit !== undefined) params.append('limit', limit.toString());
     if (role) params.append('role', role);
 
-    const response = await api.get<any>(
+    const response = await api.get<PaginatedResponse<User> | User[]>(
       `/users?${params.toString()}`
     );
     // API returns {data: [], meta: {}} - extract based on usage
@@ -47,12 +47,12 @@ export const usersService = {
     return response.data;
   },
 
-  async create(data: any): Promise<User> {
+  async create(data: Partial<User>): Promise<User> {
     const response = await api.post<User>('/users', data);
     return response.data;
   },
 
-  async update(id: string, data: any): Promise<User> {
+  async update(id: string, data: Partial<User>): Promise<User> {
     const response = await api.patch<User>(`/users/${id}`, data);
     return response.data;
   },
