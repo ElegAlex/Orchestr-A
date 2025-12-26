@@ -11,6 +11,7 @@ interface MilestoneRoadmapProps {
   onEditMilestone?: (milestone: Milestone) => void;
   onCreateTask?: () => void;
   onTaskUpdate?: () => void;
+  onImportMilestones?: () => void;
 }
 
 export function MilestoneRoadmap({
@@ -20,6 +21,7 @@ export function MilestoneRoadmap({
   onEditMilestone,
   onCreateTask,
   onTaskUpdate,
+  onImportMilestones,
 }: MilestoneRoadmapProps) {
   // Trier les jalons par date de début
   const sortedMilestones = useMemo(() => {
@@ -92,6 +94,14 @@ export function MilestoneRoadmap({
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
             >
               + Nouvelle Tâche
+            </button>
+          )}
+          {onImportMilestones && (
+            <button
+              onClick={onImportMilestones}
+              className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
+            >
+              Importer CSV
             </button>
           )}
           {onCreateMilestone && (

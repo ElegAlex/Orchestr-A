@@ -1089,6 +1089,7 @@ export default function ProjectDetailPage() {
             onCreateMilestone={handleCreateMilestone}
             onEditMilestone={handleEditMilestone}
             onTaskUpdate={handleTaskUpdate}
+            onImportMilestones={() => setShowImportMilestonesModal(true)}
           />
         )}
 
