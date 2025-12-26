@@ -1065,6 +1065,115 @@ export class UsersService {
     return result;
   }
 
+  /**
+   * Récupère les statuts de présence des utilisateurs pour une date donnée
+   */
+  async getUsersPresence(dateStr?: string) {
+    // Utiliser la date fournie ou aujourd'hui
+    const targetDate = dateStr ? new Date(dateStr) : new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Récupérer tous les utilisateurs actifs
+    const users = await this.prisma.user.findMany({
+      where: {
+        isActive: true,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        department: {
+          select: {
+            name: true,
+          },
+        },
+        userServices: {
+          take: 1,
+          select: {
+            service: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    });
+
+    // Récupérer les télétravails du jour
+    const teleworkSchedules = await this.prisma.teleworkSchedule.findMany({
+      where: {
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+        isTelework: true,
+      },
+      select: { userId: true },
+    });
+    const remoteUserIds = new Set(teleworkSchedules.map((t) => t.userId));
+
+    // Récupérer les congés approuvés couvrant ce jour
+    const leaves = await this.prisma.leave.findMany({
+      where: {
+        startDate: { lte: endOfDay },
+        endDate: { gte: startOfDay },
+        status: 'APPROVED',
+      },
+      select: { userId: true },
+    });
+    const absentUserIds = new Set(leaves.map((l) => l.userId));
+
+    // Classifier les utilisateurs
+    const onSite: Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl?: string;
+      serviceName?: string;
+      departmentName?: string;
+    }> = [];
+    const remote: typeof onSite = [];
+    const absent: typeof onSite = [];
+
+    for (const user of users) {
+      const item = {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatarUrl: user.avatarUrl ?? undefined,
+        serviceName: user.userServices[0]?.service?.name,
+        departmentName: user.department?.name,
+      };
+
+      if (absentUserIds.has(user.id)) {
+        absent.push(item);
+      } else if (remoteUserIds.has(user.id)) {
+        remote.push(item);
+      } else {
+        onSite.push(item);
+      }
+    }
+
+    return {
+      onSite,
+      remote,
+      absent,
+      date: startOfDay.toISOString().split('T')[0],
+      totals: {
+        onSite: onSite.length,
+        remote: remote.length,
+        absent: absent.length,
+        total: users.length,
+      },
+    };
+  }
+
   getImportTemplate(): string {
     // Générer un template CSV avec les en-têtes et des commentaires d'exemple
     const headers = [

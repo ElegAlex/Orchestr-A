@@ -102,6 +102,12 @@ export const usersService = {
     const response = await api.post<ImportUsersResult>('/users/import', { users });
     return response.data;
   },
+
+  async getPresence(date?: string): Promise<PresenceData> {
+    const params = date ? `?date=${date}` : '';
+    const response = await api.get<PresenceData>(`/users/presence${params}`);
+    return response.data;
+  },
 };
 
 export interface ImportUserData {
@@ -159,4 +165,27 @@ export interface UserDependenciesResponse {
   userId: string;
   canDelete: boolean;
   dependencies: UserDependency[];
+}
+
+// Types pour la présence
+export interface UserPresenceItem {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string;
+  serviceName?: string;
+  departmentName?: string;
+}
+
+export interface PresenceData {
+  onSite: UserPresenceItem[];
+  remote: UserPresenceItem[];
+  absent: UserPresenceItem[];
+  date: string;
+  totals: {
+    onSite: number;
+    remote: number;
+    absent: number;
+    total: number;
+  };
 }

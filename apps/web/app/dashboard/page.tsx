@@ -9,6 +9,7 @@ import { projectsService } from '@/services/projects.service';
 import { tasksService } from '@/services/tasks.service';
 import { personalTodosService, PersonalTodo } from '@/services/personal-todos.service';
 import { Project, Task, TaskStatus } from '@/types';
+import { PresenceDialog } from '@/components/PresenceDialog';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -247,13 +248,16 @@ export default function DashboardPage() {
     <MainLayout>
       <div className="space-y-6">
         {/* Welcome */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Bonjour {user?.firstName} !
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Voici un aperçu de votre activité
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Bonjour {user?.firstName} !
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Voici un aperçu de votre activité
+            </p>
+          </div>
+          <PresenceDialog />
         </div>
 
         {/* Stats cards */}

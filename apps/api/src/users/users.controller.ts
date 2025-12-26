@@ -137,6 +137,19 @@ export class UsersController {
     return this.usersService.getImportTemplate();
   }
 
+  @Get('presence')
+  @ApiOperation({
+    summary: 'Récupérer les statuts de présence des utilisateurs pour une date',
+  })
+  @ApiQuery({ name: 'date', required: false, type: String, description: 'Date au format YYYY-MM-DD (défaut: aujourd\'hui)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Statuts de présence (sur site, télétravail, absents)',
+  })
+  getUsersPresence(@Query('date') date?: string) {
+    return this.usersService.getUsersPresence(date);
+  }
+
   @Get('department/:departmentId')
   @ApiOperation({ summary: "Récupérer les utilisateurs d'un département" })
   @ApiResponse({
