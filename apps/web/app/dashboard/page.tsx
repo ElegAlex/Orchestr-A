@@ -59,14 +59,14 @@ export default function DashboardPage() {
       if (user?.id) {
         const tasks = await tasksService.getByAssignee(user.id);
         const now = new Date();
-        const in7Days = new Date();
-        in7Days.setDate(now.getDate() + 7);
+        const in15Days = new Date();
+        in15Days.setDate(now.getDate() + 15);
 
         const filteredTasks = Array.isArray(tasks) ? tasks.filter(task => {
           if (task.status === 'DONE') return false;
           if (!task.endDate) return true;
           const endDate = new Date(task.endDate);
-          return endDate >= now && endDate <= in7Days;
+          return endDate >= now && endDate <= in15Days;
         }) : [];
 
         setMyTasks(filteredTasks);
@@ -180,10 +180,10 @@ export default function DashboardPage() {
           try {
             tasks = await tasksService.getByAssignee(user.id);
 
-            // Filtrer : tâches non terminées avec échéance dans les 7 prochains jours
+            // Filtrer : tâches non terminées avec échéance dans les 15 prochains jours
             const now = new Date();
-            const in7Days = new Date();
-            in7Days.setDate(now.getDate() + 7);
+            const in15Days = new Date();
+            in15Days.setDate(now.getDate() + 15);
 
             const filteredTasks = Array.isArray(tasks) ? tasks.filter(task => {
               // Exclure les tâches terminées
@@ -192,9 +192,9 @@ export default function DashboardPage() {
               // Si pas de date de fin, on inclut la tâche
               if (!task.endDate) return true;
 
-              // Vérifier que l'échéance est dans les 7 prochains jours
+              // Vérifier que l'échéance est dans les 15 prochains jours
               const endDate = new Date(task.endDate);
-              return endDate >= now && endDate <= in7Days;
+              return endDate >= now && endDate <= in15Days;
             }) : [];
 
             setMyTasks(filteredTasks);
