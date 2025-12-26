@@ -27,6 +27,7 @@ export default function SkillsPage() {
     name: '',
     category: '' as SkillCategory | '',
     description: '',
+    requiredCount: 1,
   });
 
   const [skillsToAssign, setSkillsToAssign] = useState<Array<{ skillId: string; level: SkillLevel }>>([]);
@@ -91,10 +92,11 @@ export default function SkillsPage() {
         name: skillForm.name,
         category: skillForm.category as SkillCategory,
         description: skillForm.description || undefined,
+        requiredCount: skillForm.requiredCount,
       });
       toast.success('Compétence créée avec succès');
       setShowCreateSkillModal(false);
-      setSkillForm({ name: '', category: '', description: '' });
+      setSkillForm({ name: '', category: '', description: '', requiredCount: 1 });
       fetchSkills();
     } catch {
       toast.error('Erreur lors de la création');
@@ -110,11 +112,12 @@ export default function SkillsPage() {
         name: skillForm.name || undefined,
         category: skillForm.category as SkillCategory || undefined,
         description: skillForm.description || undefined,
+        requiredCount: skillForm.requiredCount,
       });
       toast.success('Compétence modifiée avec succès');
       setShowEditSkillModal(false);
       setEditingSkill(null);
-      setSkillForm({ name: '', category: '', description: '' });
+      setSkillForm({ name: '', category: '', description: '', requiredCount: 1 });
       fetchSkills();
     } catch {
       toast.error('Erreur lors de la modification');
@@ -139,6 +142,7 @@ export default function SkillsPage() {
       name: skill.name,
       category: skill.category,
       description: skill.description || '',
+      requiredCount: skill.requiredCount || 1,
     });
     setShowEditSkillModal(true);
   };
@@ -296,7 +300,7 @@ export default function SkillsPage() {
             {canManageSkills && viewMode === 'skills' && (
               <button
                 onClick={() => {
-                  setSkillForm({ name: '', category: '', description: '' });
+                  setSkillForm({ name: '', category: '', description: '', requiredCount: 1 });
                   setShowCreateSkillModal(true);
                 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -469,6 +473,9 @@ export default function SkillsPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Description
                       </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                        Ressources requises
+                      </th>
                       {canManageSkills && (
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                           Actions
@@ -493,6 +500,11 @@ export default function SkillsPage() {
                           <div className="text-sm text-gray-500">
                             {skill.description || '-'}
                           </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 bg-gray-100 text-gray-700 text-sm font-medium rounded">
+                            {skill.requiredCount || 1}
+                          </span>
                         </td>
                         {canManageSkills && (
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -565,6 +577,22 @@ export default function SkillsPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ressources requises *
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Nombre de personnes devant maitriser cette competence pour assurer la couverture
+                  </p>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    value={skillForm.requiredCount}
+                    onChange={(e) => setSkillForm({ ...skillForm, requiredCount: parseInt(e.target.value) || 1 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
                 <div className="flex justify-end gap-3">
                   <button
                     type="button"
@@ -616,6 +644,21 @@ export default function SkillsPage() {
                     value={skillForm.description}
                     onChange={(e) => setSkillForm({ ...skillForm, description: e.target.value })}
                     rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ressources requises
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Nombre de personnes devant maitriser cette competence pour assurer la couverture
+                  </p>
+                  <input
+                    type="number"
+                    min={1}
+                    value={skillForm.requiredCount}
+                    onChange={(e) => setSkillForm({ ...skillForm, requiredCount: parseInt(e.target.value) || 1 })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
