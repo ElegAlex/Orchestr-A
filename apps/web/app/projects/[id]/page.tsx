@@ -394,16 +394,65 @@ export default function ProjectDetailPage() {
     }
   };
 
-  // Import CSV handlers
+  // Import CSV handlers - RFC 4180 compliant parser
+  const parseCSVLine = (line: string, delimiter: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    let i = 0;
+
+    while (i < line.length) {
+      const char = line[i];
+
+      if (inQuotes) {
+        if (char === '"') {
+          if (i + 1 < line.length && line[i + 1] === '"') {
+            current += '"';
+            i += 2;
+          } else {
+            inQuotes = false;
+            i++;
+          }
+        } else {
+          current += char;
+          i++;
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true;
+          i++;
+        } else if (char === delimiter) {
+          result.push(current.trim());
+          current = '';
+          i++;
+        } else {
+          current += char;
+          i++;
+        }
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  const detectDelimiter = (headerLine: string): string => {
+    const semicolonCount = (headerLine.match(/;/g) || []).length;
+    const commaCount = (headerLine.match(/,/g) || []).length;
+    return semicolonCount >= commaCount ? ';' : ',';
+  };
+
   const parseCSV = (content: string): Record<string, string>[] => {
     const lines = content.split('\n').filter((line) => line.trim());
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(';').map((h) => h.trim());
+    const delimiter = detectDelimiter(lines[0]);
+    const headers = parseCSVLine(lines[0], delimiter).map((h) =>
+      h.replace(/^\*|\*$/g, '').trim()
+    );
     const data: Record<string, string>[] = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(';').map((v) => v.trim());
+      const values = parseCSVLine(lines[i], delimiter);
       const row: Record<string, string> = {};
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
@@ -1264,7 +1313,7 @@ export default function ProjectDetailPage() {
               </h2>
               <div className="space-y-4">
                 <p className="text-gray-600 text-sm">
-                  Importez vos tâches depuis un fichier CSV. Le fichier doit utiliser le point-virgule (;) comme séparateur.
+                  Importez vos tâches depuis un fichier CSV. Séparateurs acceptés : virgule (,) ou point-virgule (;).
                 </p>
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-blue-900 mb-2">Colonnes disponibles :</h3>
@@ -1323,7 +1372,7 @@ export default function ProjectDetailPage() {
               </h2>
               <div className="space-y-4">
                 <p className="text-gray-600 text-sm">
-                  Importez vos jalons depuis un fichier CSV. Le fichier doit utiliser le point-virgule (;) comme séparateur.
+                  Importez vos jalons depuis un fichier CSV. Séparateurs acceptés : virgule (,) ou point-virgule (;).
                 </p>
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-blue-900 mb-2">Colonnes disponibles :</h3>
