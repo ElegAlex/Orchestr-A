@@ -4,6 +4,8 @@ import {
   IsNotEmpty,
   IsOptional,
   IsEnum,
+  IsInt,
+  Min,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -40,4 +42,16 @@ export class CreateSkillDto {
   @IsEnum(SkillCategory)
   @IsNotEmpty()
   category: SkillCategory;
+
+  @ApiProperty({
+    description: 'Nombre de ressources nécessaires pour couvrir cette compétence',
+    example: 2,
+    required: false,
+    default: 1,
+    minimum: 1,
+  })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  requiredCount?: number;
 }

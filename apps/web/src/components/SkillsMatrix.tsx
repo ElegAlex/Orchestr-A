@@ -21,6 +21,7 @@ interface MatrixData {
       skillId: string;
       skillName: string;
       skillCategory: SkillCategory;
+      skillRequiredCount: number;
       level: SkillLevel | null;
     }>;
   }>;
@@ -161,23 +162,23 @@ function LevelCell({ level, userId, skillId, skillName, isHighlighted, onEdit }:
   );
 }
 
-function SkillGapIndicator({ coverage }: { coverage: number }) {
+function SkillGapIndicator({ coverage, current, required }: { coverage: number; current: number; required: number }) {
   const getColor = () => {
-    if (coverage >= 70) return 'bg-green-500';
-    if (coverage >= 40) return 'bg-yellow-500';
+    if (coverage >= 100) return 'bg-green-500';
+    if (coverage >= 50) return 'bg-yellow-500';
     return 'bg-red-500';
   };
 
   const getLabel = () => {
-    if (coverage >= 70) return 'Bonne couverture';
-    if (coverage >= 40) return 'Couverture moyenne';
-    return 'Skill gap';
+    if (coverage >= 100) return `Couverture complete (${current}/${required})`;
+    if (coverage >= 50) return `Couverture partielle (${current}/${required})`;
+    return `Skill gap - ${required - current} ressource(s) manquante(s)`;
   };
 
   return (
     <div className="flex items-center gap-1" title={getLabel()}>
       <div className={`w-2 h-2 rounded-full ${getColor()}`} />
-      <span className="text-[10px] text-gray-500">{coverage}%</span>
+      <span className="text-[10px] text-gray-500">{current}/{required}</span>
     </div>
   );
 }
@@ -276,7 +277,8 @@ export function SkillsMatrix() {
     return data.matrix[0].skills.map(s => ({
       id: s.skillId,
       name: s.skillName,
-      category: s.skillCategory
+      category: s.skillCategory,
+      requiredCount: s.skillRequiredCount || 1
     }));
   }, [data]);
 
@@ -300,16 +302,21 @@ export function SkillsMatrix() {
     return groups;
   }, [filteredSkills]);
 
-  // Calculate skill coverage (% of users with this skill)
+  // Calculate skill coverage (% of required resources covered)
   const skillCoverage = useMemo(() => {
     if (!data) return {};
-    const coverage: Record<string, number> = {};
+    const coverage: Record<string, { percentage: number; current: number; required: number }> = {};
 
     allSkills.forEach(skill => {
       const usersWithSkill = data.matrix.filter(row =>
         row.skills.find(s => s.skillId === skill.id && s.level !== null)
       ).length;
-      coverage[skill.id] = Math.round((usersWithSkill / data.matrix.length) * 100);
+      // Couverture basée sur le nombre de ressources requises, plafonnée à 100%
+      coverage[skill.id] = {
+        percentage: Math.min(100, Math.round((usersWithSkill / skill.requiredCount) * 100)),
+        current: usersWithSkill,
+        required: skill.requiredCount
+      };
     });
 
     return coverage;
@@ -416,11 +423,11 @@ export function SkillsMatrix() {
     toast.success('Export CSV telecharge');
   };
 
-  // Find skill gaps (skills with low coverage)
+  // Find skill gaps (skills with coverage < 100%)
   const skillGaps = useMemo(() => {
     return allSkills
-      .filter(s => (skillCoverage[s.id] || 0) < 40)
-      .sort((a, b) => (skillCoverage[a.id] || 0) - (skillCoverage[b.id] || 0));
+      .filter(s => (skillCoverage[s.id]?.percentage || 0) < 100)
+      .sort((a, b) => (skillCoverage[a.id]?.percentage || 0) - (skillCoverage[b.id]?.percentage || 0));
   }, [allSkills, skillCoverage]);
 
   if (loading) {
@@ -475,18 +482,21 @@ export function SkillsMatrix() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            Competences a renforcer (couverture &lt; 40%)
+            Competences a renforcer (couverture incomplete)
           </div>
           <div className="flex flex-wrap gap-2">
-            {skillGaps.slice(0, 8).map(skill => (
-              <span
-                key={skill.id}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-white border border-red-200 text-red-700"
-              >
-                {skill.name}
-                <span className="text-red-400">({skillCoverage[skill.id]}%)</span>
-              </span>
-            ))}
+            {skillGaps.slice(0, 8).map(skill => {
+              const coverage = skillCoverage[skill.id];
+              return (
+                <span
+                  key={skill.id}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-white border border-red-200 text-red-700"
+                >
+                  {skill.name}
+                  <span className="text-red-400">({coverage?.current || 0}/{coverage?.required || 1})</span>
+                </span>
+              );
+            })}
             {skillGaps.length > 8 && (
               <span className="text-xs text-red-500">+{skillGaps.length - 8} autres</span>
             )}
@@ -654,7 +664,11 @@ export function SkillsMatrix() {
                         >
                           {skill.name}
                         </span>
-                        <SkillGapIndicator coverage={skillCoverage[skill.id] || 0} />
+                        <SkillGapIndicator
+                          coverage={skillCoverage[skill.id]?.percentage || 0}
+                          current={skillCoverage[skill.id]?.current || 0}
+                          required={skillCoverage[skill.id]?.required || 1}
+                        />
                       </div>
                     </th>
                   ));

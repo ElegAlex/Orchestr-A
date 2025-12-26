@@ -5,12 +5,14 @@ export interface CreateSkillDto {
   name: string;
   category: SkillCategory;
   description?: string;
+  requiredCount?: number;
 }
 
 export interface UpdateSkillDto {
   name?: string;
   category?: SkillCategory;
   description?: string;
+  requiredCount?: number;
 }
 
 export interface AssignSkillDto {

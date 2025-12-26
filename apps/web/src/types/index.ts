@@ -495,6 +495,7 @@ export interface Skill {
   name: string;
   category: SkillCategory;
   description?: string;
+  requiredCount: number;
   createdAt: string;
   updatedAt: string;
 }

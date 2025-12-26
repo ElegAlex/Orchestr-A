@@ -19,7 +19,7 @@ export class SkillsService {
    * Créer une nouvelle compétence
    */
   async create(createSkillDto: CreateSkillDto) {
-    const { name, description, category } = createSkillDto;
+    const { name, description, category, requiredCount } = createSkillDto;
 
     // Vérifier l'unicité du nom
     const existing = await this.prisma.skill.findFirst({
@@ -35,6 +35,7 @@ export class SkillsService {
         name,
         description,
         category,
+        requiredCount: requiredCount ?? 1,
       },
       include: {
         _count: {
@@ -139,7 +140,7 @@ export class SkillsService {
       throw new NotFoundException('Compétence introuvable');
     }
 
-    const { name, description, category } = updateSkillDto;
+    const { name, description, category, requiredCount } = updateSkillDto;
 
     // Vérifier l'unicité du nom si modifié
     if (name && name !== existing.name) {
@@ -158,6 +159,7 @@ export class SkillsService {
         ...(name && { name }),
         ...(description !== undefined && { description }),
         ...(category && { category }),
+        ...(requiredCount !== undefined && { requiredCount }),
       },
       include: {
         _count: {
@@ -412,6 +414,7 @@ export class SkillsService {
           skillId: skill.id,
           skillName: skill.name,
           skillCategory: skill.category,
+          skillRequiredCount: skill.requiredCount,
           level: userSkillsMap.get(skill.id) || null,
         })),
       };
