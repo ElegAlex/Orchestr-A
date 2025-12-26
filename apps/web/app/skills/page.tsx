@@ -6,6 +6,7 @@ import { skillsService } from '@/services/skills.service';
 import { usersService } from '@/services/users.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { Skill, SkillCategory, SkillLevel, Role, User, UserSkill } from '@/types';
+import { SkillsMatrix } from '@/components/SkillsMatrix';
 import toast from 'react-hot-toast';
 
 export default function SkillsPage() {
@@ -20,7 +21,7 @@ export default function SkillsPage() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<SkillCategory | ''>('');
-  const [viewMode, setViewMode] = useState<'skills' | 'users'>('users');
+  const [viewMode, setViewMode] = useState<'skills' | 'users' | 'matrix'>('users');
 
   const [skillForm, setSkillForm] = useState({
     name: '',
@@ -281,6 +282,16 @@ export default function SkillsPage() {
               >
                 Référentiel
               </button>
+              <button
+                onClick={() => setViewMode('matrix')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                  viewMode === 'matrix'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Matrice
+              </button>
             </div>
             {canManageSkills && viewMode === 'skills' && (
               <button
@@ -296,7 +307,7 @@ export default function SkillsPage() {
           </div>
         </div>
 
-        {viewMode === 'users' ? (
+        {viewMode === 'users' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Liste des utilisateurs */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -418,7 +429,9 @@ export default function SkillsPage() {
               )}
             </div>
           </div>
-        ) : (
+        )}
+
+        {viewMode === 'skills' && (
           <div>
             {/* Filtres */}
             <div className="mb-6">
@@ -503,6 +516,12 @@ export default function SkillsPage() {
                 </table>
               )}
             </div>
+          </div>
+        )}
+
+        {viewMode === 'matrix' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <SkillsMatrix />
           </div>
         )}
 

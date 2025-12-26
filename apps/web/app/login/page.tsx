@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { Logo } from '@/components/Logo';
@@ -44,7 +43,7 @@ export default function LoginPage() {
             <Logo size="xl" />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            ORCHESTR&apos;A V2
+            Orchestr&apos;A
           </h1>
           <p className="text-gray-600">Gestion de projets et RH</p>
         </div>
@@ -98,18 +97,6 @@ export default function LoginPage() {
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Pas encore de compte ?{' '}
-            <Link
-              href="/register"
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              S&apos;inscrire
-            </Link>
-          </p>
-        </div>
 
       </div>
     </div>
