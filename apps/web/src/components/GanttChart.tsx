@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Gantt, Task, ViewMode } from '@rsagiev/gantt-task-react-19';
 import '@rsagiev/gantt-task-react-19/dist/index.css';
 import '../gantt-custom.css';
+import { Task as FullTask } from '@/types';
+import { TaskDependencyInfo } from './TaskDependencyInfo';
+import { TaskDependencyModal } from './TaskDependencyModal';
+import { useRouter } from 'next/navigation';
 
 interface GanttTask {
   id: string;
@@ -13,6 +17,7 @@ interface GanttTask {
   status?: string;
   progress?: number;
   milestoneId?: string;
+  dependencies?: { dependsOnTaskId: string }[];
 }
 
 interface GanttMilestone {
@@ -27,6 +32,8 @@ interface GanttChartProps {
   milestones: GanttMilestone[];
   projectStartDate?: Date;
   projectEndDate?: Date;
+  fullTasks?: FullTask[];
+  onDependencyChange?: () => void;
 }
 
 export default function GanttChart({
@@ -34,9 +41,64 @@ export default function GanttChart({
   milestones,
   projectStartDate,
   projectEndDate,
+  fullTasks = [],
+  onDependencyChange,
 }: GanttChartProps) {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const [ganttTasks, setGanttTasks] = useState<Task[]>([]);
+  const [selectedTaskForInfo, setSelectedTaskForInfo] = useState<FullTask | null>(null);
+  const [selectedTaskForModal, setSelectedTaskForModal] = useState<FullTask | null>(null);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Find full task by gantt task ID
+  const findFullTask = useCallback((ganttTaskId: string): FullTask | null => {
+    if (!ganttTaskId.startsWith('task-')) return null;
+    const realId = ganttTaskId.replace('task-', '');
+    return fullTasks.find((t) => t.id === realId) || null;
+  }, [fullTasks]);
+
+  // Handle single click - show info popover
+  const handleTaskClick = useCallback((task: Task) => {
+    // Clear any pending timeout
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+
+    // Set a timeout to distinguish single click from double click
+    clickTimeoutRef.current = setTimeout(() => {
+      const fullTask = findFullTask(task.id);
+      if (fullTask) {
+        setSelectedTaskForInfo(fullTask);
+      }
+    }, 250);
+  }, [findFullTask]);
+
+  // Handle double click - show edit modal
+  const handleTaskDoubleClick = useCallback((task: Task) => {
+    // Clear the single click timeout
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+    }
+
+    const fullTask = findFullTask(task.id);
+    if (fullTask) {
+      setSelectedTaskForInfo(null); // Close info if open
+      setSelectedTaskForModal(fullTask);
+    }
+  }, [findFullTask]);
+
+  // Navigate to task detail
+  const handleNavigate = useCallback((taskId: string) => {
+    setSelectedTaskForInfo(null);
+    router.push(`/tasks/${taskId}`);
+  }, [router]);
+
+  // Handle dependency modal save
+  const handleDependencySave = useCallback(() => {
+    onDependencyChange?.();
+  }, [onDependencyChange]);
 
   useEffect(() => {
     const convertedTasks: Task[] = [];
@@ -69,6 +131,9 @@ export default function GanttChart({
       else if (task.status === 'IN_PROGRESS') backgroundColor = '#f59e0b';
       else if (task.status === 'BLOCKED') backgroundColor = '#ef4444';
 
+      // Mapper les dépendances vers le format attendu par gantt-task-react
+      const dependencies = task.dependencies?.map(dep => `task-${dep.dependsOnTaskId}`) || [];
+
       return {
         id: `task-${task.id}`,
         name: `  ${task.title}`,
@@ -76,6 +141,7 @@ export default function GanttChart({
         end,
         type: 'task' as const,
         progress: task.progress || 0,
+        dependencies,
         styles: {
           backgroundColor,
           backgroundSelectedColor: backgroundColor,
@@ -174,8 +240,36 @@ export default function GanttChart({
           locale="fr"
           listCellWidth="250px"
           columnWidth={viewMode === ViewMode.Month ? 300 : viewMode === ViewMode.Week ? 250 : 65}
+          arrowColor="#6b7280"
+          arrowIndent={20}
+          onClick={handleTaskClick}
+          onDoubleClick={handleTaskDoubleClick}
         />
       </div>
+
+      {/* Task Dependency Info Popover */}
+      {selectedTaskForInfo && (
+        <TaskDependencyInfo
+          task={selectedTaskForInfo}
+          allTasks={fullTasks}
+          onClose={() => setSelectedTaskForInfo(null)}
+          onEdit={() => {
+            setSelectedTaskForInfo(null);
+            setSelectedTaskForModal(selectedTaskForInfo);
+          }}
+          onNavigate={handleNavigate}
+        />
+      )}
+
+      {/* Task Dependency Modal */}
+      {selectedTaskForModal && (
+        <TaskDependencyModal
+          task={selectedTaskForModal}
+          allTasks={fullTasks}
+          onClose={() => setSelectedTaskForModal(null)}
+          onSave={handleDependencySave}
+        />
+      )}
     </div>
   );
 }

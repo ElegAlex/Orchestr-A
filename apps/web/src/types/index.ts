@@ -309,6 +309,17 @@ export interface Milestone {
 // TASKS
 // ===========================
 
+export interface TaskDependency {
+  id?: string;
+  dependsOnTaskId: string;
+  dependsOnTask?: {
+    id: string;
+    title: string;
+    status: TaskStatus;
+    endDate?: string;
+  };
+}
+
 export interface TaskAssignee {
   id: string;
   taskId: string;
@@ -343,6 +354,7 @@ export interface Task {
   timeEntries?: TimeEntry[];
   comments?: Comment[];
   raci?: TaskRACI[];
+  dependencies?: TaskDependency[];
 }
 
 export interface TaskRACI {

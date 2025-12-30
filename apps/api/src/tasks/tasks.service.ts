@@ -882,9 +882,13 @@ export class TasksService {
             name: true,
           },
         },
+        dependencies: {
+          select: {
+            dependsOnTaskId: true,
+          },
+        },
         _count: {
           select: {
-            dependencies: true,
             comments: true,
           },
         },
