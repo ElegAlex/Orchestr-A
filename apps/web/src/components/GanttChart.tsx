@@ -153,7 +153,13 @@ export default function GanttChart({
     milestones.forEach((milestone) => {
       const dueDate = milestone.dueDate ? new Date(milestone.dueDate) : defaultEnd;
 
-      // Ajouter le milestone
+      // Récupérer les tâches liées à ce milestone
+      const milestoneTasks = tasksByMilestone.get(milestone.id) || [];
+
+      // Créer les dépendances du milestone (toutes les tâches qui y sont liées)
+      const milestoneDependencies = milestoneTasks.map((task) => `task-${task.id}`);
+
+      // Ajouter le milestone avec ses dépendances
       convertedTasks.push({
         id: `milestone-${milestone.id}`,
         name: `📍 ${milestone.name}`,
@@ -161,6 +167,7 @@ export default function GanttChart({
         end: dueDate,
         type: 'milestone' as const,
         progress: milestone.status === 'COMPLETED' ? 100 : 0,
+        dependencies: milestoneDependencies,
         styles: {
           backgroundColor: '#10b981',
           backgroundSelectedColor: '#059669',
@@ -168,7 +175,6 @@ export default function GanttChart({
       } as Task);
 
       // Ajouter les tâches liées à ce milestone
-      const milestoneTasks = tasksByMilestone.get(milestone.id) || [];
       milestoneTasks.forEach((task) => {
         convertedTasks.push(convertTask(task));
       });
