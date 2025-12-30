@@ -1,7 +1,0 @@
-- quand on  drag and drop une card task mais qu'elle est affectée à 2 users, ça supprime la card task du user que l'on a pas déplacé
-- quand j'ajoute une compétence à un user, la compétence ne s'affiche pas
-- enlever l'icone "cloche" de notifications dans le header
-- dans la feature profile, onglet préférence enlever la section "Notifications"
-- Supprimer de l'application la ou les feature de notification le plus promprement possible
-- enlever l'icone "de roue cranté" de profile dans le header et remplacer l'accès par un clic sur l'avatar en bas de la side bar
-- puis supprimer la bande blanche du header (ne pas toucher à la side bar)
