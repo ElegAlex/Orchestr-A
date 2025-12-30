@@ -884,7 +884,16 @@ export class TasksService {
         },
         dependencies: {
           select: {
+            id: true,
             dependsOnTaskId: true,
+            dependsOnTask: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+                endDate: true,
+              },
+            },
           },
         },
         _count: {
