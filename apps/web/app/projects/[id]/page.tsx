@@ -1174,11 +1174,18 @@ export default function ProjectDetailPage() {
         {/* Gantt Tab */}
         {activeTab === 'gantt' && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <span className="font-medium">Astuce :</span> Cliquez sur une tache pour voir ses dependances, double-cliquez pour les modifier.
+              </p>
+            </div>
             <GanttChart
               tasks={tasks}
               milestones={milestones}
               projectStartDate={project.startDate ? new Date(project.startDate) : undefined}
               projectEndDate={project.endDate ? new Date(project.endDate) : undefined}
+              fullTasks={tasks}
+              onDependencyChange={handleTaskUpdate}
             />
           </div>
         )}

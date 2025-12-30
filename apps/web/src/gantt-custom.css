@@ -20,3 +20,28 @@
 .gantt-chart svg text {
   fill: #111827 !important;
 }
+
+/* Task hover effects for click feedback */
+.gantt-chart [class*="bar"] {
+  cursor: pointer;
+  transition: filter 0.15s ease-in-out;
+}
+
+.gantt-chart [class*="bar"]:hover {
+  filter: brightness(0.95);
+}
+
+/* Task with date conflict warning */
+.gantt-task-warning {
+  outline: 2px solid #f59e0b !important;
+  outline-offset: 1px;
+}
+
+/* Dependency arrow highlight on hover */
+.gantt-chart path[stroke] {
+  transition: stroke-width 0.15s ease-in-out;
+}
+
+.gantt-chart:hover path[stroke] {
+  stroke-width: 2px;
+}

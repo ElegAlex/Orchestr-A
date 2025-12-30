@@ -7,15 +7,13 @@ import { tasksService } from '@/services/tasks.service';
 import { milestonesService } from '@/services/milestones.service';
 import { usersService } from '@/services/users.service';
 import { projectsService } from '@/services/projects.service';
-import { Task, TaskStatus, Priority, Milestone, User, Project } from '@/types';
+import { Task, TaskStatus, Priority, Milestone, User, Project, TaskDependency } from '@/types';
 import { UserMultiSelect } from '@/components/UserMultiSelect';
+import { TaskDependencySelector } from '@/components/TaskDependencySelector';
+import { DependencyValidationBanner } from '@/components/DependencyValidationBanner';
+import { detectDateConflicts, getStatusColorClass, getStatusLabel as getDependencyStatusLabel } from '@/utils/dependencyValidation';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/stores/auth.store';
-
-interface TaskDependency {
-  id: string;
-  dependsOnTask?: { title: string; status: TaskStatus };
-}
 
 interface TaskMilestone {
   name: string;
@@ -27,7 +25,6 @@ interface TaskEpic {
 }
 
 interface TaskWithRelations extends Omit<Task, 'epic' | 'milestone'> {
-  dependencies?: TaskDependency[];
   milestone?: TaskMilestone;
   epic?: TaskEpic;
 }
@@ -44,6 +41,9 @@ export default function TaskDetailPage() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectTasks, setProjectTasks] = useState<Task[]>([]);
+  const [selectedDependencyIds, setSelectedDependencyIds] = useState<string[]>([]);
+  const [savingDependencies, setSavingDependencies] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -77,7 +77,23 @@ export default function TaskDetailPage() {
             console.error('Error fetching milestones:', error);
             setMilestones([]);
           }
+
+          // Fetch project tasks for dependency selection
+          try {
+            const projectTasksData = await tasksService.getByProject(taskData.projectId);
+            const tasksArray = Array.isArray(projectTasksData)
+              ? projectTasksData
+              : (projectTasksData as { data?: Task[] }).data || [];
+            setProjectTasks(tasksArray);
+          } catch (error) {
+            console.error('Error fetching project tasks:', error);
+            setProjectTasks([]);
+          }
         }
+
+        // Initialize selected dependency IDs
+        const depIds = taskData.dependencies?.map((d: TaskDependency) => d.dependsOnTaskId) || [];
+        setSelectedDependencyIds(depIds);
 
         // Fetch all users
         try {
@@ -234,6 +250,50 @@ export default function TaskDetailPage() {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(axiosError.response?.data?.message || 'Erreur lors de la suppression');
       console.error(err);
+    }
+  };
+
+  const handleDependencyChange = async (newDependencyIds: string[]) => {
+    if (!task) return;
+
+    const currentIds = task.dependencies?.map(d => d.dependsOnTaskId) || [];
+    const toAdd = newDependencyIds.filter(id => !currentIds.includes(id));
+    const toRemove = currentIds.filter(id => !newDependencyIds.includes(id));
+
+    if (toAdd.length === 0 && toRemove.length === 0) {
+      setSelectedDependencyIds(newDependencyIds);
+      return;
+    }
+
+    setSavingDependencies(true);
+    try {
+      // Remove dependencies
+      for (const depId of toRemove) {
+        const dependency = task.dependencies?.find(d => d.dependsOnTaskId === depId);
+        if (dependency?.id) {
+          await tasksService.removeDependency(taskId, dependency.id);
+        }
+      }
+
+      // Add new dependencies
+      for (const depId of toAdd) {
+        await tasksService.addDependency(taskId, depId);
+      }
+
+      // Refresh task data
+      const updatedTask = await tasksService.getById(taskId);
+      setTask(updatedTask);
+      const updatedDepIds = updatedTask.dependencies?.map((d: TaskDependency) => d.dependsOnTaskId) || [];
+      setSelectedDependencyIds(updatedDepIds);
+      toast.success('Dependances mises a jour');
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || 'Erreur lors de la mise a jour des dependances');
+      console.error(err);
+      // Reset to original
+      setSelectedDependencyIds(currentIds);
+    } finally {
+      setSavingDependencies(false);
     }
   };
 
@@ -592,30 +652,74 @@ export default function TaskDetailPage() {
             )}
 
             {/* Dependencies */}
-            {task.dependencies && task.dependencies.length > 0 && (
+            {task.projectId && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Dépendances
+                  Dependances
                 </h2>
-                <div className="space-y-2">
-                  {task.dependencies.map((dep) => (
-                    <div
-                      key={dep.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <span className="text-sm text-gray-900">
-                        {dep.dependsOnTask?.title || 'Tâche supprimée'}
-                      </span>
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadgeColor(
-                          dep.dependsOnTask?.status || TaskStatus.TODO
-                        )}`}
-                      >
-                        {getStatusLabel(dep.dependsOnTask?.status || TaskStatus.TODO)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+
+                {/* Date conflict warnings */}
+                {!isEditing && task.dependencies && task.dependencies.length > 0 && (
+                  <DependencyValidationBanner
+                    conflicts={detectDateConflicts(
+                      { startDate: task.startDate },
+                      task.dependencies
+                    )}
+                  />
+                )}
+
+                {isEditing ? (
+                  <TaskDependencySelector
+                    currentTaskId={taskId}
+                    currentTaskStartDate={formData.startDate}
+                    selectedDependencyIds={selectedDependencyIds}
+                    availableTasks={projectTasks}
+                    onChange={handleDependencyChange}
+                    disabled={savingDependencies}
+                    label=""
+                    placeholder="Selectionner les taches dont depend cette tache"
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {(!task.dependencies || task.dependencies.length === 0) ? (
+                      <p className="text-sm text-gray-500 italic">Aucune dependance</p>
+                    ) : (
+                      task.dependencies.map((dep) => {
+                        const hasConflict = dep.dependsOnTask?.endDate && task.startDate
+                          ? new Date(task.startDate) <= new Date(dep.dependsOnTask.endDate)
+                          : false;
+                        return (
+                          <div
+                            key={dep.id || dep.dependsOnTaskId}
+                            onClick={() => dep.dependsOnTask && router.push(`/tasks/${dep.dependsOnTask.id}`)}
+                            className={`
+                              flex items-center justify-between p-3 rounded-lg cursor-pointer
+                              ${hasConflict ? 'bg-amber-50 hover:bg-amber-100' : 'bg-gray-50 hover:bg-gray-100'}
+                            `}
+                          >
+                            <div className="flex items-center gap-2">
+                              {hasConflict && (
+                                <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                              )}
+                              <span className="text-sm text-gray-900">
+                                {dep.dependsOnTask?.title || 'Tache supprimee'}
+                              </span>
+                            </div>
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-medium ${getStatusColorClass(
+                                dep.dependsOnTask?.status || TaskStatus.TODO
+                              )}`}
+                            >
+                              {getDependencyStatusLabel(dep.dependsOnTask?.status || TaskStatus.TODO)}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
