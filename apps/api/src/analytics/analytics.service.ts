@@ -1,3 +1,4 @@
+// TODO: Fix Prisma type inference issues for CI type-checking
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsQueryDto, DateRangeEnum } from './dto/analytics-query.dto';
