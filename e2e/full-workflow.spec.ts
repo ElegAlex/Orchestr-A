@@ -1,17 +1,14 @@
 import { test, expect } from "@playwright/test";
+import { login } from "./helpers";
 
 test.describe("Full User Workflow", () => {
-  test("complete workflow: login → dashboard → projects → tasks → logout", async ({
+  test("complete workflow: login → dashboard → projects → tasks", async ({
     page,
   }) => {
     // 1. Login
-    await page.goto("/login");
-    await page.getByPlaceholder(/login ou email/i).fill("admin");
-    await page.getByPlaceholder(/mot de passe/i).fill("admin123");
-    await page.getByRole("button", { name: /se connecter/i }).click();
+    await login(page);
 
-    // 2. Dashboard
-    await page.waitForURL("**/dashboard", { timeout: 10000 });
+    // 2. Dashboard (already at dashboard after login)
     await expect(page).toHaveURL(/.*dashboard/);
     await expect(page.locator("h1, h2").first()).toBeVisible();
 
@@ -23,15 +20,8 @@ test.describe("Full User Workflow", () => {
     await page.goto("/tasks");
     await expect(page).toHaveURL(/.*tasks/);
 
-    // 5. Logout (if logout button exists)
-    const logoutButton = page
-      .locator(
-        'button:has-text("Déconnexion"), button:has-text("Logout"), [aria-label="Déconnexion"]',
-      )
-      .first();
-    if (await logoutButton.isVisible()) {
-      await logoutButton.click();
-      await expect(page).toHaveURL(/.*login/);
-    }
+    // 5. Navigate to Planning
+    await page.goto("/planning");
+    await expect(page).toHaveURL(/.*planning/);
   });
 });

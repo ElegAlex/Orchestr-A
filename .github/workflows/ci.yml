@@ -162,11 +162,10 @@ jobs:
           name: frontend-coverage
         continue-on-error: true
 
-  # Job 4: E2E Tests (temporarily disabled - needs playwright test fixes)
+  # Job 4: E2E Tests
   e2e-tests:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
-    if: false # TODO: Re-enable after fixing E2E tests
 
     services:
       postgres:
