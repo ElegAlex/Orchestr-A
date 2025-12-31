@@ -152,6 +152,8 @@ describe('TasksController', () => {
         undefined,
         undefined,
         undefined,
+        undefined,
+        undefined,
       );
     });
 
@@ -173,6 +175,8 @@ describe('TasksController', () => {
         'TODO',
         undefined,
         undefined,
+        undefined,
+        undefined,
       );
     });
 
@@ -191,6 +195,8 @@ describe('TasksController', () => {
         10,
         undefined,
         'project-id-1',
+        undefined,
+        undefined,
         undefined,
       );
     });
@@ -211,6 +217,8 @@ describe('TasksController', () => {
         undefined,
         undefined,
         'user-id-1',
+        undefined,
+        undefined,
       );
     });
 
@@ -236,6 +244,8 @@ describe('TasksController', () => {
         'IN_PROGRESS',
         'project-id-1',
         'user-id-1',
+        undefined,
+        undefined,
       );
     });
   });

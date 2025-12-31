@@ -44,7 +44,8 @@ export class CreateSkillDto {
   category: SkillCategory;
 
   @ApiProperty({
-    description: 'Nombre de ressources nécessaires pour couvrir cette compétence',
+    description:
+      'Nombre de ressources nécessaires pour couvrir cette compétence',
     example: 2,
     required: false,
     default: 1,

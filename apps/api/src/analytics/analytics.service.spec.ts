@@ -46,7 +46,7 @@ describe('AnalyticsService', () => {
     projectId: 'project-1',
     status: 'DONE',
     estimatedHours: 10,
-    dueDate: new Date('2025-06-01'),
+    endDate: new Date('2025-06-01'),
     createdAt: new Date(),
   };
 
@@ -155,14 +155,14 @@ describe('AnalyticsService', () => {
         { ...mockProject, id: 'project-2', status: 'COMPLETED' },
       ];
       const tasks = [
-        { ...mockTask, status: 'DONE', dueDate: null },
+        { ...mockTask, status: 'DONE', endDate: null },
         {
           ...mockTask,
           id: 'task-2',
           status: 'TODO',
-          dueDate: new Date('2024-01-01'),
+          endDate: new Date('2024-01-01'),
         }, // Overdue
-        { ...mockTask, id: 'task-3', status: 'IN_PROGRESS', dueDate: null },
+        { ...mockTask, id: 'task-3', status: 'IN_PROGRESS', endDate: null },
       ];
 
       mockPrismaService.project.findMany.mockResolvedValue(projects);
@@ -320,7 +320,7 @@ describe('AnalyticsService', () => {
 
       const result = await service.getAnalytics({});
 
-      expect(result.projectDetails[0].projectManager).toBeNull();
+      expect(result.projectDetails[0].projectManager).toBeUndefined();
     });
 
     it('should identify overdue projects', async () => {
@@ -492,7 +492,7 @@ describe('AnalyticsService', () => {
 
       const result = await service.getAnalytics({});
 
-      expect(result.projectDetails[0].dueDate).toBeNull();
+      expect(result.projectDetails[0].dueDate).toBeUndefined();
       expect(result.projectDetails[0].isOverdue).toBe(false);
     });
 

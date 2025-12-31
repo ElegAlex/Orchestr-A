@@ -126,20 +126,20 @@ describe('MilestonesController', () => {
     });
 
     it('should filter by status', async () => {
-      const pendingMilestones = {
+      const plannedMilestones = {
         data: [mockMilestone],
         meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
       };
 
-      mockMilestonesService.findAll.mockResolvedValue(pendingMilestones);
+      mockMilestonesService.findAll.mockResolvedValue(plannedMilestones);
 
-      await controller.findAll(1, 10, undefined, MilestoneStatus.PENDING);
+      await controller.findAll(1, 10, undefined, MilestoneStatus.PLANNED);
 
       expect(mockMilestonesService.findAll).toHaveBeenCalledWith(
         1,
         10,
         undefined,
-        'PENDING',
+        'PLANNED',
       );
     });
   });

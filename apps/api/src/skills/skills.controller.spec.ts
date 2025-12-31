@@ -424,23 +424,23 @@ describe('SkillsController', () => {
 
   describe('updateUserSkill', () => {
     it('should update skill level for user', async () => {
-      const updatedSkill = { ...mockUserSkill, level: 'MASTER' };
+      const updatedSkill = { ...mockUserSkill, level: 'EXPERT' };
       mockSkillsService.assignSkillToUser.mockResolvedValue(updatedSkill);
 
       const result = await controller.updateUserSkill(
         'user-id-1',
         'skill-id-1',
         {
-          level: SkillLevel.MASTER,
+          level: SkillLevel.EXPERT,
         },
       );
 
-      expect(result.level).toBe('MASTER');
+      expect(result.level).toBe('EXPERT');
       expect(mockSkillsService.assignSkillToUser).toHaveBeenCalledWith(
         'user-id-1',
         {
           skillId: 'skill-id-1',
-          level: 'MASTER',
+          level: 'EXPERT',
         },
       );
     });
