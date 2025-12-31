@@ -322,7 +322,7 @@ Format : `type(scope): message`
 
 ## 📄 License
 
-UNLICENSED - Usage interne uniquement
+MIT License - Voir le fichier [LICENSE](./LICENSE)
 
 ## 👥 Équipe
 
