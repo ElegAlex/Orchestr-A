@@ -140,3 +140,5 @@ backups/*.gz
 # ===========================
 csv_*.csv
 *.test.csv
+test-results/
+playwright-report/
