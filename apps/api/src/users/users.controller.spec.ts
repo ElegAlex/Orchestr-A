@@ -297,10 +297,13 @@ describe('UsersController', () => {
         message: 'Utilisateur supprimé définitivement',
       });
 
-      const result = await controller.hardDelete('user-id-1');
+      const result = await controller.hardDelete('user-id-1', 'admin-user-id');
 
       expect(result.message).toBe('Utilisateur supprimé définitivement');
-      expect(mockUsersService.hardDelete).toHaveBeenCalledWith('user-id-1');
+      expect(mockUsersService.hardDelete).toHaveBeenCalledWith(
+        'user-id-1',
+        'admin-user-id',
+      );
     });
 
     it('should throw NotFoundException when user not found', async () => {
@@ -308,9 +311,9 @@ describe('UsersController', () => {
         new NotFoundException('Utilisateur introuvable'),
       );
 
-      await expect(controller.hardDelete('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.hardDelete('nonexistent', 'admin-user-id'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

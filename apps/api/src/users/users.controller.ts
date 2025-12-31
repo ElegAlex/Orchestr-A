@@ -141,7 +141,12 @@ export class UsersController {
   @ApiOperation({
     summary: 'Récupérer les statuts de présence des utilisateurs pour une date',
   })
-  @ApiQuery({ name: 'date', required: false, type: String, description: 'Date au format YYYY-MM-DD (défaut: aujourd\'hui)' })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: "Date au format YYYY-MM-DD (défaut: aujourd'hui)",
+  })
   @ApiResponse({
     status: 200,
     description: 'Statuts de présence (sur site, télétravail, absents)',

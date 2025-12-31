@@ -32,6 +32,7 @@ describe('TasksService', () => {
     },
     user: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
     },
     taskDependency: {
       create: vi.fn(),
@@ -44,6 +45,16 @@ describe('TasksService', () => {
       findUnique: vi.fn(),
       delete: vi.fn(),
     },
+    taskAssignee: {
+      deleteMany: vi.fn(),
+      createMany: vi.fn(),
+      findMany: vi.fn(),
+    },
+    $transaction: vi.fn(
+      async <T>(
+        callback: (tx: typeof mockPrismaService) => Promise<T>,
+      ): Promise<T> => callback(mockPrismaService),
+    ),
   };
 
   beforeEach(async () => {
@@ -706,7 +717,12 @@ describe('TasksService', () => {
       expect(result).toHaveLength(2);
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { assigneeId: 'user-1' },
+          where: {
+            OR: [
+              { assigneeId: 'user-1' },
+              { assignees: { some: { userId: 'user-1' } } },
+            ],
+          },
         }),
       );
     });

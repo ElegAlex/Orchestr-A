@@ -21,6 +21,5 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
-  },
-  "exclude": ["vitest.setup.ts", "vitest.config.ts", "**/*.spec.ts"]
+  }
 }
