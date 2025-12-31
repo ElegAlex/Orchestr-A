@@ -168,12 +168,14 @@ L'application sera disponible sur : http://localhost:3000
 ## API Endpoints utilisés
 
 ### Authentification
+
 - POST `/auth/register`
 - POST `/auth/login`
 - GET `/auth/profile`
 - GET `/auth/me`
 
 ### Projets
+
 - GET `/projects`
 - GET `/projects/:id`
 - GET `/projects/:id/stats`
@@ -182,6 +184,7 @@ L'application sera disponible sur : http://localhost:3000
 - DELETE `/projects/:id`
 
 ### Tâches
+
 - GET `/tasks`
 - GET `/tasks/:id`
 - GET `/tasks/project/:projectId`
@@ -190,6 +193,7 @@ L'application sera disponible sur : http://localhost:3000
 - DELETE `/tasks/:id`
 
 ### Utilisateurs
+
 - GET `/users`
 - GET `/users/:id`
 
@@ -208,6 +212,7 @@ L'application sera disponible sur : http://localhost:3000
 ## Support
 
 Pour tout problème :
+
 1. Vérifier les logs du backend (Terminal 1)
 2. Vérifier les logs du frontend (Terminal 2)
 3. Ouvrir la console du navigateur (F12)

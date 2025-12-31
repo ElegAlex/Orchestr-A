@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   format,
   differenceInDays,
@@ -11,9 +11,9 @@ import {
   startOfWeek,
   endOfWeek,
   addWeeks,
-  getISOWeek
-} from 'date-fns';
-import { fr } from 'date-fns/locale';
+  getISOWeek,
+} from "date-fns";
+import { fr } from "date-fns/locale";
 
 interface Project {
   id: string;
@@ -29,46 +29,48 @@ interface PortfolioGanttProps {
   projects: Project[];
 }
 
-type TimeScale = 'day' | 'week' | 'month';
+type TimeScale = "day" | "week" | "month";
 
 export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
-  const [timeScale, setTimeScale] = useState<TimeScale>('month');
+  const [timeScale, setTimeScale] = useState<TimeScale>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   // Filtrer les projets actifs
   const filteredProjects = useMemo(() => {
-    return projects.filter(p =>
-      ['active', 'draft', 'suspended'].includes(p.status.toLowerCase())
-    ).sort((a, b) => {
-      const dateA = new Date(a.startDate);
-      const dateB = new Date(b.startDate);
-      return dateA.getTime() - dateB.getTime();
-    });
+    return projects
+      .filter((p) =>
+        ["active", "draft", "suspended"].includes(p.status.toLowerCase()),
+      )
+      .sort((a, b) => {
+        const dateA = new Date(a.startDate);
+        const dateB = new Date(b.startDate);
+        return dateA.getTime() - dateB.getTime();
+      });
   }, [projects]);
 
   // Calculer la période visible selon l'échelle
   const getVisibleRange = () => {
     switch (timeScale) {
-      case 'day':
+      case "day":
         return {
           start: addDays(currentDate, -15),
-          end: addDays(currentDate, 15)
+          end: addDays(currentDate, 15),
         };
-      case 'week':
+      case "week":
         return {
           start: startOfWeek(addWeeks(currentDate, -15), { locale: fr }),
-          end: endOfWeek(addWeeks(currentDate, 15), { locale: fr })
+          end: endOfWeek(addWeeks(currentDate, 15), { locale: fr }),
         };
-      case 'month':
+      case "month":
         return {
           start: startOfMonth(addMonths(currentDate, -6)),
-          end: endOfMonth(addMonths(currentDate, 5))
+          end: endOfMonth(addMonths(currentDate, 5)),
         };
       default:
         return {
           start: addDays(currentDate, -15),
-          end: addDays(currentDate, 15)
+          end: addDays(currentDate, 15),
         };
     }
   };
@@ -76,60 +78,78 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
   const visibleRange = getVisibleRange();
 
   // Calculer les colonnes de temps
-  const getTimeData = (): { totalUnits: number; columns: Array<{ date: Date; label: string; sublabel: string; width: number }> } => {
+  const getTimeData = (): {
+    totalUnits: number;
+    columns: Array<{
+      date: Date;
+      label: string;
+      sublabel: string;
+      width: number;
+    }>;
+  } => {
     switch (timeScale) {
-      case 'day': {
-        const totalDays = differenceInDays(visibleRange.end, visibleRange.start) + 1;
+      case "day": {
+        const totalDays =
+          differenceInDays(visibleRange.end, visibleRange.start) + 1;
         const columns = [];
         let currentDay = visibleRange.start;
 
         while (currentDay <= visibleRange.end) {
           columns.push({
             date: currentDay,
-            label: format(currentDay, 'd', { locale: fr }),
-            sublabel: format(currentDay, 'EEE', { locale: fr }),
-            width: 100 / totalDays
+            label: format(currentDay, "d", { locale: fr }),
+            sublabel: format(currentDay, "EEE", { locale: fr }),
+            width: 100 / totalDays,
           });
           currentDay = addDays(currentDay, 1);
         }
         return { totalUnits: totalDays, columns };
       }
 
-      case 'week': {
+      case "week": {
         const columns = [];
         let currentWeek = visibleRange.start;
 
         while (currentWeek <= visibleRange.end) {
           const weekEnd = endOfWeek(currentWeek, { locale: fr });
-          const adjustedEnd = weekEnd > visibleRange.end ? visibleRange.end : weekEnd;
+          const adjustedEnd =
+            weekEnd > visibleRange.end ? visibleRange.end : weekEnd;
           const weekDays = differenceInDays(adjustedEnd, currentWeek) + 1;
 
           columns.push({
             date: currentWeek,
             label: `S${getISOWeek(currentWeek)}`,
-            sublabel: '',
-            width: (weekDays * 100) / (differenceInDays(visibleRange.end, visibleRange.start) + 1)
+            sublabel: "",
+            width:
+              (weekDays * 100) /
+              (differenceInDays(visibleRange.end, visibleRange.start) + 1),
           });
           currentWeek = addWeeks(currentWeek, 1);
         }
-        return { totalUnits: differenceInDays(visibleRange.end, visibleRange.start) + 1, columns };
+        return {
+          totalUnits:
+            differenceInDays(visibleRange.end, visibleRange.start) + 1,
+          columns,
+        };
       }
 
-      case 'month': {
-        const totalDays = differenceInDays(visibleRange.end, visibleRange.start) + 1;
+      case "month": {
+        const totalDays =
+          differenceInDays(visibleRange.end, visibleRange.start) + 1;
         const columns = [];
         let currentMonth = visibleRange.start;
 
         while (currentMonth <= visibleRange.end) {
           const monthEnd = endOfMonth(currentMonth);
-          const adjustedEnd = monthEnd > visibleRange.end ? visibleRange.end : monthEnd;
+          const adjustedEnd =
+            monthEnd > visibleRange.end ? visibleRange.end : monthEnd;
           const monthDays = differenceInDays(adjustedEnd, currentMonth) + 1;
 
           columns.push({
             date: currentMonth,
-            label: format(currentMonth, 'MMM', { locale: fr }),
-            sublabel: format(currentMonth, 'yyyy'),
-            width: (monthDays * 100) / totalDays
+            label: format(currentMonth, "MMM", { locale: fr }),
+            sublabel: format(currentMonth, "yyyy"),
+            width: (monthDays * 100) / totalDays,
           });
           currentMonth = addMonths(currentMonth, 1);
         }
@@ -153,52 +173,66 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
       return null;
     }
 
-    const adjustedStart = start < visibleRange.start ? visibleRange.start : start;
+    const adjustedStart =
+      start < visibleRange.start ? visibleRange.start : start;
     const adjustedEnd = end > visibleRange.end ? visibleRange.end : end;
 
     const startOffset = differenceInDays(adjustedStart, visibleRange.start);
     const duration = differenceInDays(adjustedEnd, adjustedStart) + 1;
-    const totalUnits = differenceInDays(visibleRange.end, visibleRange.start) + 1;
+    const totalUnits =
+      differenceInDays(visibleRange.end, visibleRange.start) + 1;
 
     return {
       left: (startOffset / totalUnits) * 100,
-      width: (duration / totalUnits) * 100
+      width: (duration / totalUnits) * 100,
     };
   };
 
   // Couleurs par statut de projet
   const getProjectColor = (status: string) => {
     const colors: { [key: string]: string } = {
-      active: '#4caf50',
-      draft: '#9e9e9e',
-      suspended: '#ff9800',
-      completed: '#667eea',
-      cancelled: '#f44336'
+      active: "#4caf50",
+      draft: "#9e9e9e",
+      suspended: "#ff9800",
+      completed: "#667eea",
+      cancelled: "#f44336",
     };
-    return colors[status.toLowerCase()] || '#9e9e9e';
+    return colors[status.toLowerCase()] || "#9e9e9e";
   };
 
   // Navigation temporelle
-  const navigateTime = (direction: 'prev' | 'next') => {
+  const navigateTime = (direction: "prev" | "next") => {
     let amount = 1;
     switch (timeScale) {
-      case 'day':
+      case "day":
         amount = 30;
         break;
-      case 'week':
+      case "week":
         amount = 7;
         break;
-      case 'month':
+      case "month":
         amount = 12;
         break;
     }
 
-    if (timeScale === 'day') {
-      setCurrentDate(direction === 'next' ? addDays(currentDate, amount) : addDays(currentDate, -amount));
-    } else if (timeScale === 'week') {
-      setCurrentDate(direction === 'next' ? addWeeks(currentDate, amount) : addWeeks(currentDate, -amount));
+    if (timeScale === "day") {
+      setCurrentDate(
+        direction === "next"
+          ? addDays(currentDate, amount)
+          : addDays(currentDate, -amount),
+      );
+    } else if (timeScale === "week") {
+      setCurrentDate(
+        direction === "next"
+          ? addWeeks(currentDate, amount)
+          : addWeeks(currentDate, -amount),
+      );
     } else {
-      setCurrentDate(direction === 'next' ? addMonths(currentDate, amount) : addMonths(currentDate, -amount));
+      setCurrentDate(
+        direction === "next"
+          ? addMonths(currentDate, amount)
+          : addMonths(currentDate, -amount),
+      );
     }
   };
 
@@ -207,13 +241,13 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
   };
 
   // Zoom
-  const handleZoom = (direction: 'in' | 'out') => {
-    const scales: TimeScale[] = ['day', 'week', 'month'];
+  const handleZoom = (direction: "in" | "out") => {
+    const scales: TimeScale[] = ["day", "week", "month"];
     const currentIndex = scales.indexOf(timeScale);
 
-    if (direction === 'in' && currentIndex > 0) {
+    if (direction === "in" && currentIndex > 0) {
       setTimeScale(scales[currentIndex - 1]);
-    } else if (direction === 'out' && currentIndex < scales.length - 1) {
+    } else if (direction === "out" && currentIndex < scales.length - 1) {
       setTimeScale(scales[currentIndex + 1]);
     }
   };
@@ -222,7 +256,9 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
     <div className="bg-white rounded-lg shadow p-6 h-full flex flex-col">
       {/* En-tête avec contrôles */}
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold">Gantt Portfolio - Vue d&apos;ensemble des Projets</h3>
+        <h3 className="text-lg font-semibold">
+          Gantt Portfolio - Vue d&apos;ensemble des Projets
+        </h3>
 
         <div className="flex items-center gap-4">
           {/* Sélecteur d'échelle */}
@@ -239,7 +275,7 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
           {/* Navigation temporelle */}
           <div className="flex gap-2">
             <button
-              onClick={() => navigateTime('prev')}
+              onClick={() => navigateTime("prev")}
               className="px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50"
               title="Précédent"
             >
@@ -253,7 +289,7 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
               Aujourd&apos;hui
             </button>
             <button
-              onClick={() => navigateTime('next')}
+              onClick={() => navigateTime("next")}
               className="px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50"
               title="Suivant"
             >
@@ -264,18 +300,18 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
           {/* Zoom */}
           <div className="flex gap-2">
             <button
-              onClick={() => handleZoom('in')}
+              onClick={() => handleZoom("in")}
               className="px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50"
               title="Zoom avant"
-              disabled={timeScale === 'day'}
+              disabled={timeScale === "day"}
             >
               🔍+
             </button>
             <button
-              onClick={() => handleZoom('out')}
+              onClick={() => handleZoom("out")}
               className="px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50"
               title="Zoom arrière"
-              disabled={timeScale === 'month'}
+              disabled={timeScale === "month"}
             >
               🔍-
             </button>
@@ -307,11 +343,14 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
         </div>
 
         {/* Lignes des projets */}
-        {filteredProjects.map(project => {
+        {filteredProjects.map((project) => {
           const projectBar = getBarPosition(project.startDate, project.dueDate);
 
           return (
-            <div key={project.id} className="flex border-b border-gray-200 min-h-[50px]">
+            <div
+              key={project.id}
+              className="flex border-b border-gray-200 min-h-[50px]"
+            >
               <div className="w-64 p-2 border-r border-gray-300 bg-white">
                 <div className="font-semibold text-sm">{project.name}</div>
                 <div className="flex gap-2 mt-1 items-center">
@@ -319,15 +358,20 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
                     className="text-xs px-2 py-0.5 rounded text-white"
                     style={{ backgroundColor: getProjectColor(project.status) }}
                   >
-                    {project.status.replace('_', ' ')}
+                    {project.status.replace("_", " ")}
                   </span>
-                  <span className="text-xs text-gray-900">{project.progress}%</span>
+                  <span className="text-xs text-gray-900">
+                    {project.progress}%
+                  </span>
                 </div>
               </div>
 
               <div
                 className="flex-1 relative"
-                style={{ backgroundColor: hoveredItem === project.id ? '#f3f4f6' : 'transparent' }}
+                style={{
+                  backgroundColor:
+                    hoveredItem === project.id ? "#f3f4f6" : "transparent",
+                }}
               >
                 {projectBar && (
                   <div
@@ -338,16 +382,16 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
                       left: `${projectBar.left}%`,
                       width: `${projectBar.width}%`,
                       borderColor: getProjectColor(project.status),
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)'
+                      backgroundColor: "rgba(255, 255, 255, 0.2)",
                     }}
-                    title={`${project.name}\n${format(new Date(project.startDate), 'dd/MM/yyyy')} - ${project.dueDate ? format(new Date(project.dueDate), 'dd/MM/yyyy') : 'En cours'}\nProgression: ${project.progress}%`}
+                    title={`${project.name}\n${format(new Date(project.startDate), "dd/MM/yyyy")} - ${project.dueDate ? format(new Date(project.dueDate), "dd/MM/yyyy") : "En cours"}\nProgression: ${project.progress}%`}
                   >
                     {/* Barre de progression */}
                     <div
                       className="absolute top-0 left-0 h-full rounded transition-all"
                       style={{
                         width: `${project.progress}%`,
-                        backgroundColor: getProjectColor(project.status)
+                        backgroundColor: getProjectColor(project.status),
                       }}
                     />
                     {/* Texte */}
@@ -376,15 +420,24 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
       {/* Légende */}
       <div className="flex gap-4 mt-4 justify-center">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-3 rounded" style={{ backgroundColor: '#4caf50' }} />
+          <div
+            className="w-8 h-3 rounded"
+            style={{ backgroundColor: "#4caf50" }}
+          />
           <span className="text-xs">Actif</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-3 rounded" style={{ backgroundColor: '#9e9e9e' }} />
+          <div
+            className="w-8 h-3 rounded"
+            style={{ backgroundColor: "#9e9e9e" }}
+          />
           <span className="text-xs">Brouillon</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-3 rounded" style={{ backgroundColor: '#ff9800' }} />
+          <div
+            className="w-8 h-3 rounded"
+            style={{ backgroundColor: "#ff9800" }}
+          />
           <span className="text-xs">Suspendu</span>
         </div>
       </div>

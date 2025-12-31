@@ -40,6 +40,7 @@ pnpm run docker:dev
 ```
 
 Cela démarre :
+
 - 🐘 **PostgreSQL 18** sur port 5432
 - 🔴 **Redis 7.4** sur port 6379
 
@@ -58,6 +59,7 @@ pnpm run db:seed
 ```
 
 Cela crée :
+
 - 👤 Un utilisateur admin : `admin@orchestr-a.internal` / `admin123`
 - 🏢 Un département de test
 - 🎯 Un projet de test
@@ -69,6 +71,7 @@ pnpm run dev
 ```
 
 Cela démarre en mode watch :
+
 - 🔌 **API Backend** : http://localhost:3001
 - 🌐 **Frontend Web** : http://localhost:3000
 
@@ -79,19 +82,22 @@ Cela démarre en mode watch :
 Le fichier `apps/api/src/main.ts` doit être modifié :
 
 ```typescript
-import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { AppModule } from './app.module';
+import { NestFactory } from "@nestjs/core";
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from "@nestjs/platform-fastify";
+import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter()
+    new FastifyAdapter(),
   );
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix("api");
 
-  await app.listen(3001, '0.0.0.0');
+  await app.listen(3001, "0.0.0.0");
   console.log(`🚀 API listening on http://localhost:3001/api`);
 }
 bootstrap();
@@ -102,18 +108,18 @@ bootstrap();
 Dans `apps/api/src/main.ts` :
 
 ```typescript
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 // ... dans bootstrap()
 const config = new DocumentBuilder()
-  .setTitle('ORCHESTR\'A V2 API')
-  .setDescription('API de gestion de projets et RH')
-  .setVersion('2.0.0')
+  .setTitle("ORCHESTR'A V2 API")
+  .setDescription("API de gestion de projets et RH")
+  .setVersion("2.0.0")
   .addBearerAuth()
   .build();
 
 const document = SwaggerModule.createDocument(app, config);
-SwaggerModule.setup('api/docs', app, document);
+SwaggerModule.setup("api/docs", app, document);
 ```
 
 Swagger sera disponible sur : http://localhost:3001/api/docs
@@ -125,13 +131,13 @@ Swagger sera disponible sur : http://localhost:3001/api/docs
 Créer `apps/web/lib/api.ts` :
 
 ```typescript
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 export async function fetchApi(endpoint: string, options?: RequestInit) {
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options?.headers,
     },
   });
@@ -169,6 +175,7 @@ Cela ouvre : http://localhost:5555
 ## 🐛 Debugging
 
 ### Backend
+
 ```bash
 cd apps/api
 pnpm run start:debug
@@ -177,9 +184,11 @@ pnpm run start:debug
 Puis dans VS Code, F5 ou connecter le debugger sur le port 9229.
 
 ### Frontend
+
 Utiliser les React DevTools dans Chrome/Firefox.
 
 ### Base de données
+
 ```bash
 # Se connecter à PostgreSQL
 docker exec -it orchestr-a-db psql -U orchestr_a -d orchestr_a_v2
@@ -196,6 +205,7 @@ docker exec -it orchestr-a-db psql -U orchestr_a -d orchestr_a_v2
 ### Workflow suggéré
 
 1. **Créer une branche**
+
    ```bash
    git checkout -b feature/nom-fonctionnalite
    ```
@@ -208,6 +218,7 @@ docker exec -it orchestr-a-db psql -U orchestr_a -d orchestr_a_v2
    - 🧪 Tests : Ajouter tests unitaires et E2E
 
 3. **Tester**
+
    ```bash
    pnpm run test
    pnpm run lint
@@ -260,6 +271,7 @@ apps/web/app/
 ### Backend (à implémenter)
 
 1. Créer le module auth :
+
    ```bash
    cd apps/api
    pnpm nest g module auth
@@ -294,6 +306,7 @@ Lors de l'installation, vous verrez des warnings sur les peer dependencies de Ne
 ### PostgreSQL 18
 
 Nous utilisons PostgreSQL 18 (dernière version, septembre 2025) qui apporte :
+
 - Performances I/O 3x plus rapides
 - Support OAuth 2.0 natif
 - Colonnes générées virtuelles
@@ -302,6 +315,7 @@ Nous utilisons PostgreSQL 18 (dernière version, septembre 2025) qui apporte :
 ### Prisma 6.16
 
 Prisma 6.16 utilise le nouveau Query Compiler Rust-free :
+
 - Bundle 90% plus léger
 - Queries 3.4x plus rapides
 - Multi-schema en GA

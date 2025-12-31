@@ -1,5 +1,5 @@
-import { api } from '@/lib/api';
-import { Leave, CreateLeaveDto, LeaveType, LeaveStatus } from '@/types';
+import { api } from "@/lib/api";
+import { Leave, CreateLeaveDto, LeaveType, LeaveStatus } from "@/types";
 
 export interface LeaveValidationDelegate {
   id: string;
@@ -41,7 +41,13 @@ interface LeaveBalance {
 }
 
 export const leavesService = {
-  async getAll(page = 1, limit = 100, userId?: string, status?: LeaveStatus, type?: LeaveType): Promise<LeavesResponse> {
+  async getAll(
+    page = 1,
+    limit = 100,
+    userId?: string,
+    status?: LeaveStatus,
+    type?: LeaveType,
+  ): Promise<LeavesResponse> {
     let url = `/leaves?page=${page}&limit=${limit}`;
     if (userId) url += `&userId=${userId}`;
     if (status) url += `&status=${status}`;
@@ -61,12 +67,12 @@ export const leavesService = {
   },
 
   async getMyLeaves(): Promise<Leave[]> {
-    const response = await api.get<Leave[]>('/leaves/me');
+    const response = await api.get<Leave[]>("/leaves/me");
     return response.data;
   },
 
   async getPendingForValidation(): Promise<Leave[]> {
-    const response = await api.get<Leave[]>('/leaves/pending-validation');
+    const response = await api.get<Leave[]>("/leaves/pending-validation");
     return response.data;
   },
 
@@ -82,13 +88,13 @@ export const leavesService = {
 
   async getByDateRange(startDate: string, endDate: string): Promise<Leave[]> {
     const response = await api.get<Leave[]>(
-      `/leaves?startDate=${startDate}&endDate=${endDate}`
+      `/leaves?startDate=${startDate}&endDate=${endDate}`,
     );
     return response.data;
   },
 
   async create(data: CreateLeaveDto): Promise<Leave> {
-    const response = await api.post<Leave>('/leaves', data);
+    const response = await api.post<Leave>("/leaves", data);
     return response.data;
   },
 
@@ -112,12 +118,14 @@ export const leavesService = {
   },
 
   async getMyBalance(): Promise<LeaveBalance> {
-    const response = await api.get<LeaveBalance>('/leaves/me/balance');
+    const response = await api.get<LeaveBalance>("/leaves/me/balance");
     return response.data;
   },
 
   async approve(id: string, comment?: string): Promise<Leave> {
-    const response = await api.post<Leave>(`/leaves/${id}/approve`, { comment });
+    const response = await api.post<Leave>(`/leaves/${id}/approve`, {
+      comment,
+    });
     return response.data;
   },
 
@@ -132,17 +140,30 @@ export const leavesService = {
   },
 
   // Gestion des délégations
-  async createDelegation(delegateId: string, startDate: string, endDate: string): Promise<LeaveValidationDelegate> {
-    const response = await api.post<LeaveValidationDelegate>('/leaves/delegations', {
-      delegateId,
-      startDate,
-      endDate,
-    });
+  async createDelegation(
+    delegateId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<LeaveValidationDelegate> {
+    const response = await api.post<LeaveValidationDelegate>(
+      "/leaves/delegations",
+      {
+        delegateId,
+        startDate,
+        endDate,
+      },
+    );
     return response.data;
   },
 
-  async getMyDelegations(): Promise<{ given: LeaveValidationDelegate[]; received: LeaveValidationDelegate[] }> {
-    const response = await api.get<{ given: LeaveValidationDelegate[]; received: LeaveValidationDelegate[] }>('/leaves/delegations/me');
+  async getMyDelegations(): Promise<{
+    given: LeaveValidationDelegate[];
+    received: LeaveValidationDelegate[];
+  }> {
+    const response = await api.get<{
+      given: LeaveValidationDelegate[];
+      received: LeaveValidationDelegate[];
+    }>("/leaves/delegations/me");
     return response.data;
   },
 

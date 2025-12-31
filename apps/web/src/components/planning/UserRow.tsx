@@ -1,13 +1,13 @@
-import { User, Task } from '@/types';
-import { ServiceGroup, DayCell as DayCellData } from '@/hooks/usePlanningData';
-import { DayCell } from './DayCell';
-import { getGroupColors, getRoleLabel } from '@/lib/planning-utils';
+import { User, Task } from "@/types";
+import { ServiceGroup, DayCell as DayCellData } from "@/hooks/usePlanningData";
+import { DayCell } from "./DayCell";
+import { getGroupColors, getRoleLabel } from "@/lib/planning-utils";
 
 interface UserRowProps {
   user: User;
   group: ServiceGroup;
   displayDays: Date[];
-  viewMode: 'week' | 'month';
+  viewMode: "week" | "month";
   getDayCell: (userId: string, date: Date) => DayCellData;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
@@ -51,7 +51,9 @@ export const UserRow = ({
             <div className="font-medium text-gray-900">
               {user.firstName} {user.lastName}
             </div>
-            <div className="text-xs text-gray-500">{getRoleLabel(user.role)}</div>
+            <div className="text-xs text-gray-500">
+              {getRoleLabel(user.role)}
+            </div>
           </div>
         </div>
       </td>

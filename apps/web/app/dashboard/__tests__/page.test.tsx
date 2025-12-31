@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen } from "@testing-library/react";
 
 // Mock Dashboard page
 const MockDashboard = () => {
@@ -16,27 +16,27 @@ const MockDashboard = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-describe('Dashboard Page', () => {
-  it('should render dashboard title', () => {
-    render(<MockDashboard />)
+describe("Dashboard Page", () => {
+  it("should render dashboard title", () => {
+    render(<MockDashboard />);
 
-    expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument()
-  })
+    expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
+  });
 
-  it('should display project stats', () => {
-    render(<MockDashboard />)
+  it("should display project stats", () => {
+    render(<MockDashboard />);
 
-    expect(screen.getByText('Projets actifs')).toBeInTheDocument()
-    expect(screen.getByText('5')).toBeInTheDocument()
-  })
+    expect(screen.getByText("Projets actifs")).toBeInTheDocument();
+    expect(screen.getByText("5")).toBeInTheDocument();
+  });
 
-  it('should display task stats', () => {
-    render(<MockDashboard />)
+  it("should display task stats", () => {
+    render(<MockDashboard />);
 
-    expect(screen.getByText('Tâches en cours')).toBeInTheDocument()
-    expect(screen.getByText('12')).toBeInTheDocument()
-  })
-})
+    expect(screen.getByText("Tâches en cours")).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeInTheDocument();
+  });
+});

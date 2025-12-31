@@ -1,18 +1,21 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { MainLayout } from '@/components/MainLayout';
-import { PlanningView } from '@/components/planning/PlanningView';
-import { useAuthStore } from '@/stores/auth.store';
-import { projectsService } from '@/services/projects.service';
-import { tasksService } from '@/services/tasks.service';
-import { personalTodosService, PersonalTodo } from '@/services/personal-todos.service';
-import { Project, Task, TaskStatus } from '@/types';
-import { PresenceDialog } from '@/components/PresenceDialog';
-import toast from 'react-hot-toast';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { MainLayout } from "@/components/MainLayout";
+import { PlanningView } from "@/components/planning/PlanningView";
+import { useAuthStore } from "@/stores/auth.store";
+import { projectsService } from "@/services/projects.service";
+import { tasksService } from "@/services/tasks.service";
+import {
+  personalTodosService,
+  PersonalTodo,
+} from "@/services/personal-todos.service";
+import { Project, Task, TaskStatus } from "@/types";
+import { PresenceDialog } from "@/components/PresenceDialog";
+import toast from "react-hot-toast";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 const MAX_TODOS = 20;
 
@@ -34,18 +37,18 @@ export default function DashboardPage() {
   // Personal To-Do state
   const [todos, setTodos] = useState<PersonalTodo[]>([]);
   const [loadingTodos, setLoadingTodos] = useState(true);
-  const [newTodoText, setNewTodoText] = useState('');
+  const [newTodoText, setNewTodoText] = useState("");
   const [addingTodo, setAddingTodo] = useState(false);
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
-  const [editTodoText, setEditTodoText] = useState('');
+  const [editTodoText, setEditTodoText] = useState("");
 
   // Fonction pour formater les dates
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Non définie';
+    if (!dateString) return "Non définie";
     try {
-      return format(new Date(dateString), 'dd MMM yyyy', { locale: fr });
+      return format(new Date(dateString), "dd MMM yyyy", { locale: fr });
     } catch {
-      return 'Date invalide';
+      return "Date invalide";
     }
   };
 
@@ -53,7 +56,7 @@ export default function DashboardPage() {
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
       await tasksService.update(taskId, { status: newStatus });
-      toast.success('Statut mis à jour');
+      toast.success("Statut mis à jour");
 
       // Refresh les tâches
       if (user?.id) {
@@ -62,25 +65,29 @@ export default function DashboardPage() {
         const in15Days = new Date();
         in15Days.setDate(now.getDate() + 15);
 
-        const filteredTasks = Array.isArray(tasks) ? tasks.filter(task => {
-          if (task.status === 'DONE') return false;
-          if (!task.endDate) return true;
-          const endDate = new Date(task.endDate);
-          return endDate >= now && endDate <= in15Days;
-        }) : [];
+        const filteredTasks = Array.isArray(tasks)
+          ? tasks.filter((task) => {
+              if (task.status === "DONE") return false;
+              if (!task.endDate) return true;
+              const endDate = new Date(task.endDate);
+              return endDate >= now && endDate <= in15Days;
+            })
+          : [];
 
         setMyTasks(filteredTasks);
 
         // Update stats
-        setStats(prev => ({
+        setStats((prev) => ({
           ...prev,
-          tasksInProgress: tasks.filter((t: Task) => t.status === 'IN_PROGRESS').length,
-          tasksDone: tasks.filter((t: Task) => t.status === 'DONE').length,
-          tasksBlocked: tasks.filter((t: Task) => t.status === 'BLOCKED').length,
+          tasksInProgress: tasks.filter((t: Task) => t.status === "IN_PROGRESS")
+            .length,
+          tasksDone: tasks.filter((t: Task) => t.status === "DONE").length,
+          tasksBlocked: tasks.filter((t: Task) => t.status === "BLOCKED")
+            .length,
         }));
       }
     } catch (err) {
-      toast.error('Erreur lors de la mise à jour du statut');
+      toast.error("Erreur lors de la mise à jour du statut");
       console.error(err);
     }
   };
@@ -92,7 +99,7 @@ export default function DashboardPage() {
       const data = await personalTodosService.getAll();
       setTodos(data);
     } catch (err) {
-      console.error('Error fetching todos:', err);
+      console.error("Error fetching todos:", err);
     } finally {
       setLoadingTodos(false);
     }
@@ -103,13 +110,17 @@ export default function DashboardPage() {
     if (!newTodoText.trim() || todos.length >= MAX_TODOS) return;
     try {
       setAddingTodo(true);
-      const newTodo = await personalTodosService.create({ text: newTodoText.trim() });
+      const newTodo = await personalTodosService.create({
+        text: newTodoText.trim(),
+      });
       setTodos([newTodo, ...todos]);
-      setNewTodoText('');
-      toast.success('To-do ajoutée');
+      setNewTodoText("");
+      toast.success("To-do ajoutée");
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || 'Erreur lors de l\'ajout');
+      toast.error(
+        axiosError.response?.data?.message || "Erreur lors de l'ajout",
+      );
     } finally {
       setAddingTodo(false);
     }
@@ -117,20 +128,22 @@ export default function DashboardPage() {
 
   const handleToggleTodo = async (todo: PersonalTodo) => {
     try {
-      const updated = await personalTodosService.update(todo.id, { completed: !todo.completed });
-      setTodos(todos.map(t => (t.id === todo.id ? updated : t)));
+      const updated = await personalTodosService.update(todo.id, {
+        completed: !todo.completed,
+      });
+      setTodos(todos.map((t) => (t.id === todo.id ? updated : t)));
     } catch {
-      toast.error('Erreur lors de la mise à jour');
+      toast.error("Erreur lors de la mise à jour");
     }
   };
 
   const handleDeleteTodo = async (id: string) => {
     try {
       await personalTodosService.delete(id);
-      setTodos(todos.filter(t => t.id !== id));
-      toast.success('To-do supprimée');
+      setTodos(todos.filter((t) => t.id !== id));
+      toast.success("To-do supprimée");
     } catch {
-      toast.error('Erreur lors de la suppression');
+      toast.error("Erreur lors de la suppression");
     }
   };
 
@@ -145,12 +158,14 @@ export default function DashboardPage() {
       return;
     }
     try {
-      const updated = await personalTodosService.update(id, { text: editTodoText.trim() });
-      setTodos(todos.map(t => (t.id === id ? updated : t)));
+      const updated = await personalTodosService.update(id, {
+        text: editTodoText.trim(),
+      });
+      setTodos(todos.map((t) => (t.id === id ? updated : t)));
       setEditingTodoId(null);
-      toast.success('To-do modifiée');
+      toast.success("To-do modifiée");
     } catch {
-      toast.error('Erreur lors de la modification');
+      toast.error("Erreur lors de la modification");
     }
   };
 
@@ -172,7 +187,7 @@ export default function DashboardPage() {
             setMyProjects([]);
             const axiosError = err as { response?: { status?: number } };
             if (axiosError.response?.status !== 404) {
-              console.error('Error fetching projects:', err);
+              console.error("Error fetching projects:", err);
             }
           }
 
@@ -185,17 +200,19 @@ export default function DashboardPage() {
             const in15Days = new Date();
             in15Days.setDate(now.getDate() + 15);
 
-            const filteredTasks = Array.isArray(tasks) ? tasks.filter(task => {
-              // Exclure les tâches terminées
-              if (task.status === 'DONE') return false;
+            const filteredTasks = Array.isArray(tasks)
+              ? tasks.filter((task) => {
+                  // Exclure les tâches terminées
+                  if (task.status === "DONE") return false;
 
-              // Si pas de date de fin, on inclut la tâche
-              if (!task.endDate) return true;
+                  // Si pas de date de fin, on inclut la tâche
+                  if (!task.endDate) return true;
 
-              // Vérifier que l'échéance est dans les 15 prochains jours
-              const endDate = new Date(task.endDate);
-              return endDate >= now && endDate <= in15Days;
-            }) : [];
+                  // Vérifier que l'échéance est dans les 15 prochains jours
+                  const endDate = new Date(task.endDate);
+                  return endDate >= now && endDate <= in15Days;
+                })
+              : [];
 
             setMyTasks(filteredTasks);
           } catch (err) {
@@ -203,24 +220,24 @@ export default function DashboardPage() {
             setMyTasks([]);
             const axiosError = err as { response?: { status?: number } };
             if (axiosError.response?.status !== 404) {
-              console.error('Error fetching tasks:', err);
+              console.error("Error fetching tasks:", err);
             }
           }
 
           // Calculate stats
           setStats({
             totalProjects: projects.length,
-            activeProjects: projects.filter((p) => p.status === 'ACTIVE')
+            activeProjects: projects.filter((p) => p.status === "ACTIVE")
               .length,
             totalTasks: tasks.length,
-            tasksInProgress: tasks.filter((t) => t.status === 'IN_PROGRESS')
+            tasksInProgress: tasks.filter((t) => t.status === "IN_PROGRESS")
               .length,
-            tasksDone: tasks.filter((t) => t.status === 'DONE').length,
-            tasksBlocked: tasks.filter((t) => t.status === 'BLOCKED').length,
+            tasksDone: tasks.filter((t) => t.status === "DONE").length,
+            tasksBlocked: tasks.filter((t) => t.status === "BLOCKED").length,
           });
         }
       } catch (err) {
-        toast.error('Erreur lors du chargement des données');
+        toast.error("Erreur lors du chargement des données");
         console.error(err);
       } finally {
         setLoading(false);
@@ -347,9 +364,7 @@ export default function DashboardPage() {
         {/* Personal To-Do List */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
-              📝 Ma To-Do
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900">📝 Ma To-Do</h2>
           </div>
           <div className="p-6">
             {/* Input Add */}
@@ -358,17 +373,19 @@ export default function DashboardPage() {
                 type="text"
                 value={newTodoText}
                 onChange={(e) => setNewTodoText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
+                onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
                 placeholder="Ajouter une to-do..."
                 disabled={addingTodo || todos.length >= MAX_TODOS}
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
               <button
                 onClick={handleAddTodo}
-                disabled={addingTodo || !newTodoText.trim() || todos.length >= MAX_TODOS}
+                disabled={
+                  addingTodo || !newTodoText.trim() || todos.length >= MAX_TODOS
+                }
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition font-medium"
               >
-                {addingTodo ? '...' : '+ Ajouter'}
+                {addingTodo ? "..." : "+ Ajouter"}
               </button>
             </div>
 
@@ -379,93 +396,96 @@ export default function DashboardPage() {
             )}
 
             {loadingTodos ? (
-              <p className="text-gray-500 text-center py-8">
-                Chargement...
-              </p>
+              <p className="text-gray-500 text-center py-8">Chargement...</p>
             ) : todos.length === 0 ? (
               <p className="text-gray-500 text-center py-8">
                 Aucune to-do pour le moment
               </p>
             ) : (
               <div className="space-y-3">
-                {todos.filter(t => !t.completed).map((todo) => (
-                  <div
-                    key={todo.id}
-                    className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
-                        <input
-                          type="checkbox"
-                          checked={false}
-                          onChange={() => handleToggleTodo(todo)}
-                          className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                        />
-                        {editingTodoId === todo.id ? (
+                {todos
+                  .filter((t) => !t.completed)
+                  .map((todo) => (
+                    <div
+                      key={todo.id}
+                      className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3 flex-1">
                           <input
-                            type="text"
-                            value={editTodoText}
-                            onChange={(e) => setEditTodoText(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveEditTodo(todo.id);
-                              if (e.key === 'Escape') setEditingTodoId(null);
-                            }}
-                            onBlur={() => handleSaveEditTodo(todo.id)}
-                            className="flex-1 px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            autoFocus
+                            type="checkbox"
+                            checked={false}
+                            onChange={() => handleToggleTodo(todo)}
+                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                           />
-                        ) : (
-                          <span
-                            className="flex-1 text-gray-900 cursor-pointer"
-                            onDoubleClick={() => handleStartEditTodo(todo)}
-                            title="Double-cliquer pour éditer"
-                          >
-                            {todo.text}
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleDeleteTodo(todo.id)}
-                        className="ml-4 text-red-600 hover:text-red-800 transition"
-                        title="Supprimer"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {todos.filter(t => t.completed).length > 0 && (
-                  <>
-                    <div className="pt-2 text-xs font-semibold text-gray-500 uppercase">
-                      Complétées ({todos.filter(t => t.completed).length})
-                    </div>
-                    {todos.filter(t => t.completed).map((todo) => (
-                      <div
-                        key={todo.id}
-                        className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition opacity-60"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-3 flex-1">
+                          {editingTodoId === todo.id ? (
                             <input
-                              type="checkbox"
-                              checked={true}
-                              onChange={() => handleToggleTodo(todo)}
-                              className="mt-1 w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer"
+                              type="text"
+                              value={editTodoText}
+                              onChange={(e) => setEditTodoText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter")
+                                  handleSaveEditTodo(todo.id);
+                                if (e.key === "Escape") setEditingTodoId(null);
+                              }}
+                              onBlur={() => handleSaveEditTodo(todo.id)}
+                              className="flex-1 px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              autoFocus
                             />
-                            <span className="flex-1 text-gray-600 line-through">
+                          ) : (
+                            <span
+                              className="flex-1 text-gray-900 cursor-pointer"
+                              onDoubleClick={() => handleStartEditTodo(todo)}
+                              title="Double-cliquer pour éditer"
+                            >
                               {todo.text}
                             </span>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteTodo(todo.id)}
-                            className="ml-4 text-red-600 hover:text-red-800 transition"
-                            title="Supprimer"
-                          >
-                            🗑️
-                          </button>
+                          )}
                         </div>
+                        <button
+                          onClick={() => handleDeleteTodo(todo.id)}
+                          className="ml-4 text-red-600 hover:text-red-800 transition"
+                          title="Supprimer"
+                        >
+                          🗑️
+                        </button>
                       </div>
-                    ))}
+                    </div>
+                  ))}
+                {todos.filter((t) => t.completed).length > 0 && (
+                  <>
+                    <div className="pt-2 text-xs font-semibold text-gray-500 uppercase">
+                      Complétées ({todos.filter((t) => t.completed).length})
+                    </div>
+                    {todos
+                      .filter((t) => t.completed)
+                      .map((todo) => (
+                        <div
+                          key={todo.id}
+                          className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition opacity-60"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3 flex-1">
+                              <input
+                                type="checkbox"
+                                checked={true}
+                                onChange={() => handleToggleTodo(todo)}
+                                className="mt-1 w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer"
+                              />
+                              <span className="flex-1 text-gray-600 line-through">
+                                {todo.text}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteTodo(todo.id)}
+                              className="ml-4 text-red-600 hover:text-red-800 transition"
+                              title="Supprimer"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                   </>
                 )}
               </div>
@@ -501,30 +521,60 @@ export default function DashboardPage() {
                         {task.description && (
                           <p className="text-sm text-gray-600 mt-1">
                             {task.description.slice(0, 100)}
-                            {task.description.length > 100 && '...'}
+                            {task.description.length > 100 && "..."}
                           </p>
                         )}
 
                         {/* Dates */}
                         <div className="flex items-center gap-4 mt-3 text-xs text-gray-600">
                           <div className="flex items-center gap-1.5">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
                             </svg>
                             <span className="font-medium">Début:</span>
                             <span>{formatDate(task.startDate)}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
                             </svg>
                             <span className="font-medium">Fin:</span>
                             <span>{formatDate(task.endDate)}</span>
                           </div>
                           {task.estimatedHours && (
                             <div className="flex items-center gap-1.5">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
                               </svg>
                               <span className="font-medium">Estimé:</span>
                               <span>{task.estimatedHours}h</span>
@@ -538,19 +588,22 @@ export default function DashboardPage() {
                           value={task.status}
                           onChange={(e) => {
                             e.stopPropagation();
-                            handleStatusChange(task.id, e.target.value as TaskStatus);
+                            handleStatusChange(
+                              task.id,
+                              e.target.value as TaskStatus,
+                            );
                           }}
                           onClick={(e) => e.stopPropagation()}
                           className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap border-0 cursor-pointer transition ${
-                            task.status === 'TODO'
-                              ? 'bg-gray-200 text-gray-800'
-                              : task.status === 'IN_PROGRESS'
-                              ? 'bg-blue-100 text-blue-800'
-                              : task.status === 'IN_REVIEW'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : task.status === 'DONE'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                            task.status === "TODO"
+                              ? "bg-gray-200 text-gray-800"
+                              : task.status === "IN_PROGRESS"
+                                ? "bg-blue-100 text-blue-800"
+                                : task.status === "IN_REVIEW"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : task.status === "DONE"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
                           }`}
                         >
                           <option value="TODO">À faire</option>
@@ -561,22 +614,22 @@ export default function DashboardPage() {
                         </select>
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                            task.priority === 'CRITICAL'
-                              ? 'bg-red-100 text-red-800'
-                              : task.priority === 'HIGH'
-                              ? 'bg-orange-100 text-orange-800'
-                              : task.priority === 'NORMAL'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
+                            task.priority === "CRITICAL"
+                              ? "bg-red-100 text-red-800"
+                              : task.priority === "HIGH"
+                                ? "bg-orange-100 text-orange-800"
+                                : task.priority === "NORMAL"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
                           }`}
                         >
-                          {task.priority === 'CRITICAL'
-                            ? 'Critique'
-                            : task.priority === 'HIGH'
-                            ? 'Haute'
-                            : task.priority === 'NORMAL'
-                            ? 'Normale'
-                            : 'Basse'}
+                          {task.priority === "CRITICAL"
+                            ? "Critique"
+                            : task.priority === "HIGH"
+                              ? "Haute"
+                              : task.priority === "NORMAL"
+                                ? "Normale"
+                                : "Basse"}
                         </span>
                       </div>
                     </div>
@@ -590,9 +643,7 @@ export default function DashboardPage() {
         {/* My projects */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Mes projets
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900">Mes projets</h2>
           </div>
           <div className="p-6">
             {myProjects.length === 0 ? (
@@ -614,31 +665,31 @@ export default function DashboardPage() {
                       {project.description?.slice(0, 80)}
                       {project.description &&
                         project.description.length > 80 &&
-                        '...'}
+                        "..."}
                     </p>
                     <div className="mt-3 flex items-center justify-between">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          project.status === 'DRAFT'
-                            ? 'bg-gray-200 text-gray-800'
-                            : project.status === 'ACTIVE'
-                            ? 'bg-green-100 text-green-800'
-                            : project.status === 'SUSPENDED'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : project.status === 'COMPLETED'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-red-100 text-red-800'
+                          project.status === "DRAFT"
+                            ? "bg-gray-200 text-gray-800"
+                            : project.status === "ACTIVE"
+                              ? "bg-green-100 text-green-800"
+                              : project.status === "SUSPENDED"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : project.status === "COMPLETED"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {project.status === 'DRAFT'
-                          ? 'Brouillon'
-                          : project.status === 'ACTIVE'
-                          ? 'Actif'
-                          : project.status === 'SUSPENDED'
-                          ? 'Suspendu'
-                          : project.status === 'COMPLETED'
-                          ? 'Terminé'
-                          : 'Annulé'}
+                        {project.status === "DRAFT"
+                          ? "Brouillon"
+                          : project.status === "ACTIVE"
+                            ? "Actif"
+                            : project.status === "SUSPENDED"
+                              ? "Suspendu"
+                              : project.status === "COMPLETED"
+                                ? "Terminé"
+                                : "Annulé"}
                       </span>
                     </div>
                   </div>

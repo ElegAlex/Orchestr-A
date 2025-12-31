@@ -2,8 +2,8 @@ export interface Metric {
   title: string;
   value: string | number;
   change?: string;
-  trend?: 'up' | 'down' | 'stable';
-  color: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
+  trend?: "up" | "down" | "stable";
+  color: "primary" | "secondary" | "success" | "warning" | "error" | "info";
 }
 
 export interface ProjectProgressData {
@@ -43,4 +43,4 @@ export interface AnalyticsData {
   projectDetails: ProjectDetail[];
 }
 
-export type DateRange = 'week' | 'month' | 'quarter' | 'year';
+export type DateRange = "week" | "month" | "quarter" | "year";

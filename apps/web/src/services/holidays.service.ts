@@ -1,17 +1,17 @@
-import { api } from '@/lib/api';
+import { api } from "@/lib/api";
 import {
   Holiday,
   CreateHolidayDto,
   UpdateHolidayDto,
   ImportFrenchHolidaysResult,
-} from '@/types';
+} from "@/types";
 
 export const holidaysService = {
   /**
    * Recupere tous les jours feries
    */
   async getAll(): Promise<Holiday[]> {
-    const response = await api.get<Holiday[]>('/holidays');
+    const response = await api.get<Holiday[]>("/holidays");
     return response.data;
   },
 
@@ -28,7 +28,7 @@ export const holidaysService = {
    */
   async getByRange(startDate: string, endDate: string): Promise<Holiday[]> {
     const response = await api.get<Holiday[]>(
-      `/holidays/range?startDate=${startDate}&endDate=${endDate}`
+      `/holidays/range?startDate=${startDate}&endDate=${endDate}`,
     );
     return response.data;
   },
@@ -45,7 +45,7 @@ export const holidaysService = {
    * Cree un nouveau jour ferie
    */
   async create(data: CreateHolidayDto): Promise<Holiday> {
-    const response = await api.post<Holiday>('/holidays', data);
+    const response = await api.post<Holiday>("/holidays", data);
     return response.data;
   },
 
@@ -70,7 +70,7 @@ export const holidaysService = {
   async importFrench(year?: number): Promise<ImportFrenchHolidaysResult> {
     const url = year
       ? `/holidays/import-french?year=${year}`
-      : '/holidays/import-french';
+      : "/holidays/import-french";
     const response = await api.post<ImportFrenchHolidaysResult>(url);
     return response.data;
   },
@@ -80,10 +80,10 @@ export const holidaysService = {
    */
   async countWorkingDays(
     startDate: string,
-    endDate: string
+    endDate: string,
   ): Promise<{ workingDays: number }> {
     const response = await api.get<{ workingDays: number }>(
-      `/holidays/working-days/count?startDate=${startDate}&endDate=${endDate}`
+      `/holidays/working-days/count?startDate=${startDate}&endDate=${endDate}`,
     );
     return response.data;
   },

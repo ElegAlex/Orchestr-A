@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Task, TaskDependency } from '@/types';
-import { TaskDependencySelector } from './TaskDependencySelector';
-import { DependencyValidationBanner } from './DependencyValidationBanner';
+import { useState, useEffect } from "react";
+import { Task, TaskDependency } from "@/types";
+import { TaskDependencySelector } from "./TaskDependencySelector";
+import { DependencyValidationBanner } from "./DependencyValidationBanner";
 import {
   detectDateConflicts,
   getStatusColorClass,
   getStatusLabel,
-} from '@/utils/dependencyValidation';
-import { tasksService } from '@/services/tasks.service';
-import toast from 'react-hot-toast';
+} from "@/utils/dependencyValidation";
+import { tasksService } from "@/services/tasks.service";
+import toast from "react-hot-toast";
 
 interface TaskDependencyModalProps {
   task: Task;
@@ -25,7 +25,9 @@ export function TaskDependencyModal({
   onClose,
   onSave,
 }: TaskDependencyModalProps) {
-  const [selectedDependencyIds, setSelectedDependencyIds] = useState<string[]>([]);
+  const [selectedDependencyIds, setSelectedDependencyIds] = useState<string[]>(
+    [],
+  );
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -36,7 +38,9 @@ export function TaskDependencyModal({
   }, [task.dependencies]);
 
   // Get the selected tasks to calculate conflicts
-  const selectedTasks = allTasks.filter((t) => selectedDependencyIds.includes(t.id));
+  const selectedTasks = allTasks.filter((t) =>
+    selectedDependencyIds.includes(t.id),
+  );
   const mockDependencies: TaskDependency[] = selectedTasks.map((t) => ({
     dependsOnTaskId: t.id,
     dependsOnTask: {
@@ -46,7 +50,10 @@ export function TaskDependencyModal({
       endDate: t.endDate,
     },
   }));
-  const conflicts = detectDateConflicts({ startDate: task.startDate }, mockDependencies);
+  const conflicts = detectDateConflicts(
+    { startDate: task.startDate },
+    mockDependencies,
+  );
 
   const handleDependencyChange = (newIds: string[]) => {
     setSelectedDependencyIds(newIds);
@@ -59,8 +66,12 @@ export function TaskDependencyModal({
 
   const handleSave = async () => {
     const currentIds = task.dependencies?.map((d) => d.dependsOnTaskId) || [];
-    const toAdd = selectedDependencyIds.filter((id) => !currentIds.includes(id));
-    const toRemove = currentIds.filter((id) => !selectedDependencyIds.includes(id));
+    const toAdd = selectedDependencyIds.filter(
+      (id) => !currentIds.includes(id),
+    );
+    const toRemove = currentIds.filter(
+      (id) => !selectedDependencyIds.includes(id),
+    );
 
     if (toAdd.length === 0 && toRemove.length === 0) {
       onClose();
@@ -71,7 +82,9 @@ export function TaskDependencyModal({
     try {
       // Remove dependencies
       for (const depId of toRemove) {
-        const dependency = task.dependencies?.find((d) => d.dependsOnTaskId === depId);
+        const dependency = task.dependencies?.find(
+          (d) => d.dependsOnTaskId === depId,
+        );
         if (dependency?.id) {
           await tasksService.removeDependency(task.id, dependency.id);
         }
@@ -82,13 +95,14 @@ export function TaskDependencyModal({
         await tasksService.addDependency(task.id, depId);
       }
 
-      toast.success('Dependances mises a jour');
+      toast.success("Dependances mises a jour");
       onSave();
       onClose();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || 'Erreur lors de la mise a jour des dependances'
+        axiosError.response?.data?.message ||
+          "Erreur lors de la mise a jour des dependances",
       );
       console.error(err);
     } finally {
@@ -99,12 +113,12 @@ export function TaskDependencyModal({
   // Close on escape
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !saving) {
+      if (event.key === "Escape" && !saving) {
         onClose();
       }
     };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose, saving]);
 
   return (
@@ -118,10 +132,12 @@ export function TaskDependencyModal({
                 Modifier les dependances
               </h2>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-gray-600 truncate">{task.title}</span>
+                <span className="text-sm text-gray-600 truncate">
+                  {task.title}
+                </span>
                 <span
                   className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${getStatusColorClass(
-                    task.status
+                    task.status,
                   )}`}
                 >
                   {getStatusLabel(task.status)}
@@ -129,8 +145,8 @@ export function TaskDependencyModal({
               </div>
               {task.startDate && task.endDate && (
                 <p className="text-xs text-gray-500 mt-1">
-                  {new Date(task.startDate).toLocaleDateString('fr-FR')} -{' '}
-                  {new Date(task.endDate).toLocaleDateString('fr-FR')}
+                  {new Date(task.startDate).toLocaleDateString("fr-FR")} -{" "}
+                  {new Date(task.endDate).toLocaleDateString("fr-FR")}
                 </p>
               )}
             </div>
@@ -139,7 +155,12 @@ export function TaskDependencyModal({
               disabled={saving}
               className="text-gray-400 hover:text-gray-600 p-1 disabled:opacity-50"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -171,14 +192,20 @@ export function TaskDependencyModal({
           {/* Summary */}
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600">
-              <span className="font-medium">{selectedDependencyIds.length}</span> dependance
-              {selectedDependencyIds.length !== 1 ? 's' : ''} selectionnee
-              {selectedDependencyIds.length !== 1 ? 's' : ''}
+              <span className="font-medium">
+                {selectedDependencyIds.length}
+              </span>{" "}
+              dependance
+              {selectedDependencyIds.length !== 1 ? "s" : ""} selectionnee
+              {selectedDependencyIds.length !== 1 ? "s" : ""}
               {conflicts.length > 0 && (
                 <span className="text-amber-600">
-                  {' '}
-                  dont <span className="font-medium">{conflicts.length}</span> conflit
-                  {conflicts.length > 1 ? 's' : ''} de dates
+                  {" "}
+                  dont <span className="font-medium">
+                    {conflicts.length}
+                  </span>{" "}
+                  conflit
+                  {conflicts.length > 1 ? "s" : ""} de dates
                 </span>
               )}
             </p>
@@ -200,7 +227,11 @@ export function TaskDependencyModal({
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {saving && (
-              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <svg
+                className="animate-spin h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
                 <circle
                   className="opacity-25"
                   cx="12"

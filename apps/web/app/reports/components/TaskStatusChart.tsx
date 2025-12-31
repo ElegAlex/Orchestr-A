@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   PieChart,
@@ -7,8 +7,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
-import { TaskStatusData } from '../types';
+} from "recharts";
+import { TaskStatusData } from "../types";
 
 interface TaskStatusChartProps {
   data: TaskStatusData[];

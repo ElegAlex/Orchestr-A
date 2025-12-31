@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Holiday,
   HolidayType,
   HOLIDAY_TYPE_LABELS,
   HOLIDAY_TYPE_COLORS,
-} from '@/types';
-import { holidaysService } from '@/services/holidays.service';
-import { HolidayModal } from './HolidayModal';
-import toast from 'react-hot-toast';
+} from "@/types";
+import { holidaysService } from "@/services/holidays.service";
+import { HolidayModal } from "./HolidayModal";
+import toast from "react-hot-toast";
 
 export function HolidaysManager() {
   const currentYear = new Date().getFullYear();
@@ -27,7 +27,7 @@ export function HolidaysManager() {
       const data = await holidaysService.getByYear(selectedYear);
       setHolidays(data);
     } catch {
-      toast.error('Erreur lors du chargement des jours feries');
+      toast.error("Erreur lors du chargement des jours feries");
     } finally {
       setLoading(false);
     }
@@ -39,7 +39,7 @@ export function HolidaysManager() {
 
   const sortedHolidays = useMemo(() => {
     return [...holidays].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
   }, [holidays]);
 
@@ -56,12 +56,12 @@ export function HolidaysManager() {
   const handleDelete = async (id: string) => {
     try {
       await holidaysService.delete(id);
-      toast.success('Jour ferie supprime');
+      toast.success("Jour ferie supprime");
       fetchHolidays();
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || 'Erreur lors de la suppression'
+        error.response?.data?.message || "Erreur lors de la suppression",
       );
     }
     setDeleteConfirmId(null);
@@ -72,7 +72,7 @@ export function HolidaysManager() {
     try {
       const result = await holidaysService.importFrench(selectedYear);
       toast.success(
-        `Import termine : ${result.created} cree(s), ${result.skipped} deja existant(s)`
+        `Import termine : ${result.created} cree(s), ${result.skipped} deja existant(s)`,
       );
       fetchHolidays();
     } catch (err) {
@@ -88,20 +88,20 @@ export function HolidaysManager() {
       await holidaysService.update(holiday.id, {
         isWorkDay: !holiday.isWorkDay,
       });
-      toast.success('Statut mis a jour');
+      toast.success("Statut mis a jour");
       fetchHolidays();
     } catch {
-      toast.error('Erreur lors de la mise a jour');
+      toast.error("Erreur lors de la mise a jour");
     }
   };
 
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
+    return date.toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
@@ -261,10 +261,7 @@ export function HolidaysManager() {
               </tr>
             ) : sortedHolidays.length === 0 ? (
               <tr>
-                <td
-                  colSpan={6}
-                  className="px-6 py-8 text-center text-gray-500"
-                >
+                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                   Aucun jour ferie declare pour {selectedYear}
                 </td>
               </tr>
@@ -272,7 +269,7 @@ export function HolidaysManager() {
               sortedHolidays.map((holiday) => (
                 <tr
                   key={holiday.id}
-                  className={`${!holiday.isWorkDay ? 'bg-gray-50' : ''} hover:bg-gray-100 transition`}
+                  className={`${!holiday.isWorkDay ? "bg-gray-50" : ""} hover:bg-gray-100 transition`}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="font-medium text-gray-900">
@@ -293,19 +290,19 @@ export function HolidaysManager() {
                     <button
                       onClick={() => handleToggleWorkDay(holiday)}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        holiday.isWorkDay ? 'bg-blue-600' : 'bg-gray-200'
+                        holiday.isWorkDay ? "bg-blue-600" : "bg-gray-200"
                       }`}
                     >
                       <span
                         className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          holiday.isWorkDay ? 'translate-x-6' : 'translate-x-1'
+                          holiday.isWorkDay ? "translate-x-6" : "translate-x-1"
                         }`}
                       />
                     </button>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-gray-500 text-sm truncate max-w-xs block">
-                      {holiday.description || '-'}
+                      {holiday.description || "-"}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -424,7 +421,10 @@ export function HolidaysManager() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <p className="text-sm text-gray-500">Feries legaux</p>
             <p className="text-2xl font-bold text-blue-600">
-              {sortedHolidays.filter((h) => h.type === HolidayType.LEGAL).length}
+              {
+                sortedHolidays.filter((h) => h.type === HolidayType.LEGAL)
+                  .length
+              }
             </p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen } from "@testing-library/react";
 
 // Simple mock component for testing
 const MockLoginForm = () => {
@@ -12,28 +12,28 @@ const MockLoginForm = () => {
       </form>
       <p>Pas encore de compte ?</p>
     </div>
-  )
-}
+  );
+};
 
-describe('LoginPage', () => {
-  it('should render login form', () => {
-    render(<MockLoginForm />)
+describe("LoginPage", () => {
+  it("should render login form", () => {
+    render(<MockLoginForm />);
 
-    expect(screen.getByText(/connexion/i)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/login ou email/i)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/mot de passe/i)).toBeInTheDocument()
-  })
+    expect(screen.getByText(/connexion/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/login ou email/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/mot de passe/i)).toBeInTheDocument();
+  });
 
-  it('should have a submit button', () => {
-    render(<MockLoginForm />)
+  it("should have a submit button", () => {
+    render(<MockLoginForm />);
 
-    const submitButton = screen.getByRole('button', { name: /se connecter/i })
-    expect(submitButton).toBeInTheDocument()
-  })
+    const submitButton = screen.getByRole("button", { name: /se connecter/i });
+    expect(submitButton).toBeInTheDocument();
+  });
 
-  it('should have a link to register page', () => {
-    render(<MockLoginForm />)
+  it("should have a link to register page", () => {
+    render(<MockLoginForm />);
 
-    expect(screen.getByText(/pas encore de compte/i)).toBeInTheDocument()
-  })
-})
+    expect(screen.getByText(/pas encore de compte/i)).toBeInTheDocument();
+  });
+});

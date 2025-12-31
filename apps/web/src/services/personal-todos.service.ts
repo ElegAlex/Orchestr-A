@@ -1,4 +1,4 @@
-import api from '@/lib/api';
+import api from "@/lib/api";
 
 export interface PersonalTodo {
   id: string;
@@ -20,7 +20,7 @@ export interface UpdatePersonalTodoDto {
 }
 
 class PersonalTodosService {
-  private baseUrl = '/personal-todos';
+  private baseUrl = "/personal-todos";
 
   async getAll(): Promise<PersonalTodo[]> {
     const { data } = await api.get<PersonalTodo[]>(this.baseUrl);
@@ -33,7 +33,10 @@ class PersonalTodosService {
   }
 
   async update(id: string, dto: UpdatePersonalTodoDto): Promise<PersonalTodo> {
-    const { data } = await api.patch<PersonalTodo>(`${this.baseUrl}/${id}`, dto);
+    const { data } = await api.patch<PersonalTodo>(
+      `${this.baseUrl}/${id}`,
+      dto,
+    );
     return data;
   }
 

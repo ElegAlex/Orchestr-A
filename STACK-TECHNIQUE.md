@@ -27,9 +27,11 @@
 ## 🎯 VUE D'ENSEMBLE
 
 ### Contexte
+
 Refonte complète (**from scratch**) de l'application ORCHESTR'A pour les collectivités territoriales.
 
 ### Principes architecturaux
+
 - **Monorepo** : Turborepo pour gérer backend, frontend et packages partagés
 - **Type-safety** : TypeScript end-to-end (backend → frontend)
 - **API-First** : Backend REST découplé du frontend
@@ -97,40 +99,40 @@ Refonte complète (**from scratch**) de l'application ORCHESTR'A pour les collec
 
 ### Runtime & Framework
 
-| Composant | Version | Justification |
-|-----------|---------|---------------|
-| **Node.js** | **≥22.0.0** | Support LTS jusqu'en 2027, support natif TypeScript, performances optimisées |
-| **TypeScript** | **5.7** | Isolated Declarations (parallélisation builds), type-safety complète |
-| **NestJS** | **11.1.10** | Architecture modulaire, DI native, perfect pour projets enterprise |
-| **Fastify** | **5.x** | 2.7x plus rapide qu'Express, meilleur pour objectif <200ms API |
+| Composant      | Version     | Justification                                                                |
+| -------------- | ----------- | ---------------------------------------------------------------------------- |
+| **Node.js**    | **≥22.0.0** | Support LTS jusqu'en 2027, support natif TypeScript, performances optimisées |
+| **TypeScript** | **5.7**     | Isolated Declarations (parallélisation builds), type-safety complète         |
+| **NestJS**     | **11.1.10** | Architecture modulaire, DI native, perfect pour projets enterprise           |
+| **Fastify**    | **5.x**     | 2.7x plus rapide qu'Express, meilleur pour objectif <200ms API               |
 
 ### ORM & Validation
 
-| Composant | Version | Justification |
-|-----------|---------|---------------|
-| **Prisma** | **6.19.1** | Query Compiler Rust-free (90% plus léger), queries 3.4x plus rapides, type-safety |
-| **class-validator** | **0.14+** | Validation déclarative avec decorators, intégration parfaite NestJS |
-| **class-transformer** | **0.5+** | Transformation et serialization objets |
+| Composant             | Version    | Justification                                                                     |
+| --------------------- | ---------- | --------------------------------------------------------------------------------- |
+| **Prisma**            | **6.19.1** | Query Compiler Rust-free (90% plus léger), queries 3.4x plus rapides, type-safety |
+| **class-validator**   | **0.14+**  | Validation déclarative avec decorators, intégration parfaite NestJS               |
+| **class-transformer** | **0.5+**   | Transformation et serialization objets                                            |
 
 ### Sécurité
 
-| Composant | Version | Justification |
-|-----------|---------|---------------|
-| **Passport.js** | **0.7+** | Stratégies multiples (local, JWT, LDAP futur) |
-| **@nestjs/passport** | **10.x** | Intégration NestJS de Passport |
-| **@nestjs/jwt** | **10.x** | Gestion JWT tokens |
-| **bcrypt** | **5.x** | Hashage mots de passe (recommandé ANSSI) |
-| **Helmet** | **8.x** | Headers de sécurité HTTP |
-| **rate-limiter-flexible** | **5.x** | Protection brute-force et rate limiting |
+| Composant                 | Version  | Justification                                 |
+| ------------------------- | -------- | --------------------------------------------- |
+| **Passport.js**           | **0.7+** | Stratégies multiples (local, JWT, LDAP futur) |
+| **@nestjs/passport**      | **10.x** | Intégration NestJS de Passport                |
+| **@nestjs/jwt**           | **10.x** | Gestion JWT tokens                            |
+| **bcrypt**                | **5.x**  | Hashage mots de passe (recommandé ANSSI)      |
+| **Helmet**                | **8.x**  | Headers de sécurité HTTP                      |
+| **rate-limiter-flexible** | **5.x**  | Protection brute-force et rate limiting       |
 
 ### Configuration & Utilities
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
-| **@nestjs/config** | **3.x** | Gestion variables environnement |
-| **@nestjs/schedule** | **4.x** | Tâches planifiées (cron jobs) |
-| **@nestjs/swagger** | **7.x** | Documentation API automatique |
-| **date-fns** | **3.x** | Manipulation dates (calculs congés, télétravail) |
+| Composant            | Version | Usage                                            |
+| -------------------- | ------- | ------------------------------------------------ |
+| **@nestjs/config**   | **3.x** | Gestion variables environnement                  |
+| **@nestjs/schedule** | **4.x** | Tâches planifiées (cron jobs)                    |
+| **@nestjs/swagger**  | **7.x** | Documentation API automatique                    |
+| **date-fns**         | **3.x** | Manipulation dates (calculs congés, télétravail) |
 
 ### Structure modules NestJS
 
@@ -178,40 +180,41 @@ api/
 
 ### Framework & Runtime
 
-| Composant | Version | Justification |
-|-----------|---------|---------------|
-| **React** | **19.2.3** | Server Components, Actions, dernière version stable |
-| **Next.js** | **16.1.1** | SSR/SSG, App Router, optimisations automatiques, SEO |
-| **TypeScript** | **5.7** | Cohérence avec backend, type-safety end-to-end |
+| Composant      | Version    | Justification                                        |
+| -------------- | ---------- | ---------------------------------------------------- |
+| **React**      | **19.2.3** | Server Components, Actions, dernière version stable  |
+| **Next.js**    | **16.1.1** | SSR/SSG, App Router, optimisations automatiques, SEO |
+| **TypeScript** | **5.7**    | Cohérence avec backend, type-safety end-to-end       |
 
 ### State Management
 
-| Composant | Version | Justification |
-|-----------|---------|---------------|
+| Composant          | Version    | Justification                                                           |
+| ------------------ | ---------- | ----------------------------------------------------------------------- |
 | **TanStack Query** | **5.90.6** | État serveur, cache intelligent, mutations, synchronisation automatique |
-| **Zustand** | **5.0.8** | État client léger (1.2kb), simple, parfait pour UI state |
+| **Zustand**        | **5.0.8**  | État client léger (1.2kb), simple, parfait pour UI state                |
 
 ### UI & Styling
 
-| Composant | Version | Justification |
-|-----------|---------|---------------|
-| **Tailwind CSS** | **4.x** | Utility-first, design system rapide, tree-shaking automatique |
-| **shadcn/ui** | **Latest** | Composants accessibles WCAG 2.1 AA, personnalisables, built on Radix UI |
-| **Radix UI** | **1.x** | Primitives UI accessibles, headless components |
-| **Lucide React** | **0.x** | Icônes modernes, tree-shakeable |
+| Composant        | Version    | Justification                                                           |
+| ---------------- | ---------- | ----------------------------------------------------------------------- |
+| **Tailwind CSS** | **4.x**    | Utility-first, design system rapide, tree-shaking automatique           |
+| **shadcn/ui**    | **Latest** | Composants accessibles WCAG 2.1 AA, personnalisables, built on Radix UI |
+| **Radix UI**     | **1.x**    | Primitives UI accessibles, headless components                          |
+| **Lucide React** | **0.x**    | Icônes modernes, tree-shakeable                                         |
 
 ### Visualisations & Composants métier
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
-| **@rsagiev/gantt-task-react-19** | **0.3.9+** | Diagramme de Gantt (éprouvé V1) |
-| **Recharts** | **3.x** | Graphiques (Burndown, Vélocité, KPIs) |
-| **React Big Calendar** | **1.x** | Calendrier multi-projets |
-| **@dnd-kit** | **6.x** | Drag & drop Kanban (moderne, performant) |
+| Composant                        | Version    | Usage                                    |
+| -------------------------------- | ---------- | ---------------------------------------- |
+| **@rsagiev/gantt-task-react-19** | **0.3.9+** | Diagramme de Gantt (éprouvé V1)          |
+| **Recharts**                     | **3.x**    | Graphiques (Burndown, Vélocité, KPIs)    |
+| **React Big Calendar**           | **1.x**    | Calendrier multi-projets                 |
+| **@dnd-kit**                     | **6.x**    | Drag & drop Kanban (moderne, performant) |
 
 ### Fonctionnalités Gantt
 
 D'après V1, le composant Gantt supporte :
+
 - ✅ Tâches, épics et jalons avec dépendances
 - ✅ Modes de vue : Jour, Semaine, Mois, Année
 - ✅ Tooltips personnalisables
@@ -221,18 +224,18 @@ D'après V1, le composant Gantt supporte :
 
 ### Forms & Validation
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
+| Composant           | Version | Usage                                       |
+| ------------------- | ------- | ------------------------------------------- |
 | **React Hook Form** | **7.x** | Gestion formulaires performante, validation |
-| **Zod** | **3.x** | Schéma validation TypeScript-first |
+| **Zod**             | **3.x** | Schéma validation TypeScript-first          |
 
 ### Utilities
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
-| **date-fns** | **3.x** | Manipulation dates (cohérence avec backend) |
-| **clsx** | **2.x** | Classes CSS conditionnelles |
-| **react-dropzone** | **14.x** | Upload fichiers (documents, avatars) |
+| Composant          | Version  | Usage                                       |
+| ------------------ | -------- | ------------------------------------------- |
+| **date-fns**       | **3.x**  | Manipulation dates (cohérence avec backend) |
+| **clsx**           | **2.x**  | Classes CSS conditionnelles                 |
+| **react-dropzone** | **14.x** | Upload fichiers (documents, avatars)        |
 
 ### Structure Next.js (App Router)
 
@@ -285,8 +288,8 @@ web/
 
 ### Système de gestion
 
-| Composant | Version | Justification |
-|-----------|---------|---------------|
+| Composant      | Version   | Justification                                                                                    |
+| -------------- | --------- | ------------------------------------------------------------------------------------------------ |
 | **PostgreSQL** | **18.0+** | Dernière version (Sept 2025), performances I/O x3, OAuth 2.0 natif, colonnes générées virtuelles |
 
 ### Nouvelles fonctionnalités PostgreSQL 18
@@ -311,14 +314,14 @@ web/
 
 ### Cache & Sessions
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
+| Composant | Version  | Usage                                                          |
+| --------- | -------- | -------------------------------------------------------------- |
 | **Redis** | **7.4+** | Cache applicatif, sessions utilisateurs, rate limiting, queues |
 
 ### ORM & Migrations
 
-| Composant | Version | Justification |
-|-----------|---------|---------------|
+| Composant  | Version    | Justification                                                                               |
+| ---------- | ---------- | ------------------------------------------------------------------------------------------- |
 | **Prisma** | **6.19.1** | Query Compiler Rust-free (bundle 1.6MB vs 14MB), queries 3.4x plus rapides, multi-schema GA |
 
 ### Nouvelles fonctionnalités Prisma 6.19
@@ -554,36 +557,36 @@ enum ActivityType {
 
 ### Conteneurisation
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
-| **Docker** | **28.x** | Conteneurisation des services |
-| **Docker Compose** | **2.30+** | Orchestration locale (dev) |
+| Composant          | Version   | Usage                         |
+| ------------------ | --------- | ----------------------------- |
+| **Docker**         | **28.x**  | Conteneurisation des services |
+| **Docker Compose** | **2.30+** | Orchestration locale (dev)    |
 
 ### Reverse Proxy & Load Balancing
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
+| Composant | Version   | Usage                                      |
+| --------- | --------- | ------------------------------------------ |
 | **Nginx** | **1.27+** | Reverse proxy, load balancer, static files |
 
 ### Orchestration (Production)
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
+| Composant      | Version  | Usage                                                                  |
+| -------------- | -------- | ---------------------------------------------------------------------- |
 | **Kubernetes** | **1.34** | Orchestration production (optionnel selon infrastructure collectivité) |
-| **PM2** | **5.x** | Alternative simple pour déploiement sans K8s |
+| **PM2**        | **5.x**  | Alternative simple pour déploiement sans K8s                           |
 
 ### Monorepo & Build System
 
-| Composant | Version | Justification |
-|-----------|---------|---------------|
-| **Turborepo** | **2.x** | Build system rapide, cache intelligent, builds incrémentaux |
-| **pnpm** | **9.x** | Gestionnaire packages (3x plus rapide que npm, économie espace disque) |
+| Composant     | Version | Justification                                                          |
+| ------------- | ------- | ---------------------------------------------------------------------- |
+| **Turborepo** | **2.x** | Build system rapide, cache intelligent, builds incrémentaux            |
+| **pnpm**      | **9.x** | Gestionnaire packages (3x plus rapide que npm, économie espace disque) |
 
 ### Structure Docker Compose (dev)
 
 ```yaml
 # docker-compose.yml
-version: '3.9'
+version: "3.9"
 
 services:
   postgres:
@@ -667,12 +670,12 @@ volumes:
 
 ### Tests
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
-| **Vitest** | **3.x** | Tests unitaires backend/frontend (3x plus rapide que Jest) |
-| **Playwright** | **1.50+** | Tests E2E multi-navigateurs |
-| **Testing Library** | **16.x** | Tests composants React |
-| **Supertest** | **7.x** | Tests API HTTP |
+| Composant           | Version   | Usage                                                      |
+| ------------------- | --------- | ---------------------------------------------------------- |
+| **Vitest**          | **3.x**   | Tests unitaires backend/frontend (3x plus rapide que Jest) |
+| **Playwright**      | **1.50+** | Tests E2E multi-navigateurs                                |
+| **Testing Library** | **16.x**  | Tests composants React                                     |
+| **Supertest**       | **7.x**   | Tests API HTTP                                             |
 
 ### Stratégie de tests
 
@@ -691,19 +694,20 @@ tests/
 ```
 
 ### Couverture cible
+
 - **Backend** : 80% minimum
 - **Frontend composants** : 70% minimum
 - **E2E** : Workflows critiques (voir REFONTE.md)
 
 ### Qualité de code
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
-| **ESLint** | **9.x** | Linting JavaScript/TypeScript |
-| **Prettier** | **3.x** | Formatage automatique |
-| **Husky** | **9.x** | Git hooks (pre-commit, pre-push) |
+| Composant       | Version  | Usage                             |
+| --------------- | -------- | --------------------------------- |
+| **ESLint**      | **9.x**  | Linting JavaScript/TypeScript     |
+| **Prettier**    | **3.x**  | Formatage automatique             |
+| **Husky**       | **9.x**  | Git hooks (pre-commit, pre-push)  |
 | **lint-staged** | **15.x** | Lint uniquement fichiers modifiés |
-| **commitlint** | **19.x** | Validation messages commit |
+| **commitlint**  | **19.x** | Validation messages commit        |
 
 ### Configuration ESLint
 
@@ -728,35 +732,36 @@ tests/
 
 ### Métriques & Dashboards
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
-| **Prometheus** | **3.x** | Collection métriques |
-| **Grafana** | **11.x** | Visualisation dashboards |
+| Composant      | Version  | Usage                    |
+| -------------- | -------- | ------------------------ |
+| **Prometheus** | **3.x**  | Collection métriques     |
+| **Grafana**    | **11.x** | Visualisation dashboards |
 
 ### Logging
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
+| Composant   | Version | Usage                                         |
+| ----------- | ------- | --------------------------------------------- |
 | **Winston** | **3.x** | Logging structuré backend (option par défaut) |
-| **Pino** | **9.x** | Alternative ultra-rapide (10x plus rapide) |
+| **Pino**    | **9.x** | Alternative ultra-rapide (10x plus rapide)    |
 
 ### Error Tracking
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
+| Composant  | Version | Usage                                               |
+| ---------- | ------- | --------------------------------------------------- |
 | **Sentry** | **8.x** | Tracking erreurs production, performance monitoring |
 
 ### Documentation
 
-| Composant | Version | Usage |
-|-----------|---------|-------|
+| Composant           | Version | Usage                          |
+| ------------------- | ------- | ------------------------------ |
 | **Swagger/OpenAPI** | **3.1** | Documentation API auto-générée |
-| **Compodoc** | **1.x** | Documentation code NestJS |
-| **Storybook** | **8.x** | Documentation composants UI |
+| **Compodoc**        | **1.x** | Documentation code NestJS      |
+| **Storybook**       | **8.x** | Documentation composants UI    |
 
 ### Métriques à monitorer
 
 **Backend :**
+
 - Temps de réponse API (P50, P95, P99)
 - Taux d'erreur
 - Requêtes/seconde
@@ -764,12 +769,14 @@ tests/
 - Utilisation mémoire/CPU
 
 **Frontend :**
+
 - Core Web Vitals (LCP, FID, CLS)
 - Time to First Byte (TTFB)
 - First Contentful Paint (FCP)
 - Taux d'erreur JavaScript
 
 **Base de données :**
+
 - Query time
 - Connexions actives
 - Cache hit ratio
@@ -929,17 +936,18 @@ async validatePassword(password: string, hash: string): Promise<boolean> {
 
 ### Objectifs (définis dans REFONTE.md)
 
-| Métrique | Objectif | Stack actuelle | Statut |
-|----------|----------|----------------|--------|
-| **API Response Time (P95)** | <200ms | <150ms | ✅ Dépassé |
-| **Page Load Time** | <2s | <1.5s | ✅ Dépassé |
-| **Concurrent Users** | 500+ | 1000+ | ✅ Dépassé |
-| **Uptime** | 99.5% | 99.9% | ✅ Dépassé |
-| **Time to Interactive (TTI)** | <3s | <2s | ✅ Dépassé |
+| Métrique                      | Objectif | Stack actuelle | Statut     |
+| ----------------------------- | -------- | -------------- | ---------- |
+| **API Response Time (P95)**   | <200ms   | <150ms         | ✅ Dépassé |
+| **Page Load Time**            | <2s      | <1.5s          | ✅ Dépassé |
+| **Concurrent Users**          | 500+     | 1000+          | ✅ Dépassé |
+| **Uptime**                    | 99.5%    | 99.9%          | ✅ Dépassé |
+| **Time to Interactive (TTI)** | <3s      | <2s            | ✅ Dépassé |
 
 ### Optimisations mises en œuvre
 
 **Backend :**
+
 - ✅ Fastify (2.7x plus rapide qu'Express)
 - ✅ Prisma 6.16 (queries 3.4x plus rapides)
 - ✅ PostgreSQL 18 (I/O 3x plus rapide)
@@ -948,6 +956,7 @@ async validatePassword(password: string, hash: string): Promise<boolean> {
 - ✅ Connection pooling optimisé
 
 **Frontend :**
+
 - ✅ Next.js SSR pour chargement initial rapide
 - ✅ Code splitting automatique
 - ✅ Image optimization (next/image)
@@ -956,6 +965,7 @@ async validatePassword(password: string, hash: string): Promise<boolean> {
 - ✅ Lazy loading composants lourds (Gantt, Charts)
 
 **Base de données :**
+
 - ✅ Index optimisés (via Prisma)
 - ✅ Queries préparées
 - ✅ Connexions poolées
@@ -1105,8 +1115,8 @@ orchestr-a-v2/
 ```yaml
 # pnpm-workspace.yaml
 packages:
-  - 'apps/*'
-  - 'packages/*'
+  - "apps/*"
+  - "packages/*"
 ```
 
 ---
@@ -1132,6 +1142,7 @@ main (production)
 Format : `type(scope): message`
 
 **Types :**
+
 - `feat`: Nouvelle fonctionnalité
 - `fix`: Correction bug
 - `refactor`: Refactoring code
@@ -1142,6 +1153,7 @@ Format : `type(scope): message`
 - `chore`: Tâches maintenance
 
 **Exemples :**
+
 ```
 feat(projects): add Gantt view with dependencies
 fix(auth): resolve JWT token expiration issue
@@ -1171,8 +1183,8 @@ jobs:
       - uses: pnpm/action-setup@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
       - run: pnpm install
       - run: pnpm run lint
 
@@ -1190,8 +1202,8 @@ jobs:
       - uses: pnpm/action-setup@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
       - run: pnpm install
       - run: pnpm run test:cov
 
@@ -1203,8 +1215,8 @@ jobs:
       - uses: pnpm/action-setup@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
       - run: pnpm install
       - run: pnpm run build
 
@@ -1216,8 +1228,8 @@ jobs:
       - uses: pnpm/action-setup@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
       - run: pnpm install
       - run: pnpm run test:e2e
 ```
@@ -1368,6 +1380,7 @@ pm2 logs orchestr-a-web
 ### Stratégie de déploiement
 
 **Blue-Green Deployment :**
+
 1. Déployer nouvelle version (green)
 2. Tester la nouvelle version
 3. Basculer le trafic vers green
@@ -1375,6 +1388,7 @@ pm2 logs orchestr-a-web
 5. Supprimer blue si tout OK
 
 **Rollback automatique :**
+
 - Health checks toutes les 10s
 - Si 3 échecs consécutifs → rollback automatique
 - Notification équipe DevOps
@@ -1384,6 +1398,7 @@ pm2 logs orchestr-a-web
 ## 📋 CHECKLIST PRE-PRODUCTION
 
 ### Sécurité
+
 - [ ] Variables d'environnement sécurisées (secrets)
 - [ ] JWT secret fort et unique
 - [ ] Mots de passe BDD complexes
@@ -1394,6 +1409,7 @@ pm2 logs orchestr-a-web
 - [ ] Headers de sécurité validés
 
 ### Base de données
+
 - [ ] Migrations exécutées
 - [ ] Index créés et optimisés
 - [ ] Backup automatique configuré
@@ -1401,6 +1417,7 @@ pm2 logs orchestr-a-web
 - [ ] Connection pooling configuré
 
 ### Performance
+
 - [ ] Cache Redis configuré
 - [ ] Compression activée (gzip/brotli)
 - [ ] Images optimisées
@@ -1408,6 +1425,7 @@ pm2 logs orchestr-a-web
 - [ ] Lazy loading configuré
 
 ### Monitoring
+
 - [ ] Sentry configuré (error tracking)
 - [ ] Prometheus métriques exposées
 - [ ] Grafana dashboards créés
@@ -1415,12 +1433,14 @@ pm2 logs orchestr-a-web
 - [ ] Alertes configurées
 
 ### Tests
+
 - [ ] Tests unitaires passent (>80% coverage backend)
 - [ ] Tests E2E passent (workflows critiques)
 - [ ] Tests de charge réalisés (500+ users)
 - [ ] Tests de sécurité (OWASP)
 
 ### Documentation
+
 - [ ] API documentée (Swagger)
 - [ ] README à jour
 - [ ] Guide d'installation
@@ -1432,12 +1452,14 @@ pm2 logs orchestr-a-web
 ## 📞 CONTACTS & SUPPORT
 
 ### Équipe technique
+
 - **Lead Dev Backend** : [à définir]
 - **Lead Dev Frontend** : [à définir]
 - **DevOps** : [à définir]
 - **Product Owner** : [à définir]
 
 ### Outils de communication
+
 - **Issues** : GitHub Issues
 - **Documentation** : Confluence / Notion (à définir)
 - **Chat** : Slack / Teams (à définir)
@@ -1447,6 +1469,7 @@ pm2 logs orchestr-a-web
 ## 📚 RESSOURCES & LIENS
 
 ### Documentation officielle
+
 - [Node.js 22 LTS](https://nodejs.org/docs/latest-v22.x/api/)
 - [NestJS Documentation](https://docs.nestjs.com/)
 - [React 19 Documentation](https://react.dev/)
@@ -1456,6 +1479,7 @@ pm2 logs orchestr-a-web
 - [Fastify Documentation](https://fastify.dev/)
 
 ### Guides & Best Practices
+
 - [TypeScript Best Practices](https://typescript-eslint.io/rules/)
 - [REST API Best Practices](https://restfulapi.net/)
 - [React Best Practices](https://react.dev/learn)
@@ -1466,6 +1490,7 @@ pm2 logs orchestr-a-web
 ## 📅 CHANGELOG
 
 ### Version 2.1 - 23/12/2025
+
 - ✅ Mise à jour versions réelles depuis package.json
 - ✅ Next.js 15.5 → **16.1.1**
 - ✅ React 19.1 → **19.2.3**
@@ -1475,6 +1500,7 @@ pm2 logs orchestr-a-web
 - ✅ NestJS → **11.1.10**
 
 ### Version 1.0 - 05/11/2025
+
 - ✅ Définition stack technique complète
 - ✅ Architecture monorepo Turborepo
 - ✅ Stack backend : NestJS 11 + Fastify 5 + Prisma 6 + PostgreSQL 18

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
-import { Milestone, Task, MilestoneStatus, TaskStatus } from '@/types';
-import { MilestoneCard } from './MilestoneCard';
+import { useMemo } from "react";
+import { Milestone, Task, MilestoneStatus, TaskStatus } from "@/types";
+import { MilestoneCard } from "./MilestoneCard";
 
 interface MilestoneRoadmapProps {
   milestones: Milestone[];
@@ -37,16 +37,22 @@ export function MilestoneRoadmap({
     const totalMilestones = milestones.length;
 
     // Calculer le statut de chaque jalon basé sur ses tâches
-    const milestonesWithStatus = milestones.map(milestone => {
-      const milestoneTasks = tasks.filter(t => t.milestoneId === milestone.id);
+    const milestonesWithStatus = milestones.map((milestone) => {
+      const milestoneTasks = tasks.filter(
+        (t) => t.milestoneId === milestone.id,
+      );
 
       if (milestoneTasks.length === 0) {
         return { milestone, status: MilestoneStatus.PENDING };
       }
 
-      const completedTasks = milestoneTasks.filter(t => t.status === TaskStatus.DONE);
+      const completedTasks = milestoneTasks.filter(
+        (t) => t.status === TaskStatus.DONE,
+      );
       const inProgressTasks = milestoneTasks.filter(
-        t => t.status === TaskStatus.IN_PROGRESS || t.status === TaskStatus.IN_REVIEW
+        (t) =>
+          t.status === TaskStatus.IN_PROGRESS ||
+          t.status === TaskStatus.IN_REVIEW,
       );
 
       if (completedTasks.length === milestoneTasks.length) {
@@ -58,8 +64,12 @@ export function MilestoneRoadmap({
       return { milestone, status: MilestoneStatus.PENDING };
     });
 
-    const completed = milestonesWithStatus.filter(m => m.status === MilestoneStatus.COMPLETED).length;
-    const inProgress = milestonesWithStatus.filter(m => m.status === MilestoneStatus.IN_PROGRESS).length;
+    const completed = milestonesWithStatus.filter(
+      (m) => m.status === MilestoneStatus.COMPLETED,
+    ).length;
+    const inProgress = milestonesWithStatus.filter(
+      (m) => m.status === MilestoneStatus.IN_PROGRESS,
+    ).length;
 
     return {
       total: totalMilestones,
@@ -71,7 +81,7 @@ export function MilestoneRoadmap({
 
   // Regrouper les tâches par jalon
   const getTasksForMilestone = (milestoneId: string) => {
-    return tasks.filter(t => t.milestoneId === milestoneId);
+    return tasks.filter((t) => t.milestoneId === milestoneId);
   };
 
   return (
@@ -190,7 +200,9 @@ export function MilestoneRoadmap({
               key={milestone.id}
               milestone={milestone}
               tasks={getTasksForMilestone(milestone.id)}
-              onEdit={onEditMilestone ? () => onEditMilestone(milestone) : undefined}
+              onEdit={
+                onEditMilestone ? () => onEditMilestone(milestone) : undefined
+              }
               onTaskUpdate={onTaskUpdate}
             />
           ))}

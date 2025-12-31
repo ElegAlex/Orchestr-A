@@ -1,11 +1,13 @@
-import { api } from '@/lib/api';
-import { Service, CreateServiceDto, User } from '@/types';
+import { api } from "@/lib/api";
+import { Service, CreateServiceDto, User } from "@/types";
 
 export const servicesService = {
   async getAll(): Promise<Service[]> {
-    const response = await api.get<{ data: Service[] } | Service[]>('/services');
+    const response = await api.get<{ data: Service[] } | Service[]>(
+      "/services",
+    );
     // API returns {data: [], meta: {}} - extract the array
-    if (response.data && 'data' in response.data) {
+    if (response.data && "data" in response.data) {
       return response.data.data;
     }
     return Array.isArray(response.data) ? response.data : [];
@@ -17,12 +19,14 @@ export const servicesService = {
   },
 
   async getByDepartment(departmentId: string): Promise<Service[]> {
-    const response = await api.get<Service[]>(`/services/department/${departmentId}`);
+    const response = await api.get<Service[]>(
+      `/services/department/${departmentId}`,
+    );
     return response.data;
   },
 
   async create(data: CreateServiceDto): Promise<Service> {
-    const response = await api.post<Service>('/services', data);
+    const response = await api.post<Service>("/services", data);
     return response.data;
   },
 

@@ -1,6 +1,6 @@
-import Image from 'next/image';
+import Image from "next/image";
 
-type LogoSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+type LogoSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 interface LogoProps {
   size?: LogoSize;
@@ -16,7 +16,11 @@ const sizes: Record<LogoSize, number> = {
   xl: 96,
 };
 
-export function Logo({ size = 'md', showText = false, className = '' }: LogoProps) {
+export function Logo({
+  size = "md",
+  showText = false,
+  className = "",
+}: LogoProps) {
   const dimension = sizes[size];
 
   return (
@@ -27,16 +31,20 @@ export function Logo({ size = 'md', showText = false, className = '' }: LogoProp
         width={dimension}
         height={dimension}
         className="object-contain"
-        priority={size === 'lg' || size === 'xl'}
+        priority={size === "lg" || size === "xl"}
       />
       {showText && (
         <span
           className={`font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent ${
-            size === 'xs' ? 'text-sm' :
-            size === 'sm' ? 'text-base' :
-            size === 'md' ? 'text-lg' :
-            size === 'lg' ? 'text-xl' :
-            'text-2xl'
+            size === "xs"
+              ? "text-sm"
+              : size === "sm"
+                ? "text-base"
+                : size === "md"
+                  ? "text-lg"
+                  : size === "lg"
+                    ? "text-xl"
+                    : "text-2xl"
           }`}
         >
           ORCHESTR&apos;A
@@ -46,7 +54,10 @@ export function Logo({ size = 'md', showText = false, className = '' }: LogoProp
   );
 }
 
-export function LogoIcon({ size = 'sm', className = '' }: Omit<LogoProps, 'showText'>) {
+export function LogoIcon({
+  size = "sm",
+  className = "",
+}: Omit<LogoProps, "showText">) {
   const dimension = sizes[size];
 
   return (

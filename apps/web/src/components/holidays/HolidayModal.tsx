@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Holiday,
   HolidayType,
   CreateHolidayDto,
   UpdateHolidayDto,
   HOLIDAY_TYPE_LABELS,
-} from '@/types';
-import { holidaysService } from '@/services/holidays.service';
-import toast from 'react-hot-toast';
+} from "@/types";
+import { holidaysService } from "@/services/holidays.service";
+import toast from "react-hot-toast";
 
 interface HolidayModalProps {
   isOpen: boolean;
@@ -30,32 +30,32 @@ export function HolidayModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState<CreateHolidayDto>({
-    date: '',
-    name: '',
+    date: "",
+    name: "",
     type: HolidayType.LEGAL,
     isWorkDay: false,
-    description: '',
+    description: "",
     recurring: false,
   });
 
   useEffect(() => {
     if (holiday) {
       setFormData({
-        date: holiday.date.split('T')[0],
+        date: holiday.date.split("T")[0],
         name: holiday.name,
         type: holiday.type,
         isWorkDay: holiday.isWorkDay,
-        description: holiday.description || '',
+        description: holiday.description || "",
         recurring: holiday.recurring,
       });
     } else {
       const year = defaultYear || new Date().getFullYear();
       setFormData({
         date: `${year}-01-01`,
-        name: '',
+        name: "",
         type: HolidayType.LEGAL,
         isWorkDay: false,
-        description: '',
+        description: "",
         recurring: false,
       });
     }
@@ -65,12 +65,12 @@ export function HolidayModal({
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      toast.error('Le nom du jour ferie est obligatoire');
+      toast.error("Le nom du jour ferie est obligatoire");
       return;
     }
 
     if (!formData.date) {
-      toast.error('La date est obligatoire');
+      toast.error("La date est obligatoire");
       return;
     }
 
@@ -87,17 +87,17 @@ export function HolidayModal({
           recurring: formData.recurring,
         };
         await holidaysService.update(holiday.id, updateData);
-        toast.success('Jour ferie mis a jour');
+        toast.success("Jour ferie mis a jour");
       } else {
         await holidaysService.create(formData);
-        toast.success('Jour ferie cree avec succes');
+        toast.success("Jour ferie cree avec succes");
       }
       onSuccess();
       onClose();
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       const message =
-        error.response?.data?.message || 'Erreur lors de l\'enregistrement';
+        error.response?.data?.message || "Erreur lors de l'enregistrement";
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -105,13 +105,13 @@ export function HolidayModal({
   };
 
   const formatDateForDisplay = (dateStr: string): string => {
-    if (!dateStr) return '';
+    if (!dateStr) return "";
     const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
+    return date.toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
@@ -123,7 +123,7 @@ export function HolidayModal({
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">
-              {isEditing ? 'Modifier le jour ferie' : 'Ajouter un jour ferie'}
+              {isEditing ? "Modifier le jour ferie" : "Ajouter un jour ferie"}
             </h2>
             <button
               onClick={onClose}
@@ -194,7 +194,10 @@ export function HolidayModal({
             <select
               value={formData.type}
               onChange={(e) =>
-                setFormData({ ...formData, type: e.target.value as HolidayType })
+                setFormData({
+                  ...formData,
+                  type: e.target.value as HolidayType,
+                })
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
@@ -309,7 +312,7 @@ export function HolidayModal({
                   <span>Enregistrement...</span>
                 </>
               ) : (
-                <span>{isEditing ? 'Mettre a jour' : 'Creer'}</span>
+                <span>{isEditing ? "Mettre a jour" : "Creer"}</span>
               )}
             </button>
           </div>

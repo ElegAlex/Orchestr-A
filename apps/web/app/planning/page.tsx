@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { MainLayout } from '@/components/MainLayout';
-import { PlanningView } from '@/components/planning/PlanningView';
+import { MainLayout } from "@/components/MainLayout";
+import { PlanningView } from "@/components/planning/PlanningView";
 
 export default function PlanningPage() {
   return (

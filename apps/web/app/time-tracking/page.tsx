@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { MainLayout } from '@/components/MainLayout';
-import { useAuthStore } from '@/stores/auth.store';
-import { timeTrackingService } from '@/services/time-tracking.service';
-import { projectsService } from '@/services/projects.service';
-import { tasksService } from '@/services/tasks.service';
+import { useEffect, useState, useCallback } from "react";
+import { MainLayout } from "@/components/MainLayout";
+import { useAuthStore } from "@/stores/auth.store";
+import { timeTrackingService } from "@/services/time-tracking.service";
+import { projectsService } from "@/services/projects.service";
+import { tasksService } from "@/services/tasks.service";
 import {
   TimeEntry,
   ActivityType,
   CreateTimeEntryDto,
   Project,
   Task,
-} from '@/types';
-import toast from 'react-hot-toast';
+} from "@/types";
+import toast from "react-hot-toast";
 
 export default function TimeTrackingPage() {
   const user = useAuthStore((state) => state.user);
@@ -22,16 +22,16 @@ export default function TimeTrackingPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [selectedProject, setSelectedProject] = useState<string>('ALL');
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedProject, setSelectedProject] = useState<string>("ALL");
 
   const [formData, setFormData] = useState<CreateTimeEntryDto>({
-    projectId: '',
-    taskId: '',
-    date: new Date().toISOString().split('T')[0],
+    projectId: "",
+    taskId: "",
+    date: new Date().toISOString().split("T")[0],
     hours: 0,
-    description: '',
+    description: "",
     activityType: ActivityType.DEVELOPMENT,
   });
 
@@ -51,7 +51,8 @@ export default function TimeTrackingPage() {
         } catch (err) {
           setProjects([]);
           const axiosError = err as { response?: { status?: number } };
-          if (axiosError.response?.status !== 404) console.error('Error fetching projects:', err);
+          if (axiosError.response?.status !== 404)
+            console.error("Error fetching projects:", err);
         }
       }
 
@@ -63,13 +64,14 @@ export default function TimeTrackingPage() {
         } catch (err) {
           setTasks([]);
           const axiosError = err as { response?: { status?: number } };
-          if (axiosError.response?.status !== 404) console.error('Error fetching tasks:', err);
+          if (axiosError.response?.status !== 404)
+            console.error("Error fetching tasks:", err);
         }
       }
     } catch (err) {
       const axiosError = err as { response?: { status?: number } };
       if (axiosError.response?.status !== 404) {
-        toast.error('Erreur lors du chargement des données');
+        toast.error("Erreur lors du chargement des données");
         console.error(err);
       }
     } finally {
@@ -85,37 +87,37 @@ export default function TimeTrackingPage() {
     e.preventDefault();
     try {
       await timeTrackingService.create(formData);
-      toast.success('Temps enregistré avec succès');
+      toast.success("Temps enregistré avec succès");
       setShowCreateModal(false);
       resetForm();
       fetchData();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || "Erreur lors de l'enregistrement"
+        axiosError.response?.data?.message || "Erreur lors de l'enregistrement",
       );
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette entrée ?')) return;
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette entrée ?")) return;
 
     try {
       await timeTrackingService.delete(id);
-      toast.success('Entrée supprimée');
+      toast.success("Entrée supprimée");
       fetchData();
     } catch {
-      toast.error('Erreur lors de la suppression');
+      toast.error("Erreur lors de la suppression");
     }
   };
 
   const resetForm = () => {
     setFormData({
-      projectId: '',
-      taskId: '',
-      date: new Date().toISOString().split('T')[0],
+      projectId: "",
+      taskId: "",
+      date: new Date().toISOString().split("T")[0],
       hours: 0,
-      description: '',
+      description: "",
       activityType: ActivityType.DEVELOPMENT,
     });
   };
@@ -123,41 +125,41 @@ export default function TimeTrackingPage() {
   const getFilteredEntries = () => {
     let filtered = entries;
 
-    if (selectedProject !== 'ALL') {
+    if (selectedProject !== "ALL") {
       filtered = filtered.filter((e) => e.projectId === selectedProject);
     }
 
     if (startDate) {
       filtered = filtered.filter((e) => {
-        const entryDate = e.date.split('T')[0];
+        const entryDate = e.date.split("T")[0];
         return entryDate >= startDate;
       });
     }
 
     if (endDate) {
       filtered = filtered.filter((e) => {
-        const entryDate = e.date.split('T')[0];
+        const entryDate = e.date.split("T")[0];
         return entryDate <= endDate;
       });
     }
 
     return filtered.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
   };
 
   const getActivityTypeLabel = (type: ActivityType) => {
     switch (type) {
       case ActivityType.DEVELOPMENT:
-        return 'Développement';
+        return "Développement";
       case ActivityType.MEETING:
-        return 'Réunion';
+        return "Réunion";
       case ActivityType.SUPPORT:
-        return 'Support';
+        return "Support";
       case ActivityType.TRAINING:
-        return 'Formation';
+        return "Formation";
       case ActivityType.OTHER:
-        return 'Autre';
+        return "Autre";
       default:
         return type;
     }
@@ -166,17 +168,17 @@ export default function TimeTrackingPage() {
   const getActivityTypeBadgeColor = (type: ActivityType) => {
     switch (type) {
       case ActivityType.DEVELOPMENT:
-        return 'bg-blue-100 text-blue-800';
+        return "bg-blue-100 text-blue-800";
       case ActivityType.MEETING:
-        return 'bg-purple-100 text-purple-800';
+        return "bg-purple-100 text-purple-800";
       case ActivityType.SUPPORT:
-        return 'bg-orange-100 text-orange-800';
+        return "bg-orange-100 text-orange-800";
       case ActivityType.TRAINING:
-        return 'bg-green-100 text-green-800';
+        return "bg-green-100 text-green-800";
       case ActivityType.OTHER:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -227,12 +229,12 @@ export default function TimeTrackingPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-700">Filtres</h3>
-            {(selectedProject !== 'ALL' || startDate || endDate) && (
+            {(selectedProject !== "ALL" || startDate || endDate) && (
               <button
                 onClick={() => {
-                  setSelectedProject('ALL');
-                  setStartDate('');
-                  setEndDate('');
+                  setSelectedProject("ALL");
+                  setStartDate("");
+                  setEndDate("");
                 }}
                 className="text-xs text-blue-600 hover:text-blue-800 transition"
               >
@@ -306,10 +308,7 @@ export default function TimeTrackingPage() {
           ) : (
             <div className="divide-y divide-gray-200">
               {getFilteredEntries().map((entry) => (
-                <div
-                  key={entry.id}
-                  className="p-6 hover:bg-gray-50 transition"
-                >
+                <div key={entry.id} className="p-6 hover:bg-gray-50 transition">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
@@ -318,17 +317,17 @@ export default function TimeTrackingPage() {
                         </span>
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium ${getActivityTypeBadgeColor(
-                            entry.activityType
+                            entry.activityType,
                           )}`}
                         >
                           {getActivityTypeLabel(entry.activityType)}
                         </span>
                         <span className="text-sm text-gray-500">
-                          {new Date(entry.date).toLocaleDateString('fr-FR', {
-                            weekday: 'long',
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
+                          {new Date(entry.date).toLocaleDateString("fr-FR", {
+                            weekday: "long",
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
                           })}
                         </span>
                       </div>
@@ -354,8 +353,8 @@ export default function TimeTrackingPage() {
                       )}
 
                       <p className="text-xs text-gray-500 mt-2">
-                        Créé le{' '}
-                        {new Date(entry.createdAt).toLocaleDateString('fr-FR')}
+                        Créé le{" "}
+                        {new Date(entry.createdAt).toLocaleDateString("fr-FR")}
                       </p>
                     </div>
 
@@ -405,7 +404,7 @@ export default function TimeTrackingPage() {
                   required
                   min="0.25"
                   step="0.25"
-                  value={formData.hours || ''}
+                  value={formData.hours || ""}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -452,7 +451,7 @@ export default function TimeTrackingPage() {
                     setFormData({
                       ...formData,
                       projectId: e.target.value,
-                      taskId: '', // Reset task when project changes
+                      taskId: "", // Reset task when project changes
                     })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

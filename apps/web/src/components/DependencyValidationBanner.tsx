@@ -1,7 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { DateConflict, formatConflictMessage } from '@/utils/dependencyValidation';
+import { useState } from "react";
+import {
+  DateConflict,
+  formatConflictMessage,
+} from "@/utils/dependencyValidation";
 
 interface DependencyValidationBannerProps {
   conflicts: DateConflict[];
@@ -40,7 +43,7 @@ export function DependencyValidationBanner({
           />
         </svg>
         <span className="text-sm text-amber-800">
-          {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''} de dates
+          {conflicts.length} conflit{conflicts.length > 1 ? "s" : ""} de dates
         </span>
       </div>
     );
@@ -84,7 +87,9 @@ export function DependencyValidationBanner({
               onClick={() => setIsExpanded(true)}
               className="mt-2 text-sm text-amber-600 hover:text-amber-800 font-medium"
             >
-              Voir {conflicts.length - 2} autre{conflicts.length - 2 > 1 ? 's' : ''} conflit{conflicts.length - 2 > 1 ? 's' : ''}
+              Voir {conflicts.length - 2} autre
+              {conflicts.length - 2 > 1 ? "s" : ""} conflit
+              {conflicts.length - 2 > 1 ? "s" : ""}
             </button>
           )}
 
@@ -103,8 +108,18 @@ export function DependencyValidationBanner({
             onClick={onDismiss}
             className="text-amber-500 hover:text-amber-700"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         )}

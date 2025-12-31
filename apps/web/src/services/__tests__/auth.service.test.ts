@@ -1,8 +1,8 @@
-import { authService } from '../auth.service';
-import { api } from '@/lib/api';
+import { authService } from "../auth.service";
+import { api } from "@/lib/api";
 
 // Mock de l'API
-jest.mock('@/lib/api', () => ({
+jest.mock("@/lib/api", () => ({
   api: {
     post: jest.fn(),
     get: jest.fn(),
@@ -24,26 +24,26 @@ const localStorageMock = {
   }),
 };
 
-Object.defineProperty(window, 'localStorage', {
+Object.defineProperty(window, "localStorage", {
   value: localStorageMock,
   writable: true,
 });
 
-describe('authService', () => {
+describe("authService", () => {
   const mockUser = {
-    id: 'user-1',
-    email: 'test@example.com',
-    login: 'testuser',
-    firstName: 'Test',
-    lastName: 'User',
-    role: 'CONTRIBUTEUR',
+    id: "user-1",
+    email: "test@example.com",
+    login: "testuser",
+    firstName: "Test",
+    lastName: "User",
+    role: "CONTRIBUTEUR",
     isActive: true,
-    createdAt: '2025-01-01',
-    updatedAt: '2025-01-01',
+    createdAt: "2025-01-01",
+    updatedAt: "2025-01-01",
   };
 
   const mockAuthResponse = {
-    access_token: 'test-token-123',
+    access_token: "test-token-123",
     user: mockUser,
   };
 
@@ -52,89 +52,104 @@ describe('authService', () => {
     localStorageStore = {};
   });
 
-  describe('login', () => {
-    it('should call API with credentials and store token', async () => {
+  describe("login", () => {
+    it("should call API with credentials and store token", async () => {
       (api.post as jest.Mock).mockResolvedValue({ data: mockAuthResponse });
 
       const result = await authService.login({
-        login: 'testuser',
-        password: 'password123',
+        login: "testuser",
+        password: "password123",
       });
 
-      expect(api.post).toHaveBeenCalledWith('/auth/login', {
-        login: 'testuser',
-        password: 'password123',
+      expect(api.post).toHaveBeenCalledWith("/auth/login", {
+        login: "testuser",
+        password: "password123",
       });
-      expect(localStorage.setItem).toHaveBeenCalledWith('access_token', 'test-token-123');
-      expect(localStorage.setItem).toHaveBeenCalledWith('user', JSON.stringify(mockUser));
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        "access_token",
+        "test-token-123",
+      );
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        "user",
+        JSON.stringify(mockUser),
+      );
       expect(result).toEqual(mockAuthResponse);
     });
 
-    it('should handle API errors', async () => {
-      const error = new Error('Invalid credentials');
+    it("should handle API errors", async () => {
+      const error = new Error("Invalid credentials");
       (api.post as jest.Mock).mockRejectedValue(error);
 
       await expect(
-        authService.login({ login: 'wrong', password: 'wrong' })
-      ).rejects.toThrow('Invalid credentials');
+        authService.login({ login: "wrong", password: "wrong" }),
+      ).rejects.toThrow("Invalid credentials");
     });
   });
 
-  describe('register', () => {
-    it('should call API with registration data and store token', async () => {
+  describe("register", () => {
+    it("should call API with registration data and store token", async () => {
       (api.post as jest.Mock).mockResolvedValue({ data: mockAuthResponse });
 
       const registerData = {
-        email: 'new@example.com',
-        login: 'newuser',
-        password: 'password123',
-        firstName: 'New',
-        lastName: 'User',
+        email: "new@example.com",
+        login: "newuser",
+        password: "password123",
+        firstName: "New",
+        lastName: "User",
       };
 
       const result = await authService.register(registerData);
 
-      expect(api.post).toHaveBeenCalledWith('/auth/register', registerData);
-      expect(localStorage.setItem).toHaveBeenCalledWith('access_token', 'test-token-123');
-      expect(localStorage.setItem).toHaveBeenCalledWith('user', JSON.stringify(mockUser));
+      expect(api.post).toHaveBeenCalledWith("/auth/register", registerData);
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        "access_token",
+        "test-token-123",
+      );
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        "user",
+        JSON.stringify(mockUser),
+      );
       expect(result).toEqual(mockAuthResponse);
     });
   });
 
-  describe('getProfile', () => {
-    it('should fetch and store user profile', async () => {
+  describe("getProfile", () => {
+    it("should fetch and store user profile", async () => {
       (api.get as jest.Mock).mockResolvedValue({ data: mockUser });
 
       const result = await authService.getProfile();
 
-      expect(api.get).toHaveBeenCalledWith('/auth/profile');
-      expect(localStorage.setItem).toHaveBeenCalledWith('user', JSON.stringify(mockUser));
+      expect(api.get).toHaveBeenCalledWith("/auth/profile");
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        "user",
+        JSON.stringify(mockUser),
+      );
       expect(result).toEqual(mockUser);
     });
   });
 
-  describe('logout', () => {
-    it('should clear localStorage and redirect to login', () => {
+  describe("logout", () => {
+    it("should clear localStorage and redirect to login", () => {
       authService.logout();
 
-      expect(localStorage.removeItem).toHaveBeenCalledWith('access_token');
-      expect(localStorage.removeItem).toHaveBeenCalledWith('user');
+      expect(localStorage.removeItem).toHaveBeenCalledWith("access_token");
+      expect(localStorage.removeItem).toHaveBeenCalledWith("user");
       // window.location.href assignment causes navigation in real browser
       // In JSDOM, we just verify localStorage was cleared
     });
   });
 
-  describe('getCurrentUser', () => {
-    it('should return parsed user from localStorage', () => {
+  describe("getCurrentUser", () => {
+    it("should return parsed user from localStorage", () => {
       localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser));
 
       const result = authService.getCurrentUser();
 
-      expect(localStorage.getItem).toHaveBeenCalledWith('user');
+      expect(localStorage.getItem).toHaveBeenCalledWith("user");
       expect(result).toEqual(mockUser);
     });
 
-    it('should return null if no user in localStorage', () => {
+    it("should return null if no user in localStorage", () => {
       localStorageMock.getItem.mockReturnValue(null);
 
       const result = authService.getCurrentUser();
@@ -143,17 +158,17 @@ describe('authService', () => {
     });
   });
 
-  describe('isAuthenticated', () => {
-    it('should return true if token exists', () => {
-      localStorageMock.getItem.mockReturnValue('some-token');
+  describe("isAuthenticated", () => {
+    it("should return true if token exists", () => {
+      localStorageMock.getItem.mockReturnValue("some-token");
 
       const result = authService.isAuthenticated();
 
-      expect(localStorage.getItem).toHaveBeenCalledWith('access_token');
+      expect(localStorage.getItem).toHaveBeenCalledWith("access_token");
       expect(result).toBe(true);
     });
 
-    it('should return false if no token', () => {
+    it("should return false if no token", () => {
       localStorageMock.getItem.mockReturnValue(null);
 
       const result = authService.isAuthenticated();

@@ -5,6 +5,7 @@ Application de gestion de projets et de ressources humaines pour collectivités 
 ## 📋 Description
 
 ORCHESTR'A V2 est une plateforme web moderne qui permet de gérer :
+
 - **Projets** : Gestion complète de projets avec Kanban drag-and-drop, Gantt, jalons
 - **Planning Unifié** : Vue Semaine/Mois intégrant télétravail, congés et tâches
 - **Ressources Humaines** : Congés, télétravail, compétences, charge de travail
@@ -23,6 +24,7 @@ ORCHESTR'A V2 est une plateforme web moderne qui permet de gérer :
 ## 🚀 Stack Technique
 
 ### Backend
+
 - **Node.js** 22.20.0 LTS
 - **NestJS** 11.1 + **Fastify** 5
 - **Prisma** 6.16 (ORM)
@@ -30,6 +32,7 @@ ORCHESTR'A V2 est une plateforme web moderne qui permet de gérer :
 - **Redis** 7.4
 
 ### Frontend
+
 - **Next.js** 15.5 (App Router)
 - **React** 19.1
 - **TypeScript** 5.7
@@ -38,6 +41,7 @@ ORCHESTR'A V2 est une plateforme web moderne qui permet de gérer :
 - **Zustand** 5
 
 ### Infrastructure
+
 - **Docker** 28 + **Docker Compose**
 - **Turborepo** 2 (Monorepo)
 - **pnpm** 9
@@ -76,48 +80,57 @@ orchestr-a-v2/
 ### Étapes
 
 1. **Cloner le repository**
+
 ```bash
 git clone https://github.com/ElegAlex/Orchestr-A.git
 cd Orchestr-A
 ```
 
 2. **Installer pnpm** (si pas déjà installé)
+
 ```bash
 npm install -g pnpm@9
 ```
 
 3. **Installer les dépendances**
+
 ```bash
 pnpm install
 ```
 
 4. **Configuration de l'environnement**
+
 ```bash
 cp .env.example .env
 # Éditer .env avec vos valeurs
 ```
 
 5. **Démarrer les services Docker**
+
 ```bash
 pnpm run docker:dev
 ```
 
 6. **Exécuter les migrations de base de données**
+
 ```bash
 pnpm run db:migrate
 ```
 
 7. **Seed la base de données** (données de test)
+
 ```bash
 pnpm run db:seed
 ```
 
 8. **Démarrer l'application en mode développement**
+
 ```bash
 pnpm run dev
 ```
 
 L'application sera disponible sur :
+
 - 🌐 **Frontend** : http://localhost:3000
 - 🔌 **API** : http://localhost:4000
 - 📊 **Prisma Studio** : `pnpm run db:studio`
@@ -125,6 +138,7 @@ L'application sera disponible sur :
 ## 📝 Scripts disponibles
 
 ### Développement
+
 ```bash
 pnpm run dev          # Démarrer tous les projets en mode dev
 pnpm run build        # Build tous les projets
@@ -134,6 +148,7 @@ pnpm run format       # Formatter le code
 ```
 
 ### Docker
+
 ```bash
 pnpm run docker:dev   # Démarrer PostgreSQL + Redis
 pnpm run docker:down  # Arrêter les conteneurs
@@ -142,6 +157,7 @@ pnpm run docker:clean # Supprimer volumes et conteneurs
 ```
 
 ### Base de données
+
 ```bash
 pnpm run db:migrate         # Exécuter les migrations
 pnpm run db:migrate:deploy  # Déployer les migrations (prod)
@@ -151,6 +167,7 @@ pnpm run db:reset           # Reset la base de données
 ```
 
 ### Tests
+
 ```bash
 pnpm run test       # Tests unitaires
 pnpm run test:cov   # Tests avec couverture
@@ -193,15 +210,18 @@ pnpm run test:e2e
 ## 🐛 Debugging
 
 ### Backend (API)
+
 ```bash
 cd apps/api
 pnpm run start:debug
 ```
 
 ### Frontend (Web)
+
 Utiliser les DevTools Chrome/Firefox
 
 ### Base de données
+
 ```bash
 # Se connecter à PostgreSQL
 docker exec -it orchestr-a-db psql -U orchestr_a -d orchestr_a_v2
@@ -291,6 +311,7 @@ docker compose -f docker-compose.prod.yml down
 Format : `type(scope): message`
 
 **Types** :
+
 - `feat`: Nouvelle fonctionnalité
 - `fix`: Correction bug
 - `refactor`: Refactoring

@@ -1,4 +1,4 @@
-import { api } from '@/lib/api';
+import { api } from "@/lib/api";
 import {
   Task,
   PaginatedResponse,
@@ -6,23 +6,23 @@ import {
   Priority,
   CreateTaskDto,
   UpdateTaskDto,
-} from '@/types';
+} from "@/types";
 
 export const tasksService = {
   async getAll(
     page?: number,
     limit?: number,
     status?: TaskStatus,
-    priority?: Priority
+    priority?: Priority,
   ): Promise<PaginatedResponse<Task>> {
     const params = new URLSearchParams();
-    if (page !== undefined) params.append('page', page.toString());
-    if (limit !== undefined) params.append('limit', limit.toString());
-    if (status) params.append('status', status);
-    if (priority) params.append('priority', priority);
+    if (page !== undefined) params.append("page", page.toString());
+    if (limit !== undefined) params.append("limit", limit.toString());
+    if (status) params.append("status", status);
+    if (priority) params.append("priority", priority);
 
     const response = await api.get<PaginatedResponse<Task>>(
-      `/tasks?${params.toString()}`
+      `/tasks?${params.toString()}`,
     );
     return response.data;
   },
@@ -54,17 +54,17 @@ export const tasksService = {
 
   async getByDateRange(startDate: string, endDate: string): Promise<Task[]> {
     const response = await api.get<PaginatedResponse<Task> | Task[]>(
-      `/tasks?startDate=${startDate}&endDate=${endDate}`
+      `/tasks?startDate=${startDate}&endDate=${endDate}`,
     );
     // L'API retourne {data: [], meta: {}} - extraire le tableau
-    if (response.data && 'data' in response.data) {
+    if (response.data && "data" in response.data) {
       return response.data.data;
     }
     return Array.isArray(response.data) ? response.data : [];
   },
 
   async create(data: CreateTaskDto): Promise<Task> {
-    const response = await api.post<Task>('/tasks', data);
+    const response = await api.post<Task>("/tasks", data);
     return response.data;
   },
 
@@ -95,7 +95,7 @@ export const tasksService = {
   async assignRaci(
     taskId: string,
     userId: string,
-    role: string
+    role: string,
   ): Promise<void> {
     await api.post(`/tasks/${taskId}/raci`, { userId, role });
   },
@@ -106,7 +106,7 @@ export const tasksService = {
 
   async getImportTemplate(projectId: string): Promise<string> {
     const response = await api.get<{ template: string }>(
-      `/tasks/project/${projectId}/import-template`
+      `/tasks/project/${projectId}/import-template`,
     );
     return response.data.template;
   },
@@ -123,11 +123,11 @@ export const tasksService = {
       estimatedHours?: number;
       startDate?: string;
       endDate?: string;
-    }>
+    }>,
   ): Promise<TasksValidationPreview> {
     const response = await api.post<TasksValidationPreview>(
       `/tasks/project/${projectId}/import/validate`,
-      { tasks }
+      { tasks },
     );
     return response.data;
   },
@@ -144,7 +144,7 @@ export const tasksService = {
       estimatedHours?: number;
       startDate?: string;
       endDate?: string;
-    }>
+    }>,
   ): Promise<{
     created: number;
     skipped: number;
@@ -164,7 +164,7 @@ export const tasksService = {
    * Recupere les taches orphelines (sans projet)
    */
   async getOrphans(): Promise<Task[]> {
-    const response = await api.get<Task[]>('/tasks/orphans');
+    const response = await api.get<Task[]>("/tasks/orphans");
     return response.data;
   },
 
@@ -201,7 +201,7 @@ export interface TaskPreviewItem {
     startDate?: string;
     endDate?: string;
   };
-  status: 'valid' | 'duplicate' | 'error' | 'warning';
+  status: "valid" | "duplicate" | "error" | "warning";
   messages: string[];
   resolvedAssignee?: { id: string; email: string; name: string };
   resolvedMilestone?: { id: string; name: string };

@@ -1,4 +1,4 @@
-import { api } from '@/lib/api';
+import { api } from "@/lib/api";
 import {
   Project,
   PaginatedResponse,
@@ -7,21 +7,21 @@ import {
   UpdateProjectDto,
   AddMemberDto,
   ProjectStats,
-} from '@/types';
+} from "@/types";
 
 export const projectsService = {
   async getAll(
     page?: number,
     limit?: number,
-    status?: ProjectStatus
+    status?: ProjectStatus,
   ): Promise<PaginatedResponse<Project>> {
     const params = new URLSearchParams();
-    if (page !== undefined) params.append('page', page.toString());
-    if (limit !== undefined) params.append('limit', limit.toString());
-    if (status) params.append('status', status);
+    if (page !== undefined) params.append("page", page.toString());
+    if (limit !== undefined) params.append("limit", limit.toString());
+    if (status) params.append("status", status);
 
     const response = await api.get<PaginatedResponse<Project>>(
-      `/projects?${params.toString()}`
+      `/projects?${params.toString()}`,
     );
     return response.data;
   },
@@ -42,7 +42,7 @@ export const projectsService = {
   },
 
   async create(data: CreateProjectDto): Promise<Project> {
-    const response = await api.post<Project>('/projects', data);
+    const response = await api.post<Project>("/projects", data);
     return response.data;
   },
 

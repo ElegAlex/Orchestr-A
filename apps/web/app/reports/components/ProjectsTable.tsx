@@ -1,16 +1,16 @@
-import { ProjectDetail } from '../types';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { ProjectDetail } from "../types";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 interface ProjectsTableProps {
   projects: ProjectDetail[];
 }
 
 const statusColors: Record<string, string> = {
-  ACTIVE: 'bg-blue-100 text-blue-800',
-  COMPLETED: 'bg-green-100 text-green-800',
-  ON_HOLD: 'bg-yellow-100 text-yellow-800',
-  CANCELLED: 'bg-red-100 text-red-800',
+  ACTIVE: "bg-blue-100 text-blue-800",
+  COMPLETED: "bg-green-100 text-green-800",
+  ON_HOLD: "bg-yellow-100 text-yellow-800",
+  CANCELLED: "bg-red-100 text-red-800",
 };
 
 export function ProjectsTable({ projects }: ProjectsTableProps) {
@@ -51,16 +51,19 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
             {projects.map((project) => (
               <tr key={project.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="font-semibold text-gray-900">{project.name}</div>
+                  <div className="font-semibold text-gray-900">
+                    {project.name}
+                  </div>
                   <div className="text-sm text-gray-900">{project.code}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      statusColors[project.status] || 'bg-gray-100 text-gray-800'
+                      statusColors[project.status] ||
+                      "bg-gray-100 text-gray-800"
                     }`}
                   >
-                    {project.status.replace('_', ' ').toUpperCase()}
+                    {project.status.replace("_", " ").toUpperCase()}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -71,20 +74,22 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                         style={{ width: `${project.progress}%` }}
                       ></div>
                     </div>
-                    <span className="text-sm font-medium text-gray-900">{project.progress}%</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {project.progress}%
+                    </span>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
                   {project.completedTasks}/{project.totalTasks}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {project.projectManager || '-'}
+                  {project.projectManager || "-"}
                 </td>
                 <td
                   className={`px-6 py-4 whitespace-nowrap text-right text-sm ${
                     project.loggedHours > project.budgetHours
-                      ? 'text-red-600 font-semibold'
-                      : 'text-gray-900'
+                      ? "text-red-600 font-semibold"
+                      : "text-gray-900"
                   }`}
                 >
                   {project.loggedHours}h
@@ -96,9 +101,13 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                   <div className="flex items-center gap-2">
                     {project.dueDate ? (
                       <span
-                        className={project.isOverdue ? 'text-red-600 font-semibold' : 'text-gray-900'}
+                        className={
+                          project.isOverdue
+                            ? "text-red-600 font-semibold"
+                            : "text-gray-900"
+                        }
                       >
-                        {format(new Date(project.dueDate), 'dd/MM/yyyy', {
+                        {format(new Date(project.dueDate), "dd/MM/yyyy", {
                           locale: fr,
                         })}
                       </span>

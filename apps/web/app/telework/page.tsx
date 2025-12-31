@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { MainLayout } from '@/components/MainLayout';
-import { useAuthStore } from '@/stores/auth.store';
-import { teleworkService } from '@/services/telework.service';
-import { TeleworkSchedule } from '@/types';
-import toast from 'react-hot-toast';
-import { format, isSameDay } from 'date-fns';
+import { useEffect, useState, useCallback } from "react";
+import { MainLayout } from "@/components/MainLayout";
+import { useAuthStore } from "@/stores/auth.store";
+import { teleworkService } from "@/services/telework.service";
+import { TeleworkSchedule } from "@/types";
+import toast from "react-hot-toast";
+import { format, isSameDay } from "date-fns";
 
 export default function TeleworkPage() {
   const user = useAuthStore((state) => state.user);
@@ -21,17 +21,25 @@ export default function TeleworkPage() {
     try {
       setLoading(true);
       // Récupérer les 6 prochains mois de données
-      const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 6, 0);
+      const startDate = new Date(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth(),
+        1,
+      );
+      const endDate = new Date(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth() + 6,
+        0,
+      );
 
       const data = await teleworkService.getByDateRange(
-        format(startDate, 'yyyy-MM-dd'),
-        format(endDate, 'yyyy-MM-dd')
+        format(startDate, "yyyy-MM-dd"),
+        format(endDate, "yyyy-MM-dd"),
       );
       setTeleworkDays(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Erreur chargement télétravail:', err);
-      toast.error('Erreur lors du chargement des données');
+      console.error("Erreur chargement télétravail:", err);
+      toast.error("Erreur lors du chargement des données");
     } finally {
       setLoading(false);
     }
@@ -48,7 +56,7 @@ export default function TeleworkPage() {
       const date = new Date(
         currentMonth.getFullYear(),
         currentMonth.getMonth() + i,
-        1
+        1,
       );
       months.push(date);
     }
@@ -78,7 +86,7 @@ export default function TeleworkPage() {
   };
 
   const formatDate = (date: Date): string => {
-    return format(date, 'yyyy-MM-dd');
+    return format(date, "yyyy-MM-dd");
   };
 
   const isWeekend = (date: Date): boolean => {
@@ -88,7 +96,9 @@ export default function TeleworkPage() {
 
   const getTeleworkStatus = (date: Date): TeleworkSchedule | undefined => {
     if (!user) return undefined;
-    return teleworkDays.find((d) => d.userId === user.id && isSameDay(new Date(d.date), date));
+    return teleworkDays.find(
+      (d) => d.userId === user.id && isSameDay(new Date(d.date), date),
+    );
   };
 
   const handleDayClick = (date: Date) => {
@@ -101,22 +111,31 @@ export default function TeleworkPage() {
     if (!selectedDate || !user) return;
 
     try {
-      const selectedDateObj = new Date(selectedDate + 'T12:00:00');
-      const existingDay = teleworkDays.find((d) => d.userId === user.id && isSameDay(new Date(d.date), selectedDateObj));
+      const selectedDateObj = new Date(selectedDate + "T12:00:00");
+      const existingDay = teleworkDays.find(
+        (d) =>
+          d.userId === user.id && isSameDay(new Date(d.date), selectedDateObj),
+      );
 
       if (existingDay) {
         // Mise à jour
         await teleworkService.update(existingDay.id, { isTelework });
-        toast.success(isTelework ? 'Télétravail enregistré' : 'Bureau enregistré');
+        toast.success(
+          isTelework ? "Télétravail enregistré" : "Bureau enregistré",
+        );
       } else {
         // Création
         await teleworkService.create({
           date: selectedDate,
           isTelework,
           isException: false,
-          userId: user.id
+          userId: user.id,
         });
-        toast.success(isTelework ? 'Jour de télétravail enregistré' : 'Jour en présentiel enregistré');
+        toast.success(
+          isTelework
+            ? "Jour de télétravail enregistré"
+            : "Jour en présentiel enregistré",
+        );
       }
 
       setShowModal(false);
@@ -124,7 +143,9 @@ export default function TeleworkPage() {
       fetchTeleworkData();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || "Erreur lors de l'enregistrement");
+      toast.error(
+        axiosError.response?.data?.message || "Erreur lors de l'enregistrement",
+      );
     }
   };
 
@@ -132,50 +153,54 @@ export default function TeleworkPage() {
     if (!selectedDate || !user) return;
 
     try {
-      const selectedDateObj = new Date(selectedDate + 'T12:00:00');
-      const existingDay = teleworkDays.find((d) => d.userId === user.id && isSameDay(new Date(d.date), selectedDateObj));
+      const selectedDateObj = new Date(selectedDate + "T12:00:00");
+      const existingDay = teleworkDays.find(
+        (d) =>
+          d.userId === user.id && isSameDay(new Date(d.date), selectedDateObj),
+      );
       if (existingDay) {
         await teleworkService.delete(existingDay.id);
-        toast.success('Jour supprimé');
+        toast.success("Jour supprimé");
       }
       setShowModal(false);
       setSelectedDate(null);
       fetchTeleworkData();
     } catch {
-      toast.error('Erreur lors de la suppression');
+      toast.error("Erreur lors de la suppression");
     }
   };
 
   const getDayStyle = (date: Date) => {
     if (isWeekend(date)) {
-      return 'bg-gray-50 text-gray-400 cursor-not-allowed';
+      return "bg-gray-50 text-gray-400 cursor-not-allowed";
     }
 
     const status = getTeleworkStatus(date);
     if (status?.isTelework) {
-      return 'bg-blue-100 text-blue-900 border-blue-300 hover:bg-blue-200 cursor-pointer';
+      return "bg-blue-100 text-blue-900 border-blue-300 hover:bg-blue-200 cursor-pointer";
     }
 
     if (status && !status.isTelework) {
-      return 'bg-gray-100 text-gray-900 border-gray-300 hover:bg-gray-200 cursor-pointer';
+      return "bg-gray-100 text-gray-900 border-gray-300 hover:bg-gray-200 cursor-pointer";
     }
 
-    return 'bg-white text-gray-900 hover:bg-gray-100 cursor-pointer border-gray-200';
+    return "bg-white text-gray-900 hover:bg-gray-100 cursor-pointer border-gray-200";
   };
 
   const getMonthName = (date: Date) => {
-    return date.toLocaleDateString('fr-FR', {
-      month: 'long',
-      year: 'numeric',
+    return date.toLocaleDateString("fr-FR", {
+      month: "long",
+      year: "numeric",
     });
   };
 
   const getTeleworkStats = () => {
     if (!user) return 0;
-    return teleworkDays.filter((d) => d.userId === user.id && d.isTelework).length;
+    return teleworkDays.filter((d) => d.userId === user.id && d.isTelework)
+      .length;
   };
 
-  const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  const weekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
   if (loading) {
     return (
@@ -276,7 +301,7 @@ export default function TeleworkPage() {
                     key={dayIndex}
                     onClick={() => day && handleDayClick(day)}
                     className={`aspect-square flex items-center justify-center text-sm font-medium border ${
-                      day ? getDayStyle(day) : 'bg-gray-50'
+                      day ? getDayStyle(day) : "bg-gray-50"
                     }`}
                   >
                     {day && (
@@ -302,8 +327,8 @@ export default function TeleworkPage() {
                 new Date(
                   currentMonth.getFullYear(),
                   currentMonth.getMonth() - 1,
-                  1
-                )
+                  1,
+                ),
               )
             }
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
@@ -316,8 +341,8 @@ export default function TeleworkPage() {
                 new Date(
                   currentMonth.getFullYear(),
                   currentMonth.getMonth() + 1,
-                  1
-                )
+                  1,
+                ),
               )
             }
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
@@ -332,12 +357,15 @@ export default function TeleworkPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {new Date(selectedDate + 'T12:00:00').toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
+              {new Date(selectedDate + "T12:00:00").toLocaleDateString(
+                "fr-FR",
+                {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                },
+              )}
             </h2>
 
             <p className="text-gray-600 mb-6">
@@ -361,7 +389,7 @@ export default function TeleworkPage() {
                 <span>Bureau</span>
               </button>
 
-              {getTeleworkStatus(new Date(selectedDate + 'T12:00:00')) && (
+              {getTeleworkStatus(new Date(selectedDate + "T12:00:00")) && (
                 <button
                   onClick={handleRemoveTelework}
                   className="w-full px-4 py-3 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition"

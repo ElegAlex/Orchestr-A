@@ -1,13 +1,20 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { MainLayout } from '@/components/MainLayout';
-import { useAuthStore } from '@/stores/auth.store';
-import { departmentsService } from '@/services/departments.service';
-import { servicesService } from '@/services/services.service';
-import { usersService } from '@/services/users.service';
-import { Department, Service, Role, CreateDepartmentDto, CreateServiceDto, User } from '@/types';
-import toast from 'react-hot-toast';
+import { useEffect, useState } from "react";
+import { MainLayout } from "@/components/MainLayout";
+import { useAuthStore } from "@/stores/auth.store";
+import { departmentsService } from "@/services/departments.service";
+import { servicesService } from "@/services/services.service";
+import { usersService } from "@/services/users.service";
+import {
+  Department,
+  Service,
+  Role,
+  CreateDepartmentDto,
+  CreateServiceDto,
+  User,
+} from "@/types";
+import toast from "react-hot-toast";
 
 export default function DepartmentsPage() {
   const user = useAuthStore((state) => state.user);
@@ -17,21 +24,25 @@ export default function DepartmentsPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
-  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  const [editingDepartment, setEditingDepartment] = useState<Department | null>(
+    null,
+  );
   const [editingService, setEditingService] = useState<Service | null>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
+    null,
+  );
 
   const [departmentForm, setDepartmentForm] = useState<CreateDepartmentDto>({
-    name: '',
-    description: '',
-    managerId: '',
+    name: "",
+    description: "",
+    managerId: "",
   });
 
   const [serviceForm, setServiceForm] = useState<CreateServiceDto>({
-    name: '',
-    description: '',
-    departmentId: '',
-    managerId: '',
+    name: "",
+    description: "",
+    departmentId: "",
+    managerId: "",
   });
 
   // Check if user is admin or responsable
@@ -58,7 +69,7 @@ export default function DepartmentsPage() {
       setUsers([]);
       const axiosError = err as { response?: { status?: number } };
       if (axiosError.response?.status !== 404) {
-        toast.error('Erreur lors du chargement des données');
+        toast.error("Erreur lors du chargement des données");
         console.error(err);
       }
     } finally {
@@ -75,10 +86,10 @@ export default function DepartmentsPage() {
     try {
       if (editingDepartment) {
         await departmentsService.update(editingDepartment.id, departmentForm);
-        toast.success('Département modifié avec succès');
+        toast.success("Département modifié avec succès");
       } else {
         await departmentsService.create(departmentForm);
-        toast.success('Département créé avec succès');
+        toast.success("Département créé avec succès");
       }
       setShowDepartmentModal(false);
       resetDepartmentForm();
@@ -87,7 +98,7 @@ export default function DepartmentsPage() {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
         axiosError.response?.data?.message ||
-          `Erreur lors de ${editingDepartment ? 'la modification' : 'la création'}`
+          `Erreur lors de ${editingDepartment ? "la modification" : "la création"}`,
       );
     }
   };
@@ -97,10 +108,10 @@ export default function DepartmentsPage() {
     try {
       if (editingService) {
         await servicesService.update(editingService.id, serviceForm);
-        toast.success('Service modifié avec succès');
+        toast.success("Service modifié avec succès");
       } else {
         await servicesService.create(serviceForm);
-        toast.success('Service créé avec succès');
+        toast.success("Service créé avec succès");
       }
       setShowServiceModal(false);
       resetServiceForm();
@@ -109,7 +120,7 @@ export default function DepartmentsPage() {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
         axiosError.response?.data?.message ||
-          `Erreur lors de ${editingService ? 'la modification' : 'la création'}`
+          `Erreur lors de ${editingService ? "la modification" : "la création"}`,
       );
     }
   };
@@ -117,29 +128,29 @@ export default function DepartmentsPage() {
   const handleDeleteDepartment = async (id: string) => {
     if (
       !confirm(
-        'Êtes-vous sûr de vouloir supprimer ce département ? Tous les services associés seront également supprimés.'
+        "Êtes-vous sûr de vouloir supprimer ce département ? Tous les services associés seront également supprimés.",
       )
     )
       return;
 
     try {
       await departmentsService.delete(id);
-      toast.success('Département supprimé');
+      toast.success("Département supprimé");
       fetchData();
     } catch {
-      toast.error('Erreur lors de la suppression');
+      toast.error("Erreur lors de la suppression");
     }
   };
 
   const handleDeleteService = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce service ?')) return;
+    if (!confirm("Êtes-vous sûr de vouloir supprimer ce service ?")) return;
 
     try {
       await servicesService.delete(id);
-      toast.success('Service supprimé');
+      toast.success("Service supprimé");
       fetchData();
     } catch {
-      toast.error('Erreur lors de la suppression');
+      toast.error("Erreur lors de la suppression");
     }
   };
 
@@ -147,8 +158,8 @@ export default function DepartmentsPage() {
     setEditingDepartment(dept);
     setDepartmentForm({
       name: dept.name,
-      description: dept.description || '',
-      managerId: dept.manager?.id || '',
+      description: dept.description || "",
+      managerId: dept.manager?.id || "",
     });
     setShowDepartmentModal(true);
   };
@@ -157,28 +168,28 @@ export default function DepartmentsPage() {
     setEditingService(service);
     setServiceForm({
       name: service.name,
-      description: service.description || '',
+      description: service.description || "",
       departmentId: service.departmentId,
-      managerId: service.manager?.id || '',
+      managerId: service.manager?.id || "",
     });
     setShowServiceModal(true);
   };
 
   const resetDepartmentForm = () => {
     setDepartmentForm({
-      name: '',
-      description: '',
-      managerId: '',
+      name: "",
+      description: "",
+      managerId: "",
     });
     setEditingDepartment(null);
   };
 
   const resetServiceForm = () => {
     setServiceForm({
-      name: '',
-      description: '',
-      departmentId: '',
-      managerId: '',
+      name: "",
+      description: "",
+      departmentId: "",
+      managerId: "",
     });
     setEditingService(null);
   };
@@ -191,7 +202,7 @@ export default function DepartmentsPage() {
     const deptServices = getServicesForDepartment(departmentId);
     const totalMembers = deptServices.reduce(
       (sum, service) => sum + (service.members?.length || 0),
-      0
+      0,
     );
     return {
       servicesCount: deptServices.length,
@@ -292,10 +303,10 @@ export default function DepartmentsPage() {
               Filtrer par département :
             </label>
             <select
-              value={selectedDepartment || 'ALL'}
+              value={selectedDepartment || "ALL"}
               onChange={(e) =>
                 setSelectedDepartment(
-                  e.target.value === 'ALL' ? null : e.target.value
+                  e.target.value === "ALL" ? null : e.target.value,
                 )
               }
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -329,8 +340,7 @@ export default function DepartmentsPage() {
           <div className="space-y-6">
             {departments
               .filter(
-                (dept) =>
-                  !selectedDepartment || dept.id === selectedDepartment
+                (dept) => !selectedDepartment || dept.id === selectedDepartment,
               )
               .map((department) => {
                 const stats = getDepartmentStats(department.id);
@@ -367,7 +377,7 @@ export default function DepartmentsPage() {
                             <div className="flex items-center space-x-2 text-sm text-gray-700">
                               <span className="font-medium">Manager :</span>
                               <span>
-                                {department.manager.firstName}{' '}
+                                {department.manager.firstName}{" "}
                                 {department.manager.lastName}
                               </span>
                             </div>
@@ -382,7 +392,9 @@ export default function DepartmentsPage() {
                             Modifier
                           </button>
                           <button
-                            onClick={() => handleDeleteDepartment(department.id)}
+                            onClick={() =>
+                              handleDeleteDepartment(department.id)
+                            }
                             className="px-3 py-1 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition"
                           >
                             Supprimer
@@ -443,17 +455,17 @@ export default function DepartmentsPage() {
                                       Manager :
                                     </span>
                                     <span>
-                                      {service.manager.firstName}{' '}
+                                      {service.manager.firstName}{" "}
                                       {service.manager.lastName}
                                     </span>
                                   </div>
                                 )}
 
                                 <p className="text-xs text-gray-500 mt-2">
-                                  Créé le{' '}
+                                  Créé le{" "}
                                   {new Date(
-                                    service.createdAt
-                                  ).toLocaleDateString('fr-FR')}
+                                    service.createdAt,
+                                  ).toLocaleDateString("fr-FR")}
                                 </p>
                               </div>
 
@@ -465,7 +477,9 @@ export default function DepartmentsPage() {
                                   Modifier
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteService(service.id)}
+                                  onClick={() =>
+                                    handleDeleteService(service.id)
+                                  }
                                   className="px-3 py-1 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition"
                                 >
                                   Supprimer
@@ -489,8 +503,8 @@ export default function DepartmentsPage() {
           <div className="bg-white rounded-lg max-w-lg w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               {editingDepartment
-                ? 'Modifier le département'
-                : 'Nouveau département'}
+                ? "Modifier le département"
+                : "Nouveau département"}
             </h2>
             <form onSubmit={handleCreateDepartment} className="space-y-4">
               <div>
@@ -502,7 +516,10 @@ export default function DepartmentsPage() {
                   required
                   value={departmentForm.name}
                   onChange={(e) =>
-                    setDepartmentForm({ ...departmentForm, name: e.target.value })
+                    setDepartmentForm({
+                      ...departmentForm,
+                      name: e.target.value,
+                    })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Ex: Informatique"
@@ -543,7 +560,12 @@ export default function DepartmentsPage() {
                 >
                   <option value="">Aucun responsable</option>
                   {users
-                    .filter((u) => u.role === Role.ADMIN || u.role === Role.RESPONSABLE || u.role === Role.MANAGER)
+                    .filter(
+                      (u) =>
+                        u.role === Role.ADMIN ||
+                        u.role === Role.RESPONSABLE ||
+                        u.role === Role.MANAGER,
+                    )
                     .map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.firstName} {u.lastName} ({u.role})
@@ -567,7 +589,7 @@ export default function DepartmentsPage() {
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  {editingDepartment ? 'Modifier' : 'Créer'}
+                  {editingDepartment ? "Modifier" : "Créer"}
                 </button>
               </div>
             </form>
@@ -580,7 +602,7 @@ export default function DepartmentsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-lg w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {editingService ? 'Modifier le service' : 'Nouveau service'}
+              {editingService ? "Modifier le service" : "Nouveau service"}
             </h2>
             <form onSubmit={handleCreateService} className="space-y-4">
               <div>
@@ -657,7 +679,12 @@ export default function DepartmentsPage() {
                 >
                   <option value="">Aucun manager</option>
                   {users
-                    .filter((u) => u.role === Role.ADMIN || u.role === Role.RESPONSABLE || u.role === Role.MANAGER)
+                    .filter(
+                      (u) =>
+                        u.role === Role.ADMIN ||
+                        u.role === Role.RESPONSABLE ||
+                        u.role === Role.MANAGER,
+                    )
                     .map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.firstName} {u.lastName} ({u.role})
@@ -681,7 +708,7 @@ export default function DepartmentsPage() {
                   type="submit"
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                 >
-                  {editingService ? 'Modifier' : 'Créer'}
+                  {editingService ? "Modifier" : "Créer"}
                 </button>
               </div>
             </form>

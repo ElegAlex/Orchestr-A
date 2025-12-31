@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   BarChart,
@@ -8,8 +8,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-} from 'recharts';
-import { ProjectProgressData } from '../types';
+} from "recharts";
+import { ProjectProgressData } from "../types";
 
 interface ProjectProgressChartProps {
   data: ProjectProgressData[];
