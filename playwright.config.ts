@@ -19,10 +19,12 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: "pnpm --filter web start --port 3000",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  webServer: process.env.CI
+    ? undefined // In CI, we start the server manually
+    : {
+        command: "pnpm --filter web start --port 3000",
+        url: "http://localhost:3000",
+        reuseExistingServer: true,
+        timeout: 120000,
+      },
 });
