@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { MetricCard } from './components/MetricCard';
 import { ProjectProgressChart } from './components/ProjectProgressChart';
@@ -23,11 +23,24 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<number>(0);
   const [exportFormat, setExportFormat] = useState<'json' | 'pdf' | 'excel'>('pdf');
 
-  useEffect(() => {
-    loadAnalytics();
-  }, [dateRange, selectedProject]);
+  const loadProjects = useCallback(async () => {
+    try {
+      const response = await fetch('/api/projects', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        },
+      });
 
-  const loadAnalytics = async () => {
+      if (response.ok) {
+        const projectsData = await response.json();
+        setProjects(projectsData.data || projectsData); // Extract data array
+      }
+    } catch (error) {
+      console.error('Error loading projects:', error);
+    }
+  }, []);
+
+  const loadAnalytics = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ dateRange });
@@ -49,32 +62,17 @@ export default function ReportsPage() {
       setData(analyticsData);
 
       // Load projects for filter if not already loaded
-      if (projects.length === 0) {
-        loadProjects();
-      }
+      loadProjects();
     } catch (error) {
       console.error('Error loading analytics:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange, selectedProject, loadProjects]);
 
-  const loadProjects = async () => {
-    try {
-      const response = await fetch('/api/projects', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const projectsData = await response.json();
-        setProjects(projectsData.data || projectsData); // Extract data array
-      }
-    } catch (error) {
-      console.error('Error loading projects:', error);
-    }
-  };
+  useEffect(() => {
+    loadAnalytics();
+  }, [loadAnalytics]);
 
   const exportReport = async () => {
     if (!data) return;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/MainLayout';
 import { useAuthStore } from '@/stores/auth.store';
@@ -46,7 +46,7 @@ export default function ProjectsPage() {
     estimatedHours: undefined,
   });
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
       let projectsData: Project[] = [];
@@ -80,11 +80,11 @@ export default function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchProjects();
-  }, [user]);
+  }, [fetchProjects]);
 
   // Filtrage des projets
   useEffect(() => {

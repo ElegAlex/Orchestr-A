@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { teleworkService } from '@/services/telework.service';
@@ -17,7 +17,7 @@ export default function TeleworkPage() {
   const [showModal, setShowModal] = useState(false);
 
   // Charger les données de télétravail
-  const fetchTeleworkData = async () => {
+  const fetchTeleworkData = useCallback(async () => {
     try {
       setLoading(true);
       // Récupérer les 6 prochains mois de données
@@ -35,11 +35,11 @@ export default function TeleworkPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentMonth]);
 
   useEffect(() => {
     fetchTeleworkData();
-  }, [currentMonth]);
+  }, [fetchTeleworkData]);
 
   // Générer les 3 prochains mois
   const getMonthsToDisplay = () => {

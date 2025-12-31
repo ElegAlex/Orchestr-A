@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Holiday,
   HolidayType,
@@ -21,7 +21,7 @@ export function HolidaysManager() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
-  const fetchHolidays = async () => {
+  const fetchHolidays = useCallback(async () => {
     try {
       setLoading(true);
       const data = await holidaysService.getByYear(selectedYear);
@@ -31,11 +31,11 @@ export function HolidaysManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedYear]);
 
   useEffect(() => {
     fetchHolidays();
-  }, [selectedYear]);
+  }, [fetchHolidays]);
 
   const sortedHolidays = useMemo(() => {
     return [...holidays].sort(

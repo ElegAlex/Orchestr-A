@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { leaveTypesService, LeaveTypeConfig, CreateLeaveTypeDto, UpdateLeaveTypeDto } from '@/services/leave-types.service';
 import toast from 'react-hot-toast';
 
@@ -28,7 +28,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
     sortOrder: 0,
   });
 
-  const fetchLeaveTypes = async () => {
+  const fetchLeaveTypes = useCallback(async () => {
     setLoading(true);
     try {
       const data = await leaveTypesService.getAll(showInactive);
@@ -39,11 +39,11 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showInactive]);
 
   useEffect(() => {
     fetchLeaveTypes();
-  }, [showInactive]);
+  }, [fetchLeaveTypes]);
 
   const resetForm = () => {
     setFormData({

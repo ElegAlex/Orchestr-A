@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Task, TaskDependency } from '@/types';
+import { Task } from '@/types';
 import {
   detectDateConflicts,
   getStatusColorClass,

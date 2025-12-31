@@ -1,7 +1,7 @@
 'use client';
 
 import { MainLayout } from '@/components/MainLayout';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { skillsService } from '@/services/skills.service';
 import { usersService } from '@/services/users.service';
 import { useAuthStore } from '@/stores/auth.store';
@@ -34,18 +34,7 @@ export default function SkillsPage() {
 
   const canManageSkills = currentUser?.role === Role.ADMIN || currentUser?.role === Role.RESPONSABLE;
 
-  useEffect(() => {
-    fetchSkills();
-    fetchUsers();
-  }, [selectedCategory]);
-
-  useEffect(() => {
-    if (selectedUser) {
-      fetchUserSkills(selectedUser);
-    }
-  }, [selectedUser]);
-
-  const fetchSkills = async () => {
+  const fetchSkills = useCallback(async () => {
     try {
       setLoading(true);
       const response = await skillsService.getAll(
@@ -59,20 +48,31 @@ export default function SkillsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCategory]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await usersService.getAll(1, 100);
       const usersData = Array.isArray(response) ? response : response.data || [];
       setUsers(usersData);
-      if (usersData.length > 0 && !selectedUser) {
-        setSelectedUser(usersData[0].id);
+      if (usersData.length > 0) {
+        setSelectedUser((prev) => prev || usersData[0].id);
       }
     } catch (err) {
       console.error('Erreur lors du chargement des utilisateurs:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSkills();
+    fetchUsers();
+  }, [fetchSkills, fetchUsers]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      fetchUserSkills(selectedUser);
+    }
+  }, [selectedUser]);
 
   const fetchUserSkills = async (userId: string) => {
     try {

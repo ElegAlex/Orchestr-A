@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import { timeTrackingService } from '@/services/time-tracking.service';
@@ -35,7 +35,7 @@ export default function TimeTrackingPage() {
     activityType: ActivityType.DEVELOPMENT,
   });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -75,11 +75,11 @@ export default function TimeTrackingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [fetchData]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
