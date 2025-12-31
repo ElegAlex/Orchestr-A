@@ -245,8 +245,8 @@ jobs:
           REDIS_URL: redis://localhost:6379
           PORT: 3001
 
-      - name: Run E2E Tests
-        run: pnpm test:e2e
+      - name: Run Playwright E2E Tests
+        run: npx playwright test
         env:
           DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
           NEXT_PUBLIC_API_URL: http://localhost:3001
