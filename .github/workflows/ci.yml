@@ -252,6 +252,7 @@ jobs:
           timeout 60 bash -c 'until curl -f http://localhost:3000 2>/dev/null; do sleep 2; done'
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          API_URL: http://localhost:3001
 
       - name: Run Playwright E2E Tests
         run: pnpm --filter web exec playwright test --config ../../playwright.config.ts
