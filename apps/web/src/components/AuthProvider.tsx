@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth.store';
+import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useAuthStore } from "@/stores/auth.store";
 
-const PUBLIC_ROUTES = ['/login', '/register', '/'];
+const PUBLIC_ROUTES = ["/login", "/register", "/"];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -20,9 +20,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
       if (!isAuthenticated && !isPublicRoute) {
-        router.push('/login');
-      } else if (isAuthenticated && (pathname === '/login' || pathname === '/register')) {
-        router.push('/dashboard');
+        router.push("/login");
+      } else if (
+        isAuthenticated &&
+        (pathname === "/login" || pathname === "/register")
+      ) {
+        router.push("/dashboard");
       }
     }
   }, [isAuthenticated, isLoading, pathname, router]);

@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { Task } from '@/types';
+import { useState, useRef, useEffect } from "react";
+import { Task } from "@/types";
 import {
   wouldCreateDateConflict,
   getStatusColorClass,
   getStatusLabel,
-} from '@/utils/dependencyValidation';
+} from "@/utils/dependencyValidation";
 
 interface TaskDependencySelectorProps {
   currentTaskId: string;
@@ -26,24 +26,27 @@ export function TaskDependencySelector({
   availableTasks,
   onChange,
   disabled = false,
-  label = 'Dependances',
-  placeholder = 'Selectionner les taches dont depend cette tache',
+  label = "Dependances",
+  placeholder = "Selectionner les taches dont depend cette tache",
 }: TaskDependencySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Close on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
-        setSearchQuery('');
+        setSearchQuery("");
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Filter tasks by search query and exclude current task
@@ -55,7 +58,9 @@ export function TaskDependencySelector({
   });
 
   // Get selected tasks
-  const selectedTasks = availableTasks.filter((t) => selectedDependencyIds.includes(t.id));
+  const selectedTasks = availableTasks.filter((t) =>
+    selectedDependencyIds.includes(t.id),
+  );
 
   const toggleTask = (taskId: string) => {
     if (selectedDependencyIds.includes(taskId)) {
@@ -83,20 +88,23 @@ export function TaskDependencySelector({
         onClick={() => !disabled && setIsOpen(true)}
         className={`
           min-h-[42px] w-full px-3 py-2 border rounded-lg
-          ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white cursor-text'}
-          ${isOpen ? 'ring-2 ring-blue-500 border-transparent' : 'border-gray-300'}
+          ${disabled ? "bg-gray-100 cursor-not-allowed" : "bg-white cursor-text"}
+          ${isOpen ? "ring-2 ring-blue-500 border-transparent" : "border-gray-300"}
           flex flex-wrap items-center gap-1
         `}
       >
         {/* Selected task tags */}
         {selectedTasks.map((task) => {
-          const hasConflict = wouldCreateDateConflict(currentTaskStartDate, task);
+          const hasConflict = wouldCreateDateConflict(
+            currentTaskStartDate,
+            task,
+          );
           return (
             <span
               key={task.id}
               className={`
                 inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm
-                ${hasConflict ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}
+                ${hasConflict ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"}
               `}
             >
               {hasConflict && (
@@ -118,10 +126,20 @@ export function TaskDependencySelector({
               {!disabled && (
                 <button
                   onClick={(e) => removeTask(task.id, e)}
-                  className={`ml-1 ${hasConflict ? 'text-amber-600 hover:text-amber-800' : 'text-blue-600 hover:text-blue-800'}`}
+                  className={`ml-1 ${hasConflict ? "text-amber-600 hover:text-amber-800" : "text-blue-600 hover:text-blue-800"}`}
                 >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               )}
@@ -137,7 +155,7 @@ export function TaskDependencySelector({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsOpen(true)}
-            placeholder={selectedTasks.length === 0 ? placeholder : ''}
+            placeholder={selectedTasks.length === 0 ? placeholder : ""}
             className="flex-1 min-w-[150px] outline-none bg-transparent text-gray-900 placeholder-gray-500"
           />
         )}
@@ -152,12 +170,15 @@ export function TaskDependencySelector({
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {filteredTasks.length === 0 ? (
             <div className="px-3 py-4 text-sm text-gray-500 text-center">
-              {searchQuery ? 'Aucune tache trouvee' : 'Aucune tache disponible'}
+              {searchQuery ? "Aucune tache trouvee" : "Aucune tache disponible"}
             </div>
           ) : (
             filteredTasks.map((task) => {
               const isSelected = selectedDependencyIds.includes(task.id);
-              const hasConflict = wouldCreateDateConflict(currentTaskStartDate, task);
+              const hasConflict = wouldCreateDateConflict(
+                currentTaskStartDate,
+                task,
+              );
 
               return (
                 <div
@@ -165,19 +186,29 @@ export function TaskDependencySelector({
                   onClick={() => toggleTask(task.id)}
                   className={`
                     flex items-center gap-3 px-3 py-2 cursor-pointer
-                    ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}
+                    ${isSelected ? "bg-blue-50" : "hover:bg-gray-50"}
                   `}
                 >
                   {/* Checkbox */}
                   <div
                     className={`
                       w-4 h-4 rounded border flex items-center justify-center flex-shrink-0
-                      ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}
+                      ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300"}
                     `}
                   >
                     {isSelected && (
-                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
                     )}
                   </div>
@@ -207,12 +238,15 @@ export function TaskDependencySelector({
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getStatusColorClass(task.status)}`}>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-xs font-medium ${getStatusColorClass(task.status)}`}
+                      >
                         {getStatusLabel(task.status)}
                       </span>
                       {task.endDate && (
                         <span className="text-xs text-gray-500">
-                          Fin: {new Date(task.endDate).toLocaleDateString('fr-FR')}
+                          Fin:{" "}
+                          {new Date(task.endDate).toLocaleDateString("fr-FR")}
                         </span>
                       )}
                     </div>

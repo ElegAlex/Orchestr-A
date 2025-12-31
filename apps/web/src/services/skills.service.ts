@@ -1,5 +1,5 @@
-import { api } from '@/lib/api';
-import { Skill, SkillCategory, SkillLevel, User, UserSkill } from '@/types';
+import { api } from "@/lib/api";
+import { Skill, SkillCategory, SkillLevel, User, UserSkill } from "@/types";
 
 export interface CreateSkillDto {
   name: string;
@@ -33,13 +33,19 @@ interface SkillMatrix {
 
 export const skillsService = {
   // Récupérer toutes les compétences
-  async getAll(page?: number, limit?: number, category?: SkillCategory): Promise<SkillsResponse> {
+  async getAll(
+    page?: number,
+    limit?: number,
+    category?: SkillCategory,
+  ): Promise<SkillsResponse> {
     const params = new URLSearchParams();
-    if (page) params.append('page', page.toString());
-    if (limit) params.append('limit', limit.toString());
-    if (category) params.append('category', category);
+    if (page) params.append("page", page.toString());
+    if (limit) params.append("limit", limit.toString());
+    if (category) params.append("category", category);
 
-    const response = await api.get<SkillsResponse>(`/skills?${params.toString()}`);
+    const response = await api.get<SkillsResponse>(
+      `/skills?${params.toString()}`,
+    );
     return response.data;
   },
 
@@ -51,7 +57,7 @@ export const skillsService = {
 
   // Créer une compétence
   async create(data: CreateSkillDto): Promise<Skill> {
-    const response = await api.post<Skill>('/skills', data);
+    const response = await api.post<Skill>("/skills", data);
     return response.data;
   },
 
@@ -68,13 +74,16 @@ export const skillsService = {
 
   // Assigner une compétence à un utilisateur
   async assignToUser(userId: string, data: AssignSkillDto): Promise<UserSkill> {
-    const response = await api.post<UserSkill>(`/skills/user/${userId}/assign`, data);
+    const response = await api.post<UserSkill>(
+      `/skills/user/${userId}/assign`,
+      data,
+    );
     return response.data;
   },
 
   // Assigner une compétence à soi-même
   async assignToMe(data: AssignSkillDto): Promise<UserSkill> {
-    const response = await api.post<UserSkill>('/skills/me/assign', data);
+    const response = await api.post<UserSkill>("/skills/me/assign", data);
     return response.data;
   },
 
@@ -91,38 +100,60 @@ export const skillsService = {
   // Récupérer les compétences d'un utilisateur
   async getUserSkills(userId: string): Promise<UserSkill[]> {
     // L'API retourne { userId, total, skills, byCategory } - on extrait le tableau skills
-    const response = await api.get<{ userId: string; total: number; skills: UserSkill[]; byCategory: Record<string, UserSkill[]> }>(`/skills/user/${userId}`);
+    const response = await api.get<{
+      userId: string;
+      total: number;
+      skills: UserSkill[];
+      byCategory: Record<string, UserSkill[]>;
+    }>(`/skills/user/${userId}`);
     return response.data.skills || [];
   },
 
   // Récupérer mes compétences
   async getMySkills(): Promise<UserSkill[]> {
-    const response = await api.get<UserSkill[]>('/skills/me/my-skills');
+    const response = await api.get<UserSkill[]>("/skills/me/my-skills");
     return response.data;
   },
 
   // Récupérer la matrice de compétences
-  async getMatrix(departmentId?: string, category?: SkillCategory): Promise<SkillMatrix> {
+  async getMatrix(
+    departmentId?: string,
+    category?: SkillCategory,
+  ): Promise<SkillMatrix> {
     const params = new URLSearchParams();
-    if (departmentId) params.append('departmentId', departmentId);
-    if (category) params.append('category', category);
+    if (departmentId) params.append("departmentId", departmentId);
+    if (category) params.append("category", category);
 
-    const response = await api.get<SkillMatrix>(`/skills/matrix?${params.toString()}`);
+    const response = await api.get<SkillMatrix>(
+      `/skills/matrix?${params.toString()}`,
+    );
     return response.data;
   },
 
   // Rechercher des utilisateurs par compétence
-  async findUsersBySkill(skillId: string, minLevel?: SkillLevel): Promise<User[]> {
+  async findUsersBySkill(
+    skillId: string,
+    minLevel?: SkillLevel,
+  ): Promise<User[]> {
     const params = new URLSearchParams();
-    if (minLevel) params.append('minLevel', minLevel);
+    if (minLevel) params.append("minLevel", minLevel);
 
-    const response = await api.get<User[]>(`/skills/search/${skillId}?${params.toString()}`);
+    const response = await api.get<User[]>(
+      `/skills/search/${skillId}?${params.toString()}`,
+    );
     return response.data;
   },
 
   // Mettre à jour le niveau d'une compétence utilisateur
-  async updateUserSkill(userId: string, skillId: string, data: { level: SkillLevel }): Promise<UserSkill> {
-    const response = await api.patch<UserSkill>(`/skills/user/${userId}/skill/${skillId}`, data);
+  async updateUserSkill(
+    userId: string,
+    skillId: string,
+    data: { level: SkillLevel },
+  ): Promise<UserSkill> {
+    const response = await api.patch<UserSkill>(
+      `/skills/user/${userId}/skill/${skillId}`,
+      data,
+    );
     return response.data;
   },
 };

@@ -1,24 +1,24 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { authService } from '@/services/auth.service';
-import { useAuthStore } from '@/stores/auth.store';
-import { Role } from '@/types';
-import toast from 'react-hot-toast';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { authService } from "@/services/auth.service";
+import { useAuthStore } from "@/stores/auth.store";
+import { Role } from "@/types";
+import toast from "react-hot-toast";
 
 export default function RegisterPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    login: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
+    email: "",
+    login: "",
+    password: "",
+    confirmPassword: "",
+    firstName: "",
+    lastName: "",
     role: Role.CONTRIBUTEUR,
   });
 
@@ -26,7 +26,7 @@ export default function RegisterPage() {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas');
+      toast.error("Les mots de passe ne correspondent pas");
       return;
     }
 
@@ -37,12 +37,12 @@ export default function RegisterPage() {
       const { confirmPassword: _unused, ...registerData } = formData;
       const response = await authService.register(registerData);
       setUser(response.user);
-      toast.success('Inscription réussie !');
-      router.push('/dashboard');
+      toast.success("Inscription réussie !");
+      router.push("/dashboard");
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || 'Erreur lors de l\'inscription'
+        axiosError.response?.data?.message || "Erreur lors de l'inscription",
       );
     } finally {
       setLoading(false);
@@ -181,13 +181,13 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {loading ? 'Inscription...' : 'S\'inscrire'}
+            {loading ? "Inscription..." : "S'inscrire"}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Déjà un compte ?{' '}
+            Déjà un compte ?{" "}
             <Link
               href="/login"
               className="text-blue-600 hover:text-blue-700 font-medium"

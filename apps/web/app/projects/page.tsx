@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { MainLayout } from '@/components/MainLayout';
-import { useAuthStore } from '@/stores/auth.store';
-import { projectsService } from '@/services/projects.service';
-import { usersService } from '@/services/users.service';
-import { departmentsService } from '@/services/departments.service';
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { MainLayout } from "@/components/MainLayout";
+import { useAuthStore } from "@/stores/auth.store";
+import { projectsService } from "@/services/projects.service";
+import { usersService } from "@/services/users.service";
+import { departmentsService } from "@/services/departments.service";
 import {
   Project,
   ProjectStatus,
@@ -15,8 +15,8 @@ import {
   Role,
   User,
   Department,
-} from '@/types';
-import toast from 'react-hot-toast';
+} from "@/types";
+import toast from "react-hot-toast";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -25,23 +25,29 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'ALL'>(
-    'ALL'
+  const [statusFilter, setStatusFilter] = useState<ProjectStatus | "ALL">(
+    "ALL",
   );
-  const [priorityFilter, setPriorityFilter] = useState<Priority | 'ALL'>('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<Priority | "ALL">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
   const [managers, setManagers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
 
-  const [formData, setFormData] = useState<CreateProjectDto & { managerId?: string; departmentId?: string; estimatedHours?: number }>({
-    name: '',
-    description: '',
+  const [formData, setFormData] = useState<
+    CreateProjectDto & {
+      managerId?: string;
+      departmentId?: string;
+      estimatedHours?: number;
+    }
+  >({
+    name: "",
+    description: "",
     status: ProjectStatus.DRAFT,
     priority: Priority.NORMAL,
-    startDate: '',
-    endDate: '',
-    managerId: user?.id || '',
-    departmentId: user?.departmentId || '',
+    startDate: "",
+    endDate: "",
+    managerId: user?.id || "",
+    departmentId: user?.departmentId || "",
     budgetHours: undefined,
     estimatedHours: undefined,
   });
@@ -52,10 +58,7 @@ export default function ProjectsPage() {
       let projectsData: Project[] = [];
 
       // Admin et Responsable voient tous les projets
-      if (
-        user?.role === Role.ADMIN ||
-        user?.role === Role.RESPONSABLE
-      ) {
+      if (user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE) {
         const response = await projectsService.getAll();
         projectsData = response.data;
       } else if (user?.id) {
@@ -75,7 +78,7 @@ export default function ProjectsPage() {
     } catch (err) {
       setProjects([]);
       setFilteredProjects([]);
-      toast.error('Erreur lors du chargement des projets');
+      toast.error("Erreur lors du chargement des projets");
       console.error(err);
     } finally {
       setLoading(false);
@@ -91,12 +94,12 @@ export default function ProjectsPage() {
     let filtered = projects;
 
     // Filtre par statut
-    if (statusFilter !== 'ALL') {
+    if (statusFilter !== "ALL") {
       filtered = filtered.filter((p) => p.status === statusFilter);
     }
 
     // Filtre par priorité
-    if (priorityFilter !== 'ALL') {
+    if (priorityFilter !== "ALL") {
       filtered = filtered.filter((p) => p.priority === priorityFilter);
     }
 
@@ -106,7 +109,7 @@ export default function ProjectsPage() {
       filtered = filtered.filter(
         (p) =>
           p.name.toLowerCase().includes(query) ||
-          p.description?.toLowerCase().includes(query)
+          p.description?.toLowerCase().includes(query),
       );
     }
 
@@ -140,14 +143,14 @@ export default function ProjectsPage() {
       }
 
       await projectsService.create(projectData);
-      toast.success('Projet créé avec succès');
+      toast.success("Projet créé avec succès");
       setShowCreateModal(false);
       resetForm();
       fetchProjects();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || 'Erreur lors de la création'
+        axiosError.response?.data?.message || "Erreur lors de la création",
       );
     }
   };
@@ -165,27 +168,27 @@ export default function ProjectsPage() {
         : usersResponse.data;
 
       const managersList = usersData.filter((u: User) =>
-        [Role.ADMIN, Role.RESPONSABLE, Role.MANAGER].includes(u.role)
+        [Role.ADMIN, Role.RESPONSABLE, Role.MANAGER].includes(u.role),
       );
       setManagers(managersList);
       setDepartments(departments);
     } catch (error) {
       setManagers([]);
       setDepartments([]);
-      console.error('Error loading managers and departments:', error);
+      console.error("Error loading managers and departments:", error);
     }
   };
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      description: '',
+      name: "",
+      description: "",
       status: ProjectStatus.DRAFT,
       priority: Priority.NORMAL,
-      startDate: '',
-      endDate: '',
-      managerId: user?.id || '',
-      departmentId: user?.departmentId || '',
+      startDate: "",
+      endDate: "",
+      managerId: user?.id || "",
+      departmentId: user?.departmentId || "",
       budgetHours: undefined,
       estimatedHours: undefined,
     });
@@ -194,32 +197,32 @@ export default function ProjectsPage() {
   const getStatusBadgeColor = (status: ProjectStatus) => {
     switch (status) {
       case ProjectStatus.DRAFT:
-        return 'bg-gray-200 text-gray-800';
+        return "bg-gray-200 text-gray-800";
       case ProjectStatus.ACTIVE:
-        return 'bg-green-100 text-green-800';
+        return "bg-green-100 text-green-800";
       case ProjectStatus.SUSPENDED:
-        return 'bg-yellow-100 text-yellow-800';
+        return "bg-yellow-100 text-yellow-800";
       case ProjectStatus.COMPLETED:
-        return 'bg-blue-100 text-blue-800';
+        return "bg-blue-100 text-blue-800";
       case ProjectStatus.CANCELLED:
-        return 'bg-red-100 text-red-800';
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getStatusLabel = (status: ProjectStatus) => {
     switch (status) {
       case ProjectStatus.DRAFT:
-        return 'Brouillon';
+        return "Brouillon";
       case ProjectStatus.ACTIVE:
-        return 'Actif';
+        return "Actif";
       case ProjectStatus.SUSPENDED:
-        return 'Suspendu';
+        return "Suspendu";
       case ProjectStatus.COMPLETED:
-        return 'Terminé';
+        return "Terminé";
       case ProjectStatus.CANCELLED:
-        return 'Annulé';
+        return "Annulé";
       default:
         return status;
     }
@@ -228,28 +231,28 @@ export default function ProjectsPage() {
   const getPriorityBadgeColor = (priority: Priority) => {
     switch (priority) {
       case Priority.CRITICAL:
-        return 'bg-red-100 text-red-800';
+        return "bg-red-100 text-red-800";
       case Priority.HIGH:
-        return 'bg-orange-100 text-orange-800';
+        return "bg-orange-100 text-orange-800";
       case Priority.NORMAL:
-        return 'bg-blue-100 text-blue-800';
+        return "bg-blue-100 text-blue-800";
       case Priority.LOW:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getPriorityLabel = (priority: Priority) => {
     switch (priority) {
       case Priority.CRITICAL:
-        return 'Critique';
+        return "Critique";
       case Priority.HIGH:
-        return 'Haute';
+        return "Haute";
       case Priority.NORMAL:
-        return 'Normale';
+        return "Normale";
       case Priority.LOW:
-        return 'Basse';
+        return "Basse";
       default:
         return priority;
     }
@@ -329,7 +332,7 @@ export default function ProjectsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) =>
-                  setStatusFilter(e.target.value as ProjectStatus | 'ALL')
+                  setStatusFilter(e.target.value as ProjectStatus | "ALL")
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
@@ -350,7 +353,7 @@ export default function ProjectsPage() {
               <select
                 value={priorityFilter}
                 onChange={(e) =>
-                  setPriorityFilter(e.target.value as Priority | 'ALL')
+                  setPriorityFilter(e.target.value as Priority | "ALL")
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
@@ -384,7 +387,7 @@ export default function ProjectsPage() {
                   </h3>
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityBadgeColor(
-                      project.priority
+                      project.priority,
                     )}`}
                   >
                     {getPriorityLabel(project.priority)}
@@ -392,13 +395,13 @@ export default function ProjectsPage() {
                 </div>
 
                 <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                  {project.description || 'Aucune description'}
+                  {project.description || "Aucune description"}
                 </p>
 
                 <div className="flex items-center justify-between">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(
-                      project.status
+                      project.status,
                     )}`}
                   >
                     {getStatusLabel(project.status)}
@@ -416,17 +419,17 @@ export default function ProjectsPage() {
                     <div className="flex items-center justify-between text-xs text-gray-500">
                       {project.startDate && (
                         <span>
-                          Début:{' '}
+                          Début:{" "}
                           {new Date(project.startDate).toLocaleDateString(
-                            'fr-FR'
+                            "fr-FR",
                           )}
                         </span>
                       )}
                       {project.endDate && (
                         <span>
-                          Fin:{' '}
+                          Fin:{" "}
                           {new Date(project.endDate).toLocaleDateString(
-                            'fr-FR'
+                            "fr-FR",
                           )}
                         </span>
                       )}
@@ -580,7 +583,7 @@ export default function ProjectsPage() {
                     Département
                   </label>
                   <select
-                    value={formData.departmentId || ''}
+                    value={formData.departmentId || ""}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
@@ -607,7 +610,7 @@ export default function ProjectsPage() {
                   <input
                     type="number"
                     min="0"
-                    value={formData.budgetHours || ''}
+                    value={formData.budgetHours || ""}
                     onChange={(e) =>
                       setFormData({
                         ...formData,

@@ -3,97 +3,97 @@
 // ===========================
 
 export enum Role {
-  ADMIN = 'ADMIN',
-  RESPONSABLE = 'RESPONSABLE',
-  MANAGER = 'MANAGER',
-  REFERENT_TECHNIQUE = 'REFERENT_TECHNIQUE',
-  CONTRIBUTEUR = 'CONTRIBUTEUR',
-  OBSERVATEUR = 'OBSERVATEUR',
+  ADMIN = "ADMIN",
+  RESPONSABLE = "RESPONSABLE",
+  MANAGER = "MANAGER",
+  REFERENT_TECHNIQUE = "REFERENT_TECHNIQUE",
+  CONTRIBUTEUR = "CONTRIBUTEUR",
+  OBSERVATEUR = "OBSERVATEUR",
 }
 
 export enum ProjectStatus {
-  DRAFT = 'DRAFT',
-  ACTIVE = 'ACTIVE',
-  SUSPENDED = 'SUSPENDED',
-  COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED',
+  DRAFT = "DRAFT",
+  ACTIVE = "ACTIVE",
+  SUSPENDED = "SUSPENDED",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
 }
 
 export enum TaskStatus {
-  TODO = 'TODO',
-  IN_PROGRESS = 'IN_PROGRESS',
-  IN_REVIEW = 'IN_REVIEW',
-  DONE = 'DONE',
-  BLOCKED = 'BLOCKED',
+  TODO = "TODO",
+  IN_PROGRESS = "IN_PROGRESS",
+  IN_REVIEW = "IN_REVIEW",
+  DONE = "DONE",
+  BLOCKED = "BLOCKED",
 }
 
 export enum Priority {
-  LOW = 'LOW',
-  NORMAL = 'NORMAL',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL',
+  LOW = "LOW",
+  NORMAL = "NORMAL",
+  HIGH = "HIGH",
+  CRITICAL = "CRITICAL",
 }
 
 export enum MilestoneStatus {
-  PENDING = 'PENDING',
-  IN_PROGRESS = 'IN_PROGRESS',
-  COMPLETED = 'COMPLETED',
-  DELAYED = 'DELAYED',
+  PENDING = "PENDING",
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED = "COMPLETED",
+  DELAYED = "DELAYED",
 }
 
 export enum RACIRole {
-  RESPONSIBLE = 'RESPONSIBLE',
-  ACCOUNTABLE = 'ACCOUNTABLE',
-  CONSULTED = 'CONSULTED',
-  INFORMED = 'INFORMED',
+  RESPONSIBLE = "RESPONSIBLE",
+  ACCOUNTABLE = "ACCOUNTABLE",
+  CONSULTED = "CONSULTED",
+  INFORMED = "INFORMED",
 }
 
 export enum ActivityType {
-  DEVELOPMENT = 'DEVELOPMENT',
-  MEETING = 'MEETING',
-  SUPPORT = 'SUPPORT',
-  TRAINING = 'TRAINING',
-  OTHER = 'OTHER',
+  DEVELOPMENT = "DEVELOPMENT",
+  MEETING = "MEETING",
+  SUPPORT = "SUPPORT",
+  TRAINING = "TRAINING",
+  OTHER = "OTHER",
 }
 
 export enum LeaveType {
-  CP = 'CP',
-  RTT = 'RTT',
-  SICK_LEAVE = 'SICK_LEAVE',
-  UNPAID = 'UNPAID',
-  OTHER = 'OTHER',
+  CP = "CP",
+  RTT = "RTT",
+  SICK_LEAVE = "SICK_LEAVE",
+  UNPAID = "UNPAID",
+  OTHER = "OTHER",
 }
 
 export enum LeaveStatus {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
 }
 
 export enum HalfDay {
-  MORNING = 'MORNING',
-  AFTERNOON = 'AFTERNOON',
+  MORNING = "MORNING",
+  AFTERNOON = "AFTERNOON",
 }
 
 export enum SkillCategory {
-  TECHNICAL = 'TECHNICAL',
-  METHODOLOGY = 'METHODOLOGY',
-  SOFT_SKILL = 'SOFT_SKILL',
-  BUSINESS = 'BUSINESS',
+  TECHNICAL = "TECHNICAL",
+  METHODOLOGY = "METHODOLOGY",
+  SOFT_SKILL = "SOFT_SKILL",
+  BUSINESS = "BUSINESS",
 }
 
 export enum SkillLevel {
-  BEGINNER = 'BEGINNER',
-  INTERMEDIATE = 'INTERMEDIATE',
-  EXPERT = 'EXPERT',
-  MASTER = 'MASTER',
+  BEGINNER = "BEGINNER",
+  INTERMEDIATE = "INTERMEDIATE",
+  EXPERT = "EXPERT",
+  MASTER = "MASTER",
 }
 
 export enum HolidayType {
-  LEGAL = 'LEGAL',
-  BRIDGE = 'BRIDGE',
-  CLOSURE = 'CLOSURE',
-  CUSTOM = 'CUSTOM',
+  LEGAL = "LEGAL",
+  BRIDGE = "BRIDGE",
+  CLOSURE = "CLOSURE",
+  CUSTOM = "CUSTOM",
 }
 
 // ===========================
@@ -620,15 +620,15 @@ export interface ImportFrenchHolidaysResult {
 }
 
 export const HOLIDAY_TYPE_LABELS: Record<HolidayType, string> = {
-  [HolidayType.LEGAL]: 'Ferie legal',
-  [HolidayType.BRIDGE]: 'Pont',
-  [HolidayType.CLOSURE]: 'Fermeture exceptionnelle',
-  [HolidayType.CUSTOM]: 'Personnalise',
+  [HolidayType.LEGAL]: "Ferie legal",
+  [HolidayType.BRIDGE]: "Pont",
+  [HolidayType.CLOSURE]: "Fermeture exceptionnelle",
+  [HolidayType.CUSTOM]: "Personnalise",
 };
 
 export const HOLIDAY_TYPE_COLORS: Record<HolidayType, string> = {
-  [HolidayType.LEGAL]: 'bg-red-100 text-red-800',
-  [HolidayType.BRIDGE]: 'bg-orange-100 text-orange-800',
-  [HolidayType.CLOSURE]: 'bg-purple-100 text-purple-800',
-  [HolidayType.CUSTOM]: 'bg-gray-100 text-gray-800',
+  [HolidayType.LEGAL]: "bg-red-100 text-red-800",
+  [HolidayType.BRIDGE]: "bg-orange-100 text-orange-800",
+  [HolidayType.CLOSURE]: "bg-purple-100 text-purple-800",
+  [HolidayType.CUSTOM]: "bg-gray-100 text-gray-800",
 };

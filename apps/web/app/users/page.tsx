@@ -1,14 +1,20 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { MainLayout } from '@/components/MainLayout';
-import { useAuthStore } from '@/stores/auth.store';
-import { usersService, ImportUserData, ImportUsersResult, UsersValidationPreview, UserDependenciesResponse } from '@/services/users.service';
-import { ImportPreviewModal } from '@/components/ImportPreviewModal';
-import { departmentsService } from '@/services/departments.service';
-import { servicesService } from '@/services/services.service';
-import { User, Role, Department, Service } from '@/types';
-import toast from 'react-hot-toast';
+import { useEffect, useState } from "react";
+import { MainLayout } from "@/components/MainLayout";
+import { useAuthStore } from "@/stores/auth.store";
+import {
+  usersService,
+  ImportUserData,
+  ImportUsersResult,
+  UsersValidationPreview,
+  UserDependenciesResponse,
+} from "@/services/users.service";
+import { ImportPreviewModal } from "@/components/ImportPreviewModal";
+import { departmentsService } from "@/services/departments.service";
+import { servicesService } from "@/services/services.service";
+import { User, Role, Department, Service } from "@/types";
+import toast from "react-hot-toast";
 
 export default function UsersPage() {
   const currentUser = useAuthStore((state) => state.user);
@@ -20,34 +26,44 @@ export default function UsersPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [importResult, setImportResult] = useState<ImportUsersResult | null>(null);
+  const [importResult, setImportResult] = useState<ImportUsersResult | null>(
+    null,
+  );
   const [importing, setImporting] = useState(false);
   const [csvPreview, setCsvPreview] = useState<ImportUserData[]>([]);
   // Pre-validation states
-  const [usersPreview, setUsersPreview] = useState<UsersValidationPreview | null>(null);
+  const [usersPreview, setUsersPreview] =
+    useState<UsersValidationPreview | null>(null);
   const [showUsersPreview, setShowUsersPreview] = useState(false);
-  const [pendingUsersImport, setPendingUsersImport] = useState<ImportUserData[]>([]);
+  const [pendingUsersImport, setPendingUsersImport] = useState<
+    ImportUserData[]
+  >([]);
 
   // Delete user states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [checkingDependencies, setCheckingDependencies] = useState(false);
-  const [userDependencies, setUserDependencies] = useState<UserDependenciesResponse | null>(null);
+  const [userDependencies, setUserDependencies] =
+    useState<UserDependenciesResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    login: '',
-    password: '',
-    firstName: '',
-    lastName: '',
+    email: "",
+    login: "",
+    password: "",
+    firstName: "",
+    lastName: "",
     role: Role.CONTRIBUTEUR,
-    departmentId: '',
+    departmentId: "",
     serviceIds: [] as string[],
   });
 
   // Check permissions
-  const canManageUsers = currentUser?.role === Role.ADMIN || currentUser?.role === Role.RESPONSABLE;
-  const canEditUsers = currentUser?.role === Role.ADMIN || currentUser?.role === Role.RESPONSABLE || currentUser?.role === Role.MANAGER;
+  const canManageUsers =
+    currentUser?.role === Role.ADMIN || currentUser?.role === Role.RESPONSABLE;
+  const canEditUsers =
+    currentUser?.role === Role.ADMIN ||
+    currentUser?.role === Role.RESPONSABLE ||
+    currentUser?.role === Role.MANAGER;
 
   const fetchUsers = async () => {
     try {
@@ -56,7 +72,7 @@ export default function UsersPage() {
       const usersList = Array.isArray(response) ? response : response.data;
       setUsers(usersList);
     } catch (err) {
-      toast.error('Erreur lors du chargement des utilisateurs');
+      toast.error("Erreur lors du chargement des utilisateurs");
       console.error(err);
     } finally {
       setLoading(false);
@@ -69,12 +85,19 @@ export default function UsersPage() {
         departmentsService.getAll(),
         servicesService.getAll(),
       ]);
-      const depts = Array.isArray(deptResponse) ? deptResponse : (deptResponse as { data?: Department[] }).data || [];
-      const servs = Array.isArray(servResponse) ? servResponse : (servResponse as { data?: Service[] }).data || [];
+      const depts = Array.isArray(deptResponse)
+        ? deptResponse
+        : (deptResponse as { data?: Department[] }).data || [];
+      const servs = Array.isArray(servResponse)
+        ? servResponse
+        : (servResponse as { data?: Service[] }).data || [];
       setDepartments(depts);
       setServices(servs);
     } catch (err) {
-      console.error('Erreur lors du chargement des départements/services:', err);
+      console.error(
+        "Erreur lors du chargement des départements/services:",
+        err,
+      );
     }
   };
 
@@ -98,26 +121,27 @@ export default function UsersPage() {
       } = {
         ...formData,
         departmentId: formData.departmentId || undefined,
-        serviceIds: formData.serviceIds.length > 0 ? formData.serviceIds : undefined,
+        serviceIds:
+          formData.serviceIds.length > 0 ? formData.serviceIds : undefined,
       };
       await usersService.create(createData);
-      toast.success('Utilisateur créé avec succès');
+      toast.success("Utilisateur créé avec succès");
       setShowCreateModal(false);
       setFormData({
-        email: '',
-        login: '',
-        password: '',
-        firstName: '',
-        lastName: '',
+        email: "",
+        login: "",
+        password: "",
+        firstName: "",
+        lastName: "",
         role: Role.CONTRIBUTEUR,
-        departmentId: '',
+        departmentId: "",
         serviceIds: [],
       });
       fetchUsers();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || 'Erreur lors de la création'
+        axiosError.response?.data?.message || "Erreur lors de la création",
       );
     }
   };
@@ -127,11 +151,11 @@ export default function UsersPage() {
     setFormData({
       email: user.email,
       login: user.login,
-      password: '',
+      password: "",
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
-      departmentId: user.departmentId || '',
+      departmentId: user.departmentId || "",
       serviceIds: user.userServices?.map((us) => us.service.id) || [],
     });
     setShowEditModal(true);
@@ -160,51 +184,51 @@ export default function UsersPage() {
 
       // Ajouter departmentId seulement s'il est renseigné (UUID valide)
       // Ne pas inclure du tout si vide pour éviter la validation UUID
-      if (formData.departmentId && formData.departmentId.trim() !== '') {
+      if (formData.departmentId && formData.departmentId.trim() !== "") {
         updateData.departmentId = formData.departmentId;
       }
       // Si pas de departmentId, on ne l'inclut pas dans la requête
 
       // Ajouter le mot de passe seulement s'il est renseigné
-      if (formData.password && formData.password.trim() !== '') {
+      if (formData.password && formData.password.trim() !== "") {
         updateData.password = formData.password;
       }
 
       await usersService.update(editingUser.id, updateData);
-      toast.success('Utilisateur modifié avec succès');
+      toast.success("Utilisateur modifié avec succès");
       setShowEditModal(false);
       setEditingUser(null);
       setFormData({
-        email: '',
-        login: '',
-        password: '',
-        firstName: '',
-        lastName: '',
+        email: "",
+        login: "",
+        password: "",
+        firstName: "",
+        lastName: "",
         role: Role.CONTRIBUTEUR,
-        departmentId: '',
+        departmentId: "",
         serviceIds: [],
       });
       fetchUsers();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || 'Erreur lors de la modification'
+        axiosError.response?.data?.message || "Erreur lors de la modification",
       );
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir désactiver cet utilisateur ?'))
+    if (!confirm("Êtes-vous sûr de vouloir désactiver cet utilisateur ?"))
       return;
 
     try {
       await usersService.delete(id);
-      toast.success('Utilisateur désactivé');
+      toast.success("Utilisateur désactivé");
       fetchUsers();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || 'Erreur lors de la suppression'
+        axiosError.response?.data?.message || "Erreur lors de la suppression",
       );
     }
   };
@@ -220,7 +244,7 @@ export default function UsersPage() {
       const dependencies = await usersService.checkDependencies(user.id);
       setUserDependencies(dependencies);
     } catch {
-      toast.error('Erreur lors de la vérification des dépendances');
+      toast.error("Erreur lors de la vérification des dépendances");
       setShowDeleteModal(false);
     } finally {
       setCheckingDependencies(false);
@@ -234,14 +258,15 @@ export default function UsersPage() {
     setDeleting(true);
     try {
       await usersService.hardDelete(userToDelete.id);
-      toast.success('Utilisateur supprimé définitivement');
+      toast.success("Utilisateur supprimé définitivement");
       setShowDeleteModal(false);
       setUserToDelete(null);
       setUserDependencies(null);
       fetchUsers();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      const message = axiosError.response?.data?.message || 'Erreur lors de la suppression';
+      const message =
+        axiosError.response?.data?.message || "Erreur lors de la suppression";
       toast.error(message);
     } finally {
       setDeleting(false);
@@ -267,62 +292,68 @@ export default function UsersPage() {
   const getRoleBadgeColor = (role: Role) => {
     switch (role) {
       case Role.ADMIN:
-        return 'bg-red-100 text-red-800';
+        return "bg-red-100 text-red-800";
       case Role.RESPONSABLE:
-        return 'bg-purple-100 text-purple-800';
+        return "bg-purple-100 text-purple-800";
       case Role.MANAGER:
-        return 'bg-blue-100 text-blue-800';
+        return "bg-blue-100 text-blue-800";
       case Role.REFERENT_TECHNIQUE:
-        return 'bg-green-100 text-green-800';
+        return "bg-green-100 text-green-800";
       case Role.CONTRIBUTEUR:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
       default:
-        return 'bg-yellow-100 text-yellow-800';
+        return "bg-yellow-100 text-yellow-800";
     }
   };
 
   const getRoleLabel = (role: Role) => {
     switch (role) {
       case Role.ADMIN:
-        return 'Admin';
+        return "Admin";
       case Role.RESPONSABLE:
-        return 'Responsable';
+        return "Responsable";
       case Role.MANAGER:
-        return 'Manager';
+        return "Manager";
       case Role.REFERENT_TECHNIQUE:
-        return 'Référent Technique';
+        return "Référent Technique";
       case Role.CONTRIBUTEUR:
-        return 'Contributeur';
+        return "Contributeur";
       case Role.OBSERVATEUR:
-        return 'Observateur';
+        return "Observateur";
       default:
         return role;
     }
   };
 
   const parseCSV = (text: string): ImportUserData[] => {
-    const lines = text.trim().split('\n');
+    const lines = text.trim().split("\n");
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(';').map(h => h.trim().toLowerCase());
+    const headers = lines[0].split(";").map((h) => h.trim().toLowerCase());
     const users: ImportUserData[] = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(';').map(v => v.trim());
+      const values = lines[i].split(";").map((v) => v.trim());
       if (values.length < 6) continue;
 
       const user: ImportUserData = {
-        email: values[headers.indexOf('email')] || '',
-        login: values[headers.indexOf('login')] || '',
-        password: values[headers.indexOf('password')] || '',
-        firstName: values[headers.indexOf('firstname')] || '',
-        lastName: values[headers.indexOf('lastname')] || '',
-        role: values[headers.indexOf('role')] || 'CONTRIBUTEUR',
-        departmentName: values[headers.indexOf('departmentname')] || undefined,
-        serviceNames: values[headers.indexOf('servicenames')] || undefined,
+        email: values[headers.indexOf("email")] || "",
+        login: values[headers.indexOf("login")] || "",
+        password: values[headers.indexOf("password")] || "",
+        firstName: values[headers.indexOf("firstname")] || "",
+        lastName: values[headers.indexOf("lastname")] || "",
+        role: values[headers.indexOf("role")] || "CONTRIBUTEUR",
+        departmentName: values[headers.indexOf("departmentname")] || undefined,
+        serviceNames: values[headers.indexOf("servicenames")] || undefined,
       };
 
-      if (user.email && user.login && user.password && user.firstName && user.lastName) {
+      if (
+        user.email &&
+        user.login &&
+        user.password &&
+        user.firstName &&
+        user.lastName
+      ) {
         users.push(user);
       }
     }
@@ -341,12 +372,12 @@ export default function UsersPage() {
       setCsvPreview(users);
       setImportResult(null);
     };
-    reader.readAsText(file, 'UTF-8');
+    reader.readAsText(file, "UTF-8");
   };
 
   const handleImport = async () => {
     if (csvPreview.length === 0) {
-      toast.error('Aucun utilisateur valide a importer');
+      toast.error("Aucun utilisateur valide a importer");
       return;
     }
 
@@ -360,7 +391,9 @@ export default function UsersPage() {
       setShowUsersPreview(true);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || 'Erreur lors de la validation');
+      toast.error(
+        axiosError.response?.data?.message || "Erreur lors de la validation",
+      );
     } finally {
       setImporting(false);
     }
@@ -389,7 +422,9 @@ export default function UsersPage() {
       setCsvPreview([]);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || 'Erreur lors de l\'import');
+      toast.error(
+        axiosError.response?.data?.message || "Erreur lors de l'import",
+      );
     } finally {
       setImporting(false);
     }
@@ -397,12 +432,13 @@ export default function UsersPage() {
 
   const downloadTemplate = () => {
     // Template without fake data - just headers and explanatory comments
-    const template = 'email;login;password;firstName;lastName;role;departmentName;serviceNames\n# email@domaine.com;# prenom.nom;# motdepasse (min 6 car.);# Prenom;# Nom;# ADMIN|RESPONSABLE|MANAGER|CONTRIBUTEUR|OBSERVATEUR;# Nom departement existant;# Service1, Service2';
-    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+    const template =
+      "email;login;password;firstName;lastName;role;departmentName;serviceNames\n# email@domaine.com;# prenom.nom;# motdepasse (min 6 car.);# Prenom;# Nom;# ADMIN|RESPONSABLE|MANAGER|CONTRIBUTEUR|OBSERVATEUR;# Nom departement existant;# Service1, Service2";
+    const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = 'template_import_utilisateurs.csv';
+    link.download = "template_import_utilisateurs.csv";
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -501,7 +537,7 @@ export default function UsersPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
-                        user.role
+                        user.role,
                       )}`}
                     >
                       {getRoleLabel(user.role)}
@@ -509,7 +545,7 @@ export default function UsersPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
-                      {user.department?.name || '-'}
+                      {user.department?.name || "-"}
                     </div>
                     {user.userServices && user.userServices.length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
@@ -528,11 +564,11 @@ export default function UsersPage() {
                     <span
                       className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         user.isActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {user.isActive ? 'Actif' : 'Inactif'}
+                      {user.isActive ? "Actif" : "Inactif"}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -550,7 +586,11 @@ export default function UsersPage() {
                           onClick={() => handleDelete(user.id)}
                           className="text-orange-600 hover:text-orange-900 disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={user.id === currentUser?.id}
-                          title={user.id === currentUser?.id ? 'Vous ne pouvez pas vous désactiver vous-même' : 'Désactiver (soft delete)'}
+                          title={
+                            user.id === currentUser?.id
+                              ? "Vous ne pouvez pas vous désactiver vous-même"
+                              : "Désactiver (soft delete)"
+                          }
                         >
                           Désactiver
                         </button>
@@ -560,7 +600,11 @@ export default function UsersPage() {
                           onClick={() => openDeleteModal(user)}
                           className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={user.id === currentUser?.id}
-                          title={user.id === currentUser?.id ? 'Vous ne pouvez pas vous supprimer vous-même' : 'Supprimer définitivement'}
+                          title={
+                            user.id === currentUser?.id
+                              ? "Vous ne pouvez pas vous supprimer vous-même"
+                              : "Supprimer définitivement"
+                          }
                         >
                           Supprimer
                         </button>
@@ -687,7 +731,11 @@ export default function UsersPage() {
                 <select
                   value={formData.departmentId}
                   onChange={(e) =>
-                    setFormData({ ...formData, departmentId: e.target.value, serviceIds: [] })
+                    setFormData({
+                      ...formData,
+                      departmentId: e.target.value,
+                      serviceIds: [],
+                    })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
@@ -706,21 +754,36 @@ export default function UsersPage() {
                 </label>
                 <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
                   {!formData.departmentId ? (
-                    <p className="text-sm text-gray-500">Sélectionnez d&apos;abord un département</p>
-                  ) : services.filter((service) => service.departmentId === formData.departmentId).length === 0 ? (
-                    <p className="text-sm text-gray-500">Aucun service disponible</p>
+                    <p className="text-sm text-gray-500">
+                      Sélectionnez d&apos;abord un département
+                    </p>
+                  ) : services.filter(
+                      (service) =>
+                        service.departmentId === formData.departmentId,
+                    ).length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      Aucun service disponible
+                    </p>
                   ) : (
                     services
-                      .filter((service) => service.departmentId === formData.departmentId)
+                      .filter(
+                        (service) =>
+                          service.departmentId === formData.departmentId,
+                      )
                       .map((service) => (
-                        <label key={service.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                        <label
+                          key={service.id}
+                          className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
+                        >
                           <input
                             type="checkbox"
                             checked={formData.serviceIds.includes(service.id)}
                             onChange={() => toggleService(service.id)}
                             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                           />
-                          <span className="text-sm text-gray-900">{service.name}</span>
+                          <span className="text-sm text-gray-900">
+                            {service.name}
+                          </span>
                         </label>
                       ))
                   )}
@@ -758,19 +821,43 @@ export default function UsersPage() {
             <div className="space-y-4">
               {/* Instructions */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-medium text-blue-800 mb-2">Format du fichier CSV</h3>
+                <h3 className="font-medium text-blue-800 mb-2">
+                  Format du fichier CSV
+                </h3>
                 <p className="text-sm text-blue-700 mb-2">
-                  Le fichier doit contenir les colonnes suivantes (séparées par des points-virgules) :
+                  Le fichier doit contenir les colonnes suivantes (séparées par
+                  des points-virgules) :
                 </p>
                 <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
-                  <li><strong>email</strong> - Email de l&apos;utilisateur (requis)</li>
-                  <li><strong>login</strong> - Login unique (requis)</li>
-                  <li><strong>password</strong> - Mot de passe initial (requis, min 6 caractères)</li>
-                  <li><strong>firstName</strong> - Prénom (requis)</li>
-                  <li><strong>lastName</strong> - Nom (requis)</li>
-                  <li><strong>role</strong> - Rôle (ADMIN, RESPONSABLE, MANAGER, REFERENT_TECHNIQUE, CONTRIBUTEUR, OBSERVATEUR)</li>
-                  <li><strong>departmentName</strong> - Nom du département (optionnel)</li>
-                  <li><strong>serviceNames</strong> - Noms des services séparés par virgules (optionnel)</li>
+                  <li>
+                    <strong>email</strong> - Email de l&apos;utilisateur
+                    (requis)
+                  </li>
+                  <li>
+                    <strong>login</strong> - Login unique (requis)
+                  </li>
+                  <li>
+                    <strong>password</strong> - Mot de passe initial (requis,
+                    min 6 caractères)
+                  </li>
+                  <li>
+                    <strong>firstName</strong> - Prénom (requis)
+                  </li>
+                  <li>
+                    <strong>lastName</strong> - Nom (requis)
+                  </li>
+                  <li>
+                    <strong>role</strong> - Rôle (ADMIN, RESPONSABLE, MANAGER,
+                    REFERENT_TECHNIQUE, CONTRIBUTEUR, OBSERVATEUR)
+                  </li>
+                  <li>
+                    <strong>departmentName</strong> - Nom du département
+                    (optionnel)
+                  </li>
+                  <li>
+                    <strong>serviceNames</strong> - Noms des services séparés
+                    par virgules (optionnel)
+                  </li>
                 </ul>
                 <button
                   onClick={downloadTemplate}
@@ -803,21 +890,41 @@ export default function UsersPage() {
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Email</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Login</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Nom</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Rôle</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Département</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                            Email
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                            Login
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                            Nom
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                            Rôle
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                            Département
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {csvPreview.slice(0, 10).map((user, idx) => (
                           <tr key={idx}>
-                            <td className="px-3 py-2 text-gray-900">{user.email}</td>
-                            <td className="px-3 py-2 text-gray-900">{user.login}</td>
-                            <td className="px-3 py-2 text-gray-900">{user.firstName} {user.lastName}</td>
-                            <td className="px-3 py-2 text-gray-900">{user.role}</td>
-                            <td className="px-3 py-2 text-gray-500">{user.departmentName || '-'}</td>
+                            <td className="px-3 py-2 text-gray-900">
+                              {user.email}
+                            </td>
+                            <td className="px-3 py-2 text-gray-900">
+                              {user.login}
+                            </td>
+                            <td className="px-3 py-2 text-gray-900">
+                              {user.firstName} {user.lastName}
+                            </td>
+                            <td className="px-3 py-2 text-gray-900">
+                              {user.role}
+                            </td>
+                            <td className="px-3 py-2 text-gray-500">
+                              {user.departmentName || "-"}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -833,27 +940,39 @@ export default function UsersPage() {
 
               {/* Import Result */}
               {importResult && (
-                <div className={`rounded-lg p-4 ${importResult.errors > 0 ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200'}`}>
-                  <h3 className={`font-medium mb-2 ${importResult.errors > 0 ? 'text-yellow-800' : 'text-green-800'}`}>
+                <div
+                  className={`rounded-lg p-4 ${importResult.errors > 0 ? "bg-yellow-50 border border-yellow-200" : "bg-green-50 border border-green-200"}`}
+                >
+                  <h3
+                    className={`font-medium mb-2 ${importResult.errors > 0 ? "text-yellow-800" : "text-green-800"}`}
+                  >
                     Résultat de l&apos;import
                   </h3>
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <span className="text-green-700 font-semibold">{importResult.created}</span>
+                      <span className="text-green-700 font-semibold">
+                        {importResult.created}
+                      </span>
                       <span className="text-gray-600 ml-1">créé(s)</span>
                     </div>
                     <div>
-                      <span className="text-gray-700 font-semibold">{importResult.skipped}</span>
+                      <span className="text-gray-700 font-semibold">
+                        {importResult.skipped}
+                      </span>
                       <span className="text-gray-600 ml-1">ignoré(s)</span>
                     </div>
                     <div>
-                      <span className="text-red-700 font-semibold">{importResult.errors}</span>
+                      <span className="text-red-700 font-semibold">
+                        {importResult.errors}
+                      </span>
                       <span className="text-gray-600 ml-1">erreur(s)</span>
                     </div>
                   </div>
                   {importResult.errorDetails.length > 0 && (
                     <div className="mt-3">
-                      <p className="text-sm font-medium text-gray-700 mb-1">Détails :</p>
+                      <p className="text-sm font-medium text-gray-700 mb-1">
+                        Détails :
+                      </p>
                       <ul className="text-sm text-gray-600 list-disc list-inside max-h-32 overflow-y-auto">
                         {importResult.errorDetails.map((err, idx) => (
                           <li key={idx}>{err}</li>
@@ -878,7 +997,9 @@ export default function UsersPage() {
                   disabled={csvPreview.length === 0 || importing}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {importing ? 'Import en cours...' : `Importer ${csvPreview.length} utilisateur(s)`}
+                  {importing
+                    ? "Import en cours..."
+                    : `Importer ${csvPreview.length} utilisateur(s)`}
                 </button>
               </div>
             </div>
@@ -1000,7 +1121,11 @@ export default function UsersPage() {
                 <select
                   value={formData.departmentId}
                   onChange={(e) =>
-                    setFormData({ ...formData, departmentId: e.target.value, serviceIds: [] })
+                    setFormData({
+                      ...formData,
+                      departmentId: e.target.value,
+                      serviceIds: [],
+                    })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
@@ -1019,21 +1144,36 @@ export default function UsersPage() {
                 </label>
                 <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
                   {!formData.departmentId ? (
-                    <p className="text-sm text-gray-500">Sélectionnez d&apos;abord un département</p>
-                  ) : services.filter((service) => service.departmentId === formData.departmentId).length === 0 ? (
-                    <p className="text-sm text-gray-500">Aucun service disponible</p>
+                    <p className="text-sm text-gray-500">
+                      Sélectionnez d&apos;abord un département
+                    </p>
+                  ) : services.filter(
+                      (service) =>
+                        service.departmentId === formData.departmentId,
+                    ).length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      Aucun service disponible
+                    </p>
                   ) : (
                     services
-                      .filter((service) => service.departmentId === formData.departmentId)
+                      .filter(
+                        (service) =>
+                          service.departmentId === formData.departmentId,
+                      )
                       .map((service) => (
-                        <label key={service.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                        <label
+                          key={service.id}
+                          className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
+                        >
                           <input
                             type="checkbox"
                             checked={formData.serviceIds.includes(service.id)}
                             onChange={() => toggleService(service.id)}
                             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                           />
-                          <span className="text-sm text-gray-900">{service.name}</span>
+                          <span className="text-sm text-gray-900">
+                            {service.name}
+                          </span>
                         </label>
                       ))
                   )}
@@ -1075,49 +1215,61 @@ export default function UsersPage() {
           onConfirm={handleConfirmUsersImport}
           title="Previsualisation de l'import des utilisateurs"
           items={{
-            valid: usersPreview.valid.map(item => ({
+            valid: usersPreview.valid.map((item) => ({
               lineNumber: item.lineNumber,
               status: item.status,
               messages: item.messages,
               data: item.user,
               resolvedFields: {
-                ...(item.resolvedDepartment && { Departement: item.resolvedDepartment }),
-                ...(item.resolvedServices && item.resolvedServices.length > 0 && {
-                  Services: { id: '', name: item.resolvedServices.map(s => s.name).join(', ') }
+                ...(item.resolvedDepartment && {
+                  Departement: item.resolvedDepartment,
                 }),
+                ...(item.resolvedServices &&
+                  item.resolvedServices.length > 0 && {
+                    Services: {
+                      id: "",
+                      name: item.resolvedServices.map((s) => s.name).join(", "),
+                    },
+                  }),
               },
             })),
-            duplicates: usersPreview.duplicates.map(item => ({
+            duplicates: usersPreview.duplicates.map((item) => ({
               lineNumber: item.lineNumber,
               status: item.status,
               messages: item.messages,
               data: item.user,
             })),
-            errors: usersPreview.errors.map(item => ({
+            errors: usersPreview.errors.map((item) => ({
               lineNumber: item.lineNumber,
               status: item.status,
               messages: item.messages,
               data: item.user,
             })),
-            warnings: usersPreview.warnings.map(item => ({
+            warnings: usersPreview.warnings.map((item) => ({
               lineNumber: item.lineNumber,
               status: item.status,
               messages: item.messages,
               data: item.user,
               resolvedFields: {
-                ...(item.resolvedDepartment && { Departement: item.resolvedDepartment }),
-                ...(item.resolvedServices && item.resolvedServices.length > 0 && {
-                  Services: { id: '', name: item.resolvedServices.map(s => s.name).join(', ') }
+                ...(item.resolvedDepartment && {
+                  Departement: item.resolvedDepartment,
                 }),
+                ...(item.resolvedServices &&
+                  item.resolvedServices.length > 0 && {
+                    Services: {
+                      id: "",
+                      name: item.resolvedServices.map((s) => s.name).join(", "),
+                    },
+                  }),
               },
             })),
           }}
           summary={usersPreview.summary}
           columns={[
-            { key: 'email', label: 'Email' },
-            { key: 'login', label: 'Login' },
-            { key: 'firstName', label: 'Prenom' },
-            { key: 'lastName', label: 'Nom' },
+            { key: "email", label: "Email" },
+            { key: "login", label: "Login" },
+            { key: "firstName", label: "Prenom" },
+            { key: "lastName", label: "Nom" },
           ]}
           isImporting={importing}
         />
@@ -1129,8 +1281,18 @@ export default function UsersPage() {
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex items-center space-x-3 mb-4">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <svg
+                  className="w-6 h-6 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
                 </svg>
               </div>
               <h2 className="text-xl font-bold text-gray-900">
@@ -1140,8 +1302,12 @@ export default function UsersPage() {
 
             {userToDelete && (
               <p className="text-gray-600 mb-4">
-                Êtes-vous sûr de vouloir supprimer définitivement l&apos;utilisateur{' '}
-                <strong>{userToDelete.firstName} {userToDelete.lastName}</strong> ({userToDelete.email}) ?
+                Êtes-vous sûr de vouloir supprimer définitivement
+                l&apos;utilisateur{" "}
+                <strong>
+                  {userToDelete.firstName} {userToDelete.lastName}
+                </strong>{" "}
+                ({userToDelete.email}) ?
               </p>
             )}
 
@@ -1149,37 +1315,42 @@ export default function UsersPage() {
             {checkingDependencies && (
               <div className="flex items-center justify-center py-4">
                 <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                <span className="ml-2 text-gray-600">Vérification des dépendances...</span>
+                <span className="ml-2 text-gray-600">
+                  Vérification des dépendances...
+                </span>
               </div>
             )}
 
             {/* Affichage des dépendances */}
-            {!checkingDependencies && userDependencies && !userDependencies.canDelete && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                <h3 className="font-semibold text-red-800 mb-2">
-                  Impossible de supprimer cet utilisateur
-                </h3>
-                <p className="text-sm text-red-700 mb-2">
-                  Des dépendances actives empêchent la suppression :
-                </p>
-                <ul className="text-sm text-red-700 list-disc list-inside space-y-1">
-                  {userDependencies.dependencies.map((dep, index) => (
-                    <li key={index}>{dep.description}</li>
-                  ))}
-                </ul>
-                <p className="text-sm text-red-600 mt-3">
-                  Veuillez d&apos;abord réassigner ou terminer ces éléments.
-                </p>
-              </div>
-            )}
+            {!checkingDependencies &&
+              userDependencies &&
+              !userDependencies.canDelete && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <h3 className="font-semibold text-red-800 mb-2">
+                    Impossible de supprimer cet utilisateur
+                  </h3>
+                  <p className="text-sm text-red-700 mb-2">
+                    Des dépendances actives empêchent la suppression :
+                  </p>
+                  <ul className="text-sm text-red-700 list-disc list-inside space-y-1">
+                    {userDependencies.dependencies.map((dep, index) => (
+                      <li key={index}>{dep.description}</li>
+                    ))}
+                  </ul>
+                  <p className="text-sm text-red-600 mt-3">
+                    Veuillez d&apos;abord réassigner ou terminer ces éléments.
+                  </p>
+                </div>
+              )}
 
             {/* Message de confirmation si suppression possible */}
             {!checkingDependencies && userDependencies?.canDelete && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-yellow-800">
-                  <strong>Attention :</strong> Cette action est <strong>irréversible</strong>.
-                  Toutes les données associées à cet utilisateur (historique, commentaires, entrées de temps, etc.)
-                  seront définitivement supprimées.
+                  <strong>Attention :</strong> Cette action est{" "}
+                  <strong>irréversible</strong>. Toutes les données associées à
+                  cet utilisateur (historique, commentaires, entrées de temps,
+                  etc.) seront définitivement supprimées.
                 </p>
               </div>
             )}
@@ -1196,7 +1367,11 @@ export default function UsersPage() {
               </button>
               <button
                 onClick={handleHardDelete}
-                disabled={!userDependencies?.canDelete || deleting || checkingDependencies}
+                disabled={
+                  !userDependencies?.canDelete ||
+                  deleting ||
+                  checkingDependencies
+                }
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
                 {deleting ? (
@@ -1205,7 +1380,7 @@ export default function UsersPage() {
                     Suppression...
                   </>
                 ) : (
-                  'Supprimer définitivement'
+                  "Supprimer définitivement"
                 )}
               </button>
             </div>

@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Milestone, Task, MilestoneStatus, TaskStatus } from '@/types';
-import { useRouter } from 'next/navigation';
-import { tasksService } from '@/services/tasks.service';
-import toast from 'react-hot-toast';
+import { useState } from "react";
+import { Milestone, Task, MilestoneStatus, TaskStatus } from "@/types";
+import { useRouter } from "next/navigation";
+import { tasksService } from "@/services/tasks.service";
+import toast from "react-hot-toast";
 
 interface MilestoneCardProps {
   milestone: Milestone;
@@ -13,7 +13,12 @@ interface MilestoneCardProps {
   onTaskUpdate?: () => void;
 }
 
-export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: MilestoneCardProps) {
+export function MilestoneCard({
+  milestone,
+  tasks,
+  onEdit,
+  onTaskUpdate,
+}: MilestoneCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const router = useRouter();
@@ -23,13 +28,15 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
     setUpdatingTaskId(taskId);
     try {
       await tasksService.update(taskId, { status: newStatus });
-      toast.success('Statut de la tâche mis à jour');
+      toast.success("Statut de la tâche mis à jour");
       if (onTaskUpdate) {
         onTaskUpdate();
       }
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour');
+      toast.error(
+        error.response?.data?.message || "Erreur lors de la mise à jour",
+      );
     } finally {
       setUpdatingTaskId(null);
     }
@@ -39,46 +46,93 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
   const getStatusConfig = (status: TaskStatus) => {
     switch (status) {
       case TaskStatus.DONE:
-        return { label: 'Terminé', bgClass: 'bg-green-100', textClass: 'text-green-800' };
+        return {
+          label: "Terminé",
+          bgClass: "bg-green-100",
+          textClass: "text-green-800",
+        };
       case TaskStatus.IN_PROGRESS:
-        return { label: 'En cours', bgClass: 'bg-blue-100', textClass: 'text-blue-800' };
+        return {
+          label: "En cours",
+          bgClass: "bg-blue-100",
+          textClass: "text-blue-800",
+        };
       case TaskStatus.IN_REVIEW:
-        return { label: 'En revue', bgClass: 'bg-yellow-100', textClass: 'text-yellow-800' };
+        return {
+          label: "En revue",
+          bgClass: "bg-yellow-100",
+          textClass: "text-yellow-800",
+        };
       case TaskStatus.BLOCKED:
-        return { label: 'Bloqué', bgClass: 'bg-red-100', textClass: 'text-red-800' };
+        return {
+          label: "Bloqué",
+          bgClass: "bg-red-100",
+          textClass: "text-red-800",
+        };
       default:
-        return { label: 'À faire', bgClass: 'bg-gray-100', textClass: 'text-gray-800' };
+        return {
+          label: "À faire",
+          bgClass: "bg-gray-100",
+          textClass: "text-gray-800",
+        };
     }
   };
 
   // Calculer le statut automatiquement depuis les tâches
-  const getAutoStatus = (): { status: MilestoneStatus; label: string; color: string } => {
+  const getAutoStatus = (): {
+    status: MilestoneStatus;
+    label: string;
+    color: string;
+  } => {
     if (tasks.length === 0) {
-      return { status: MilestoneStatus.PENDING, label: 'À venir', color: '#9e9e9e' };
+      return {
+        status: MilestoneStatus.PENDING,
+        label: "À venir",
+        color: "#9e9e9e",
+      };
     }
 
-    const completedTasks = tasks.filter(t => t.status === TaskStatus.DONE);
+    const completedTasks = tasks.filter((t) => t.status === TaskStatus.DONE);
     const inProgressTasks = tasks.filter(
-      t => t.status === TaskStatus.IN_PROGRESS || t.status === TaskStatus.IN_REVIEW
+      (t) =>
+        t.status === TaskStatus.IN_PROGRESS ||
+        t.status === TaskStatus.IN_REVIEW,
     );
 
     if (completedTasks.length === tasks.length) {
-      return { status: MilestoneStatus.COMPLETED, label: 'Terminé', color: '#4caf50' };
+      return {
+        status: MilestoneStatus.COMPLETED,
+        label: "Terminé",
+        color: "#4caf50",
+      };
     }
     if (inProgressTasks.length > 0 || completedTasks.length > 0) {
-      return { status: MilestoneStatus.IN_PROGRESS, label: 'En cours', color: '#ff9800' };
+      return {
+        status: MilestoneStatus.IN_PROGRESS,
+        label: "En cours",
+        color: "#ff9800",
+      };
     }
-    return { status: MilestoneStatus.PENDING, label: 'À venir', color: '#9e9e9e' };
+    return {
+      status: MilestoneStatus.PENDING,
+      label: "À venir",
+      color: "#9e9e9e",
+    };
   };
 
   const statusConfig = getAutoStatus();
-  const progressPercent = tasks.length > 0
-    ? Math.round((tasks.filter(t => t.status === TaskStatus.DONE).length / tasks.length) * 100)
-    : 0;
+  const progressPercent =
+    tasks.length > 0
+      ? Math.round(
+          (tasks.filter((t) => t.status === TaskStatus.DONE).length /
+            tasks.length) *
+            100,
+        )
+      : 0;
 
   // Obtenir les contributeurs uniques
   const contributors = Array.from(
-    new Set(tasks.map(t => t.assignee).filter(Boolean))
+    new Set(tasks.map((t) => t.assignee).filter(Boolean)),
   ).slice(0, 3);
 
   return (
@@ -110,8 +164,18 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
                 title="Modifier le jalon"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  />
                 </svg>
               </button>
             )}
@@ -131,12 +195,12 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
             <span>📅</span>
             <span>
               {milestone.dueDate
-                ? new Date(milestone.dueDate).toLocaleDateString('fr-FR', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
+                ? new Date(milestone.dueDate).toLocaleDateString("fr-FR", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
                   })
-                : 'Pas de date'}
+                : "Pas de date"}
             </span>
           </div>
         </div>
@@ -144,7 +208,7 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
         {/* Tâches et contributeurs */}
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm text-gray-600">
-            {tasks.length} tâche{tasks.length > 1 ? 's' : ''}
+            {tasks.length} tâche{tasks.length > 1 ? "s" : ""}
           </div>
           {contributors.length > 0 && (
             <div className="flex -space-x-2">
@@ -154,7 +218,8 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
                   className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold border-2 border-white"
                   title={`${contributor?.firstName} ${contributor?.lastName}`}
                 >
-                  {contributor?.firstName?.[0]}{contributor?.lastName?.[0]}
+                  {contributor?.firstName?.[0]}
+                  {contributor?.lastName?.[0]}
                 </div>
               ))}
             </div>
@@ -172,7 +237,7 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
               className="h-2 rounded-full transition-all duration-500"
               style={{
                 width: `${progressPercent}%`,
-                backgroundColor: statusConfig.color
+                backgroundColor: statusConfig.color,
               }}
             ></div>
           </div>
@@ -184,7 +249,8 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
           className="w-full flex items-center justify-center space-x-2 text-sm text-gray-600 hover:text-gray-900 py-2 hover:bg-gray-50 rounded-lg transition"
         >
           <span>
-            {isExpanded ? '▲' : '▼'} {isExpanded ? 'Masquer' : 'Voir'} {tasks.length} tâche{tasks.length > 1 ? 's' : ''}
+            {isExpanded ? "▲" : "▼"} {isExpanded ? "Masquer" : "Voir"}{" "}
+            {tasks.length} tâche{tasks.length > 1 ? "s" : ""}
           </span>
         </button>
 
@@ -196,7 +262,7 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
                 Aucune tâche associée
               </p>
             ) : (
-              tasks.map(task => {
+              tasks.map((task) => {
                 const statusConfig = getStatusConfig(task.status);
                 return (
                   <div
@@ -206,7 +272,7 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
                         <span className="text-xs">
-                          {task.status === TaskStatus.DONE ? '✅' : '☐'}
+                          {task.status === TaskStatus.DONE ? "✅" : "☐"}
                         </span>
                         <span
                           className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600"
@@ -223,16 +289,46 @@ export function MilestoneCard({ milestone, tasks, onEdit, onTaskUpdate }: Milest
                     </div>
                     <select
                       value={task.status}
-                      onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
+                      onChange={(e) =>
+                        handleStatusChange(
+                          task.id,
+                          e.target.value as TaskStatus,
+                        )
+                      }
                       onClick={(e) => e.stopPropagation()}
                       disabled={updatingTaskId === task.id}
                       className={`px-3 py-1.5 rounded text-xs font-medium border-0 cursor-pointer transition focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed ${statusConfig.bgClass} ${statusConfig.textClass}`}
                     >
-                      <option value={TaskStatus.TODO} className="bg-white text-gray-800">À faire</option>
-                      <option value={TaskStatus.IN_PROGRESS} className="bg-white text-gray-800">En cours</option>
-                      <option value={TaskStatus.IN_REVIEW} className="bg-white text-gray-800">En revue</option>
-                      <option value={TaskStatus.BLOCKED} className="bg-white text-gray-800">Bloqué</option>
-                      <option value={TaskStatus.DONE} className="bg-white text-gray-800">Terminé</option>
+                      <option
+                        value={TaskStatus.TODO}
+                        className="bg-white text-gray-800"
+                      >
+                        À faire
+                      </option>
+                      <option
+                        value={TaskStatus.IN_PROGRESS}
+                        className="bg-white text-gray-800"
+                      >
+                        En cours
+                      </option>
+                      <option
+                        value={TaskStatus.IN_REVIEW}
+                        className="bg-white text-gray-800"
+                      >
+                        En revue
+                      </option>
+                      <option
+                        value={TaskStatus.BLOCKED}
+                        className="bg-white text-gray-800"
+                      >
+                        Bloqué
+                      </option>
+                      <option
+                        value={TaskStatus.DONE}
+                        className="bg-white text-gray-800"
+                      >
+                        Terminé
+                      </option>
                     </select>
                   </div>
                 );

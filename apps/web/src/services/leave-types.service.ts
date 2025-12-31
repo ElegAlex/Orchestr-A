@@ -1,4 +1,4 @@
-import { api } from '@/lib/api';
+import { api } from "@/lib/api";
 
 export interface LeaveTypeConfig {
   id: string;
@@ -47,7 +47,7 @@ export interface UpdateLeaveTypeDto {
 export const leaveTypesService = {
   async getAll(includeInactive = false): Promise<LeaveTypeConfig[]> {
     const response = await api.get<LeaveTypeConfig[]>(
-      `/leave-types${includeInactive ? '?includeInactive=true' : ''}`
+      `/leave-types${includeInactive ? "?includeInactive=true" : ""}`,
     );
     return response.data;
   },
@@ -58,27 +58,36 @@ export const leaveTypesService = {
   },
 
   async getByCode(code: string): Promise<LeaveTypeConfig> {
-    const response = await api.get<LeaveTypeConfig>(`/leave-types/code/${code}`);
+    const response = await api.get<LeaveTypeConfig>(
+      `/leave-types/code/${code}`,
+    );
     return response.data;
   },
 
   async create(data: CreateLeaveTypeDto): Promise<LeaveTypeConfig> {
-    const response = await api.post<LeaveTypeConfig>('/leave-types', data);
+    const response = await api.post<LeaveTypeConfig>("/leave-types", data);
     return response.data;
   },
 
   async update(id: string, data: UpdateLeaveTypeDto): Promise<LeaveTypeConfig> {
-    const response = await api.patch<LeaveTypeConfig>(`/leave-types/${id}`, data);
+    const response = await api.patch<LeaveTypeConfig>(
+      `/leave-types/${id}`,
+      data,
+    );
     return response.data;
   },
 
-  async delete(id: string): Promise<{ message: string; deleted?: boolean; deactivated?: boolean }> {
+  async delete(
+    id: string,
+  ): Promise<{ message: string; deleted?: boolean; deactivated?: boolean }> {
     const response = await api.delete(`/leave-types/${id}`);
     return response.data;
   },
 
   async reorder(orderedIds: string[]): Promise<LeaveTypeConfig[]> {
-    const response = await api.post<LeaveTypeConfig[]>('/leave-types/reorder', { orderedIds });
+    const response = await api.post<LeaveTypeConfig[]>("/leave-types/reorder", {
+      orderedIds,
+    });
     return response.data;
   },
 };

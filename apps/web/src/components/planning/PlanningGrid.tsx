@@ -1,26 +1,30 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Task } from '@/types';
-import { usePlanningData, ServiceGroup, DayCell } from '@/hooks/usePlanningData';
-import { GroupHeader } from './GroupHeader';
-import { UserRow } from './UserRow';
-import { TaskModal } from './TaskModal';
-import { teleworkService } from '@/services/telework.service';
-import { tasksService } from '@/services/tasks.service';
-import { usePlanningViewStore } from '@/stores/planningView.store';
-import { format, isToday, getDay } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import { Task } from "@/types";
+import {
+  usePlanningData,
+  ServiceGroup,
+  DayCell,
+} from "@/hooks/usePlanningData";
+import { GroupHeader } from "./GroupHeader";
+import { UserRow } from "./UserRow";
+import { TaskModal } from "./TaskModal";
+import { teleworkService } from "@/services/telework.service";
+import { tasksService } from "@/services/tasks.service";
+import { usePlanningViewStore } from "@/stores/planningView.store";
+import { format, isToday, getDay } from "date-fns";
+import { fr } from "date-fns/locale";
+import toast from "react-hot-toast";
 
-type ViewFilter = 'all' | 'availability' | 'activity';
+type ViewFilter = "all" | "availability" | "activity";
 
 /** Composant interne pour gérer les sections collapsibles */
 interface CollapsibleServiceSectionProps {
   group: ServiceGroup;
   taskCount: number;
   displayDays: Date[];
-  viewMode: 'week' | 'month';
+  viewMode: "week" | "month";
   showGroupHeaders: boolean;
   getDayCell: (userId: string, date: Date) => DayCell;
   onTeleworkToggle: (userId: string, date: Date) => void;
@@ -79,7 +83,7 @@ const CollapsibleServiceSection = ({
 
 interface PlanningGridProps {
   currentDate: Date;
-  viewMode: 'week' | 'month';
+  viewMode: "week" | "month";
   filterUserId?: string; // Pour filtrer sur un utilisateur (dashboard)
   filterServiceIds?: string[]; // Pour filtrer sur un ou plusieurs services
   viewFilter?: ViewFilter; // Filtre d'affichage (default: 'all')
@@ -91,7 +95,7 @@ export const PlanningGrid = ({
   viewMode,
   filterUserId,
   filterServiceIds,
-  viewFilter = 'all',
+  viewFilter = "all",
   showGroupHeaders = true,
 }: PlanningGridProps) => {
   const {
@@ -119,16 +123,23 @@ export const PlanningGrid = ({
     try {
       const cell = getDayCell(userId, date);
       const existing = cell.teleworkSchedule;
-      const dateStr = format(date, 'yyyy-MM-dd');
+      const dateStr = format(date, "yyyy-MM-dd");
 
       if (existing) {
-        await teleworkService.update(existing.id, { isTelework: !existing.isTelework });
+        await teleworkService.update(existing.id, {
+          isTelework: !existing.isTelework,
+        });
       } else {
-        await teleworkService.create({ date: dateStr, isTelework: true, isException: false, userId });
+        await teleworkService.create({
+          date: dateStr,
+          isTelework: true,
+          isException: false,
+          userId,
+        });
       }
       silentRefetch();
     } catch {
-      toast.error('Erreur lors de la mise à jour du télétravail');
+      toast.error("Erreur lors de la mise à jour du télétravail");
     }
   };
 
@@ -145,7 +156,8 @@ export const PlanningGrid = ({
   const handleDrop = async (targetUserId: string, date: Date) => {
     if (!draggedTask || !dragSourceUserId) return;
 
-    const currentAssigneeIds = draggedTask.assignees?.map(a => a.userId) || [];
+    const currentAssigneeIds =
+      draggedTask.assignees?.map((a) => a.userId) || [];
     const isSameUser = dragSourceUserId === targetUserId;
     const targetAlreadyAssigned = currentAssigneeIds.includes(targetUserId);
     const isSingleAssignee = currentAssigneeIds.length <= 1;
@@ -157,7 +169,11 @@ export const PlanningGrid = ({
     try {
       if (isSingleAssignee) {
         // Tâche mono-assigné: on peut changer date ET assigné
-        const updateData: { startDate: string; endDate: string; assigneeIds?: string[] } = {
+        const updateData: {
+          startDate: string;
+          endDate: string;
+          assigneeIds?: string[];
+        } = {
           startDate: date.toISOString(),
           endDate: date.toISOString(),
         };
@@ -168,40 +184,46 @@ export const PlanningGrid = ({
       } else {
         // Tâche multi-assignés: on change seulement l'assignation (pas les dates)
         if (isSameUser) {
-          toast('Tâche multi-assignée : changement de date impossible.\nModifiez les dates via le détail de la tâche.', {
-            icon: 'ℹ️',
-            duration: 3000,
-            id: `multi-assignee-${Date.now()}`,
-          });
+          toast(
+            "Tâche multi-assignée : changement de date impossible.\nModifiez les dates via le détail de la tâche.",
+            {
+              icon: "ℹ️",
+              duration: 3000,
+              id: `multi-assignee-${Date.now()}`,
+            },
+          );
           return;
         }
         if (targetAlreadyAssigned) {
-          toast('Cet utilisateur est déjà assigné à cette tâche.', {
-            icon: 'ℹ️',
+          toast("Cet utilisateur est déjà assigné à cette tâche.", {
+            icon: "ℹ️",
             duration: 2000,
             id: `already-assigned-${Date.now()}`,
           });
           return;
         }
         // Remplacer source par cible
-        const newAssigneeIds = currentAssigneeIds.map(id =>
-          id === dragSourceUserId ? targetUserId : id
+        const newAssigneeIds = currentAssigneeIds.map((id) =>
+          id === dragSourceUserId ? targetUserId : id,
         );
         await tasksService.update(draggedTask.id, {
           assigneeIds: newAssigneeIds,
         });
 
         // Informer que seul l'assigné a changé (pas la date)
-        toast('Tâche multi-assignée : seul l\'assigné a été modifié.\nLa date reste inchangée pour tous les assignés.', {
-          icon: 'ℹ️',
-          duration: 3000,
-          id: `reassign-only-${Date.now()}`,
-        });
+        toast(
+          "Tâche multi-assignée : seul l'assigné a été modifié.\nLa date reste inchangée pour tous les assignés.",
+          {
+            icon: "ℹ️",
+            duration: 3000,
+            id: `reassign-only-${Date.now()}`,
+          },
+        );
       }
 
       silentRefetch();
     } catch {
-      toast.error('Erreur lors du déplacement de la tâche');
+      toast.error("Erreur lors du déplacement de la tâche");
     }
   };
 
@@ -239,26 +261,45 @@ export const PlanningGrid = ({
                 {displayDays.map((day, index) => {
                   const isMonday = getDay(day) === 1;
                   const isFirstDay = index === 0;
-                  const showWeekSeparator = viewMode === 'month' && isMonday && !isFirstDay;
+                  const showWeekSeparator =
+                    viewMode === "month" && isMonday && !isFirstDay;
                   const holiday = getHolidayForDate(day);
 
                   return (
                     <th
                       key={day.toISOString()}
                       className={`text-center font-semibold ${
-                        viewMode === 'month' ? 'px-1 py-1 min-w-[40px] max-w-[50px]' : 'px-4 py-3 min-w-[180px]'
-                      } ${holiday ? 'bg-red-50 text-red-900' : isToday(day) ? 'bg-blue-50 text-blue-900' : 'text-gray-900'} ${
-                        showWeekSeparator ? 'border-l-2 border-l-indigo-400' : ''
+                        viewMode === "month"
+                          ? "px-1 py-1 min-w-[40px] max-w-[50px]"
+                          : "px-4 py-3 min-w-[180px]"
+                      } ${holiday ? "bg-red-50 text-red-900" : isToday(day) ? "bg-blue-50 text-blue-900" : "text-gray-900"} ${
+                        showWeekSeparator
+                          ? "border-l-2 border-l-indigo-400"
+                          : ""
                       }`}
                       title={holiday ? holiday.name : undefined}
                     >
-                      <div className={viewMode === 'month' ? 'text-[9px] leading-tight' : 'text-sm'}>
-                        {format(day, viewMode === 'month' ? 'EEEEE' : 'EEEE', { locale: fr })}
+                      <div
+                        className={
+                          viewMode === "month"
+                            ? "text-[9px] leading-tight"
+                            : "text-sm"
+                        }
+                      >
+                        {format(day, viewMode === "month" ? "EEEEE" : "EEEE", {
+                          locale: fr,
+                        })}
                       </div>
-                      <div className={viewMode === 'month' ? 'text-xs font-bold' : 'text-lg font-bold'}>
-                        {format(day, 'dd')}
+                      <div
+                        className={
+                          viewMode === "month"
+                            ? "text-xs font-bold"
+                            : "text-lg font-bold"
+                        }
+                      >
+                        {format(day, "dd")}
                       </div>
-                      {holiday && viewMode === 'week' && (
+                      {holiday && viewMode === "week" && (
                         <div className="text-[10px] text-red-600 font-normal truncate max-w-[150px]">
                           {holiday.name}
                         </div>
@@ -271,7 +312,10 @@ export const PlanningGrid = ({
             <tbody className="divide-y divide-gray-200">
               {filteredGroups.length === 0 ? (
                 <tr>
-                  <td colSpan={displayDays.length + 1} className="px-4 py-8 text-center text-gray-500">
+                  <td
+                    colSpan={displayDays.length + 1}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
                     Aucune ressource à afficher
                   </td>
                 </tr>
@@ -305,7 +349,11 @@ export const PlanningGrid = ({
       </div>
 
       {/* Task Modal */}
-      <TaskModal task={selectedTask} isOpen={showTaskModal} onClose={handleCloseModal} />
+      <TaskModal
+        task={selectedTask}
+        isOpen={showTaskModal}
+        onClose={handleCloseModal}
+      />
     </>
   );
 };

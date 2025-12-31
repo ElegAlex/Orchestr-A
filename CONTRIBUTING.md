@@ -5,11 +5,13 @@
 ### 1. Documents à lire (5-10 min)
 
 **Obligatoires :**
+
 1. **STATUS-SUMMARY.md** - Vue d'ensemble rapide (2 min)
 2. **FRONTEND-LATEST-UPDATE.md** - Dernière session (3 min)
 3. `git status` - Vérifier état du repo (1 min)
 
 **Si besoin de contexte :**
+
 - WHAT-HAS-BEEN-DONE.md - État détaillé complet
 - PLANNING-VIEW-SPECS.md - Si travail sur Planning
 - STACK-TECHNIQUE.md - Si questions d'architecture
@@ -35,6 +37,7 @@ git pull origin master
 ## 🎯 PROCHAINES TÂCHES PRIORITAIRES
 
 ### Sprint 1 : Tests & Qualité (Semaine 1)
+
 **Priorité : HAUTE**
 
 - [ ] **Tests Backend** (6h)
@@ -60,6 +63,7 @@ git pull origin master
   - [ ] Scénario: Planning view
 
 ### Sprint 2 : Analytics & Export (Semaine 2)
+
 **Priorité : MOYENNE**
 
 - [ ] **Dashboard Analytics** (4h)
@@ -80,6 +84,7 @@ git pull origin master
   - [ ] Rapport congés équipe
 
 ### Sprint 3 : Workflow & Notifications (Semaine 3)
+
 **Priorité : MOYENNE**
 
 - [ ] **Approbation Congés** (3h)
@@ -99,6 +104,7 @@ git pull origin master
   - [ ] Alertes deadlines
 
 ### Sprint 4 : Production & CI/CD (Semaine 4)
+
 **Priorité : HAUTE**
 
 - [ ] **CI/CD** (4h)
@@ -286,12 +292,13 @@ npm run test:e2e          # Tests E2E Playwright
 ### Écrire un test
 
 **Backend (Vitest):**
+
 ```typescript
 // apps/api/src/auth/auth.service.spec.ts
-import { Test } from '@nestjs/testing';
-import { AuthService } from './auth.service';
+import { Test } from "@nestjs/testing";
+import { AuthService } from "./auth.service";
 
-describe('AuthService', () => {
+describe("AuthService", () => {
   let service: AuthService;
 
   beforeEach(async () => {
@@ -302,14 +309,15 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
   });
 
-  it('should validate user credentials', async () => {
-    const result = await service.validateUser('test@example.com', 'password');
+  it("should validate user credentials", async () => {
+    const result = await service.validateUser("test@example.com", "password");
     expect(result).toBeDefined();
   });
 });
 ```
 
 **Frontend (React Testing Library):**
+
 ```typescript
 // apps/web/app/login/page.test.tsx
 import { render, screen } from '@testing-library/react';
@@ -428,12 +436,14 @@ docker-compose restart
 ## 📞 RESSOURCES
 
 ### Documentation
+
 - [README.md](./README.md) - Vue d'ensemble
 - [STATUS-SUMMARY.md](./STATUS-SUMMARY.md) - État actuel
 - [STACK-TECHNIQUE.md](./STACK-TECHNIQUE.md) - Architecture
 - [WHAT-HAS-BEEN-DONE.md](./WHAT-HAS-BEEN-DONE.md) - Détails complets
 
 ### Outils
+
 - **Swagger API** : http://localhost:3001/api/docs
 - **Prisma Studio** : `pnpm run db:studio`
 - **GitHub Repo** : https://github.com/ElegAlex/Orchestr-A

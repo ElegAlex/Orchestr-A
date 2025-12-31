@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   BarChart,
@@ -10,8 +10,8 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
-} from 'recharts';
-import { useState, useEffect } from 'react';
+} from "recharts";
+import { useState, useEffect } from "react";
 
 interface WorkloadData {
   name: string;
@@ -34,16 +34,16 @@ export function WorkloadChart() {
       // En production, récupérer depuis l'API
       // Pour l'instant, données simulées
       const mockData: WorkloadData[] = [
-        { name: 'Alice M.', planned: 35, capacity: 40, utilization: 87.5 },
-        { name: 'Bob D.', planned: 42, capacity: 40, utilization: 105 },
-        { name: 'Charlie L.', planned: 38, capacity: 40, utilization: 95 },
-        { name: 'Diana R.', planned: 30, capacity: 40, utilization: 75 },
-        { name: 'Eric T.', planned: 40, capacity: 40, utilization: 100 },
-        { name: 'Fiona K.', planned: 25, capacity: 40, utilization: 62.5 },
+        { name: "Alice M.", planned: 35, capacity: 40, utilization: 87.5 },
+        { name: "Bob D.", planned: 42, capacity: 40, utilization: 105 },
+        { name: "Charlie L.", planned: 38, capacity: 40, utilization: 95 },
+        { name: "Diana R.", planned: 30, capacity: 40, utilization: 75 },
+        { name: "Eric T.", planned: 40, capacity: 40, utilization: 100 },
+        { name: "Fiona K.", planned: 25, capacity: 40, utilization: 62.5 },
       ];
       setData(mockData);
     } catch (error) {
-      console.error('Error loading workload data:', error);
+      console.error("Error loading workload data:", error);
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,9 @@ export function WorkloadChart() {
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="name" />
-          <YAxis label={{ value: 'Heures', angle: -90, position: 'insideLeft' }} />
+          <YAxis
+            label={{ value: "Heures", angle: -90, position: "insideLeft" }}
+          />
           <Tooltip />
           <Legend />
           <ReferenceLine
@@ -96,7 +98,7 @@ export function WorkloadChart() {
               <Bar
                 key={`bar-${index}`}
                 dataKey="planned"
-                fill={entry.utilization > 100 ? '#f44336' : '#667eea'}
+                fill={entry.utilization > 100 ? "#f44336" : "#667eea"}
               />
             ))}
           </Bar>
@@ -145,10 +147,10 @@ export function WorkloadChart() {
                 <td
                   className={`px-3 py-2 text-right font-semibold ${
                     person.utilization > 100
-                      ? 'text-red-600'
+                      ? "text-red-600"
                       : person.utilization < 80
-                        ? 'text-yellow-600'
-                        : 'text-green-600'
+                        ? "text-yellow-600"
+                        : "text-green-600"
                   }`}
                 >
                   {person.utilization.toFixed(0)}%

@@ -1,11 +1,13 @@
-import { api } from '@/lib/api';
-import { Department, CreateDepartmentDto } from '@/types';
+import { api } from "@/lib/api";
+import { Department, CreateDepartmentDto } from "@/types";
 
 export const departmentsService = {
   async getAll(): Promise<Department[]> {
-    const response = await api.get<{ data: Department[] } | Department[]>('/departments');
+    const response = await api.get<{ data: Department[] } | Department[]>(
+      "/departments",
+    );
     // API returns {data: [], meta: {}} - extract the array
-    if (response.data && 'data' in response.data) {
+    if (response.data && "data" in response.data) {
       return response.data.data;
     }
     return Array.isArray(response.data) ? response.data : [];
@@ -17,11 +19,14 @@ export const departmentsService = {
   },
 
   async create(data: CreateDepartmentDto): Promise<Department> {
-    const response = await api.post<Department>('/departments', data);
+    const response = await api.post<Department>("/departments", data);
     return response.data;
   },
 
-  async update(id: string, data: Partial<CreateDepartmentDto>): Promise<Department> {
+  async update(
+    id: string,
+    data: Partial<CreateDepartmentDto>,
+  ): Promise<Department> {
     const response = await api.patch<Department>(`/departments/${id}`, data);
     return response.data;
   },

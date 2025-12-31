@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { addWeeks, subWeeks, format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { PlanningGrid } from './PlanningGrid';
-import { usePlanningData } from '@/hooks/usePlanningData';
-import { useAuthStore } from '@/stores/auth.store';
-import { usePlanningViewStore } from '@/stores/planningView.store';
+import { useState, useEffect, useRef, useMemo } from "react";
+import { addWeeks, subWeeks, format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { PlanningGrid } from "./PlanningGrid";
+import { usePlanningData } from "@/hooks/usePlanningData";
+import { useAuthStore } from "@/stores/auth.store";
+import { usePlanningViewStore } from "@/stores/planningView.store";
 
-type ViewFilter = 'all' | 'availability' | 'activity';
+type ViewFilter = "all" | "availability" | "activity";
 
 interface PlanningViewProps {
   filterUserId?: string; // Filtrer pour un utilisateur spécifique (pour dashboard)
@@ -17,23 +17,23 @@ interface PlanningViewProps {
   showControls?: boolean; // Afficher les contrôles (semaine/mois, navigation) (default: true)
   showGroupHeaders?: boolean; // Afficher les headers de groupes (default: true)
   showLegend?: boolean; // Afficher la légende (default: true)
-  initialViewMode?: 'week' | 'month'; // Mode initial (default: 'week')
+  initialViewMode?: "week" | "month"; // Mode initial (default: 'week')
 }
 
 export const PlanningView = ({
   filterUserId,
-  title = 'Planning des Ressources',
+  title = "Planning des Ressources",
   showFilters = true,
   showControls = true,
   showGroupHeaders = true,
   showLegend = true,
-  initialViewMode = 'week',
+  initialViewMode = "week",
 }: PlanningViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'week' | 'month'>(initialViewMode);
-  const [selectedUser, setSelectedUser] = useState<string>('ALL');
+  const [viewMode, setViewMode] = useState<"week" | "month">(initialViewMode);
+  const [selectedUser, setSelectedUser] = useState<string>("ALL");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
+  const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [hasInitializedServices, setHasInitializedServices] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -41,9 +41,11 @@ export const PlanningView = ({
   const { user: currentUser } = useAuthStore();
 
   // Utiliser filterUserId si fourni, sinon utiliser le filtre de l'interface
-  const effectiveFilterUserId = filterUserId || (selectedUser !== 'ALL' ? selectedUser : undefined);
+  const effectiveFilterUserId =
+    filterUserId || (selectedUser !== "ALL" ? selectedUser : undefined);
   // Si aucun service n'est sélectionné, ne pas filtrer (afficher tous)
-  const effectiveFilterServiceIds = selectedServices.length > 0 ? selectedServices : undefined;
+  const effectiveFilterServiceIds =
+    selectedServices.length > 0 ? selectedServices : undefined;
 
   const { displayDays, users, groupedUsers } = usePlanningData({
     currentDate,
@@ -59,17 +61,18 @@ export const PlanningView = ({
   // Calculer les IDs des services visibles
   const serviceIds = useMemo(
     () => groupedUsers.map((g) => g.id),
-    [groupedUsers]
+    [groupedUsers],
   );
 
   // Vérifier si tous les services sont repliés ou dépliés
   const allCollapsed = useMemo(
-    () => serviceIds.length > 0 && serviceIds.every((id) => collapsedServices[id]),
-    [serviceIds, collapsedServices]
+    () =>
+      serviceIds.length > 0 && serviceIds.every((id) => collapsedServices[id]),
+    [serviceIds, collapsedServices],
   );
   const allExpanded = useMemo(
     () => serviceIds.every((id) => !collapsedServices[id]),
-    [serviceIds, collapsedServices]
+    [serviceIds, collapsedServices],
   );
 
   const handleCollapseAll = () => collapseAll(serviceIds);
@@ -79,21 +82,25 @@ export const PlanningView = ({
   useEffect(() => {
     if (groupedUsers.length > 0 && !hasInitializedServices) {
       // Récupérer les IDs des services de l'utilisateur connecté
-      const userServiceIds = currentUser?.userServices?.map((us) => us.service.id) || [];
+      const userServiceIds =
+        currentUser?.userServices?.map((us) => us.service.id) || [];
 
       // Si l'utilisateur est manager, inclure aussi le groupe "management"
-      const isManager = currentUser?.role === 'MANAGER' || currentUser?.role === 'RESPONSABLE' ||
-        (currentUser?.managedServices && currentUser.managedServices.length > 0);
+      const isManager =
+        currentUser?.role === "MANAGER" ||
+        currentUser?.role === "RESPONSABLE" ||
+        (currentUser?.managedServices &&
+          currentUser.managedServices.length > 0);
 
       if (userServiceIds.length > 0 || isManager) {
         // Filtrer pour ne garder que les services qui existent dans groupedUsers
         const validServiceIds = userServiceIds.filter((id) =>
-          groupedUsers.some((g) => g.id === id)
+          groupedUsers.some((g) => g.id === id),
         );
 
         // Ajouter "management" si l'utilisateur est manager
-        if (isManager && groupedUsers.some((g) => g.id === 'management')) {
-          validServiceIds.push('management');
+        if (isManager && groupedUsers.some((g) => g.id === "management")) {
+          validServiceIds.push("management");
         }
 
         // Si des services valides ont été trouvés, les utiliser
@@ -102,16 +109,15 @@ export const PlanningView = ({
           setSelectedServices(validServiceIds);
         } else {
           // Sinon, sélectionner tous les services
-           
+
           setSelectedServices(groupedUsers.map((g) => g.id));
         }
       } else {
         // Utilisateur sans service assigné : afficher tous les services
-         
+
         setSelectedServices(groupedUsers.map((g) => g.id));
       }
 
-       
       setHasInitializedServices(true);
     }
   }, [groupedUsers, currentUser, hasInitializedServices]);
@@ -119,17 +125,22 @@ export const PlanningView = ({
   // Fermer le dropdown quand on clique en dehors
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setShowServiceDropdown(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const toggleService = (serviceId: string) => {
     setSelectedServices((prev) =>
-      prev.includes(serviceId) ? prev.filter((id) => id !== serviceId) : [...prev, serviceId]
+      prev.includes(serviceId)
+        ? prev.filter((id) => id !== serviceId)
+        : [...prev, serviceId],
     );
   };
 
@@ -141,7 +152,8 @@ export const PlanningView = ({
     setSelectedServices([]);
   };
 
-  const allServicesSelected = groupedUsers.length > 0 && selectedServices.length === groupedUsers.length;
+  const allServicesSelected =
+    groupedUsers.length > 0 && selectedServices.length === groupedUsers.length;
 
   return (
     <div className="space-y-6">
@@ -150,30 +162,38 @@ export const PlanningView = ({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
           <p className="text-gray-600 mt-1">
-            {viewMode === 'week'
-              ? `Semaine du ${format(displayDays[0] || new Date(), 'dd MMM', {
+            {viewMode === "week"
+              ? `Semaine du ${format(displayDays[0] || new Date(), "dd MMM", {
                   locale: fr,
-                })} au ${format(displayDays[displayDays.length - 1] || new Date(), 'dd MMM yyyy', {
-                  locale: fr,
-                })}`
-              : format(currentDate, 'MMMM yyyy', { locale: fr })}
+                })} au ${format(
+                  displayDays[displayDays.length - 1] || new Date(),
+                  "dd MMM yyyy",
+                  {
+                    locale: fr,
+                  },
+                )}`
+              : format(currentDate, "MMMM yyyy", { locale: fr })}
           </p>
         </div>
         {showControls && (
           <div className="flex items-center space-x-4">
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
-                onClick={() => setViewMode('week')}
+                onClick={() => setViewMode("week")}
                 className={`px-3 py-1 rounded text-sm transition ${
-                  viewMode === 'week' ? 'bg-white shadow-sm font-medium' : 'text-gray-600'
+                  viewMode === "week"
+                    ? "bg-white shadow-sm font-medium"
+                    : "text-gray-600"
                 }`}
               >
                 Semaine
               </button>
               <button
-                onClick={() => setViewMode('month')}
+                onClick={() => setViewMode("month")}
                 className={`px-3 py-1 rounded text-sm transition ${
-                  viewMode === 'month' ? 'bg-white shadow-sm font-medium' : 'text-gray-600'
+                  viewMode === "month"
+                    ? "bg-white shadow-sm font-medium"
+                    : "text-gray-600"
                 }`}
               >
                 Mois
@@ -181,9 +201,15 @@ export const PlanningView = ({
             </div>
             <button
               onClick={() =>
-                viewMode === 'week'
+                viewMode === "week"
                   ? setCurrentDate(subWeeks(currentDate, 1))
-                  : setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
+                  : setCurrentDate(
+                      new Date(
+                        currentDate.getFullYear(),
+                        currentDate.getMonth() - 1,
+                        1,
+                      ),
+                    )
               }
               className="p-2 hover:bg-gray-100 rounded-lg transition"
             >
@@ -197,9 +223,15 @@ export const PlanningView = ({
             </button>
             <button
               onClick={() =>
-                viewMode === 'week'
+                viewMode === "week"
                   ? setCurrentDate(addWeeks(currentDate, 1))
-                  : setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
+                  : setCurrentDate(
+                      new Date(
+                        currentDate.getFullYear(),
+                        currentDate.getMonth() + 1,
+                        1,
+                      ),
+                    )
               }
               className="p-2 hover:bg-gray-100 rounded-lg transition"
             >
@@ -213,20 +245,27 @@ export const PlanningView = ({
       {showFilters && !filterUserId && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center space-x-4 flex-wrap gap-y-2">
-            <div className="flex items-center space-x-2 relative" ref={dropdownRef}>
-              <label className="text-sm font-medium text-gray-700">Services :</label>
+            <div
+              className="flex items-center space-x-2 relative"
+              ref={dropdownRef}
+            >
+              <label className="text-sm font-medium text-gray-700">
+                Services :
+              </label>
               <button
                 onClick={() => setShowServiceDropdown(!showServiceDropdown)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[200px] text-left flex items-center justify-between"
               >
                 <span className="truncate">
                   {selectedServices.length === 0
-                    ? 'Aucun service'
+                    ? "Aucun service"
                     : selectedServices.length === groupedUsers.length
-                    ? 'Tous les services'
-                    : `${selectedServices.length} service${selectedServices.length > 1 ? 's' : ''}`}
+                      ? "Tous les services"
+                      : `${selectedServices.length} service${selectedServices.length > 1 ? "s" : ""}`}
                 </span>
-                <span className="ml-2">{showServiceDropdown ? '\u25B2' : '\u25BC'}</span>
+                <span className="ml-2">
+                  {showServiceDropdown ? "\u25B2" : "\u25BC"}
+                </span>
               </button>
               {showServiceDropdown && (
                 <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[250px]">
@@ -235,8 +274,8 @@ export const PlanningView = ({
                       onClick={selectAllServices}
                       className={`px-3 py-1 text-xs rounded ${
                         allServicesSelected
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                     >
                       Tout
@@ -245,8 +284,8 @@ export const PlanningView = ({
                       onClick={deselectAllServices}
                       className={`px-3 py-1 text-xs rounded ${
                         selectedServices.length === 0
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                     >
                       Aucun
@@ -266,7 +305,9 @@ export const PlanningView = ({
                         />
                         <span className="mr-2">{group.icon}</span>
                         <span className="flex-1">{group.name}</span>
-                        <span className="text-gray-500 text-sm">({group.users.length})</span>
+                        <span className="text-gray-500 text-sm">
+                          ({group.users.length})
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -275,7 +316,9 @@ export const PlanningView = ({
             </div>
 
             <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-gray-700">Ressource :</label>
+              <label className="text-sm font-medium text-gray-700">
+                Ressource :
+              </label>
               <select
                 value={selectedUser}
                 onChange={(e) => setSelectedUser(e.target.value)}
@@ -291,7 +334,9 @@ export const PlanningView = ({
             </div>
 
             <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-gray-700">Affichage :</label>
+              <label className="text-sm font-medium text-gray-700">
+                Affichage :
+              </label>
               <select
                 value={viewFilter}
                 onChange={(e) => setViewFilter(e.target.value as ViewFilter)}
@@ -312,8 +357,18 @@ export const PlanningView = ({
                   className="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1"
                   title="Replier tous les services"
                 >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                    />
                   </svg>
                   Replier
                 </button>
@@ -323,8 +378,18 @@ export const PlanningView = ({
                   className="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1"
                   title="Déplier tous les services"
                 >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                    />
                   </svg>
                   Déplier
                 </button>
@@ -332,10 +397,12 @@ export const PlanningView = ({
 
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <span className="flex items-center">
-                  <span className="w-3 h-3 bg-blue-500 rounded mr-1"></span>Tâche
+                  <span className="w-3 h-3 bg-blue-500 rounded mr-1"></span>
+                  Tâche
                 </span>
                 <span className="flex items-center">
-                  <span className="w-3 h-3 bg-green-500 rounded mr-1"></span>Congé
+                  <span className="w-3 h-3 bg-green-500 rounded mr-1"></span>
+                  Congé
                 </span>
                 <span className="flex items-center">
                   <span>🏠</span>Télétravail

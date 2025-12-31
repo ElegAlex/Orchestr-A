@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { authService } from '@/services/auth.service';
-import { useAuthStore } from '@/stores/auth.store';
-import { Logo } from '@/components/Logo';
-import toast from 'react-hot-toast';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { authService } from "@/services/auth.service";
+import { useAuthStore } from "@/stores/auth.store";
+import { Logo } from "@/components/Logo";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    login: '',
-    password: '',
+    login: "",
+    password: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,12 +23,12 @@ export default function LoginPage() {
     try {
       const response = await authService.login(formData);
       setUser(response.user);
-      toast.success('Connexion réussie !');
-      router.push('/dashboard');
+      toast.success("Connexion réussie !");
+      router.push("/dashboard");
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || 'Erreur lors de la connexion'
+        axiosError.response?.data?.message || "Erreur lors de la connexion",
       );
     } finally {
       setLoading(false);
@@ -94,10 +94,9 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {loading ? 'Connexion...' : 'Se connecter'}
+            {loading ? "Connexion..." : "Se connecter"}
           </button>
         </form>
-
       </div>
     </div>
   );

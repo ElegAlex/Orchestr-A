@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { Gantt, Task, ViewMode } from '@rsagiev/gantt-task-react-19';
-import '@rsagiev/gantt-task-react-19/dist/index.css';
-import '../gantt-custom.css';
-import { Task as FullTask } from '@/types';
-import { TaskDependencyInfo } from './TaskDependencyInfo';
-import { TaskDependencyModal } from './TaskDependencyModal';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useRef, useCallback } from "react";
+import { Gantt, Task, ViewMode } from "@rsagiev/gantt-task-react-19";
+import "@rsagiev/gantt-task-react-19/dist/index.css";
+import "../gantt-custom.css";
+import { Task as FullTask } from "@/types";
+import { TaskDependencyInfo } from "./TaskDependencyInfo";
+import { TaskDependencyModal } from "./TaskDependencyModal";
+import { useRouter } from "next/navigation";
 
 interface GanttTask {
   id: string;
@@ -47,53 +47,67 @@ export default function GanttChart({
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const [ganttTasks, setGanttTasks] = useState<Task[]>([]);
-  const [selectedTaskForInfo, setSelectedTaskForInfo] = useState<FullTask | null>(null);
-  const [selectedTaskForModal, setSelectedTaskForModal] = useState<FullTask | null>(null);
+  const [selectedTaskForInfo, setSelectedTaskForInfo] =
+    useState<FullTask | null>(null);
+  const [selectedTaskForModal, setSelectedTaskForModal] =
+    useState<FullTask | null>(null);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Find full task by gantt task ID
-  const findFullTask = useCallback((ganttTaskId: string): FullTask | null => {
-    if (!ganttTaskId.startsWith('task-')) return null;
-    const realId = ganttTaskId.replace('task-', '');
-    return fullTasks.find((t) => t.id === realId) || null;
-  }, [fullTasks]);
+  const findFullTask = useCallback(
+    (ganttTaskId: string): FullTask | null => {
+      if (!ganttTaskId.startsWith("task-")) return null;
+      const realId = ganttTaskId.replace("task-", "");
+      return fullTasks.find((t) => t.id === realId) || null;
+    },
+    [fullTasks],
+  );
 
   // Handle single click - show info popover
-  const handleTaskClick = useCallback((task: Task) => {
-    // Clear any pending timeout
-    if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
-    }
-
-    // Set a timeout to distinguish single click from double click
-    clickTimeoutRef.current = setTimeout(() => {
-      const fullTask = findFullTask(task.id);
-      if (fullTask) {
-        setSelectedTaskForInfo(fullTask);
+  const handleTaskClick = useCallback(
+    (task: Task) => {
+      // Clear any pending timeout
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
       }
-    }, 250);
-  }, [findFullTask]);
+
+      // Set a timeout to distinguish single click from double click
+      clickTimeoutRef.current = setTimeout(() => {
+        const fullTask = findFullTask(task.id);
+        if (fullTask) {
+          setSelectedTaskForInfo(fullTask);
+        }
+      }, 250);
+    },
+    [findFullTask],
+  );
 
   // Handle double click - show edit modal
-  const handleTaskDoubleClick = useCallback((task: Task) => {
-    // Clear the single click timeout
-    if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
-    }
+  const handleTaskDoubleClick = useCallback(
+    (task: Task) => {
+      // Clear the single click timeout
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+        clickTimeoutRef.current = null;
+      }
 
-    const fullTask = findFullTask(task.id);
-    if (fullTask) {
-      setSelectedTaskForInfo(null); // Close info if open
-      setSelectedTaskForModal(fullTask);
-    }
-  }, [findFullTask]);
+      const fullTask = findFullTask(task.id);
+      if (fullTask) {
+        setSelectedTaskForInfo(null); // Close info if open
+        setSelectedTaskForModal(fullTask);
+      }
+    },
+    [findFullTask],
+  );
 
   // Navigate to task detail
-  const handleNavigate = useCallback((taskId: string) => {
-    setSelectedTaskForInfo(null);
-    router.push(`/tasks/${taskId}`);
-  }, [router]);
+  const handleNavigate = useCallback(
+    (taskId: string) => {
+      setSelectedTaskForInfo(null);
+      router.push(`/tasks/${taskId}`);
+    },
+    [router],
+  );
 
   // Handle dependency modal save
   const handleDependencySave = useCallback(() => {
@@ -104,7 +118,8 @@ export default function GanttChart({
     const convertedTasks: Task[] = [];
     const now = new Date();
     const defaultStart = projectStartDate || now;
-    const defaultEnd = projectEndDate || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const defaultEnd =
+      projectEndDate || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     // Grouper les tâches par milestone
     const tasksByMilestone = new Map<string, GanttTask[]>();
@@ -124,22 +139,25 @@ export default function GanttChart({
     // Fonction pour convertir une tâche
     const convertTask = (task: GanttTask) => {
       const start = task.startDate ? new Date(task.startDate) : defaultStart;
-      const end = task.endDate ? new Date(task.endDate) : new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const end = task.endDate
+        ? new Date(task.endDate)
+        : new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-      let backgroundColor = '#3b82f6';
-      if (task.status === 'DONE') backgroundColor = '#10b981';
-      else if (task.status === 'IN_PROGRESS') backgroundColor = '#f59e0b';
-      else if (task.status === 'BLOCKED') backgroundColor = '#ef4444';
+      let backgroundColor = "#3b82f6";
+      if (task.status === "DONE") backgroundColor = "#10b981";
+      else if (task.status === "IN_PROGRESS") backgroundColor = "#f59e0b";
+      else if (task.status === "BLOCKED") backgroundColor = "#ef4444";
 
       // Mapper les dépendances vers le format attendu par gantt-task-react
-      const dependencies = task.dependencies?.map(dep => `task-${dep.dependsOnTaskId}`) || [];
+      const dependencies =
+        task.dependencies?.map((dep) => `task-${dep.dependsOnTaskId}`) || [];
 
       return {
         id: `task-${task.id}`,
         name: `  ${task.title}`,
         start,
         end,
-        type: 'task' as const,
+        type: "task" as const,
         progress: task.progress || 0,
         dependencies,
         styles: {
@@ -151,13 +169,17 @@ export default function GanttChart({
 
     // Ajouter milestones avec leurs tâches
     milestones.forEach((milestone) => {
-      const dueDate = milestone.dueDate ? new Date(milestone.dueDate) : defaultEnd;
+      const dueDate = milestone.dueDate
+        ? new Date(milestone.dueDate)
+        : defaultEnd;
 
       // Récupérer les tâches liées à ce milestone
       const milestoneTasks = tasksByMilestone.get(milestone.id) || [];
 
       // Créer les dépendances du milestone (toutes les tâches qui y sont liées)
-      const milestoneDependencies = milestoneTasks.map((task) => `task-${task.id}`);
+      const milestoneDependencies = milestoneTasks.map(
+        (task) => `task-${task.id}`,
+      );
 
       // Ajouter le milestone avec ses dépendances
       convertedTasks.push({
@@ -165,12 +187,12 @@ export default function GanttChart({
         name: `📍 ${milestone.name}`,
         start: dueDate,
         end: dueDate,
-        type: 'milestone' as const,
-        progress: milestone.status === 'COMPLETED' ? 100 : 0,
+        type: "milestone" as const,
+        progress: milestone.status === "COMPLETED" ? 100 : 0,
         dependencies: milestoneDependencies,
         styles: {
-          backgroundColor: '#10b981',
-          backgroundSelectedColor: '#059669',
+          backgroundColor: "#10b981",
+          backgroundSelectedColor: "#059669",
         },
       } as Task);
 
@@ -193,9 +215,12 @@ export default function GanttChart({
     return (
       <div className="text-center py-12">
         <div className="text-6xl mb-4">📊</div>
-        <p className="text-gray-500">Aucune donnée pour le diagramme de Gantt</p>
+        <p className="text-gray-500">
+          Aucune donnée pour le diagramme de Gantt
+        </p>
         <p className="text-sm text-gray-400 mt-2">
-          Ajoutez des tâches et jalons avec des dates pour visualiser le planning
+          Ajoutez des tâches et jalons avec des dates pour visualiser le
+          planning
         </p>
       </div>
     );
@@ -210,8 +235,8 @@ export default function GanttChart({
           onClick={() => setViewMode(ViewMode.Day)}
           className={`px-3 py-1 rounded text-sm ${
             viewMode === ViewMode.Day
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-900 hover:bg-gray-300"
           }`}
         >
           Jour
@@ -220,8 +245,8 @@ export default function GanttChart({
           onClick={() => setViewMode(ViewMode.Week)}
           className={`px-3 py-1 rounded text-sm ${
             viewMode === ViewMode.Week
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-900 hover:bg-gray-300"
           }`}
         >
           Semaine
@@ -230,8 +255,8 @@ export default function GanttChart({
           onClick={() => setViewMode(ViewMode.Month)}
           className={`px-3 py-1 rounded text-sm ${
             viewMode === ViewMode.Month
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-900 hover:bg-gray-300"
           }`}
         >
           Mois
@@ -245,7 +270,13 @@ export default function GanttChart({
           viewMode={viewMode}
           locale="fr"
           listCellWidth="250px"
-          columnWidth={viewMode === ViewMode.Month ? 300 : viewMode === ViewMode.Week ? 250 : 65}
+          columnWidth={
+            viewMode === ViewMode.Month
+              ? 300
+              : viewMode === ViewMode.Week
+                ? 250
+                : 65
+          }
           arrowColor="#6b7280"
           arrowIndent={20}
           onClick={handleTaskClick}

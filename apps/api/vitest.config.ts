@@ -43,7 +43,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      'database': resolve(__dirname, '../../packages/database'),
+      database: resolve(__dirname, '../../packages/database'),
     },
   },
 });

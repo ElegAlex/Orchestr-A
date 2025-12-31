@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth.store';
-import { Role } from '@/types';
-import { Logo, LogoIcon } from '@/components/Logo';
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAuthStore } from "@/stores/auth.store";
+import { Role } from "@/types";
+import { Logo, LogoIcon } from "@/components/Logo";
 
 interface NavItem {
   name: string;
@@ -15,21 +15,21 @@ interface NavItem {
 }
 
 const navigation: NavItem[] = [
-  { name: 'Tableau de bord', href: '/dashboard', icon: '🎯' },
-  { name: 'Projets', href: '/projects', icon: '📁' },
-  { name: 'Tâches', href: '/tasks', icon: '✓' },
-  { name: 'Planning', href: '/planning', icon: '📅' },
-  { name: 'Temps passé', href: '/time-tracking', icon: '⏱️' },
-  { name: 'Congés', href: '/leaves', icon: '🏖️' },
-  { name: 'Télétravail', href: '/telework', icon: '🏠' },
+  { name: "Tableau de bord", href: "/dashboard", icon: "🎯" },
+  { name: "Projets", href: "/projects", icon: "📁" },
+  { name: "Tâches", href: "/tasks", icon: "✓" },
+  { name: "Planning", href: "/planning", icon: "📅" },
+  { name: "Temps passé", href: "/time-tracking", icon: "⏱️" },
+  { name: "Congés", href: "/leaves", icon: "🏖️" },
+  { name: "Télétravail", href: "/telework", icon: "🏠" },
 ];
 
 const adminNavigation: NavItem[] = [
-  { name: 'Rapports & Analytics', href: '/reports', icon: '📊' },
-  { name: 'Utilisateurs', href: '/users', icon: '👥' },
-  { name: 'Départements', href: '/departments', icon: '🏢' },
-  { name: 'Compétences', href: '/skills', icon: '⭐' },
-  { name: 'Paramètres', href: '/settings', icon: '⚙️', adminOnly: true },
+  { name: "Rapports & Analytics", href: "/reports", icon: "📊" },
+  { name: "Utilisateurs", href: "/users", icon: "👥" },
+  { name: "Départements", href: "/departments", icon: "🏢" },
+  { name: "Compétences", href: "/skills", icon: "⭐" },
+  { name: "Paramètres", href: "/settings", icon: "⚙️", adminOnly: true },
 ];
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
@@ -49,14 +49,18 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transition-all duration-300 ${
-          sidebarOpen ? 'w-64' : 'w-20'
+          sidebarOpen ? "w-64" : "w-20"
         }`}
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
           <Link href="/dashboard" className="flex items-center">
             {sidebarOpen ? (
-              <Logo size="sm" showText className="hover:opacity-80 transition" />
+              <Logo
+                size="sm"
+                showText
+                className="hover:opacity-80 transition"
+              />
             ) : (
               <LogoIcon size="sm" className="hover:opacity-80 transition" />
             )}
@@ -65,7 +69,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 rounded-lg hover:bg-gray-100 transition"
           >
-            {sidebarOpen ? '◀' : '▶'}
+            {sidebarOpen ? "◀" : "▶"}
           </button>
         </div>
 
@@ -79,8 +83,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
                   isActive
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
                 <span className="text-xl mr-3">{item.icon}</span>
@@ -108,8 +112,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
                         isActive
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          ? "bg-blue-50 text-blue-600"
+                          : "text-gray-700 hover:bg-gray-100"
                       }`}
                     >
                       <span className="text-xl mr-3">{item.icon}</span>
@@ -123,9 +127,13 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
         {/* User menu */}
         <div className="border-t border-gray-200 p-4">
-          <Link href="/profile" className="flex items-center hover:bg-gray-50 rounded-lg p-2 -m-2 transition">
+          <Link
+            href="/profile"
+            className="flex items-center hover:bg-gray-50 rounded-lg p-2 -m-2 transition"
+          >
             <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
+              {user?.firstName?.[0]}
+              {user?.lastName?.[0]}
             </div>
             {sidebarOpen && (
               <div className="ml-3 flex-1">
@@ -150,7 +158,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div
         className={`transition-all duration-300 ${
-          sidebarOpen ? 'ml-64' : 'ml-20'
+          sidebarOpen ? "ml-64" : "ml-20"
         }`}
       >
         {/* Page content */}

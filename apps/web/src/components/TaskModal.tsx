@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Task, TaskStatus, Priority, Milestone, User, Project } from '@/types';
-import { UserMultiSelect } from './UserMultiSelect';
-import toast from 'react-hot-toast';
+import { useState, useEffect } from "react";
+import { Task, TaskStatus, Priority, Milestone, User, Project } from "@/types";
+import { UserMultiSelect } from "./UserMultiSelect";
+import toast from "react-hot-toast";
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -27,18 +27,18 @@ export function TaskModal({
   users = [],
 }: TaskModalProps) {
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
+    title: "",
+    description: "",
     status: TaskStatus.TODO,
     priority: Priority.NORMAL,
-    projectId: projectId || '',
-    milestoneId: '',
+    projectId: projectId || "",
+    milestoneId: "",
     assigneeIds: [] as string[],
-    estimatedHours: '',
-    startDate: '',
-    endDate: '',
-    startTime: '',
-    endTime: '',
+    estimatedHours: "",
+    startDate: "",
+    endDate: "",
+    startTime: "",
+    endTime: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,42 +46,50 @@ export function TaskModal({
   useEffect(() => {
     if (task) {
       // Extraire les IDs des assignés depuis la relation assignees
-      const taskAssigneeIds = task.assignees?.map((a) => a.user?.id || a.userId).filter(Boolean) as string[] || [];
+      const taskAssigneeIds =
+        (task.assignees
+          ?.map((a) => a.user?.id || a.userId)
+          .filter(Boolean) as string[]) || [];
       // Si pas d'assignees multiples mais un assigneeId, l'utiliser
-      const assigneeIds = taskAssigneeIds.length > 0 ? taskAssigneeIds : (task.assigneeId ? [task.assigneeId] : []);
+      const assigneeIds =
+        taskAssigneeIds.length > 0
+          ? taskAssigneeIds
+          : task.assigneeId
+            ? [task.assigneeId]
+            : [];
 
       setFormData({
-        title: task.title || '',
-        description: task.description || '',
+        title: task.title || "",
+        description: task.description || "",
         status: task.status || TaskStatus.TODO,
         priority: task.priority || Priority.NORMAL,
-        projectId: task.projectId || '',
-        milestoneId: task.milestoneId || '',
+        projectId: task.projectId || "",
+        milestoneId: task.milestoneId || "",
         assigneeIds,
-        estimatedHours: task.estimatedHours?.toString() || '',
+        estimatedHours: task.estimatedHours?.toString() || "",
         startDate: task.startDate
-          ? new Date(task.startDate).toISOString().split('T')[0]
-          : '',
+          ? new Date(task.startDate).toISOString().split("T")[0]
+          : "",
         endDate: task.endDate
-          ? new Date(task.endDate).toISOString().split('T')[0]
-          : '',
-        startTime: task.startTime || '',
-        endTime: task.endTime || '',
+          ? new Date(task.endDate).toISOString().split("T")[0]
+          : "",
+        startTime: task.startTime || "",
+        endTime: task.endTime || "",
       });
     } else {
       setFormData({
-        title: '',
-        description: '',
+        title: "",
+        description: "",
         status: TaskStatus.TODO,
         priority: Priority.NORMAL,
-        projectId: projectId || '',
-        milestoneId: '',
+        projectId: projectId || "",
+        milestoneId: "",
         assigneeIds: [],
-        estimatedHours: '',
-        startDate: '',
-        endDate: '',
-        startTime: '',
-        endTime: '',
+        estimatedHours: "",
+        startDate: "",
+        endDate: "",
+        startTime: "",
+        endTime: "",
       });
     }
   }, [task, projectId]);
@@ -90,7 +98,7 @@ export function TaskModal({
     e.preventDefault();
 
     if (!formData.title.trim()) {
-      toast.error('Le titre de la tache est obligatoire');
+      toast.error("Le titre de la tache est obligatoire");
       return;
     }
 
@@ -116,16 +124,19 @@ export function TaskModal({
       } else {
         taskData.assigneeIds = [];
       }
-      if (formData.estimatedHours) taskData.estimatedHours = parseFloat(formData.estimatedHours);
-      if (formData.startDate) taskData.startDate = new Date(formData.startDate).toISOString();
-      if (formData.endDate) taskData.endDate = new Date(formData.endDate).toISOString();
+      if (formData.estimatedHours)
+        taskData.estimatedHours = parseFloat(formData.estimatedHours);
+      if (formData.startDate)
+        taskData.startDate = new Date(formData.startDate).toISOString();
+      if (formData.endDate)
+        taskData.endDate = new Date(formData.endDate).toISOString();
       if (formData.startTime) taskData.startTime = formData.startTime;
       if (formData.endTime) taskData.endTime = formData.endTime;
 
       await onSave(taskData);
       onClose();
     } catch (err) {
-      console.error('Error saving task:', err);
+      console.error("Error saving task:", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -147,14 +158,24 @@ export function TaskModal({
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">
-              {task ? 'Modifier la tâche' : 'Nouvelle tâche'}
+              {task ? "Modifier la tâche" : "Nouvelle tâche"}
             </h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -170,7 +191,9 @@ export function TaskModal({
               type="text"
               required
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Ex: Implémenter la fonctionnalité X"
             />
@@ -183,7 +206,9 @@ export function TaskModal({
             </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               rows={4}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Decrivez la tache..."
@@ -202,7 +227,7 @@ export function TaskModal({
                   setFormData({
                     ...formData,
                     projectId: e.target.value,
-                    milestoneId: '', // Reset milestone when project changes
+                    milestoneId: "", // Reset milestone when project changes
                   });
                 }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -215,7 +240,8 @@ export function TaskModal({
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Laissez vide pour une tache hors projet (reunion, tache transverse...)
+                Laissez vide pour une tache hors projet (reunion, tache
+                transverse...)
               </p>
             </div>
           )}
@@ -228,7 +254,12 @@ export function TaskModal({
               </label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskStatus })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    status: e.target.value as TaskStatus,
+                  })
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value={TaskStatus.TODO}>À faire</option>
@@ -245,7 +276,12 @@ export function TaskModal({
               </label>
               <select
                 value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value as Priority })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    priority: e.target.value as Priority,
+                  })
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value={Priority.LOW}>Basse</option>
@@ -264,12 +300,16 @@ export function TaskModal({
               </label>
               <select
                 value={formData.milestoneId}
-                onChange={(e) => setFormData({ ...formData, milestoneId: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, milestoneId: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={!formData.projectId}
               >
                 <option value="">
-                  {formData.projectId ? 'Aucun jalon' : 'Selectionnez un projet d\'abord'}
+                  {formData.projectId
+                    ? "Aucun jalon"
+                    : "Selectionnez un projet d'abord"}
                 </option>
                 {filteredMilestones.map((milestone) => (
                   <option key={milestone.id} value={milestone.id}>
@@ -284,7 +324,9 @@ export function TaskModal({
                 label="Assignés"
                 users={users}
                 selectedIds={formData.assigneeIds}
-                onChange={(ids) => setFormData({ ...formData, assigneeIds: ids })}
+                onChange={(ids) =>
+                  setFormData({ ...formData, assigneeIds: ids })
+                }
                 placeholder="Selectionner les assignés"
               />
             </div>
@@ -301,7 +343,9 @@ export function TaskModal({
                 min="0"
                 step="0.5"
                 value={formData.estimatedHours}
-                onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, estimatedHours: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="8"
               />
@@ -318,10 +362,15 @@ export function TaskModal({
                   const newStartDate = e.target.value;
                   const currentEndDate = formData.endDate;
                   // Auto-remplir endDate si vide ou antérieure à la nouvelle startDate
-                  const newEndDate = (!currentEndDate || currentEndDate < newStartDate)
-                    ? newStartDate
-                    : currentEndDate;
-                  setFormData({ ...formData, startDate: newStartDate, endDate: newEndDate });
+                  const newEndDate =
+                    !currentEndDate || currentEndDate < newStartDate
+                      ? newStartDate
+                      : currentEndDate;
+                  setFormData({
+                    ...formData,
+                    startDate: newStartDate,
+                    endDate: newEndDate,
+                  });
                 }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -335,7 +384,9 @@ export function TaskModal({
                 type="date"
                 value={formData.endDate}
                 min={formData.startDate || undefined}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, endDate: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -350,7 +401,9 @@ export function TaskModal({
               <input
                 type="time"
                 value={formData.startTime}
-                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, startTime: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -362,7 +415,9 @@ export function TaskModal({
               <input
                 type="time"
                 value={formData.endTime}
-                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, endTime: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -385,14 +440,30 @@ export function TaskModal({
             >
               {isSubmitting ? (
                 <>
-                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   <span>Enregistrement...</span>
                 </>
               ) : (
-                <span>{task ? 'Mettre à jour' : 'Créer la tâche'}</span>
+                <span>{task ? "Mettre à jour" : "Créer la tâche"}</span>
               )}
             </button>
           </div>

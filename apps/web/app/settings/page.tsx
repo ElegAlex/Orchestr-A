@@ -1,39 +1,63 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { MainLayout } from '@/components/MainLayout';
-import { useAuthStore } from '@/stores/auth.store';
-import { useSettingsStore } from '@/stores/settings.store';
-import { settingsService, AppSetting } from '@/services/settings.service';
-import { Role } from '@/types';
-import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
-import { HolidaysManager } from '@/components/holidays/HolidaysManager';
+import { useEffect, useState } from "react";
+import { MainLayout } from "@/components/MainLayout";
+import { useAuthStore } from "@/stores/auth.store";
+import { useSettingsStore } from "@/stores/settings.store";
+import { settingsService, AppSetting } from "@/services/settings.service";
+import { Role } from "@/types";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { HolidaysManager } from "@/components/holidays/HolidaysManager";
 
-type CategoryTab = 'display' | 'holidays';
+type CategoryTab = "display" | "holidays";
 
 const DATE_FORMAT_OPTIONS = [
-  { value: 'dd/MM/yyyy', label: 'JJ/MM/AAAA (31/12/2025)', example: '31/12/2025' },
-  { value: 'MM/dd/yyyy', label: 'MM/JJ/AAAA (12/31/2025)', example: '12/31/2025' },
-  { value: 'yyyy-MM-dd', label: 'AAAA-MM-JJ (2025-12-31)', example: '2025-12-31' },
-  { value: 'd MMMM yyyy', label: 'J Mois AAAA (31 décembre 2025)', example: '31 décembre 2025' },
-  { value: 'EEEE d MMMM yyyy', label: 'Jour J Mois AAAA (mercredi 31 décembre 2025)', example: 'mercredi 31 décembre 2025' },
+  {
+    value: "dd/MM/yyyy",
+    label: "JJ/MM/AAAA (31/12/2025)",
+    example: "31/12/2025",
+  },
+  {
+    value: "MM/dd/yyyy",
+    label: "MM/JJ/AAAA (12/31/2025)",
+    example: "12/31/2025",
+  },
+  {
+    value: "yyyy-MM-dd",
+    label: "AAAA-MM-JJ (2025-12-31)",
+    example: "2025-12-31",
+  },
+  {
+    value: "d MMMM yyyy",
+    label: "J Mois AAAA (31 décembre 2025)",
+    example: "31 décembre 2025",
+  },
+  {
+    value: "EEEE d MMMM yyyy",
+    label: "Jour J Mois AAAA (mercredi 31 décembre 2025)",
+    example: "mercredi 31 décembre 2025",
+  },
 ];
 
 const TIME_FORMAT_OPTIONS = [
-  { value: 'HH:mm', label: '24h (14:30)', example: '14:30' },
-  { value: 'HH:mm:ss', label: '24h avec secondes (14:30:45)', example: '14:30:45' },
-  { value: 'hh:mm a', label: '12h (02:30 PM)', example: '02:30 PM' },
+  { value: "HH:mm", label: "24h (14:30)", example: "14:30" },
+  {
+    value: "HH:mm:ss",
+    label: "24h avec secondes (14:30:45)",
+    example: "14:30:45",
+  },
+  { value: "hh:mm a", label: "12h (02:30 PM)", example: "02:30 PM" },
 ];
 
 const LOCALE_OPTIONS = [
-  { value: 'fr-FR', label: 'Français (France)' },
-  { value: 'en-US', label: 'English (US)' },
+  { value: "fr-FR", label: "Français (France)" },
+  { value: "en-US", label: "English (US)" },
 ];
 
 const WEEK_START_OPTIONS = [
-  { value: 1, label: 'Lundi' },
-  { value: 0, label: 'Dimanche' },
+  { value: 1, label: "Lundi" },
+  { value: 0, label: "Dimanche" },
 ];
 
 export default function SettingsPage() {
@@ -42,7 +66,7 @@ export default function SettingsPage() {
   const { fetchSettings } = useSettingsStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<CategoryTab>('display');
+  const [activeTab, setActiveTab] = useState<CategoryTab>("display");
   const [settings, setSettings] = useState<Record<string, unknown>>({});
   const [, setSettingsList] = useState<AppSetting[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
@@ -51,7 +75,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!isAdmin) {
-      router.push('/dashboard');
+      router.push("/dashboard");
       return;
     }
     loadSettings();
@@ -64,8 +88,8 @@ export default function SettingsPage() {
       setSettings(response.settings);
       setSettingsList(response.list);
     } catch (err) {
-      console.error('Error loading settings:', err);
-      toast.error('Erreur lors du chargement des paramètres');
+      console.error("Error loading settings:", err);
+      toast.error("Erreur lors du chargement des paramètres");
     } finally {
       setLoading(false);
     }
@@ -82,18 +106,24 @@ export default function SettingsPage() {
       await settingsService.bulkUpdate(settings);
       await fetchSettings(); // Refresh global settings
       setHasChanges(false);
-      toast.success('Paramètres enregistrés avec succès');
+      toast.success("Paramètres enregistrés avec succès");
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      console.error('Error saving settings:', err);
-      toast.error(axiosError.response?.data?.message || 'Erreur lors de la sauvegarde');
+      console.error("Error saving settings:", err);
+      toast.error(
+        axiosError.response?.data?.message || "Erreur lors de la sauvegarde",
+      );
     } finally {
       setSaving(false);
     }
   };
 
   const handleReset = async () => {
-    if (!confirm('Êtes-vous sûr de vouloir réinitialiser tous les paramètres à leurs valeurs par défaut ?')) {
+    if (
+      !confirm(
+        "Êtes-vous sûr de vouloir réinitialiser tous les paramètres à leurs valeurs par défaut ?",
+      )
+    ) {
       return;
     }
 
@@ -104,10 +134,10 @@ export default function SettingsPage() {
       setSettingsList(response.list);
       await fetchSettings();
       setHasChanges(false);
-      toast.success('Paramètres réinitialisés');
+      toast.success("Paramètres réinitialisés");
     } catch (err) {
-      console.error('Error resetting settings:', err);
-      toast.error('Erreur lors de la réinitialisation');
+      console.error("Error resetting settings:", err);
+      toast.error("Erreur lors de la réinitialisation");
     } finally {
       setSaving(false);
     }
@@ -137,7 +167,9 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
-            <p className="text-gray-600 mt-1">Configuration globale de l&apos;application</p>
+            <p className="text-gray-600 mt-1">
+              Configuration globale de l&apos;application
+            </p>
           </div>
           <div className="flex items-center space-x-3">
             <button
@@ -176,21 +208,21 @@ export default function SettingsPage() {
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
             <button
-              onClick={() => setActiveTab('display')}
+              onClick={() => setActiveTab("display")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'display'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "display"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               Affichage
             </button>
             <button
-              onClick={() => setActiveTab('holidays')}
+              onClick={() => setActiveTab("holidays")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'holidays'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "holidays"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               Jours feries
@@ -201,9 +233,11 @@ export default function SettingsPage() {
         {/* Content */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           {/* Display Settings */}
-          {activeTab === 'display' && (
+          {activeTab === "display" && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Paramètres d&apos;affichage</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Paramètres d&apos;affichage
+              </h2>
 
               {/* Date Format */}
               <div>
@@ -211,8 +245,8 @@ export default function SettingsPage() {
                   Format de date
                 </label>
                 <select
-                  value={(settings.dateFormat as string) || 'dd/MM/yyyy'}
-                  onChange={(e) => handleChange('dateFormat', e.target.value)}
+                  value={(settings.dateFormat as string) || "dd/MM/yyyy"}
+                  onChange={(e) => handleChange("dateFormat", e.target.value)}
                   className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   {DATE_FORMAT_OPTIONS.map((option) => (
@@ -222,7 +256,10 @@ export default function SettingsPage() {
                   ))}
                 </select>
                 <p className="text-sm text-gray-500 mt-1">
-                  Exemple : {DATE_FORMAT_OPTIONS.find((o) => o.value === settings.dateFormat as string)?.example || '31/12/2025'}
+                  Exemple :{" "}
+                  {DATE_FORMAT_OPTIONS.find(
+                    (o) => o.value === (settings.dateFormat as string),
+                  )?.example || "31/12/2025"}
                 </p>
               </div>
 
@@ -232,8 +269,8 @@ export default function SettingsPage() {
                   Format d&apos;heure
                 </label>
                 <select
-                  value={(settings.timeFormat as string) || 'HH:mm'}
-                  onChange={(e) => handleChange('timeFormat', e.target.value)}
+                  value={(settings.timeFormat as string) || "HH:mm"}
+                  onChange={(e) => handleChange("timeFormat", e.target.value)}
                   className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   {TIME_FORMAT_OPTIONS.map((option) => (
@@ -250,8 +287,8 @@ export default function SettingsPage() {
                   Langue / Région
                 </label>
                 <select
-                  value={(settings.locale as string) || 'fr-FR'}
-                  onChange={(e) => handleChange('locale', e.target.value)}
+                  value={(settings.locale as string) || "fr-FR"}
+                  onChange={(e) => handleChange("locale", e.target.value)}
                   className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   {LOCALE_OPTIONS.map((option) => (
@@ -272,7 +309,9 @@ export default function SettingsPage() {
                 </label>
                 <select
                   value={(settings.weekStartsOn as number) ?? 1}
-                  onChange={(e) => handleChange('weekStartsOn', parseInt(e.target.value))}
+                  onChange={(e) =>
+                    handleChange("weekStartsOn", parseInt(e.target.value))
+                  }
                   className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   {WEEK_START_OPTIONS.map((option) => (
@@ -286,7 +325,7 @@ export default function SettingsPage() {
           )}
 
           {/* Holidays Settings */}
-          {activeTab === 'holidays' && (
+          {activeTab === "holidays" && (
             <div className="p-6">
               <HolidaysManager />
             </div>

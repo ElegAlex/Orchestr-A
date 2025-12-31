@@ -107,7 +107,9 @@ export enum HolidayType {
 class MockPrismaClient {
   $connect = vi.fn();
   $disconnect = vi.fn();
-  $transaction = vi.fn((callback: (tx: MockPrismaClient) => Promise<unknown>) => callback(this));
+  $transaction = vi.fn((callback: (tx: MockPrismaClient) => Promise<unknown>) =>
+    callback(this),
+  );
 }
 
 // Mock the database module with enums and PrismaClient

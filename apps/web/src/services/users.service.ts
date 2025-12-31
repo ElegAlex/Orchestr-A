@@ -1,22 +1,22 @@
-import { api } from '@/lib/api';
-import { User, PaginatedResponse, Role } from '@/types';
+import { api } from "@/lib/api";
+import { User, PaginatedResponse, Role } from "@/types";
 
 export const usersService = {
   async getAll(
     page?: number,
     limit?: number,
-    role?: Role
+    role?: Role,
   ): Promise<User[] | PaginatedResponse<User>> {
     const params = new URLSearchParams();
-    if (page !== undefined) params.append('page', page.toString());
-    if (limit !== undefined) params.append('limit', limit.toString());
-    if (role) params.append('role', role);
+    if (page !== undefined) params.append("page", page.toString());
+    if (limit !== undefined) params.append("limit", limit.toString());
+    if (role) params.append("role", role);
 
     const response = await api.get<PaginatedResponse<User> | User[]>(
-      `/users?${params.toString()}`
+      `/users?${params.toString()}`,
     );
     // API returns {data: [], meta: {}} - extract based on usage
-    if (response.data && 'data' in response.data) {
+    if (response.data && "data" in response.data) {
       // Si pas de pagination demandée, retourner le tableau directement
       if (page === undefined) {
         return response.data.data as User[];
@@ -48,7 +48,7 @@ export const usersService = {
   },
 
   async create(data: Partial<User>): Promise<User> {
-    const response = await api.post<User>('/users', data);
+    const response = await api.post<User>("/users", data);
     return response.data;
   },
 
@@ -65,7 +65,9 @@ export const usersService = {
    * Vérifier les dépendances d'un utilisateur avant suppression définitive
    */
   async checkDependencies(id: string): Promise<UserDependenciesResponse> {
-    const response = await api.get<UserDependenciesResponse>(`/users/${id}/dependencies`);
+    const response = await api.get<UserDependenciesResponse>(
+      `/users/${id}/dependencies`,
+    );
     return response.data;
   },
 
@@ -73,7 +75,9 @@ export const usersService = {
    * Supprimer définitivement un utilisateur (Admin uniquement)
    */
   async hardDelete(id: string): Promise<{ success: boolean; message: string }> {
-    const response = await api.delete<{ success: boolean; message: string }>(`/users/${id}/hard`);
+    const response = await api.delete<{ success: boolean; message: string }>(
+      `/users/${id}/hard`,
+    );
     return response.data;
   },
 
@@ -81,7 +85,7 @@ export const usersService = {
     currentPassword: string;
     newPassword: string;
   }): Promise<void> {
-    await api.patch('/users/me/change-password', data);
+    await api.patch("/users/me/change-password", data);
   },
 
   async resetPassword(id: string, newPassword: string): Promise<void> {
@@ -89,22 +93,29 @@ export const usersService = {
   },
 
   async getImportTemplate(): Promise<string> {
-    const response = await api.get<string>('/users/import/template');
+    const response = await api.get<string>("/users/import/template");
     return response.data;
   },
 
-  async validateImport(users: ImportUserData[]): Promise<UsersValidationPreview> {
-    const response = await api.post<UsersValidationPreview>('/users/import/validate', { users });
+  async validateImport(
+    users: ImportUserData[],
+  ): Promise<UsersValidationPreview> {
+    const response = await api.post<UsersValidationPreview>(
+      "/users/import/validate",
+      { users },
+    );
     return response.data;
   },
 
   async importUsers(users: ImportUserData[]): Promise<ImportUsersResult> {
-    const response = await api.post<ImportUsersResult>('/users/import', { users });
+    const response = await api.post<ImportUsersResult>("/users/import", {
+      users,
+    });
     return response.data;
   },
 
   async getPresence(date?: string): Promise<PresenceData> {
-    const params = date ? `?date=${date}` : '';
+    const params = date ? `?date=${date}` : "";
     const response = await api.get<PresenceData>(`/users/presence${params}`);
     return response.data;
   },
@@ -134,7 +145,7 @@ export interface ImportUsersResult {
 export interface UserPreviewItem {
   lineNumber: number;
   user: ImportUserData;
-  status: 'valid' | 'duplicate' | 'error' | 'warning';
+  status: "valid" | "duplicate" | "error" | "warning";
   messages: string[];
   resolvedDepartment?: { id: string; name: string };
   resolvedServices?: Array<{ id: string; name: string }>;

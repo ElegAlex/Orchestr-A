@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { MainLayout } from '@/components/MainLayout';
-import { useAuthStore } from '@/stores/auth.store';
-import { tasksService } from '@/services/tasks.service';
-import { projectsService } from '@/services/projects.service';
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { MainLayout } from "@/components/MainLayout";
+import { useAuthStore } from "@/stores/auth.store";
+import { tasksService } from "@/services/tasks.service";
+import { projectsService } from "@/services/projects.service";
 import {
   Task,
   TaskStatus,
@@ -14,10 +14,10 @@ import {
   Project,
   Role,
   User,
-} from '@/types';
-import { usersService } from '@/services/users.service';
-import { UserMultiSelect } from '@/components/UserMultiSelect';
-import toast from 'react-hot-toast';
+} from "@/types";
+import { usersService } from "@/services/users.service";
+import { UserMultiSelect } from "@/components/UserMultiSelect";
+import toast from "react-hot-toast";
 
 export default function TasksPage() {
   const router = useRouter();
@@ -28,27 +28,29 @@ export default function TasksPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<string>('ALL');
+  const [selectedProject, setSelectedProject] = useState<string>("ALL");
   const [orphanTasks, setOrphanTasks] = useState<Task[]>([]);
-  const [selectedPriority, setSelectedPriority] = useState<Priority | 'ALL'>(
-    'ALL'
+  const [selectedPriority, setSelectedPriority] = useState<Priority | "ALL">(
+    "ALL",
   );
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const [formData, setFormData] = useState<CreateTaskDto & { assigneeIds: string[] }>({
-    title: '',
-    description: '',
+  const [formData, setFormData] = useState<
+    CreateTaskDto & { assigneeIds: string[] }
+  >({
+    title: "",
+    description: "",
     status: TaskStatus.TODO,
     priority: Priority.NORMAL,
-    projectId: '',
+    projectId: "",
     assigneeIds: [],
     estimatedHours: undefined,
-    startDate: '',
-    endDate: '',
-    startTime: '',
-    endTime: '',
+    startDate: "",
+    endDate: "",
+    startTime: "",
+    endTime: "",
   });
 
   const fetchData = useCallback(async () => {
@@ -67,7 +69,8 @@ export default function TasksPage() {
         } catch (err) {
           projectsData = [];
           const axiosError = err as { response?: { status?: number } };
-          if (axiosError.response?.status !== 404) console.error('Error fetching projects:', err);
+          if (axiosError.response?.status !== 404)
+            console.error("Error fetching projects:", err);
         }
       }
       setProjects(projectsData);
@@ -81,36 +84,47 @@ export default function TasksPage() {
         } catch (err) {
           tasksData = [];
           const axiosError = err as { response?: { status?: number } };
-          if (axiosError.response?.status !== 404) console.error('Error fetching tasks:', err);
+          if (axiosError.response?.status !== 404)
+            console.error("Error fetching tasks:", err);
         }
       }
       setTasks(tasksData);
 
       // Fetch orphan tasks (only for admin/responsable/manager)
-      if (user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE || user?.role === Role.MANAGER) {
+      if (
+        user?.role === Role.ADMIN ||
+        user?.role === Role.RESPONSABLE ||
+        user?.role === Role.MANAGER
+      ) {
         try {
           const orphans = await tasksService.getOrphans();
           setOrphanTasks(Array.isArray(orphans) ? orphans : []);
         } catch (err) {
           setOrphanTasks([]);
           const axiosError = err as { response?: { status?: number } };
-          if (axiosError.response?.status !== 404) console.error('Error fetching orphan tasks:', err);
+          if (axiosError.response?.status !== 404)
+            console.error("Error fetching orphan tasks:", err);
         }
       }
 
       // Fetch users for assignment
-      if (user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE || user?.role === Role.MANAGER) {
+      if (
+        user?.role === Role.ADMIN ||
+        user?.role === Role.RESPONSABLE ||
+        user?.role === Role.MANAGER
+      ) {
         try {
           const usersData = await usersService.getAll();
           setUsers(Array.isArray(usersData) ? usersData : []);
         } catch (err) {
           setUsers([]);
           const axiosError = err as { response?: { status?: number } };
-          if (axiosError.response?.status !== 404) console.error('Error fetching users:', err);
+          if (axiosError.response?.status !== 404)
+            console.error("Error fetching users:", err);
         }
       }
     } catch (err) {
-      toast.error('Erreur lors du chargement des données');
+      toast.error("Erreur lors du chargement des données");
       console.error(err);
     } finally {
       setLoading(false);
@@ -131,7 +145,8 @@ export default function TasksPage() {
         status: formData.status,
         priority: formData.priority,
         projectId: formData.projectId || null,
-        assigneeIds: formData.assigneeIds.length > 0 ? formData.assigneeIds : undefined,
+        assigneeIds:
+          formData.assigneeIds.length > 0 ? formData.assigneeIds : undefined,
         estimatedHours: formData.estimatedHours || undefined,
         startDate: formData.startDate || undefined,
         endDate: formData.endDate || undefined,
@@ -139,14 +154,14 @@ export default function TasksPage() {
         endTime: formData.endTime || undefined,
       };
       await tasksService.create(taskData);
-      toast.success('Tâche créée avec succès');
+      toast.success("Tâche créée avec succès");
       setShowCreateModal(false);
       resetForm();
       fetchData();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || 'Erreur lors de la création'
+        axiosError.response?.data?.message || "Erreur lors de la création",
       );
     }
   };
@@ -154,10 +169,10 @@ export default function TasksPage() {
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
       await tasksService.update(taskId, { status: newStatus });
-      toast.success('Statut mis à jour');
+      toast.success("Statut mis à jour");
       fetchData();
     } catch {
-      toast.error('Erreur lors de la mise à jour du statut');
+      toast.error("Erreur lors de la mise à jour du statut");
     }
   };
 
@@ -168,10 +183,11 @@ export default function TasksPage() {
     if (projectId) {
       try {
         const project = await projectsService.getById(projectId);
-        const members = project.members?.map(m => m.user).filter(Boolean) as User[] || [];
+        const members =
+          (project.members?.map((m) => m.user).filter(Boolean) as User[]) || [];
         setProjectMembers(members);
       } catch (error) {
-        console.error('Error fetching project members:', error);
+        console.error("Error fetching project members:", error);
         setProjectMembers([]);
       }
     } else {
@@ -189,17 +205,17 @@ export default function TasksPage() {
 
   const resetForm = () => {
     setFormData({
-      title: '',
-      description: '',
+      title: "",
+      description: "",
       status: TaskStatus.TODO,
       priority: Priority.NORMAL,
-      projectId: '',
+      projectId: "",
       assigneeIds: [],
       estimatedHours: undefined,
-      startDate: '',
-      endDate: '',
-      startTime: '',
-      endTime: '',
+      startDate: "",
+      endDate: "",
+      startTime: "",
+      endTime: "",
     });
     setProjectMembers([]);
   };
@@ -207,17 +223,20 @@ export default function TasksPage() {
   const getFilteredTasks = () => {
     let filtered: Task[] = [];
 
-    if (selectedProject === 'ORPHAN') {
+    if (selectedProject === "ORPHAN") {
       // Show orphan tasks (tasks without project)
       filtered = orphanTasks;
-    } else if (selectedProject === 'ALL') {
+    } else if (selectedProject === "ALL") {
       // Show all tasks including orphans
-      filtered = [...tasks, ...orphanTasks.filter(ot => !tasks.some(t => t.id === ot.id))];
+      filtered = [
+        ...tasks,
+        ...orphanTasks.filter((ot) => !tasks.some((t) => t.id === ot.id)),
+      ];
     } else {
       filtered = tasks.filter((t) => t.projectId === selectedProject);
     }
 
-    if (selectedPriority !== 'ALL') {
+    if (selectedPriority !== "ALL") {
       filtered = filtered.filter((t) => t.priority === selectedPriority);
     }
 
@@ -231,28 +250,28 @@ export default function TasksPage() {
   const getPriorityBadgeColor = (priority: Priority) => {
     switch (priority) {
       case Priority.CRITICAL:
-        return 'bg-red-100 text-red-800';
+        return "bg-red-100 text-red-800";
       case Priority.HIGH:
-        return 'bg-orange-100 text-orange-800';
+        return "bg-orange-100 text-orange-800";
       case Priority.NORMAL:
-        return 'bg-blue-100 text-blue-800';
+        return "bg-blue-100 text-blue-800";
       case Priority.LOW:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getPriorityLabel = (priority: Priority) => {
     switch (priority) {
       case Priority.CRITICAL:
-        return 'Critique';
+        return "Critique";
       case Priority.HIGH:
-        return 'Haute';
+        return "Haute";
       case Priority.NORMAL:
-        return 'Normale';
+        return "Normale";
       case Priority.LOW:
-        return 'Basse';
+        return "Basse";
       default:
         return priority;
     }
@@ -270,22 +289,22 @@ export default function TasksPage() {
   const handleDragStart = (e: React.DragEvent, task: Task) => {
     setDraggedTask(task);
     setIsDragging(true);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/html", e.currentTarget.innerHTML);
     // Add subtle opacity to dragged element
-    (e.currentTarget as HTMLElement).style.opacity = '0.4';
+    (e.currentTarget as HTMLElement).style.opacity = "0.4";
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
     setDraggedTask(null);
     setDragOverColumn(null);
     setIsDragging(false);
-    (e.currentTarget as HTMLElement).style.opacity = '1';
+    (e.currentTarget as HTMLElement).style.opacity = "1";
   };
 
   const handleDragOver = (e: React.DragEvent, status: TaskStatus) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.dropEffect = "move";
     setDragOverColumn(status);
   };
 
@@ -300,10 +319,10 @@ export default function TasksPage() {
     if (draggedTask && draggedTask.status !== newStatus) {
       try {
         await tasksService.update(draggedTask.id, { status: newStatus });
-        toast.success('Statut mis à jour');
+        toast.success("Statut mis à jour");
         fetchData();
       } catch {
-        toast.error('Erreur lors de la mise à jour du statut');
+        toast.error("Erreur lors de la mise à jour du statut");
       }
     }
 
@@ -319,15 +338,15 @@ export default function TasksPage() {
   };
 
   const columns: { status: TaskStatus; title: string; color: string }[] = [
-    { status: TaskStatus.TODO, title: 'À faire', color: 'bg-gray-100' },
+    { status: TaskStatus.TODO, title: "À faire", color: "bg-gray-100" },
     {
       status: TaskStatus.IN_PROGRESS,
-      title: 'En cours',
-      color: 'bg-blue-100',
+      title: "En cours",
+      color: "bg-blue-100",
     },
-    { status: TaskStatus.IN_REVIEW, title: 'En revue', color: 'bg-yellow-100' },
-    { status: TaskStatus.DONE, title: 'Terminé', color: 'bg-green-100' },
-    { status: TaskStatus.BLOCKED, title: 'Bloqué', color: 'bg-red-100' },
+    { status: TaskStatus.IN_REVIEW, title: "En revue", color: "bg-yellow-100" },
+    { status: TaskStatus.DONE, title: "Terminé", color: "bg-green-100" },
+    { status: TaskStatus.BLOCKED, title: "Bloqué", color: "bg-red-100" },
   ];
 
   if (loading) {
@@ -396,7 +415,7 @@ export default function TasksPage() {
               <select
                 value={selectedPriority}
                 onChange={(e) =>
-                  setSelectedPriority(e.target.value as Priority | 'ALL')
+                  setSelectedPriority(e.target.value as Priority | "ALL")
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
@@ -437,7 +456,9 @@ export default function TasksPage() {
                   {/* Tasks - Drop Zone */}
                   <div
                     className={`p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-400px)] overflow-y-auto transition-colors ${
-                      isDropTarget ? 'bg-blue-50 border-2 border-dashed border-blue-400' : ''
+                      isDropTarget
+                        ? "bg-blue-50 border-2 border-dashed border-blue-400"
+                        : ""
                     }`}
                     onDragOver={(e) => handleDragOver(e, column.status)}
                     onDragLeave={handleDragLeave}
@@ -457,7 +478,7 @@ export default function TasksPage() {
                           onClick={() => handleTaskClick(task)}
                           className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all cursor-move active:cursor-grabbing select-none"
                           style={{
-                            transition: 'all 0.2s ease',
+                            transition: "all 0.2s ease",
                           }}
                         >
                           {/* Drag Handle */}
@@ -484,7 +505,7 @@ export default function TasksPage() {
                                 </h4>
                                 <span
                                   className={`px-2 py-1 rounded text-xs font-medium ${getPriorityBadgeColor(
-                                    task.priority
+                                    task.priority,
                                   )}`}
                                 >
                                   {getPriorityLabel(task.priority)}
@@ -512,19 +533,22 @@ export default function TasksPage() {
                               )}
 
                               {/* Affichage des assignés multiples */}
-                              {(task.assignees && task.assignees.length > 0) ? (
+                              {task.assignees && task.assignees.length > 0 ? (
                                 <div className="flex items-center space-x-1 text-xs text-gray-500 mb-2">
                                   <div className="flex -space-x-1">
-                                    {task.assignees.slice(0, 3).map((assignment, idx) => (
-                                      <div
-                                        key={assignment.userId || idx}
-                                        className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] border border-white"
-                                        title={`${assignment.user?.firstName || ''} ${assignment.user?.lastName || ''}`}
-                                      >
-                                        {assignment.user?.firstName?.[0] || '?'}
-                                        {assignment.user?.lastName?.[0] || ''}
-                                      </div>
-                                    ))}
+                                    {task.assignees
+                                      .slice(0, 3)
+                                      .map((assignment, idx) => (
+                                        <div
+                                          key={assignment.userId || idx}
+                                          className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] border border-white"
+                                          title={`${assignment.user?.firstName || ""} ${assignment.user?.lastName || ""}`}
+                                        >
+                                          {assignment.user?.firstName?.[0] ||
+                                            "?"}
+                                          {assignment.user?.lastName?.[0] || ""}
+                                        </div>
+                                      ))}
                                     {task.assignees.length > 3 && (
                                       <div className="w-5 h-5 rounded-full bg-gray-400 text-white flex items-center justify-center text-[10px] border border-white">
                                         +{task.assignees.length - 3}
@@ -537,17 +561,19 @@ export default function TasksPage() {
                                       : `${task.assignees.length} assignés`}
                                   </span>
                                 </div>
-                              ) : task.assignee && (
-                                <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
-                                  <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">
-                                    {task.assignee.firstName[0]}
-                                    {task.assignee.lastName[0]}
+                              ) : (
+                                task.assignee && (
+                                  <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
+                                    <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">
+                                      {task.assignee.firstName[0]}
+                                      {task.assignee.lastName[0]}
+                                    </div>
+                                    <span>
+                                      {task.assignee.firstName}{" "}
+                                      {task.assignee.lastName}
+                                    </span>
                                   </div>
-                                  <span>
-                                    {task.assignee.firstName}{' '}
-                                    {task.assignee.lastName}
-                                  </span>
-                                </div>
+                                )
                               )}
 
                               {task.estimatedHours && (
@@ -578,12 +604,12 @@ export default function TasksPage() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       const prevIndex = columns.findIndex(
-                                        (c) => c.status === column.status
+                                        (c) => c.status === column.status,
                                       );
                                       if (prevIndex > 0) {
                                         handleStatusChange(
                                           task.id,
-                                          columns[prevIndex - 1].status
+                                          columns[prevIndex - 1].status,
                                         );
                                       }
                                     }}
@@ -598,12 +624,12 @@ export default function TasksPage() {
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         const nextIndex = columns.findIndex(
-                                          (c) => c.status === column.status
+                                          (c) => c.status === column.status,
                                         );
                                         if (nextIndex < columns.length - 2) {
                                           handleStatusChange(
                                             task.id,
-                                            columns[nextIndex + 1].status
+                                            columns[nextIndex + 1].status,
                                           );
                                         }
                                       }}
@@ -670,7 +696,7 @@ export default function TasksPage() {
                   Projet
                 </label>
                 <select
-                  value={formData.projectId || ''}
+                  value={formData.projectId || ""}
                   onChange={(e) => handleFormProjectChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
@@ -682,7 +708,8 @@ export default function TasksPage() {
                   ))}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Laissez vide pour une tache hors projet (reunion, transverse...)
+                  Laissez vide pour une tache hors projet (reunion,
+                  transverse...)
                 </p>
               </div>
 
@@ -691,14 +718,16 @@ export default function TasksPage() {
                 label="Assignés"
                 users={getAvailableAssignees()}
                 selectedIds={formData.assigneeIds}
-                onChange={(ids) => setFormData({ ...formData, assigneeIds: ids })}
+                onChange={(ids) =>
+                  setFormData({ ...formData, assigneeIds: ids })
+                }
                 placeholder="Selectionner les assignés"
                 hint={
                   formData.projectId && projectMembers.length > 0
-                    ? 'Membres du projet'
+                    ? "Membres du projet"
                     : formData.projectId && projectMembers.length === 0
-                    ? 'Aucun membre dans ce projet - tous les utilisateurs sont affichés'
-                    : undefined
+                      ? "Aucun membre dans ce projet - tous les utilisateurs sont affichés"
+                      : undefined
                 }
               />
 
@@ -758,10 +787,15 @@ export default function TasksPage() {
                     onChange={(e) => {
                       const newStartDate = e.target.value;
                       const currentEndDate = formData.endDate;
-                      const newEndDate = (!currentEndDate || currentEndDate < newStartDate)
-                        ? newStartDate
-                        : currentEndDate;
-                      setFormData({ ...formData, startDate: newStartDate, endDate: newEndDate });
+                      const newEndDate =
+                        !currentEndDate || currentEndDate < newStartDate
+                          ? newStartDate
+                          : currentEndDate;
+                      setFormData({
+                        ...formData,
+                        startDate: newStartDate,
+                        endDate: newEndDate,
+                      });
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -821,7 +855,7 @@ export default function TasksPage() {
                   type="number"
                   min="0"
                   step="0.5"
-                  value={formData.estimatedHours || ''}
+                  value={formData.estimatedHours || ""}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -857,7 +891,6 @@ export default function TasksPage() {
           </div>
         </div>
       )}
-
     </MainLayout>
   );
 }

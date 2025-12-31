@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { settingsService } from '@/services/settings.service';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { settingsService } from "@/services/settings.service";
 
 interface SettingsState {
   settings: Record<string, unknown>;
@@ -16,12 +16,12 @@ interface SettingsState {
 
 // Valeurs par défaut pour l'application
 const DEFAULT_SETTINGS: Record<string, unknown> = {
-  dateFormat: 'dd/MM/yyyy',
-  timeFormat: 'HH:mm',
-  dateTimeFormat: 'dd/MM/yyyy HH:mm',
-  locale: 'fr-FR',
+  dateFormat: "dd/MM/yyyy",
+  timeFormat: "HH:mm",
+  dateTimeFormat: "dd/MM/yyyy HH:mm",
+  locale: "fr-FR",
   weekStartsOn: 1,
-  appName: 'ORCHESTR\'A',
+  appName: "ORCHESTR'A",
   defaultLeaveDays: 25,
   maxTeleworkDaysPerWeek: 3,
 };
@@ -44,8 +44,11 @@ export const useSettingsStore = create<SettingsState>()(
             isLoaded: true,
           });
         } catch (error: unknown) {
-          console.error('Error fetching settings:', error);
-          const message = error instanceof Error ? error.message : 'Erreur lors du chargement des paramètres';
+          console.error("Error fetching settings:", error);
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Erreur lors du chargement des paramètres";
           set({
             error: message,
             isLoading: false,
@@ -61,7 +64,7 @@ export const useSettingsStore = create<SettingsState>()(
             settings: { ...state.settings, [key]: value },
           }));
         } catch (error: unknown) {
-          console.error('Error updating setting:', error);
+          console.error("Error updating setting:", error);
           throw error;
         }
       },
@@ -78,8 +81,11 @@ export const useSettingsStore = create<SettingsState>()(
       },
     }),
     {
-      name: 'orchestr-a-settings',
-      partialize: (state) => ({ settings: state.settings, isLoaded: state.isLoaded }),
-    }
-  )
+      name: "orchestr-a-settings",
+      partialize: (state) => ({
+        settings: state.settings,
+        isLoaded: state.isLoaded,
+      }),
+    },
+  ),
 );

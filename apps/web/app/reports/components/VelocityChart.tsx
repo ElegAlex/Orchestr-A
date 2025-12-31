@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   Bar,
@@ -10,18 +10,18 @@ import {
   ResponsiveContainer,
   Line,
   ComposedChart,
-} from 'recharts';
+} from "recharts";
 
 export function VelocityChart() {
   // Données simulées pour la vélocité
   // En production, calculées depuis les tâches complétées par sprint/semaine
   const data = [
-    { period: 'S1', completed: 12, planned: 15 },
-    { period: 'S2', completed: 14, planned: 15 },
-    { period: 'S3', completed: 10, planned: 15 },
-    { period: 'S4', completed: 16, planned: 15 },
-    { period: 'S5', completed: 13, planned: 15 },
-    { period: 'S6', completed: 15, planned: 15 },
+    { period: "S1", completed: 12, planned: 15 },
+    { period: "S2", completed: 14, planned: 15 },
+    { period: "S3", completed: 10, planned: 15 },
+    { period: "S4", completed: 16, planned: 15 },
+    { period: "S5", completed: 13, planned: 15 },
+    { period: "S6", completed: 15, planned: 15 },
   ];
 
   const average =
@@ -65,9 +65,7 @@ export function VelocityChart() {
         </div>
         <div className="bg-purple-50 p-3 rounded">
           <div className="text-2xl font-bold text-purple-700">
-            {((data[data.length - 1].completed / average - 1) * 100).toFixed(
-              0,
-            )}
+            {((data[data.length - 1].completed / average - 1) * 100).toFixed(0)}
             %
           </div>
           <div className="text-sm text-purple-600">vs. moyenne</div>

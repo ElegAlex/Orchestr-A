@@ -1,4 +1,4 @@
-import { api } from '@/lib/api';
+import { api } from "@/lib/api";
 
 export interface AppSetting {
   id: string;
@@ -17,12 +17,14 @@ export interface SettingsResponse {
 
 export const settingsService = {
   async getAll(): Promise<SettingsResponse> {
-    const response = await api.get<SettingsResponse>('/settings');
+    const response = await api.get<SettingsResponse>("/settings");
     return response.data;
   },
 
   async getByCategory(category: string): Promise<AppSetting[]> {
-    const response = await api.get<AppSetting[]>(`/settings/category/${category}`);
+    const response = await api.get<AppSetting[]>(
+      `/settings/category/${category}`,
+    );
     return response.data;
   },
 
@@ -31,7 +33,11 @@ export const settingsService = {
     return response.data;
   },
 
-  async update(key: string, value: unknown, description?: string): Promise<AppSetting> {
+  async update(
+    key: string,
+    value: unknown,
+    description?: string,
+  ): Promise<AppSetting> {
     const response = await api.put<AppSetting>(`/settings/${key}`, {
       value: JSON.stringify(value),
       description,
@@ -40,7 +46,9 @@ export const settingsService = {
   },
 
   async bulkUpdate(settings: Record<string, unknown>): Promise<AppSetting[]> {
-    const response = await api.post<AppSetting[]>('/settings/bulk', { settings });
+    const response = await api.post<AppSetting[]>("/settings/bulk", {
+      settings,
+    });
     return response.data;
   },
 
@@ -50,7 +58,7 @@ export const settingsService = {
   },
 
   async resetAllToDefaults(): Promise<SettingsResponse> {
-    const response = await api.post<SettingsResponse>('/settings/reset-all');
+    const response = await api.post<SettingsResponse>("/settings/reset-all");
     return response.data;
   },
 };

@@ -1,4 +1,4 @@
-import { Task, TaskDependency, TaskStatus } from '@/types';
+import { Task, TaskDependency, TaskStatus } from "@/types";
 
 export interface DateConflict {
   dependencyTaskId: string;
@@ -15,7 +15,7 @@ export interface DateConflict {
  */
 export function detectDateConflicts(
   currentTask: { startDate?: string },
-  dependencies: TaskDependency[]
+  dependencies: TaskDependency[],
 ): DateConflict[] {
   const conflicts: DateConflict[] = [];
 
@@ -55,8 +55,12 @@ export function detectDateConflicts(
  * Format a date conflict into a human-readable message
  */
 export function formatConflictMessage(conflict: DateConflict): string {
-  const depEndFormatted = new Date(conflict.dependencyEndDate).toLocaleDateString('fr-FR');
-  const currentStartFormatted = new Date(conflict.currentTaskStartDate).toLocaleDateString('fr-FR');
+  const depEndFormatted = new Date(
+    conflict.dependencyEndDate,
+  ).toLocaleDateString("fr-FR");
+  const currentStartFormatted = new Date(
+    conflict.currentTaskStartDate,
+  ).toLocaleDateString("fr-FR");
 
   if (conflict.gapDays < 0) {
     return `"${conflict.dependencyTaskTitle}" se termine le ${depEndFormatted}, mais cette tache commence le ${currentStartFormatted} (${Math.abs(conflict.gapDays)} jour(s) de chevauchement)`;
@@ -64,7 +68,7 @@ export function formatConflictMessage(conflict: DateConflict): string {
     return `"${conflict.dependencyTaskTitle}" se termine le meme jour que cette tache commence (${depEndFormatted})`;
   }
 
-  return '';
+  return "";
 }
 
 /**
@@ -72,7 +76,7 @@ export function formatConflictMessage(conflict: DateConflict): string {
  */
 export function wouldCreateDateConflict(
   currentTaskStartDate: string | undefined,
-  dependencyTask: Task
+  dependencyTask: Task,
 ): boolean {
   if (!currentTaskStartDate || !dependencyTask.endDate) {
     return false;
@@ -93,16 +97,16 @@ export function wouldCreateDateConflict(
 export function getStatusColorClass(status: TaskStatus): string {
   switch (status) {
     case TaskStatus.DONE:
-      return 'bg-green-100 text-green-800';
+      return "bg-green-100 text-green-800";
     case TaskStatus.IN_PROGRESS:
-      return 'bg-blue-100 text-blue-800';
+      return "bg-blue-100 text-blue-800";
     case TaskStatus.IN_REVIEW:
-      return 'bg-yellow-100 text-yellow-800';
+      return "bg-yellow-100 text-yellow-800";
     case TaskStatus.BLOCKED:
-      return 'bg-red-100 text-red-800';
+      return "bg-red-100 text-red-800";
     case TaskStatus.TODO:
     default:
-      return 'bg-gray-100 text-gray-800';
+      return "bg-gray-100 text-gray-800";
   }
 }
 
@@ -112,15 +116,15 @@ export function getStatusColorClass(status: TaskStatus): string {
 export function getStatusLabel(status: TaskStatus): string {
   switch (status) {
     case TaskStatus.TODO:
-      return 'A faire';
+      return "A faire";
     case TaskStatus.IN_PROGRESS:
-      return 'En cours';
+      return "En cours";
     case TaskStatus.IN_REVIEW:
-      return 'En revue';
+      return "En revue";
     case TaskStatus.DONE:
-      return 'Termine';
+      return "Termine";
     case TaskStatus.BLOCKED:
-      return 'Bloque';
+      return "Bloque";
     default:
       return status;
   }

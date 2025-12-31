@@ -1,54 +1,54 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { MainLayout } from '@/components/MainLayout';
-import { useAuthStore } from '@/stores/auth.store';
-import { Role } from '@/types';
-import toast from 'react-hot-toast';
+import { useState } from "react";
+import { MainLayout } from "@/components/MainLayout";
+import { useAuthStore } from "@/stores/auth.store";
+import { Role } from "@/types";
+import toast from "react-hot-toast";
 
-type TabType = 'personal' | 'security' | 'preferences';
+type TabType = "personal" | "security" | "preferences";
 
 export default function ProfilePage() {
   const user = useAuthStore((state) => state.user);
-  const [activeTab, setActiveTab] = useState<TabType>('personal');
+  const [activeTab, setActiveTab] = useState<TabType>("personal");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   const getRoleBadgeColor = (role: Role) => {
     switch (role) {
       case Role.ADMIN:
-        return 'bg-red-100 text-red-800';
+        return "bg-red-100 text-red-800";
       case Role.RESPONSABLE:
-        return 'bg-purple-100 text-purple-800';
+        return "bg-purple-100 text-purple-800";
       case Role.MANAGER:
-        return 'bg-blue-100 text-blue-800';
+        return "bg-blue-100 text-blue-800";
       case Role.REFERENT_TECHNIQUE:
-        return 'bg-green-100 text-green-800';
+        return "bg-green-100 text-green-800";
       case Role.CONTRIBUTEUR:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
       default:
-        return 'bg-yellow-100 text-yellow-800';
+        return "bg-yellow-100 text-yellow-800";
     }
   };
 
   const getRoleLabel = (role: Role) => {
     switch (role) {
       case Role.ADMIN:
-        return 'Administrateur';
+        return "Administrateur";
       case Role.RESPONSABLE:
-        return 'Responsable';
+        return "Responsable";
       case Role.MANAGER:
-        return 'Manager';
+        return "Manager";
       case Role.REFERENT_TECHNIQUE:
-        return 'Référent Technique';
+        return "Référent Technique";
       case Role.CONTRIBUTEUR:
-        return 'Contributeur';
+        return "Contributeur";
       case Role.OBSERVATEUR:
-        return 'Observateur';
+        return "Observateur";
       default:
         return role;
     }
@@ -58,26 +58,26 @@ export default function ProfilePage() {
     e.preventDefault();
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas');
+      toast.error("Les mots de passe ne correspondent pas");
       return;
     }
 
     if (passwordForm.newPassword.length < 8) {
-      toast.error('Le mot de passe doit contenir au moins 8 caractères');
+      toast.error("Le mot de passe doit contenir au moins 8 caractères");
       return;
     }
 
     try {
       // API call would go here
-      toast.success('Mot de passe modifié avec succès');
+      toast.success("Mot de passe modifié avec succès");
       setShowPasswordModal(false);
       setPasswordForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       });
     } catch {
-      toast.error('Erreur lors du changement de mot de passe');
+      toast.error("Erreur lors du changement de mot de passe");
     }
   };
 
@@ -122,7 +122,7 @@ export default function ProfilePage() {
               <div className="flex items-center space-x-3 mt-3">
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(
-                    user.role
+                    user.role,
                   )}`}
                 >
                   {getRoleLabel(user.role)}
@@ -130,11 +130,11 @@ export default function ProfilePage() {
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${
                     user.isActive
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
                   }`}
                 >
-                  {user.isActive ? 'Actif' : 'Inactif'}
+                  {user.isActive ? "Actif" : "Inactif"}
                 </span>
               </div>
             </div>
@@ -145,31 +145,31 @@ export default function ProfilePage() {
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
             <button
-              onClick={() => setActiveTab('personal')}
+              onClick={() => setActiveTab("personal")}
               className={`${
-                activeTab === 'personal'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "personal"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
             >
               Informations personnelles
             </button>
             <button
-              onClick={() => setActiveTab('security')}
+              onClick={() => setActiveTab("security")}
               className={`${
-                activeTab === 'security'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "security"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
             >
               Sécurité
             </button>
             <button
-              onClick={() => setActiveTab('preferences')}
+              onClick={() => setActiveTab("preferences")}
               className={`${
-                activeTab === 'preferences'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "preferences"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
             >
               Préférences
@@ -178,7 +178,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'personal' && (
+        {activeTab === "personal" && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -247,10 +247,10 @@ export default function ProfilePage() {
                   Membre depuis
                 </label>
                 <p className="text-gray-900">
-                  {new Date(user.createdAt).toLocaleDateString('fr-FR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
+                  {new Date(user.createdAt).toLocaleDateString("fr-FR", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
                   })}
                 </p>
               </div>
@@ -258,7 +258,7 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {activeTab === 'security' && (
+        {activeTab === "security" && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Sécurité</h2>
@@ -284,13 +284,13 @@ export default function ProfilePage() {
                   Historique de connexion
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Dernière connexion :{' '}
-                  {new Date().toLocaleDateString('fr-FR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
+                  Dernière connexion :{" "}
+                  {new Date().toLocaleDateString("fr-FR", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
                   })}
                 </p>
               </div>
@@ -298,7 +298,7 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {activeTab === 'preferences' && (
+        {activeTab === "preferences" && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -411,9 +411,9 @@ export default function ProfilePage() {
                   onClick={() => {
                     setShowPasswordModal(false);
                     setPasswordForm({
-                      currentPassword: '',
-                      newPassword: '',
-                      confirmPassword: '',
+                      currentPassword: "",
+                      newPassword: "",
+                      confirmPassword: "",
                     });
                   }}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"

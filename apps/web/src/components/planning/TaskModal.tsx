@@ -1,5 +1,5 @@
-import { Task, TaskStatus } from '@/types';
-import { getPriorityColor } from '@/lib/planning-utils';
+import { Task, TaskStatus } from "@/types";
+import { getPriorityColor } from "@/lib/planning-utils";
 
 interface TaskModalProps {
   task: Task | null;
@@ -35,8 +35,8 @@ export const TaskModal = ({ task, isOpen, onClose }: TaskModalProps) => {
               <span
                 className={`inline-block px-3 py-1 rounded text-sm ${
                   task.status === TaskStatus.DONE
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-blue-100 text-blue-800'
+                    ? "bg-green-100 text-green-800"
+                    : "bg-blue-100 text-blue-800"
                 }`}
               >
                 {task.status}
@@ -44,7 +44,9 @@ export const TaskModal = ({ task, isOpen, onClose }: TaskModalProps) => {
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Priorité</h3>
-              <span className={`inline-block px-3 py-1 rounded text-sm ${getPriorityColor(task.priority)}`}>
+              <span
+                className={`inline-block px-3 py-1 rounded text-sm ${getPriorityColor(task.priority)}`}
+              >
                 {task.priority}
               </span>
             </div>
@@ -56,7 +58,9 @@ export const TaskModal = ({ task, isOpen, onClose }: TaskModalProps) => {
             )}
             {task.progress !== undefined && (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Progression</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Progression
+                </h3>
                 <div className="flex items-center space-x-2">
                   <div className="flex-1 bg-gray-200 rounded-full h-2">
                     <div
@@ -64,7 +68,9 @@ export const TaskModal = ({ task, isOpen, onClose }: TaskModalProps) => {
                       style={{ width: `${task.progress}%` }}
                     ></div>
                   </div>
-                  <span className="text-sm text-gray-600">{task.progress}%</span>
+                  <span className="text-sm text-gray-600">
+                    {task.progress}%
+                  </span>
                 </div>
               </div>
             )}

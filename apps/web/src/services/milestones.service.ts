@@ -1,9 +1,9 @@
-import { api } from '@/lib/api';
-import { Milestone, PaginatedResponse } from '@/types';
+import { api } from "@/lib/api";
+import { Milestone, PaginatedResponse } from "@/types";
 
 export const milestonesService = {
   async getAll(): Promise<PaginatedResponse<Milestone>> {
-    const response = await api.get<PaginatedResponse<Milestone>>('/milestones');
+    const response = await api.get<PaginatedResponse<Milestone>>("/milestones");
     return response.data;
   },
 
@@ -13,7 +13,9 @@ export const milestonesService = {
   },
 
   async getByProject(projectId: string): Promise<Milestone[]> {
-    const response = await api.get<Milestone[]>(`/milestones/project/${projectId}`);
+    const response = await api.get<Milestone[]>(
+      `/milestones/project/${projectId}`,
+    );
     return response.data;
   },
 
@@ -23,7 +25,7 @@ export const milestonesService = {
     dueDate: string;
     projectId: string;
   }): Promise<Milestone> {
-    const response = await api.post<Milestone>('/milestones', data);
+    const response = await api.post<Milestone>("/milestones", data);
     return response.data;
   },
 
@@ -34,7 +36,7 @@ export const milestonesService = {
       description?: string;
       dueDate: string;
       status: string;
-    }>
+    }>,
   ): Promise<Milestone> {
     const response = await api.patch<Milestone>(`/milestones/${id}`, data);
     return response.data;
@@ -46,7 +48,7 @@ export const milestonesService = {
 
   async getImportTemplate(projectId: string): Promise<string> {
     const response = await api.get<{ template: string }>(
-      `/milestones/project/${projectId}/import-template`
+      `/milestones/project/${projectId}/import-template`,
     );
     return response.data.template;
   },
@@ -57,11 +59,11 @@ export const milestonesService = {
       name: string;
       description?: string;
       dueDate: string;
-    }>
+    }>,
   ): Promise<MilestonesValidationPreview> {
     const response = await api.post<MilestonesValidationPreview>(
       `/milestones/project/${projectId}/import/validate`,
-      { milestones }
+      { milestones },
     );
     return response.data;
   },
@@ -72,7 +74,7 @@ export const milestonesService = {
       name: string;
       description?: string;
       dueDate: string;
-    }>
+    }>,
   ): Promise<{
     created: number;
     skipped: number;
@@ -97,7 +99,7 @@ export interface MilestonePreviewItem {
     description?: string;
     dueDate: string;
   };
-  status: 'valid' | 'duplicate' | 'error' | 'warning';
+  status: "valid" | "duplicate" | "error" | "warning";
   messages: string[];
 }
 

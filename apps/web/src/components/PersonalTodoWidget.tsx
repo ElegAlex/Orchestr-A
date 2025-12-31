@@ -1,21 +1,24 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { personalTodosService, PersonalTodo } from '@/services/personal-todos.service';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import {
+  personalTodosService,
+  PersonalTodo,
+} from "@/services/personal-todos.service";
+import toast from "react-hot-toast";
 
 const MAX_TODOS = 20;
 
 export const PersonalTodoWidget = () => {
   const [todos, setTodos] = useState<PersonalTodo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newTodoText, setNewTodoText] = useState('');
+  const [newTodoText, setNewTodoText] = useState("");
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editText, setEditText] = useState('');
+  const [editText, setEditText] = useState("");
 
-  const activeTodos = todos.filter(t => !t.completed);
-  const completedTodos = todos.filter(t => t.completed);
+  const activeTodos = todos.filter((t) => !t.completed);
+  const completedTodos = todos.filter((t) => t.completed);
 
   useEffect(() => {
     fetchTodos();
@@ -27,7 +30,7 @@ export const PersonalTodoWidget = () => {
       const data = await personalTodosService.getAll();
       setTodos(data);
     } catch (err) {
-      toast.error('Erreur lors du chargement des to-dos');
+      toast.error("Erreur lors du chargement des to-dos");
       console.error(err);
     } finally {
       setLoading(false);
@@ -43,13 +46,15 @@ export const PersonalTodoWidget = () => {
 
     try {
       setAdding(true);
-      const newTodo = await personalTodosService.create({ text: newTodoText.trim() });
+      const newTodo = await personalTodosService.create({
+        text: newTodoText.trim(),
+      });
       setTodos([newTodo, ...todos]);
-      setNewTodoText('');
-      toast.success('To-do ajoutée');
+      setNewTodoText("");
+      toast.success("To-do ajoutée");
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'ajout');
+      toast.error(error.response?.data?.message || "Erreur lors de l'ajout");
       console.error(err);
     } finally {
       setAdding(false);
@@ -61,9 +66,9 @@ export const PersonalTodoWidget = () => {
       const updated = await personalTodosService.update(todo.id, {
         completed: !todo.completed,
       });
-      setTodos(todos.map(t => (t.id === todo.id ? updated : t)));
+      setTodos(todos.map((t) => (t.id === todo.id ? updated : t)));
     } catch (err) {
-      toast.error('Erreur lors de la mise à jour');
+      toast.error("Erreur lors de la mise à jour");
       console.error(err);
     }
   };
@@ -71,10 +76,10 @@ export const PersonalTodoWidget = () => {
   const handleDelete = async (id: string) => {
     try {
       await personalTodosService.delete(id);
-      setTodos(todos.filter(t => t.id !== id));
-      toast.success('To-do supprimée');
+      setTodos(todos.filter((t) => t.id !== id));
+      toast.success("To-do supprimée");
     } catch (err) {
-      toast.error('Erreur lors de la suppression');
+      toast.error("Erreur lors de la suppression");
       console.error(err);
     }
   };
@@ -91,19 +96,21 @@ export const PersonalTodoWidget = () => {
     }
 
     try {
-      const updated = await personalTodosService.update(id, { text: editText.trim() });
-      setTodos(todos.map(t => (t.id === id ? updated : t)));
+      const updated = await personalTodosService.update(id, {
+        text: editText.trim(),
+      });
+      setTodos(todos.map((t) => (t.id === id ? updated : t)));
       setEditingId(null);
-      toast.success('To-do modifiée');
+      toast.success("To-do modifiée");
     } catch (err) {
-      toast.error('Erreur lors de la modification');
+      toast.error("Erreur lors de la modification");
       console.error(err);
     }
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditText('');
+    setEditText("");
   };
 
   if (loading) {
@@ -139,17 +146,19 @@ export const PersonalTodoWidget = () => {
             type="text"
             value={newTodoText}
             onChange={(e) => setNewTodoText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
+            onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
             placeholder="Ajouter une to-do..."
             disabled={adding || todos.length >= MAX_TODOS}
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
           />
           <button
             onClick={handleAddTodo}
-            disabled={adding || !newTodoText.trim() || todos.length >= MAX_TODOS}
+            disabled={
+              adding || !newTodoText.trim() || todos.length >= MAX_TODOS
+            }
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition text-sm font-medium"
           >
-            {adding ? '...' : '+ Ajouter'}
+            {adding ? "..." : "+ Ajouter"}
           </button>
         </div>
 
@@ -168,7 +177,7 @@ export const PersonalTodoWidget = () => {
         ) : (
           <div className="space-y-2">
             {/* Actives */}
-            {activeTodos.map(todo => (
+            {activeTodos.map((todo) => (
               <div
                 key={todo.id}
                 className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition group flex items-center gap-3"
@@ -186,8 +195,8 @@ export const PersonalTodoWidget = () => {
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveEdit(todo.id);
-                        if (e.key === 'Escape') handleCancelEdit();
+                        if (e.key === "Enter") handleSaveEdit(todo.id);
+                        if (e.key === "Escape") handleCancelEdit();
                       }}
                       className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       autoFocus
@@ -236,7 +245,7 @@ export const PersonalTodoWidget = () => {
                     </div>
                   </div>
                 )}
-                {completedTodos.map(todo => (
+                {completedTodos.map((todo) => (
                   <div
                     key={todo.id}
                     className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition group flex items-center gap-3 opacity-60"

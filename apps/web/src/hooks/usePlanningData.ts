@@ -1,17 +1,34 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { startOfWeek, addDays, startOfDay, endOfDay, format, isSameDay, isWithinInterval, parseISO } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { tasksService } from '@/services/tasks.service';
-import { usersService } from '@/services/users.service';
-import { leavesService } from '@/services/leaves.service';
-import { teleworkService } from '@/services/telework.service';
-import { servicesService } from '@/services/services.service';
-import { holidaysService } from '@/services/holidays.service';
-import { Task, User, Leave, TeleworkSchedule, Service, Role, Holiday } from '@/types';
-import { getServiceStyle } from '@/lib/planning-utils';
-import toast from 'react-hot-toast';
+import { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  startOfWeek,
+  addDays,
+  startOfDay,
+  endOfDay,
+  format,
+  isSameDay,
+  isWithinInterval,
+  parseISO,
+} from "date-fns";
+import { fr } from "date-fns/locale";
+import { tasksService } from "@/services/tasks.service";
+import { usersService } from "@/services/users.service";
+import { leavesService } from "@/services/leaves.service";
+import { teleworkService } from "@/services/telework.service";
+import { servicesService } from "@/services/services.service";
+import { holidaysService } from "@/services/holidays.service";
+import {
+  Task,
+  User,
+  Leave,
+  TeleworkSchedule,
+  Service,
+  Role,
+  Holiday,
+} from "@/types";
+import { getServiceStyle } from "@/lib/planning-utils";
+import toast from "react-hot-toast";
 
-export type ViewFilter = 'all' | 'availability' | 'activity';
+export type ViewFilter = "all" | "availability" | "activity";
 
 export interface DayCell {
   date: Date;
@@ -34,7 +51,7 @@ export interface ServiceGroup {
 
 interface UsePlanningDataOptions {
   currentDate: Date;
-  viewMode: 'week' | 'month';
+  viewMode: "week" | "month";
   filterUserId?: string; // Filtrer pour un seul utilisateur
   filterServiceIds?: string[]; // Filtrer pour un ou plusieurs services
   viewFilter?: ViewFilter; // Filtre d'affichage (default: 'all')
@@ -63,81 +80,111 @@ export const usePlanningData = ({
   viewMode,
   filterUserId,
   filterServiceIds,
-  viewFilter = 'all',
+  viewFilter = "all",
 }: UsePlanningDataOptions): UsePlanningDataReturn => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [leaves, setLeaves] = useState<Leave[]>([]);
-  const [teleworkSchedules, setTeleworkSchedules] = useState<TeleworkSchedule[]>([]);
+  const [teleworkSchedules, setTeleworkSchedules] = useState<
+    TeleworkSchedule[]
+  >([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
 
   // Calculer les jours à afficher
   const displayDays = useMemo(() => {
-    if (viewMode === 'week') {
+    if (viewMode === "week") {
       const start = startOfWeek(currentDate, { locale: fr, weekStartsOn: 1 });
       return Array.from({ length: 5 }, (_, i) => addDays(start, i));
     } else {
       const start = startOfWeek(
         new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
-        { locale: fr, weekStartsOn: 1 }
+        { locale: fr, weekStartsOn: 1 },
       );
-      const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+      const daysInMonth = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1,
+        0,
+      ).getDate();
       const totalDays = Math.ceil((daysInMonth + start.getDay()) / 7) * 7;
-      return Array.from({ length: totalDays }, (_, i) => addDays(start, i))
-        .filter((d) => d.getMonth() === currentDate.getMonth() && d.getDay() !== 0 && d.getDay() !== 6);
+      return Array.from({ length: totalDays }, (_, i) =>
+        addDays(start, i),
+      ).filter(
+        (d) =>
+          d.getMonth() === currentDate.getMonth() &&
+          d.getDay() !== 0 &&
+          d.getDay() !== 6,
+      );
     }
   }, [currentDate, viewMode]);
 
   // Fetch data
-  const fetchData = useCallback(async (silent = false) => {
-    if (displayDays.length === 0) return;
-    try {
-      if (!silent) setLoading(true);
-      const startDate = startOfDay(displayDays[0]);
-      const endDate = endOfDay(displayDays[displayDays.length - 1]);
+  const fetchData = useCallback(
+    async (silent = false) => {
+      if (displayDays.length === 0) return;
+      try {
+        if (!silent) setLoading(true);
+        const startDate = startOfDay(displayDays[0]);
+        const endDate = endOfDay(displayDays[displayDays.length - 1]);
 
-      // Format YYYY-MM-DD pour telework (évite les problèmes de timezone)
-      const teleworkStartDate = format(startDate, 'yyyy-MM-dd');
-      const teleworkEndDate = format(endDate, 'yyyy-MM-dd');
+        // Format YYYY-MM-DD pour telework (évite les problèmes de timezone)
+        const teleworkStartDate = format(startDate, "yyyy-MM-dd");
+        const teleworkEndDate = format(endDate, "yyyy-MM-dd");
 
-      const [usersData, tasksData, leavesData, teleworkData, servicesData, holidaysData] = await Promise.all([
-        usersService.getAll(),
-        tasksService.getByDateRange(startDate.toISOString(), endDate.toISOString()),
-        leavesService.getByDateRange(startDate.toISOString(), endDate.toISOString()),
-        teleworkService.getByDateRange(teleworkStartDate, teleworkEndDate),
-        servicesService.getAll(),
-        holidaysService.getByRange(teleworkStartDate, teleworkEndDate),
-      ]);
+        const [
+          usersData,
+          tasksData,
+          leavesData,
+          teleworkData,
+          servicesData,
+          holidaysData,
+        ] = await Promise.all([
+          usersService.getAll(),
+          tasksService.getByDateRange(
+            startDate.toISOString(),
+            endDate.toISOString(),
+          ),
+          leavesService.getByDateRange(
+            startDate.toISOString(),
+            endDate.toISOString(),
+          ),
+          teleworkService.getByDateRange(teleworkStartDate, teleworkEndDate),
+          servicesService.getAll(),
+          holidaysService.getByRange(teleworkStartDate, teleworkEndDate),
+        ]);
 
-      const usersList = Array.isArray(usersData)
-        ? usersData
-        : Array.isArray(usersData?.data)
-        ? usersData.data
-        : [];
+        const usersList = Array.isArray(usersData)
+          ? usersData
+          : Array.isArray(usersData?.data)
+            ? usersData.data
+            : [];
 
-      setUsers(Array.isArray(usersList) ? usersList.filter((u) => u.isActive) : []);
-      setTasks(Array.isArray(tasksData) ? tasksData : []);
-      setLeaves(Array.isArray(leavesData) ? leavesData : []);
-      setTeleworkSchedules(Array.isArray(teleworkData) ? teleworkData : []);
-      setServices(Array.isArray(servicesData) ? servicesData : []);
-      setHolidays(Array.isArray(holidaysData) ? holidaysData : []);
-    } catch (err) {
-      if (!silent) {
-        setUsers([]);
-        setTasks([]);
-        setLeaves([]);
-        setTeleworkSchedules([]);
-        setServices([]);
-        setHolidays([]);
-        toast.error('Erreur lors du chargement des données');
+        setUsers(
+          Array.isArray(usersList) ? usersList.filter((u) => u.isActive) : [],
+        );
+        setTasks(Array.isArray(tasksData) ? tasksData : []);
+        setLeaves(Array.isArray(leavesData) ? leavesData : []);
+        setTeleworkSchedules(Array.isArray(teleworkData) ? teleworkData : []);
+        setServices(Array.isArray(servicesData) ? servicesData : []);
+        setHolidays(Array.isArray(holidaysData) ? holidaysData : []);
+      } catch (err) {
+        if (!silent) {
+          setUsers([]);
+          setTasks([]);
+          setLeaves([]);
+          setTeleworkSchedules([]);
+          setServices([]);
+          setHolidays([]);
+          toast.error("Erreur lors du chargement des données");
+        }
+        console.error(err);
+      } finally {
+        if (!silent) setLoading(false);
       }
-      console.error(err);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [displayDays]);
+    },
+    [displayDays],
+  );
 
   useEffect(() => {
     fetchData();
@@ -166,12 +213,14 @@ export const usePlanningData = ({
     // 1. Section Encadrement en premier (si des managers existent)
     if (managementUsers.length > 0) {
       groups.push({
-        id: 'management',
-        name: 'Encadrement',
-        icon: '',
+        id: "management",
+        name: "Encadrement",
+        icon: "",
         isManagement: true,
-        users: managementUsers.sort((a, b) => a.lastName.localeCompare(b.lastName)),
-        color: 'amber',
+        users: managementUsers.sort((a, b) =>
+          a.lastName.localeCompare(b.lastName),
+        ),
+        color: "amber",
       });
     }
 
@@ -206,7 +255,9 @@ export const usePlanningData = ({
           name: service.name,
           icon: style.icon,
           isManagement: false,
-          users: serviceUsers.sort((a, b) => a.lastName.localeCompare(b.lastName)),
+          users: serviceUsers.sort((a, b) =>
+            a.lastName.localeCompare(b.lastName),
+          ),
           color: style.color,
         });
       }
@@ -215,12 +266,14 @@ export const usePlanningData = ({
     // 3. Section "Sans service" pour les orphelins
     if (usersWithoutService.length > 0) {
       groups.push({
-        id: 'unassigned',
-        name: 'Sans service',
-        icon: '',
+        id: "unassigned",
+        name: "Sans service",
+        icon: "",
         isManagement: false,
-        users: usersWithoutService.sort((a, b) => a.lastName.localeCompare(b.lastName)),
-        color: 'gray',
+        users: usersWithoutService.sort((a, b) =>
+          a.lastName.localeCompare(b.lastName),
+        ),
+        color: "gray",
       });
     }
 
@@ -259,34 +312,47 @@ export const usePlanningData = ({
         if (!t.endDate) return false;
 
         const taskEnd = startOfDay(new Date(t.endDate));
-        const taskStart = t.startDate ? startOfDay(new Date(t.startDate)) : taskEnd;
+        const taskStart = t.startDate
+          ? startOfDay(new Date(t.startDate))
+          : taskEnd;
         const checkDate = startOfDay(date);
 
         // Vérifier que la date est dans l'intervalle [startDate, endDate]
-        if (!isWithinInterval(checkDate, { start: taskStart, end: taskEnd })) return false;
+        if (!isWithinInterval(checkDate, { start: taskStart, end: taskEnd }))
+          return false;
 
         // Vérifier si l'utilisateur est assigné (assigneeId principal ou dans assignees)
         if (t.assigneeId === userId) return true;
-        if (t.assignees && t.assignees.some((a) => a.userId === userId || a.user?.id === userId)) return true;
+        if (
+          t.assignees &&
+          t.assignees.some((a) => a.userId === userId || a.user?.id === userId)
+        )
+          return true;
         return false;
       });
       // Vérifier si la date est dans la plage du congé (startDate <= date <= endDate)
       // Inclure tous les congés sauf les rejetés (PENDING et APPROVED)
       const dayLeaves = leaves.filter((l) => {
-        if (l.userId !== userId || l.status === 'REJECTED') return false;
+        if (l.userId !== userId || l.status === "REJECTED") return false;
         const leaveStart = startOfDay(parseISO(l.startDate));
         const leaveEnd = startOfDay(parseISO(l.endDate));
         const checkDate = startOfDay(date);
-        return isWithinInterval(checkDate, { start: leaveStart, end: leaveEnd });
+        return isWithinInterval(checkDate, {
+          start: leaveStart,
+          end: leaveEnd,
+        });
       });
       const teleworkSchedule = teleworkSchedules.find(
-        (ts) => ts.userId === userId && isSameDay(new Date(ts.date), date)
+        (ts) => ts.userId === userId && isSameDay(new Date(ts.date), date),
       );
 
       // Vérifier si c'est un jour férié
-      const dateStr = format(date, 'yyyy-MM-dd');
+      const dateStr = format(date, "yyyy-MM-dd");
       const holiday = holidays.find((h) => {
-        const holidayDateStr = typeof h.date === 'string' ? h.date.slice(0, 10) : format(new Date(h.date), 'yyyy-MM-dd');
+        const holidayDateStr =
+          typeof h.date === "string"
+            ? h.date.slice(0, 10)
+            : format(new Date(h.date), "yyyy-MM-dd");
         return holidayDateStr === dateStr;
       });
 
@@ -295,10 +361,10 @@ export const usePlanningData = ({
       let filteredLeaves = dayLeaves;
       let filteredIsTelework = teleworkSchedule?.isTelework || false;
 
-      if (viewFilter === 'availability') {
+      if (viewFilter === "availability") {
         // Mode "Disponibilités" : afficher uniquement les congés et télétravail
         filteredTasks = []; // Masquer toutes les tâches
-      } else if (viewFilter === 'activity') {
+      } else if (viewFilter === "activity") {
         // Mode "Activités" : afficher uniquement les tâches
         filteredLeaves = []; // Masquer les congés
         filteredIsTelework = false; // Masquer le télétravail
@@ -314,7 +380,7 @@ export const usePlanningData = ({
         holidayName: holiday?.name,
       };
     },
-    [tasks, leaves, teleworkSchedules, holidays, viewFilter]
+    [tasks, leaves, teleworkSchedules, holidays, viewFilter],
   );
 
   // Compter les tâches par groupe
@@ -323,7 +389,13 @@ export const usePlanningData = ({
       // Vérifier assigneeId principal
       if (groupUsers.some((u) => u.id === t.assigneeId)) return true;
       // Vérifier dans assignees multiples
-      if (t.assignees && t.assignees.some((a) => groupUsers.some((u) => u.id === a.userId || u.id === a.user?.id))) return true;
+      if (
+        t.assignees &&
+        t.assignees.some((a) =>
+          groupUsers.some((u) => u.id === a.userId || u.id === a.user?.id),
+        )
+      )
+        return true;
       return false;
     }).length;
   };
@@ -331,13 +403,16 @@ export const usePlanningData = ({
   // Obtenir le jour férié pour une date donnée
   const getHolidayForDate = useCallback(
     (date: Date): Holiday | undefined => {
-      const dateStr = format(date, 'yyyy-MM-dd');
+      const dateStr = format(date, "yyyy-MM-dd");
       return holidays.find((h) => {
-        const holidayDateStr = typeof h.date === 'string' ? h.date.slice(0, 10) : format(new Date(h.date), 'yyyy-MM-dd');
+        const holidayDateStr =
+          typeof h.date === "string"
+            ? h.date.slice(0, 10)
+            : format(new Date(h.date), "yyyy-MM-dd");
         return holidayDateStr === dateStr;
       });
     },
-    [holidays]
+    [holidays],
   );
 
   return {

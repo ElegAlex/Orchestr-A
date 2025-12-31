@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface PlanningViewState {
   /** Map serviceId -> isCollapsed */
@@ -73,8 +73,8 @@ export const usePlanningViewStore = create<PlanningViewState>()(
       },
     }),
     {
-      name: 'orchestra-planning-view',
+      name: "orchestra-planning-view",
       partialize: (state) => ({ collapsedServices: state.collapsedServices }),
-    }
-  )
+    },
+  ),
 );
