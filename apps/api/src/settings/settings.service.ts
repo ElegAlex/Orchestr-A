@@ -75,7 +75,15 @@ export class SettingsService implements OnModuleInit {
    * Initialiser les paramètres par défaut au démarrage
    */
   async onModuleInit() {
-    await this.initializeDefaultSettings();
+    try {
+      await this.initializeDefaultSettings();
+    } catch (error) {
+      // Log but don't fail startup if settings table doesn't exist yet
+      console.warn(
+        'Warning: Could not initialize default settings. Table may not exist yet.',
+        error instanceof Error ? error.message : error,
+      );
+    }
   }
 
   /**
