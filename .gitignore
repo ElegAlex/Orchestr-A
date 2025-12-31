@@ -128,3 +128,15 @@ packages/database/node_modules/.prisma/
 Ochestra_V1/
 ZZ_META.md
 docs/BACKLOG_FUTUR.md
+
+# ===========================
+# BACKUPS
+# ===========================
+backups/*.sql
+backups/*.gz
+
+# ===========================
+# TEST DATA FILES
+# ===========================
+csv_*.csv
+*.test.csv
