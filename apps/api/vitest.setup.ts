@@ -103,11 +103,26 @@ export enum HolidayType {
   COMPANY = 'COMPANY',
 }
 
-// Mock the database module to export these enums
-vi.mock('database', async () => {
-  const actual = await vi.importActual('database');
+// Mock PrismaClient for tests
+class MockPrismaClient {
+  $connect = vi.fn();
+  $disconnect = vi.fn();
+  $transaction = vi.fn((callback: (tx: MockPrismaClient) => Promise<unknown>) => callback(this));
+}
+
+// Mock the database module with enums and PrismaClient
+vi.mock('database', () => {
   return {
-    ...actual,
+    PrismaClient: MockPrismaClient,
+    Prisma: {
+      PrismaClientKnownRequestError: class PrismaClientKnownRequestError extends Error {
+        code: string;
+        constructor(message: string, { code }: { code: string }) {
+          super(message);
+          this.code = code;
+        }
+      },
+    },
     Role,
     ProjectStatus,
     MilestoneStatus,
