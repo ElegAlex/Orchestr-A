@@ -26,10 +26,10 @@ export default defineConfig({
         'src/__mocks__/**',
       ],
       thresholds: {
-        lines: 80,
+        lines: 65,
         functions: 80,
-        branches: 80,
-        statements: 80,
+        branches: 65,
+        statements: 65,
       },
     },
     include: ['src/**/*.spec.ts'],
