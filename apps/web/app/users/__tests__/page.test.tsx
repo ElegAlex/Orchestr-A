@@ -224,11 +224,6 @@ describe('UsersPage', () => {
       expect(screen.getByRole('heading', { name: /créer un utilisateur/i })).toBeInTheDocument();
     });
 
-    // Find inputs by type - modal has specific input fields
-    const textInputs = screen.getAllByRole('textbox');
-    const emailInput = textInputs.find(input => input.getAttribute('type') === 'email') || textInputs[2]; // email is 3rd textbox
-    const passwordInput = screen.getByPlaceholderText('') || document.querySelector('input[type="password"]');
-
     // Find inputs - the form has: firstName, lastName (first row), email, login, password
     const inputs = document.querySelectorAll('.bg-white.rounded-lg input[type="text"], .bg-white.rounded-lg input[type="email"], .bg-white.rounded-lg input[type="password"]');
 
