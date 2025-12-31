@@ -1,13 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { login } from "./helpers";
 
 test.describe("Leaves Management", () => {
   test.beforeEach(async ({ page }) => {
-    // Login avant chaque test
-    await page.goto("/login");
-    await page.getByPlaceholder(/login ou email/i).fill("admin");
-    await page.getByPlaceholder(/mot de passe/i).fill("admin123");
-    await page.getByRole("button", { name: /se connecter/i }).click();
-    await page.waitForURL("**/dashboard", { timeout: 10000 });
+    await login(page);
   });
 
   test("should display leaves page", async ({ page }) => {
@@ -158,12 +154,7 @@ test.describe("Leaves Management", () => {
 
 test.describe("Leave Approval Workflow", () => {
   test.beforeEach(async ({ page }) => {
-    // Login en tant qu'admin/manager pour avoir accès à l'approbation
-    await page.goto("/login");
-    await page.getByPlaceholder(/login ou email/i).fill("admin");
-    await page.getByPlaceholder(/mot de passe/i).fill("admin123");
-    await page.getByRole("button", { name: /se connecter/i }).click();
-    await page.waitForURL("**/dashboard", { timeout: 10000 });
+    await login(page);
   });
 
   test("should display pending leaves for approval", async ({ page }) => {
