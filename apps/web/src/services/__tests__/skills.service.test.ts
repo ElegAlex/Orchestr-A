@@ -165,7 +165,15 @@ describe('skillsService', () => {
 
   describe('getUserSkills', () => {
     it('should fetch user skills', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: [mockUserSkill] });
+      // The API returns { userId, total, skills, byCategory } structure
+      (api.get as jest.Mock).mockResolvedValue({
+        data: {
+          userId: 'user-1',
+          total: 1,
+          skills: [mockUserSkill],
+          byCategory: { TECHNICAL: [mockUserSkill] },
+        },
+      });
 
       const result = await skillsService.getUserSkills('user-1');
 
