@@ -20,7 +20,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "cd apps/web && npm run dev",
+    command: "pnpm --filter web start --port 3000",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
