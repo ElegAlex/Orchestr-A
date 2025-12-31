@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { usersService, UserPresenceItem, PresenceData } from '@/services/users.service';
 
 function UserPresenceCard({ user }: { user: UserPresenceItem }) {
@@ -8,12 +9,14 @@ function UserPresenceCard({ user }: { user: UserPresenceItem }) {
 
   return (
     <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-      <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium">
+      <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium overflow-hidden">
         {user.avatarUrl ? (
-          <img
+          <Image
             src={user.avatarUrl}
             alt={`${user.firstName} ${user.lastName}`}
-            className="h-9 w-9 rounded-full object-cover"
+            width={36}
+            height={36}
+            className="rounded-full object-cover"
           />
         ) : (
           initials

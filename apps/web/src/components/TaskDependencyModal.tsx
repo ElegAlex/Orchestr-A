@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Task, TaskDependency, TaskStatus } from '@/types';
+import { Task, TaskDependency } from '@/types';
 import { TaskDependencySelector } from './TaskDependencySelector';
 import { DependencyValidationBanner } from './DependencyValidationBanner';
 import {

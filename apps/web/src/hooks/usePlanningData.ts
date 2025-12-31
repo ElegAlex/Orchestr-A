@@ -91,7 +91,8 @@ export const usePlanningData = ({
   }, [currentDate, viewMode]);
 
   // Fetch data
-  const fetchData = async (silent = false) => {
+  const fetchData = useCallback(async (silent = false) => {
+    if (displayDays.length === 0) return;
     try {
       if (!silent) setLoading(true);
       const startDate = startOfDay(displayDays[0]);
@@ -136,13 +137,11 @@ export const usePlanningData = ({
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, [displayDays]);
 
   useEffect(() => {
-    if (displayDays.length > 0) {
-      fetchData();
-    }
-  }, [currentDate, viewMode]);
+    fetchData();
+  }, [fetchData]);
 
   // Identifier les managers (encadrement)
   const isManager = (u: User): boolean => {

@@ -100,7 +100,6 @@ export const PlanningGrid = ({
     filteredGroups,
     getDayCell,
     getHolidayForDate,
-    refetch,
     silentRefetch,
     getGroupTaskCount,
   } = usePlanningData({
