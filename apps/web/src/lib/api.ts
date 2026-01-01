@@ -1,7 +1,9 @@
 import axios from "axios";
 
-// Use relative path to leverage Next.js rewrites
-const API_URL = "/api";
+// Use NEXT_PUBLIC_API_URL if available (for CI/production), otherwise use relative path for rewrites
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL}/api`
+  : "/api";
 
 export const api = axios.create({
   baseURL: API_URL,
