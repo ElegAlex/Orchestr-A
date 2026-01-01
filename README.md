@@ -326,7 +326,7 @@ MIT License - Voir le fichier [LICENSE](./LICENSE)
 
 ## 👥 Équipe
 
-ORCHESTR'A Team
+Alexandre BERGE
 
 ---
 
