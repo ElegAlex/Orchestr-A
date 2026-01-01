@@ -233,6 +233,7 @@ jobs:
           JWT_SECRET: test-jwt-secret-key
           REDIS_URL: redis://localhost:6379
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          API_URL: http://localhost:3001
 
       - name: Start Backend API
         run: |
