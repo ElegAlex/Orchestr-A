@@ -26,25 +26,25 @@ ORCHESTR'A V2 est une plateforme web moderne qui permet de gérer :
 ### Backend
 
 - **Node.js** >= 22.0.0 LTS
-- **NestJS** 11.1 + **Fastify** 5
-- **Prisma** 6.19 (ORM)
+- **NestJS** 11.1.10 + **Fastify** 5
+- **Prisma** 6.19.1 (ORM)
 - **PostgreSQL** 18
 - **Redis** 7.4
 
 ### Frontend
 
-- **Next.js** 16.1 (App Router)
-- **React** 19.2
+- **Next.js** 16.1.1 (App Router)
+- **React** 19.2.3
 - **TypeScript** 5
 - **Tailwind CSS** 4
-- **TanStack Query** 5
-- **Zustand** 5
+- **TanStack Query** 5.90.6
+- **Zustand** 5.0.8
 
 ### Infrastructure
 
-- **Docker** 28 + **Docker Compose**
-- **Turborepo** 2 (Monorepo)
-- **pnpm** 9
+- **Docker** + **Docker Compose**
+- **Turborepo** 2.3.3 (Monorepo)
+- **pnpm** 9.15.9
 
 ## 📦 Structure du projet
 
