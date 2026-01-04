@@ -116,27 +116,53 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 docker compose --env-file .env.production -f docker-compose.prod.yml restart api
 ```
 
-## Configuration SSL/HTTPS
+## Configuration SSL/HTTPS (optionnel)
 
-### Option 1 : Certificats Let's Encrypt (recommande)
+Si vous avez un nom de domaine, suivez ces etapes pour activer HTTPS avec Let's Encrypt.
 
-```bash
-# Placer vos certificats dans nginx/ssl/
-cp /etc/letsencrypt/live/votre-domaine/fullchain.pem ./nginx/ssl/
-cp /etc/letsencrypt/live/votre-domaine/privkey.pem ./nginx/ssl/
-
-# Editer nginx/nginx.conf pour decommenter le bloc HTTPS
-nano nginx/nginx.conf
-
-# Redemarrer nginx
-docker compose --env-file .env.production -f docker-compose.prod.yml restart nginx
-```
-
-### Option 2 : Script automatise
+### Etape 1 : Configurer le domaine
 
 ```bash
-./scripts/configure-ssl.sh votre-domaine.com
+# Editer .env.production pour utiliser votre domaine
+nano .env.production
+# Modifier CORS_ORIGIN=https://votre-domaine.com
 ```
+
+### Etape 2 : Mettre a jour nginx.conf
+
+```bash
+# Remplacer orchestr-a.com par votre domaine
+sed -i 's/orchestr-a.com/votre-domaine.com/g' nginx/nginx.conf
+```
+
+### Etape 3 : Obtenir les certificats SSL
+
+```bash
+# Arreter nginx si en cours d'execution (libere le port 80)
+docker compose --env-file .env.production -f docker-compose.prod.yml stop nginx 2>/dev/null || true
+
+# Obtenir le certificat via Docker (remplacez les valeurs)
+docker run --rm \
+  -v orchestr-a-certbot-certs:/etc/letsencrypt \
+  -v orchestr-a-certbot-www:/var/www/certbot \
+  -p 80:80 \
+  certbot/certbot certonly \
+  --standalone \
+  --preferred-challenges http \
+  -d votre-domaine.com \
+  -d www.votre-domaine.com \
+  --email votre-email@example.com \
+  --agree-tos \
+  --non-interactive
+```
+
+### Etape 4 : Demarrer les services
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+```
+
+Les certificats sont automatiquement renouveles par le conteneur certbot.
 
 ## Backup de la base de donnees
 
@@ -153,7 +179,7 @@ docker exec orchestr-a-postgres-prod pg_dump -U orchestr_a orchestr_a_prod > bac
 Apres le premier deploiement :
 
 - **URL** : http://VOTRE_IP ou https://votre-domaine.com
-- **Email** : `admin@orchestr-a.internal`
+- **Login** : `admin`
 - **Mot de passe** : `admin123`
 
 **IMPORTANT** : Changez ce mot de passe immediatement apres la premiere connexion !
@@ -200,24 +226,28 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --bui
 ## Architecture des conteneurs
 
 ```
-                    +--------------+
-                    |    nginx     |
-                    |   (port 80)  |
-                    +------+-------+
-                           |
-            +--------------+--------------+
-            |                             |
-    +-------v-------+             +-------v-------+
-    |     web       |             |     api       |
-    | (Next.js:3000)|             | (NestJS:4000) |
-    +---------------+             +-------+-------+
-                                          |
-                          +---------------+---------------+
-                          |                               |
-                  +-------v-------+               +-------v-------+
-                  |   postgres    |               |     redis     |
-                  |  (port 5432)  |               |  (port 6379)  |
-                  +---------------+               +---------------+
+                         +--------------+
+                         |    nginx     |
+                         | (80 + 443)   |
+                         +------+-------+
+                                |
+                 +--------------+--------------+
+                 |                             |
+         +-------v-------+             +-------v-------+
+         |     web       |             |     api       |
+         | (Next.js:3000)|             | (NestJS:4000) |
+         +---------------+             +-------+-------+
+                                               |
+                               +---------------+---------------+
+                               |                               |
+                       +-------v-------+               +-------v-------+
+                       |   postgres    |               |     redis     |
+                       |  (port 5432)  |               |  (port 6379)  |
+                       +---------------+               +---------------+
+
+         +---------------+
+         |    certbot    |  <-- Renouvellement automatique SSL
+         +---------------+
 ```
 
 ## Support
