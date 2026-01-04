@@ -116,4 +116,4 @@ echo "=================================================================="
 echo ""
 
 cd /app
-exec node apps/api/dist/src/main.js
+exec node apps/api/dist/main.js
