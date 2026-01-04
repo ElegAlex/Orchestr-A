@@ -77,8 +77,15 @@ echo "[3/4] Checking default data..."
 
 # Create admin user if none exists (using INSERT ... ON CONFLICT for idempotency)
 echo "      Ensuring default admin user exists..."
-npx prisma db execute --stdin <<EOF 2>/dev/null || true
-INSERT INTO users (id, email, login, "passwordHash", "firstName", "lastName", role, "isActive", "createdAt", "updatedAt")
+
+# Extract connection details from DATABASE_URL for psql
+# Format: postgresql://user:pass@host:port/dbname
+DB_USER=$(echo "$DATABASE_URL" | sed -n 's|postgresql://\([^:]*\):.*|\1|p')
+DB_PASS=$(echo "$DATABASE_URL" | sed -n 's|postgresql://[^:]*:\([^@]*\)@.*|\1|p')
+DB_NAME=$(echo "$DATABASE_URL" | sed -n 's|.*/\([^?]*\).*|\1|p')
+
+PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "
+INSERT INTO users (id, email, login, \"passwordHash\", \"firstName\", \"lastName\", role, \"isActive\", \"createdAt\", \"updatedAt\")
 VALUES (
     gen_random_uuid()::text,
     'admin@orchestr-a.internal',
@@ -92,7 +99,8 @@ VALUES (
     NOW()
 )
 ON CONFLICT (email) DO NOTHING;
-EOF
+" 2>/dev/null || echo "      (admin may already exist)"
+
 echo "      Default admin: admin@orchestr-a.internal / admin123"
 
 echo ""
