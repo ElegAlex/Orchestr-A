@@ -75,17 +75,11 @@ echo ""
 # ========================================
 echo "[3/4] Checking default data..."
 
-# Create admin user if no users exist
-ADMIN_EXISTS=$(npx prisma db execute --stdin <<EOF 2>/dev/null | grep -c "1" || echo "0"
-SELECT COUNT(*) FROM users WHERE role = 'ADMIN';
-EOF
-)
-
-if [ "$ADMIN_EXISTS" = "0" ] || [ -z "$ADMIN_EXISTS" ]; then
-    echo "      Creating default admin user..."
-    npx prisma db execute --stdin <<EOF 2>/dev/null || true
+# Create admin user if none exists (using INSERT ... ON CONFLICT for idempotency)
+echo "      Ensuring default admin user exists..."
+npx prisma db execute --stdin <<EOF 2>/dev/null || true
 INSERT INTO users (id, email, login, "passwordHash", "firstName", "lastName", role, "isActive", "createdAt", "updatedAt")
-SELECT
+VALUES (
     gen_random_uuid()::text,
     'admin@orchestr-a.internal',
     'admin',
@@ -96,12 +90,10 @@ SELECT
     true,
     NOW(),
     NOW()
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@orchestr-a.internal');
+)
+ON CONFLICT (email) DO NOTHING;
 EOF
-    echo "      Admin user created (admin@orchestr-a.internal / admin123)"
-else
-    echo "      Admin user already exists"
-fi
+echo "      Default admin: admin@orchestr-a.internal / admin123"
 
 echo ""
 
