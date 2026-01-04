@@ -32,8 +32,8 @@ RUN pnpm --filter api run build
 # ==================================
 FROM node:22-alpine AS production
 
-# Installation de pnpm et netcat (pour healthcheck dans entrypoint)
-RUN npm install -g pnpm@9.15.0 && apk add --no-cache netcat-openbsd
+# Installation de pnpm, netcat (pour healthcheck) et postgresql-client (pour seed)
+RUN npm install -g pnpm@9.15.0 && apk add --no-cache netcat-openbsd postgresql-client
 
 # Création de l'utilisateur non-root
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
