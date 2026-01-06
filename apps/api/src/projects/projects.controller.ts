@@ -27,6 +27,7 @@ import { AddMemberDto } from './dto/add-member.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role, ProjectStatus } from 'database';
 
 @ApiTags('projects')
@@ -58,8 +59,11 @@ export class ProjectsController {
     status: 404,
     description: 'Manager ou département introuvable',
   })
-  create(@Body() createProjectDto: CreateProjectDto) {
-    return this.projectsService.create(createProjectDto);
+  create(
+    @Body() createProjectDto: CreateProjectDto,
+    @CurrentUser('id') creatorId: string,
+  ) {
+    return this.projectsService.create(createProjectDto, creatorId);
   }
 
   @Get()
