@@ -168,10 +168,10 @@ export class ProjectsController {
   }
 
   @Delete(':id/hard')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.RESPONSABLE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Supprimer définitivement un projet (Admin uniquement)',
+    summary: 'Supprimer définitivement un projet (Admin/Responsable)',
   })
   @ApiResponse({
     status: 200,
