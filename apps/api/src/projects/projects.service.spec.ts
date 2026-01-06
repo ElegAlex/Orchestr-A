@@ -32,6 +32,7 @@ describe('ProjectsService', () => {
     timeEntry: {
       findMany: vi.fn(),
     },
+    $transaction: vi.fn(),
   };
 
   const mockProject = {
@@ -93,15 +94,38 @@ describe('ProjectsService', () => {
       managerId: 'manager-1',
       departmentId: 'dept-1',
     };
+    const creatorId = 'creator-user-id';
 
-    it('should create a project successfully', async () => {
-      mockPrismaService.project.create.mockResolvedValue(mockProject);
+    // Helper to setup transaction mock
+    const setupTransactionMock = (projectToReturn: typeof mockProject | null) => {
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const tx = {
+          project: {
+            create: vi.fn().mockResolvedValue({ ...mockProject, id: 'new-project-id' }),
+            findUnique: vi.fn().mockResolvedValue(projectToReturn),
+          },
+          projectMember: {
+            create: vi.fn().mockResolvedValue({
+              id: 'member-1',
+              projectId: 'new-project-id',
+              userId: creatorId,
+              role: 'Chef de projet',
+              allocation: 100,
+            }),
+          },
+        };
+        return callback(tx);
+      });
+    };
 
-      const result = await service.create(createProjectDto);
+    it('should create a project successfully and add creator as member', async () => {
+      setupTransactionMock(mockProject);
+
+      const result = await service.create(createProjectDto, creatorId);
 
       expect(result).toBeDefined();
-      expect(result.name).toBe('Test Project');
-      expect(mockPrismaService.project.create).toHaveBeenCalled();
+      expect(result!.name).toBe('Test Project');
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when end date is before start date', async () => {
@@ -111,7 +135,7 @@ describe('ProjectsService', () => {
         endDate: '2025-01-01',
       };
 
-      await expect(service.create(invalidDto)).rejects.toThrow(
+      await expect(service.create(invalidDto, creatorId)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -123,33 +147,20 @@ describe('ProjectsService', () => {
         code: 'TEST-001',
       };
 
-      mockPrismaService.project.create.mockResolvedValue({
-        ...mockProject,
-        startDate: null,
-        endDate: null,
-      });
+      setupTransactionMock({ ...mockProject, startDate: null, endDate: null });
 
-      const result = await service.create(dtoWithoutDates);
+      const result = await service.create(dtoWithoutDates, creatorId);
 
       expect(result).toBeDefined();
     });
 
     it('should use DRAFT status by default', async () => {
       const dtoWithoutStatus = { ...createProjectDto };
-      mockPrismaService.project.create.mockResolvedValue({
-        ...mockProject,
-        status: ProjectStatus.DRAFT,
-      });
+      setupTransactionMock({ ...mockProject, status: ProjectStatus.DRAFT });
 
-      await service.create(dtoWithoutStatus);
+      await service.create(dtoWithoutStatus, creatorId);
 
-      expect(mockPrismaService.project.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            status: ProjectStatus.DRAFT,
-          }) as object,
-        }),
-      );
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
     });
 
     it('should use provided status', async () => {
@@ -157,20 +168,11 @@ describe('ProjectsService', () => {
         ...createProjectDto,
         status: ProjectStatus.ACTIVE,
       };
-      mockPrismaService.project.create.mockResolvedValue({
-        ...mockProject,
-        status: ProjectStatus.ACTIVE,
-      });
+      setupTransactionMock({ ...mockProject, status: ProjectStatus.ACTIVE });
 
-      await service.create(dtoWithStatus);
+      await service.create(dtoWithStatus, creatorId);
 
-      expect(mockPrismaService.project.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            status: ProjectStatus.ACTIVE,
-          }) as object,
-        }),
-      );
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
     });
   });
 

@@ -68,6 +68,7 @@ describe('ProjectsController', () => {
       endDate: '2025-12-31',
       budgetHours: 500,
     };
+    const creatorId = 'creator-user-id';
 
     it('should create a new project successfully', async () => {
       const expectedProject = {
@@ -77,10 +78,10 @@ describe('ProjectsController', () => {
       };
       mockProjectsService.create.mockResolvedValue(expectedProject);
 
-      const result = await controller.create(createProjectDto);
+      const result = await controller.create(createProjectDto, creatorId);
 
       expect(result).toEqual(expectedProject);
-      expect(mockProjectsService.create).toHaveBeenCalledWith(createProjectDto);
+      expect(mockProjectsService.create).toHaveBeenCalledWith(createProjectDto, creatorId);
       expect(mockProjectsService.create).toHaveBeenCalledTimes(1);
     });
 
@@ -96,7 +97,7 @@ describe('ProjectsController', () => {
           ...createProjectDto,
           startDate: '2025-12-31',
           endDate: '2025-01-01',
-        }),
+        }, creatorId),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -105,10 +106,11 @@ describe('ProjectsController', () => {
       const expectedProject = { ...mockProject, name: 'Minimal Project' };
       mockProjectsService.create.mockResolvedValue(expectedProject);
 
-      const result = await controller.create(minimalDto);
+      const result = await controller.create(minimalDto, creatorId);
 
-      expect(result.name).toBe('Minimal Project');
-      expect(mockProjectsService.create).toHaveBeenCalledWith(minimalDto);
+      expect(result).not.toBeNull();
+      expect(result!.name).toBe('Minimal Project');
+      expect(mockProjectsService.create).toHaveBeenCalledWith(minimalDto, creatorId);
     });
   });
 

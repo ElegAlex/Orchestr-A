@@ -16,8 +16,9 @@ export class ProjectsService {
 
   /**
    * Créer un nouveau projet
+   * Le créateur est automatiquement ajouté comme membre avec le rôle "Chef de projet"
    */
-  async create(createProjectDto: CreateProjectDto) {
+  async create(createProjectDto: CreateProjectDto, creatorId: string) {
     const { startDate, endDate, ...projectData } = createProjectDto;
 
     // Vérifier que la date de fin est après la date de début
@@ -27,46 +28,64 @@ export class ProjectsService {
       );
     }
 
-    // Créer le projet
-    const project = await this.prisma.project.create({
-      data: {
-        ...projectData,
-        ...(startDate && { startDate: new Date(startDate) }),
-        ...(endDate && { endDate: new Date(endDate) }),
-        status: createProjectDto.status || ProjectStatus.DRAFT,
-      },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
+    // Créer le projet et ajouter le créateur comme membre dans une transaction
+    const project = await this.prisma.$transaction(async (tx) => {
+      // Créer le projet
+      const newProject = await tx.project.create({
+        data: {
+          ...projectData,
+          ...(startDate && { startDate: new Date(startDate) }),
+          ...(endDate && { endDate: new Date(endDate) }),
+          status: createProjectDto.status || ProjectStatus.DRAFT,
+        },
+      });
+
+      // Ajouter automatiquement le créateur comme membre du projet
+      await tx.projectMember.create({
+        data: {
+          projectId: newProject.id,
+          userId: creatorId,
+          role: 'Chef de projet',
+          allocation: 100,
+        },
+      });
+
+      // Retourner le projet avec toutes les relations
+      return tx.project.findUnique({
+        where: { id: newProject.id },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
               },
             },
           },
-        },
-        epics: {
-          select: {
-            id: true,
-            name: true,
+          epics: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          milestones: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          tasks: {
+            select: {
+              id: true,
+              title: true,
+            },
           },
         },
-        milestones: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        tasks: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
+      });
     });
 
     return project;
