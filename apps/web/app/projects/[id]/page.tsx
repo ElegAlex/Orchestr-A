@@ -1856,25 +1856,16 @@ export default function ProjectDetailPage() {
                 </h2>
               </div>
 
-              <p className="text-gray-600 mb-6">
-                Êtes-vous sûr de vouloir supprimer le projet{" "}
+              <p className="text-gray-600 mb-4">
+                Êtes-vous sûr de vouloir supprimer définitivement le projet{" "}
                 <span className="font-semibold">&quot;{project?.name}&quot;</span> ?
               </p>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-yellow-800">
-                  <strong>Annuler</strong> : Le projet sera marqué comme annulé
-                  mais conservé dans la base de données.
-                  {canHardDeleteProject && (
-                    <>
-                      <br />
-                      <strong className="text-red-600">
-                        Supprimer définitivement
-                      </strong>{" "}
-                      : Le projet et toutes ses données seront supprimés de
-                      manière permanente.
-                    </>
-                  )}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-red-800">
+                  <strong>Attention :</strong> Cette action est irréversible.
+                  Le projet et toutes ses données (tâches, jalons, membres) seront
+                  supprimés définitivement.
                 </p>
               </div>
 
@@ -1887,27 +1878,15 @@ export default function ProjectDetailPage() {
                   Annuler
                 </button>
                 <button
-                  onClick={handleDeleteProject}
+                  onClick={handleHardDeleteProject}
                   disabled={deleting}
-                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition disabled:opacity-50 flex items-center space-x-2"
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center space-x-2"
                 >
                   {deleting && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   )}
-                  <span>Annuler le projet</span>
+                  <span>Supprimer définitivement</span>
                 </button>
-                {canHardDeleteProject && (
-                  <button
-                    onClick={handleHardDeleteProject}
-                    disabled={deleting}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center space-x-2"
-                  >
-                    {deleting && (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    )}
-                    <span>Supprimer définitivement</span>
-                  </button>
-                )}
               </div>
             </div>
           </div>
