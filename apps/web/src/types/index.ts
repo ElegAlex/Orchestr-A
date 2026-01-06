@@ -266,6 +266,7 @@ export interface UpdateProjectDto {
   departmentId?: string;
   budget?: number;
   estimatedHours?: number;
+  budgetHours?: number;
 }
 
 export interface AddMemberDto {

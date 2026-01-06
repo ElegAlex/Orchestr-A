@@ -13,7 +13,9 @@ import {
   MilestonesValidationPreview,
 } from "@/services/milestones.service";
 import { ImportPreviewModal } from "@/components/ImportPreviewModal";
+import { ProjectEditModal } from "@/components/ProjectEditModal";
 import { usersService } from "@/services/users.service";
+import { useAuthStore } from "@/stores/auth.store";
 import {
   Project,
   ProjectStats,
@@ -23,6 +25,8 @@ import {
   TaskStatus,
   Milestone,
   User,
+  Role,
+  UpdateProjectDto,
 } from "@/types";
 import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
@@ -91,6 +95,12 @@ export default function ProjectDetailPage() {
       dueDate: string;
     }>
   >([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Get current user from auth store
+  const { user: currentUser } = useAuthStore();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -705,6 +715,67 @@ export default function ProjectDetailPage() {
     }
   };
 
+  // Permission helpers
+  const canEditProject = currentUser && [
+    Role.ADMIN,
+    Role.RESPONSABLE,
+    Role.MANAGER,
+  ].includes(currentUser.role);
+
+  const canDeleteProject = currentUser && [
+    Role.ADMIN,
+    Role.RESPONSABLE,
+  ].includes(currentUser.role);
+
+  const canHardDeleteProject = currentUser?.role === Role.ADMIN;
+
+  // Project update handler
+  const handleUpdateProject = async (data: UpdateProjectDto) => {
+    await projectsService.update(projectId, data);
+    toast.success("Projet mis à jour avec succès");
+    // Refresh project data
+    const projectData = await projectsService.getById(projectId);
+    setProject(projectData);
+  };
+
+  // Project delete handler (soft delete - sets status to CANCELLED)
+  const handleDeleteProject = async () => {
+    setDeleting(true);
+    try {
+      await projectsService.delete(projectId);
+      toast.success("Projet annulé avec succès");
+      router.push("/projects");
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message ||
+          "Erreur lors de la suppression du projet"
+      );
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  // Project hard delete handler (permanent deletion)
+  const handleHardDeleteProject = async () => {
+    setDeleting(true);
+    try {
+      await projectsService.hardDelete(projectId);
+      toast.success("Projet supprimé définitivement");
+      router.push("/projects");
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message ||
+          "Erreur lors de la suppression définitive"
+      );
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   if (loading || !project) {
     return (
       <MainLayout>
@@ -753,6 +824,45 @@ export default function ProjectDetailPage() {
               >
                 {getPriorityLabel(project.priority)}
               </span>
+              {/* Action buttons based on user role */}
+              {canEditProject && (
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
+                  title="Modifier le projet"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                  </svg>
+                  <span>Modifier</span>
+                </button>
+              )}
+              {canDeleteProject && (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center space-x-2"
+                  title="Supprimer le projet"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span>Supprimer</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1710,6 +1820,97 @@ export default function ProjectDetailPage() {
             ]}
             isImporting={importingMilestones}
           />
+        )}
+
+        {/* Project Edit Modal */}
+        {project && (
+          <ProjectEditModal
+            isOpen={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            onSave={handleUpdateProject}
+            project={project}
+          />
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6 text-red-600"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Supprimer le projet
+                </h2>
+              </div>
+
+              <p className="text-gray-600 mb-6">
+                Êtes-vous sûr de vouloir supprimer le projet{" "}
+                <span className="font-semibold">&quot;{project?.name}&quot;</span> ?
+              </p>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-yellow-800">
+                  <strong>Annuler</strong> : Le projet sera marqué comme annulé
+                  mais conservé dans la base de données.
+                  {canHardDeleteProject && (
+                    <>
+                      <br />
+                      <strong className="text-red-600">
+                        Supprimer définitivement
+                      </strong>{" "}
+                      : Le projet et toutes ses données seront supprimés de
+                      manière permanente.
+                    </>
+                  )}
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleDeleteProject}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition disabled:opacity-50 flex items-center space-x-2"
+                >
+                  {deleting && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  )}
+                  <span>Annuler le projet</span>
+                </button>
+                {canHardDeleteProject && (
+                  <button
+                    onClick={handleHardDeleteProject}
+                    disabled={deleting}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center space-x-2"
+                  >
+                    {deleting && (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    )}
+                    <span>Supprimer définitivement</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </MainLayout>
