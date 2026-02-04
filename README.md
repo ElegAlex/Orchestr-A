@@ -21,7 +21,40 @@ ORCHESTR'A V2 est une plateforme web moderne qui permet de gérer :
 ✅ **Authentification** : JWT avec RBAC (6 rôles), routes protégées
 ✅ **API REST** : 107 endpoints documentés avec Swagger
 
-## 🚀 Stack Technique
+## 🚀 Déploiement rapide
+
+Déployez Orchestr-A en une commande (Docker requis) :
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ElegAlex/Orchestr-A/master/install.sh | bash
+```
+
+Ou manuellement :
+
+```bash
+# Télécharger la configuration
+mkdir orchestr-a && cd orchestr-a
+curl -fsSL https://raw.githubusercontent.com/ElegAlex/Orchestr-A/master/docker-compose.standalone.yml -o docker-compose.yml
+
+# Configurer (générer vos secrets)
+cat > .env << EOF
+POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)
+REDIS_PASSWORD=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)
+JWT_SECRET=$(openssl rand -base64 64 | tr -dc 'a-zA-Z0-9' | head -c 64)
+EOF
+
+# Démarrer
+docker compose pull
+docker compose up -d
+```
+
+**Accès** : http://localhost:3000 — Login : `admin` / `admin123`
+
+📖 [Documentation complète du déploiement](docs/QUICK-DEPLOY.md)
+
+---
+
+## 🛠️ Stack Technique
 
 ### Backend
 
