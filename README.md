@@ -23,7 +23,23 @@ ORCHESTR'A V2 est une plateforme web moderne qui permet de gérer :
 
 ## 🚀 Déploiement rapide
 
-Déployez Orchestr-A en une commande (Docker requis) :
+### Option 1 : Image All-in-One (Ultra-simple)
+
+Une seule commande, tout est inclus (PostgreSQL, Redis, API, Web) :
+
+```bash
+docker run -d \
+  --name orchestr-a \
+  -p 3000:3000 \
+  -v orchestr-a-data:/data \
+  ghcr.io/elegalex/orchestr-a:latest
+```
+
+**Accès** : http://localhost:3000 — Login : `admin@orchestr-a.local` / `admin123`
+
+### Option 2 : Docker Compose (Multi-services)
+
+Déployez avec docker-compose pour plus de contrôle :
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ElegAlex/Orchestr-A/master/install.sh | bash
