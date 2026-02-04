@@ -2,7 +2,91 @@
 
 Déployez Orchestr-A en quelques minutes avec des images Docker pré-buildées.
 
-## Installation en une commande
+## Option 1 : Image All-in-One (Recommandé)
+
+La méthode la plus simple : une seule image Docker contenant tout (PostgreSQL, Redis, API, Web, Nginx).
+
+### Démarrage en une commande
+
+```bash
+docker run -d \
+  --name orchestr-a \
+  -p 3000:3000 \
+  -v orchestr-a-data:/data \
+  ghcr.io/elegalex/orchestr-a:latest
+```
+
+**C'est tout !** L'application sera disponible sur http://localhost:3000 après ~60 secondes.
+
+### Identifiants par défaut
+
+| Service | URL | Identifiants |
+|---------|-----|--------------|
+| Application | http://localhost:3000 | admin@orchestr-a.local / admin123 |
+| API | http://localhost:3000/api | - |
+| Swagger | http://localhost:3000/api/docs | - |
+
+### Options de configuration
+
+```bash
+# Avec JWT personnalisé (recommandé en production)
+docker run -d \
+  --name orchestr-a \
+  -p 3000:3000 \
+  -v orchestr-a-data:/data \
+  -e JWT_SECRET="votre-secret-de-64-caracteres-minimum-tres-securise" \
+  ghcr.io/elegalex/orchestr-a:latest
+
+# Exposer sur un autre port
+docker run -d \
+  --name orchestr-a \
+  -p 8080:3000 \
+  -v orchestr-a-data:/data \
+  ghcr.io/elegalex/orchestr-a:latest
+```
+
+### Commandes utiles (All-in-One)
+
+| Action | Commande |
+|--------|----------|
+| Voir les logs | `docker logs -f orchestr-a` |
+| Arrêter | `docker stop orchestr-a` |
+| Redémarrer | `docker restart orchestr-a` |
+| Supprimer (garder données) | `docker rm orchestr-a` |
+| Supprimer tout | `docker rm orchestr-a && docker volume rm orchestr-a-data` |
+| Voir le statut des services | `docker exec orchestr-a supervisorctl status` |
+
+### Architecture All-in-One
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              orchestr-a:latest (image unique)           │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │                  supervisord                     │   │
+│  └─────────┬───────┬───────┬───────┬───────────────┘   │
+│            │       │       │       │                    │
+│       ┌────▼──┐ ┌──▼───┐ ┌─▼──┐ ┌──▼─────┐             │
+│       │ nginx │ │ api  │ │ web│ │postgres│             │
+│       │ :3000 │ │ :4000│ │:3001│ │ :5432 │             │
+│       └───────┘ └──────┘ └────┘ └────────┘             │
+│                                    │                    │
+│                              ┌─────▼─────┐              │
+│                              │   redis   │              │
+│                              │   :6379   │              │
+│                              └───────────┘              │
+│                                                         │
+│  Volume persistant: /data                               │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Option 2 : Docker Compose (Multi-services)
+
+Pour plus de contrôle et de flexibilité (scaling, configuration avancée).
+
+### Installation en une commande
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ElegAlex/Orchestr-A/master/install.sh | bash
@@ -15,7 +99,7 @@ Le script :
 4. Génère des secrets sécurisés automatiquement
 5. Télécharge et démarre les services
 
-## Installation manuelle
+### Installation manuelle
 
 ### Prérequis
 
