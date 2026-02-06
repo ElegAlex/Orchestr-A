@@ -727,8 +727,6 @@ export default function ProjectDetailPage() {
     Role.RESPONSABLE,
   ].includes(currentUser.role);
 
-  const canHardDeleteProject = currentUser?.role === Role.ADMIN;
-
   // Project update handler
   const handleUpdateProject = async (data: UpdateProjectDto) => {
     await projectsService.update(projectId, data);
@@ -736,25 +734,6 @@ export default function ProjectDetailPage() {
     // Refresh project data
     const projectData = await projectsService.getById(projectId);
     setProject(projectData);
-  };
-
-  // Project delete handler (soft delete - sets status to CANCELLED)
-  const handleDeleteProject = async () => {
-    setDeleting(true);
-    try {
-      await projectsService.delete(projectId);
-      toast.success("Projet annulé avec succès");
-      router.push("/projects");
-    } catch (err) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        axiosError.response?.data?.message ||
-          "Erreur lors de la suppression du projet"
-      );
-    } finally {
-      setDeleting(false);
-      setShowDeleteConfirm(false);
-    }
   };
 
   // Project hard delete handler (permanent deletion)
