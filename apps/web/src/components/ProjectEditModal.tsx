@@ -59,7 +59,7 @@ export function ProjectEditModal({
       const axiosError = err as { response?: { data?: { message?: string } } };
       setError(
         axiosError.response?.data?.message ||
-          "Erreur lors de la mise à jour du projet"
+          "Erreur lors de la mise à jour du projet",
       );
     } finally {
       setSaving(false);
@@ -72,7 +72,9 @@ export function ProjectEditModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Modifier le projet</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            Modifier le projet
+          </h2>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -199,7 +201,9 @@ export function ProjectEditModal({
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  budgetHours: e.target.value ? parseInt(e.target.value) : undefined,
+                  budgetHours: e.target.value
+                    ? parseInt(e.target.value)
+                    : undefined,
                 })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"

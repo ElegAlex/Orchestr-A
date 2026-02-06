@@ -20,11 +20,11 @@ docker run -d \
 
 ### Identifiants par défaut
 
-| Service | URL | Identifiants |
-|---------|-----|--------------|
-| Application | http://localhost:3000 | admin@orchestr-a.local / admin123 |
-| API | http://localhost:3000/api | - |
-| Swagger | http://localhost:3000/api/docs | - |
+| Service     | URL                            | Identifiants                      |
+| ----------- | ------------------------------ | --------------------------------- |
+| Application | http://localhost:3000          | admin@orchestr-a.local / admin123 |
+| API         | http://localhost:3000/api      | -                                 |
+| Swagger     | http://localhost:3000/api/docs | -                                 |
 
 ### Options de configuration
 
@@ -47,14 +47,14 @@ docker run -d \
 
 ### Commandes utiles (All-in-One)
 
-| Action | Commande |
-|--------|----------|
-| Voir les logs | `docker logs -f orchestr-a` |
-| Arrêter | `docker stop orchestr-a` |
-| Redémarrer | `docker restart orchestr-a` |
-| Supprimer (garder données) | `docker rm orchestr-a` |
-| Supprimer tout | `docker rm orchestr-a && docker volume rm orchestr-a-data` |
-| Voir le statut des services | `docker exec orchestr-a supervisorctl status` |
+| Action                      | Commande                                                   |
+| --------------------------- | ---------------------------------------------------------- |
+| Voir les logs               | `docker logs -f orchestr-a`                                |
+| Arrêter                     | `docker stop orchestr-a`                                   |
+| Redémarrer                  | `docker restart orchestr-a`                                |
+| Supprimer (garder données)  | `docker rm orchestr-a`                                     |
+| Supprimer tout              | `docker rm orchestr-a && docker volume rm orchestr-a-data` |
+| Voir le statut des services | `docker exec orchestr-a supervisorctl status`              |
 
 ### Architecture All-in-One
 
@@ -93,6 +93,7 @@ curl -fsSL https://raw.githubusercontent.com/ElegAlex/Orchestr-A/master/install.
 ```
 
 Le script :
+
 1. Vérifie les prérequis (Docker, Docker Compose)
 2. Crée un répertoire `orchestr-a`
 3. Télécharge la configuration
@@ -155,11 +156,11 @@ docker compose up -d
 
 ## Accès
 
-| Service | URL | Identifiants |
-|---------|-----|--------------|
-| Application | http://localhost:3000 | admin / admin123 |
-| API | http://localhost:4000 | - |
-| Health check | http://localhost:4000/api/health | - |
+| Service      | URL                              | Identifiants     |
+| ------------ | -------------------------------- | ---------------- |
+| Application  | http://localhost:3000            | admin / admin123 |
+| API          | http://localhost:4000            | -                |
+| Health check | http://localhost:4000/api/health | -                |
 
 ## Configuration avancée
 
@@ -189,14 +190,14 @@ CORS_ORIGIN=https://orchestr-a.example.com
 
 ## Commandes utiles
 
-| Action | Commande |
-|--------|----------|
-| Voir les logs | `docker compose logs -f` |
-| Logs d'un service | `docker compose logs -f api` |
-| Redémarrer | `docker compose restart` |
-| Arrêter | `docker compose down` |
-| Mise à jour | `docker compose pull && docker compose up -d` |
-| Reset complet | `docker compose down -v && docker compose up -d` |
+| Action            | Commande                                         |
+| ----------------- | ------------------------------------------------ |
+| Voir les logs     | `docker compose logs -f`                         |
+| Logs d'un service | `docker compose logs -f api`                     |
+| Redémarrer        | `docker compose restart`                         |
+| Arrêter           | `docker compose down`                            |
+| Mise à jour       | `docker compose pull && docker compose up -d`    |
+| Reset complet     | `docker compose down -v && docker compose up -d` |
 
 ## Sauvegarde
 

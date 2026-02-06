@@ -1,12 +1,12 @@
 # Orchestr'A V2 — Guide d'installation sur RHEL 8.10
 
-| | |
-|---|---|
-| **Version du document** | 1.0.0 |
-| **Date** | 2026-02-05 |
-| **Auteur** | Equipe Orchestr'A |
-| **Application** | Orchestr'A V2 |
-| **Cible** | Red Hat Enterprise Linux 8.10 |
+|                         |                               |
+| ----------------------- | ----------------------------- |
+| **Version du document** | 1.0.0                         |
+| **Date**                | 2026-02-05                    |
+| **Auteur**              | Equipe Orchestr'A             |
+| **Application**         | Orchestr'A V2                 |
+| **Cible**               | Red Hat Enterprise Linux 8.10 |
 
 ---
 
@@ -14,25 +14,25 @@
 
 ### Materiel minimum
 
-| Ressource | Minimum | Recommande | Notes |
-|-----------|---------|------------|-------|
-| CPU | 2 vCPU | 4 vCPU | Build Docker gourmand en CPU |
-| RAM | 4 Go | 8 Go | PostgreSQL + Node.js + Nginx |
-| Disque | 20 Go | 50 Go | Images Docker ~5 Go + donnees |
-| Reseau | 1 Gbps | 1 Gbps | Acces Internet pour pull images |
-| DNS | Enregistrement A | A + AAAA | Pointe vers l'IP du serveur |
+| Ressource | Minimum          | Recommande | Notes                           |
+| --------- | ---------------- | ---------- | ------------------------------- |
+| CPU       | 2 vCPU           | 4 vCPU     | Build Docker gourmand en CPU    |
+| RAM       | 4 Go             | 8 Go       | PostgreSQL + Node.js + Nginx    |
+| Disque    | 20 Go            | 50 Go      | Images Docker ~5 Go + donnees   |
+| Reseau    | 1 Gbps           | 1 Gbps     | Acces Internet pour pull images |
+| DNS       | Enregistrement A | A + AAAA   | Pointe vers l'IP du serveur     |
 
 ### Compatibilite testee
 
-| Composant | Version |
-|-----------|---------|
-| RHEL | 8.10 |
-| Docker CE | 27.x |
-| Docker Compose | v2 (plugin) |
-| Node.js (images) | 22-alpine |
-| PostgreSQL | 18-alpine |
-| Redis | 7.4-alpine |
-| Nginx | 1.27-alpine |
+| Composant        | Version     |
+| ---------------- | ----------- |
+| RHEL             | 8.10        |
+| Docker CE        | 27.x        |
+| Docker Compose   | v2 (plugin) |
+| Node.js (images) | 22-alpine   |
+| PostgreSQL       | 18-alpine   |
+| Redis            | 7.4-alpine  |
+| Nginx            | 1.27-alpine |
 
 ---
 
@@ -157,13 +157,13 @@ sudo dnf install -y \
   yum-utils
 ```
 
-| Paquet | Usage |
-|--------|-------|
-| `git` | Clonage du depot Orchestr'A |
-| `curl` / `wget` | Telechargements et health checks |
-| `openssl` | Generation de secrets et certificats |
-| `bind-utils` | Commande `dig` pour verification DNS |
-| `yum-utils` | Fournit `yum-config-manager` (necessaire pour ajouter le depot Docker) |
+| Paquet          | Usage                                                                  |
+| --------------- | ---------------------------------------------------------------------- |
+| `git`           | Clonage du depot Orchestr'A                                            |
+| `curl` / `wget` | Telechargements et health checks                                       |
+| `openssl`       | Generation de secrets et certificats                                   |
+| `bind-utils`    | Commande `dig` pour verification DNS                                   |
+| `yum-utils`     | Fournit `yum-config-manager` (necessaire pour ajouter le depot Docker) |
 
 :white_check_mark: **Verification** : `git --version` et `curl --version` retournent des numeros de version.
 
@@ -221,11 +221,11 @@ sudo firewall-cmd --list-all
 
 SELinux (Security-Enhanced Linux) est active par defaut sur RHEL 8 en mode `enforcing`. Trois approches sont possibles :
 
-| Mode | Description | Recommandation |
-|------|-------------|----------------|
-| **Enforcing** (avec ajustements) | SELinux actif, regles adaptees pour Docker | :white_check_mark: **Recommande** |
-| **Permissive** | SELinux genere des alertes mais ne bloque pas | Acceptable pour un test |
-| **Disabled** | SELinux completement desactive | :warning: Deconseille en production |
+| Mode                             | Description                                   | Recommandation                      |
+| -------------------------------- | --------------------------------------------- | ----------------------------------- |
+| **Enforcing** (avec ajustements) | SELinux actif, regles adaptees pour Docker    | :white_check_mark: **Recommande**   |
+| **Permissive**                   | SELinux genere des alertes mais ne bloque pas | Acceptable pour un test             |
+| **Disabled**                     | SELinux completement desactive                | :warning: Deconseille en production |
 
 #### Option recommandee : Enforcing avec ajustements
 
@@ -334,12 +334,12 @@ sudo dnf install -y \
   docker-compose-plugin
 ```
 
-| Paquet | Role |
-|--------|------|
-| `docker-ce` | Le moteur Docker (daemon) |
-| `docker-ce-cli` | Interface en ligne de commande `docker` |
-| `containerd.io` | Runtime de conteneurs bas-niveau |
-| `docker-buildx-plugin` | Builder avance (multi-plateforme, cache) |
+| Paquet                  | Role                                              |
+| ----------------------- | ------------------------------------------------- |
+| `docker-ce`             | Le moteur Docker (daemon)                         |
+| `docker-ce-cli`         | Interface en ligne de commande `docker`           |
+| `containerd.io`         | Runtime de conteneurs bas-niveau                  |
+| `docker-buildx-plugin`  | Builder avance (multi-plateforme, cache)          |
 | `docker-compose-plugin` | Plugin `docker compose` v2 (sous-commande native) |
 
 > :warning: **Compose v2 vs v1** : le projet utilise `docker compose` (avec espace, plugin v2), pas `docker-compose` (avec tiret, binaire standalone v1 deprecie). La syntaxe est identique, seule l'invocation change.
@@ -409,12 +409,12 @@ sudo tee /etc/docker/daemon.json > /dev/null << 'EOF'
 EOF
 ```
 
-| Parametre | Explication |
-|-----------|-------------|
-| `log-driver` + `log-opts` | Limite chaque fichier de log a 50 Mo, garde 5 fichiers max par conteneur. Evite que les logs remplissent le disque. |
-| `storage-driver: overlay2` | Driver de stockage recommande pour les noyaux recents (RHEL 8 inclus). |
-| `dns` | Serveurs DNS de secours. Utile si le DNS interne est lent ou instable. Adaptez selon votre infrastructure. |
-| `live-restore` | Permet aux conteneurs de continuer a tourner pendant un redemarrage du daemon Docker. |
+| Parametre                  | Explication                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `log-driver` + `log-opts`  | Limite chaque fichier de log a 50 Mo, garde 5 fichiers max par conteneur. Evite que les logs remplissent le disque. |
+| `storage-driver: overlay2` | Driver de stockage recommande pour les noyaux recents (RHEL 8 inclus).                                              |
+| `dns`                      | Serveurs DNS de secours. Utile si le DNS interne est lent ou instable. Adaptez selon votre infrastructure.          |
+| `live-restore`             | Permet aux conteneurs de continuer a tourner pendant un redemarrage du daemon Docker.                               |
 
 Redemarrez Docker pour appliquer :
 
@@ -490,6 +490,7 @@ L'image API est construite en **2 etapes** (multi-stage build) pour obtenir une 
 2. **Stage `production`** : copie uniquement le code compile et les dependances de production. Installe `prisma` globalement pour les migrations au demarrage. Execute le tout sous un utilisateur non-root `nestjs`.
 
 Au demarrage du conteneur, le script `docker-entrypoint.sh` :
+
 - Attend que PostgreSQL soit accessible (boucle avec `nc`)
 - Applique les migrations Prisma (`prisma migrate deploy`)
 - Cree l'utilisateur admin par defaut s'il n'existe pas
@@ -524,6 +525,7 @@ chmod +x scripts/init-env.sh
 ```
 
 Le script :
+
 - Genere un mot de passe PostgreSQL de 32 caracteres aleatoires
 - Genere un mot de passe Redis de 32 caracteres aleatoires
 - Genere un secret JWT en base64 de 64 caracteres
@@ -551,63 +553,63 @@ Voici la liste exhaustive des variables du fichier `.env.production` :
 
 #### Secrets (obligatoires)
 
-| Variable | Description | Exemple | Obligatoire | Defaut |
-|----------|-------------|---------|:-----------:|--------|
-| `DATABASE_PASSWORD` | Mot de passe PostgreSQL | `aB3dEf...` (32 car.) | :white_check_mark: | — |
-| `REDIS_PASSWORD` | Mot de passe Redis | `xY9zWk...` (32 car.) | :white_check_mark: | — |
-| `JWT_SECRET` | Cle de signature des tokens JWT | `base64...` (64 car.) | :white_check_mark: | — |
+| Variable            | Description                     | Exemple               |    Obligatoire     | Defaut |
+| ------------------- | ------------------------------- | --------------------- | :----------------: | ------ |
+| `DATABASE_PASSWORD` | Mot de passe PostgreSQL         | `aB3dEf...` (32 car.) | :white_check_mark: | —      |
+| `REDIS_PASSWORD`    | Mot de passe Redis              | `xY9zWk...` (32 car.) | :white_check_mark: | —      |
+| `JWT_SECRET`        | Cle de signature des tokens JWT | `base64...` (64 car.) | :white_check_mark: | —      |
 
 #### Domaine (obligatoire)
 
-| Variable | Description | Exemple | Obligatoire | Defaut |
-|----------|-------------|---------|:-----------:|--------|
-| `CORS_ORIGIN` | URL de production pour CORS | `https://app.company.fr` | :white_check_mark: | — |
-| `NEXT_PUBLIC_API_URL` | URL de l'API vue depuis le navigateur | `/api` | Non | `/api` |
+| Variable              | Description                           | Exemple                  |    Obligatoire     | Defaut |
+| --------------------- | ------------------------------------- | ------------------------ | :----------------: | ------ |
+| `CORS_ORIGIN`         | URL de production pour CORS           | `https://app.company.fr` | :white_check_mark: | —      |
+| `NEXT_PUBLIC_API_URL` | URL de l'API vue depuis le navigateur | `/api`                   |        Non         | `/api` |
 
 #### Base de donnees (optionnel)
 
-| Variable | Description | Exemple | Obligatoire | Defaut |
-|----------|-------------|---------|:-----------:|--------|
-| `DATABASE_NAME` | Nom de la base PostgreSQL | `orchestr_a_prod` | Non | `orchestr_a_prod` |
-| `DATABASE_USER` | Utilisateur PostgreSQL | `orchestr_a` | Non | `postgres` |
+| Variable        | Description               | Exemple           | Obligatoire | Defaut            |
+| --------------- | ------------------------- | ----------------- | :---------: | ----------------- |
+| `DATABASE_NAME` | Nom de la base PostgreSQL | `orchestr_a_prod` |     Non     | `orchestr_a_prod` |
+| `DATABASE_USER` | Utilisateur PostgreSQL    | `orchestr_a`      |     Non     | `postgres`        |
 
 #### Authentification (optionnel)
 
-| Variable | Description | Exemple | Obligatoire | Defaut |
-|----------|-------------|---------|:-----------:|--------|
-| `JWT_EXPIRES_IN` | Duree de validite des tokens JWT | `7d`, `8h`, `30d` | Non | `7d` |
+| Variable         | Description                      | Exemple           | Obligatoire | Defaut |
+| ---------------- | -------------------------------- | ----------------- | :---------: | ------ |
+| `JWT_EXPIRES_IN` | Duree de validite des tokens JWT | `7d`, `8h`, `30d` |     Non     | `7d`   |
 
 #### Securite (optionnel)
 
-| Variable | Description | Exemple | Obligatoire | Defaut |
-|----------|-------------|---------|:-----------:|--------|
-| `THROTTLE_LIMIT` | Nombre max de requetes par fenetre | `100` | Non | `100` |
-| `THROTTLE_TTL` | Duree de la fenetre de rate-limit (secondes) | `60` | Non | `60` |
-| `SWAGGER_ENABLED` | Activer la documentation API Swagger | `false` | Non | `false` |
+| Variable          | Description                                  | Exemple | Obligatoire | Defaut  |
+| ----------------- | -------------------------------------------- | ------- | :---------: | ------- |
+| `THROTTLE_LIMIT`  | Nombre max de requetes par fenetre           | `100`   |     Non     | `100`   |
+| `THROTTLE_TTL`    | Duree de la fenetre de rate-limit (secondes) | `60`    |     Non     | `60`    |
+| `SWAGGER_ENABLED` | Activer la documentation API Swagger         | `false` |     Non     | `false` |
 
 #### Reseau (optionnel)
 
-| Variable | Description | Exemple | Obligatoire | Defaut |
-|----------|-------------|---------|:-----------:|--------|
-| `HTTP_PORT` | Port HTTP expose sur l'hote | `80` | Non | `80` |
-| `HTTPS_PORT` | Port HTTPS expose sur l'hote | `443` | Non | `443` |
+| Variable     | Description                  | Exemple | Obligatoire | Defaut |
+| ------------ | ---------------------------- | ------- | :---------: | ------ |
+| `HTTP_PORT`  | Port HTTP expose sur l'hote  | `80`    |     Non     | `80`   |
+| `HTTPS_PORT` | Port HTTPS expose sur l'hote | `443`   |     Non     | `443`  |
 
 #### Email (optionnel)
 
-| Variable | Description | Exemple | Obligatoire | Defaut |
-|----------|-------------|---------|:-----------:|--------|
-| `SMTP_HOST` | Serveur SMTP | `smtp.example.com` | Non | — |
-| `SMTP_PORT` | Port SMTP | `587` | Non | — |
-| `SMTP_USER` | Utilisateur SMTP | `noreply@example.com` | Non | — |
-| `SMTP_PASSWORD` | Mot de passe SMTP | `secret` | Non | — |
-| `SMTP_FROM` | Adresse d'expediteur | `ORCHESTR'A <noreply@...>` | Non | — |
+| Variable        | Description          | Exemple                    | Obligatoire | Defaut |
+| --------------- | -------------------- | -------------------------- | :---------: | ------ |
+| `SMTP_HOST`     | Serveur SMTP         | `smtp.example.com`         |     Non     | —      |
+| `SMTP_PORT`     | Port SMTP            | `587`                      |     Non     | —      |
+| `SMTP_USER`     | Utilisateur SMTP     | `noreply@example.com`      |     Non     | —      |
+| `SMTP_PASSWORD` | Mot de passe SMTP    | `secret`                   |     Non     | —      |
+| `SMTP_FROM`     | Adresse d'expediteur | `ORCHESTR'A <noreply@...>` |     Non     | —      |
 
 #### Monitoring (optionnel)
 
-| Variable | Description | Exemple | Obligatoire | Defaut |
-|----------|-------------|---------|:-----------:|--------|
-| `SENTRY_DSN` | DSN Sentry pour le suivi d'erreurs | `https://xxx@sentry.io/xxx` | Non | — |
-| `SENTRY_ENVIRONMENT` | Nom d'environnement Sentry | `production` | Non | — |
+| Variable             | Description                        | Exemple                     | Obligatoire | Defaut |
+| -------------------- | ---------------------------------- | --------------------------- | :---------: | ------ |
+| `SENTRY_DSN`         | DSN Sentry pour le suivi d'erreurs | `https://xxx@sentry.io/xxx` |     Non     | —      |
+| `SENTRY_ENVIRONMENT` | Nom d'environnement Sentry         | `production`                |     Non     | —      |
 
 ### 4.3 Configuration manuelle
 
@@ -662,6 +664,7 @@ L'application est concue pour fonctionner en HTTPS derriere le reverse proxy Ngi
 C'est la methode recommandee pour les serveurs accessibles depuis Internet.
 
 **Prerequis** :
+
 - Le domaine doit pointer vers l'IP publique du serveur (enregistrement DNS A)
 - Les ports 80 et 443 doivent etre ouverts (firewalld configure en section 1.5)
 
@@ -765,6 +768,7 @@ Navigateur → :443 (HTTPS) → Nginx → /api/*  → API (port 4000 interne)
 ```
 
 **Fonctionnalites incluses** :
+
 - **Compression gzip** : JSON, CSS, JS, SVG, fonts (economie de bande passante)
 - **En-tetes de securite** : `X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `HSTS`
 - **Rate limiting** : 10 requetes/seconde par IP sur `/api`, burst de 20
@@ -812,6 +816,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml build
 ```
 
 > :bulb: **Build sans cache** : si vous rencontrez des problemes de cache apres une mise a jour, ajoutez `--no-cache` :
+>
 > ```bash
 > docker compose --env-file .env.production -f docker-compose.prod.yml build --no-cache
 > ```
@@ -855,25 +860,25 @@ L'ordre de demarrage est gere automatiquement par les declarations `depends_on` 
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-| Service | Image | Role | Port interne | Expose a l'hote |
-|---------|-------|------|:------------:|:---------------:|
-| `postgres` | `postgres:18-alpine` | Base de donnees relationnelle | 5432 | Non |
-| `redis` | `redis:7.4-alpine` | Cache et sessions (max 256 Mo, politique LRU) | 6379 | Non |
-| `api` | Build local | API REST NestJS/Fastify | 4000 | Non |
-| `web` | Build local | Frontend Next.js (standalone) | 3000 | Non |
-| `nginx` | `nginx:1.27-alpine` | Reverse proxy + terminaison SSL | 80, 443 | **Oui** |
-| `certbot` | `certbot/certbot` | Renouvellement certificats Let's Encrypt | — | Non |
+| Service    | Image                | Role                                          | Port interne | Expose a l'hote |
+| ---------- | -------------------- | --------------------------------------------- | :----------: | :-------------: |
+| `postgres` | `postgres:18-alpine` | Base de donnees relationnelle                 |     5432     |       Non       |
+| `redis`    | `redis:7.4-alpine`   | Cache et sessions (max 256 Mo, politique LRU) |     6379     |       Non       |
+| `api`      | Build local          | API REST NestJS/Fastify                       |     4000     |       Non       |
+| `web`      | Build local          | Frontend Next.js (standalone)                 |     3000     |       Non       |
+| `nginx`    | `nginx:1.27-alpine`  | Reverse proxy + terminaison SSL               |   80, 443    |     **Oui**     |
+| `certbot`  | `certbot/certbot`    | Renouvellement certificats Let's Encrypt      |      —       |       Non       |
 
 **Volumes persistants** :
 
-| Volume | Contenu | Critique |
-|--------|---------|:--------:|
-| `orchestr-a-postgres-data-prod` | Donnees PostgreSQL | :white_check_mark: |
-| `orchestr-a-redis-data-prod` | Donnees Redis (AOF) | Non |
-| `orchestr-a-api-logs-prod` | Logs de l'API | Non |
-| `orchestr-a-nginx-logs-prod` | Logs Nginx | Non |
-| `orchestr-a-certbot-certs` | Certificats SSL Let's Encrypt | :white_check_mark: |
-| `orchestr-a-certbot-www` | Challenge ACME | Non |
+| Volume                          | Contenu                       |      Critique      |
+| ------------------------------- | ----------------------------- | :----------------: |
+| `orchestr-a-postgres-data-prod` | Donnees PostgreSQL            | :white_check_mark: |
+| `orchestr-a-redis-data-prod`    | Donnees Redis (AOF)           |        Non         |
+| `orchestr-a-api-logs-prod`      | Logs de l'API                 |        Non         |
+| `orchestr-a-nginx-logs-prod`    | Logs Nginx                    |        Non         |
+| `orchestr-a-certbot-certs`      | Certificats SSL Let's Encrypt | :white_check_mark: |
+| `orchestr-a-certbot-www`        | Challenge ACME                |        Non         |
 
 ### 6.4 Initialisation de la base de donnees
 
@@ -886,6 +891,7 @@ L'initialisation est **automatique** au premier demarrage :
    - Cree l'utilisateur admin par defaut via `INSERT ... ON CONFLICT DO NOTHING`
 
 > :warning: **Identifiants admin par defaut** :
+>
 > - Login : `admin`
 > - Mot de passe : `admin123`
 > - Email : `admin@orchestr-a.internal`
@@ -955,6 +961,7 @@ chmod +x scripts/health-check.sh
 ### 7.2 Creation des premiers utilisateurs
 
 Depuis l'interface d'administration (compte admin), creez les comptes utilisateurs necessaires. Chaque utilisateur recoit :
+
 - Un login unique
 - Un mot de passe initial
 - Un role (ADMIN, MANAGER, USER)
@@ -1046,12 +1053,14 @@ chmod +x scripts/backup-database.sh
 ```
 
 **Ce que fait le script** :
+
 1. Execute `pg_dump` dans le conteneur `orchestr-a-postgres-prod`
 2. Sauvegarde dans `./backups/orchestr-a-backup-YYYYMMDD_HHMMSS.sql`
 3. Compresse le fichier avec `gzip`
 4. Supprime automatiquement les sauvegardes de plus de 30 jours
 
 > :bulb: **Automatiser avec cron** :
+>
 > ```bash
 > # Sauvegarde quotidienne a 2h du matin
 > (crontab -l 2>/dev/null; echo "0 2 * * * cd /opt/ORCHESTRA && ./scripts/backup-database.sh >> /var/log/orchestr-a-backup.log 2>&1") | crontab -
@@ -1073,6 +1082,7 @@ ls -lh backups/
 ```
 
 Le script :
+
 1. Decompresse le fichier `.gz` si necessaire
 2. Demande confirmation avant d'ecraser la base
 3. Injecte le dump dans PostgreSQL via `psql`
@@ -1087,6 +1097,7 @@ chmod +x scripts/health-check.sh
 ```
 
 Le script verifie :
+
 - L'etat de chaque conteneur (running + healthy)
 - L'accessibilite des endpoints HTTP (API, frontend via Nginx, frontend direct)
 - La connexion a PostgreSQL et compte les enregistrements (utilisateurs, projets, taches)
@@ -1100,12 +1111,12 @@ Le script verifie :
 
 Les principaux consommateurs d'espace disque sont :
 
-| Element | Emplacement | Croissance |
-|---------|-------------|------------|
-| Donnees PostgreSQL | Volume `orchestr-a-postgres-data-prod` | Proportionnel aux donnees |
-| Images Docker | `/var/lib/docker` | A chaque build |
-| Logs Docker | `/var/lib/docker/containers/*/` | Continue (limitee par config) |
-| Sauvegardes | `./backups/` | Quotidien (30 jours de retention) |
+| Element            | Emplacement                            | Croissance                        |
+| ------------------ | -------------------------------------- | --------------------------------- |
+| Donnees PostgreSQL | Volume `orchestr-a-postgres-data-prod` | Proportionnel aux donnees         |
+| Images Docker      | `/var/lib/docker`                      | A chaque build                    |
+| Logs Docker        | `/var/lib/docker/containers/*/`        | Continue (limitee par config)     |
+| Sauvegardes        | `./backups/`                           | Quotidien (30 jours de retention) |
 
 ```bash
 # Espace disque global
@@ -1119,6 +1130,7 @@ docker system df -v
 ```
 
 > :bulb: Configurez une alerte si l'espace disque descend en dessous de 20% :
+>
 > ```bash
 > # Ajouter dans le cron (verification toutes les heures)
 > (crontab -l 2>/dev/null; echo '0 * * * * [ $(df / --output=pcent | tail -1 | tr -dc "0-9") -gt 80 ] && echo "ALERTE: Disque a $(df / --output=pcent | tail -1)" | mail -s "Orchestr-A: Espace disque critique" admin@example.com') | crontab -
@@ -1141,6 +1153,7 @@ docker system prune -a -f
 ```
 
 > :bulb: **Planifier un nettoyage mensuel** :
+>
 > ```bash
 > (crontab -l 2>/dev/null; echo "0 3 1 * * docker system prune -f >> /var/log/docker-prune.log 2>&1") | crontab -
 > ```
@@ -1149,13 +1162,13 @@ docker system prune -a -f
 
 La rotation des logs est deja configuree dans `docker-compose.prod.yml` pour chaque service :
 
-| Service | Taille max par fichier | Fichiers conserves |
-|---------|:----------------------:|:------------------:|
-| PostgreSQL | 50 Mo | 5 |
-| Redis | 10 Mo | 3 |
-| API | 50 Mo | 5 |
-| Web | 20 Mo | 3 |
-| Nginx | 20 Mo | 5 |
+| Service    | Taille max par fichier | Fichiers conserves |
+| ---------- | :--------------------: | :----------------: |
+| PostgreSQL |         50 Mo          |         5          |
+| Redis      |         10 Mo          |         3          |
+| API        |         50 Mo          |         5          |
+| Web        |         20 Mo          |         3          |
+| Nginx      |         20 Mo          |         5          |
 
 Ces limites sont aussi definies globalement dans `/etc/docker/daemon.json` (section 2.6). La configuration par service dans `docker-compose.prod.yml` a priorite.
 
@@ -1198,20 +1211,20 @@ sudo dnf update -y
 
 ## 10. Troubleshooting
 
-| # | Probleme | Diagnostic | Solution |
-|:-:|----------|------------|----------|
-| 1 | **Conteneur ne demarre pas** | `docker compose -f docker-compose.prod.yml ps` montre `Exit` ou `Restarting` | Consulter les logs : `docker compose -f docker-compose.prod.yml logs <service>`. Verifier les variables d'env requises dans `.env.production`. |
-| 2 | **Erreur connexion PostgreSQL** | L'API log `ECONNREFUSED` ou `Connection refused` sur le port 5432 | Verifier que le conteneur PostgreSQL est `healthy` : `docker inspect orchestr-a-postgres-prod --format='{{.State.Health.Status}}'`. Verifier `DATABASE_PASSWORD` dans `.env.production`. |
-| 3 | **Erreur connexion Redis** | L'API log `NOAUTH` ou `ERR invalid password` | Verifier que `REDIS_PASSWORD` dans `.env.production` correspond au mot de passe configure. Redemarrer Redis : `docker compose -f docker-compose.prod.yml restart redis`. |
-| 4 | **Permission denied (SELinux)** | `ausearch -m AVC -ts recent` montre des blocages | Generer et appliquer une politique : `ausearch -m AVC -ts recent \| audit2allow -M fix && semodule -i fix.pp`. Ou passer temporairement en permissive : `setenforce 0`. |
-| 5 | **Port deja utilise** | `Error starting userland proxy: listen tcp 0.0.0.0:80: bind: address already in use` | Identifier le processus : `sudo ss -tlnp \| grep :80`. Arreter le processus ou changer le port dans `.env.production` (`HTTP_PORT`, `HTTPS_PORT`). |
-| 6 | **Certificat SSL expire** | Navigateur affiche `NET::ERR_CERT_DATE_INVALID` | Verifier les logs certbot. Forcer le renouvellement : `docker compose -f docker-compose.prod.yml run --rm certbot renew --force-renewal` puis `docker exec orchestr-a-nginx-prod nginx -s reload`. |
-| 7 | **Probleme DNS** | `curl: (6) Could not resolve host` | Verifier la resolution : `dig votre-domaine.fr`. Verifier le DNS dans `/etc/resolv.conf` et `/etc/docker/daemon.json`. |
-| 8 | **Espace disque plein** | `No space left on device` | Nettoyer Docker : `docker system prune -a -f`. Supprimer les anciennes sauvegardes : `ls -la backups/`. Verifier `df -h`. |
-| 9 | **Migration Prisma echouee** | L'API log `ERROR: migrate deploy failed` | Se connecter au conteneur API : `docker exec -it orchestr-a-api-prod sh`. Verifier : `cd /app/packages/database && npx prisma migrate status`. Appliquer manuellement : `npx prisma migrate deploy`. |
-| 10 | **Erreurs CORS** | Console navigateur : `Access-Control-Allow-Origin` manquant | Verifier `CORS_ORIGIN` dans `.env.production` : doit correspondre exactement a l'URL dans le navigateur (protocole + domaine, ex: `https://app.example.com`). Reconstruire et redemarrer l'API. |
-| 11 | **API Health check echoue (start_period)** | L'API affiche `unhealthy` pendant les premieres minutes | Normal : le `start_period` est de 90 secondes pour l'API (temps des migrations). Attendez 2-3 minutes apres le demarrage. |
-| 12 | **Conflit Podman/Docker** | `docker: command not found` apres installation ou comportement inattendu | Verifier : `which docker` et `rpm -qa \| grep podman`. Desinstaller Podman (section 1.2) et reinstaller Docker CE. |
+|  #  | Probleme                                   | Diagnostic                                                                           | Solution                                                                                                                                                                                             |
+| :-: | ------------------------------------------ | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|  1  | **Conteneur ne demarre pas**               | `docker compose -f docker-compose.prod.yml ps` montre `Exit` ou `Restarting`         | Consulter les logs : `docker compose -f docker-compose.prod.yml logs <service>`. Verifier les variables d'env requises dans `.env.production`.                                                       |
+|  2  | **Erreur connexion PostgreSQL**            | L'API log `ECONNREFUSED` ou `Connection refused` sur le port 5432                    | Verifier que le conteneur PostgreSQL est `healthy` : `docker inspect orchestr-a-postgres-prod --format='{{.State.Health.Status}}'`. Verifier `DATABASE_PASSWORD` dans `.env.production`.             |
+|  3  | **Erreur connexion Redis**                 | L'API log `NOAUTH` ou `ERR invalid password`                                         | Verifier que `REDIS_PASSWORD` dans `.env.production` correspond au mot de passe configure. Redemarrer Redis : `docker compose -f docker-compose.prod.yml restart redis`.                             |
+|  4  | **Permission denied (SELinux)**            | `ausearch -m AVC -ts recent` montre des blocages                                     | Generer et appliquer une politique : `ausearch -m AVC -ts recent \| audit2allow -M fix && semodule -i fix.pp`. Ou passer temporairement en permissive : `setenforce 0`.                              |
+|  5  | **Port deja utilise**                      | `Error starting userland proxy: listen tcp 0.0.0.0:80: bind: address already in use` | Identifier le processus : `sudo ss -tlnp \| grep :80`. Arreter le processus ou changer le port dans `.env.production` (`HTTP_PORT`, `HTTPS_PORT`).                                                   |
+|  6  | **Certificat SSL expire**                  | Navigateur affiche `NET::ERR_CERT_DATE_INVALID`                                      | Verifier les logs certbot. Forcer le renouvellement : `docker compose -f docker-compose.prod.yml run --rm certbot renew --force-renewal` puis `docker exec orchestr-a-nginx-prod nginx -s reload`.   |
+|  7  | **Probleme DNS**                           | `curl: (6) Could not resolve host`                                                   | Verifier la resolution : `dig votre-domaine.fr`. Verifier le DNS dans `/etc/resolv.conf` et `/etc/docker/daemon.json`.                                                                               |
+|  8  | **Espace disque plein**                    | `No space left on device`                                                            | Nettoyer Docker : `docker system prune -a -f`. Supprimer les anciennes sauvegardes : `ls -la backups/`. Verifier `df -h`.                                                                            |
+|  9  | **Migration Prisma echouee**               | L'API log `ERROR: migrate deploy failed`                                             | Se connecter au conteneur API : `docker exec -it orchestr-a-api-prod sh`. Verifier : `cd /app/packages/database && npx prisma migrate status`. Appliquer manuellement : `npx prisma migrate deploy`. |
+| 10  | **Erreurs CORS**                           | Console navigateur : `Access-Control-Allow-Origin` manquant                          | Verifier `CORS_ORIGIN` dans `.env.production` : doit correspondre exactement a l'URL dans le navigateur (protocole + domaine, ex: `https://app.example.com`). Reconstruire et redemarrer l'API.      |
+| 11  | **API Health check echoue (start_period)** | L'API affiche `unhealthy` pendant les premieres minutes                              | Normal : le `start_period` est de 90 secondes pour l'API (temps des migrations). Attendez 2-3 minutes apres le demarrage.                                                                            |
+| 12  | **Conflit Podman/Docker**                  | `docker: command not found` apres installation ou comportement inattendu             | Verifier : `which docker` et `rpm -qa \| grep podman`. Desinstaller Podman (section 1.2) et reinstaller Docker CE.                                                                                   |
 
 **Commandes de diagnostic general** :
 
@@ -1278,15 +1291,15 @@ Seuls les ports 80 et 443 sont exposes a l'hote.
 
 ### 11.2 Ports utilises
 
-| Port | Service | Direction | Protocole | Notes |
-|:----:|---------|:---------:|:---------:|-------|
-| 22 | SSH | Externe → Hote | TCP | Administration serveur |
-| 80 | Nginx | Externe → Conteneur | TCP | Redirection HTTPS + ACME |
-| 443 | Nginx | Externe → Conteneur | TCP | Trafic applicatif HTTPS |
-| 4000 | API | Interne Docker | TCP | Non expose a l'hote |
-| 3000 | Web | Interne Docker | TCP | Non expose a l'hote |
-| 5432 | PostgreSQL | Interne Docker | TCP | Non expose a l'hote |
-| 6379 | Redis | Interne Docker | TCP | Non expose a l'hote |
+| Port | Service    |      Direction      | Protocole | Notes                    |
+| :--: | ---------- | :-----------------: | :-------: | ------------------------ |
+|  22  | SSH        |   Externe → Hote    |    TCP    | Administration serveur   |
+|  80  | Nginx      | Externe → Conteneur |    TCP    | Redirection HTTPS + ACME |
+| 443  | Nginx      | Externe → Conteneur |    TCP    | Trafic applicatif HTTPS  |
+| 4000 | API        |   Interne Docker    |    TCP    | Non expose a l'hote      |
+| 3000 | Web        |   Interne Docker    |    TCP    | Non expose a l'hote      |
+| 5432 | PostgreSQL |   Interne Docker    |    TCP    | Non expose a l'hote      |
+| 6379 | Redis      |   Interne Docker    |    TCP    | Non expose a l'hote      |
 
 ### 11.3 Commandes Docker utiles
 

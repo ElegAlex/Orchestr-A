@@ -716,16 +716,12 @@ export default function ProjectDetailPage() {
   };
 
   // Permission helpers
-  const canEditProject = currentUser && [
-    Role.ADMIN,
-    Role.RESPONSABLE,
-    Role.MANAGER,
-  ].includes(currentUser.role);
+  const canEditProject =
+    currentUser &&
+    [Role.ADMIN, Role.RESPONSABLE, Role.MANAGER].includes(currentUser.role);
 
-  const canDeleteProject = currentUser && [
-    Role.ADMIN,
-    Role.RESPONSABLE,
-  ].includes(currentUser.role);
+  const canDeleteProject =
+    currentUser && [Role.ADMIN, Role.RESPONSABLE].includes(currentUser.role);
 
   // Project update handler
   const handleUpdateProject = async (data: UpdateProjectDto) => {
@@ -747,7 +743,7 @@ export default function ProjectDetailPage() {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
         axiosError.response?.data?.message ||
-          "Erreur lors de la suppression définitive"
+          "Erreur lors de la suppression définitive",
       );
     } finally {
       setDeleting(false);
@@ -1837,13 +1833,16 @@ export default function ProjectDetailPage() {
 
               <p className="text-gray-600 mb-4">
                 Êtes-vous sûr de vouloir supprimer définitivement le projet{" "}
-                <span className="font-semibold">&quot;{project?.name}&quot;</span> ?
+                <span className="font-semibold">
+                  &quot;{project?.name}&quot;
+                </span>{" "}
+                ?
               </p>
 
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                 <p className="text-sm text-red-800">
-                  <strong>Attention :</strong> Cette action est irréversible.
-                  Le projet et toutes ses données (tâches, jalons, membres) seront
+                  <strong>Attention :</strong> Cette action est irréversible. Le
+                  projet et toutes ses données (tâches, jalons, membres) seront
                   supprimés définitivement.
                 </p>
               </div>

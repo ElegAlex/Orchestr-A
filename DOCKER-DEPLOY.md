@@ -34,6 +34,7 @@ cd Orchestr-A
 ```
 
 Ce script :
+
 - Genere automatiquement les secrets (DATABASE_PASSWORD, REDIS_PASSWORD, JWT_SECRET)
 - Cree le fichier `.env.production`
 
@@ -61,6 +62,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml ps
 ```
 
 Tous les services doivent etre `(healthy)` :
+
 - `orchestr-a-postgres-prod` - Base de donnees
 - `orchestr-a-redis-prod` - Cache
 - `orchestr-a-api-prod` - API NestJS
@@ -253,6 +255,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --bui
 ## Support
 
 En cas de probleme :
+
 1. Consultez les logs : `docker compose logs -f`
 2. Verifiez les issues GitHub : https://github.com/ElegAlex/Orchestr-A/issues
 3. Creez une nouvelle issue si necessaire
