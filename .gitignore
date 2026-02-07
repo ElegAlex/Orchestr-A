@@ -142,3 +142,8 @@ csv_*.csv
 *.test.csv
 test-results/
 playwright-report/
+
+# ===========================
+# PRIVATE PROMPTS
+# ===========================
+Prompt/
