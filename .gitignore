@@ -19,6 +19,7 @@ out/
 # ===========================
 .env
 .env.local
+.env.development
 .env.development.local
 .env.test.local
 .env.production.local
@@ -92,10 +93,16 @@ Desktop.ini
 # DOCKER
 # ===========================
 docker-compose.override.yml
+postgres_data/
+redis_data/
 
 # ===========================
 # SSL CERTIFICATES
 # ===========================
+*.pem
+*.key
+*.crt
+*.p12
 nginx/ssl/*.pem
 nginx/ssl/*.crt
 nginx/ssl/*.key
