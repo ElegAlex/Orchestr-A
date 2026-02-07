@@ -81,7 +81,10 @@ describe('ProjectsController', () => {
       const result = await controller.create(createProjectDto, creatorId);
 
       expect(result).toEqual(expectedProject);
-      expect(mockProjectsService.create).toHaveBeenCalledWith(createProjectDto, creatorId);
+      expect(mockProjectsService.create).toHaveBeenCalledWith(
+        createProjectDto,
+        creatorId,
+      );
       expect(mockProjectsService.create).toHaveBeenCalledTimes(1);
     });
 
@@ -93,11 +96,14 @@ describe('ProjectsController', () => {
       );
 
       await expect(
-        controller.create({
-          ...createProjectDto,
-          startDate: '2025-12-31',
-          endDate: '2025-01-01',
-        }, creatorId),
+        controller.create(
+          {
+            ...createProjectDto,
+            startDate: '2025-12-31',
+            endDate: '2025-01-01',
+          },
+          creatorId,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -110,7 +116,10 @@ describe('ProjectsController', () => {
 
       expect(result).not.toBeNull();
       expect(result!.name).toBe('Minimal Project');
-      expect(mockProjectsService.create).toHaveBeenCalledWith(minimalDto, creatorId);
+      expect(mockProjectsService.create).toHaveBeenCalledWith(
+        minimalDto,
+        creatorId,
+      );
     });
   });
 

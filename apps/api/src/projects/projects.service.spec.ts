@@ -97,11 +97,15 @@ describe('ProjectsService', () => {
     const creatorId = 'creator-user-id';
 
     // Helper to setup transaction mock
-    const setupTransactionMock = (projectToReturn: typeof mockProject | null) => {
+    const setupTransactionMock = (
+      projectToReturn: typeof mockProject | null,
+    ) => {
       mockPrismaService.$transaction.mockImplementation(async (callback) => {
         const tx = {
           project: {
-            create: vi.fn().mockResolvedValue({ ...mockProject, id: 'new-project-id' }),
+            create: vi
+              .fn()
+              .mockResolvedValue({ ...mockProject, id: 'new-project-id' }),
             findUnique: vi.fn().mockResolvedValue(projectToReturn),
           },
           projectMember: {
