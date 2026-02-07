@@ -1,12 +1,12 @@
 # P2.2 - Hypothèses & Challenge
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚠️ **MATRICE DES RISQUES & HYPOTHÈSES (RAT)** Confiance actuelle du projet : **Faible (35%)** ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ## 1. Le "Pre-Mortem" (Pourquoi ça pourrait rater)
 
 > **"Si ce projet échoue dans 12 mois, ce sera probablement parce que..."**
-> 
+>
 > Les techniciens terrain (Karim) n'ont jamais adopté l'outil. Malgré une interface soignée, ils ont continué à utiliser "leur" Excel parce que (1) l'habitude était plus forte que la promesse de simplification — les projets avec une gestion du changement excellente ont 7 fois plus de chances de réussir, et nous n'avions aucun accompagnement ; (2) ils ont perçu l'outil comme un instrument de surveillance de leur productivité — 56% des employés ressentent de l'anxiété face au monitoring ; (3) le développeur solo a fait un burnout après 6 mois — 60% des mainteneurs open source ont quitté ou envisagé de quitter leurs projets, et 73% ont vécu un burnout. L'outil est devenu un projet zombie, non maintenu, que personne n'ose supprimer mais que personne n'utilise — reproduisant exactement le schéma des 346 millions d'euros du projet ONP "en pure perte".
 
 ---
@@ -17,33 +17,33 @@
 
 _"Les utilisateurs veulent-ils vraiment ça ?"_
 
-|Hypothèse détectée|Pourquoi c'est risqué ? (Le doute)|Impact si Faux|
-|---|---|---|
-|**"Karim adoptera l'outil en 5 minutes sans formation"**|Même les logiciels "intuitifs" génèrent des données mal saisies et des fonctionnalités partiellement utilisées. La courbe d'oubli d'Ebbinghaus montre que 90% de la formation est perdue après un mois sans renforcement.|🔴 **Mortel** — Sans adoption terrain, l'outil est inutile|
-|**"L'ergonomie seule suffit à remplacer Excel"**|Les implémentations ERP échouent dans 55 à 75% des cas malgré des budgets conséquents. Excel fonctionne comme un "boundary object" aligné sur le travail réel.|🔴 **Mortel** — Retour massif à Excel|
-|**"Les techniciens ne percevront pas l'outil comme un instrument de contrôle"**|78% des employeurs utilisent des logiciels de surveillance. Un outil de suivi des interventions sera immédiatement perçu comme outil de contrôle.|🟠 **Sévère** — Résistance passive, données faussées|
-|**"Le POC Pilote valide la demande pour OpsTracker"**|Le POC était dans un contexte de migration exceptionnelle avec engagement fort. Aucune donnée sur l'usage spontané en routine.|🟠 **Sévère** — Généralisation abusive|
+| Hypothèse détectée                                                              | Pourquoi c'est risqué ? (Le doute)                                                                                                                                                                                        | Impact si Faux                                             |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **"Karim adoptera l'outil en 5 minutes sans formation"**                        | Même les logiciels "intuitifs" génèrent des données mal saisies et des fonctionnalités partiellement utilisées. La courbe d'oubli d'Ebbinghaus montre que 90% de la formation est perdue après un mois sans renforcement. | 🔴 **Mortel** — Sans adoption terrain, l'outil est inutile |
+| **"L'ergonomie seule suffit à remplacer Excel"**                                | Les implémentations ERP échouent dans 55 à 75% des cas malgré des budgets conséquents. Excel fonctionne comme un "boundary object" aligné sur le travail réel.                                                            | 🔴 **Mortel** — Retour massif à Excel                      |
+| **"Les techniciens ne percevront pas l'outil comme un instrument de contrôle"** | 78% des employeurs utilisent des logiciels de surveillance. Un outil de suivi des interventions sera immédiatement perçu comme outil de contrôle.                                                                         | 🟠 **Sévère** — Résistance passive, données faussées       |
+| **"Le POC Pilote valide la demande pour OpsTracker"**                           | Le POC était dans un contexte de migration exceptionnelle avec engagement fort. Aucune donnée sur l'usage spontané en routine.                                                                                            | 🟠 **Sévère** — Généralisation abusive                     |
 
 ### 💰 Hypothèses de VIABILITÉ (Business)
 
 _"Le modèle est-il soutenable ?"_
 
-|Hypothèse détectée|Pourquoi c'est risqué ?|Impact si Faux|
-|---|---|---|
-|**"Un développeur solo peut maintenir un outil métier critique"**|57% des projets open source ont un bus factor de 1. Les mainteneurs non payés consacrent moins de 10 heures par semaine à la maintenance.|🔴 **Mortel** — Abandon du projet|
-|**"Le modèle open source gratuit est viable sans revenus"**|60% des mainteneurs ne sont pas payés et 48% se sentent sous-appréciés. Sans structure d'appui, la pérennité est compromise.|🟠 **Sévère** — Projet zombie à terme|
-|**"4 organisations adopteront l'outil dans les 3 mois"**|Les grands projets numériques de l'État dépassent systématiquement leurs délais de plus de 30%. Aucun engagement formel des organisations cibles.|🟡 **Pivot nécessaire** — Timeline irréaliste|
+| Hypothèse détectée                                                | Pourquoi c'est risqué ?                                                                                                                           | Impact si Faux                                |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| **"Un développeur solo peut maintenir un outil métier critique"** | 57% des projets open source ont un bus factor de 1. Les mainteneurs non payés consacrent moins de 10 heures par semaine à la maintenance.         | 🔴 **Mortel** — Abandon du projet             |
+| **"Le modèle open source gratuit est viable sans revenus"**       | 60% des mainteneurs ne sont pas payés et 48% se sentent sous-appréciés. Sans structure d'appui, la pérennité est compromise.                      | 🟠 **Sévère** — Projet zombie à terme         |
+| **"4 organisations adopteront l'outil dans les 3 mois"**          | Les grands projets numériques de l'État dépassent systématiquement leurs délais de plus de 30%. Aucun engagement formel des organisations cibles. | 🟡 **Pivot nécessaire** — Timeline irréaliste |
 
 ### 🛠 Hypothèses de FAISABILITÉ (Tech/Orga)
 
 _"Peut-on le construire ?"_
 
-|Hypothèse détectée|Pourquoi c'est risqué ?|Impact si Faux|
-|---|---|---|
-|**"MVP fonctionnel en 3 jours"**|La durée minimale réaliste pour un MVP est de 3 à 4 mois. Les projets IT dépassent en moyenne leurs délais de 45%.|🔴 **Mortel** — Faux départ, dette technique|
-|**"RGAA 4.1 intégré dès le MVP"**|Un grand portail de service public affiche seulement 46,51% de conformité RGAA malgré des années de travail. Les outils automatiques ne détectent que 30-40% des problèmes.|🔴 **Mortel** — Sanctions 50k€, non-déploiement|
-|**"Le bundle Symfony interne sera disponible et compatible"**|Aucune confirmation formelle. Dépendance externe non maîtrisée.|🟡 **Retard** — Architecture à repenser|
-|**"L'architecture JSONB + Symfony Workflow fonctionnera du premier coup"**|Complexité technique élevée sans prototype préalable. Les estimations initiales peuvent varier d'un facteur 4 par rapport à la réalité.|🟡 **Retard** — Refactoring nécessaire|
+| Hypothèse détectée                                                         | Pourquoi c'est risqué ?                                                                                                                                                     | Impact si Faux                                  |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| **"MVP fonctionnel en 3 jours"**                                           | La durée minimale réaliste pour un MVP est de 3 à 4 mois. Les projets IT dépassent en moyenne leurs délais de 45%.                                                          | 🔴 **Mortel** — Faux départ, dette technique    |
+| **"RGAA 4.1 intégré dès le MVP"**                                          | Un grand portail de service public affiche seulement 46,51% de conformité RGAA malgré des années de travail. Les outils automatiques ne détectent que 30-40% des problèmes. | 🔴 **Mortel** — Sanctions 50k€, non-déploiement |
+| **"Le bundle Symfony interne sera disponible et compatible"**              | Aucune confirmation formelle. Dépendance externe non maîtrisée.                                                                                                             | 🟡 **Retard** — Architecture à repenser         |
+| **"L'architecture JSONB + Symfony Workflow fonctionnera du premier coup"** | Complexité technique élevée sans prototype préalable. Les estimations initiales peuvent varier d'un facteur 4 par rapport à la réalité.                                     | 🟡 **Retard** — Refactoring nécessaire          |
 
 ---
 
@@ -83,9 +83,9 @@ Cette hypothèse est en contradiction directe avec toutes les données disponibl
 
 ## 4. Recommandation Stratégique
 
-|Feu Tricolore|Décision|Action requise|
-|---|---|---|
-|🟡|**PAUSE — Valider les hypothèses critiques**|Lancer les 3 tests avant toute ligne de code. Recalibrer le planning de "3 jours" à "3 mois minimum". Formaliser le plan de pérennité.|
+| Feu Tricolore | Décision                                     | Action requise                                                                                                                         |
+| ------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 🟡            | **PAUSE — Valider les hypothèses critiques** | Lancer les 3 tests avant toute ligne de code. Recalibrer le planning de "3 jours" à "3 mois minimum". Formaliser le plan de pérennité. |
 
 ### Justification détaillée :
 
@@ -113,14 +113,14 @@ Cette hypothèse est en contradiction directe avec toutes les données disponibl
 
 ## Annexe : Faits vs Hypothèses (Traçabilité)
 
-|Ce qu'on SAIT (Fait documenté)|Ce qu'on CROIT (Hypothèse)|
-|---|---|
-|Le POC Pilote a été "apprécié" (P0)|Les organisations l'utiliseront en routine|
-|4 organisations ont "exprimé des besoins" (P0)|Elles adopteront OpsTracker|
-|Excel pose des problèmes de consolidation (P1.1)|OpsTracker résoudra ces problèmes|
-|L'ergonomie de ProjeQtOr est mauvaise (P1.2)|Une bonne UX suffit à l'adoption|
-|Karim veut "ne pas chercher ses infos" (P1.3)|Il utilisera l'outil spontanément|
-|Le sponsor valide le projet (P0)|Les ressources suivront|
+| Ce qu'on SAIT (Fait documenté)                   | Ce qu'on CROIT (Hypothèse)                 |
+| ------------------------------------------------ | ------------------------------------------ |
+| Le POC Pilote a été "apprécié" (P0)              | Les organisations l'utiliseront en routine |
+| 4 organisations ont "exprimé des besoins" (P0)   | Elles adopteront OpsTracker                |
+| Excel pose des problèmes de consolidation (P1.1) | OpsTracker résoudra ces problèmes          |
+| L'ergonomie de ProjeQtOr est mauvaise (P1.2)     | Une bonne UX suffit à l'adoption           |
+| Karim veut "ne pas chercher ses infos" (P1.3)    | Il utilisera l'outil spontanément          |
+| Le sponsor valide le projet (P0)                 | Les ressources suivront                    |
 
 ---
 
