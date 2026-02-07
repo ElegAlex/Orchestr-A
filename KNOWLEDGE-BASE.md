@@ -20,7 +20,7 @@
 
 **Version** : 2.0.0
 **Licence** : MIT
-**Auteur** : Alexandre BERGE
+**Auteur** : Équipe Orchestr'A
 
 ---
 
