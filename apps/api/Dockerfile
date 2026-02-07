@@ -18,8 +18,7 @@ COPY apps/api ./apps/api
 
 # Installation des dépendances
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
-RUN pnpm install --frozen-lockfile || true
-RUN pnpm install --frozen-lockfile --offline
+RUN pnpm install --frozen-lockfile
 
 # Génération du client Prisma (nécessaire pour les exports d'enums)
 RUN cd packages/database && npx prisma generate

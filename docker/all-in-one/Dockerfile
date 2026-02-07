@@ -18,8 +18,7 @@ COPY apps/api ./apps/api
 
 # Install dependencies and build
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
-RUN pnpm install --frozen-lockfile || true
-RUN pnpm install --frozen-lockfile --offline
+RUN pnpm install --frozen-lockfile
 RUN cd packages/database && npx prisma generate
 RUN pnpm run build --filter=api
 
@@ -38,8 +37,7 @@ COPY apps/web ./apps/web
 
 # Install dependencies
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
-RUN pnpm install --frozen-lockfile || true
-RUN pnpm install --frozen-lockfile --offline
+RUN pnpm install --frozen-lockfile
 RUN cd packages/database && npx prisma generate
 
 # Build with API URL for internal proxying
