@@ -1,4 +1,8 @@
-# 🎯 ORCHESTR'A V2
+# ORCHESTR'A V2
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.0.0-green)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
 
 Application de gestion de projets et de ressources humaines pour collectivités territoriales.
 
@@ -348,37 +352,16 @@ docker compose -f docker-compose.prod.yml down
 - **[DOCKER-DEPLOY.md](./DOCKER-DEPLOY.md)** - Guide de déploiement Docker simplifié
 - **[docs/Déploiement.md](./docs/Déploiement.md)** - Déploiement VPS complet (hybride)
 
-## 🤝 Contribution
+## Contribution
 
-1. Créer une branche : `git checkout -b feature/ma-fonctionnalite`
-2. Commit : `git commit -m "feat: ajout de ma fonctionnalité"`
-3. Push : `git push origin feature/ma-fonctionnalite`
-4. Créer une Pull Request
+Les contributions sont les bienvenues ! Consultez le [guide de contribution](./CONTRIBUTING.md) pour commencer.
 
-### Conventions de commits
+Ce projet adhère au [Contributor Covenant](./CODE_OF_CONDUCT.md).
 
-Format : `type(scope): message`
-
-**Types** :
-
-- `feat`: Nouvelle fonctionnalité
-- `fix`: Correction bug
-- `refactor`: Refactoring
-- `perf`: Performance
-- `docs`: Documentation
-- `test`: Tests
-- `chore`: Maintenance
-
-## 📄 License
+## Licence
 
 MIT License - Voir le fichier [LICENSE](./LICENSE)
 
-## 👥 Équipe
+## Auteur
 
-Alexandre BERGE
-
----
-
-**Version** : 2.0.0
-**Date** : 31/12/2025
-**Statut** : ✅ Application complète avec CI/CD
+Alexandre BERGE - [@ElegAlex](https://github.com/ElegAlex)
