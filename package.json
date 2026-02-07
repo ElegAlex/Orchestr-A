@@ -48,5 +48,13 @@
     "turborepo"
   ],
   "author": "Alexandre BERGE",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ElegAlex/Orchestr-A.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ElegAlex/Orchestr-A/issues"
+  },
+  "homepage": "https://github.com/ElegAlex/Orchestr-A#readme"
 }

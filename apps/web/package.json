@@ -2,6 +2,16 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "author": "Alexandre BERGE",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ElegAlex/Orchestr-A.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ElegAlex/Orchestr-A/issues"
+  },
+  "homepage": "https://github.com/ElegAlex/Orchestr-A#readme",
   "scripts": {
     "dev": "next dev --port 4001",
     "build": "next build",
