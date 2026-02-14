@@ -7,7 +7,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
-import { TaskStatus, RACIRole } from 'database';
+import { TaskStatus, RACIRole, Role } from 'database';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -76,6 +76,7 @@ describe('TasksService', () => {
   });
 
   describe('create', () => {
+    const mockUser = { id: 'user-1', role: Role.ADMIN };
     const createTaskDto = {
       title: 'Test Task',
       description: 'Test Description',
@@ -102,7 +103,7 @@ describe('TasksService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.task.create.mockResolvedValue(mockTask);
 
-      const result = await service.create(createTaskDto);
+      const result = await service.create(createTaskDto, mockUser);
 
       expect(result).toBeDefined();
       expect(result.title).toBe(createTaskDto.title);
@@ -111,7 +112,7 @@ describe('TasksService', () => {
     it('should throw error when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(createTaskDto)).rejects.toThrow(
+      await expect(service.create(createTaskDto, mockUser)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -126,7 +127,7 @@ describe('TasksService', () => {
       mockPrismaService.epic.findUnique.mockResolvedValue(mockEpic);
       mockPrismaService.task.create.mockResolvedValue(mockTask);
 
-      const result = await service.create(dtoWithEpic);
+      const result = await service.create(dtoWithEpic, mockUser);
       expect(result.epicId).toBe('epic-1');
     });
 
@@ -137,7 +138,7 @@ describe('TasksService', () => {
       });
       mockPrismaService.epic.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(dtoWithEpic)).rejects.toThrow(
+      await expect(service.create(dtoWithEpic, mockUser)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -152,7 +153,7 @@ describe('TasksService', () => {
         projectId: 'other-project',
       });
 
-      await expect(service.create(dtoWithEpic)).rejects.toThrow(
+      await expect(service.create(dtoWithEpic, mockUser)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -167,7 +168,7 @@ describe('TasksService', () => {
       mockPrismaService.milestone.findUnique.mockResolvedValue(mockMilestone);
       mockPrismaService.task.create.mockResolvedValue(mockTask);
 
-      const result = await service.create(dtoWithMilestone);
+      const result = await service.create(dtoWithMilestone, mockUser);
       expect(result.milestoneId).toBe('milestone-1');
     });
 
@@ -178,7 +179,7 @@ describe('TasksService', () => {
       });
       mockPrismaService.milestone.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(dtoWithMilestone)).rejects.toThrow(
+      await expect(service.create(dtoWithMilestone, mockUser)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -193,7 +194,7 @@ describe('TasksService', () => {
         projectId: 'other-project',
       });
 
-      await expect(service.create(dtoWithMilestone)).rejects.toThrow(
+      await expect(service.create(dtoWithMilestone, mockUser)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -209,7 +210,7 @@ describe('TasksService', () => {
         ...dtoWithAssignee,
       });
 
-      const result = await service.create(dtoWithAssignee);
+      const result = await service.create(dtoWithAssignee, mockUser);
       expect(result.assigneeId).toBe('user-1');
     });
 
@@ -220,7 +221,7 @@ describe('TasksService', () => {
       });
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(dtoWithAssignee)).rejects.toThrow(
+      await expect(service.create(dtoWithAssignee, mockUser)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -235,7 +236,7 @@ describe('TasksService', () => {
         id: 'project-1',
       });
 
-      await expect(service.create(dtoWithDates)).rejects.toThrow(
+      await expect(service.create(dtoWithDates, mockUser)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -254,7 +255,7 @@ describe('TasksService', () => {
         ...dtoWithDates,
       });
 
-      const result = await service.create(dtoWithDates);
+      const result = await service.create(dtoWithDates, mockUser);
       expect(result).toBeDefined();
     });
   });

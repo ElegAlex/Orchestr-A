@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -16,7 +17,7 @@ import {
   TaskPreviewItemDto,
   TaskPreviewStatus,
 } from './dto/import-tasks.dto';
-import { TaskStatus, Priority, RACIRole } from 'database';
+import { TaskStatus, Priority, RACIRole, Role } from 'database';
 import { Prisma } from 'database';
 
 @Injectable()
@@ -27,7 +28,10 @@ export class TasksService {
    * Créer une nouvelle tâche
    * Le projectId est optionnel pour permettre les tâches orphelines (réunions, tâches transverses)
    */
-  async create(createTaskDto: CreateTaskDto) {
+  async create(
+    createTaskDto: CreateTaskDto,
+    user: { id: string; role: Role },
+  ) {
     const {
       projectId,
       epicId,
@@ -39,6 +43,13 @@ export class TasksService {
       ...taskData
     } = createTaskDto;
 
+    // Vérification des permissions en fonction du rôle
+    if (user.role === Role.CONTRIBUTEUR && projectId) {
+      throw new ForbiddenException(
+        'Les contributeurs ne peuvent créer que des tâches hors projet',
+      );
+    }
+
     // Vérifier que le projet existe si fourni
     if (projectId) {
       const project = await this.prisma.project.findUnique({
@@ -47,6 +58,27 @@ export class TasksService {
 
       if (!project) {
         throw new NotFoundException('Projet introuvable');
+      }
+
+      // Vérifier le membership pour REFERENT_TECHNIQUE et CHEF_DE_PROJET
+      if (
+        user.role === Role.REFERENT_TECHNIQUE ||
+        user.role === Role.CHEF_DE_PROJET
+      ) {
+        const membership = await this.prisma.projectMember.findUnique({
+          where: {
+            projectId_userId: {
+              projectId,
+              userId: user.id,
+            },
+          },
+        });
+
+        if (!membership) {
+          throw new ForbiddenException(
+            'Vous devez être membre du projet pour créer des tâches',
+          );
+        }
       }
     }
 

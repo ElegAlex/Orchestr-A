@@ -132,41 +132,88 @@ export const DayCell = ({
 
         {/* Tasks - visible uniquement si pas de congé */}
         {!hasLeave &&
-          cell.tasks.map((task) => (
+          cell.tasks.map((task) => {
+            // Style spécial pour intervention extérieure
+            const isExternal = task.isExternalIntervention;
+            const baseClass = isExternal
+              ? "bg-red-100 text-red-900 border-red-400 border-2"
+              : getPriorityColor(task.priority);
+
+            return (
+              <div
+                key={task.id}
+                draggable
+                onDragStart={() => onDragStart(task, userId)}
+                onDragEnd={onDragEnd}
+                onClick={() => onTaskClick(task)}
+                className={`rounded border cursor-move hover:shadow-md transition ${baseClass} ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
+              >
+                {viewMode === "month" ? (
+                  <div className="text-center" title={task.title}>
+                    <span>{getStatusIcon(task.status)}</span>
+                    {isExternal && (
+                      <div className="text-[6px] font-bold">EXT</div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-start space-x-1">
+                      <span className="text-xs">
+                        {getStatusIcon(task.status)}
+                      </span>
+                      <span className="flex-1 font-medium line-clamp-2">
+                        {task.title}
+                      </span>
+                    </div>
+                    {isExternal && (
+                      <div className="text-[10px] font-bold text-red-800 mt-1">
+                        🔴 Intervention ext.
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-2 text-[10px] text-gray-600 mt-1">
+                      {(task.startTime || task.endTime) && (
+                        <span>
+                          🕐 {task.startTime || "--:--"} -{" "}
+                          {task.endTime || "--:--"}
+                        </span>
+                      )}
+                      {task.estimatedHours && (
+                        <span>⏱️ {task.estimatedHours}h</span>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+
+        {/* Events - visible uniquement si pas de congé */}
+        {!hasLeave &&
+          cell.events.map((event) => (
             <div
-              key={task.id}
-              draggable
-              onDragStart={() => onDragStart(task, userId)}
-              onDragEnd={onDragEnd}
-              onClick={() => onTaskClick(task)}
-              className={`rounded border cursor-move hover:shadow-md transition ${getPriorityColor(
-                task.priority,
-              )} ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
+              key={event.id}
+              className={`rounded border-2 border-purple-400 bg-purple-100 text-purple-900 ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
             >
               {viewMode === "month" ? (
-                <div className="text-center" title={task.title}>
-                  <span>{getStatusIcon(task.status)}</span>
+                <div className="text-center" title={event.title}>
+                  <span>📅</span>
                 </div>
               ) : (
                 <>
                   <div className="flex items-start space-x-1">
-                    <span className="text-xs">
-                      {getStatusIcon(task.status)}
-                    </span>
+                    <span className="text-xs">📅</span>
                     <span className="flex-1 font-medium line-clamp-2">
-                      {task.title}
+                      {event.title}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-2 text-[10px] text-gray-600 mt-1">
-                    {(task.startTime || task.endTime) && (
+                  <div className="flex items-center space-x-2 text-[10px] text-purple-700 mt-1">
+                    {(event.startTime || event.endTime) && (
                       <span>
-                        🕐 {task.startTime || "--:--"} -{" "}
-                        {task.endTime || "--:--"}
+                        🕐 {event.startTime || "--:--"} -{" "}
+                        {event.endTime || "--:--"}
                       </span>
                     )}
-                    {task.estimatedHours && (
-                      <span>⏱️ {task.estimatedHours}h</span>
-                    )}
+                    {event.isAllDay && <span>📆 Journée entière</span>}
                   </div>
                 </>
               )}

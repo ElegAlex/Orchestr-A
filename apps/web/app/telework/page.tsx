@@ -13,8 +13,6 @@ export default function TeleworkPage() {
   const [loading, setLoading] = useState(true);
   const [teleworkDays, setTeleworkDays] = useState<TeleworkSchedule[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState(false);
 
   // Charger les données de télétravail
   const fetchTeleworkData = useCallback(async () => {
@@ -49,10 +47,10 @@ export default function TeleworkPage() {
     fetchTeleworkData();
   }, [fetchTeleworkData]);
 
-  // Générer les 3 prochains mois
+  // Générer les 6 prochains mois
   const getMonthsToDisplay = () => {
     const months = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 6; i++) {
       const date = new Date(
         currentMonth.getFullYear(),
         currentMonth.getMonth() + i,
@@ -101,72 +99,37 @@ export default function TeleworkPage() {
     );
   };
 
-  const handleDayClick = (date: Date) => {
-    if (isWeekend(date)) return;
-    setSelectedDate(formatDate(date));
-    setShowModal(true);
-  };
-
-  const handleToggleTelework = async (isTelework: boolean) => {
-    if (!selectedDate || !user) return;
+  const handleDayClick = async (date: Date) => {
+    if (isWeekend(date) || !user) return;
 
     try {
-      const selectedDateObj = new Date(selectedDate + "T12:00:00");
-      const existingDay = teleworkDays.find(
-        (d) =>
-          d.userId === user.id && isSameDay(new Date(d.date), selectedDateObj),
-      );
+      const existingStatus = getTeleworkStatus(date);
 
-      if (existingDay) {
-        // Mise à jour
-        await teleworkService.update(existingDay.id, { isTelework });
-        toast.success(
-          isTelework ? "Télétravail enregistré" : "Bureau enregistré",
-        );
-      } else {
-        // Création
+      if (!existingStatus) {
+        // Pas de déclaration → créer en télétravail
         await teleworkService.create({
-          date: selectedDate,
-          isTelework,
+          date: formatDate(date),
+          isTelework: true,
           isException: false,
           userId: user.id,
         });
-        toast.success(
-          isTelework
-            ? "Jour de télétravail enregistré"
-            : "Jour en présentiel enregistré",
-        );
+        toast.success("Télétravail enregistré");
+      } else if (existingStatus.isTelework) {
+        // Déjà en télétravail → supprimer
+        await teleworkService.delete(existingStatus.id);
+        toast.success("Jour supprimé");
+      } else {
+        // En présentiel → basculer en télétravail
+        await teleworkService.update(existingStatus.id, { isTelework: true });
+        toast.success("Télétravail enregistré");
       }
 
-      setShowModal(false);
-      setSelectedDate(null);
       fetchTeleworkData();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
         axiosError.response?.data?.message || "Erreur lors de l'enregistrement",
       );
-    }
-  };
-
-  const handleRemoveTelework = async () => {
-    if (!selectedDate || !user) return;
-
-    try {
-      const selectedDateObj = new Date(selectedDate + "T12:00:00");
-      const existingDay = teleworkDays.find(
-        (d) =>
-          d.userId === user.id && isSameDay(new Date(d.date), selectedDateObj),
-      );
-      if (existingDay) {
-        await teleworkService.delete(existingDay.id);
-        toast.success("Jour supprimé");
-      }
-      setShowModal(false);
-      setSelectedDate(null);
-      fetchTeleworkData();
-    } catch {
-      toast.error("Erreur lors de la suppression");
     }
   };
 
@@ -237,9 +200,9 @@ export default function TeleworkPage() {
                 Comment ça marche ?
               </h3>
               <p className="text-sm text-blue-800 mt-1">
-                Cliquez sur un jour pour déclarer votre présence en télétravail
-                ou au bureau. Les jours en bleu sont vos jours de télétravail.
-                Vous pouvez modifier vos choix à tout moment.
+                Cliquez sur un jour pour basculer entre télétravail et non
+                déclaré. Les jours en bleu sont vos jours de télétravail. Vous
+                pouvez modifier vos choix à tout moment.
               </p>
             </div>
           </div>
@@ -268,8 +231,8 @@ export default function TeleworkPage() {
           </div>
         </div>
 
-        {/* Calendar for 3 months */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Calendar for 6 months */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {getMonthsToDisplay().map((month, monthIndex) => (
             <div
               key={monthIndex}
@@ -351,68 +314,6 @@ export default function TeleworkPage() {
           </button>
         </div>
       </div>
-
-      {/* Day Selection Modal */}
-      {showModal && selectedDate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {new Date(selectedDate + "T12:00:00").toLocaleDateString(
-                "fr-FR",
-                {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                },
-              )}
-            </h2>
-
-            <p className="text-gray-600 mb-6">
-              Où travaillez-vous ce jour-là ?
-            </p>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => handleToggleTelework(true)}
-                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center space-x-2"
-              >
-                <span>🏠</span>
-                <span>Télétravail</span>
-              </button>
-
-              <button
-                onClick={() => handleToggleTelework(false)}
-                className="w-full px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition flex items-center justify-center space-x-2"
-              >
-                <span>🏢</span>
-                <span>Bureau</span>
-              </button>
-
-              {getTeleworkStatus(new Date(selectedDate + "T12:00:00")) && (
-                <button
-                  onClick={handleRemoveTelework}
-                  className="w-full px-4 py-3 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition"
-                >
-                  Supprimer
-                </button>
-              )}
-            </div>
-
-            <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
-              <button
-                onClick={() => {
-                  setShowModal(false);
-                  setSelectedDate(null);
-                }}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </MainLayout>
   );
 }

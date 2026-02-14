@@ -7,7 +7,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
-import { TaskStatus } from 'database';
+import { TaskStatus, Role } from 'database';
 
 describe('TasksController', () => {
   let controller: TasksController;
@@ -70,6 +70,7 @@ describe('TasksController', () => {
   });
 
   describe('create', () => {
+    const mockUser = { id: 'user-1', role: Role.ADMIN };
     const createTaskDto = {
       title: 'New Task',
       description: 'A new task',
@@ -83,10 +84,10 @@ describe('TasksController', () => {
       const expectedTask = { ...mockTask, ...createTaskDto, id: 'new-task-id' };
       mockTasksService.create.mockResolvedValue(expectedTask);
 
-      const result = await controller.create(createTaskDto);
+      const result = await controller.create(createTaskDto, mockUser);
 
       expect(result).toEqual(expectedTask);
-      expect(mockTasksService.create).toHaveBeenCalledWith(createTaskDto);
+      expect(mockTasksService.create).toHaveBeenCalledWith(createTaskDto, mockUser);
       expect(mockTasksService.create).toHaveBeenCalledTimes(1);
     });
 
@@ -95,7 +96,7 @@ describe('TasksController', () => {
         new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.create(createTaskDto)).rejects.toThrow(
+      await expect(controller.create(createTaskDto, mockUser)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -108,7 +109,7 @@ describe('TasksController', () => {
       const expectedTask = { ...mockTask, ...taskWithAssignee };
       mockTasksService.create.mockResolvedValue(expectedTask);
 
-      const result = await controller.create(taskWithAssignee);
+      const result = await controller.create(taskWithAssignee, mockUser);
 
       expect(result.assigneeId).toBe('user-id-1');
     });
@@ -122,7 +123,7 @@ describe('TasksController', () => {
       const expectedTask = { ...mockTask, ...taskWithRelations };
       mockTasksService.create.mockResolvedValue(expectedTask);
 
-      const result = await controller.create(taskWithRelations);
+      const result = await controller.create(taskWithRelations, mockUser);
 
       expect(result.epicId).toBe('epic-id-1');
       expect(result.milestoneId).toBe('milestone-id-1');

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { addWeeks, subWeeks, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { PlanningGrid } from "./PlanningGrid";
+import { TaskCreateModal } from "./TaskCreateModal";
 import { usePlanningData } from "@/hooks/usePlanningData";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePlanningViewStore } from "@/stores/planningView.store";
@@ -36,6 +37,7 @@ export const PlanningView = ({
   const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [hasInitializedServices, setHasInitializedServices] = useState(false);
+  const [showTaskCreateModal, setShowTaskCreateModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { user: currentUser } = useAuthStore();
@@ -47,7 +49,7 @@ export const PlanningView = ({
   const effectiveFilterServiceIds =
     selectedServices.length > 0 ? selectedServices : undefined;
 
-  const { displayDays, users, groupedUsers } = usePlanningData({
+  const { displayDays, users, groupedUsers, refetch } = usePlanningData({
     currentDate,
     viewMode,
     filterUserId: effectiveFilterUserId,
@@ -177,6 +179,14 @@ export const PlanningView = ({
         </div>
         {showControls && (
           <div className="flex items-center space-x-4">
+            {/* Bouton Créer une tâche */}
+            <button
+              onClick={() => setShowTaskCreateModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
+            >
+              <span>+</span>
+              <span>Créer une tâche</span>
+            </button>
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setViewMode("week")}
@@ -427,7 +437,7 @@ export const PlanningView = ({
       {showLegend && (
         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Légende</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs">
             <div className="flex items-center space-x-2">
               <span>○</span>
               <span>À faire</span>
@@ -464,9 +474,24 @@ export const PlanningView = ({
               <span className="opacity-60">🌴?</span>
               <span>Congé en attente</span>
             </div>
+            <div className="flex items-center space-x-2">
+              <span>📅</span>
+              <span>Événement</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block w-3 h-3 bg-red-500 rounded"></span>
+              <span>Intervention ext.</span>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Task Create Modal */}
+      <TaskCreateModal
+        isOpen={showTaskCreateModal}
+        onClose={() => setShowTaskCreateModal(false)}
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 };

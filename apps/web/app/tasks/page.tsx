@@ -51,6 +51,7 @@ export default function TasksPage() {
     endDate: "",
     startTime: "",
     endTime: "",
+    isExternalIntervention: false,
   });
 
   const fetchData = useCallback(async () => {
@@ -152,6 +153,7 @@ export default function TasksPage() {
         endDate: formData.endDate || undefined,
         startTime: formData.startTime || undefined,
         endTime: formData.endTime || undefined,
+        isExternalIntervention: formData.isExternalIntervention,
       };
       await tasksService.create(taskData);
       toast.success("Tâche créée avec succès");
@@ -216,6 +218,7 @@ export default function TasksPage() {
       endDate: "",
       startTime: "",
       endTime: "",
+      isExternalIntervention: false,
     });
     setProjectMembers([]);
   };
@@ -281,7 +284,10 @@ export default function TasksPage() {
     return (
       user?.role === Role.ADMIN ||
       user?.role === Role.RESPONSABLE ||
-      user?.role === Role.MANAGER
+      user?.role === Role.MANAGER ||
+      user?.role === Role.CHEF_DE_PROJET ||
+      user?.role === Role.REFERENT_TECHNIQUE ||
+      user?.role === Role.CONTRIBUTEUR
     );
   };
 
@@ -867,6 +873,27 @@ export default function TasksPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Ex: 8"
                 />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isExternalIntervention"
+                  checked={formData.isExternalIntervention}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      isExternalIntervention: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
+                />
+                <label
+                  htmlFor="isExternalIntervention"
+                  className="ml-2 block text-sm font-medium text-gray-700"
+                >
+                  Intervention extérieure
+                </label>
               </div>
 
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">

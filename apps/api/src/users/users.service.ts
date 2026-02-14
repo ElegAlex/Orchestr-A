@@ -624,7 +624,7 @@ export class UsersService {
     );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Mot de passe actuel incorrect');
+      throw new BadRequestException('Ancien mot de passe incorrect');
     }
 
     // Hasher le nouveau mot de passe

@@ -38,10 +38,10 @@ export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.REFERENT_TECHNIQUE)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET, Role.REFERENT_TECHNIQUE)
   @ApiOperation({
     summary:
-      'Créer un nouveau projet (Admin/Responsable/Manager/Référent Technique)',
+      'Créer un nouveau projet (Admin/Responsable/Manager/Chef de projet/Référent Technique)',
   })
   @ApiResponse({
     status: 201,
@@ -126,9 +126,9 @@ export class ProjectsController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
   @ApiOperation({
-    summary: 'Mettre à jour un projet (Admin/Responsable/Manager)',
+    summary: 'Mettre à jour un projet (Admin/Responsable/Manager/Chef de projet)',
   })
   @ApiResponse({
     status: 200,
@@ -186,9 +186,9 @@ export class ProjectsController {
   }
 
   @Post(':id/members')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
   @ApiOperation({
-    summary: 'Ajouter un membre au projet (Admin/Responsable/Manager)',
+    summary: 'Ajouter un membre au projet (Admin/Responsable/Manager/Chef de projet)',
   })
   @ApiResponse({
     status: 201,
@@ -210,10 +210,10 @@ export class ProjectsController {
   }
 
   @Delete(':projectId/members/:userId')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Retirer un membre du projet (Admin/Responsable/Manager)',
+    summary: 'Retirer un membre du projet (Admin/Responsable/Manager/Chef de projet)',
   })
   @ApiResponse({
     status: 200,

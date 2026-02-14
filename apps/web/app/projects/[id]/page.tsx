@@ -1027,6 +1027,14 @@ export default function ProjectDetailPage() {
                       {new Date(project.createdAt).toLocaleDateString("fr-FR")}
                     </p>
                   </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Créé par</p>
+                    <p className="text-lg text-gray-900 mt-1">
+                      {(project as any).createdBy
+                        ? `${(project as any).createdBy.firstName} ${(project as any).createdBy.lastName}`
+                        : "Non renseigné"}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

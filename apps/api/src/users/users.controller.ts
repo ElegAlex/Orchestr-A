@@ -209,8 +209,8 @@ export class UsersController {
     description: 'Mot de passe modifié avec succès',
   })
   @ApiResponse({
-    status: 401,
-    description: 'Mot de passe actuel incorrect',
+    status: 400,
+    description: 'Ancien mot de passe incorrect',
   })
   changePassword(
     @CurrentUser('id') userId: string,

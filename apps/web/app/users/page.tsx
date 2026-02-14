@@ -433,7 +433,7 @@ export default function UsersPage() {
   const downloadTemplate = () => {
     // Template without fake data - just headers and explanatory comments
     const template =
-      "email;login;password;firstName;lastName;role;departmentName;serviceNames\n# email@domaine.com;# prenom.nom;# motdepasse (min 6 car.);# Prenom;# Nom;# ADMIN|RESPONSABLE|MANAGER|CONTRIBUTEUR|OBSERVATEUR;# Nom departement existant;# Service1, Service2";
+      "email;login;password;firstName;lastName;role;departmentName;serviceNames\n# email@domaine.com;# prenom.nom;# motdepasse (min 6 car.);# Prenom;# Nom;# ADMIN|RESPONSABLE|MANAGER|CHEF_DE_PROJET|REFERENT_TECHNIQUE|CONTRIBUTEUR|OBSERVATEUR;# Nom departement existant;# Service1, Service2";
     const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -718,6 +718,7 @@ export default function UsersPage() {
                   <option value={Role.REFERENT_TECHNIQUE}>
                     Référent Technique
                   </option>
+                  <option value={Role.CHEF_DE_PROJET}>Chef de projet</option>
                   <option value={Role.MANAGER}>Manager</option>
                   <option value={Role.RESPONSABLE}>Responsable</option>
                   <option value={Role.ADMIN}>Admin</option>
@@ -1108,6 +1109,7 @@ export default function UsersPage() {
                   <option value={Role.REFERENT_TECHNIQUE}>
                     Référent Technique
                   </option>
+                  <option value={Role.CHEF_DE_PROJET}>Chef de projet</option>
                   <option value={Role.MANAGER}>Manager</option>
                   <option value={Role.RESPONSABLE}>Responsable</option>
                   <option value={Role.ADMIN}>Admin</option>

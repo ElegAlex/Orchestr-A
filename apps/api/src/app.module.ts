@@ -22,6 +22,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { PersonalTodosModule } from './personal-todos/personal-todos.module';
 import { SettingsModule } from './settings/settings.module';
 import { HolidaysModule } from './holidays/holidays.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { HolidaysModule } from './holidays/holidays.module';
     PersonalTodosModule,
     SettingsModule,
     HolidaysModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -41,7 +41,7 @@ export class MilestonesController {
   constructor(private readonly milestonesService: MilestonesService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
   @ApiOperation({ summary: 'Créer un milestone' })
   @ApiResponse({ status: 201, description: 'Milestone créé' })
   create(@Body() createMilestoneDto: CreateMilestoneDto) {
@@ -70,7 +70,7 @@ export class MilestonesController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
   @ApiOperation({ summary: 'Modifier un milestone' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -80,7 +80,7 @@ export class MilestonesController {
   }
 
   @Post(':id/complete')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Marquer un milestone comme complété' })
   complete(@Param('id', ParseUUIDPipe) id: string) {
@@ -88,7 +88,7 @@ export class MilestonesController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un milestone' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
@@ -96,7 +96,7 @@ export class MilestonesController {
   }
 
   @Post('project/:projectId/import/validate')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
   @ApiOperation({ summary: 'Valider des jalons avant import (dry-run)' })
   @ApiResponse({
     status: 200,
@@ -118,7 +118,7 @@ export class MilestonesController {
   }
 
   @Post('project/:projectId/import')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
   @ApiOperation({ summary: 'Importer des jalons en masse via CSV' })
   @ApiResponse({
     status: 201,

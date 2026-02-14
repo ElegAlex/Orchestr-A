@@ -18,7 +18,8 @@ const navigation: NavItem[] = [
   { name: "Tableau de bord", href: "/dashboard", icon: "🎯" },
   { name: "Projets", href: "/projects", icon: "📁" },
   { name: "Tâches", href: "/tasks", icon: "✓" },
-  { name: "Planning", href: "/planning", icon: "📅" },
+  { name: "Événements", href: "/events", icon: "📅" },
+  { name: "Planning", href: "/planning", icon: "🗓️" },
   { name: "Temps passé", href: "/time-tracking", icon: "⏱️" },
   { name: "Congés", href: "/leaves", icon: "🏖️" },
   { name: "Télétravail", href: "/telework", icon: "🏠" },
@@ -45,20 +46,21 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === Role.ADMIN;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--background)]">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transition-all duration-300 ${
+        className={`fixed inset-y-0 left-0 z-50 bg-[var(--card)] border-r border-[var(--border)] transition-all duration-300 ${
           sidebarOpen ? "w-64" : "w-20"
         }`}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-[var(--border)]">
           <Link href="/dashboard" className="flex items-center">
             {sidebarOpen ? (
               <Logo
                 size="sm"
                 showText
+                enableEasterEgg
                 className="hover:opacity-80 transition"
               />
             ) : (
@@ -67,7 +69,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           </Link>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-gray-100 transition"
+            className="p-2 rounded-lg hover:bg-[var(--accent)] transition text-[var(--foreground)]"
           >
             {sidebarOpen ? "◀" : "▶"}
           </button>
@@ -83,8 +85,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
                   isActive
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? "bg-[var(--primary)] bg-opacity-10 text-[var(--primary)]"
+                    : "text-[var(--foreground)] hover:bg-[var(--accent)]"
                 }`}
               >
                 <span className="text-xl mr-3">{item.icon}</span>
@@ -97,7 +99,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             <>
               <div className="pt-4 pb-2">
                 {sidebarOpen && (
-                  <p className="px-3 text-xs font-semibold text-gray-400 uppercase">
+                  <p className="px-3 text-xs font-semibold text-[var(--muted-foreground)] uppercase">
                     Administration
                   </p>
                 )}
@@ -112,8 +114,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
                         isActive
-                          ? "bg-blue-50 text-blue-600"
-                          : "text-gray-700 hover:bg-gray-100"
+                          ? "bg-[var(--primary)] bg-opacity-10 text-[var(--primary)]"
+                          : "text-[var(--foreground)] hover:bg-[var(--accent)]"
                       }`}
                     >
                       <span className="text-xl mr-3">{item.icon}</span>
@@ -126,28 +128,30 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* User menu */}
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-[var(--border)] p-4">
           <Link
             href="/profile"
-            className="flex items-center hover:bg-gray-50 rounded-lg p-2 -m-2 transition"
+            className="flex items-center hover:bg-[var(--accent)] rounded-lg p-2 -m-2 transition"
           >
-            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
+            <div className="w-10 h-10 rounded-full bg-[var(--primary)] text-white flex items-center justify-center font-semibold">
               {user?.firstName?.[0]}
               {user?.lastName?.[0]}
             </div>
             {sidebarOpen && (
               <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-[var(--foreground)]">
                   {user?.firstName} {user?.lastName}
                 </p>
-                <p className="text-xs text-gray-500">{user?.role}</p>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  {user?.role}
+                </p>
               </div>
             )}
           </Link>
           {sidebarOpen && (
             <button
               onClick={logout}
-              className="mt-3 w-full px-3 py-2 text-sm text-left text-red-600 hover:bg-red-50 rounded-lg transition"
+              className="mt-3 w-full px-3 py-2 text-sm text-left text-[var(--destructive)] hover:bg-[var(--destructive)] hover:bg-opacity-10 rounded-lg transition"
             >
               Déconnexion
             </button>

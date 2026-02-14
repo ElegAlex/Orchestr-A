@@ -37,6 +37,7 @@ export class ProjectsService {
           ...(startDate && { startDate: new Date(startDate) }),
           ...(endDate && { endDate: new Date(endDate) }),
           status: createProjectDto.status || ProjectStatus.DRAFT,
+          createdById: creatorId,
         },
       });
 
@@ -105,6 +106,14 @@ export class ProjectsService {
         skip,
         take: limit,
         include: {
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              login: true,
+            },
+          },
           members: {
             take: 5,
             include: {
@@ -152,6 +161,14 @@ export class ProjectsService {
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            login: true,
+          },
+        },
         members: {
           include: {
             user: {

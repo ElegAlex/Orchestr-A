@@ -12,16 +12,80 @@
   --input-border: #d1d5db;
   --input-disabled: #9ca3af;
   --muted-foreground: #4b5563; /* Renforcé de #6b7280 à #4b5563 - contraste 7.0:1 */
+
+  /* shadcn/ui variables - light theme */
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #111827;
+  --muted: #f3f4f6;
+  --accent: #f3f4f6;
+  --accent-foreground: #111827;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --ring: #2563eb;
+  --radius: 0.5rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #f3f4f6; /* Renforcé pour dark mode */
-    --input-text: #f3f4f6;
-    --input-placeholder: #9ca3af;
-    --muted-foreground: #d1d5db;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #f3f4f6; /* Renforcé pour dark mode */
+  --input-text: #f3f4f6;
+  --input-placeholder: #9ca3af;
+  --muted-foreground: #d1d5db;
+  --tw-prose-body: #d1d5db;
+  --tw-prose-headings: #f3f4f6;
+
+  /* shadcn/ui variables - dark theme */
+  --card: #1f2937;
+  --card-foreground: #f3f4f6;
+  --popover: #1f2937;
+  --popover-foreground: #f3f4f6;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #374151;
+  --secondary-foreground: #f3f4f6;
+  --muted: #374151;
+  --accent: #374151;
+  --accent-foreground: #f3f4f6;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #374151;
+  --input-border: #4b5563;
+  --ring: #3b82f6;
+}
+
+.girly {
+  --background: #fff0f5; /* Lavender blush */
+  --foreground: #880e4f; /* Rose foncé */
+  --input-text: #880e4f;
+  --input-placeholder: #c2185b;
+  --muted-foreground: #ad1457;
+  --tw-prose-body: #ad1457;
+  --tw-prose-headings: #880e4f;
+
+  /* shadcn/ui variables - girly theme */
+  --card: #fce4ec; /* Rose très clair */
+  --card-foreground: #880e4f;
+  --popover: #fce4ec;
+  --popover-foreground: #880e4f;
+  --primary: #e91e63; /* Rose vif */
+  --primary-foreground: #ffffff;
+  --secondary: #f8bbd0;
+  --secondary-foreground: #880e4f;
+  --muted: #fce4ec;
+  --accent: #f48fb1; /* Rose clair */
+  --accent-foreground: #880e4f;
+  --destructive: #c2185b;
+  --destructive-foreground: #ffffff;
+  --border: #f8bbd0;
+  --input-border: #f48fb1;
+  --ring: #e91e63;
 }
 
 body {

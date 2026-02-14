@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@/components/AuthProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -35,8 +36,10 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
-        <AuthProvider>{children}</AuthProvider>
-        <Toaster position="top-right" />
+        <ThemeProvider>
+          <AuthProvider>{children}</AuthProvider>
+          <Toaster position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

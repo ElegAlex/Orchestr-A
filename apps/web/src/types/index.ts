@@ -6,6 +6,7 @@ export enum Role {
   ADMIN = "ADMIN",
   RESPONSABLE = "RESPONSABLE",
   MANAGER = "MANAGER",
+  CHEF_DE_PROJET = "CHEF_DE_PROJET",
   REFERENT_TECHNIQUE = "REFERENT_TECHNIQUE",
   CONTRIBUTEUR = "CONTRIBUTEUR",
   OBSERVATEUR = "OBSERVATEUR",
@@ -212,6 +213,8 @@ export interface Project {
   budgetHours?: number;
   createdAt: string;
   updatedAt: string;
+  createdById?: string;
+  createdBy?: { id: string; firstName: string; lastName: string; login: string } | null;
   members?: ProjectMember[];
   epics?: Epic[];
   milestones?: Milestone[];
@@ -352,6 +355,7 @@ export interface Task {
   milestone?: Milestone;
   assignee?: User; // Assigné principal
   assignees?: TaskAssignee[]; // Assignés multiples
+  isExternalIntervention?: boolean;
   timeEntries?: TimeEntry[];
   comments?: Comment[];
   raci?: TaskRACI[];
@@ -381,6 +385,7 @@ export interface CreateTaskDto {
   endDate?: string;
   startTime?: string; // Horaire de début optionnel (format HH:MM)
   endTime?: string; // Horaire de fin optionnel (format HH:MM)
+  isExternalIntervention?: boolean; // Intervention extérieure
 }
 
 export interface UpdateTaskDto {
@@ -398,6 +403,7 @@ export interface UpdateTaskDto {
   endDate?: string;
   startTime?: string; // Horaire de début optionnel (format HH:MM)
   endTime?: string; // Horaire de fin optionnel (format HH:MM)
+  isExternalIntervention?: boolean; // Intervention extérieure
 }
 
 // ===========================

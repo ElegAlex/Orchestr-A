@@ -34,6 +34,7 @@ model User {
   managedDepartments Department[]     @relation("DepartmentManager")
   managedServices   Service[]         @relation("ServiceManager")
   projectMembers    ProjectMember[]
+  createdProjects   Project[]         @relation("ProjectCreator")
   tasks             Task[]            // Tâches où l'user est assigné principal
   taskAssignments   TaskAssignee[]    // Tâches où l'user est co-assigné
   leaves            Leave[]           @relation("UserLeaves")
@@ -47,6 +48,8 @@ model User {
   comments          Comment[]
   personalTodos     PersonalTodo[]
   createdHolidays   Holiday[]         @relation("HolidayCreator")
+  createdEvents     Event[]           @relation("EventCreator")
+  eventParticipations EventParticipant[]
 
   @@map("users")
 }
@@ -55,6 +58,7 @@ enum Role {
   ADMIN
   RESPONSABLE
   MANAGER
+  CHEF_DE_PROJET
   REFERENT_TECHNIQUE
   CONTRIBUTEUR
   OBSERVATEUR
@@ -124,16 +128,19 @@ model Project {
   startDate     DateTime?
   endDate       DateTime?
   budgetHours   Int?
+  createdById   String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   // Relations
+  createdBy     User?           @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: SetNull)
   members       ProjectMember[]
   epics         Epic[]
   milestones    Milestone[]
   tasks         Task[]
   documents     Document[]
   timeEntries   TimeEntry[]
+  events        Event[]
 
   @@map("projects")
 }
@@ -215,23 +222,24 @@ enum MilestoneStatus {
 // ===========================
 
 model Task {
-  id              String     @id @default(uuid())
-  title           String
-  description     String?
-  status          TaskStatus @default(TODO)
-  priority        Priority   @default(NORMAL)
-  projectId       String?    // Nullable pour permettre les tâches orphelines (réunions, tâches transverses)
-  epicId          String?
-  milestoneId     String?
-  assigneeId      String?    // Assigné principal (rétrocompatibilité)
-  estimatedHours  Float?
-  progress        Int        @default(0) // 0-100%
-  startDate       DateTime?
-  endDate         DateTime?
-  startTime       String?    // Horaire de début optionnel (format HH:MM)
-  endTime         String?    // Horaire de fin optionnel (format HH:MM)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id                      String     @id @default(uuid())
+  title                   String
+  description             String?
+  status                  TaskStatus @default(TODO)
+  priority                Priority   @default(NORMAL)
+  projectId               String?    // Nullable pour permettre les tâches orphelines (réunions, tâches transverses)
+  epicId                  String?
+  milestoneId             String?
+  assigneeId              String?    // Assigné principal (rétrocompatibilité)
+  estimatedHours          Float?
+  progress                Int        @default(0) // 0-100%
+  startDate               DateTime?
+  endDate                 DateTime?
+  startTime               String?    // Horaire de début optionnel (format HH:MM)
+  endTime                 String?    // Horaire de fin optionnel (format HH:MM)
+  isExternalIntervention  Boolean    @default(false)
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
 
   // Relations
   project         Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -618,4 +626,41 @@ enum HolidayType {
   BRIDGE       // Pont accordé
   CLOSURE      // Fermeture exceptionnelle
   CUSTOM       // Autre (personnalisé)
+}
+
+// ===========================
+// EVENTS (ÉVÉNEMENTS)
+// ===========================
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime
+  startTime   String?  // Format HH:MM
+  endTime     String?  // Format HH:MM
+  isAllDay    Boolean  @default(true)
+  projectId   String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  project      Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdBy    User                @relation("EventCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  participants EventParticipant[]
+
+  @@map("events")
+}
+
+model EventParticipant {
+  eventId   String
+  userId    String
+
+  // Relations
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@map("event_participants")
 }

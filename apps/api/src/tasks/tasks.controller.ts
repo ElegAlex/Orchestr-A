@@ -33,6 +33,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role, TaskStatus, RACIRole } from 'database';
 
 @ApiTags('tasks')
@@ -43,7 +44,7 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CONTRIBUTEUR)
+  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET, Role.REFERENT_TECHNIQUE, Role.CONTRIBUTEUR)
   @ApiOperation({ summary: 'Créer une nouvelle tâche' })
   @ApiResponse({
     status: 201,
@@ -54,11 +55,18 @@ export class TasksController {
     description: 'Données invalides',
   })
   @ApiResponse({
+    status: 403,
+    description: 'Accès interdit (contributeur sur projet ou non-membre)',
+  })
+  @ApiResponse({
     status: 404,
     description: 'Projet, epic, milestone ou utilisateur introuvable',
   })
-  create(@Body() createTaskDto: CreateTaskDto) {
-    return this.tasksService.create(createTaskDto);
+  create(
+    @Body() createTaskDto: CreateTaskDto,
+    @CurrentUser() user: { id: string; role: Role },
+  ) {
+    return this.tasksService.create(createTaskDto, user);
   }
 
   @Get()

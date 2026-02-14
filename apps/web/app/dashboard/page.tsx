@@ -254,7 +254,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">Chargement...</p>
+            <p className="mt-4 text-[var(--muted-foreground)]">Chargement...</p>
           </div>
         </div>
       </MainLayout>
@@ -267,10 +267,10 @@ export default function DashboardPage() {
         {/* Welcome */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-[var(--foreground)]">
               Bonjour {user?.firstName} !
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-[var(--muted-foreground)] mt-1">
               Voici un aperçu de votre activité
             </p>
           </div>
@@ -280,53 +280,53 @@ export default function DashboardPage() {
         {/* Stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* KPI Cards */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">
                   Projets actifs
                 </p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
+                <p className="text-3xl font-bold text-[var(--foreground)] mt-2">
                   {stats.activeProjects}
                 </p>
               </div>
               <div className="text-4xl">📁</div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-[var(--muted-foreground)] mt-2">
               sur {stats.totalProjects} projets
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">
                   Tâches en cours
                 </p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
+                <p className="text-3xl font-bold text-[var(--foreground)] mt-2">
                   {stats.tasksInProgress}
                 </p>
               </div>
               <div className="text-4xl">⏳</div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-[var(--muted-foreground)] mt-2">
               sur {stats.totalTasks} tâches
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">
                   Tâches terminées
                 </p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
+                <p className="text-3xl font-bold text-[var(--foreground)] mt-2">
                   {stats.tasksDone}
                 </p>
               </div>
               <div className="text-4xl">✅</div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-[var(--muted-foreground)] mt-2">
               {stats.totalTasks > 0
                 ? Math.round((stats.tasksDone / stats.totalTasks) * 100)
                 : 0}
@@ -334,19 +334,19 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">
                   Tâches bloquées
                 </p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
+                <p className="text-3xl font-bold text-[var(--foreground)] mt-2">
                   {stats.tasksBlocked}
                 </p>
               </div>
               <div className="text-4xl">🚫</div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Nécessitent attention</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-2">Nécessitent attention</p>
           </div>
         </div>
 
@@ -362,9 +362,9 @@ export default function DashboardPage() {
         )}
 
         {/* Personal To-Do List */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">📝 Ma To-Do</h2>
+        <div className="bg-[var(--card)] rounded-lg shadow-sm border border-[var(--border)]">
+          <div className="px-6 py-4 border-b border-[var(--border)]">
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">📝 Ma To-Do</h2>
           </div>
           <div className="p-6">
             {/* Input Add */}
@@ -396,9 +396,9 @@ export default function DashboardPage() {
             )}
 
             {loadingTodos ? (
-              <p className="text-gray-500 text-center py-8">Chargement...</p>
+              <p className="text-[var(--muted-foreground)] text-center py-8">Chargement...</p>
             ) : todos.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
+              <p className="text-[var(--muted-foreground)] text-center py-8">
                 Aucune to-do pour le moment
               </p>
             ) : (
@@ -408,7 +408,7 @@ export default function DashboardPage() {
                   .map((todo) => (
                     <div
                       key={todo.id}
-                      className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                      className="p-4 bg-[var(--muted)] rounded-lg hover:bg-[var(--accent)] transition"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3 flex-1">
@@ -434,7 +434,7 @@ export default function DashboardPage() {
                             />
                           ) : (
                             <span
-                              className="flex-1 text-gray-900 cursor-pointer"
+                              className="flex-1 text-[var(--foreground)] cursor-pointer"
                               onDoubleClick={() => handleStartEditTodo(todo)}
                               title="Double-cliquer pour éditer"
                             >
@@ -454,7 +454,7 @@ export default function DashboardPage() {
                   ))}
                 {todos.filter((t) => t.completed).length > 0 && (
                   <>
-                    <div className="pt-2 text-xs font-semibold text-gray-500 uppercase">
+                    <div className="pt-2 text-xs font-semibold text-[var(--muted-foreground)] uppercase">
                       Complétées ({todos.filter((t) => t.completed).length})
                     </div>
                     {todos
@@ -462,7 +462,7 @@ export default function DashboardPage() {
                       .map((todo) => (
                         <div
                           key={todo.id}
-                          className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition opacity-60"
+                          className="p-4 bg-[var(--muted)] rounded-lg hover:bg-[var(--accent)] transition opacity-60"
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex items-start gap-3 flex-1">
@@ -472,7 +472,7 @@ export default function DashboardPage() {
                                 onChange={() => handleToggleTodo(todo)}
                                 className="mt-1 w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer"
                               />
-                              <span className="flex-1 text-gray-600 line-through">
+                              <span className="flex-1 text-[var(--muted-foreground)] line-through">
                                 {todo.text}
                               </span>
                             </div>
@@ -494,15 +494,15 @@ export default function DashboardPage() {
         </div>
 
         {/* Upcoming tasks */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
+        <div className="bg-[var(--card)] rounded-lg shadow-sm border border-[var(--border)]">
+          <div className="px-6 py-4 border-b border-[var(--border)]">
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">
               Mes tâches à venir
             </h2>
           </div>
           <div className="p-6">
             {myTasks.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
+              <p className="text-[var(--muted-foreground)] text-center py-8">
                 Aucune tâche assignée
               </p>
             ) : (
@@ -510,23 +510,23 @@ export default function DashboardPage() {
                 {myTasks.slice(0, 5).map((task) => (
                   <div
                     key={task.id}
-                    className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                    className="p-4 bg-[var(--muted)] rounded-lg hover:bg-[var(--accent)] transition cursor-pointer"
                     onClick={() => router.push(`/tasks/${task.id}`)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-medium text-gray-900 hover:text-blue-600 transition">
+                        <h3 className="font-medium text-[var(--foreground)] hover:text-blue-600 transition">
                           {task.title}
                         </h3>
                         {task.description && (
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-[var(--muted-foreground)] mt-1">
                             {task.description.slice(0, 100)}
                             {task.description.length > 100 && "..."}
                           </p>
                         )}
 
                         {/* Dates */}
-                        <div className="flex items-center gap-4 mt-3 text-xs text-gray-600">
+                        <div className="flex items-center gap-4 mt-3 text-xs text-[var(--muted-foreground)]">
                           <div className="flex items-center gap-1.5">
                             <svg
                               className="w-4 h-4"
@@ -641,13 +641,13 @@ export default function DashboardPage() {
         </div>
 
         {/* My projects */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Mes projets</h2>
+        <div className="bg-[var(--card)] rounded-lg shadow-sm border border-[var(--border)]">
+          <div className="px-6 py-4 border-b border-[var(--border)]">
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Mes projets</h2>
           </div>
           <div className="p-6">
             {myProjects.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
+              <p className="text-[var(--muted-foreground)] text-center py-8">
                 Aucun projet assigné
               </p>
             ) : (
@@ -656,12 +656,12 @@ export default function DashboardPage() {
                   <div
                     key={project.id}
                     onClick={() => router.push(`/projects/${project.id}`)}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 transition cursor-pointer"
+                    className="p-4 border border-[var(--border)] rounded-lg hover:border-[var(--primary)] transition cursor-pointer"
                   >
-                    <h3 className="font-semibold text-gray-900">
+                    <h3 className="font-semibold text-[var(--foreground)]">
                       {project.name}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-[var(--muted-foreground)] mt-1">
                       {project.description?.slice(0, 80)}
                       {project.description &&
                         project.description.length > 80 &&

@@ -16,6 +16,7 @@ import { leavesService } from "@/services/leaves.service";
 import { teleworkService } from "@/services/telework.service";
 import { servicesService } from "@/services/services.service";
 import { holidaysService } from "@/services/holidays.service";
+import { eventsService, Event } from "@/services/events.service";
 import {
   Task,
   User,
@@ -34,6 +35,7 @@ export interface DayCell {
   date: Date;
   tasks: Task[];
   leaves: Leave[];
+  events: Event[];
   isTelework: boolean;
   teleworkSchedule: TeleworkSchedule | null;
   isHoliday: boolean;
@@ -64,6 +66,7 @@ interface UsePlanningDataReturn {
   services: Service[];
   tasks: Task[];
   leaves: Leave[];
+  events: Event[];
   teleworkSchedules: TeleworkSchedule[];
   holidays: Holiday[];
   groupedUsers: ServiceGroup[];
@@ -87,6 +90,7 @@ export const usePlanningData = ({
   const [services, setServices] = useState<Service[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [leaves, setLeaves] = useState<Leave[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [teleworkSchedules, setTeleworkSchedules] = useState<
     TeleworkSchedule[]
   >([]);
@@ -136,6 +140,7 @@ export const usePlanningData = ({
           usersData,
           tasksData,
           leavesData,
+          eventsData,
           teleworkData,
           servicesData,
           holidaysData,
@@ -149,6 +154,7 @@ export const usePlanningData = ({
             startDate.toISOString(),
             endDate.toISOString(),
           ),
+          eventsService.getByRange(teleworkStartDate, teleworkEndDate),
           teleworkService.getByDateRange(teleworkStartDate, teleworkEndDate),
           servicesService.getAll(),
           holidaysService.getByRange(teleworkStartDate, teleworkEndDate),
@@ -165,6 +171,7 @@ export const usePlanningData = ({
         );
         setTasks(Array.isArray(tasksData) ? tasksData : []);
         setLeaves(Array.isArray(leavesData) ? leavesData : []);
+        setEvents(Array.isArray(eventsData) ? eventsData : []);
         setTeleworkSchedules(Array.isArray(teleworkData) ? teleworkData : []);
         setServices(Array.isArray(servicesData) ? servicesData : []);
         setHolidays(Array.isArray(holidaysData) ? holidaysData : []);
@@ -173,6 +180,7 @@ export const usePlanningData = ({
           setUsers([]);
           setTasks([]);
           setLeaves([]);
+          setEvents([]);
           setTeleworkSchedules([]);
           setServices([]);
           setHolidays([]);
@@ -330,6 +338,17 @@ export const usePlanningData = ({
           return true;
         return false;
       });
+      // Filtrer les événements pour cet utilisateur et cette date
+      const dayEvents = events.filter((e) => {
+        const eventDate = startOfDay(new Date(e.date));
+        const checkDate = startOfDay(date);
+        if (!isSameDay(eventDate, checkDate)) return false;
+        // Vérifier si l'utilisateur est participant
+        if (e.participants && e.participants.length > 0) {
+          return e.participants.some((p) => p.userId === userId);
+        }
+        return false;
+      });
       // Vérifier si la date est dans la plage du congé (startDate <= date <= endDate)
       // Inclure tous les congés sauf les rejetés (PENDING et APPROVED)
       const dayLeaves = leaves.filter((l) => {
@@ -358,14 +377,16 @@ export const usePlanningData = ({
 
       // Appliquer le filtre d'affichage
       let filteredTasks = dayTasks;
+      let filteredEvents = dayEvents;
       let filteredLeaves = dayLeaves;
       let filteredIsTelework = teleworkSchedule?.isTelework || false;
 
       if (viewFilter === "availability") {
         // Mode "Disponibilités" : afficher uniquement les congés et télétravail
         filteredTasks = []; // Masquer toutes les tâches
+        filteredEvents = []; // Masquer les événements
       } else if (viewFilter === "activity") {
-        // Mode "Activités" : afficher uniquement les tâches
+        // Mode "Activités" : afficher uniquement les tâches et événements
         filteredLeaves = []; // Masquer les congés
         filteredIsTelework = false; // Masquer le télétravail
       }
@@ -373,6 +394,7 @@ export const usePlanningData = ({
       return {
         date,
         tasks: filteredTasks,
+        events: filteredEvents,
         leaves: filteredLeaves,
         isTelework: filteredIsTelework,
         teleworkSchedule: teleworkSchedule || null,
@@ -380,7 +402,7 @@ export const usePlanningData = ({
         holidayName: holiday?.name,
       };
     },
-    [tasks, leaves, teleworkSchedules, holidays, viewFilter],
+    [tasks, events, leaves, teleworkSchedules, holidays, viewFilter],
   );
 
   // Compter les tâches par groupe
@@ -422,6 +444,7 @@ export const usePlanningData = ({
     services,
     tasks,
     leaves,
+    events,
     teleworkSchedules,
     holidays,
     groupedUsers,

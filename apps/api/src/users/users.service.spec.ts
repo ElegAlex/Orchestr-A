@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Role } from 'database';
 
@@ -376,7 +377,28 @@ describe('UsersService', () => {
 
       await expect(
         service.changePassword('1', changePasswordDto),
-      ).rejects.toThrow('Mot de passe actuel incorrect');
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.changePassword('1', changePasswordDto),
+      ).rejects.toThrow('Ancien mot de passe incorrect');
+    });
+
+    it('should throw error when user not found', async () => {
+      const changePasswordDto = {
+        currentPassword: 'oldpassword',
+        newPassword: 'newpassword123',
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.changePassword('nonexistent', changePasswordDto),
+      ).rejects.toThrow(NotFoundException);
+
+      await expect(
+        service.changePassword('nonexistent', changePasswordDto),
+      ).rejects.toThrow('Utilisateur introuvable');
     });
   });
 });

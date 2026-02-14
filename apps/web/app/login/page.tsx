@@ -36,8 +36,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 girly:from-pink-50 girly:to-pink-100 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-[var(--card)] rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <Logo size="xl" />
@@ -45,14 +45,16 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
             Orchestr&apos;A
           </h1>
-          <p className="text-gray-600">Gestion de projets et RH</p>
+          <p className="text-[var(--muted-foreground)]">
+            Gestion de projets et RH
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label
               htmlFor="login"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-[var(--foreground)] mb-2"
             >
               Identifiant
             </label>
@@ -64,7 +66,7 @@ export default function LoginPage() {
               onChange={(e) =>
                 setFormData({ ...formData, login: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-[var(--input-border)] bg-[var(--background)] text-[var(--input-text)] rounded-lg focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent"
               placeholder="admin"
             />
           </div>
@@ -72,7 +74,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-[var(--foreground)] mb-2"
             >
               Mot de passe
             </label>
@@ -84,7 +86,7 @@ export default function LoginPage() {
               onChange={(e) =>
                 setFormData({ ...formData, password: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-[var(--input-border)] bg-[var(--background)] text-[var(--input-text)] rounded-lg focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent"
               placeholder="••••••••"
             />
           </div>
@@ -92,7 +94,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="w-full bg-[var(--primary)] text-[var(--primary-foreground)] py-2 px-4 rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {loading ? "Connexion..." : "Se connecter"}
           </button>
