@@ -1147,6 +1147,27 @@ export class UsersService {
       externalTasks.flatMap((t) => t.assignees.map((a) => a.userId)),
     );
 
+    // Récupérer les événements en intervention extérieure couvrant ce jour
+    const externalEvents = await this.prisma.event.findMany({
+      where: {
+        isExternalIntervention: true,
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+      select: {
+        participants: {
+          select: { userId: true },
+        },
+      },
+    });
+    for (const event of externalEvents) {
+      for (const p of event.participants) {
+        externalUserIds.add(p.userId);
+      }
+    }
+
     // Classifier les utilisateurs
     const onSite: Array<{
       id: string;

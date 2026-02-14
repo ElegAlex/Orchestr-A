@@ -173,23 +173,23 @@
       "errors": "Erreurs"
     },
     "tabs": {
-      "all": "Tous ({{count}})",
-      "valid": "Valides ({{count}})",
-      "warnings": "Avertissements ({{count}})",
-      "duplicates": "Doublons ({{count}})",
-      "errors": "Erreurs ({{count}})"
+      "all": "Tous ({count})",
+      "valid": "Valides ({count})",
+      "warnings": "Avertissements ({count})",
+      "duplicates": "Doublons ({count})",
+      "errors": "Erreurs ({count})"
     },
     "table": {
-      "line": "Ligne {{lineNumber}}",
+      "line": "Ligne {lineNumber}",
       "noItems": "Aucun element dans cette categorie"
     },
     "footer": {
-      "willImport": "<strong>{{count}}</strong> element(s) seront importes",
-      "duplicatesIgnored": "({{count}} doublon(s) ignores)",
-      "errorsNotImported": "({{count}} erreur(s) non importees)",
+      "willImport": "<strong>{count}</strong> element(s) seront importes",
+      "duplicatesIgnored": "({count} doublon(s) ignores)",
+      "errorsNotImported": "({count} erreur(s) non importees)",
       "noValidItems": "Aucun element valide a importer",
       "importing": "Import en cours...",
-      "confirm": "Confirmer l'import ({{count}})"
+      "confirm": "Confirmer l'import ({count})"
     }
   }
 }

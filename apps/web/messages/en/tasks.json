@@ -1,6 +1,6 @@
 {
   "title": "Tasks",
-  "taskCount": "{{count}} task(s)",
+  "taskCount": "{count} task(s)",
   "createTask": "+ Create Task",
   "noTasks": "No tasks",
   "back": "Back",
@@ -32,8 +32,8 @@
     "projectIcon": "📁",
     "orphanIcon": "📋",
     "orphanLabel": "Independent task",
-    "estimatedHours": "⏱️ {{hours}}h estimated",
-    "assignees": "{{count}} assignees",
+    "estimatedHours": "⏱️ {hours}h estimated",
+    "assignees": "{count} assignees",
     "progress": "Progress"
   },
 
@@ -117,10 +117,10 @@
       "endLabel": "End:",
       "modifyTitle": "Modify dependencies",
       "prerequisitesLabel": "Prerequisites",
-      "selectedCount": "{{count}} dependenc{{count, plural, one {y} other {ies}}} selected",
-      "conflictCount": "including {{count}} date conflict{{count, plural, one {} other {s}}}",
-      "dependsOn": "Depends on ({{count}})",
-      "blocks": "Blocks ({{count}})",
+      "selectedCount": "{count, plural, one {# dependency} other {# dependencies}} selected",
+      "conflictCount": "including {count, plural, one {# date conflict} other {# date conflicts}}",
+      "dependsOn": "Depends on ({count})",
+      "blocks": "Blocks ({count})",
       "noDependents": "No dependent tasks",
       "viewDetails": "View details"
     }

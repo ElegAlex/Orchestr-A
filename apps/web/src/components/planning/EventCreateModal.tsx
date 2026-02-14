@@ -40,6 +40,7 @@ export const EventCreateModal = ({
     startTime: "",
     endTime: "",
     isAllDay: true,
+    isExternalIntervention: false,
     projectId: "",
     participantIds: [],
   });
@@ -94,6 +95,7 @@ export const EventCreateModal = ({
         startTime: formData.startTime || undefined,
         endTime: formData.endTime || undefined,
         isAllDay: formData.isAllDay,
+        isExternalIntervention: formData.isExternalIntervention,
         projectId: formData.projectId || undefined,
         participantIds:
           formData.participantIds.length > 0
@@ -123,6 +125,7 @@ export const EventCreateModal = ({
       startTime: "",
       endTime: "",
       isAllDay: true,
+      isExternalIntervention: false,
       projectId: "",
       participantIds: [],
     });
@@ -183,19 +186,35 @@ export const EventCreateModal = ({
             />
           </div>
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="eventIsAllDay"
-              checked={formData.isAllDay}
-              onChange={(e) =>
-                setFormData({ ...formData, isAllDay: e.target.checked })
-              }
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="eventIsAllDay" className="text-sm text-gray-700">
-              {t("allDay")}
-            </label>
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="eventIsAllDay"
+                checked={formData.isAllDay}
+                onChange={(e) =>
+                  setFormData({ ...formData, isAllDay: e.target.checked })
+                }
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor="eventIsAllDay" className="text-sm text-gray-700">
+                {t("allDay")}
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="eventIsExternalIntervention"
+                checked={formData.isExternalIntervention}
+                onChange={(e) =>
+                  setFormData({ ...formData, isExternalIntervention: e.target.checked })
+                }
+                className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+              />
+              <label htmlFor="eventIsExternalIntervention" className="text-sm text-gray-700">
+                {t("externalIntervention")}
+              </label>
+            </div>
           </div>
 
           {!formData.isAllDay && (

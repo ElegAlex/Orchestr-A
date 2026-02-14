@@ -105,8 +105,16 @@ export const DayCell = ({
         </div>
       )}
 
+      {/* External Intervention Background Overlay */}
+      {cell.isExternalIntervention && !hasLeave && !cell.isHoliday && (
+        <div
+          className="absolute inset-0 z-0 bg-red-100/40 border-2 border-red-400 rounded-sm pointer-events-none"
+          aria-hidden="true"
+        />
+      )}
+
       {/* Telework Background Overlay - en arrière-plan pour que les tâches restent visibles */}
-      {cell.isTelework && !hasLeave && !cell.isHoliday && (
+      {cell.isTelework && !hasLeave && !cell.isHoliday && !cell.isExternalIntervention && (
         <div
           className="absolute inset-0 z-0 bg-orange-100/40 border-2 border-orange-300 rounded-sm pointer-events-none"
           aria-hidden="true"
@@ -190,36 +198,51 @@ export const DayCell = ({
 
         {/* Events - visible uniquement si pas de congé */}
         {!hasLeave &&
-          cell.events.map((event) => (
-            <div
-              key={event.id}
-              className={`rounded border-2 border-purple-400 bg-purple-100 text-purple-900 ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
-            >
-              {viewMode === "month" ? (
-                <div className="text-center" title={event.title}>
-                  <span>📅</span>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-start space-x-1">
-                    <span className="text-xs">📅</span>
-                    <span className="flex-1 font-medium line-clamp-2">
-                      {event.title}
-                    </span>
+          cell.events.map((event) => {
+            const isExtEvent = event.isExternalIntervention;
+            const eventBorderClass = isExtEvent
+              ? "border-red-400 bg-red-100 text-red-900"
+              : "border-purple-400 bg-purple-100 text-purple-900";
+            const eventTimeClass = isExtEvent
+              ? "text-red-700"
+              : "text-purple-700";
+
+            return (
+              <div
+                key={event.id}
+                className={`rounded border-2 ${eventBorderClass} ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
+              >
+                {viewMode === "month" ? (
+                  <div className="text-center" title={event.title}>
+                    <span>{isExtEvent ? "🔴" : "📅"}</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-[10px] text-purple-700 mt-1">
-                    {(event.startTime || event.endTime) && (
-                      <span>
-                        🕐 {event.startTime || "--:--"} -{" "}
-                        {event.endTime || "--:--"}
+                ) : (
+                  <>
+                    <div className="flex items-start space-x-1">
+                      <span className="text-xs">{isExtEvent ? "🔴" : "📅"}</span>
+                      <span className="flex-1 font-medium line-clamp-2">
+                        {event.title}
                       </span>
+                    </div>
+                    {isExtEvent && (
+                      <div className="text-[10px] font-bold text-red-800 mt-1">
+                        {t("dayCell.externalIntervention")}
+                      </div>
                     )}
-                    {event.isAllDay && <span>📆 {t("dayCell.allDay")}</span>}
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
+                    <div className={`flex items-center space-x-2 text-[10px] ${eventTimeClass} mt-1`}>
+                      {(event.startTime || event.endTime) && (
+                        <span>
+                          🕐 {event.startTime || "--:--"} -{" "}
+                          {event.endTime || "--:--"}
+                        </span>
+                      )}
+                      {event.isAllDay && <span>📆 {t("dayCell.allDay")}</span>}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
       </div>
     </td>
   );

@@ -38,6 +38,7 @@ export default function EventsPage() {
     startTime: "",
     endTime: "",
     isAllDay: true,
+    isExternalIntervention: false,
     projectId: "",
     participantIds: [],
   });
@@ -115,6 +116,7 @@ export default function EventsPage() {
         startTime: formData.startTime || undefined,
         endTime: formData.endTime || undefined,
         isAllDay: formData.isAllDay,
+        isExternalIntervention: formData.isExternalIntervention,
         projectId: formData.projectId || undefined,
         participantIds:
           formData.participantIds.length > 0
@@ -143,6 +145,7 @@ export default function EventsPage() {
       startTime: event.startTime || "",
       endTime: event.endTime || "",
       isAllDay: event.isAllDay,
+      isExternalIntervention: event.isExternalIntervention || false,
       projectId: event.projectId || "",
       participantIds: event.participants?.map((p) => p.userId) || [],
     });
@@ -160,6 +163,7 @@ export default function EventsPage() {
         startTime: formData.startTime || undefined,
         endTime: formData.endTime || undefined,
         isAllDay: formData.isAllDay,
+        isExternalIntervention: formData.isExternalIntervention,
         projectId: formData.projectId || undefined,
         participantIds:
           formData.participantIds.length > 0
@@ -200,6 +204,7 @@ export default function EventsPage() {
       startTime: "",
       endTime: "",
       isAllDay: true,
+      isExternalIntervention: false,
       projectId: "",
       participantIds: [],
     });
@@ -355,9 +360,16 @@ export default function EventsPage() {
                         <div className="flex items-center space-x-3">
                           <span className="text-2xl">📅</span>
                           <div>
-                            <h3 className="font-semibold text-gray-900">
-                              {event.title}
-                            </h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-gray-900">
+                                {event.title}
+                              </h3>
+                              {event.isExternalIntervention && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                                  {t("details.externalIntervention")}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-600 mt-1">
                               {formatDate(event.date)}
                               {!event.isAllDay &&
@@ -525,19 +537,35 @@ export default function EventsPage() {
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isAllDay"
-                  checked={formData.isAllDay}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isAllDay: e.target.checked })
-                  }
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="isAllDay" className="text-sm text-gray-700">
-                  {t("create.allDay")}
-                </label>
+              <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isAllDay"
+                    checked={formData.isAllDay}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isAllDay: e.target.checked })
+                    }
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="isAllDay" className="text-sm text-gray-700">
+                    {t("create.allDay")}
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isExternalIntervention"
+                    checked={formData.isExternalIntervention}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isExternalIntervention: e.target.checked })
+                    }
+                    className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  <label htmlFor="isExternalIntervention" className="text-sm text-gray-700">
+                    {t("create.externalIntervention")}
+                  </label>
+                </div>
               </div>
 
               {!formData.isAllDay && (

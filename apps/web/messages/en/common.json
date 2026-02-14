@@ -173,23 +173,23 @@
       "errors": "Errors"
     },
     "tabs": {
-      "all": "All ({{count}})",
-      "valid": "Valid ({{count}})",
-      "warnings": "Warnings ({{count}})",
-      "duplicates": "Duplicates ({{count}})",
-      "errors": "Errors ({{count}})"
+      "all": "All ({count})",
+      "valid": "Valid ({count})",
+      "warnings": "Warnings ({count})",
+      "duplicates": "Duplicates ({count})",
+      "errors": "Errors ({count})"
     },
     "table": {
-      "line": "Line {{lineNumber}}",
+      "line": "Line {lineNumber}",
       "noItems": "No items in this category"
     },
     "footer": {
-      "willImport": "<strong>{{count}}</strong> item(s) will be imported",
-      "duplicatesIgnored": "({{count}} duplicate(s) ignored)",
-      "errorsNotImported": "({{count}} error(s) not imported)",
+      "willImport": "<strong>{count}</strong> item(s) will be imported",
+      "duplicatesIgnored": "({count} duplicate(s) ignored)",
+      "errorsNotImported": "({count} error(s) not imported)",
       "noValidItems": "No valid items to import",
       "importing": "Importing...",
-      "confirm": "Confirm import ({{count}})"
+      "confirm": "Confirm import ({count})"
     }
   }
 }

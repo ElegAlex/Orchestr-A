@@ -1,6 +1,6 @@
 {
   "title": "Tâches",
-  "taskCount": "{{count}} tâche(s)",
+  "taskCount": "{count} tâche(s)",
   "createTask": "+ Créer une tâche",
   "noTasks": "Aucune tâche",
   "back": "Retour",
@@ -32,8 +32,8 @@
     "projectIcon": "📁",
     "orphanIcon": "📋",
     "orphanLabel": "Tache independante",
-    "estimatedHours": "⏱️ {{hours}}h estimées",
-    "assignees": "{{count}} assignés",
+    "estimatedHours": "⏱️ {hours}h estimées",
+    "assignees": "{count} assignés",
     "progress": "Progression"
   },
 
@@ -117,10 +117,10 @@
       "endLabel": "Fin:",
       "modifyTitle": "Modifier les dependances",
       "prerequisitesLabel": "Taches prealables",
-      "selectedCount": "{{count}} dependance(s) selectionnee(s)",
-      "conflictCount": "dont {{count}} conflit(s) de dates",
-      "dependsOn": "Depend de ({{count}})",
-      "blocks": "Bloque ({{count}})",
+      "selectedCount": "{count} dependance(s) selectionnee(s)",
+      "conflictCount": "dont {count} conflit(s) de dates",
+      "dependsOn": "Depend de ({count})",
+      "blocks": "Bloque ({count})",
       "noDependents": "Aucune tache dependante",
       "viewDetails": "Voir les details"
     }

@@ -40,7 +40,7 @@ export default async function RootLayout({
   const locale = (await params)?.locale || 'fr';
 
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
       <body>
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>

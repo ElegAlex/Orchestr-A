@@ -37,6 +37,7 @@ export interface DayCell {
   leaves: Leave[];
   events: Event[];
   isTelework: boolean;
+  isExternalIntervention: boolean;
   teleworkSchedule: TeleworkSchedule | null;
   isHoliday: boolean;
   holidayName?: string;
@@ -375,20 +376,27 @@ export const usePlanningData = ({
         return holidayDateStr === dateStr;
       });
 
+      // Vérifier si c'est une intervention extérieure (via événement)
+      const hasExternalIntervention = dayEvents.some(
+        (e) => e.isExternalIntervention,
+      );
+
       // Appliquer le filtre d'affichage
       let filteredTasks = dayTasks;
       let filteredEvents = dayEvents;
       let filteredLeaves = dayLeaves;
       let filteredIsTelework = teleworkSchedule?.isTelework || false;
+      let filteredIsExternalIntervention = hasExternalIntervention;
 
       if (viewFilter === "availability") {
-        // Mode "Disponibilités" : afficher uniquement les congés et télétravail
+        // Mode "Disponibilités" : afficher uniquement les congés, télétravail et interventions ext.
         filteredTasks = []; // Masquer toutes les tâches
         filteredEvents = []; // Masquer les événements
       } else if (viewFilter === "activity") {
         // Mode "Activités" : afficher uniquement les tâches et événements
         filteredLeaves = []; // Masquer les congés
         filteredIsTelework = false; // Masquer le télétravail
+        filteredIsExternalIntervention = false; // Masquer les interventions ext.
       }
 
       return {
@@ -397,6 +405,7 @@ export const usePlanningData = ({
         events: filteredEvents,
         leaves: filteredLeaves,
         isTelework: filteredIsTelework,
+        isExternalIntervention: filteredIsExternalIntervention,
         teleworkSchedule: teleworkSchedule || null,
         isHoliday: !!holiday,
         holidayName: holiday?.name,

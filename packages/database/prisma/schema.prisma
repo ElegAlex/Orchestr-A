@@ -639,9 +639,10 @@ model Event {
   date        DateTime
   startTime   String?  // Format HH:MM
   endTime     String?  // Format HH:MM
-  isAllDay    Boolean  @default(true)
-  projectId   String?
-  createdById String
+  isAllDay                Boolean  @default(true)
+  isExternalIntervention  Boolean  @default(false)
+  projectId               String?
+  createdById             String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

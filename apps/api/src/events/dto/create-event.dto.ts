@@ -76,6 +76,15 @@ export class CreateEventDto {
   isAllDay?: boolean;
 
   @ApiProperty({
+    description: 'Intervention extérieure',
+    example: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  isExternalIntervention?: boolean;
+
+  @ApiProperty({
     description: 'ID du projet associé (optionnel)',
     example: 'uuid-here',
     required: false,

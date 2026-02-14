@@ -1,7 +1,7 @@
 {
   "title": "Projets",
-  "projectCount": "{{count}} projet(s)",
-  "projectCountFiltered": "{{filtered}} projet(s) sur {{total}}",
+  "projectCount": "{count} projet(s)",
+  "projectCountFiltered": "{filtered} projet(s) sur {total}",
   "createProject": "Créer un projet",
   "noProjects": "Aucun projet trouvé",
   "backToProjects": "Retour aux projets",
@@ -34,7 +34,7 @@
     "noDescription": "Aucune description",
     "startDate": "Début:",
     "endDate": "Fin:",
-    "budgetHours": "{{hours}}h"
+    "budgetHours": "{hours}h"
   },
 
   "modal": {
@@ -88,7 +88,7 @@
       },
       "editMilestone": "Modifier le jalon",
       "noDate": "Pas de date",
-      "taskCount": "{{count}} tâche(s)",
+      "taskCount": "{count} tâche(s)",
       "progress": "Progression",
       "show": "Voir",
       "hide": "Masquer",
@@ -105,12 +105,12 @@
         "tasks": "Tâches",
         "budget": "Budget",
         "team": "Équipe",
-        "tasksDetail": "{{completed}}/{{total}}",
-        "tasksInProgress": "{{inProgress}} en cours, {{blocked}} bloquées",
-        "budgetDetail": "{{logged}}h",
-        "budgetRemaining": "sur {{total}}h ({{remaining}}h restantes)",
-        "teamCount": "{{count}}",
-        "teamDetail": "{{epics}} épopées, {{milestones}} jalons"
+        "tasksDetail": "{completed}/{total}",
+        "tasksInProgress": "{inProgress} en cours, {blocked} bloquées",
+        "budgetDetail": "{logged}h",
+        "budgetRemaining": "sur {total}h ({remaining}h restantes)",
+        "teamCount": "{count}",
+        "teamDetail": "{epics} épopées, {milestones} jalons"
       },
       "info": {
         "title": "Informations du projet",
@@ -134,8 +134,8 @@
         "blocked": "Bloqué"
       },
       "noTasks": "Aucune tâche",
-      "estimatedHours": "⏱️ {{hours}}h estimées",
-      "assignees": "{{count}} assignés",
+      "estimatedHours": "⏱️ {hours}h estimées",
+      "assignees": "{count} assignés",
       "progress": "Progression"
     },
     "milestones": {
@@ -145,8 +145,8 @@
       "title": "Membres de l'équipe",
       "addMember": "+ Ajouter un membre",
       "noMembers": "Aucun membre",
-      "allocation": "Allocation: {{percent}}%",
-      "removeConfirm": "Voulez-vous vraiment retirer {{firstName}} {{lastName}} de l'équipe ?"
+      "allocation": "Allocation: {percent}%",
+      "removeConfirm": "Voulez-vous vraiment retirer {firstName} {lastName} de l'équipe ?"
     },
     "gantt": {
       "hint": "Cliquez sur une tache pour voir ses dependances, double-cliquez pour les modifier."
@@ -238,12 +238,12 @@
     "memberRemoveError": "Erreur lors du retrait du membre",
     "statusUpdateSuccess": "Statut mis à jour",
     "statusUpdateError": "Erreur lors de la mise à jour du statut",
-    "taskImportSuccess": "{{count}} tache(s) importee(s) avec succes",
-    "taskImportSkipped": "{{count}} tache(s) ignoree(s) (doublons)",
-    "taskImportError": "{{count}} erreur(s) lors de l'import",
-    "milestoneImportSuccess": "{{count}} jalon(s) importe(s) avec succes",
-    "milestoneImportSkipped": "{{count}} jalon(s) ignore(s) (doublons)",
-    "milestoneImportError": "{{count}} erreur(s) lors de l'import",
+    "taskImportSuccess": "{count} tache(s) importee(s) avec succes",
+    "taskImportSkipped": "{count} tache(s) ignoree(s) (doublons)",
+    "taskImportError": "{count} erreur(s) lors de l'import",
+    "milestoneImportSuccess": "{count} jalon(s) importe(s) avec succes",
+    "milestoneImportSkipped": "{count} jalon(s) ignore(s) (doublons)",
+    "milestoneImportError": "{count} erreur(s) lors de l'import",
     "csvEmpty": "Le fichier CSV est vide ou invalide",
     "csvValidationError": "Erreur lors de la validation",
     "templateDownloadError": "Erreur lors du téléchargement du template"

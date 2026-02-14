@@ -8,6 +8,7 @@ export interface Event {
   startTime?: string;
   endTime?: string;
   isAllDay: boolean;
+  isExternalIntervention?: boolean;
   projectId?: string;
   createdById: string;
   createdAt: Date | string;
@@ -46,6 +47,7 @@ export interface CreateEventDto {
   startTime?: string;
   endTime?: string;
   isAllDay?: boolean;
+  isExternalIntervention?: boolean;
   projectId?: string;
   participantIds?: string[];
 }
@@ -57,6 +59,7 @@ export interface UpdateEventDto {
   startTime?: string;
   endTime?: string;
   isAllDay?: boolean;
+  isExternalIntervention?: boolean;
   projectId?: string;
   participantIds?: string[];
 }

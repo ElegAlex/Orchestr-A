@@ -16,7 +16,8 @@
   },
   "details": {
     "participants": "{count} participant",
-    "participantsPlural": "{count} participants"
+    "participantsPlural": "{count} participants",
+    "externalIntervention": "Intervention ext."
   },
   "create": {
     "title": "Créer un événement",
@@ -32,6 +33,7 @@
     "noProject": "Aucun projet",
     "participants": "Participants",
     "participantsPlaceholder": "Sélectionner les participants",
+    "externalIntervention": "Intervention extérieure",
     "creating": "Création...",
     "createButton": "Créer l'événement",
     "success": "Événement créé avec succès",

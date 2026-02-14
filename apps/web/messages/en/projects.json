@@ -1,7 +1,7 @@
 {
   "title": "Projects",
-  "projectCount": "{{count}} project(s)",
-  "projectCountFiltered": "{{filtered}} project(s) of {{total}}",
+  "projectCount": "{count} project(s)",
+  "projectCountFiltered": "{filtered} project(s) of {total}",
   "createProject": "Create Project",
   "noProjects": "No projects found",
   "backToProjects": "Back to projects",
@@ -34,7 +34,7 @@
     "noDescription": "No description",
     "startDate": "Start:",
     "endDate": "End:",
-    "budgetHours": "{{hours}}h"
+    "budgetHours": "{hours}h"
   },
 
   "modal": {
@@ -88,7 +88,7 @@
       },
       "editMilestone": "Edit milestone",
       "noDate": "No date",
-      "taskCount": "{{count}} task(s)",
+      "taskCount": "{count} task(s)",
       "progress": "Progress",
       "show": "Show",
       "hide": "Hide",
@@ -105,12 +105,12 @@
         "tasks": "Tasks",
         "budget": "Budget",
         "team": "Team",
-        "tasksDetail": "{{completed}}/{{total}}",
-        "tasksInProgress": "{{inProgress}} in progress, {{blocked}} blocked",
-        "budgetDetail": "{{logged}}h",
-        "budgetRemaining": "of {{total}}h ({{remaining}}h remaining)",
-        "teamCount": "{{count}}",
-        "teamDetail": "{{epics}} epics, {{milestones}} milestones"
+        "tasksDetail": "{completed}/{total}",
+        "tasksInProgress": "{inProgress} in progress, {blocked} blocked",
+        "budgetDetail": "{logged}h",
+        "budgetRemaining": "of {total}h ({remaining}h remaining)",
+        "teamCount": "{count}",
+        "teamDetail": "{epics} epics, {milestones} milestones"
       },
       "info": {
         "title": "Project Information",
@@ -134,8 +134,8 @@
         "blocked": "Blocked"
       },
       "noTasks": "No tasks",
-      "estimatedHours": "⏱️ {{hours}}h estimated",
-      "assignees": "{{count}} assignees",
+      "estimatedHours": "⏱️ {hours}h estimated",
+      "assignees": "{count} assignees",
       "progress": "Progress"
     },
     "milestones": {
@@ -145,8 +145,8 @@
       "title": "Team Members",
       "addMember": "+ Add Member",
       "noMembers": "No members",
-      "allocation": "Allocation: {{percent}}%",
-      "removeConfirm": "Do you really want to remove {{firstName}} {{lastName}} from the team?"
+      "allocation": "Allocation: {percent}%",
+      "removeConfirm": "Do you really want to remove {firstName} {lastName} from the team?"
     },
     "gantt": {
       "hint": "Click on a task to see its dependencies, double-click to edit them."
@@ -238,12 +238,12 @@
     "memberRemoveError": "Error removing member",
     "statusUpdateSuccess": "Status updated",
     "statusUpdateError": "Error updating status",
-    "taskImportSuccess": "{{count}} task(s) imported successfully",
-    "taskImportSkipped": "{{count}} task(s) skipped (duplicates)",
-    "taskImportError": "{{count}} error(s) during import",
-    "milestoneImportSuccess": "{{count}} milestone(s) imported successfully",
-    "milestoneImportSkipped": "{{count}} milestone(s) skipped (duplicates)",
-    "milestoneImportError": "{{count}} error(s) during import",
+    "taskImportSuccess": "{count} task(s) imported successfully",
+    "taskImportSkipped": "{count} task(s) skipped (duplicates)",
+    "taskImportError": "{count} error(s) during import",
+    "milestoneImportSuccess": "{count} milestone(s) imported successfully",
+    "milestoneImportSkipped": "{count} milestone(s) skipped (duplicates)",
+    "milestoneImportError": "{count} error(s) during import",
     "csvEmpty": "CSV file is empty or invalid",
     "csvValidationError": "Validation error",
     "templateDownloadError": "Error downloading template"
