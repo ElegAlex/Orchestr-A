@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
+import { usersService } from "@/services/users.service";
 import { useThemeStore, Theme } from "@/stores/theme.store";
 import { Role } from "@/types";
 import toast from "react-hot-toast";
@@ -62,7 +63,10 @@ export default function ProfilePage() {
     }
 
     try {
-      // API call would go here
+      await usersService.changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
       toast.success(t("messages.passwordChangeSuccess"));
       setShowPasswordModal(false);
       setPasswordForm({
@@ -70,8 +74,9 @@ export default function ProfilePage() {
         newPassword: "",
         confirmPassword: "",
       });
-    } catch {
-      toast.error(t("messages.passwordChangeError"));
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || t("messages.passwordChangeError"));
     }
   };
 
