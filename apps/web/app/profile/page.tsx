@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
+import { useThemeStore, Theme } from "@/stores/theme.store";
 import { Role } from "@/types";
 import toast from "react-hot-toast";
 
@@ -10,6 +11,7 @@ type TabType = "personal" | "security" | "preferences";
 
 export default function ProfilePage() {
   const user = useAuthStore((state) => state.user);
+  const { theme, setTheme } = useThemeStore();
   const [activeTab, setActiveTab] = useState<TabType>("personal");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -320,8 +322,17 @@ export default function ProfilePage() {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Thème</h3>
                 <select
-                  defaultValue="light"
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={theme === "girly" ? "light" : theme}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "auto") {
+                      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+                      setTheme(prefersDark ? "dark" : "light");
+                    } else {
+                      setTheme(val as Theme);
+                    }
+                  }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                 >
                   <option value="light">Clair</option>
                   <option value="dark">Sombre</option>
