@@ -153,6 +153,9 @@
     "emptyOnSite": "Aucun collaborateur sur site",
     "emptyRemote": "Aucun collaborateur en télétravail",
     "emptyAbsent": "Aucun collaborateur absent",
+    "external": "Intervention ext.",
+    "externalCount": "{count} intervention ext.",
+    "emptyExternal": "Aucun collaborateur en intervention extérieure",
     "loadError": "Erreur lors du chargement des données"
   },
   "import": {

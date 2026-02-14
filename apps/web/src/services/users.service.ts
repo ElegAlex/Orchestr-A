@@ -192,11 +192,13 @@ export interface PresenceData {
   onSite: UserPresenceItem[];
   remote: UserPresenceItem[];
   absent: UserPresenceItem[];
+  external: UserPresenceItem[];
   date: string;
   totals: {
     onSite: number;
     remote: number;
     absent: number;
+    external: number;
     total: number;
   };
 }

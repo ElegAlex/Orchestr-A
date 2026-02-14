@@ -153,6 +153,9 @@
     "emptyOnSite": "No staff on site",
     "emptyRemote": "No staff working remotely",
     "emptyAbsent": "No absent staff",
+    "external": "External",
+    "externalCount": "{count} external",
+    "emptyExternal": "No staff on external intervention",
     "loadError": "Error loading data"
   },
   "import": {

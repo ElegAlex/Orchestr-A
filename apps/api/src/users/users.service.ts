@@ -1129,6 +1129,24 @@ export class UsersService {
     });
     const absentUserIds = new Set(leaves.map((l) => l.userId));
 
+    // Récupérer les tâches en intervention extérieure couvrant ce jour
+    const externalTasks = await this.prisma.task.findMany({
+      where: {
+        isExternalIntervention: true,
+        startDate: { lte: endOfDay },
+        endDate: { gte: startOfDay },
+        status: { notIn: ['DONE'] },
+      },
+      select: {
+        assignees: {
+          select: { userId: true },
+        },
+      },
+    });
+    const externalUserIds = new Set(
+      externalTasks.flatMap((t) => t.assignees.map((a) => a.userId)),
+    );
+
     // Classifier les utilisateurs
     const onSite: Array<{
       id: string;
@@ -1140,6 +1158,7 @@ export class UsersService {
     }> = [];
     const remote: typeof onSite = [];
     const absent: typeof onSite = [];
+    const external: typeof onSite = [];
 
     for (const user of users) {
       const item = {
@@ -1153,6 +1172,8 @@ export class UsersService {
 
       if (absentUserIds.has(user.id)) {
         absent.push(item);
+      } else if (externalUserIds.has(user.id)) {
+        external.push(item);
       } else if (remoteUserIds.has(user.id)) {
         remote.push(item);
       } else {
@@ -1164,11 +1185,13 @@ export class UsersService {
       onSite,
       remote,
       absent,
+      external,
       date: startOfDay.toISOString().split('T')[0],
       totals: {
         onSite: onSite.length,
         remote: remote.length,
         absent: absent.length,
+        external: external.length,
         total: users.length,
       },
     };

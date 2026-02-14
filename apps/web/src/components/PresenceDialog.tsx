@@ -83,7 +83,7 @@ export function PresenceDialog() {
   const [data, setData] = useState<PresenceData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"onsite" | "remote" | "absent">(
+  const [activeTab, setActiveTab] = useState<"onsite" | "remote" | "external" | "absent">(
     "onsite",
   );
 
@@ -243,6 +243,28 @@ export function PresenceDialog() {
                           </svg>
                           {t("absentCount", { count: data.totals.absent })}
                         </span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          <svg
+                            className="h-3 w-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                          </svg>
+                          {t("externalCount", { count: data.totals.external })}
+                        </span>
                       </div>
                     )}
 
@@ -324,6 +346,37 @@ export function PresenceDialog() {
                             {t("absent")}
                           </span>
                         </button>
+                        <button
+                          onClick={() => setActiveTab("external")}
+                          className={`pb-3 px-1 border-b-2 text-sm font-medium transition ${
+                            activeTab === "external"
+                              ? "border-orange-500 text-orange-600"
+                              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                            </svg>
+                            {t("external")}
+                          </span>
+                        </button>
                       </nav>
                     </div>
 
@@ -348,6 +401,12 @@ export function PresenceDialog() {
                           <PresenceList
                             users={data.absent}
                             emptyMessage={t("emptyAbsent")}
+                          />
+                        )}
+                        {activeTab === "external" && (
+                          <PresenceList
+                            users={data.external}
+                            emptyMessage={t("emptyExternal")}
                           />
                         )}
                       </div>
