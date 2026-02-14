@@ -1,0 +1,141 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "projects": "Projets",
+    "tasks": "Tâches",
+    "planning": "Planning",
+    "events": "Événements",
+    "leaves": "Congés",
+    "telework": "Télétravail",
+    "skills": "Compétences",
+    "timeTracking": "Suivi du temps",
+    "users": "Utilisateurs",
+    "departments": "Départements",
+    "reports": "Rapports",
+    "settings": "Paramètres",
+    "profile": "Profil",
+    "roleManagement": "Gestion des rôles",
+    "admin": "Administration"
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "import": "Importer",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "next": "Suivant",
+    "close": "Fermer",
+    "refresh": "Actualiser",
+    "loading": "Chargement..."
+  },
+  "roles": {
+    "ADMIN": "Administrateur",
+    "RESPONSABLE": "Responsable",
+    "MANAGER": "Manager",
+    "CHEF_DE_PROJET": "Chef de projet",
+    "REFERENT_TECHNIQUE": "Référent technique",
+    "CONTRIBUTEUR": "Contributeur",
+    "OBSERVATEUR": "Observateur"
+  },
+  "status": {
+    "active": "Actif",
+    "inactive": "Inactif",
+    "pending": "En attente",
+    "completed": "Terminé",
+    "cancelled": "Annulé",
+    "inProgress": "En cours",
+    "draft": "Brouillon"
+  },
+  "priority": {
+    "LOW": "Basse",
+    "NORMAL": "Normale",
+    "MEDIUM": "Moyenne",
+    "HIGH": "Haute",
+    "URGENT": "Urgente",
+    "CRITICAL": "Critique"
+  },
+  "projectStatus": {
+    "DRAFT": "Brouillon",
+    "ACTIVE": "Actif",
+    "SUSPENDED": "Suspendu",
+    "ON_HOLD": "En pause",
+    "COMPLETED": "Terminé",
+    "CANCELLED": "Annulé"
+  },
+  "taskStatus": {
+    "TODO": "À faire",
+    "IN_PROGRESS": "En cours",
+    "IN_REVIEW": "En revue",
+    "DONE": "Terminé",
+    "BLOCKED": "Bloqué"
+  },
+  "errors": {
+    "required": "Champ requis",
+    "unauthorized": "Non autorisé",
+    "notFound": "Non trouvé",
+    "serverError": "Erreur serveur",
+    "networkError": "Erreur réseau",
+    "validationError": "Erreur de validation",
+    "forbidden": "Accès interdit"
+  },
+  "table": {
+    "empty": "Aucune donnée",
+    "loading": "Chargement...",
+    "rowsPerPage": "Lignes par page",
+    "of": "sur",
+    "page": "Page"
+  },
+  "language": {
+    "fr": "Français",
+    "en": "English",
+    "switchLanguage": "Changer de langue"
+  },
+  "form": {
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "Email",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "name": "Nom",
+    "title": "Titre",
+    "description": "Description",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "status": "Statut",
+    "priority": "Priorité",
+    "estimatedHours": "Heures estimées",
+    "login": "Identifiant"
+  },
+  "confirmation": {
+    "areYouSure": "Êtes-vous sûr ?",
+    "deleteConfirm": "Voulez-vous vraiment supprimer cet élément ?",
+    "cannotBeUndone": "Cette action ne peut pas être annulée",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "messages": {
+    "success": "Opération réussie",
+    "error": "Une erreur est survenue",
+    "saved": "Enregistré avec succès",
+    "deleted": "Supprimé avec succès",
+    "updated": "Mis à jour avec succès",
+    "created": "Créé avec succès"
+  },
+  "common": {
+    "welcome": "Bienvenue",
+    "logout": "Déconnexion",
+    "administration": "Administration",
+    "on": "sur",
+    "of": "de",
+    "notDefined": "Non définie",
+    "invalidDate": "Date invalide",
+    "noData": "Aucune donnée",
+    "completed": "Complétées"
+  }
+}

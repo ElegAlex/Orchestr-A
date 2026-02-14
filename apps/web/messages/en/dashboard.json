@@ -1,0 +1,61 @@
+{
+  "title": "Dashboard",
+  "welcome": "Hello {name}!",
+  "activityOverview": "Here's an overview of your activity",
+  "stats": {
+    "activeProjects": "Active projects",
+    "tasksInProgress": "Tasks in progress",
+    "tasksCompleted": "Completed tasks",
+    "tasksBlocked": "Blocked tasks",
+    "onProjects": "of {total} projects",
+    "onTasks": "of {total} tasks",
+    "percentCompleted": "{percent}% completed",
+    "needAttention": "Need attention"
+  },
+  "planning": {
+    "title": "My planning"
+  },
+  "todos": {
+    "title": "My To-Do",
+    "placeholder": "Add a to-do...",
+    "addButton": "+ Add",
+    "addingButton": "...",
+    "limitReached": "⚠️ Limit of {max} to-dos reached",
+    "empty": "No to-dos yet",
+    "editHint": "Double-click to edit",
+    "deleteHint": "Delete",
+    "completedSection": "Completed ({count})",
+    "success": {
+      "added": "To-do added",
+      "deleted": "To-do deleted",
+      "updated": "To-do updated"
+    },
+    "errors": {
+      "add": "Error adding to-do",
+      "delete": "Error deleting to-do",
+      "update": "Error updating to-do"
+    }
+  },
+  "tasks": {
+    "title": "My upcoming tasks",
+    "empty": "No assigned tasks",
+    "startDate": "Start:",
+    "endDate": "End:",
+    "estimated": "Estimated:",
+    "hours": "{hours}h",
+    "success": {
+      "statusUpdated": "Status updated"
+    },
+    "errors": {
+      "statusUpdate": "Error updating status"
+    }
+  },
+  "projects": {
+    "title": "My projects",
+    "empty": "No assigned projects"
+  },
+  "loading": "Loading...",
+  "errors": {
+    "loadData": "Error loading data"
+  }
+}

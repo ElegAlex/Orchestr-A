@@ -1,0 +1,114 @@
+{
+  "planning": {
+    "title": "Resource Planning",
+    "week": "Week",
+    "month": "Month",
+    "today": "Today",
+    "createTask": "Create a task",
+    "weekOf": "Week of {start} to {end}",
+    "loading": "Loading planning...",
+    "noResources": "No resources to display"
+  },
+  "filters": {
+    "services": "Services:",
+    "noService": "No service",
+    "allServices": "All services",
+    "servicesCount": "{count} service",
+    "servicesCountPlural": "{count} services",
+    "all": "All",
+    "none": "None",
+    "resource": "Resource:",
+    "allResources": "All resources",
+    "display": "Display:",
+    "displayAll": "All",
+    "displayAvailability": "Availability",
+    "displayActivity": "Activity"
+  },
+  "actions": {
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "collapseAll": "Collapse all services",
+    "expandAll": "Expand all services",
+    "collapseService": "Collapse this service",
+    "expandService": "Expand this service"
+  },
+  "group": {
+    "people": "people",
+    "person": "person",
+    "task": "task",
+    "tasks": "tasks",
+    "collapsed": "(collapsed)"
+  },
+  "legend": {
+    "title": "Legend",
+    "task": "Task",
+    "leave": "Leave",
+    "telework": "Telework",
+    "office": "Office",
+    "leaveValidated": "Approved leave",
+    "leavePending": "Pending leave",
+    "event": "Event",
+    "externalIntervention": "External intervention"
+  },
+  "table": {
+    "resource": "Resource"
+  },
+  "telework": {
+    "label": "Telework",
+    "office": "Office",
+    "updateError": "Error updating telework"
+  },
+  "taskMove": {
+    "multiAssignDateError": "Multi-assigned task: date change not possible.\nModify dates via task details.",
+    "alreadyAssigned": "This user is already assigned to this task.",
+    "reassignOnly": "Multi-assigned task: only assignee was modified.\nDate remains unchanged for all assignees.",
+    "moveError": "Error moving task"
+  },
+  "dayCell": {
+    "pendingValidation": "pending validation",
+    "validated": "validated",
+    "pending": "Pending",
+    "externalShort": "EXT",
+    "externalIntervention": "External intervention",
+    "allDay": "All day"
+  },
+  "taskModal": {
+    "description": "Description",
+    "status": "Status",
+    "priority": "Priority",
+    "estimation": "Estimation",
+    "progress": "Progress"
+  },
+  "taskCreate": {
+    "title": "Create a task",
+    "titleField": "Title *",
+    "titlePlaceholder": "e.g., Develop the homepage",
+    "description": "Description",
+    "descriptionPlaceholder": "Detailed task description...",
+    "project": "Project",
+    "noProject": "No project (independent task)",
+    "assignees": "Assignees",
+    "assigneesPlaceholder": "Select assignees",
+    "status": "Status",
+    "priority": "Priority",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "estimationHours": "Estimation (hours)",
+    "estimationPlaceholder": "e.g., 8",
+    "externalIntervention": "External intervention",
+    "creating": "Creating...",
+    "createButton": "Create task",
+    "success": "Task created successfully",
+    "error": "Error creating task"
+  },
+  "leaveTypes": {
+    "CP": "Paid leave",
+    "RTT": "RTT",
+    "SICK_LEAVE": "Sick leave",
+    "UNPAID": "Unpaid",
+    "OTHER": "Other"
+  },
+  "roles": {
+    "REFERENT_TECHNIQUE_SHORT": "Tech Lead"
+  }
+}

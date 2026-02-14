@@ -8,6 +8,7 @@ import { Task as FullTask } from "@/types";
 import { TaskDependencyInfo } from "./TaskDependencyInfo";
 import { TaskDependencyModal } from "./TaskDependencyModal";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 interface GanttTask {
   id: string;
@@ -44,6 +45,7 @@ export default function GanttChart({
   fullTasks = [],
   onDependencyChange,
 }: GanttChartProps) {
+  const t = useTranslations("projects");
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const [ganttTasks, setGanttTasks] = useState<Task[]>([]);
@@ -216,11 +218,10 @@ export default function GanttChart({
       <div className="text-center py-12">
         <div className="text-6xl mb-4">📊</div>
         <p className="text-gray-500">
-          Aucune donnée pour le diagramme de Gantt
+          {t("ganttChart.emptyState.title")}
         </p>
         <p className="text-sm text-gray-400 mt-2">
-          Ajoutez des tâches et jalons avec des dates pour visualiser le
-          planning
+          {t("ganttChart.emptyState.description")}
         </p>
       </div>
     );
@@ -230,7 +231,7 @@ export default function GanttChart({
     <div className="bg-white rounded-lg gantt-chart">
       {/* View Mode Selector */}
       <div className="flex items-center space-x-2 mb-4">
-        <span className="text-sm font-medium text-gray-900">Vue:</span>
+        <span className="text-sm font-medium text-gray-900">{t("ganttChart.viewLabel")}:</span>
         <button
           onClick={() => setViewMode(ViewMode.Day)}
           className={`px-3 py-1 rounded text-sm ${
@@ -239,7 +240,7 @@ export default function GanttChart({
               : "bg-gray-200 text-gray-900 hover:bg-gray-300"
           }`}
         >
-          Jour
+          {t("ganttChart.viewDay")}
         </button>
         <button
           onClick={() => setViewMode(ViewMode.Week)}
@@ -249,7 +250,7 @@ export default function GanttChart({
               : "bg-gray-200 text-gray-900 hover:bg-gray-300"
           }`}
         >
-          Semaine
+          {t("ganttChart.viewWeek")}
         </button>
         <button
           onClick={() => setViewMode(ViewMode.Month)}
@@ -259,7 +260,7 @@ export default function GanttChart({
               : "bg-gray-200 text-gray-900 hover:bg-gray-300"
           }`}
         >
-          Mois
+          {t("ganttChart.viewMonth")}
         </button>
       </div>
 

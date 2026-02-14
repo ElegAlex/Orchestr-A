@@ -25,8 +25,7 @@ import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { Role } from 'database';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('services')
 @Controller('services')
@@ -36,7 +35,7 @@ export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('services:create')
   @ApiOperation({
     summary: 'Créer un nouveau service (Admin/Responsable uniquement)',
   })
@@ -125,7 +124,7 @@ export class ServicesController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('services:update')
   @ApiOperation({
     summary: 'Mettre à jour un service (Admin/Responsable)',
   })
@@ -150,7 +149,7 @@ export class ServicesController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('services:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Supprimer un service (Admin uniquement)',

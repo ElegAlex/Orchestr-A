@@ -26,9 +26,9 @@ import { UpdateSkillDto } from './dto/update-skill.dto';
 import { AssignSkillDto } from './dto/assign-skill.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Role, SkillCategory, SkillLevel } from 'database';
+import { SkillCategory, SkillLevel } from 'database';
 
 @ApiTags('skills')
 @Controller('skills')
@@ -38,7 +38,7 @@ export class SkillsController {
   constructor(private readonly skillsService: SkillsService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('skills:create')
   @ApiOperation({
     summary: 'Créer une nouvelle compétence (Admin/Responsable uniquement)',
   })
@@ -74,7 +74,7 @@ export class SkillsController {
   }
 
   @Get('matrix')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('skills:manage_matrix')
   @ApiOperation({
     summary: 'Récupérer la matrice de compétences (Admin/Responsable/Manager)',
   })
@@ -92,7 +92,7 @@ export class SkillsController {
   }
 
   @Get('search/:skillId')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('skills:read')
   @ApiOperation({
     summary:
       'Rechercher des utilisateurs par compétence (Admin/Responsable/Manager)',
@@ -130,7 +130,7 @@ export class SkillsController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('skills:update')
   @ApiOperation({
     summary: 'Mettre à jour une compétence (Admin/Responsable)',
   })
@@ -154,7 +154,7 @@ export class SkillsController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('skills:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Supprimer une compétence (Admin uniquement)',
@@ -193,7 +193,7 @@ export class SkillsController {
   }
 
   @Post('user/:userId/assign')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('skills:manage_matrix')
   @ApiOperation({
     summary:
       'Assigner une compétence à un utilisateur (Admin/Responsable/Manager)',
@@ -232,7 +232,7 @@ export class SkillsController {
   }
 
   @Delete('user/:userId/remove/:skillId')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('skills:manage_matrix')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
@@ -279,7 +279,7 @@ export class SkillsController {
   }
 
   @Patch('user/:userId/skill/:skillId')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('skills:manage_matrix')
   @ApiOperation({
     summary:
       "Mettre à jour le niveau d'une compétence d'un utilisateur (Admin/Responsable/Manager)",

@@ -1,0 +1,279 @@
+{
+  "users": {
+    "title": "Utilisateurs",
+    "count": "utilisateurs",
+    "createButton": "Créer un utilisateur",
+    "importButton": "Importer CSV",
+    "columns": {
+      "user": "Utilisateur",
+      "emailLogin": "Email / Login",
+      "role": "Rôle",
+      "departmentServices": "Département / Services",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "actions": {
+      "edit": "Modifier",
+      "deactivate": "Désactiver",
+      "delete": "Supprimer",
+      "deactivateTooltip": "Vous ne pouvez pas vous désactiver vous-même",
+      "deleteTooltip": "Vous ne pouvez pas vous supprimer vous-même",
+      "deactivateAction": "Désactiver (soft delete)",
+      "deleteAction": "Supprimer définitivement"
+    },
+    "createModal": {
+      "title": "Créer un utilisateur",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Email",
+      "login": "Login",
+      "password": "Mot de passe",
+      "role": "Rôle",
+      "department": "Département",
+      "noDepartment": "Aucun département",
+      "services": "Services",
+      "selectDepartmentFirst": "Sélectionnez d'abord un département",
+      "noServiceAvailable": "Aucun service disponible",
+      "cancel": "Annuler",
+      "create": "Créer"
+    },
+    "editModal": {
+      "title": "Modifier l'utilisateur",
+      "loginReadOnly": "Le login ne peut pas être modifié",
+      "newPassword": "Nouveau mot de passe (optionnel)",
+      "passwordPlaceholder": "Laisser vide pour ne pas changer",
+      "passwordHint": "Laissez vide si vous ne souhaitez pas modifier le mot de passe",
+      "save": "Enregistrer"
+    },
+    "deleteModal": {
+      "title": "Supprimer définitivement",
+      "confirmText": "Êtes-vous sûr de vouloir supprimer définitivement l'utilisateur",
+      "checkingDeps": "Vérification des dépendances...",
+      "cannotDelete": "Impossible de supprimer cet utilisateur",
+      "depsExist": "Des dépendances actives empêchent la suppression :",
+      "pleaseReassign": "Veuillez d'abord réassigner ou terminer ces éléments.",
+      "warningTitle": "Attention :",
+      "warningText": "Cette action est irréversible. Toutes les données associées à cet utilisateur (historique, commentaires, entrées de temps, etc.) seront définitivement supprimées.",
+      "cancel": "Annuler",
+      "confirm": "Supprimer définitivement",
+      "deleting": "Suppression..."
+    },
+    "import": {
+      "title": "Importer des utilisateurs depuis CSV",
+      "formatTitle": "Format du fichier CSV",
+      "formatDescription": "Le fichier doit contenir les colonnes suivantes (séparées par des points-virgules) :",
+      "columns": {
+        "email": "Email de l'utilisateur (requis)",
+        "login": "Login unique (requis)",
+        "password": "Mot de passe initial (requis, min 6 caractères)",
+        "firstName": "Prénom (requis)",
+        "lastName": "Nom (requis)",
+        "role": "Rôle (ADMIN, RESPONSABLE, MANAGER, REFERENT_TECHNIQUE, CONTRIBUTEUR, OBSERVATEUR)",
+        "departmentName": "Nom du département (optionnel)",
+        "serviceNames": "Noms des services séparés par virgules (optionnel)"
+      },
+      "downloadTemplate": "Télécharger le template CSV",
+      "selectFile": "Sélectionner un fichier CSV",
+      "preview": "Aperçu",
+      "detected": "utilisateur(s) détecté(s)",
+      "previewColumns": {
+        "email": "Email",
+        "login": "Login",
+        "name": "Nom",
+        "role": "Rôle",
+        "department": "Département"
+      },
+      "andMore": "... et",
+      "others": "autre(s)",
+      "resultTitle": "Résultat de l'import",
+      "created": "créé(s)",
+      "skipped": "ignoré(s)",
+      "errors": "erreur(s)",
+      "details": "Détails :",
+      "close": "Fermer",
+      "import": "Importer",
+      "importing": "Import en cours...",
+      "importCount": "utilisateur(s)",
+      "previewTitle": "Previsualisation de l'import des utilisateurs",
+      "noValidUsers": "Aucun utilisateur valide a importer"
+    },
+    "messages": {
+      "loadError": "Erreur lors du chargement des utilisateurs",
+      "createSuccess": "Utilisateur créé avec succès",
+      "createError": "Erreur lors de la création",
+      "updateSuccess": "Utilisateur modifié avec succès",
+      "updateError": "Erreur lors de la modification",
+      "deactivateConfirm": "Êtes-vous sûr de vouloir désactiver cet utilisateur ?",
+      "deactivateSuccess": "Utilisateur désactivé",
+      "deleteError": "Erreur lors de la suppression",
+      "depsCheckError": "Erreur lors de la vérification des dépendances",
+      "hardDeleteSuccess": "Utilisateur supprimé définitivement",
+      "importCreated": "utilisateur(s) cree(s) avec succes",
+      "importSkipped": "utilisateur(s) ignore(s) (existants)",
+      "importErrors": "erreur(s) lors de l'import",
+      "importValidationError": "Erreur lors de la validation",
+      "importError": "Erreur lors de l'import"
+    },
+    "loading": "Chargement..."
+  },
+  "departments": {
+    "title": "Départements & Services",
+    "count": "département(s)",
+    "servicesCount": "service(s)",
+    "newService": "Nouveau service",
+    "newDepartment": "Nouveau département",
+    "infoTitle": "Organisation hiérarchique",
+    "infoText": "Les départements représentent les grandes divisions de l'entreprise. Chaque département peut contenir plusieurs services. Les managers peuvent être assignés aux départements et services pour gérer leurs équipes.",
+    "filterLabel": "Filtrer par département :",
+    "allDepartments": "Tous les départements",
+    "noDepartment": "Aucun département créé",
+    "createFirst": "Créer votre premier département",
+    "services": "service(s)",
+    "members": "membre(s)",
+    "manager": "Manager :",
+    "modify": "Modifier",
+    "delete": "Supprimer",
+    "noServiceInDept": "Aucun service dans ce département",
+    "addService": "Ajouter un service",
+    "createdOn": "Créé le",
+    "departmentModal": {
+      "titleCreate": "Nouveau département",
+      "titleEdit": "Modifier le département",
+      "name": "Nom du département *",
+      "namePlaceholder": "Ex: Informatique",
+      "description": "Description (optionnel)",
+      "descriptionPlaceholder": "Description du département...",
+      "manager": "Responsable du département (optionnel)",
+      "noManager": "Aucun responsable",
+      "cancel": "Annuler",
+      "create": "Créer",
+      "edit": "Modifier"
+    },
+    "serviceModal": {
+      "titleCreate": "Nouveau service",
+      "titleEdit": "Modifier le service",
+      "department": "Département *",
+      "selectDepartment": "Sélectionner un département",
+      "name": "Nom du service *",
+      "namePlaceholder": "Ex: Développement Web",
+      "description": "Description (optionnel)",
+      "descriptionPlaceholder": "Description du service...",
+      "manager": "Manager du service (optionnel)",
+      "noManager": "Aucun manager",
+      "cancel": "Annuler",
+      "create": "Créer",
+      "edit": "Modifier"
+    },
+    "messages": {
+      "loadError": "Erreur lors du chargement des données",
+      "createDeptSuccess": "Département créé avec succès",
+      "updateDeptSuccess": "Département modifié avec succès",
+      "createServiceSuccess": "Service créé avec succès",
+      "updateServiceSuccess": "Service modifié avec succès",
+      "saveError": "Erreur lors de",
+      "creation": "la création",
+      "modification": "la modification",
+      "deleteDeptConfirm": "Êtes-vous sûr de vouloir supprimer ce département ? Tous les services associés seront également supprimés.",
+      "deleteDeptSuccess": "Département supprimé",
+      "deleteServiceConfirm": "Êtes-vous sûr de vouloir supprimer ce service ?",
+      "deleteServiceSuccess": "Service supprimé",
+      "deleteError": "Erreur lors de la suppression"
+    },
+    "accessRestricted": {
+      "icon": "🔒",
+      "title": "Accès restreint",
+      "message": "Cette page est réservée aux administrateurs et responsables"
+    },
+    "loading": "Chargement..."
+  },
+  "reports": {
+    "title": "Rapports & Analytics",
+    "tabs": {
+      "overview": "📊 Vue d'ensemble",
+      "advanced": "📈 Analytics Avancés",
+      "gantt": "📅 Gantt Portfolio"
+    },
+    "dateRange": {
+      "week": "Cette semaine",
+      "month": "Ce mois",
+      "quarter": "Ce trimestre",
+      "year": "Cette année"
+    },
+    "filters": {
+      "allProjects": "Tous les projets",
+      "refresh": "⟳ Actualiser",
+      "export": "↓ Exporter"
+    },
+    "exportFormats": {
+      "pdf": "PDF",
+      "excel": "Excel",
+      "json": "JSON"
+    },
+    "alerts": {
+      "attentionRequired": "Attention requise",
+      "overdueTasks": "tâche(s) en retard nécessitent votre attention. Consultez la page Tâches pour plus de détails."
+    },
+    "errors": {
+      "title": "Erreur",
+      "loadFailed": "Impossible de charger les données analytiques.",
+      "exportError": "Erreur lors de l'export. Vérifiez la console pour plus de détails."
+    },
+    "loading": "Chargement..."
+  },
+  "roles": {
+    "title": "Gestion des rôles",
+    "description": "Configurer les rôles et permissions",
+    "table": {
+      "name": "Nom",
+      "code": "Code",
+      "permissions": "Permissions",
+      "system": "Système"
+    },
+    "create": "Créer un rôle",
+    "delete": "Supprimer le rôle",
+    "systemBadge": "Système",
+    "permissionMatrix": "Matrice des permissions",
+    "selectAll": "Tout sélectionner",
+    "savePermissions": "Sauvegarder les permissions",
+    "initializePermissions": "Initialiser les permissions",
+    "noRoles": "Aucun rôle configuré",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce rôle ?",
+    "cannotDeleteSystem": "Les rôles système ne peuvent pas être supprimés",
+    "modules": {
+      "projects": "Projets",
+      "tasks": "Tâches",
+      "events": "Événements",
+      "leaves": "Congés",
+      "telework": "Télétravail",
+      "skills": "Compétences",
+      "time_tracking": "Suivi du temps",
+      "users": "Utilisateurs",
+      "departments": "Départements",
+      "services": "Services",
+      "documents": "Documents",
+      "comments": "Commentaires",
+      "settings": "Paramètres",
+      "analytics": "Analytiques",
+      "holidays": "Jours fériés",
+      "epics": "Épopées",
+      "milestones": "Jalons"
+    },
+    "actions": {
+      "create": "Créer",
+      "read": "Lire",
+      "update": "Modifier",
+      "delete": "Supprimer",
+      "approve": "Approuver",
+      "manage_members": "Gérer les membres",
+      "manage_delegations": "Gérer les délégations",
+      "manage_matrix": "Gérer la matrice",
+      "manage_roles": "Gérer les rôles",
+      "import": "Importer",
+      "export": "Exporter",
+      "read_team": "Voir l'équipe",
+      "read_reports": "Voir les rapports",
+      "create_in_project": "Créer dans un projet",
+      "create_orphan": "Créer hors projet"
+    }
+  }
+}

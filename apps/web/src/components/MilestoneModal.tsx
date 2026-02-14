@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Milestone, MilestoneStatus } from "@/types";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 interface MilestoneModalProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ export function MilestoneModal({
   milestone,
   projectId,
 }: MilestoneModalProps) {
+  const t = useTranslations("projects");
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -52,7 +55,7 @@ export function MilestoneModal({
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      toast.error("Le nom du jalon est obligatoire");
+      toast.error(t("milestoneModal.nameRequired"));
       return;
     }
 
@@ -90,7 +93,7 @@ export function MilestoneModal({
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">
-              {milestone ? "Modifier le jalon" : "Nouveau jalon"}
+              {milestone ? t("milestoneModal.editTitle") : t("milestoneModal.createTitle")}
             </h2>
             <button
               onClick={onClose}
@@ -117,7 +120,7 @@ export function MilestoneModal({
           {/* Nom du jalon */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Nom du jalon <span className="text-red-500">*</span>
+              {t("milestoneModal.nameLabel")} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -127,14 +130,14 @@ export function MilestoneModal({
                 setFormData({ ...formData, name: e.target.value })
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Ex: Livraison V1.0, Revue de projet..."
+              placeholder={t("milestoneModal.namePlaceholder")}
             />
           </div>
 
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Description
+              {t("milestoneModal.descriptionLabel")}
             </label>
             <textarea
               value={formData.description}
@@ -143,14 +146,14 @@ export function MilestoneModal({
               }
               rows={4}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Décrivez l'objectif et les livrables de ce jalon..."
+              placeholder={t("milestoneModal.descriptionPlaceholder")}
             />
           </div>
 
           {/* Date d'échéance */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Date d&apos;échéance
+              {t("milestoneModal.dueDateLabel")}
             </label>
             <input
               type="date"
@@ -165,7 +168,7 @@ export function MilestoneModal({
           {/* Statut (en lecture seule avec explication) */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Statut
+              {t("milestoneModal.statusLabel")}
             </label>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start space-x-3">
@@ -184,11 +187,10 @@ export function MilestoneModal({
                 </svg>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-blue-900">
-                    Statut calculé automatiquement
+                    {t("milestoneModal.statusAutoTitle")}
                   </p>
                   <p className="text-xs text-blue-700 mt-1">
-                    Le statut du jalon est déterminé automatiquement en fonction
-                    de l&apos;avancement des tâches qui lui sont associées.
+                    {t("milestoneModal.statusAutoDescription")}
                   </p>
                 </div>
               </div>
@@ -203,7 +205,7 @@ export function MilestoneModal({
               disabled={isSubmitting}
               className="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
             >
-              Annuler
+              {t("milestoneModal.cancel")}
             </button>
             <button
               type="submit"
@@ -232,10 +234,10 @@ export function MilestoneModal({
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  <span>Enregistrement...</span>
+                  <span>{t("milestoneModal.saving")}</span>
                 </>
               ) : (
-                <span>{milestone ? "Mettre à jour" : "Créer le jalon"}</span>
+                <span>{milestone ? t("milestoneModal.updateButton") : t("milestoneModal.createButton")}</span>
               )}
             </button>
           </div>

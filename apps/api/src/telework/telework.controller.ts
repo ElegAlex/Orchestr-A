@@ -25,9 +25,8 @@ import { CreateTeleworkDto } from './dto/create-telework.dto';
 import { UpdateTeleworkDto } from './dto/update-telework.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Role } from 'database';
 
 @ApiTags('telework')
 @Controller('telework')
@@ -118,7 +117,7 @@ export class TeleworkController {
   }
 
   @Get('team/:date')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('telework:read_team')
   @ApiOperation({
     summary:
       'Voir qui est en télétravail pour une date (Admin/Responsable/Manager)',
@@ -136,7 +135,7 @@ export class TeleworkController {
   }
 
   @Get('user/:userId/week')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('telework:read_team')
   @ApiOperation({
     summary:
       "Récupérer le planning de télétravail d'un utilisateur (Admin/Responsable/Manager)",
@@ -158,7 +157,7 @@ export class TeleworkController {
   }
 
   @Get('user/:userId/stats')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('telework:read_team')
   @ApiOperation({
     summary:
       "Récupérer les statistiques de télétravail d'un utilisateur (Admin/Responsable/Manager)",

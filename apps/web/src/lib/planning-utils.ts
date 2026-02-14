@@ -149,6 +149,8 @@ export const getStatusIcon = (status: TaskStatus) => {
   }
 };
 
+// Note: getRoleLabel and getLeaveTypeLabel are kept for backward compatibility
+// with other pages (leaves, users, profile). Planning components use i18n directly.
 export const getRoleLabel = (role: Role): string => {
   switch (role) {
     case Role.ADMIN:

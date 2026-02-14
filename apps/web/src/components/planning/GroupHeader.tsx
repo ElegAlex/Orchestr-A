@@ -1,6 +1,7 @@
 import { ServiceGroup } from "@/hooks/usePlanningData";
 import { getGroupColors } from "@/lib/planning-utils";
 import { usePlanningViewStore } from "@/stores/planningView.store";
+import { useTranslations } from "next-intl";
 
 interface GroupHeaderProps {
   group: ServiceGroup;
@@ -13,6 +14,7 @@ export const GroupHeader = ({
   taskCount,
   colSpan,
 }: GroupHeaderProps) => {
+  const t = useTranslations("planning");
   const colors = getGroupColors(group.color, group.isManagement);
   const { collapsedServices, toggleService } = usePlanningViewStore();
   const isCollapsed = collapsedServices[group.id] ?? false;
@@ -36,8 +38,8 @@ export const GroupHeader = ({
               className={`mr-2 p-1 rounded hover:bg-black/10 transition-transform duration-200 ${
                 isCollapsed ? "" : "rotate-90"
               }`}
-              aria-label={isCollapsed ? "Déplier" : "Replier"}
-              title={isCollapsed ? "Déplier ce service" : "Replier ce service"}
+              aria-label={isCollapsed ? t("actions.expand") : t("actions.collapse")}
+              title={isCollapsed ? t("actions.expandService") : t("actions.collapseService")}
             >
               <svg
                 className={`w-4 h-4 ${colors.text}`}
@@ -63,11 +65,11 @@ export const GroupHeader = ({
                 className={`ml-3 text-xs font-normal ${colors.text} opacity-75`}
               >
                 {group.users.length}{" "}
-                {group.users.length > 1 ? "personnes" : "personne"}
+                {group.users.length > 1 ? t("group.people") : t("group.person")}
               </span>
               {isCollapsed && (
                 <span className={`ml-2 text-xs ${colors.text} opacity-60`}>
-                  (replié)
+                  {t("group.collapsed")}
                 </span>
               )}
             </div>
@@ -76,7 +78,7 @@ export const GroupHeader = ({
             <div
               className={`${colors.badge} text-white text-xs font-bold px-2 py-1 rounded-full`}
             >
-              {taskCount} tâche{taskCount > 1 ? "s" : ""}
+              {taskCount} {taskCount > 1 ? t("group.tasks") : t("group.task")}
             </div>
           )}
         </div>

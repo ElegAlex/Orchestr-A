@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { addWeeks, subWeeks, format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { fr, enUS } from "date-fns/locale";
 import { PlanningGrid } from "./PlanningGrid";
 import { TaskCreateModal } from "./TaskCreateModal";
 import { usePlanningData } from "@/hooks/usePlanningData";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePlanningViewStore } from "@/stores/planningView.store";
+import { useTranslations, useLocale } from "next-intl";
 
 type ViewFilter = "all" | "availability" | "activity";
 
@@ -23,13 +24,17 @@ interface PlanningViewProps {
 
 export const PlanningView = ({
   filterUserId,
-  title = "Planning des Ressources",
+  title,
   showFilters = true,
   showControls = true,
   showGroupHeaders = true,
   showLegend = true,
   initialViewMode = "week",
 }: PlanningViewProps) => {
+  const t = useTranslations("planning");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? enUS : fr;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"week" | "month">(initialViewMode);
   const [selectedUser, setSelectedUser] = useState<string>("ALL");
@@ -162,19 +167,22 @@ export const PlanningView = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{title || t("planning.title")}</h1>
           <p className="text-gray-600 mt-1">
             {viewMode === "week"
-              ? `Semaine du ${format(displayDays[0] || new Date(), "dd MMM", {
-                  locale: fr,
-                })} au ${format(
-                  displayDays[displayDays.length - 1] || new Date(),
-                  "dd MMM yyyy",
-                  {
-                    locale: fr,
-                  },
-                )}`
-              : format(currentDate, "MMMM yyyy", { locale: fr })}
+              ? t("planning.weekOf", {
+                  start: format(displayDays[0] || new Date(), "dd MMM", {
+                    locale: dateLocale,
+                  }),
+                  end: format(
+                    displayDays[displayDays.length - 1] || new Date(),
+                    "dd MMM yyyy",
+                    {
+                      locale: dateLocale,
+                    },
+                  ),
+                })
+              : format(currentDate, "MMMM yyyy", { locale: dateLocale })}
           </p>
         </div>
         {showControls && (
@@ -185,7 +193,7 @@ export const PlanningView = ({
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
             >
               <span>+</span>
-              <span>Créer une tâche</span>
+              <span>{t("planning.createTask")}</span>
             </button>
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
@@ -196,7 +204,7 @@ export const PlanningView = ({
                     : "text-gray-600"
                 }`}
               >
-                Semaine
+                {t("planning.week")}
               </button>
               <button
                 onClick={() => setViewMode("month")}
@@ -206,7 +214,7 @@ export const PlanningView = ({
                     : "text-gray-600"
                 }`}
               >
-                Mois
+                {t("planning.month")}
               </button>
             </div>
             <button
@@ -229,7 +237,7 @@ export const PlanningView = ({
               onClick={() => setCurrentDate(new Date())}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
             >
-              Aujourd&apos;hui
+              {t("planning.today")}
             </button>
             <button
               onClick={() =>
@@ -260,7 +268,7 @@ export const PlanningView = ({
               ref={dropdownRef}
             >
               <label className="text-sm font-medium text-gray-700">
-                Services :
+                {t("filters.services")}
               </label>
               <button
                 onClick={() => setShowServiceDropdown(!showServiceDropdown)}
@@ -268,10 +276,12 @@ export const PlanningView = ({
               >
                 <span className="truncate">
                   {selectedServices.length === 0
-                    ? "Aucun service"
+                    ? t("filters.noService")
                     : selectedServices.length === groupedUsers.length
-                      ? "Tous les services"
-                      : `${selectedServices.length} service${selectedServices.length > 1 ? "s" : ""}`}
+                      ? t("filters.allServices")
+                      : selectedServices.length === 1
+                        ? t("filters.servicesCount", { count: selectedServices.length })
+                        : t("filters.servicesCountPlural", { count: selectedServices.length })}
                 </span>
                 <span className="ml-2">
                   {showServiceDropdown ? "\u25B2" : "\u25BC"}
@@ -288,7 +298,7 @@ export const PlanningView = ({
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                     >
-                      Tout
+                      {t("filters.all")}
                     </button>
                     <button
                       onClick={deselectAllServices}
@@ -298,7 +308,7 @@ export const PlanningView = ({
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                     >
-                      Aucun
+                      {t("filters.none")}
                     </button>
                   </div>
                   <div className="max-h-60 overflow-y-auto">
@@ -327,14 +337,14 @@ export const PlanningView = ({
 
             <div className="flex items-center space-x-2">
               <label className="text-sm font-medium text-gray-700">
-                Ressource :
+                {t("filters.resource")}
               </label>
               <select
                 value={selectedUser}
                 onChange={(e) => setSelectedUser(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="ALL">Toutes les ressources</option>
+                <option value="ALL">{t("filters.allResources")}</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.firstName} {u.lastName}
@@ -345,16 +355,16 @@ export const PlanningView = ({
 
             <div className="flex items-center space-x-2">
               <label className="text-sm font-medium text-gray-700">
-                Affichage :
+                {t("filters.display")}
               </label>
               <select
                 value={viewFilter}
                 onChange={(e) => setViewFilter(e.target.value as ViewFilter)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="all">Tout</option>
-                <option value="availability">Disponibilités</option>
-                <option value="activity">Activités</option>
+                <option value="all">{t("filters.displayAll")}</option>
+                <option value="availability">{t("filters.displayAvailability")}</option>
+                <option value="activity">{t("filters.displayActivity")}</option>
               </select>
             </div>
 
@@ -365,7 +375,7 @@ export const PlanningView = ({
                   onClick={handleCollapseAll}
                   disabled={allCollapsed}
                   className="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1"
-                  title="Replier tous les services"
+                  title={t("actions.collapseAll")}
                 >
                   <svg
                     className="w-3 h-3"
@@ -380,13 +390,13 @@ export const PlanningView = ({
                       d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
                     />
                   </svg>
-                  Replier
+                  {t("actions.collapse")}
                 </button>
                 <button
                   onClick={handleExpandAll}
                   disabled={allExpanded}
                   className="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1"
-                  title="Déplier tous les services"
+                  title={t("actions.expandAll")}
                 >
                   <svg
                     className="w-3 h-3"
@@ -401,21 +411,21 @@ export const PlanningView = ({
                       d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
                     />
                   </svg>
-                  Déplier
+                  {t("actions.expand")}
                 </button>
               </div>
 
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <span className="flex items-center">
                   <span className="w-3 h-3 bg-blue-500 rounded mr-1"></span>
-                  Tâche
+                  {t("legend.task")}
                 </span>
                 <span className="flex items-center">
                   <span className="w-3 h-3 bg-green-500 rounded mr-1"></span>
-                  Congé
+                  {t("legend.leave")}
                 </span>
                 <span className="flex items-center">
-                  <span>🏠</span>Télétravail
+                  <span>🏠</span>{t("legend.telework")}
                 </span>
               </div>
             </div>
@@ -436,51 +446,51 @@ export const PlanningView = ({
       {/* Legend */}
       {showLegend && (
         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Légende</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">{t("legend.title")}</h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs">
             <div className="flex items-center space-x-2">
               <span>○</span>
-              <span>À faire</span>
+              <span>{tCommon("taskStatus.TODO")}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span>◐</span>
-              <span>En cours</span>
+              <span>{tCommon("taskStatus.IN_PROGRESS")}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span>◕</span>
-              <span>En revue</span>
+              <span>{tCommon("taskStatus.IN_REVIEW")}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span>●</span>
-              <span>Terminé</span>
+              <span>{tCommon("taskStatus.DONE")}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span>⊗</span>
-              <span>Bloqué</span>
+              <span>{tCommon("taskStatus.BLOCKED")}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span>🏠</span>
-              <span>Télétravail</span>
+              <span>{t("legend.telework")}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span>🏢</span>
-              <span>Bureau</span>
+              <span>{t("legend.office")}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span>🌴</span>
-              <span>Congé validé</span>
+              <span>{t("legend.leaveValidated")}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span className="opacity-60">🌴?</span>
-              <span>Congé en attente</span>
+              <span>{t("legend.leavePending")}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span>📅</span>
-              <span>Événement</span>
+              <span>{t("legend.event")}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span className="inline-block w-3 h-3 bg-red-500 rounded"></span>
-              <span>Intervention ext.</span>
+              <span>{t("legend.externalIntervention")}</span>
             </div>
           </div>
         </div>

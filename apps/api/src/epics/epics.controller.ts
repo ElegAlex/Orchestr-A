@@ -25,8 +25,7 @@ import { CreateEpicDto } from './dto/create-epic.dto';
 import { UpdateEpicDto } from './dto/update-epic.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { Role } from 'database';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('epics')
 @Controller('epics')
@@ -36,7 +35,7 @@ export class EpicsController {
   constructor(private readonly epicsService: EpicsService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('epics:create')
   @ApiOperation({ summary: 'Créer un epic' })
   @ApiResponse({ status: 201, description: 'Epic créé' })
   create(@Body() createEpicDto: CreateEpicDto) {
@@ -63,7 +62,7 @@ export class EpicsController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('epics:update')
   @ApiOperation({ summary: 'Modifier un epic' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -73,7 +72,7 @@ export class EpicsController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('epics:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un epic' })
   remove(@Param('id', ParseUUIDPipe) id: string) {

@@ -1,0 +1,50 @@
+{
+  "events": {
+    "title": "Événements",
+    "count": "{count} événement",
+    "countPlural": "{count} événements",
+    "noEvents": "Aucun événement trouvé",
+    "createEvent": "Créer un événement"
+  },
+  "view": {
+    "list": "Liste",
+    "calendar": "Calendrier",
+    "calendarSimplified": "Vue calendrier simplifiée",
+    "calendarDescription": "Affichage des événements par date"
+  },
+  "filters": {
+    "project": "Projet",
+    "allProjects": "Tous les projets"
+  },
+  "details": {
+    "participants": "{count} participant",
+    "participantsPlural": "{count} participants"
+  },
+  "create": {
+    "title": "Créer un événement",
+    "titleField": "Titre *",
+    "titlePlaceholder": "Ex: Réunion de suivi projet",
+    "description": "Description",
+    "descriptionPlaceholder": "Description de l'événement...",
+    "date": "Date *",
+    "allDay": "Toute la journée",
+    "startTime": "Heure de début",
+    "endTime": "Heure de fin",
+    "project": "Projet (optionnel)",
+    "noProject": "Aucun projet",
+    "participants": "Participants",
+    "participantsPlaceholder": "Sélectionner les participants",
+    "creating": "Création...",
+    "createButton": "Créer l'événement",
+    "success": "Événement créé avec succès",
+    "error": "Erreur lors de la création"
+  },
+  "delete": {
+    "confirm": "Êtes-vous sûr de vouloir supprimer cet événement ?",
+    "success": "Événement supprimé",
+    "error": "Erreur lors de la suppression"
+  },
+  "errors": {
+    "loadData": "Erreur lors du chargement des données"
+  }
+}

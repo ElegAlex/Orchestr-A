@@ -1,5 +1,6 @@
 import { Task, TaskStatus } from "@/types";
 import { getPriorityColor } from "@/lib/planning-utils";
+import { useTranslations } from "next-intl";
 
 interface TaskModalProps {
   task: Task | null;
@@ -8,6 +9,8 @@ interface TaskModalProps {
 }
 
 export const TaskModal = ({ task, isOpen, onClose }: TaskModalProps) => {
+  const t = useTranslations("planning.taskModal");
+  const tCommon = useTranslations("common");
   if (!isOpen || !task) return null;
 
   return (
@@ -25,13 +28,13 @@ export const TaskModal = ({ task, isOpen, onClose }: TaskModalProps) => {
         <div className="space-y-4">
           {task.description && (
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">{t("description")}</h3>
               <p className="text-gray-700">{task.description}</p>
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">Statut</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">{t("status")}</h3>
               <span
                 className={`inline-block px-3 py-1 rounded text-sm ${
                   task.status === TaskStatus.DONE
@@ -39,27 +42,27 @@ export const TaskModal = ({ task, isOpen, onClose }: TaskModalProps) => {
                     : "bg-blue-100 text-blue-800"
                 }`}
               >
-                {task.status}
+                {tCommon(`taskStatus.${task.status}`)}
               </span>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">Priorité</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">{t("priority")}</h3>
               <span
                 className={`inline-block px-3 py-1 rounded text-sm ${getPriorityColor(task.priority)}`}
               >
-                {task.priority}
+                {tCommon(`priority.${task.priority}`)}
               </span>
             </div>
             {task.estimatedHours && (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Estimation</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">{t("estimation")}</h3>
                 <p className="text-gray-700">{task.estimatedHours}h</p>
               </div>
             )}
             {task.progress !== undefined && (
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">
-                  Progression
+                  {t("progress")}
                 </h3>
                 <div className="flex items-center space-x-2">
                   <div className="flex-1 bg-gray-200 rounded-full h-2">
@@ -81,7 +84,7 @@ export const TaskModal = ({ task, isOpen, onClose }: TaskModalProps) => {
             onClick={onClose}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
           >
-            Fermer
+            {tCommon("actions.close")}
           </button>
         </div>
       </div>

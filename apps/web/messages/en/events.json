@@ -1,0 +1,50 @@
+{
+  "events": {
+    "title": "Events",
+    "count": "{count} event",
+    "countPlural": "{count} events",
+    "noEvents": "No events found",
+    "createEvent": "Create an event"
+  },
+  "view": {
+    "list": "List",
+    "calendar": "Calendar",
+    "calendarSimplified": "Simplified calendar view",
+    "calendarDescription": "Display events by date"
+  },
+  "filters": {
+    "project": "Project",
+    "allProjects": "All projects"
+  },
+  "details": {
+    "participants": "{count} participant",
+    "participantsPlural": "{count} participants"
+  },
+  "create": {
+    "title": "Create an event",
+    "titleField": "Title *",
+    "titlePlaceholder": "e.g., Project follow-up meeting",
+    "description": "Description",
+    "descriptionPlaceholder": "Event description...",
+    "date": "Date *",
+    "allDay": "All day",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "project": "Project (optional)",
+    "noProject": "No project",
+    "participants": "Participants",
+    "participantsPlaceholder": "Select participants",
+    "creating": "Creating...",
+    "createButton": "Create event",
+    "success": "Event created successfully",
+    "error": "Error creating event"
+  },
+  "delete": {
+    "confirm": "Are you sure you want to delete this event?",
+    "success": "Event deleted",
+    "error": "Error deleting event"
+  },
+  "errors": {
+    "loadData": "Error loading data"
+  }
+}

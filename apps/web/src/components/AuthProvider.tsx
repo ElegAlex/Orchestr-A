@@ -4,8 +4,6 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth.store";
 
-const PUBLIC_ROUTES = ["/login", "/register", "/"];
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -17,13 +15,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading) {
-      const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+      // Check if pathname matches public routes (with or without locale prefix)
+      const isPublicRoute = pathname === "/" ||
+                           pathname === "/login" ||
+                           pathname === "/register" ||
+                           pathname.match(/^\/(fr|en)$/) ||
+                           pathname.match(/^\/(fr|en)\/login$/) ||
+                           pathname.match(/^\/(fr|en)\/register$/);
 
       if (!isAuthenticated && !isPublicRoute) {
         router.push("/login");
       } else if (
         isAuthenticated &&
-        (pathname === "/login" || pathname === "/register")
+        (pathname === "/login" ||
+         pathname === "/register" ||
+         pathname.match(/^\/(fr|en)\/login$/) ||
+         pathname.match(/^\/(fr|en)\/register$/))
       ) {
         router.push("/dashboard");
       }

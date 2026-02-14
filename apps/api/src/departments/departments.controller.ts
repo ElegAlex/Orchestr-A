@@ -25,8 +25,7 @@ import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { Role } from 'database';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('departments')
 @Controller('departments')
@@ -36,7 +35,7 @@ export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('departments:create')
   @ApiOperation({
     summary: 'Créer un nouveau département (Admin/Responsable uniquement)',
   })
@@ -105,7 +104,7 @@ export class DepartmentsController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('departments:update')
   @ApiOperation({
     summary: 'Mettre à jour un département (Admin/Responsable)',
   })
@@ -129,7 +128,7 @@ export class DepartmentsController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('departments:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Supprimer un département (Admin uniquement)',

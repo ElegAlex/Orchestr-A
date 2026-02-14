@@ -664,3 +664,41 @@ model EventParticipant {
   @@id([eventId, userId])
   @@map("event_participants")
 }
+
+// ===========================
+// RBAC - DYNAMIC PERMISSIONS
+// ===========================
+
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  module      String
+  action      String
+  description String?
+  rolePermissions RolePermission[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@map("permissions")
+}
+
+model RoleConfig {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)
+  isDefault   Boolean  @default(false)
+  permissions RolePermission[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@map("role_configs")
+}
+
+model RolePermission {
+  roleConfigId String
+  roleConfig   RoleConfig @relation(fields: [roleConfigId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  @@id([roleConfigId, permissionId])
+  @@map("role_permissions")
+}

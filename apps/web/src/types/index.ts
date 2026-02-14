@@ -639,3 +639,63 @@ export const HOLIDAY_TYPE_COLORS: Record<HolidayType, string> = {
   [HolidayType.CLOSURE]: "bg-purple-100 text-purple-800",
   [HolidayType.CUSTOM]: "bg-gray-100 text-gray-800",
 };
+
+// ===========================
+// RBAC - ROLE MANAGEMENT
+// ===========================
+
+export interface Permission {
+  id: string;
+  name: string;
+  action: string;
+  resource: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoleConfig {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  isSystem: boolean;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RolePermission {
+  id: string;
+  roleId: string;
+  permissionId: string;
+  createdAt: string;
+}
+
+export interface RoleConfigWithPermissions extends RoleConfig {
+  permissions: Array<{
+    permission: Permission;
+  }>;
+}
+
+export interface CreateRoleConfigDto {
+  code: string;
+  name: string;
+  description?: string;
+  isDefault?: boolean;
+  permissionIds?: string[];
+}
+
+export interface UpdateRoleConfigDto {
+  code?: string;
+  name?: string;
+  description?: string;
+  permissionIds?: string[];
+}
+
+export interface CreatePermissionDto {
+  name: string;
+  action: string;
+  resource: string;
+  description?: string;
+}

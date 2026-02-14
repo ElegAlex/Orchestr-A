@@ -14,8 +14,9 @@ import { teleworkService } from "@/services/telework.service";
 import { tasksService } from "@/services/tasks.service";
 import { usePlanningViewStore } from "@/stores/planningView.store";
 import { format, isToday, getDay } from "date-fns";
-import { fr } from "date-fns/locale";
+import { fr, enUS } from "date-fns/locale";
 import toast from "react-hot-toast";
+import { useTranslations, useLocale } from "next-intl";
 
 type ViewFilter = "all" | "availability" | "activity";
 
@@ -98,6 +99,9 @@ export const PlanningGrid = ({
   viewFilter = "all",
   showGroupHeaders = true,
 }: PlanningGridProps) => {
+  const t = useTranslations("planning");
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? enUS : fr;
   const {
     loading,
     displayDays,
@@ -139,7 +143,7 @@ export const PlanningGrid = ({
       }
       silentRefetch();
     } catch {
-      toast.error("Erreur lors de la mise à jour du télétravail");
+      toast.error(t("telework.updateError"));
     }
   };
 
@@ -185,7 +189,7 @@ export const PlanningGrid = ({
         // Tâche multi-assignés: on change seulement l'assignation (pas les dates)
         if (isSameUser) {
           toast(
-            "Tâche multi-assignée : changement de date impossible.\nModifiez les dates via le détail de la tâche.",
+            t("taskMove.multiAssignDateError"),
             {
               icon: "ℹ️",
               duration: 3000,
@@ -195,7 +199,7 @@ export const PlanningGrid = ({
           return;
         }
         if (targetAlreadyAssigned) {
-          toast("Cet utilisateur est déjà assigné à cette tâche.", {
+          toast(t("taskMove.alreadyAssigned"), {
             icon: "ℹ️",
             duration: 2000,
             id: `already-assigned-${Date.now()}`,
@@ -212,7 +216,7 @@ export const PlanningGrid = ({
 
         // Informer que seul l'assigné a changé (pas la date)
         toast(
-          "Tâche multi-assignée : seul l'assigné a été modifié.\nLa date reste inchangée pour tous les assignés.",
+          t("taskMove.reassignOnly"),
           {
             icon: "ℹ️",
             duration: 3000,
@@ -223,7 +227,7 @@ export const PlanningGrid = ({
 
       silentRefetch();
     } catch {
-      toast.error("Erreur lors du déplacement de la tâche");
+      toast.error(t("taskMove.moveError"));
     }
   };
 
@@ -242,7 +246,7 @@ export const PlanningGrid = ({
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Chargement du planning...</p>
+          <p className="mt-4 text-gray-600">{t("planning.loading")}</p>
         </div>
       </div>
     );
@@ -256,7 +260,7 @@ export const PlanningGrid = ({
             <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-30">
               <tr>
                 <th className="sticky left-0 bg-gray-50 z-40 px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[200px]">
-                  Ressource
+                  {t("table.resource")}
                 </th>
                 {displayDays.map((day, index) => {
                   const isMonday = getDay(day) === 1;
@@ -287,7 +291,7 @@ export const PlanningGrid = ({
                         }
                       >
                         {format(day, viewMode === "month" ? "EEEEE" : "EEEE", {
-                          locale: fr,
+                          locale: dateLocale,
                         })}
                       </div>
                       <div
@@ -316,7 +320,7 @@ export const PlanningGrid = ({
                     colSpan={displayDays.length + 1}
                     className="px-4 py-8 text-center text-gray-500"
                   >
-                    Aucune ressource à afficher
+                    {t("planning.noResources")}
                   </td>
                 </tr>
               ) : (

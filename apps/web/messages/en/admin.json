@@ -1,0 +1,279 @@
+{
+  "users": {
+    "title": "Users",
+    "count": "users",
+    "createButton": "Create User",
+    "importButton": "Import CSV",
+    "columns": {
+      "user": "User",
+      "emailLogin": "Email / Login",
+      "role": "Role",
+      "departmentServices": "Department / Services",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "actions": {
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "delete": "Delete",
+      "deactivateTooltip": "You cannot deactivate yourself",
+      "deleteTooltip": "You cannot delete yourself",
+      "deactivateAction": "Deactivate (soft delete)",
+      "deleteAction": "Permanently delete"
+    },
+    "createModal": {
+      "title": "Create User",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "login": "Login",
+      "password": "Password",
+      "role": "Role",
+      "department": "Department",
+      "noDepartment": "No department",
+      "services": "Services",
+      "selectDepartmentFirst": "Select a department first",
+      "noServiceAvailable": "No service available",
+      "cancel": "Cancel",
+      "create": "Create"
+    },
+    "editModal": {
+      "title": "Edit User",
+      "loginReadOnly": "Login cannot be modified",
+      "newPassword": "New password (optional)",
+      "passwordPlaceholder": "Leave blank to keep unchanged",
+      "passwordHint": "Leave blank if you don't want to change the password",
+      "save": "Save"
+    },
+    "deleteModal": {
+      "title": "Permanently Delete",
+      "confirmText": "Are you sure you want to permanently delete the user",
+      "checkingDeps": "Checking dependencies...",
+      "cannotDelete": "Cannot delete this user",
+      "depsExist": "Active dependencies prevent deletion:",
+      "pleaseReassign": "Please reassign or complete these items first.",
+      "warningTitle": "Warning:",
+      "warningText": "This action is irreversible. All data associated with this user (history, comments, time entries, etc.) will be permanently deleted.",
+      "cancel": "Cancel",
+      "confirm": "Permanently Delete",
+      "deleting": "Deleting..."
+    },
+    "import": {
+      "title": "Import Users from CSV",
+      "formatTitle": "CSV File Format",
+      "formatDescription": "The file must contain the following columns (separated by semicolons):",
+      "columns": {
+        "email": "User email (required)",
+        "login": "Unique login (required)",
+        "password": "Initial password (required, min 6 characters)",
+        "firstName": "First name (required)",
+        "lastName": "Last name (required)",
+        "role": "Role (ADMIN, RESPONSABLE, MANAGER, REFERENT_TECHNIQUE, CONTRIBUTEUR, OBSERVATEUR)",
+        "departmentName": "Department name (optional)",
+        "serviceNames": "Service names separated by commas (optional)"
+      },
+      "downloadTemplate": "Download CSV template",
+      "selectFile": "Select a CSV file",
+      "preview": "Preview",
+      "detected": "user(s) detected",
+      "previewColumns": {
+        "email": "Email",
+        "login": "Login",
+        "name": "Name",
+        "role": "Role",
+        "department": "Department"
+      },
+      "andMore": "... and",
+      "others": "other(s)",
+      "resultTitle": "Import Result",
+      "created": "created",
+      "skipped": "skipped",
+      "errors": "error(s)",
+      "details": "Details:",
+      "close": "Close",
+      "import": "Import",
+      "importing": "Importing...",
+      "importCount": "user(s)",
+      "previewTitle": "Users Import Preview",
+      "noValidUsers": "No valid users to import"
+    },
+    "messages": {
+      "loadError": "Error loading users",
+      "createSuccess": "User created successfully",
+      "createError": "Error creating user",
+      "updateSuccess": "User updated successfully",
+      "updateError": "Error updating user",
+      "deactivateConfirm": "Are you sure you want to deactivate this user?",
+      "deactivateSuccess": "User deactivated",
+      "deleteError": "Error deleting user",
+      "depsCheckError": "Error checking dependencies",
+      "hardDeleteSuccess": "User permanently deleted",
+      "importCreated": "user(s) created successfully",
+      "importSkipped": "user(s) skipped (existing)",
+      "importErrors": "error(s) during import",
+      "importValidationError": "Error during validation",
+      "importError": "Error during import"
+    },
+    "loading": "Loading..."
+  },
+  "departments": {
+    "title": "Departments & Services",
+    "count": "department(s)",
+    "servicesCount": "service(s)",
+    "newService": "New Service",
+    "newDepartment": "New Department",
+    "infoTitle": "Hierarchical Organization",
+    "infoText": "Departments represent the major divisions of the company. Each department can contain multiple services. Managers can be assigned to departments and services to manage their teams.",
+    "filterLabel": "Filter by department:",
+    "allDepartments": "All departments",
+    "noDepartment": "No department created",
+    "createFirst": "Create your first department",
+    "services": "service(s)",
+    "members": "member(s)",
+    "manager": "Manager:",
+    "modify": "Edit",
+    "delete": "Delete",
+    "noServiceInDept": "No service in this department",
+    "addService": "Add a service",
+    "createdOn": "Created on",
+    "departmentModal": {
+      "titleCreate": "New Department",
+      "titleEdit": "Edit Department",
+      "name": "Department name *",
+      "namePlaceholder": "e.g., IT",
+      "description": "Description (optional)",
+      "descriptionPlaceholder": "Department description...",
+      "manager": "Department manager (optional)",
+      "noManager": "No manager",
+      "cancel": "Cancel",
+      "create": "Create",
+      "edit": "Edit"
+    },
+    "serviceModal": {
+      "titleCreate": "New Service",
+      "titleEdit": "Edit Service",
+      "department": "Department *",
+      "selectDepartment": "Select a department",
+      "name": "Service name *",
+      "namePlaceholder": "e.g., Web Development",
+      "description": "Description (optional)",
+      "descriptionPlaceholder": "Service description...",
+      "manager": "Service manager (optional)",
+      "noManager": "No manager",
+      "cancel": "Cancel",
+      "create": "Create",
+      "edit": "Edit"
+    },
+    "messages": {
+      "loadError": "Error loading data",
+      "createDeptSuccess": "Department created successfully",
+      "updateDeptSuccess": "Department updated successfully",
+      "createServiceSuccess": "Service created successfully",
+      "updateServiceSuccess": "Service updated successfully",
+      "saveError": "Error during",
+      "creation": "creation",
+      "modification": "update",
+      "deleteDeptConfirm": "Are you sure you want to delete this department? All associated services will also be deleted.",
+      "deleteDeptSuccess": "Department deleted",
+      "deleteServiceConfirm": "Are you sure you want to delete this service?",
+      "deleteServiceSuccess": "Service deleted",
+      "deleteError": "Error during deletion"
+    },
+    "accessRestricted": {
+      "icon": "🔒",
+      "title": "Restricted Access",
+      "message": "This page is reserved for administrators and supervisors"
+    },
+    "loading": "Loading..."
+  },
+  "reports": {
+    "title": "Reports & Analytics",
+    "tabs": {
+      "overview": "📊 Overview",
+      "advanced": "📈 Advanced Analytics",
+      "gantt": "📅 Portfolio Gantt"
+    },
+    "dateRange": {
+      "week": "This week",
+      "month": "This month",
+      "quarter": "This quarter",
+      "year": "This year"
+    },
+    "filters": {
+      "allProjects": "All projects",
+      "refresh": "⟳ Refresh",
+      "export": "↓ Export"
+    },
+    "exportFormats": {
+      "pdf": "PDF",
+      "excel": "Excel",
+      "json": "JSON"
+    },
+    "alerts": {
+      "attentionRequired": "Attention Required",
+      "overdueTasks": "overdue task(s) require your attention. See the Tasks page for details."
+    },
+    "errors": {
+      "title": "Error",
+      "loadFailed": "Unable to load analytics data.",
+      "exportError": "Error during export. Check the console for details."
+    },
+    "loading": "Loading..."
+  },
+  "roles": {
+    "title": "Role Management",
+    "description": "Configure roles and permissions",
+    "table": {
+      "name": "Name",
+      "code": "Code",
+      "permissions": "Permissions",
+      "system": "System"
+    },
+    "create": "Create Role",
+    "delete": "Delete Role",
+    "systemBadge": "System",
+    "permissionMatrix": "Permission Matrix",
+    "selectAll": "Select All",
+    "savePermissions": "Save Permissions",
+    "initializePermissions": "Initialize Permissions",
+    "noRoles": "No roles configured",
+    "confirmDelete": "Are you sure you want to delete this role?",
+    "cannotDeleteSystem": "System roles cannot be deleted",
+    "modules": {
+      "projects": "Projects",
+      "tasks": "Tasks",
+      "events": "Events",
+      "leaves": "Leaves",
+      "telework": "Telework",
+      "skills": "Skills",
+      "time_tracking": "Time Tracking",
+      "users": "Users",
+      "departments": "Departments",
+      "services": "Services",
+      "documents": "Documents",
+      "comments": "Comments",
+      "settings": "Settings",
+      "analytics": "Analytics",
+      "holidays": "Holidays",
+      "epics": "Epics",
+      "milestones": "Milestones"
+    },
+    "actions": {
+      "create": "Create",
+      "read": "Read",
+      "update": "Update",
+      "delete": "Delete",
+      "approve": "Approve",
+      "manage_members": "Manage Members",
+      "manage_delegations": "Manage Delegations",
+      "manage_matrix": "Manage Matrix",
+      "manage_roles": "Manage Roles",
+      "import": "Import",
+      "export": "Export",
+      "read_team": "View Team",
+      "read_reports": "View Reports",
+      "create_in_project": "Create in Project",
+      "create_orphan": "Create Without Project"
+    }
+  }
+}

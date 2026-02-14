@@ -1,0 +1,235 @@
+{
+  "title": "Projects",
+  "projectCount": "{{count}} project(s)",
+  "projectCountFiltered": "{{filtered}} project(s) of {{total}}",
+  "createProject": "Create Project",
+  "noProjects": "No projects found",
+  "backToProjects": "Back to projects",
+
+  "filters": {
+    "search": "Search",
+    "searchPlaceholder": "Name or description...",
+    "status": "Status",
+    "priority": "Priority",
+    "all": "All",
+    "allPriorities": "All"
+  },
+
+  "status": {
+    "DRAFT": "Draft",
+    "ACTIVE": "Active",
+    "SUSPENDED": "Suspended",
+    "COMPLETED": "Completed",
+    "CANCELLED": "Cancelled"
+  },
+
+  "priority": {
+    "CRITICAL": "Critical",
+    "HIGH": "High",
+    "NORMAL": "Normal",
+    "LOW": "Low"
+  },
+
+  "card": {
+    "noDescription": "No description",
+    "startDate": "Start:",
+    "endDate": "End:",
+    "budgetHours": "{{hours}}h"
+  },
+
+  "modal": {
+    "create": {
+      "title": "Create Project",
+      "nameLabel": "Project name *",
+      "namePlaceholder": "E.g.: Website redesign",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Detailed project description...",
+      "statusLabel": "Status",
+      "priorityLabel": "Priority",
+      "startDateLabel": "Start date *",
+      "endDateLabel": "End date *",
+      "managerLabel": "Project manager *",
+      "managerPlaceholder": "-- Select --",
+      "departmentLabel": "Department",
+      "departmentPlaceholder": "-- None --",
+      "budgetHoursLabel": "Budget hours",
+      "budgetHoursPlaceholder": "E.g.: 50000",
+      "cancel": "Cancel",
+      "submit": "Create project"
+    },
+    "edit": {
+      "title": "Edit Project",
+      "submit": "Save changes"
+    },
+    "delete": {
+      "title": "Delete Project",
+      "confirmMessage": "Are you sure you want to permanently delete the project",
+      "warningTitle": "Warning:",
+      "warningMessage": "This action is irreversible. The project and all its data (tasks, milestones, members) will be permanently deleted.",
+      "cancel": "Cancel",
+      "confirm": "Delete permanently"
+    }
+  },
+
+  "detail": {
+    "tabs": {
+      "overview": "Overview",
+      "tasks": "Tasks",
+      "milestones": "Milestones",
+      "team": "Team",
+      "gantt": "📊 Gantt"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "overview": {
+      "stats": {
+        "progress": "Progress",
+        "tasks": "Tasks",
+        "budget": "Budget",
+        "team": "Team",
+        "tasksDetail": "{{completed}}/{{total}}",
+        "tasksInProgress": "{{inProgress}} in progress, {{blocked}} blocked",
+        "budgetDetail": "{{logged}}h",
+        "budgetRemaining": "of {{total}}h ({{remaining}}h remaining)",
+        "teamCount": "{{count}}",
+        "teamDetail": "{{epics}} epics, {{milestones}} milestones"
+      },
+      "info": {
+        "title": "Project Information",
+        "startDate": "Start date",
+        "endDate": "End date",
+        "budgetHours": "Budget hours",
+        "createdAt": "Created on",
+        "createdBy": "Created by",
+        "notSpecified": "Not specified"
+      }
+    },
+    "tasks": {
+      "title": "Task Board",
+      "importCsv": "Import CSV",
+      "newTask": "+ New Task",
+      "columns": {
+        "todo": "To Do",
+        "inProgress": "In Progress",
+        "inReview": "In Review",
+        "done": "Done",
+        "blocked": "Blocked"
+      },
+      "noTasks": "No tasks",
+      "estimatedHours": "⏱️ {{hours}}h estimated",
+      "assignees": "{{count}} assignees",
+      "progress": "Progress"
+    },
+    "milestones": {
+      "title": "Milestones"
+    },
+    "team": {
+      "title": "Team Members",
+      "addMember": "+ Add Member",
+      "noMembers": "No members",
+      "allocation": "Allocation: {{percent}}%",
+      "removeConfirm": "Do you really want to remove {{firstName}} {{lastName}} from the team?"
+    },
+    "gantt": {
+      "hint": "Click on a task to see its dependencies, double-click to edit them."
+    }
+  },
+
+  "members": {
+    "modal": {
+      "title": "Add Member",
+      "userLabel": "User *",
+      "userPlaceholder": "Select a user",
+      "roleLabel": "Project role",
+      "rolePlaceholder": "Select a role",
+      "allocationLabel": "Allocation (%)",
+      "cancel": "Cancel",
+      "submit": "Add"
+    },
+    "roles": {
+      "sponsor": "Sponsor",
+      "projectManager": "Project Manager",
+      "technicalLead": "Technical Lead",
+      "architect": "Architect",
+      "techLead": "Tech Lead",
+      "seniorDeveloper": "Senior Developer",
+      "developer": "Developer",
+      "juniorDeveloper": "Junior Developer",
+      "devOps": "DevOps",
+      "qaLead": "QA Lead",
+      "tester": "Tester",
+      "uxUiDesigner": "UX/UI Designer",
+      "productOwner": "Product Owner",
+      "scrumMaster": "Scrum Master",
+      "businessAnalyst": "Business Analyst",
+      "member": "Member",
+      "observer": "Observer"
+    }
+  },
+
+  "import": {
+    "tasks": {
+      "modalTitle": "Import Tasks (CSV)",
+      "description": "Import your tasks from a CSV file. Accepted separators: comma (,) or semicolon (;).",
+      "columnsTitle": "Available columns:",
+      "columns": "title*, description, status, priority, assigneeEmail, milestoneName, estimatedHours, startDate, endDate",
+      "requiredNote": "* Required field",
+      "downloadTemplate": "Download CSV template",
+      "dropzoneIdle": "Click to select a CSV file",
+      "dropzoneImporting": "Importing...",
+      "close": "Close"
+    },
+    "milestones": {
+      "modalTitle": "Import Milestones (CSV)",
+      "description": "Import your milestones from a CSV file. Accepted separators: comma (,) or semicolon (;).",
+      "columnsTitle": "Available columns:",
+      "columns": "name*, description, dueDate*",
+      "requiredNote": "* Required fields (dueDate in YYYY-MM-DD format)",
+      "downloadTemplate": "Download CSV template",
+      "dropzoneIdle": "Click to select a CSV file",
+      "dropzoneImporting": "Importing...",
+      "close": "Close"
+    },
+    "preview": {
+      "tasksTitle": "Tasks Import Preview",
+      "milestonesTitle": "Milestones Import Preview",
+      "columnTitle": "Title",
+      "columnStatus": "Status",
+      "columnPriority": "Priority",
+      "columnAssignee": "Assignee",
+      "columnName": "Name",
+      "columnDescription": "Description",
+      "columnDueDate": "Due Date",
+      "confirm": "Confirm Import",
+      "cancel": "Cancel"
+    }
+  },
+
+  "messages": {
+    "loadError": "Error loading projects",
+    "loadDetailError": "Error loading project",
+    "createSuccess": "Project created successfully",
+    "createError": "Error creating project",
+    "updateSuccess": "Project updated successfully",
+    "updateError": "Error updating project",
+    "deleteSuccess": "Project permanently deleted",
+    "deleteError": "Error deleting project",
+    "memberAddSuccess": "Member added successfully",
+    "memberAddError": "Error adding member",
+    "memberRemoveSuccess": "Member removed successfully",
+    "memberRemoveError": "Error removing member",
+    "statusUpdateSuccess": "Status updated",
+    "statusUpdateError": "Error updating status",
+    "taskImportSuccess": "{{count}} task(s) imported successfully",
+    "taskImportSkipped": "{{count}} task(s) skipped (duplicates)",
+    "taskImportError": "{{count}} error(s) during import",
+    "milestoneImportSuccess": "{{count}} milestone(s) imported successfully",
+    "milestoneImportSkipped": "{{count}} milestone(s) skipped (duplicates)",
+    "milestoneImportError": "{{count}} error(s) during import",
+    "csvEmpty": "CSV file is empty or invalid",
+    "csvValidationError": "Validation error",
+    "templateDownloadError": "Error downloading template"
+  }
+}

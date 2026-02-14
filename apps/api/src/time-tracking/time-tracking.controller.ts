@@ -25,9 +25,8 @@ import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Role } from 'database';
 
 @ApiTags('time-tracking')
 @Controller('time-tracking')
@@ -126,7 +125,7 @@ export class TimeTrackingController {
   }
 
   @Get('user/:userId/report')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('time_tracking:read_reports')
   @ApiOperation({
     summary:
       "Récupérer le rapport de temps d'un utilisateur (Admin/Responsable/Manager)",
@@ -150,7 +149,7 @@ export class TimeTrackingController {
   }
 
   @Get('project/:projectId/report')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('time_tracking:read_reports')
   @ApiOperation({
     summary:
       "Récupérer le rapport de temps d'un projet (Admin/Responsable/Manager)",

@@ -23,6 +23,7 @@ import { PersonalTodosModule } from './personal-todos/personal-todos.module';
 import { SettingsModule } from './settings/settings.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { EventsModule } from './events/events.module';
+import { RoleManagementModule } from './role-management/role-management.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { EventsModule } from './events/events.module';
     SettingsModule,
     HolidaysModule,
     EventsModule,
+    RoleManagementModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,0 +1,141 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "tasks": "Tasks",
+    "planning": "Planning",
+    "events": "Events",
+    "leaves": "Leaves",
+    "telework": "Telework",
+    "skills": "Skills",
+    "timeTracking": "Time Tracking",
+    "users": "Users",
+    "departments": "Departments",
+    "reports": "Reports",
+    "settings": "Settings",
+    "profile": "Profile",
+    "roleManagement": "Role Management",
+    "admin": "Administration"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "close": "Close",
+    "refresh": "Refresh",
+    "loading": "Loading..."
+  },
+  "roles": {
+    "ADMIN": "Administrator",
+    "RESPONSABLE": "Supervisor",
+    "MANAGER": "Manager",
+    "CHEF_DE_PROJET": "Project Manager",
+    "REFERENT_TECHNIQUE": "Technical Lead",
+    "CONTRIBUTEUR": "Contributor",
+    "OBSERVATEUR": "Observer"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "pending": "Pending",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "inProgress": "In Progress",
+    "draft": "Draft"
+  },
+  "priority": {
+    "LOW": "Low",
+    "NORMAL": "Normal",
+    "MEDIUM": "Medium",
+    "HIGH": "High",
+    "URGENT": "Urgent",
+    "CRITICAL": "Critical"
+  },
+  "projectStatus": {
+    "DRAFT": "Draft",
+    "ACTIVE": "Active",
+    "SUSPENDED": "Suspended",
+    "ON_HOLD": "On Hold",
+    "COMPLETED": "Completed",
+    "CANCELLED": "Cancelled"
+  },
+  "taskStatus": {
+    "TODO": "To Do",
+    "IN_PROGRESS": "In Progress",
+    "IN_REVIEW": "In Review",
+    "DONE": "Done",
+    "BLOCKED": "Blocked"
+  },
+  "errors": {
+    "required": "Required field",
+    "unauthorized": "Unauthorized",
+    "notFound": "Not found",
+    "serverError": "Server error",
+    "networkError": "Network error",
+    "validationError": "Validation error",
+    "forbidden": "Access forbidden"
+  },
+  "table": {
+    "empty": "No data",
+    "loading": "Loading...",
+    "rowsPerPage": "Rows per page",
+    "of": "of",
+    "page": "Page"
+  },
+  "language": {
+    "fr": "Français",
+    "en": "English",
+    "switchLanguage": "Switch language"
+  },
+  "form": {
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "name": "Name",
+    "title": "Title",
+    "description": "Description",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "status": "Status",
+    "priority": "Priority",
+    "estimatedHours": "Estimated Hours",
+    "login": "Login"
+  },
+  "confirmation": {
+    "areYouSure": "Are you sure?",
+    "deleteConfirm": "Do you really want to delete this item?",
+    "cannotBeUndone": "This action cannot be undone",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "messages": {
+    "success": "Operation successful",
+    "error": "An error occurred",
+    "saved": "Saved successfully",
+    "deleted": "Deleted successfully",
+    "updated": "Updated successfully",
+    "created": "Created successfully"
+  },
+  "common": {
+    "welcome": "Welcome",
+    "logout": "Logout",
+    "administration": "Administration",
+    "on": "on",
+    "of": "of",
+    "notDefined": "Not defined",
+    "invalidDate": "Invalid date",
+    "noData": "No data",
+    "completed": "Completed"
+  }
+}

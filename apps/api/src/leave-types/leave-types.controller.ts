@@ -24,8 +24,7 @@ import { CreateLeaveTypeDto } from './dto/create-leave-type.dto';
 import { UpdateLeaveTypeDto } from './dto/update-leave-type.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { Role } from 'database';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('Leave Types')
 @ApiBearerAuth()
@@ -35,7 +34,7 @@ export class LeaveTypesController {
   constructor(private readonly leaveTypesService: LeaveTypesService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('leaves:update')
   @ApiOperation({
     summary: 'Créer un nouveau type de congé (Admin/Responsable)',
   })
@@ -75,7 +74,7 @@ export class LeaveTypesController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('leaves:update')
   @ApiOperation({
     summary: 'Mettre à jour un type de congé (Admin/Responsable)',
   })
@@ -93,7 +92,7 @@ export class LeaveTypesController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('leaves:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un type de congé (Admin/Responsable)' })
   @ApiResponse({
@@ -110,7 +109,7 @@ export class LeaveTypesController {
   }
 
   @Post('reorder')
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('leaves:update')
   @ApiOperation({
     summary: 'Réordonner les types de congés (Admin/Responsable)',
   })

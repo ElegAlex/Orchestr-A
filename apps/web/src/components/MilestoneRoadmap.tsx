@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Milestone, Task, MilestoneStatus, TaskStatus } from "@/types";
 import { MilestoneCard } from "./MilestoneCard";
+import { useTranslations } from "next-intl";
 
 interface MilestoneRoadmapProps {
   milestones: Milestone[];
@@ -23,6 +24,8 @@ export function MilestoneRoadmap({
   onTaskUpdate,
   onImportMilestones,
 }: MilestoneRoadmapProps) {
+  const t = useTranslations("projects");
+
   // Trier les jalons par date de début
   const sortedMilestones = useMemo(() => {
     return [...milestones].sort((a, b) => {
@@ -91,10 +94,10 @@ export function MilestoneRoadmap({
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
             <span>🗺️</span>
-            <span>Roadmap par Jalons</span>
+            <span>{t("milestoneRoadmap.title")}</span>
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Vue organisée par jalons avec tâches associées
+            {t("milestoneRoadmap.description")}
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -103,7 +106,7 @@ export function MilestoneRoadmap({
               onClick={onCreateTask}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
             >
-              + Nouvelle Tâche
+              {t("milestoneRoadmap.newTask")}
             </button>
           )}
           {onImportMilestones && (
@@ -111,7 +114,7 @@ export function MilestoneRoadmap({
               onClick={onImportMilestones}
               className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
             >
-              Importer CSV
+              {t("milestoneRoadmap.importCSV")}
             </button>
           )}
           {onCreateMilestone && (
@@ -119,7 +122,7 @@ export function MilestoneRoadmap({
               onClick={onCreateMilestone}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
             >
-              + Nouveau Jalon
+              {t("milestoneRoadmap.newMilestone")}
             </button>
           )}
         </div>
@@ -130,7 +133,7 @@ export function MilestoneRoadmap({
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Jalons</p>
+              <p className="text-sm font-medium text-gray-600">{t("milestoneRoadmap.metrics.milestones")}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {metrics.total}
               </p>
@@ -142,7 +145,7 @@ export function MilestoneRoadmap({
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Terminés</p>
+              <p className="text-sm font-medium text-gray-600">{t("milestoneRoadmap.metrics.completed")}</p>
               <p className="text-2xl font-bold text-green-600 mt-1">
                 {metrics.completed}
               </p>
@@ -154,7 +157,7 @@ export function MilestoneRoadmap({
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">En cours</p>
+              <p className="text-sm font-medium text-gray-600">{t("milestoneRoadmap.metrics.inProgress")}</p>
               <p className="text-2xl font-bold text-orange-600 mt-1">
                 {metrics.inProgress}
               </p>
@@ -166,7 +169,7 @@ export function MilestoneRoadmap({
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Tâches</p>
+              <p className="text-sm font-medium text-gray-600">{t("milestoneRoadmap.metrics.tasks")}</p>
               <p className="text-2xl font-bold text-blue-600 mt-1">
                 {metrics.totalTasks}
               </p>
@@ -180,16 +183,16 @@ export function MilestoneRoadmap({
       {sortedMilestones.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 text-center py-16">
           <div className="text-6xl mb-4">📅</div>
-          <p className="text-gray-500 text-lg mb-4">Aucun jalon créé</p>
+          <p className="text-gray-500 text-lg mb-4">{t("milestoneRoadmap.emptyState.title")}</p>
           <p className="text-gray-400 text-sm mb-6">
-            Créez votre premier jalon pour organiser votre projet
+            {t("milestoneRoadmap.emptyState.description")}
           </p>
           {onCreateMilestone && (
             <button
               onClick={onCreateMilestone}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
             >
-              + Créer un jalon
+              {t("milestoneRoadmap.emptyState.createButton")}
             </button>
           )}
         </div>

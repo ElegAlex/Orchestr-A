@@ -3,9 +3,9 @@ import { DayCell as DayCellData } from "@/hooks/usePlanningData";
 import {
   getPriorityColor,
   getStatusIcon,
-  getLeaveTypeLabel,
 } from "@/lib/planning-utils";
 import { isToday, getDay } from "date-fns";
+import { useTranslations } from "next-intl";
 
 interface DayCellProps {
   cell: DayCellData;
@@ -30,6 +30,7 @@ export const DayCell = ({
   onDrop,
   onTaskClick,
 }: DayCellProps) => {
+  const t = useTranslations("planning");
   const hasLeave = cell.leaves.length > 0;
   const isMonday = getDay(cell.date) === 1;
   const isFirstDay = dayIndex === 0;
@@ -81,7 +82,7 @@ export const DayCell = ({
               ? "bg-green-100/70 border-2 border-dashed border-green-300"
               : "bg-green-200/90 border-2 border-green-400"
           }`}
-          title={`${getLeaveTypeLabel(leave.type)}${isPending ? " (en attente de validation)" : " (validé)"}`}
+          title={`${t(`leaveTypes.${leave.type}`)}${isPending ? ` (${t("dayCell.pendingValidation")})` : ` (${t("dayCell.validated")})`}`}
         >
           <span className={`${viewMode === "month" ? "text-lg" : "text-2xl"}`}>
             🌴
@@ -89,11 +90,11 @@ export const DayCell = ({
           {viewMode === "week" && (
             <>
               <span className="font-medium text-green-800 text-xs">
-                {getLeaveTypeLabel(leave.type)}
+                {t(`leaveTypes.${leave.type}`)}
               </span>
               {isPending && (
                 <span className="text-[10px] text-green-600 italic">
-                  En attente
+                  {t("dayCell.pending")}
                 </span>
               )}
             </>
@@ -123,7 +124,7 @@ export const DayCell = ({
               className={`${viewMode === "month" ? "text-[10px]" : "text-lg"} transition ${
                 cell.isTelework ? "opacity-100" : "opacity-30 hover:opacity-60"
               }`}
-              title={cell.isTelework ? "Télétravail" : "Bureau"}
+              title={cell.isTelework ? t("telework.label") : t("telework.office")}
             >
               {cell.isTelework ? "🏠" : "🏢"}
             </button>
@@ -152,7 +153,7 @@ export const DayCell = ({
                   <div className="text-center" title={task.title}>
                     <span>{getStatusIcon(task.status)}</span>
                     {isExternal && (
-                      <div className="text-[6px] font-bold">EXT</div>
+                      <div className="text-[6px] font-bold">{t("dayCell.externalShort")}</div>
                     )}
                   </div>
                 ) : (
@@ -167,7 +168,7 @@ export const DayCell = ({
                     </div>
                     {isExternal && (
                       <div className="text-[10px] font-bold text-red-800 mt-1">
-                        🔴 Intervention ext.
+                        🔴 {t("dayCell.externalIntervention")}
                       </div>
                     )}
                     <div className="flex items-center space-x-2 text-[10px] text-gray-600 mt-1">
@@ -213,7 +214,7 @@ export const DayCell = ({
                         {event.endTime || "--:--"}
                       </span>
                     )}
-                    {event.isAllDay && <span>📆 Journée entière</span>}
+                    {event.isAllDay && <span>📆 {t("dayCell.allDay")}</span>}
                   </div>
                 </>
               )}

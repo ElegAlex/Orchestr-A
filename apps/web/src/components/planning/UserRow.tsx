@@ -1,7 +1,8 @@
-import { User, Task } from "@/types";
+import { User, Task, Role } from "@/types";
 import { ServiceGroup, DayCell as DayCellData } from "@/hooks/usePlanningData";
 import { DayCell } from "./DayCell";
-import { getGroupColors, getRoleLabel } from "@/lib/planning-utils";
+import { getGroupColors } from "@/lib/planning-utils";
+import { useTranslations } from "next-intl";
 
 interface UserRowProps {
   user: User;
@@ -28,6 +29,8 @@ export const UserRow = ({
   onDrop,
   onTaskClick,
 }: UserRowProps) => {
+  const tCommon = useTranslations("common");
+  const tPlanning = useTranslations("planning");
   const colors = getGroupColors(group.color, group.isManagement);
 
   return (
@@ -52,7 +55,9 @@ export const UserRow = ({
               {user.firstName} {user.lastName}
             </div>
             <div className="text-xs text-gray-500">
-              {getRoleLabel(user.role)}
+              {user.role === Role.REFERENT_TECHNIQUE
+                ? tPlanning("roles.REFERENT_TECHNIQUE_SHORT")
+                : tCommon(`roles.${user.role}`)}
             </div>
           </div>
         </div>

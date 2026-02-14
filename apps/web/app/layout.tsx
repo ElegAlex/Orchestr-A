@@ -28,13 +28,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
+type RootLayoutProps = {
   children: React.ReactNode;
-}>) {
+  params: Promise<{ locale?: string }>;
+};
+
+export default async function RootLayout({
+  children,
+  params,
+}: RootLayoutProps) {
+  const locale = (await params)?.locale || 'fr';
+
   return (
-    <html lang="fr">
+    <html lang={locale}>
       <body>
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>

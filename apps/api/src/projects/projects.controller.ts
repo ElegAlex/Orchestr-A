@@ -26,9 +26,9 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Role, ProjectStatus } from 'database';
+import { ProjectStatus } from 'database';
 
 @ApiTags('projects')
 @Controller('projects')
@@ -38,7 +38,7 @@ export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET, Role.REFERENT_TECHNIQUE)
+  @Permissions('projects:create')
   @ApiOperation({
     summary:
       'Créer un nouveau projet (Admin/Responsable/Manager/Chef de projet/Référent Technique)',
@@ -126,7 +126,7 @@ export class ProjectsController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
+  @Permissions('projects:update')
   @ApiOperation({
     summary: 'Mettre à jour un projet (Admin/Responsable/Manager/Chef de projet)',
   })
@@ -150,7 +150,7 @@ export class ProjectsController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('projects:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Annuler un projet (soft delete, Admin/Responsable uniquement)',
@@ -168,7 +168,7 @@ export class ProjectsController {
   }
 
   @Delete(':id/hard')
-  @Roles(Role.ADMIN, Role.RESPONSABLE)
+  @Permissions('projects:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Supprimer définitivement un projet (Admin/Responsable)',
@@ -186,7 +186,7 @@ export class ProjectsController {
   }
 
   @Post(':id/members')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
+  @Permissions('projects:manage_members')
   @ApiOperation({
     summary: 'Ajouter un membre au projet (Admin/Responsable/Manager/Chef de projet)',
   })
@@ -210,7 +210,7 @@ export class ProjectsController {
   }
 
   @Delete(':projectId/members/:userId')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET)
+  @Permissions('projects:manage_members')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Retirer un membre du projet (Admin/Responsable/Manager/Chef de projet)',

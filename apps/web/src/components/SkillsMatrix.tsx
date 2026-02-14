@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { skillsService } from "@/services/skills.service";
 import { SkillCategory, SkillLevel } from "@/types";
 import toast from "react-hot-toast";
@@ -49,10 +50,10 @@ const LEVEL_COLORS_HOVER: Record<SkillLevel, string> = {
 };
 
 const LEVEL_LABELS: Record<SkillLevel, string> = {
-  BEGINNER: "Debutant",
-  INTERMEDIATE: "Intermediaire",
+  BEGINNER: "Débutant",
+  INTERMEDIATE: "Intermédiaire",
   EXPERT: "Expert",
-  MASTER: "Maitre",
+  MASTER: "Maître",
 };
 
 const LEVEL_SHORT: Record<SkillLevel, string> = {
@@ -64,9 +65,9 @@ const LEVEL_SHORT: Record<SkillLevel, string> = {
 
 const CATEGORY_LABELS: Record<SkillCategory, string> = {
   TECHNICAL: "Technique",
-  METHODOLOGY: "Methodologie",
+  METHODOLOGY: "Méthodologie",
   SOFT_SKILL: "Soft Skills",
-  BUSINESS: "Metier",
+  BUSINESS: "Métier",
 };
 
 const CATEGORY_COLORS: Record<SkillCategory, string> = {
@@ -99,6 +100,8 @@ function LevelCell({
   isHighlighted,
   onEdit,
 }: LevelCellProps) {
+  const t = useTranslations("hr.skills");
+  const tc = useTranslations("common");
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -109,7 +112,7 @@ function LevelCell({
         // Remove skill
         await skillsService.removeFromUser(userId, skillId);
         onEdit(userId, skillId, null);
-        toast.success("Competence retiree");
+        toast.success(t("skillGapCount", { count: 1 }));
       } else {
         // Assign or update skill
         await skillsService.assignToUser(userId, {
@@ -117,10 +120,10 @@ function LevelCell({
           level: newLevel as SkillLevel,
         });
         onEdit(userId, skillId, newLevel as SkillLevel);
-        toast.success("Niveau mis a jour");
+        toast.success(tc("messages.updated"));
       }
     } catch (err) {
-      toast.error("Erreur lors de la mise a jour");
+      toast.error(tc("errors.validationError"));
       console.error(err);
     } finally {
       setIsUpdating(false);
@@ -248,6 +251,8 @@ function MatrixLoadingSkeleton() {
 }
 
 export function SkillsMatrix() {
+  const t = useTranslations("hr.skills.matrix");
+  const tc = useTranslations("common");
   const [data, setData] = useState<MatrixData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -277,7 +282,7 @@ export function SkillsMatrix() {
       const result = await skillsService.getMatrix();
       setData(result as unknown as MatrixData);
     } catch (err) {
-      setError("Erreur lors du chargement de la matrice");
+      setError(t("loadingError"));
       console.error(err);
     } finally {
       setLoading(false);
@@ -446,7 +451,7 @@ export function SkillsMatrix() {
   const exportToCSV = () => {
     if (!data) return;
 
-    const headers = ["Collaborateur", ...filteredSkills.map((s) => s.name)];
+    const headers = [t("collaborator"), ...filteredSkills.map((s) => s.name)];
     const rows = filteredUsers.map((row) => {
       const skillsMap = new Map(row.skills.map((s) => [s.skillId, s.level]));
       return [
@@ -463,7 +468,7 @@ export function SkillsMatrix() {
     link.download = `matrice-competences-${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success("Export CSV telecharge");
+    toast.success(t("exportSuccess"));
   };
 
   // Find skill gaps (skills with coverage < 100%)
@@ -589,7 +594,7 @@ export function SkillsMatrix() {
           </svg>
           <input
             type="text"
-            placeholder="Rechercher un collaborateur..."
+            placeholder={t("search")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -606,7 +611,7 @@ export function SkillsMatrix() {
           <option value="all">Toutes categories</option>
           {categories.map((cat) => (
             <option key={cat} value={cat}>
-              {CATEGORY_LABELS[cat]}
+              {t(`categories.${cat}`)}
             </option>
           ))}
         </select>
@@ -642,7 +647,7 @@ export function SkillsMatrix() {
         >
           <option value="name">Trier par nom</option>
           <option value="coverage">Trier par couverture</option>
-          <optgroup label="Trier par competence">
+          <optgroup label={t("sortBySkill")}>
             {filteredSkills.slice(0, 10).map((skill) => (
               <option key={skill.id} value={`skill:${skill.id}`}>
                 {skill.name}
@@ -680,7 +685,7 @@ export function SkillsMatrix() {
             key={level}
             className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium border ${LEVEL_COLORS[level as SkillLevel]}`}
           >
-            {LEVEL_SHORT[level as SkillLevel]} = {label}
+            {t(`levelShort.${level}`)} = {label}
           </span>
         ))}
         <span className="text-xs text-gray-400 ml-4">
@@ -730,7 +735,7 @@ export function SkillsMatrix() {
                           d="M9 5l7 7-7 7"
                         />
                       </svg>
-                      {CATEGORY_LABELS[category as SkillCategory]}
+                      {t(`categories.${category}`)}
                       <span className="text-gray-400">({skills.length})</span>
                     </button>
                   </th>

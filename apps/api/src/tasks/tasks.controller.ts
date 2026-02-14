@@ -32,7 +32,7 @@ import {
 } from './dto/import-tasks.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role, TaskStatus, RACIRole } from 'database';
 
@@ -44,7 +44,7 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CHEF_DE_PROJET, Role.REFERENT_TECHNIQUE, Role.CONTRIBUTEUR)
+  @Permissions('tasks:create')
   @ApiOperation({ summary: 'Créer une nouvelle tâche' })
   @ApiResponse({
     status: 201,
@@ -165,7 +165,7 @@ export class TasksController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.CONTRIBUTEUR)
+  @Permissions('tasks:update')
   @ApiOperation({ summary: 'Mettre à jour une tâche' })
   @ApiResponse({
     status: 200,
@@ -187,7 +187,7 @@ export class TasksController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('tasks:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer une tâche (Admin/Responsable/Manager)' })
   @ApiResponse({
@@ -207,7 +207,7 @@ export class TasksController {
   }
 
   @Post(':id/dependencies')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('tasks:update')
   @ApiOperation({ summary: 'Ajouter une dépendance à une tâche' })
   @ApiResponse({
     status: 201,
@@ -233,7 +233,7 @@ export class TasksController {
   }
 
   @Delete(':taskId/dependencies/:dependsOnId')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('tasks:update')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Retirer une dépendance' })
   @ApiResponse({
@@ -252,7 +252,7 @@ export class TasksController {
   }
 
   @Post(':id/raci')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('tasks:update')
   @ApiOperation({
     summary: 'Assigner un rôle RACI à un utilisateur pour une tâche',
   })
@@ -276,7 +276,7 @@ export class TasksController {
   }
 
   @Delete(':taskId/raci/:userId/:role')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('tasks:update')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Retirer une assignation RACI' })
   @ApiResponse({
@@ -296,7 +296,7 @@ export class TasksController {
   }
 
   @Post('project/:projectId/import/validate')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('tasks:create')
   @ApiOperation({ summary: 'Valider des tâches avant import (dry-run)' })
   @ApiResponse({
     status: 200,
@@ -315,7 +315,7 @@ export class TasksController {
   }
 
   @Post('project/:projectId/import')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('tasks:create')
   @ApiOperation({ summary: 'Importer des tâches en masse via CSV' })
   @ApiResponse({
     status: 201,
@@ -346,7 +346,7 @@ export class TasksController {
   }
 
   @Post(':id/attach-project')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.REFERENT_TECHNIQUE)
+  @Permissions('tasks:update')
   @ApiOperation({ summary: 'Rattacher une tâche orpheline à un projet' })
   @ApiResponse({
     status: 200,
@@ -364,7 +364,7 @@ export class TasksController {
   }
 
   @Post(':id/detach-project')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER, Role.REFERENT_TECHNIQUE)
+  @Permissions('tasks:update')
   @ApiOperation({
     summary: 'Détacher une tâche de son projet (rend la tâche orpheline)',
   })

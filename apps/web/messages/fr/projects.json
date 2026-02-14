@@ -1,0 +1,235 @@
+{
+  "title": "Projets",
+  "projectCount": "{{count}} projet(s)",
+  "projectCountFiltered": "{{filtered}} projet(s) sur {{total}}",
+  "createProject": "Créer un projet",
+  "noProjects": "Aucun projet trouvé",
+  "backToProjects": "Retour aux projets",
+
+  "filters": {
+    "search": "Rechercher",
+    "searchPlaceholder": "Nom ou description...",
+    "status": "Statut",
+    "priority": "Priorité",
+    "all": "Tous",
+    "allPriorities": "Toutes"
+  },
+
+  "status": {
+    "DRAFT": "Brouillon",
+    "ACTIVE": "Actif",
+    "SUSPENDED": "Suspendu",
+    "COMPLETED": "Terminé",
+    "CANCELLED": "Annulé"
+  },
+
+  "priority": {
+    "CRITICAL": "Critique",
+    "HIGH": "Haute",
+    "NORMAL": "Normale",
+    "LOW": "Basse"
+  },
+
+  "card": {
+    "noDescription": "Aucune description",
+    "startDate": "Début:",
+    "endDate": "Fin:",
+    "budgetHours": "{{hours}}h"
+  },
+
+  "modal": {
+    "create": {
+      "title": "Créer un projet",
+      "nameLabel": "Nom du projet *",
+      "namePlaceholder": "Ex: Refonte du site web",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Description détaillée du projet...",
+      "statusLabel": "Statut",
+      "priorityLabel": "Priorité",
+      "startDateLabel": "Date de début *",
+      "endDateLabel": "Date de fin *",
+      "managerLabel": "Responsable du projet *",
+      "managerPlaceholder": "-- Sélectionner --",
+      "departmentLabel": "Département",
+      "departmentPlaceholder": "-- Aucun --",
+      "budgetHoursLabel": "Budget en heures",
+      "budgetHoursPlaceholder": "Ex: 50000",
+      "cancel": "Annuler",
+      "submit": "Créer le projet"
+    },
+    "edit": {
+      "title": "Modifier le projet",
+      "submit": "Enregistrer les modifications"
+    },
+    "delete": {
+      "title": "Supprimer le projet",
+      "confirmMessage": "Êtes-vous sûr de vouloir supprimer définitivement le projet",
+      "warningTitle": "Attention :",
+      "warningMessage": "Cette action est irréversible. Le projet et toutes ses données (tâches, jalons, membres) seront supprimés définitivement.",
+      "cancel": "Annuler",
+      "confirm": "Supprimer définitivement"
+    }
+  },
+
+  "detail": {
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "tasks": "Tâches",
+      "milestones": "Jalons",
+      "team": "Équipe",
+      "gantt": "📊 Gantt"
+    },
+    "actions": {
+      "edit": "Modifier",
+      "delete": "Supprimer"
+    },
+    "overview": {
+      "stats": {
+        "progress": "Progression",
+        "tasks": "Tâches",
+        "budget": "Budget",
+        "team": "Équipe",
+        "tasksDetail": "{{completed}}/{{total}}",
+        "tasksInProgress": "{{inProgress}} en cours, {{blocked}} bloquées",
+        "budgetDetail": "{{logged}}h",
+        "budgetRemaining": "sur {{total}}h ({{remaining}}h restantes)",
+        "teamCount": "{{count}}",
+        "teamDetail": "{{epics}} épopées, {{milestones}} jalons"
+      },
+      "info": {
+        "title": "Informations du projet",
+        "startDate": "Date de début",
+        "endDate": "Date de fin",
+        "budgetHours": "Budget heures",
+        "createdAt": "Créé le",
+        "createdBy": "Créé par",
+        "notSpecified": "Non renseigné"
+      }
+    },
+    "tasks": {
+      "title": "Tableau des tâches",
+      "importCsv": "Importer CSV",
+      "newTask": "+ Nouvelle tâche",
+      "columns": {
+        "todo": "À faire",
+        "inProgress": "En cours",
+        "inReview": "En revue",
+        "done": "Terminé",
+        "blocked": "Bloqué"
+      },
+      "noTasks": "Aucune tâche",
+      "estimatedHours": "⏱️ {{hours}}h estimées",
+      "assignees": "{{count}} assignés",
+      "progress": "Progression"
+    },
+    "milestones": {
+      "title": "Jalons"
+    },
+    "team": {
+      "title": "Membres de l'équipe",
+      "addMember": "+ Ajouter un membre",
+      "noMembers": "Aucun membre",
+      "allocation": "Allocation: {{percent}}%",
+      "removeConfirm": "Voulez-vous vraiment retirer {{firstName}} {{lastName}} de l'équipe ?"
+    },
+    "gantt": {
+      "hint": "Cliquez sur une tache pour voir ses dependances, double-cliquez pour les modifier."
+    }
+  },
+
+  "members": {
+    "modal": {
+      "title": "Ajouter un membre",
+      "userLabel": "Utilisateur *",
+      "userPlaceholder": "Sélectionnez un utilisateur",
+      "roleLabel": "Rôle dans le projet",
+      "rolePlaceholder": "Sélectionnez un rôle",
+      "allocationLabel": "Allocation (%)",
+      "cancel": "Annuler",
+      "submit": "Ajouter"
+    },
+    "roles": {
+      "sponsor": "Sponsor",
+      "projectManager": "Chef de projet",
+      "technicalLead": "Responsable technique",
+      "architect": "Architecte",
+      "techLead": "Tech Lead",
+      "seniorDeveloper": "Développeur Senior",
+      "developer": "Développeur",
+      "juniorDeveloper": "Développeur Junior",
+      "devOps": "DevOps",
+      "qaLead": "QA Lead",
+      "tester": "Testeur",
+      "uxUiDesigner": "UX/UI Designer",
+      "productOwner": "Product Owner",
+      "scrumMaster": "Scrum Master",
+      "businessAnalyst": "Analyste métier",
+      "member": "Membre",
+      "observer": "Observateur"
+    }
+  },
+
+  "import": {
+    "tasks": {
+      "modalTitle": "Importer des tâches (CSV)",
+      "description": "Importez vos tâches depuis un fichier CSV. Séparateurs acceptés : virgule (,) ou point-virgule (;).",
+      "columnsTitle": "Colonnes disponibles :",
+      "columns": "title*, description, status, priority, assigneeEmail, milestoneName, estimatedHours, startDate, endDate",
+      "requiredNote": "* Champ obligatoire",
+      "downloadTemplate": "Télécharger le template CSV",
+      "dropzoneIdle": "Cliquez pour sélectionner un fichier CSV",
+      "dropzoneImporting": "Import en cours...",
+      "close": "Fermer"
+    },
+    "milestones": {
+      "modalTitle": "Importer des jalons (CSV)",
+      "description": "Importez vos jalons depuis un fichier CSV. Séparateurs acceptés : virgule (,) ou point-virgule (;).",
+      "columnsTitle": "Colonnes disponibles :",
+      "columns": "name*, description, dueDate*",
+      "requiredNote": "* Champs obligatoires (dueDate au format YYYY-MM-DD)",
+      "downloadTemplate": "Télécharger le template CSV",
+      "dropzoneIdle": "Cliquez pour sélectionner un fichier CSV",
+      "dropzoneImporting": "Import en cours...",
+      "close": "Fermer"
+    },
+    "preview": {
+      "tasksTitle": "Previsualisation de l'import des taches",
+      "milestonesTitle": "Previsualisation de l'import des jalons",
+      "columnTitle": "Titre",
+      "columnStatus": "Statut",
+      "columnPriority": "Priorite",
+      "columnAssignee": "Assignee",
+      "columnName": "Nom",
+      "columnDescription": "Description",
+      "columnDueDate": "Echeance",
+      "confirm": "Confirmer l'import",
+      "cancel": "Annuler"
+    }
+  },
+
+  "messages": {
+    "loadError": "Erreur lors du chargement des projets",
+    "loadDetailError": "Erreur lors du chargement du projet",
+    "createSuccess": "Projet créé avec succès",
+    "createError": "Erreur lors de la création",
+    "updateSuccess": "Projet mis à jour avec succès",
+    "updateError": "Erreur lors de la mise à jour",
+    "deleteSuccess": "Projet supprimé définitivement",
+    "deleteError": "Erreur lors de la suppression définitive",
+    "memberAddSuccess": "Membre ajouté avec succès",
+    "memberAddError": "Erreur lors de l'ajout du membre",
+    "memberRemoveSuccess": "Membre retiré avec succès",
+    "memberRemoveError": "Erreur lors du retrait du membre",
+    "statusUpdateSuccess": "Statut mis à jour",
+    "statusUpdateError": "Erreur lors de la mise à jour du statut",
+    "taskImportSuccess": "{{count}} tache(s) importee(s) avec succes",
+    "taskImportSkipped": "{{count}} tache(s) ignoree(s) (doublons)",
+    "taskImportError": "{{count}} erreur(s) lors de l'import",
+    "milestoneImportSuccess": "{{count}} jalon(s) importe(s) avec succes",
+    "milestoneImportSkipped": "{{count}} jalon(s) ignore(s) (doublons)",
+    "milestoneImportError": "{{count}} erreur(s) lors de l'import",
+    "csvEmpty": "Le fichier CSV est vide ou invalide",
+    "csvValidationError": "Erreur lors de la validation",
+    "templateDownloadError": "Erreur lors du téléchargement du template"
+  }
+}

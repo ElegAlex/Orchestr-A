@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   leaveTypesService,
   LeaveTypeConfig,
@@ -14,6 +15,8 @@ interface LeaveTypesManagerProps {
 }
 
 export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
+  const t = useTranslations("hr.leaves.leaveTypesManager");
+  const tc = useTranslations("common");
   const [leaveTypes, setLeaveTypes] = useState<LeaveTypeConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -40,7 +43,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
       setLeaveTypes(data);
     } catch (error) {
       console.error(error);
-      toast.error("Erreur lors du chargement des types de congés");
+      toast.error(tc("errors.serverError"));
     } finally {
       setLoading(false);
     }
@@ -68,7 +71,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
     e.preventDefault();
     try {
       await leaveTypesService.create(formData);
-      toast.success("Type de congé créé avec succès");
+      toast.success(t("typeCreated"));
       setShowCreateModal(false);
       resetForm();
       fetchLeaveTypes();
@@ -76,7 +79,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || "Erreur lors de la création",
+        axiosError.response?.data?.message || tc("errors.validationError"),
       );
     }
   };
@@ -102,7 +105,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
 
     try {
       await leaveTypesService.update(editingType.id, updateData);
-      toast.success("Type de congé modifié avec succès");
+      toast.success(t("typeUpdated"));
       setShowEditModal(false);
       setEditingType(null);
       resetForm();
@@ -111,14 +114,14 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || "Erreur lors de la modification",
+        axiosError.response?.data?.message || tc("errors.validationError"),
       );
     }
   };
 
   const handleDelete = async (type: LeaveTypeConfig) => {
     if (type.isSystem) {
-      toast.error("Les types système ne peuvent pas être supprimés");
+      toast.error(t("typeSystemCannotDelete"));
       return;
     }
 
@@ -136,7 +139,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || "Erreur lors de la suppression",
+        axiosError.response?.data?.message || tc("errors.validationError"),
       );
     }
   };
@@ -144,12 +147,12 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
   const handleToggleActive = async (type: LeaveTypeConfig) => {
     try {
       await leaveTypesService.update(type.id, { isActive: !type.isActive });
-      toast.success(type.isActive ? "Type désactivé" : "Type réactivé");
+      toast.success(type.isActive ? t("typeDeleted") : t("typeReactivated"));
       fetchLeaveTypes();
       onTypeChange?.();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || "Erreur");
+      toast.error(axiosError.response?.data?.message || tc("errors.serverError"));
     }
   };
 
@@ -317,7 +320,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                 <td className="px-4 py-3 text-sm text-gray-600">
                   {type.maxDaysPerYear
                     ? `${type.maxDaysPerYear} jours`
-                    : "Illimité"}
+                    : t("unlimited")}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
                   {type._count?.leaves || 0} congé(s)
@@ -345,7 +348,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                     <button
                       onClick={() => openEditModal(type)}
                       className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition"
-                      title="Modifier"
+                      title={tc("actions.edit")}
                     >
                       <svg
                         className="w-4 h-4"
@@ -370,7 +373,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                               ? "text-gray-500 hover:text-yellow-600 hover:bg-yellow-50"
                               : "text-gray-500 hover:text-green-600 hover:bg-green-50"
                           }`}
-                          title={type.isActive ? "Désactiver" : "Réactiver"}
+                          title={type.isActive ? t("deactivate") : t("reactivate")}
                         >
                           {type.isActive ? (
                             <svg
@@ -405,7 +408,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                         <button
                           onClick={() => handleDelete(type)}
                           className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition"
-                          title="Supprimer"
+                          title={tc("actions.delete")}
                         >
                           <svg
                             className="w-4 h-4"
@@ -456,7 +459,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                       })
                     }
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="EX: FORMATION"
+                    placeholder={t("codePlaceholder")}
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">
@@ -474,7 +477,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                       setFormData({ ...formData, name: e.target.value })
                     }
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Formation"
+                    placeholder={t("namePlaceholder")}
                     required
                   />
                 </div>
@@ -491,7 +494,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                   }
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   rows={2}
-                  placeholder="Description du type de congé..."
+                  placeholder={t("descriptionPlaceholder")}
                 />
               </div>
 
@@ -556,7 +559,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                       })
                     }
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Illimité"
+                    placeholder={t("unlimited")}
                     min={0}
                   />
                 </div>
@@ -733,7 +736,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                         })
                       }
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="Illimité"
+                      placeholder={t("unlimited")}
                       min={0}
                     />
                   </div>

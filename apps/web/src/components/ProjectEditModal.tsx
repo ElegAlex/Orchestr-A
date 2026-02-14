@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Project, ProjectStatus, Priority, UpdateProjectDto } from "@/types";
+import { useTranslations } from "next-intl";
 
 interface ProjectEditModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ export function ProjectEditModal({
   onSave,
   project,
 }: ProjectEditModalProps) {
+  const t = useTranslations("projects");
+
   const [formData, setFormData] = useState<UpdateProjectDto>({
     name: "",
     description: "",
@@ -59,7 +62,7 @@ export function ProjectEditModal({
       const axiosError = err as { response?: { data?: { message?: string } } };
       setError(
         axiosError.response?.data?.message ||
-          "Erreur lors de la mise à jour du projet",
+          t("projectEditModal.errorSaving"),
       );
     } finally {
       setSaving(false);
@@ -73,7 +76,7 @@ export function ProjectEditModal({
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">
-            Modifier le projet
+            {t("projectEditModal.title")}
           </h2>
         </div>
 
@@ -86,7 +89,7 @@ export function ProjectEditModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">
-              Nom du projet *
+              {t("projectEditModal.nameLabel")}
             </label>
             <input
               type="text"
@@ -96,13 +99,13 @@ export function ProjectEditModal({
                 setFormData({ ...formData, name: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-              placeholder="Nom du projet"
+              placeholder={t("projectEditModal.namePlaceholder")}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">
-              Description
+              {t("projectEditModal.descriptionLabel")}
             </label>
             <textarea
               rows={3}
@@ -111,14 +114,14 @@ export function ProjectEditModal({
                 setFormData({ ...formData, description: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-              placeholder="Description du projet"
+              placeholder={t("projectEditModal.descriptionPlaceholder")}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">
-                Statut
+                {t("projectEditModal.statusLabel")}
               </label>
               <select
                 value={formData.status}
@@ -130,17 +133,17 @@ export function ProjectEditModal({
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
-                <option value={ProjectStatus.DRAFT}>Brouillon</option>
-                <option value={ProjectStatus.ACTIVE}>Actif</option>
-                <option value={ProjectStatus.SUSPENDED}>Suspendu</option>
-                <option value={ProjectStatus.COMPLETED}>Terminé</option>
-                <option value={ProjectStatus.CANCELLED}>Annulé</option>
+                <option value={ProjectStatus.DRAFT}>{t("status.DRAFT")}</option>
+                <option value={ProjectStatus.ACTIVE}>{t("status.ACTIVE")}</option>
+                <option value={ProjectStatus.SUSPENDED}>{t("status.SUSPENDED")}</option>
+                <option value={ProjectStatus.COMPLETED}>{t("status.COMPLETED")}</option>
+                <option value={ProjectStatus.CANCELLED}>{t("status.CANCELLED")}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">
-                Priorité
+                {t("projectEditModal.priorityLabel")}
               </label>
               <select
                 value={formData.priority}
@@ -152,10 +155,10 @@ export function ProjectEditModal({
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
-                <option value={Priority.LOW}>Basse</option>
-                <option value={Priority.NORMAL}>Normale</option>
-                <option value={Priority.HIGH}>Haute</option>
-                <option value={Priority.CRITICAL}>Critique</option>
+                <option value={Priority.LOW}>{t("priority.LOW")}</option>
+                <option value={Priority.NORMAL}>{t("priority.NORMAL")}</option>
+                <option value={Priority.HIGH}>{t("priority.HIGH")}</option>
+                <option value={Priority.CRITICAL}>{t("priority.CRITICAL")}</option>
               </select>
             </div>
           </div>
@@ -163,7 +166,7 @@ export function ProjectEditModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">
-                Date de début
+                {t("projectEditModal.startDateLabel")}
               </label>
               <input
                 type="date"
@@ -177,7 +180,7 @@ export function ProjectEditModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">
-                Date de fin
+                {t("projectEditModal.endDateLabel")}
               </label>
               <input
                 type="date"
@@ -192,7 +195,7 @@ export function ProjectEditModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">
-              Budget heures
+              {t("projectEditModal.budgetHoursLabel")}
             </label>
             <input
               type="number"
@@ -207,7 +210,7 @@ export function ProjectEditModal({
                 })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-              placeholder="Budget en heures"
+              placeholder={t("projectEditModal.budgetHoursPlaceholder")}
             />
           </div>
 
@@ -218,7 +221,7 @@ export function ProjectEditModal({
               disabled={saving}
               className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
             >
-              Annuler
+              {t("projectEditModal.cancel")}
             </button>
             <button
               type="submit"
@@ -228,7 +231,7 @@ export function ProjectEditModal({
               {saving && (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               )}
-              <span>{saving ? "Enregistrement..." : "Enregistrer"}</span>
+              <span>{saving ? t("projectEditModal.saving") : t("projectEditModal.save")}</span>
             </button>
           </div>
         </form>

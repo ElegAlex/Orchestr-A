@@ -1,0 +1,314 @@
+{
+  "leaves": {
+    "title": "Gestion des congés",
+    "myLeaves": "Mes demandes",
+    "pendingValidation": "À valider",
+    "allLeaves": "Toutes les demandes",
+    "delegations": "Délégations",
+    "leaveTypes": "Types de congés",
+    "newRequest": "Nouvelle demande",
+    "noLeaves": "Aucune demande de congé",
+    "createFirst": "Créer ma première demande",
+    "noPendingValidation": "Aucune demande en attente de validation",
+    "noLeave": "Aucune demande",
+    "allUsers": "Tous les utilisateurs",
+    "pendingRequests": "demande(s) en attente de validation",
+    "status": {
+      "APPROVED": "Approuvé",
+      "PENDING": "En attente",
+      "REJECTED": "Refusé"
+    },
+    "halfDay": {
+      "MORNING": "Matin",
+      "AFTERNOON": "Après-midi",
+      "label": "Demi-journée (optionnel)",
+      "fullDay": "Journée complète"
+    },
+    "fields": {
+      "leaveType": "Type de congé",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "reason": "Motif (optionnel)",
+      "reasonPlaceholder": "Précisez le motif si nécessaire...",
+      "rejectReason": "Motif du refus (optionnel)",
+      "rejectReasonPlaceholder": "Expliquez la raison du refus...",
+      "from": "Du",
+      "to": "Au",
+      "days": "jour",
+      "daysPlural": "jours"
+    },
+    "actions": {
+      "approve": "Approuver",
+      "reject": "Refuser",
+      "delete": "Supprimer",
+      "edit": "Modifier",
+      "submit": "Soumettre la demande"
+    },
+    "modals": {
+      "createTitle": "Nouvelle demande de congé",
+      "editTitle": "Modifier la demande",
+      "rejectTitle": "Refuser la demande",
+      "confirmReject": "Confirmer le refus",
+      "validationWarning": "Votre demande sera soumise à validation par votre responsable."
+    },
+    "delegations": {
+      "given": "Délégations données",
+      "received": "Délégations reçues",
+      "noDelegationsGiven": "Aucune délégation donnée",
+      "noDelegationsReceived": "Aucune délégation reçue",
+      "create": "Créer une délégation",
+      "createTitle": "Créer une délégation",
+      "delegateTo": "Déléguer à",
+      "selectUser": "Sélectionner un utilisateur",
+      "deactivate": "Désactiver",
+      "active": "Active",
+      "inactive": "Inactive",
+      "from": "De",
+      "delegationInfo": "Durant cette période, l'utilisateur sélectionné pourra valider les demandes de congé à votre place."
+    },
+    "leaveTypesManager": {
+      "title": "Types de congés",
+      "newType": "Nouveau type",
+      "showInactive": "Afficher les inactifs",
+      "code": "Code",
+      "name": "Nom",
+      "description": "Description",
+      "icon": "Icône",
+      "color": "Couleur",
+      "options": "Options",
+      "limitPerYear": "Limite/an",
+      "usages": "Utilisations",
+      "status": "Statut",
+      "paid": "Rémunéré",
+      "unpaid": "Non rémunéré",
+      "requiresApproval": "Validation",
+      "requiresApprovalFull": "Validation requise",
+      "auto": "Auto",
+      "unlimited": "Illimité",
+      "system": "Système",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "createTitle": "Nouveau type de congé",
+      "editTitle": "Modifier le type de congé",
+      "systemWarning": "Type système : seuls le nom, la description, l'icône et la couleur peuvent être modifiés.",
+      "codeHelper": "Majuscules et underscores uniquement",
+      "codePlaceholder": "EX: FORMATION",
+      "namePlaceholder": "Formation",
+      "descriptionPlaceholder": "Description du type de congé...",
+      "annualLimit": "Limite annuelle",
+      "annualLimitPlaceholder": "Illimité",
+      "requiredCountHelper": "Nombre de personnes devant maitriser cette competence pour assurer la couverture"
+    },
+    "validation": {
+      "assignedValidator": "Validateur assigné",
+      "approvedBy": "Approuvé",
+      "rejectedBy": "Refusé",
+      "by": "par",
+      "on": "le",
+      "rejectMotif": "Motif"
+    },
+    "messages": {
+      "created": "Demande de congé créée - En attente de validation",
+      "updated": "Congé modifié avec succès",
+      "deleted": "Demande supprimée",
+      "approved": "Demande approuvée",
+      "rejected": "Demande refusée",
+      "delegationCreated": "Délégation créée avec succès",
+      "delegationDeactivated": "Délégation désactivée",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette demande ?",
+      "confirmDeactivate": "Êtes-vous sûr de vouloir désactiver cette délégation ?",
+      "typeCreated": "Type de congé créé avec succès",
+      "typeUpdated": "Type de congé modifié avec succès",
+      "typeDeleted": "Type désactivé",
+      "typeReactivated": "Type réactivé",
+      "typeSystemCannotDelete": "Les types système ne peuvent pas être supprimés",
+      "typeDeleteConfirm": "Ce type est utilisé par {count} congé(s). Il sera désactivé au lieu d'être supprimé. Continuer ?",
+      "typeDeleteConfirmSimple": "Êtes-vous sûr de vouloir supprimer ce type de congé ?"
+    }
+  },
+  "telework": {
+    "title": "Mon planning télétravail",
+    "stats": "{count} jour(s) de télétravail planifié(s)",
+    "days": "jour",
+    "daysPlural": "jours",
+    "howItWorks": {
+      "title": "Comment ça marche ?",
+      "description": "Cliquez sur un jour pour basculer entre télétravail et non déclaré. Les jours en bleu sont vos jours de télétravail. Vous pouvez modifier vos choix à tout moment."
+    },
+    "legend": {
+      "title": "Légende",
+      "telework": "Télétravail",
+      "office": "Bureau (déclaré)",
+      "notDeclared": "Non déclaré",
+      "weekend": "Week-end"
+    },
+    "weekDays": {
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mer",
+      "thu": "Jeu",
+      "fri": "Ven",
+      "sat": "Sam",
+      "sun": "Dim"
+    },
+    "navigation": {
+      "previousMonth": "Mois précédent",
+      "nextMonth": "Mois suivant"
+    },
+    "messages": {
+      "recorded": "Télétravail enregistré",
+      "deleted": "Jour supprimé"
+    }
+  },
+  "skills": {
+    "title": "Gestion des Compétences",
+    "subtitle": "Gérez les compétences des utilisateurs",
+    "newSkill": "Nouvelle compétence",
+    "categories": {
+      "TECHNICAL": "Technique",
+      "METHODOLOGY": "Méthodologie",
+      "SOFT_SKILL": "Soft Skills",
+      "BUSINESS": "Métier",
+      "all": "Toutes les catégories"
+    },
+    "levels": {
+      "BEGINNER": "Débutant",
+      "INTERMEDIATE": "Intermédiaire",
+      "EXPERT": "Expert",
+      "MASTER": "Maître",
+      "min": "Min."
+    },
+    "levelShort": {
+      "BEGINNER": "Deb",
+      "INTERMEDIATE": "Int",
+      "EXPERT": "Exp",
+      "MASTER": "Mai"
+    },
+    "views": {
+      "users": "Par utilisateur",
+      "skills": "Référentiel",
+      "matrix": "Matrice"
+    },
+    "userView": {
+      "users": "Utilisateurs",
+      "skills": "compétence(s)",
+      "addSkills": "Ajouter des compétences",
+      "noSkills": "Aucune compétence assignée",
+      "addSkillsPrompt": "Ajouter des compétences"
+    },
+    "skillsView": {
+      "name": "Nom",
+      "category": "Catégorie",
+      "description": "Description",
+      "requiredCount": "Ressources requises",
+      "actions": "Actions",
+      "noSkills": "Aucune compétence trouvée"
+    },
+    "matrix": {
+      "collaborators": "Collaborateurs",
+      "skills": "Competences",
+      "averageCoverage": "Couverture moyenne",
+      "skillGaps": "Skill Gaps",
+      "skillGapsToReinforce": "competences a renforcer",
+      "skillGapsAlert": "Competences a renforcer (couverture incomplete)",
+      "others": "autres",
+      "search": "Rechercher un collaborateur...",
+      "allCategories": "Toutes categories",
+      "allLevels": "Tous niveaux",
+      "sortByName": "Trier par nom",
+      "sortByCoverage": "Trier par couverture",
+      "sortBySkill": "Trier par competence",
+      "exportCSV": "Export CSV",
+      "legend": "Legende",
+      "clickToEdit": "Cliquer sur une cellule pour modifier",
+      "collaborator": "Collaborateur",
+      "coverage": "Couverture",
+      "completeCoverage": "Couverture complete ({current}/{required})",
+      "partialCoverage": "Couverture partielle ({current}/{required})",
+      "skillGapCount": "Skill gap - {count} ressource(s) manquante(s)",
+      "add": "Ajouter {name}",
+      "clickToModify": "{level} - Cliquer pour modifier",
+      "noData": "Aucune donnee de competences disponible",
+      "statsFooter": "{users} collaborateur{usersPlural} - {skills} competence{skillsPlural}",
+      "loadingError": "Erreur lors du chargement de la matrice",
+      "exportSuccess": "Export CSV telecharge"
+    },
+    "modals": {
+      "createTitle": "Créer une compétence",
+      "editTitle": "Modifier la compétence",
+      "assignTitle": "Ajouter des compétences à {firstName} {lastName}",
+      "nameLabel": "Nom",
+      "categoryLabel": "Catégorie",
+      "categorySelect": "Sélectionner",
+      "descriptionLabel": "Description",
+      "requiredCountLabel": "Ressources requises",
+      "requiredCountHelper": "Nombre de personnes devant maitriser cette competence pour assurer la couverture",
+      "selectSkills": "Sélectionnez les compétences et définissez leur niveau ({count} sélectionnée(s))",
+      "allSkillsAssigned": "Toutes les compétences sont déjà assignées",
+      "assign": "Assigner ({count})"
+    },
+    "actions": {
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "remove": "Retirer"
+    },
+    "messages": {
+      "created": "Compétence créée avec succès",
+      "updated": "Compétence modifiée avec succès",
+      "deleted": "Compétence supprimée",
+      "assigned": "{count} compétence(s) assignée(s)",
+      "removed": "Compétence retirée",
+      "levelUpdated": "Niveau mis à jour",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer \"{name}\" ?",
+      "confirmRemove": "Retirer cette compétence ?",
+      "matrixUpdated": "Competence retiree",
+      "matrixLevelUpdated": "Niveau mis a jour"
+    }
+  },
+  "timeTracking": {
+    "title": "Temps passé",
+    "newEntry": "Saisir du temps",
+    "stats": "{count} entrée(s) - {hours}h au total",
+    "noEntries": "Aucune entrée de temps",
+    "createFirst": "Saisir votre première entrée",
+    "activityTypes": {
+      "DEVELOPMENT": "Développement",
+      "MEETING": "Réunion",
+      "SUPPORT": "Support",
+      "TRAINING": "Formation",
+      "OTHER": "Autre"
+    },
+    "filters": {
+      "title": "Filtres",
+      "project": "Projet",
+      "allProjects": "Tous les projets",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "reset": "Réinitialiser les filtres"
+    },
+    "fields": {
+      "date": "Date",
+      "hours": "Durée (heures)",
+      "hoursPlaceholder": "Ex: 2.5",
+      "activityType": "Type d'activité",
+      "project": "Projet (optionnel)",
+      "noProject": "Aucun projet",
+      "task": "Tâche (optionnel)",
+      "noTask": "Aucune tâche",
+      "description": "Description (optionnel)",
+      "descriptionPlaceholder": "Décrivez votre activité..."
+    },
+    "modals": {
+      "createTitle": "Saisir du temps"
+    },
+    "actions": {
+      "delete": "Supprimer"
+    },
+    "messages": {
+      "created": "Temps enregistré avec succès",
+      "deleted": "Entrée supprimée",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette entrée ?",
+      "createdOn": "Créé le"
+    }
+  }
+}

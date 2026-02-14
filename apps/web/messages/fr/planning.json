@@ -1,0 +1,114 @@
+{
+  "planning": {
+    "title": "Planning des Ressources",
+    "week": "Semaine",
+    "month": "Mois",
+    "today": "Aujourd'hui",
+    "createTask": "Créer une tâche",
+    "weekOf": "Semaine du {start} au {end}",
+    "loading": "Chargement du planning...",
+    "noResources": "Aucune ressource à afficher"
+  },
+  "filters": {
+    "services": "Services :",
+    "noService": "Aucun service",
+    "allServices": "Tous les services",
+    "servicesCount": "{count} service",
+    "servicesCountPlural": "{count} services",
+    "all": "Tout",
+    "none": "Aucun",
+    "resource": "Ressource :",
+    "allResources": "Toutes les ressources",
+    "display": "Affichage :",
+    "displayAll": "Tout",
+    "displayAvailability": "Disponibilités",
+    "displayActivity": "Activités"
+  },
+  "actions": {
+    "collapse": "Replier",
+    "expand": "Déplier",
+    "collapseAll": "Replier tous les services",
+    "expandAll": "Déplier tous les services",
+    "collapseService": "Replier ce service",
+    "expandService": "Déplier ce service"
+  },
+  "group": {
+    "people": "personnes",
+    "person": "personne",
+    "task": "tâche",
+    "tasks": "tâches",
+    "collapsed": "(replié)"
+  },
+  "legend": {
+    "title": "Légende",
+    "task": "Tâche",
+    "leave": "Congé",
+    "telework": "Télétravail",
+    "office": "Bureau",
+    "leaveValidated": "Congé validé",
+    "leavePending": "Congé en attente",
+    "event": "Événement",
+    "externalIntervention": "Intervention ext."
+  },
+  "table": {
+    "resource": "Ressource"
+  },
+  "telework": {
+    "label": "Télétravail",
+    "office": "Bureau",
+    "updateError": "Erreur lors de la mise à jour du télétravail"
+  },
+  "taskMove": {
+    "multiAssignDateError": "Tâche multi-assignée : changement de date impossible.\nModifiez les dates via le détail de la tâche.",
+    "alreadyAssigned": "Cet utilisateur est déjà assigné à cette tâche.",
+    "reassignOnly": "Tâche multi-assignée : seul l'assigné a été modifié.\nLa date reste inchangée pour tous les assignés.",
+    "moveError": "Erreur lors du déplacement de la tâche"
+  },
+  "dayCell": {
+    "pendingValidation": "en attente de validation",
+    "validated": "validé",
+    "pending": "En attente",
+    "externalShort": "EXT",
+    "externalIntervention": "Intervention ext.",
+    "allDay": "Journée entière"
+  },
+  "taskModal": {
+    "description": "Description",
+    "status": "Statut",
+    "priority": "Priorité",
+    "estimation": "Estimation",
+    "progress": "Progression"
+  },
+  "taskCreate": {
+    "title": "Créer une tâche",
+    "titleField": "Titre *",
+    "titlePlaceholder": "Ex: Développer la page d'accueil",
+    "description": "Description",
+    "descriptionPlaceholder": "Description détaillée de la tâche...",
+    "project": "Projet",
+    "noProject": "Aucun projet (tache independante)",
+    "assignees": "Assignés",
+    "assigneesPlaceholder": "Selectionner les assignés",
+    "status": "Statut",
+    "priority": "Priorité",
+    "startTime": "Heure de début",
+    "endTime": "Heure de fin",
+    "estimationHours": "Estimation (heures)",
+    "estimationPlaceholder": "Ex: 8",
+    "externalIntervention": "Intervention extérieure",
+    "creating": "Création...",
+    "createButton": "Créer la tâche",
+    "success": "Tâche créée avec succès",
+    "error": "Erreur lors de la création"
+  },
+  "leaveTypes": {
+    "CP": "Congés payés",
+    "RTT": "RTT",
+    "SICK_LEAVE": "Maladie",
+    "UNPAID": "Sans solde",
+    "OTHER": "Autre"
+  },
+  "roles": {
+    "REFERENT_TECHNIQUE_SHORT": "Réf. Tech."
+  }
+}

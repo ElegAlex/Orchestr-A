@@ -23,12 +23,11 @@ import {
 import { HolidaysService } from './holidays.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { HolidayRangeQueryDto } from './dto/holiday-range-query.dto';
-import { Role } from 'database';
 import type { User } from '@prisma/client';
 
 @ApiTags('Holidays')
@@ -86,7 +85,7 @@ export class HolidaysController {
   }
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Permissions('holidays:create')
   @ApiOperation({ summary: 'Créer un nouveau jour férié (Admin uniquement)' })
   @ApiResponse({ status: 201, description: 'Jour férié créé' })
   @ApiResponse({
@@ -101,7 +100,7 @@ export class HolidaysController {
   }
 
   @Post('import-french')
-  @Roles(Role.ADMIN)
+  @Permissions('holidays:create')
   @ApiOperation({
     summary: 'Importer les jours fériés français (Admin uniquement)',
   })
@@ -132,7 +131,7 @@ export class HolidaysController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('holidays:update')
   @ApiOperation({ summary: 'Modifier un jour férié (Admin uniquement)' })
   @ApiParam({ name: 'id', description: 'ID du jour férié' })
   @ApiResponse({ status: 200, description: 'Jour férié mis à jour' })
@@ -149,7 +148,7 @@ export class HolidaysController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
+  @Permissions('holidays:delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Supprimer un jour férié (Admin uniquement)' })
   @ApiParam({ name: 'id', description: 'ID du jour férié' })

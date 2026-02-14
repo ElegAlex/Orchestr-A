@@ -15,6 +15,7 @@ import { usersService } from "@/services/users.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { useAuthStore } from "@/stores/auth.store";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 interface TaskCreateModalProps {
   isOpen: boolean;
@@ -27,6 +28,8 @@ export const TaskCreateModal = ({
   onClose,
   onSuccess,
 }: TaskCreateModalProps) => {
+  const t = useTranslations("planning.taskCreate");
+  const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -136,14 +139,14 @@ export const TaskCreateModal = ({
         isExternalIntervention: formData.isExternalIntervention,
       };
       await tasksService.create(taskData);
-      toast.success("Tâche créée avec succès");
+      toast.success(t("success"));
       resetForm();
       onClose();
       if (onSuccess) onSuccess();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || "Erreur lors de la création",
+        axiosError.response?.data?.message || t("error"),
       );
     } finally {
       setLoading(false);
@@ -174,12 +177,12 @@ export const TaskCreateModal = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold text-gray-900 mb-4">
-          Créer une tâche
+          {t("title")}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Titre *
+              {t("titleField")}
             </label>
             <input
               type="text"
@@ -189,13 +192,13 @@ export const TaskCreateModal = ({
                 setFormData({ ...formData, title: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Ex: Développer la page d'accueil"
+              placeholder={t("titlePlaceholder")}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
+              {t("description")}
             </label>
             <textarea
               value={formData.description}
@@ -204,20 +207,20 @@ export const TaskCreateModal = ({
               }
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Description détaillée de la tâche..."
+              placeholder={t("descriptionPlaceholder")}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Projet
+              {t("project")}
             </label>
             <select
               value={formData.projectId || ""}
               onChange={(e) => handleFormProjectChange(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Aucun projet (tache independante)</option>
+              <option value="">{t("noProject")}</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -227,17 +230,17 @@ export const TaskCreateModal = ({
           </div>
 
           <UserMultiSelect
-            label="Assignés"
+            label={t("assignees")}
             users={getAvailableAssignees()}
             selectedIds={formData.assigneeIds}
             onChange={(ids) => setFormData({ ...formData, assigneeIds: ids })}
-            placeholder="Selectionner les assignés"
+            placeholder={t("assigneesPlaceholder")}
           />
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Statut
+                {t("status")}
               </label>
               <select
                 value={formData.status}
@@ -249,17 +252,17 @@ export const TaskCreateModal = ({
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value={TaskStatus.TODO}>À faire</option>
-                <option value={TaskStatus.IN_PROGRESS}>En cours</option>
-                <option value={TaskStatus.IN_REVIEW}>En revue</option>
-                <option value={TaskStatus.DONE}>Terminé</option>
-                <option value={TaskStatus.BLOCKED}>Bloqué</option>
+                <option value={TaskStatus.TODO}>{tCommon("taskStatus.TODO")}</option>
+                <option value={TaskStatus.IN_PROGRESS}>{tCommon("taskStatus.IN_PROGRESS")}</option>
+                <option value={TaskStatus.IN_REVIEW}>{tCommon("taskStatus.IN_REVIEW")}</option>
+                <option value={TaskStatus.DONE}>{tCommon("taskStatus.DONE")}</option>
+                <option value={TaskStatus.BLOCKED}>{tCommon("taskStatus.BLOCKED")}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Priorité
+                {t("priority")}
               </label>
               <select
                 value={formData.priority}
@@ -271,10 +274,10 @@ export const TaskCreateModal = ({
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value={Priority.LOW}>Basse</option>
-                <option value={Priority.NORMAL}>Normale</option>
-                <option value={Priority.HIGH}>Haute</option>
-                <option value={Priority.CRITICAL}>Critique</option>
+                <option value={Priority.LOW}>{tCommon("priority.LOW")}</option>
+                <option value={Priority.NORMAL}>{tCommon("priority.NORMAL")}</option>
+                <option value={Priority.HIGH}>{tCommon("priority.HIGH")}</option>
+                <option value={Priority.CRITICAL}>{tCommon("priority.CRITICAL")}</option>
               </select>
             </div>
           </div>
@@ -282,7 +285,7 @@ export const TaskCreateModal = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de début
+                {tCommon("form.startDate")}
               </label>
               <input
                 type="date"
@@ -306,7 +309,7 @@ export const TaskCreateModal = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de fin
+                {tCommon("form.endDate")}
               </label>
               <input
                 type="date"
@@ -323,7 +326,7 @@ export const TaskCreateModal = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Heure de début
+                {t("startTime")}
               </label>
               <input
                 type="time"
@@ -337,7 +340,7 @@ export const TaskCreateModal = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Heure de fin
+                {t("endTime")}
               </label>
               <input
                 type="time"
@@ -352,7 +355,7 @@ export const TaskCreateModal = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estimation (heures)
+              {t("estimationHours")}
             </label>
             <input
               type="number"
@@ -368,7 +371,7 @@ export const TaskCreateModal = ({
                 })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Ex: 8"
+              placeholder={t("estimationPlaceholder")}
             />
           </div>
 
@@ -389,7 +392,7 @@ export const TaskCreateModal = ({
               htmlFor="isExternalIntervention"
               className="ml-2 block text-sm font-medium text-gray-700"
             >
-              Intervention extérieure
+              {t("externalIntervention")}
             </label>
           </div>
 
@@ -402,14 +405,14 @@ export const TaskCreateModal = ({
               }}
               className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
             >
-              Annuler
+              {tCommon("actions.cancel")}
             </button>
             <button
               type="submit"
               disabled={loading}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
             >
-              {loading ? "Création..." : "Créer la tâche"}
+              {loading ? t("creating") : t("createButton")}
             </button>
           </div>
         </form>

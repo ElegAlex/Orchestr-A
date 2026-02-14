@@ -1,0 +1,137 @@
+{
+  "title": "Tâches",
+  "taskCount": "{{count}} tâche(s)",
+  "createTask": "+ Créer une tâche",
+  "noTasks": "Aucune tâche",
+  "back": "Retour",
+
+  "filters": {
+    "project": "Projet",
+    "priority": "Priorité",
+    "allProjects": "Tous les projets",
+    "orphanTasks": "Taches sans projet",
+    "allPriorities": "Toutes"
+  },
+
+  "status": {
+    "TODO": "À faire",
+    "IN_PROGRESS": "En cours",
+    "IN_REVIEW": "En revue",
+    "DONE": "Terminé",
+    "BLOCKED": "Bloqué"
+  },
+
+  "priority": {
+    "CRITICAL": "Critique",
+    "HIGH": "Haute",
+    "NORMAL": "Normale",
+    "LOW": "Basse"
+  },
+
+  "card": {
+    "projectIcon": "📁",
+    "orphanIcon": "📋",
+    "orphanLabel": "Tache independante",
+    "estimatedHours": "⏱️ {{hours}}h estimées",
+    "assignees": "{{count}} assignés",
+    "progress": "Progression"
+  },
+
+  "modal": {
+    "create": {
+      "title": "Créer une tâche",
+      "titleLabel": "Titre *",
+      "titlePlaceholder": "Ex: Développer la page d'accueil",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Description détaillée de la tâche...",
+      "projectLabel": "Projet",
+      "projectNone": "Aucun projet (tache independante)",
+      "projectHint": "Laissez vide pour une tache hors projet (reunion, transverse...)",
+      "assigneesLabel": "Assignés",
+      "assigneesPlaceholder": "Selectionner les assignés",
+      "assigneesHintMembers": "Membres du projet",
+      "assigneesHintNoMembers": "Aucun membre dans ce projet - tous les utilisateurs sont affichés",
+      "statusLabel": "Statut",
+      "priorityLabel": "Priorité",
+      "startDateLabel": "Date de début",
+      "endDateLabel": "Date de fin",
+      "startTimeLabel": "Heure de début",
+      "endTimeLabel": "Heure de fin",
+      "estimatedHoursLabel": "Estimation (heures)",
+      "estimatedHoursPlaceholder": "Ex: 8",
+      "externalInterventionLabel": "Intervention extérieure",
+      "cancel": "Annuler",
+      "submit": "Créer la tâche"
+    }
+  },
+
+  "detail": {
+    "actions": {
+      "delete": "Supprimer",
+      "edit": "Modifier",
+      "cancel": "Annuler",
+      "save": "Sauvegarder"
+    },
+    "sections": {
+      "description": "Description",
+      "noDescription": "Aucune description",
+      "settings": "Paramètres",
+      "progress": "Progression",
+      "progressLabel": "Avancement",
+      "dependencies": "Dependances",
+      "noDependencies": "Aucune dependance",
+      "deletedTask": "Tache supprimee",
+      "project": "Projet",
+      "assignees": "Assignés",
+      "assignedTo": "Assigné à",
+      "milestone": "Jalon",
+      "epic": "Epic",
+      "details": "Détails"
+    },
+    "fields": {
+      "status": "Statut",
+      "priority": "Priorité",
+      "milestone": "Jalon",
+      "milestoneNone": "Aucun jalon",
+      "assignees": "Assignés",
+      "assigneesPlaceholder": "Selectionner les assignés",
+      "project": "Projet",
+      "projectNone": "Aucun projet",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "startTime": "Heure de début",
+      "endTime": "Heure de fin",
+      "estimation": "Estimation",
+      "dueDate": "Échéance:",
+      "createdAt": "Créée le",
+      "updatedAt": "Mise à jour",
+      "schedule": "Horaires"
+    },
+    "dependencies": {
+      "selectPlaceholder": "Selectionner les taches dont depend cette tache"
+    }
+  },
+
+  "raci": {
+    "responsible": "Responsable",
+    "accountable": "Autorité",
+    "consulted": "Consulté",
+    "informed": "Informé"
+  },
+
+  "messages": {
+    "loadError": "Erreur lors du chargement des données",
+    "loadTaskError": "Erreur lors du chargement de la tâche",
+    "createSuccess": "Tâche créée avec succès",
+    "createError": "Erreur lors de la création",
+    "updateSuccess": "Tâche mise à jour avec succès",
+    "updateError": "Erreur lors de la mise à jour",
+    "deleteSuccess": "Tâche supprimée avec succès",
+    "deleteError": "Erreur lors de la suppression",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette tâche ?",
+    "statusUpdateSuccess": "Statut mis à jour",
+    "statusUpdateError": "Erreur lors de la mise à jour du statut",
+    "dependenciesUpdateSuccess": "Dependances mises a jour",
+    "dependenciesUpdateError": "Erreur lors de la mise a jour des dependances"
+  }
+}

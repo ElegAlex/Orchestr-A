@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Task, TaskStatus, Priority, Milestone, User, Project } from "@/types";
 import { UserMultiSelect } from "./UserMultiSelect";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ export function TaskModal({
   milestones = [],
   users = [],
 }: TaskModalProps) {
+  const t = useTranslations("tasks");
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -98,7 +101,7 @@ export function TaskModal({
     e.preventDefault();
 
     if (!formData.title.trim()) {
-      toast.error("Le titre de la tache est obligatoire");
+      toast.error(t("modal.create.titleRequired"));
       return;
     }
 
@@ -158,7 +161,7 @@ export function TaskModal({
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">
-              {task ? "Modifier la tâche" : "Nouvelle tâche"}
+              {task ? t("modal.edit.title") : t("modal.create.title")}
             </h2>
             <button
               onClick={onClose}
@@ -185,7 +188,7 @@ export function TaskModal({
           {/* Titre */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Titre <span className="text-red-500">*</span>
+              {t("modal.create.titleLabel")} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -195,14 +198,14 @@ export function TaskModal({
                 setFormData({ ...formData, title: e.target.value })
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Ex: Implémenter la fonctionnalité X"
+              placeholder={t("modal.create.titlePlaceholder")}
             />
           </div>
 
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Description
+              {t("modal.create.descriptionLabel")}
             </label>
             <textarea
               value={formData.description}
@@ -211,7 +214,7 @@ export function TaskModal({
               }
               rows={4}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Decrivez la tache..."
+              placeholder={t("modal.create.descriptionPlaceholder")}
             />
           </div>
 
@@ -219,7 +222,7 @@ export function TaskModal({
           {showProjectSelector && (
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Projet
+                {t("modal.create.projectLabel")}
               </label>
               <select
                 value={formData.projectId}
@@ -232,7 +235,7 @@ export function TaskModal({
                 }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Aucun projet (tache independante)</option>
+                <option value="">{t("modal.create.noProject")}</option>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
@@ -240,8 +243,7 @@ export function TaskModal({
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Laissez vide pour une tache hors projet (reunion, tache
-                transverse...)
+                {t("modal.create.projectHint")}
               </p>
             </div>
           )}
@@ -250,7 +252,7 @@ export function TaskModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Statut
+                {t("modal.create.statusLabel")}
               </label>
               <select
                 value={formData.status}
@@ -262,17 +264,17 @@ export function TaskModal({
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value={TaskStatus.TODO}>À faire</option>
-                <option value={TaskStatus.IN_PROGRESS}>En cours</option>
-                <option value={TaskStatus.IN_REVIEW}>En revue</option>
-                <option value={TaskStatus.BLOCKED}>Bloqué</option>
-                <option value={TaskStatus.DONE}>Terminé</option>
+                <option value={TaskStatus.TODO}>{t("status.TODO")}</option>
+                <option value={TaskStatus.IN_PROGRESS}>{t("status.IN_PROGRESS")}</option>
+                <option value={TaskStatus.IN_REVIEW}>{t("status.IN_REVIEW")}</option>
+                <option value={TaskStatus.BLOCKED}>{t("status.BLOCKED")}</option>
+                <option value={TaskStatus.DONE}>{t("status.DONE")}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Priorité
+                {t("modal.create.priorityLabel")}
               </label>
               <select
                 value={formData.priority}
@@ -284,10 +286,10 @@ export function TaskModal({
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value={Priority.LOW}>Basse</option>
-                <option value={Priority.NORMAL}>Normale</option>
-                <option value={Priority.HIGH}>Haute</option>
-                <option value={Priority.CRITICAL}>Critique</option>
+                <option value={Priority.LOW}>{t("priority.LOW")}</option>
+                <option value={Priority.NORMAL}>{t("priority.NORMAL")}</option>
+                <option value={Priority.HIGH}>{t("priority.HIGH")}</option>
+                <option value={Priority.CRITICAL}>{t("priority.CRITICAL")}</option>
               </select>
             </div>
           </div>
@@ -296,7 +298,7 @@ export function TaskModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Jalon
+                {t("modal.create.milestoneLabel")}
               </label>
               <select
                 value={formData.milestoneId}
@@ -308,8 +310,8 @@ export function TaskModal({
               >
                 <option value="">
                   {formData.projectId
-                    ? "Aucun jalon"
-                    : "Selectionnez un projet d'abord"}
+                    ? t("modal.create.noMilestone")
+                    : t("modal.create.selectProjectFirst")}
                 </option>
                 {filteredMilestones.map((milestone) => (
                   <option key={milestone.id} value={milestone.id}>
@@ -321,13 +323,13 @@ export function TaskModal({
 
             <div>
               <UserMultiSelect
-                label="Assignés"
+                label={t("modal.create.assigneesLabel")}
                 users={users}
                 selectedIds={formData.assigneeIds}
                 onChange={(ids) =>
                   setFormData({ ...formData, assigneeIds: ids })
                 }
-                placeholder="Selectionner les assignés"
+                placeholder={t("modal.create.assigneesPlaceholder")}
               />
             </div>
           </div>
@@ -336,7 +338,7 @@ export function TaskModal({
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Estimation (h)
+                {t("modal.create.estimatedHoursLabel")}
               </label>
               <input
                 type="number"
@@ -347,13 +349,13 @@ export function TaskModal({
                   setFormData({ ...formData, estimatedHours: e.target.value })
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="8"
+                placeholder={t("modal.create.estimatedHoursPlaceholder")}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Date de début
+                {t("modal.create.startDateLabel")}
               </label>
               <input
                 type="date"
@@ -378,7 +380,7 @@ export function TaskModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Date de fin
+                {t("modal.create.endDateLabel")}
               </label>
               <input
                 type="date"
@@ -396,7 +398,7 @@ export function TaskModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Heure de début
+                {t("modal.create.startTimeLabel")}
               </label>
               <input
                 type="time"
@@ -410,7 +412,7 @@ export function TaskModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Heure de fin
+                {t("modal.create.endTimeLabel")}
               </label>
               <input
                 type="time"
@@ -431,7 +433,7 @@ export function TaskModal({
               disabled={isSubmitting}
               className="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
             >
-              Annuler
+              {t("modal.create.cancel")}
             </button>
             <button
               type="submit"
@@ -460,10 +462,10 @@ export function TaskModal({
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  <span>Enregistrement...</span>
+                  <span>{t("modal.create.saving")}</span>
                 </>
               ) : (
-                <span>{task ? "Mettre à jour" : "Créer la tâche"}</span>
+                <span>{task ? t("modal.edit.submit") : t("modal.create.submit")}</span>
               )}
             </button>
           </div>

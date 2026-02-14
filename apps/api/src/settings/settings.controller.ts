@@ -16,8 +16,7 @@ import {
 } from './dto/update-setting.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { Role } from 'database';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('Settings')
 @Controller('settings')
@@ -48,7 +47,7 @@ export class SettingsController {
 
   @Put(':key')
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Permissions('settings:update')
   @ApiOperation({ summary: 'Mettre à jour un paramètre (Admin uniquement)' })
   @ApiBearerAuth()
   async update(
@@ -72,7 +71,7 @@ export class SettingsController {
 
   @Post('bulk')
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Permissions('settings:update')
   @ApiOperation({
     summary: 'Mettre à jour plusieurs paramètres (Admin uniquement)',
   })
@@ -83,7 +82,7 @@ export class SettingsController {
 
   @Post(':key/reset')
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Permissions('settings:update')
   @ApiOperation({
     summary:
       'Réinitialiser un paramètre à sa valeur par défaut (Admin uniquement)',
@@ -95,7 +94,7 @@ export class SettingsController {
 
   @Post('reset-all')
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Permissions('settings:update')
   @ApiOperation({
     summary: 'Réinitialiser tous les paramètres (Admin uniquement)',
   })
@@ -106,7 +105,7 @@ export class SettingsController {
 
   @Delete(':key')
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Permissions('settings:update')
   @ApiOperation({
     summary: 'Supprimer un paramètre personnalisé (Admin uniquement)',
   })

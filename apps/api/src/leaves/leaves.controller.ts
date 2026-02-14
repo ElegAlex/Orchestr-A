@@ -26,9 +26,9 @@ import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Role, LeaveStatus, LeaveType } from 'database';
+import { LeaveStatus, LeaveType } from 'database';
 
 @ApiTags('leaves')
 @Controller('leaves')
@@ -137,7 +137,7 @@ export class LeavesController {
   }
 
   @Get('balance/:userId')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('leaves:read')
   @ApiOperation({
     summary:
       "Récupérer le solde de congés d'un utilisateur (Admin/Responsable/Manager)",
@@ -292,7 +292,7 @@ export class LeavesController {
   }
 
   @Post(':id/cancel')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('leaves:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
@@ -319,7 +319,7 @@ export class LeavesController {
   // ===========================
 
   @Post('delegations')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('leaves:manage_delegations')
   @ApiOperation({
     summary: 'Créer une délégation de validation (Admin/Responsable/Manager)',
   })

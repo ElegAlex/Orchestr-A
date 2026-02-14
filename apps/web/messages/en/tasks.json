@@ -1,0 +1,137 @@
+{
+  "title": "Tasks",
+  "taskCount": "{{count}} task(s)",
+  "createTask": "+ Create Task",
+  "noTasks": "No tasks",
+  "back": "Back",
+
+  "filters": {
+    "project": "Project",
+    "priority": "Priority",
+    "allProjects": "All projects",
+    "orphanTasks": "Tasks without project",
+    "allPriorities": "All"
+  },
+
+  "status": {
+    "TODO": "To Do",
+    "IN_PROGRESS": "In Progress",
+    "IN_REVIEW": "In Review",
+    "DONE": "Done",
+    "BLOCKED": "Blocked"
+  },
+
+  "priority": {
+    "CRITICAL": "Critical",
+    "HIGH": "High",
+    "NORMAL": "Normal",
+    "LOW": "Low"
+  },
+
+  "card": {
+    "projectIcon": "📁",
+    "orphanIcon": "📋",
+    "orphanLabel": "Independent task",
+    "estimatedHours": "⏱️ {{hours}}h estimated",
+    "assignees": "{{count}} assignees",
+    "progress": "Progress"
+  },
+
+  "modal": {
+    "create": {
+      "title": "Create Task",
+      "titleLabel": "Title *",
+      "titlePlaceholder": "E.g.: Develop homepage",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Detailed task description...",
+      "projectLabel": "Project",
+      "projectNone": "No project (independent task)",
+      "projectHint": "Leave empty for a task outside a project (meeting, cross-functional...)",
+      "assigneesLabel": "Assignees",
+      "assigneesPlaceholder": "Select assignees",
+      "assigneesHintMembers": "Project members",
+      "assigneesHintNoMembers": "No members in this project - all users are shown",
+      "statusLabel": "Status",
+      "priorityLabel": "Priority",
+      "startDateLabel": "Start date",
+      "endDateLabel": "End date",
+      "startTimeLabel": "Start time",
+      "endTimeLabel": "End time",
+      "estimatedHoursLabel": "Estimation (hours)",
+      "estimatedHoursPlaceholder": "E.g.: 8",
+      "externalInterventionLabel": "External intervention",
+      "cancel": "Cancel",
+      "submit": "Create task"
+    }
+  },
+
+  "detail": {
+    "actions": {
+      "delete": "Delete",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "sections": {
+      "description": "Description",
+      "noDescription": "No description",
+      "settings": "Settings",
+      "progress": "Progress",
+      "progressLabel": "Progress",
+      "dependencies": "Dependencies",
+      "noDependencies": "No dependencies",
+      "deletedTask": "Deleted task",
+      "project": "Project",
+      "assignees": "Assignees",
+      "assignedTo": "Assigned to",
+      "milestone": "Milestone",
+      "epic": "Epic",
+      "details": "Details"
+    },
+    "fields": {
+      "status": "Status",
+      "priority": "Priority",
+      "milestone": "Milestone",
+      "milestoneNone": "No milestone",
+      "assignees": "Assignees",
+      "assigneesPlaceholder": "Select assignees",
+      "project": "Project",
+      "projectNone": "No project",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "startTime": "Start time",
+      "endTime": "End time",
+      "estimation": "Estimation",
+      "dueDate": "Due date:",
+      "createdAt": "Created on",
+      "updatedAt": "Updated",
+      "schedule": "Schedule"
+    },
+    "dependencies": {
+      "selectPlaceholder": "Select tasks this task depends on"
+    }
+  },
+
+  "raci": {
+    "responsible": "Responsible",
+    "accountable": "Accountable",
+    "consulted": "Consulted",
+    "informed": "Informed"
+  },
+
+  "messages": {
+    "loadError": "Error loading data",
+    "loadTaskError": "Error loading task",
+    "createSuccess": "Task created successfully",
+    "createError": "Error creating task",
+    "updateSuccess": "Task updated successfully",
+    "updateError": "Error updating task",
+    "deleteSuccess": "Task deleted successfully",
+    "deleteError": "Error deleting task",
+    "deleteConfirm": "Are you sure you want to delete this task?",
+    "statusUpdateSuccess": "Status updated",
+    "statusUpdateError": "Error updating status",
+    "dependenciesUpdateSuccess": "Dependencies updated",
+    "dependenciesUpdateError": "Error updating dependencies"
+  }
+}

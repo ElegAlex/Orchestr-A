@@ -25,9 +25,8 @@ import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Role } from 'database';
 
 @ApiTags('documents')
 @Controller('documents')
@@ -75,7 +74,7 @@ export class DocumentsController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.RESPONSABLE, Role.MANAGER)
+  @Permissions('documents:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un document' })
   remove(@Param('id', ParseUUIDPipe) id: string) {

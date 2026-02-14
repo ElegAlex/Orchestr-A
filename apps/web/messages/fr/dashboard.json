@@ -1,0 +1,61 @@
+{
+  "title": "Tableau de bord",
+  "welcome": "Bonjour {name} !",
+  "activityOverview": "Voici un aperçu de votre activité",
+  "stats": {
+    "activeProjects": "Projets actifs",
+    "tasksInProgress": "Tâches en cours",
+    "tasksCompleted": "Tâches terminées",
+    "tasksBlocked": "Tâches bloquées",
+    "onProjects": "sur {total} projets",
+    "onTasks": "sur {total} tâches",
+    "percentCompleted": "{percent}% complétées",
+    "needAttention": "Nécessitent attention"
+  },
+  "planning": {
+    "title": "Mon planning"
+  },
+  "todos": {
+    "title": "Ma To-Do",
+    "placeholder": "Ajouter une to-do...",
+    "addButton": "+ Ajouter",
+    "addingButton": "...",
+    "limitReached": "⚠️ Limite de {max} to-dos atteinte",
+    "empty": "Aucune to-do pour le moment",
+    "editHint": "Double-cliquer pour éditer",
+    "deleteHint": "Supprimer",
+    "completedSection": "Complétées ({count})",
+    "success": {
+      "added": "To-do ajoutée",
+      "deleted": "To-do supprimée",
+      "updated": "To-do modifiée"
+    },
+    "errors": {
+      "add": "Erreur lors de l'ajout",
+      "delete": "Erreur lors de la suppression",
+      "update": "Erreur lors de la mise à jour"
+    }
+  },
+  "tasks": {
+    "title": "Mes tâches à venir",
+    "empty": "Aucune tâche assignée",
+    "startDate": "Début:",
+    "endDate": "Fin:",
+    "estimated": "Estimé:",
+    "hours": "{hours}h",
+    "success": {
+      "statusUpdated": "Statut mis à jour"
+    },
+    "errors": {
+      "statusUpdate": "Erreur lors de la mise à jour du statut"
+    }
+  },
+  "projects": {
+    "title": "Mes projets",
+    "empty": "Aucun projet assigné"
+  },
+  "loading": "Chargement...",
+  "errors": {
+    "loadData": "Erreur lors du chargement des données"
+  }
+}

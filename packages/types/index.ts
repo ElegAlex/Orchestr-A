@@ -60,3 +60,62 @@ export interface UpdateEventDto {
   projectId?: string;
   participantIds?: string[];
 }
+
+// ===========================
+// RBAC - DYNAMIC PERMISSIONS
+// ===========================
+
+export interface Permission {
+  id: string;
+  code: string;
+  module: string;
+  action: string;
+  description?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface RoleConfig {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  isSystem: boolean;
+  isDefault: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface RolePermission {
+  roleConfigId: string;
+  permissionId: string;
+}
+
+export interface RoleConfigWithPermissions extends RoleConfig {
+  permissions: Array<{
+    permission: Permission;
+  }>;
+}
+
+export interface CreateRoleConfigDto {
+  code: string;
+  name: string;
+  description?: string;
+  isDefault?: boolean;
+  permissionIds?: string[];
+}
+
+export interface UpdateRoleConfigDto {
+  code?: string;
+  name?: string;
+  description?: string;
+  isDefault?: boolean;
+  permissionIds?: string[];
+}
+
+export interface CreatePermissionDto {
+  code: string;
+  module: string;
+  action: string;
+  description?: string;
+}

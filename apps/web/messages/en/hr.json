@@ -1,0 +1,314 @@
+{
+  "leaves": {
+    "title": "Leave Management",
+    "myLeaves": "My Requests",
+    "pendingValidation": "Pending Approval",
+    "allLeaves": "All Requests",
+    "delegations": "Delegations",
+    "leaveTypes": "Leave Types",
+    "newRequest": "New Request",
+    "noLeaves": "No leave requests",
+    "createFirst": "Create my first request",
+    "noPendingValidation": "No pending requests",
+    "noLeave": "No requests",
+    "allUsers": "All users",
+    "pendingRequests": "pending request(s)",
+    "status": {
+      "APPROVED": "Approved",
+      "PENDING": "Pending",
+      "REJECTED": "Rejected"
+    },
+    "halfDay": {
+      "MORNING": "Morning",
+      "AFTERNOON": "Afternoon",
+      "label": "Half-day (optional)",
+      "fullDay": "Full day"
+    },
+    "fields": {
+      "leaveType": "Leave Type",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "reason": "Reason (optional)",
+      "reasonPlaceholder": "Specify the reason if necessary...",
+      "rejectReason": "Rejection Reason (optional)",
+      "rejectReasonPlaceholder": "Explain the reason for rejection...",
+      "from": "From",
+      "to": "To",
+      "days": "day",
+      "daysPlural": "days"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "delete": "Delete",
+      "edit": "Edit",
+      "submit": "Submit Request"
+    },
+    "modals": {
+      "createTitle": "New Leave Request",
+      "editTitle": "Edit Request",
+      "rejectTitle": "Reject Request",
+      "confirmReject": "Confirm Rejection",
+      "validationWarning": "Your request will be submitted for validation by your manager."
+    },
+    "delegations": {
+      "given": "Delegations Given",
+      "received": "Delegations Received",
+      "noDelegationsGiven": "No delegations given",
+      "noDelegationsReceived": "No delegations received",
+      "create": "Create Delegation",
+      "createTitle": "Create a Delegation",
+      "delegateTo": "Delegate to",
+      "selectUser": "Select a user",
+      "deactivate": "Deactivate",
+      "active": "Active",
+      "inactive": "Inactive",
+      "from": "From",
+      "delegationInfo": "During this period, the selected user will be able to validate leave requests on your behalf."
+    },
+    "leaveTypesManager": {
+      "title": "Leave Types",
+      "newType": "New Type",
+      "showInactive": "Show Inactive",
+      "code": "Code",
+      "name": "Name",
+      "description": "Description",
+      "icon": "Icon",
+      "color": "Color",
+      "options": "Options",
+      "limitPerYear": "Limit/year",
+      "usages": "Usages",
+      "status": "Status",
+      "paid": "Paid",
+      "unpaid": "Unpaid",
+      "requiresApproval": "Approval",
+      "requiresApprovalFull": "Approval Required",
+      "auto": "Auto",
+      "unlimited": "Unlimited",
+      "system": "System",
+      "active": "Active",
+      "inactive": "Inactive",
+      "createTitle": "New Leave Type",
+      "editTitle": "Edit Leave Type",
+      "systemWarning": "System type: only name, description, icon and color can be modified.",
+      "codeHelper": "Uppercase and underscores only",
+      "codePlaceholder": "EX: TRAINING",
+      "namePlaceholder": "Training",
+      "descriptionPlaceholder": "Leave type description...",
+      "annualLimit": "Annual Limit",
+      "annualLimitPlaceholder": "Unlimited",
+      "requiredCountHelper": "Number of people required to master this skill to ensure coverage"
+    },
+    "validation": {
+      "assignedValidator": "Assigned Validator",
+      "approvedBy": "Approved",
+      "rejectedBy": "Rejected",
+      "by": "by",
+      "on": "on",
+      "rejectMotif": "Reason"
+    },
+    "messages": {
+      "created": "Leave request created - Pending validation",
+      "updated": "Leave updated successfully",
+      "deleted": "Request deleted",
+      "approved": "Request approved",
+      "rejected": "Request rejected",
+      "delegationCreated": "Delegation created successfully",
+      "delegationDeactivated": "Delegation deactivated",
+      "confirmDelete": "Are you sure you want to delete this request?",
+      "confirmDeactivate": "Are you sure you want to deactivate this delegation?",
+      "typeCreated": "Leave type created successfully",
+      "typeUpdated": "Leave type updated successfully",
+      "typeDeleted": "Type deactivated",
+      "typeReactivated": "Type reactivated",
+      "typeSystemCannotDelete": "System types cannot be deleted",
+      "typeDeleteConfirm": "This type is used by {count} leave(s). It will be deactivated instead of deleted. Continue?",
+      "typeDeleteConfirmSimple": "Are you sure you want to delete this leave type?"
+    }
+  },
+  "telework": {
+    "title": "My Telework Schedule",
+    "stats": "{count} telework day(s) planned",
+    "days": "day",
+    "daysPlural": "days",
+    "howItWorks": {
+      "title": "How does it work?",
+      "description": "Click on a day to toggle between telework and not declared. Days in blue are your telework days. You can modify your choices at any time."
+    },
+    "legend": {
+      "title": "Legend",
+      "telework": "Telework",
+      "office": "Office (declared)",
+      "notDeclared": "Not declared",
+      "weekend": "Weekend"
+    },
+    "weekDays": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "navigation": {
+      "previousMonth": "Previous Month",
+      "nextMonth": "Next Month"
+    },
+    "messages": {
+      "recorded": "Telework recorded",
+      "deleted": "Day deleted"
+    }
+  },
+  "skills": {
+    "title": "Skills Management",
+    "subtitle": "Manage user skills",
+    "newSkill": "New Skill",
+    "categories": {
+      "TECHNICAL": "Technical",
+      "METHODOLOGY": "Methodology",
+      "SOFT_SKILL": "Soft Skills",
+      "BUSINESS": "Business",
+      "all": "All categories"
+    },
+    "levels": {
+      "BEGINNER": "Beginner",
+      "INTERMEDIATE": "Intermediate",
+      "EXPERT": "Expert",
+      "MASTER": "Master",
+      "min": "Min."
+    },
+    "levelShort": {
+      "BEGINNER": "Beg",
+      "INTERMEDIATE": "Int",
+      "EXPERT": "Exp",
+      "MASTER": "Mas"
+    },
+    "views": {
+      "users": "By User",
+      "skills": "Skills Repository",
+      "matrix": "Matrix"
+    },
+    "userView": {
+      "users": "Users",
+      "skills": "skill(s)",
+      "addSkills": "Add Skills",
+      "noSkills": "No skills assigned",
+      "addSkillsPrompt": "Add skills"
+    },
+    "skillsView": {
+      "name": "Name",
+      "category": "Category",
+      "description": "Description",
+      "requiredCount": "Required Resources",
+      "actions": "Actions",
+      "noSkills": "No skills found"
+    },
+    "matrix": {
+      "collaborators": "Collaborators",
+      "skills": "Skills",
+      "averageCoverage": "Average Coverage",
+      "skillGaps": "Skill Gaps",
+      "skillGapsToReinforce": "skills to strengthen",
+      "skillGapsAlert": "Skills to strengthen (incomplete coverage)",
+      "others": "more",
+      "search": "Search a collaborator...",
+      "allCategories": "All categories",
+      "allLevels": "All levels",
+      "sortByName": "Sort by name",
+      "sortByCoverage": "Sort by coverage",
+      "sortBySkill": "Sort by skill",
+      "exportCSV": "Export CSV",
+      "legend": "Legend",
+      "clickToEdit": "Click on a cell to edit",
+      "collaborator": "Collaborator",
+      "coverage": "Coverage",
+      "completeCoverage": "Complete coverage ({current}/{required})",
+      "partialCoverage": "Partial coverage ({current}/{required})",
+      "skillGapCount": "Skill gap - {count} missing resource(s)",
+      "add": "Add {name}",
+      "clickToModify": "{level} - Click to modify",
+      "noData": "No skill data available",
+      "statsFooter": "{users} collaborator{usersPlural} - {skills} skill{skillsPlural}",
+      "loadingError": "Error loading matrix",
+      "exportSuccess": "CSV export downloaded"
+    },
+    "modals": {
+      "createTitle": "Create a Skill",
+      "editTitle": "Edit Skill",
+      "assignTitle": "Add skills to {firstName} {lastName}",
+      "nameLabel": "Name",
+      "categoryLabel": "Category",
+      "categorySelect": "Select",
+      "descriptionLabel": "Description",
+      "requiredCountLabel": "Required Resources",
+      "requiredCountHelper": "Number of people required to master this skill to ensure coverage",
+      "selectSkills": "Select skills and define their level ({count} selected)",
+      "allSkillsAssigned": "All skills are already assigned",
+      "assign": "Assign ({count})"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "remove": "Remove"
+    },
+    "messages": {
+      "created": "Skill created successfully",
+      "updated": "Skill updated successfully",
+      "deleted": "Skill deleted",
+      "assigned": "{count} skill(s) assigned",
+      "removed": "Skill removed",
+      "levelUpdated": "Level updated",
+      "confirmDelete": "Are you sure you want to delete \"{name}\"?",
+      "confirmRemove": "Remove this skill?",
+      "matrixUpdated": "Skill removed",
+      "matrixLevelUpdated": "Level updated"
+    }
+  },
+  "timeTracking": {
+    "title": "Time Tracking",
+    "newEntry": "Log Time",
+    "stats": "{count} entry(ies) - {hours}h total",
+    "noEntries": "No time entries",
+    "createFirst": "Log your first entry",
+    "activityTypes": {
+      "DEVELOPMENT": "Development",
+      "MEETING": "Meeting",
+      "SUPPORT": "Support",
+      "TRAINING": "Training",
+      "OTHER": "Other"
+    },
+    "filters": {
+      "title": "Filters",
+      "project": "Project",
+      "allProjects": "All projects",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "reset": "Reset Filters"
+    },
+    "fields": {
+      "date": "Date",
+      "hours": "Duration (hours)",
+      "hoursPlaceholder": "Ex: 2.5",
+      "activityType": "Activity Type",
+      "project": "Project (optional)",
+      "noProject": "No project",
+      "task": "Task (optional)",
+      "noTask": "No task",
+      "description": "Description (optional)",
+      "descriptionPlaceholder": "Describe your activity..."
+    },
+    "modals": {
+      "createTitle": "Log Time"
+    },
+    "actions": {
+      "delete": "Delete"
+    },
+    "messages": {
+      "created": "Time logged successfully",
+      "deleted": "Entry deleted",
+      "confirmDelete": "Are you sure you want to delete this entry?",
+      "createdOn": "Created on"
+    }
+  }
+}

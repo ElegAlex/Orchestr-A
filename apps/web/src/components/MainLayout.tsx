@@ -3,40 +3,44 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth.store";
 import { Role } from "@/types";
 import { Logo, LogoIcon } from "@/components/Logo";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 interface NavItem {
-  name: string;
+  key: string;
   href: string;
   icon: string;
   adminOnly?: boolean;
 }
 
-const navigation: NavItem[] = [
-  { name: "Tableau de bord", href: "/dashboard", icon: "🎯" },
-  { name: "Projets", href: "/projects", icon: "📁" },
-  { name: "Tâches", href: "/tasks", icon: "✓" },
-  { name: "Événements", href: "/events", icon: "📅" },
-  { name: "Planning", href: "/planning", icon: "🗓️" },
-  { name: "Temps passé", href: "/time-tracking", icon: "⏱️" },
-  { name: "Congés", href: "/leaves", icon: "🏖️" },
-  { name: "Télétravail", href: "/telework", icon: "🏠" },
-];
-
-const adminNavigation: NavItem[] = [
-  { name: "Rapports & Analytics", href: "/reports", icon: "📊" },
-  { name: "Utilisateurs", href: "/users", icon: "👥" },
-  { name: "Départements", href: "/departments", icon: "🏢" },
-  { name: "Compétences", href: "/skills", icon: "⭐" },
-  { name: "Paramètres", href: "/settings", icon: "⚙️", adminOnly: true },
-];
-
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const t = useTranslations('common');
   const { user, logout } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const navigation: NavItem[] = [
+    { key: "dashboard", href: "/dashboard", icon: "🎯" },
+    { key: "projects", href: "/projects", icon: "📁" },
+    { key: "tasks", href: "/tasks", icon: "✓" },
+    { key: "events", href: "/events", icon: "📅" },
+    { key: "planning", href: "/planning", icon: "🗓️" },
+    { key: "timeTracking", href: "/time-tracking", icon: "⏱️" },
+    { key: "leaves", href: "/leaves", icon: "🏖️" },
+    { key: "telework", href: "/telework", icon: "🏠" },
+  ];
+
+  const adminNavigation: NavItem[] = [
+    { key: "reports", href: "/reports", icon: "📊" },
+    { key: "users", href: "/users", icon: "👥" },
+    { key: "departments", href: "/departments", icon: "🏢" },
+    { key: "skills", href: "/skills", icon: "⭐" },
+    { key: "roleManagement", href: "/admin/roles", icon: "🛡️", adminOnly: true },
+    { key: "settings", href: "/settings", icon: "⚙️", adminOnly: true },
+  ];
 
   const isManager =
     user?.role === Role.ADMIN ||
@@ -81,7 +85,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             const isActive = pathname === item.href;
             return (
               <Link
-                key={item.name}
+                key={item.key}
                 href={item.href}
                 className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
                   isActive
@@ -90,7 +94,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 <span className="text-xl mr-3">{item.icon}</span>
-                {sidebarOpen && <span>{item.name}</span>}
+                {sidebarOpen && <span>{t(`nav.${item.key}`)}</span>}
               </Link>
             );
           })}
@@ -100,7 +104,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               <div className="pt-4 pb-2">
                 {sidebarOpen && (
                   <p className="px-3 text-xs font-semibold text-[var(--muted-foreground)] uppercase">
-                    Administration
+                    {t('common.administration')}
                   </p>
                 )}
               </div>
@@ -110,7 +114,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                   const isActive = pathname === item.href;
                   return (
                     <Link
-                      key={item.name}
+                      key={item.key}
                       href={item.href}
                       className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
                         isActive
@@ -119,7 +123,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                       }`}
                     >
                       <span className="text-xl mr-3">{item.icon}</span>
-                      {sidebarOpen && <span>{item.name}</span>}
+                      {sidebarOpen && <span>{t(`nav.${item.key}`)}</span>}
                     </Link>
                   );
                 })}
@@ -153,7 +157,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               onClick={logout}
               className="mt-3 w-full px-3 py-2 text-sm text-left text-[var(--destructive)] hover:bg-[var(--destructive)] hover:bg-opacity-10 rounded-lg transition"
             >
-              Déconnexion
+              {t('common.logout')}
             </button>
           )}
         </div>
@@ -165,6 +169,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           sidebarOpen ? "ml-64" : "ml-20"
         }`}
       >
+        {/* Header with language switcher */}
+        <header className="h-16 bg-[var(--card)] border-b border-[var(--border)] px-6 flex items-center justify-end">
+          <LanguageSwitcher />
+        </header>
+
         {/* Page content */}
         <main className="p-6">{children}</main>
       </div>
