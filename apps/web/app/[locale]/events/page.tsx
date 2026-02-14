@@ -223,11 +223,11 @@ export default function EventsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{t("events.title")}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
             <p className="text-gray-600 mt-1">
               {getFilteredEvents().length === 1
-                ? t("events.count", { count: getFilteredEvents().length })
-                : t("events.countPlural", { count: getFilteredEvents().length })}
+                ? t("count", { count: getFilteredEvents().length })
+                : t("countPlural", { count: getFilteredEvents().length })}
             </p>
           </div>
           <div className="flex items-center space-x-3">
@@ -259,7 +259,7 @@ export default function EventsPage() {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
               >
                 <span>+</span>
-                <span>{t("events.createEvent")}</span>
+                <span>{t("createEvent")}</span>
               </button>
             )}
           </div>
@@ -293,7 +293,7 @@ export default function EventsPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             {getFilteredEvents().length === 0 ? (
               <div className="p-8 text-center text-gray-500">
-                {t("events.noEvents")}
+                {t("noEvents")}
               </div>
             ) : (
               <div className="divide-y divide-gray-200">

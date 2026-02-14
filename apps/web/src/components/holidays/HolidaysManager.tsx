@@ -10,8 +10,12 @@ import {
 import { holidaysService } from "@/services/holidays.service";
 import { HolidayModal } from "./HolidayModal";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 export function HolidaysManager() {
+  const t = useTranslations("settings.holidays");
+  const tCommon = useTranslations("common.actions");
+
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -27,11 +31,11 @@ export function HolidaysManager() {
       const data = await holidaysService.getByYear(selectedYear);
       setHolidays(data);
     } catch {
-      toast.error("Erreur lors du chargement des jours feries");
+      toast.error(t("messages.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [selectedYear]);
+  }, [selectedYear, t]);
 
   useEffect(() => {
     fetchHolidays();
@@ -56,12 +60,12 @@ export function HolidaysManager() {
   const handleDelete = async (id: string) => {
     try {
       await holidaysService.delete(id);
-      toast.success("Jour ferie supprime");
+      toast.success(t("messages.deleteSuccess"));
       fetchHolidays();
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || "Erreur lors de la suppression",
+        error.response?.data?.message || t("messages.deleteError"),
       );
     }
     setDeleteConfirmId(null);
@@ -72,12 +76,12 @@ export function HolidaysManager() {
     try {
       const result = await holidaysService.importFrench(selectedYear);
       toast.success(
-        `Import termine : ${result.created} cree(s), ${result.skipped} deja existant(s)`,
+        t("messages.importSuccess", { created: result.created, skipped: result.skipped }),
       );
       fetchHolidays();
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || "Erreur lors de l'import");
+      toast.error(error.response?.data?.message || t("messages.importError"));
     } finally {
       setIsImporting(false);
     }
@@ -88,10 +92,10 @@ export function HolidaysManager() {
       await holidaysService.update(holiday.id, {
         isWorkDay: !holiday.isWorkDay,
       });
-      toast.success("Statut mis a jour");
+      toast.success(t("messages.updateStatusSuccess"));
       fetchHolidays();
     } catch {
-      toast.error("Erreur lors de la mise a jour");
+      toast.error(t("messages.updateStatusError"));
     }
   };
 
@@ -115,7 +119,7 @@ export function HolidaysManager() {
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <span className="text-2xl">*</span>
-            Jours feries
+            {t("title")}
           </h2>
 
           {/* Selecteur d'annee */}
@@ -202,7 +206,7 @@ export function HolidaysManager() {
                 />
               </svg>
             )}
-            <span>Importer feries FR {selectedYear}</span>
+            <span>{t("importButton", { year: selectedYear })}</span>
           </button>
           <button
             onClick={handleCreate}
@@ -221,7 +225,7 @@ export function HolidaysManager() {
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            <span>Ajouter un jour</span>
+            <span>{t("addButton")}</span>
           </button>
         </div>
       </div>
@@ -232,22 +236,22 @@ export function HolidaysManager() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
+                {t("table.headers.date")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Libelle
+                {t("table.headers.name")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
+                {t("table.headers.type")}
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Jour ouvre
+                {t("table.headers.isWorkDay")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
+                {t("table.headers.description")}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                {t("table.headers.actions")}
               </th>
             </tr>
           </thead>
@@ -256,13 +260,13 @@ export function HolidaysManager() {
               <tr>
                 <td colSpan={6} className="px-6 py-8 text-center">
                   <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                  <p className="mt-2 text-gray-500">Chargement...</p>
+                  <p className="mt-2 text-gray-500">{tCommon("loading")}</p>
                 </td>
               </tr>
             ) : sortedHolidays.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                  Aucun jour ferie declare pour {selectedYear}
+                  {t("table.empty", { year: selectedYear })}
                 </td>
               </tr>
             ) : (
@@ -310,7 +314,7 @@ export function HolidaysManager() {
                       <button
                         onClick={() => handleEdit(holiday)}
                         className="p-2 text-gray-400 hover:text-blue-600 transition"
-                        title="Modifier"
+                        title={t("tooltips.edit")}
                       >
                         <svg
                           className="w-4 h-4"
@@ -331,7 +335,7 @@ export function HolidaysManager() {
                           <button
                             onClick={() => handleDelete(holiday.id)}
                             className="p-2 text-white bg-red-600 rounded hover:bg-red-700 transition"
-                            title="Confirmer"
+                            title={t("tooltips.confirm")}
                           >
                             <svg
                               className="w-4 h-4"
@@ -350,7 +354,7 @@ export function HolidaysManager() {
                           <button
                             onClick={() => setDeleteConfirmId(null)}
                             className="p-2 text-gray-600 bg-gray-200 rounded hover:bg-gray-300 transition"
-                            title="Annuler"
+                            title={t("tooltips.cancel")}
                           >
                             <svg
                               className="w-4 h-4"
@@ -371,7 +375,7 @@ export function HolidaysManager() {
                         <button
                           onClick={() => setDeleteConfirmId(holiday.id)}
                           className="p-2 text-gray-400 hover:text-red-600 transition"
-                          title="Supprimer"
+                          title={t("tooltips.delete")}
                         >
                           <svg
                             className="w-4 h-4"
@@ -401,25 +405,25 @@ export function HolidaysManager() {
       {!loading && sortedHolidays.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Total jours feries</p>
+            <p className="text-sm text-gray-500">{t("stats.total")}</p>
             <p className="text-2xl font-bold text-gray-900">
               {sortedHolidays.length}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Jours chomes</p>
+            <p className="text-sm text-gray-500">{t("stats.nonWorkDays")}</p>
             <p className="text-2xl font-bold text-red-600">
               {sortedHolidays.filter((h) => !h.isWorkDay).length}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Jours ouvres</p>
+            <p className="text-sm text-gray-500">{t("stats.workDays")}</p>
             <p className="text-2xl font-bold text-green-600">
               {sortedHolidays.filter((h) => h.isWorkDay).length}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Feries legaux</p>
+            <p className="text-sm text-gray-500">{t("stats.legal")}</p>
             <p className="text-2xl font-bold text-blue-600">
               {
                 sortedHolidays.filter((h) => h.type === HolidayType.LEGAL)

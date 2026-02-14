@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { MilestoneRoadmap } from "@/components/MilestoneRoadmap";
 import { MilestoneModal } from "@/components/MilestoneModal";
@@ -41,6 +41,7 @@ type TabType = "overview" | "tasks" | "team" | "milestones" | "gantt";
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations('projects');
   const tTasks = useTranslations('tasks');
   const tCommon = useTranslations('common');
@@ -155,7 +156,7 @@ export default function ProjectDetailPage() {
       } catch (err) {
         toast.error(t('messages.loadDetailError'));
         console.error(err);
-        router.push("/projects");
+        router.push(`/${locale}/projects`);
       } finally {
         setLoading(false);
       }
@@ -251,7 +252,7 @@ export default function ProjectDetailPage() {
 
   const handleTaskClick = (task: Task) => {
     if (!isDragging) {
-      router.push(`/tasks/${task.id}`);
+      router.push(`/${locale}/tasks/${task.id}`);
     }
   };
 
@@ -718,7 +719,7 @@ export default function ProjectDetailPage() {
     try {
       await projectsService.hardDelete(projectId);
       toast.success(t('messages.deleteSuccess'));
-      router.push("/projects");
+      router.push(`/${locale}/projects`);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
@@ -750,7 +751,7 @@ export default function ProjectDetailPage() {
         {/* Header */}
         <div>
           <button
-            onClick={() => router.push("/projects")}
+            onClick={() => router.push(`/${locale}/projects`)}
             className="text-blue-600 hover:text-blue-800 mb-4 flex items-center space-x-1"
           >
             <span>←</span>

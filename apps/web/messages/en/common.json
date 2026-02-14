@@ -82,7 +82,9 @@
     "serverError": "Server error",
     "networkError": "Network error",
     "validationError": "Validation error",
-    "forbidden": "Access forbidden"
+    "forbidden": "Access forbidden",
+    "loadError": "Error loading data",
+    "saveError": "Error saving"
   },
   "table": {
     "empty": "No data",
@@ -136,6 +138,55 @@
     "notDefined": "Not defined",
     "invalidDate": "Invalid date",
     "noData": "No data",
-    "completed": "Completed"
+    "completed": "Completed",
+    "noUserFound": "No user found"
+  },
+  "presence": {
+    "title": "Today's Presence",
+    "button": "Presence",
+    "onSite": "On site",
+    "remote": "Remote",
+    "absent": "Absent",
+    "onSiteCount": "{count} on site",
+    "remoteCount": "{count} remote",
+    "absentCount": "{count} absent",
+    "emptyOnSite": "No staff on site",
+    "emptyRemote": "No staff working remotely",
+    "emptyAbsent": "No absent staff",
+    "loadError": "Error loading data"
+  },
+  "import": {
+    "status": {
+      "valid": "Valid",
+      "warning": "Warning",
+      "duplicate": "Duplicate",
+      "error": "Error"
+    },
+    "summary": {
+      "total": "Total",
+      "valid": "Valid",
+      "warnings": "Warnings",
+      "duplicates": "Duplicates",
+      "errors": "Errors"
+    },
+    "tabs": {
+      "all": "All ({{count}})",
+      "valid": "Valid ({{count}})",
+      "warnings": "Warnings ({{count}})",
+      "duplicates": "Duplicates ({{count}})",
+      "errors": "Errors ({{count}})"
+    },
+    "table": {
+      "line": "Line {{lineNumber}}",
+      "noItems": "No items in this category"
+    },
+    "footer": {
+      "willImport": "<strong>{{count}}</strong> item(s) will be imported",
+      "duplicatesIgnored": "({{count}} duplicate(s) ignored)",
+      "errorsNotImported": "({{count}} error(s) not imported)",
+      "noValidItems": "No valid items to import",
+      "importing": "Importing...",
+      "confirm": "Confirm import ({{count}})"
+    }
   }
 }

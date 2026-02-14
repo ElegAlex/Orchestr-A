@@ -6,13 +6,17 @@ import { useAuthStore } from "@/stores/auth.store";
 import { useThemeStore, Theme } from "@/stores/theme.store";
 import { Role } from "@/types";
 import toast from "react-hot-toast";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import { useRouter, usePathname } from "next/navigation";
 
 type TabType = "personal" | "security" | "preferences";
 
 export default function ProfilePage() {
   const t = useTranslations("profile");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const { theme, setTheme } = useThemeStore();
   const [activeTab, setActiveTab] = useState<TabType>("personal");
@@ -237,7 +241,7 @@ export default function ProfilePage() {
                   {t("personal.memberSince")}
                 </label>
                 <p className="text-gray-900">
-                  {new Date(user.createdAt).toLocaleDateString("fr-FR", {
+                  {new Date(user.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
                     day: "numeric",
                     month: "long",
                     year: "numeric",
@@ -275,7 +279,7 @@ export default function ProfilePage() {
                 </h3>
                 <p className="text-sm text-gray-600">
                   {t("security.loginHistory.lastLogin")}{" "}
-                  {new Date().toLocaleDateString("fr-FR", {
+                  {new Date().toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
                     day: "numeric",
                     month: "long",
                     year: "numeric",
@@ -299,7 +303,14 @@ export default function ProfilePage() {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">{t("preferences.language.title")}</h3>
                 <select
-                  defaultValue="fr"
+                  value={locale}
+                  onChange={(e) => {
+                    const newLocale = e.target.value;
+                    if (newLocale !== locale) {
+                      const newPath = pathname.replace(`/${locale}/`, `/${newLocale}/`);
+                      router.push(newPath);
+                    }
+                  }}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="fr">{t("preferences.language.fr")}</option>

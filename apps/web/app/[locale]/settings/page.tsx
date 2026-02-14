@@ -9,7 +9,7 @@ import { Role } from "@/types";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { HolidaysManager } from "@/components/holidays/HolidaysManager";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 type CategoryTab = "display" | "holidays";
 
@@ -63,6 +63,7 @@ const WEEK_START_OPTIONS = [
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
+  const locale = useLocale();
   const user = useAuthStore((state) => state.user);
   const router = useRouter();
   const { fetchSettings } = useSettingsStore();
@@ -77,7 +78,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!isAdmin) {
-      router.push("/dashboard");
+      router.push(`/${locale}/dashboard`);
       return;
     }
     loadSettings();
@@ -279,24 +280,6 @@ export default function SettingsPage() {
                   <option value="HH:mm:ss">{t("display.timeFormat.options.HHmmss")}</option>
                   <option value="hh:mm a">{t("display.timeFormat.options.hhmmaa")}</option>
                 </select>
-              </div>
-
-              {/* Locale */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t("display.locale.label")}
-                </label>
-                <select
-                  value={(settings.locale as string) || "fr-FR"}
-                  onChange={(e) => handleChange("locale", e.target.value)}
-                  className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="fr-FR">{t("display.locale.options.frFR")}</option>
-                  <option value="en-US">{t("display.locale.options.enUS")}</option>
-                </select>
-                <p className="text-sm text-gray-500 mt-1">
-                  {t("display.locale.hint")}
-                </p>
               </div>
 
               {/* Week Starts On */}

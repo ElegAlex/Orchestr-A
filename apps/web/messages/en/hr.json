@@ -163,6 +163,7 @@
   "skills": {
     "title": "Skills Management",
     "subtitle": "Manage user skills",
+    "loading": "Loading...",
     "newSkill": "New Skill",
     "categories": {
       "TECHNICAL": "Technical",
@@ -262,11 +263,19 @@
       "confirmDelete": "Are you sure you want to delete \"{name}\"?",
       "confirmRemove": "Remove this skill?",
       "matrixUpdated": "Skill removed",
-      "matrixLevelUpdated": "Level updated"
+      "matrixLevelUpdated": "Level updated",
+      "loadError": "Error loading skills",
+      "createError": "Error creating skill",
+      "updateError": "Error updating skill",
+      "deleteError": "Error deleting skill",
+      "assignError": "Error assigning skill",
+      "removeError": "Error removing skill",
+      "levelUpdateError": "Error updating level"
     }
   },
   "timeTracking": {
     "title": "Time Tracking",
+    "loading": "Loading...",
     "newEntry": "Log Time",
     "stats": "{count} entry(ies) - {hours}h total",
     "noEntries": "No time entries",
@@ -308,7 +317,10 @@
       "created": "Time logged successfully",
       "deleted": "Entry deleted",
       "confirmDelete": "Are you sure you want to delete this entry?",
-      "createdOn": "Created on"
+      "createdOn": "Created on",
+      "loadError": "Error loading data",
+      "saveError": "Error saving",
+      "deleteError": "Error deleting"
     }
   }
 }

@@ -49,26 +49,6 @@ const LEVEL_COLORS_HOVER: Record<SkillLevel, string> = {
   MASTER: "hover:bg-purple-200",
 };
 
-const LEVEL_LABELS: Record<SkillLevel, string> = {
-  BEGINNER: "Débutant",
-  INTERMEDIATE: "Intermédiaire",
-  EXPERT: "Expert",
-  MASTER: "Maître",
-};
-
-const LEVEL_SHORT: Record<SkillLevel, string> = {
-  BEGINNER: "Deb",
-  INTERMEDIATE: "Int",
-  EXPERT: "Exp",
-  MASTER: "Mai",
-};
-
-const CATEGORY_LABELS: Record<SkillCategory, string> = {
-  TECHNICAL: "Technique",
-  METHODOLOGY: "Méthodologie",
-  SOFT_SKILL: "Soft Skills",
-  BUSINESS: "Métier",
-};
 
 const CATEGORY_COLORS: Record<SkillCategory, string> = {
   TECHNICAL: "bg-blue-50 border-blue-200",
@@ -142,9 +122,9 @@ function LevelCell({
         className="w-16 h-8 text-xs border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">-</option>
-        {Object.entries(LEVEL_LABELS).map(([key, label]) => (
-          <option key={key} value={key}>
-            {label}
+        {(["BEGINNER", "INTERMEDIATE", "EXPERT", "MASTER"] as SkillLevel[]).map((lvl) => (
+          <option key={lvl} value={lvl}>
+            {t(`levels.${lvl}`)}
           </option>
         ))}
       </select>
@@ -158,7 +138,7 @@ function LevelCell({
         className={`w-10 h-8 rounded flex items-center justify-center text-xs transition-all cursor-pointer
           ${isHighlighted ? "bg-gray-100 text-gray-400" : "bg-gray-50 text-gray-300"}
           hover:bg-blue-50 hover:text-blue-400 hover:border hover:border-blue-300`}
-        title={`Ajouter ${skillName}`}
+        title={t("matrix.add", { name: skillName })}
       >
         +
       </button>
@@ -171,9 +151,9 @@ function LevelCell({
       className={`w-10 h-8 rounded flex items-center justify-center text-xs font-medium transition-all cursor-pointer border
         ${LEVEL_COLORS[level]} ${LEVEL_COLORS_HOVER[level]}
         ${isHighlighted ? "ring-2 ring-blue-300" : ""}`}
-      title={`${LEVEL_LABELS[level]} - Cliquer pour modifier`}
+      title={t("matrix.clickToModify", { level: t(`levels.${level}`) })}
     >
-      {LEVEL_SHORT[level]}
+      {t(`levelShort.${level}`)}
     </button>
   );
 }
@@ -187,6 +167,8 @@ function SkillGapIndicator({
   current: number;
   required: number;
 }) {
+  const t = useTranslations("hr.skills.matrix");
+
   const getColor = () => {
     if (coverage >= 100) return "bg-green-500";
     if (coverage >= 50) return "bg-yellow-500";
@@ -194,9 +176,9 @@ function SkillGapIndicator({
   };
 
   const getLabel = () => {
-    if (coverage >= 100) return `Couverture complete (${current}/${required})`;
-    if (coverage >= 50) return `Couverture partielle (${current}/${required})`;
-    return `Skill gap - ${required - current} ressource(s) manquante(s)`;
+    if (coverage >= 100) return t("completeCoverage", { current, required });
+    if (coverage >= 50) return t("partialCoverage", { current, required });
+    return t("skillGapCount", { count: required - current });
   };
 
   return (
@@ -251,7 +233,7 @@ function MatrixLoadingSkeleton() {
 }
 
 export function SkillsMatrix() {
-  const t = useTranslations("hr.skills.matrix");
+  const t = useTranslations("hr.skills");
   const tc = useTranslations("common");
   const [data, setData] = useState<MatrixData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -282,7 +264,7 @@ export function SkillsMatrix() {
       const result = await skillsService.getMatrix();
       setData(result as unknown as MatrixData);
     } catch (err) {
-      setError(t("loadingError"));
+      setError(t("matrix.loadingError"));
       console.error(err);
     } finally {
       setLoading(false);
@@ -451,7 +433,7 @@ export function SkillsMatrix() {
   const exportToCSV = () => {
     if (!data) return;
 
-    const headers = [t("collaborator"), ...filteredSkills.map((s) => s.name)];
+    const headers = [t("matrix.collaborator"), ...filteredSkills.map((s) => s.name)];
     const rows = filteredUsers.map((row) => {
       const skillsMap = new Map(row.skills.map((s) => [s.skillId, s.level]));
       return [
@@ -468,7 +450,7 @@ export function SkillsMatrix() {
     link.download = `matrice-competences-${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success(t("exportSuccess"));
+    toast.success(t("matrix.exportSuccess"));
   };
 
   // Find skill gaps (skills with coverage < 100%)
@@ -493,7 +475,7 @@ export function SkillsMatrix() {
   if (!data || data.matrix.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
-        Aucune donnee de competences disponible
+        {t("matrix.noData")}
       </div>
     );
   }
@@ -503,19 +485,19 @@ export function SkillsMatrix() {
       {/* Analytics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-500">Collaborateurs</div>
+          <div className="text-sm text-gray-500">{t("matrix.collaborators")}</div>
           <div className="text-2xl font-bold text-gray-900">
             {data.matrix.length}
           </div>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-500">Competences</div>
+          <div className="text-sm text-gray-500">{t("matrix.skills")}</div>
           <div className="text-2xl font-bold text-gray-900">
             {allSkills.length}
           </div>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-500">Couverture moyenne</div>
+          <div className="text-sm text-gray-500">{t("matrix.averageCoverage")}</div>
           <div className="text-2xl font-bold text-gray-900">
             {Math.round(
               Object.values(userCoverage).reduce((a, b) => a + b, 0) /
@@ -525,11 +507,11 @@ export function SkillsMatrix() {
           </div>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-500">Skill Gaps</div>
+          <div className="text-sm text-gray-500">{t("matrix.skillGaps")}</div>
           <div className="text-2xl font-bold text-red-600">
             {skillGaps.length}
           </div>
-          <div className="text-xs text-gray-400">competences a renforcer</div>
+          <div className="text-xs text-gray-400">{t("matrix.skillGapsToReinforce")}</div>
         </div>
       </div>
 
@@ -550,7 +532,7 @@ export function SkillsMatrix() {
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
               />
             </svg>
-            Competences a renforcer (couverture incomplete)
+            {t("matrix.skillGapsAlert")}
           </div>
           <div className="flex flex-wrap gap-2">
             {skillGaps.slice(0, 8).map((skill) => {
@@ -569,7 +551,7 @@ export function SkillsMatrix() {
             })}
             {skillGaps.length > 8 && (
               <span className="text-xs text-red-500">
-                +{skillGaps.length - 8} autres
+                +{skillGaps.length - 8} {t("matrix.others")}
               </span>
             )}
           </div>
@@ -594,7 +576,7 @@ export function SkillsMatrix() {
           </svg>
           <input
             type="text"
-            placeholder={t("search")}
+            placeholder={t("matrix.search")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -608,7 +590,7 @@ export function SkillsMatrix() {
           }
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          <option value="all">Toutes categories</option>
+          <option value="all">{t("matrix.allCategories")}</option>
           {categories.map((cat) => (
             <option key={cat} value={cat}>
               {t(`categories.${cat}`)}
@@ -623,10 +605,10 @@ export function SkillsMatrix() {
           }
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          <option value="all">Tous niveaux</option>
-          {Object.entries(LEVEL_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>
-              Min. {label}
+          <option value="all">{t("matrix.allLevels")}</option>
+          {(["BEGINNER", "INTERMEDIATE", "EXPERT", "MASTER"] as SkillLevel[]).map((lvl) => (
+            <option key={lvl} value={lvl}>
+              {t("levels.min")} {t(`levels.${lvl}`)}
             </option>
           ))}
         </select>
@@ -645,9 +627,9 @@ export function SkillsMatrix() {
           }}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          <option value="name">Trier par nom</option>
-          <option value="coverage">Trier par couverture</option>
-          <optgroup label={t("sortBySkill")}>
+          <option value="name">{t("matrix.sortByName")}</option>
+          <option value="coverage">{t("matrix.sortByCoverage")}</option>
+          <optgroup label={t("matrix.sortBySkill")}>
             {filteredSkills.slice(0, 10).map((skill) => (
               <option key={skill.id} value={`skill:${skill.id}`}>
                 {skill.name}
@@ -673,23 +655,23 @@ export function SkillsMatrix() {
               d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          Export CSV
+          {t("matrix.exportCSV")}
         </button>
       </div>
 
       {/* Legend */}
       <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-sm text-gray-500 mr-2">Legende:</span>
-        {Object.entries(LEVEL_LABELS).map(([level, label]) => (
+        <span className="text-sm text-gray-500 mr-2">{t("matrix.legend")}:</span>
+        {(["BEGINNER", "INTERMEDIATE", "EXPERT", "MASTER"] as SkillLevel[]).map((lvl) => (
           <span
-            key={level}
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium border ${LEVEL_COLORS[level as SkillLevel]}`}
+            key={lvl}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium border ${LEVEL_COLORS[lvl]}`}
           >
-            {t(`levelShort.${level}`)} = {label}
+            {t(`levelShort.${lvl}`)} = {t(`levels.${lvl}`)}
           </span>
         ))}
         <span className="text-xs text-gray-400 ml-4">
-          Cliquer sur une cellule pour modifier
+          {t("matrix.clickToEdit")}
         </span>
       </div>
 
@@ -700,9 +682,9 @@ export function SkillsMatrix() {
             <tr>
               <th className="sticky left-0 z-20 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[220px] border-r border-gray-200">
                 <div className="flex flex-col gap-1">
-                  <span>Collaborateur</span>
+                  <span>{t("matrix.collaborator")}</span>
                   <span className="text-[10px] font-normal normal-case text-gray-400">
-                    Couverture
+                    {t("matrix.coverage")}
                   </span>
                 </div>
               </th>
@@ -877,9 +859,12 @@ export function SkillsMatrix() {
 
       {/* Stats */}
       <p className="text-sm text-gray-500">
-        {filteredUsers.length} collaborateur
-        {filteredUsers.length > 1 ? "s" : ""} - {filteredSkills.length}{" "}
-        competence{filteredSkills.length > 1 ? "s" : ""}
+        {t("matrix.statsFooter", {
+          users: filteredUsers.length,
+          usersPlural: filteredUsers.length > 1 ? "s" : "",
+          skills: filteredSkills.length,
+          skillsPlural: filteredSkills.length > 1 ? "s" : "",
+        })}
       </p>
     </div>
   );

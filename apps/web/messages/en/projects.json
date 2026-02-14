@@ -79,6 +79,22 @@
       "team": "Team",
       "gantt": "📊 Gantt"
     },
+    "milestones": {
+      "title": "Milestones",
+      "status": {
+        "pending": "Upcoming",
+        "inProgress": "In Progress",
+        "completed": "Completed"
+      },
+      "editMilestone": "Edit milestone",
+      "noDate": "No date",
+      "taskCount": "{{count}} task(s)",
+      "progress": "Progress",
+      "show": "Show",
+      "hide": "Hide",
+      "noTasks": "No associated tasks",
+      "taskStatusUpdated": "Task status updated"
+    },
     "actions": {
       "edit": "Edit",
       "delete": "Delete"

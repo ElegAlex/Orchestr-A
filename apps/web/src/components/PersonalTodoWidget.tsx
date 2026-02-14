@@ -6,10 +6,12 @@ import {
   PersonalTodo,
 } from "@/services/personal-todos.service";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 const MAX_TODOS = 20;
 
 export const PersonalTodoWidget = () => {
+  const t = useTranslations("dashboard");
   const [todos, setTodos] = useState<PersonalTodo[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTodoText, setNewTodoText] = useState("");
@@ -30,7 +32,7 @@ export const PersonalTodoWidget = () => {
       const data = await personalTodosService.getAll();
       setTodos(data);
     } catch (err) {
-      toast.error("Erreur lors du chargement des to-dos");
+      toast.error(t("errors.loadData"));
       console.error(err);
     } finally {
       setLoading(false);
@@ -40,7 +42,7 @@ export const PersonalTodoWidget = () => {
   const handleAddTodo = async () => {
     if (!newTodoText.trim()) return;
     if (todos.length >= MAX_TODOS) {
-      toast.error(`Limite de ${MAX_TODOS} to-dos atteinte`);
+      toast.error(t("todos.limitReached", { max: MAX_TODOS }));
       return;
     }
 
@@ -51,10 +53,10 @@ export const PersonalTodoWidget = () => {
       });
       setTodos([newTodo, ...todos]);
       setNewTodoText("");
-      toast.success("To-do ajoutée");
+      toast.success(t("todos.success.added"));
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || "Erreur lors de l'ajout");
+      toast.error(error.response?.data?.message || t("todos.errors.add"));
       console.error(err);
     } finally {
       setAdding(false);
@@ -68,7 +70,7 @@ export const PersonalTodoWidget = () => {
       });
       setTodos(todos.map((t) => (t.id === todo.id ? updated : t)));
     } catch (err) {
-      toast.error("Erreur lors de la mise à jour");
+      toast.error(t("todos.errors.update"));
       console.error(err);
     }
   };
@@ -77,9 +79,9 @@ export const PersonalTodoWidget = () => {
     try {
       await personalTodosService.delete(id);
       setTodos(todos.filter((t) => t.id !== id));
-      toast.success("To-do supprimée");
+      toast.success(t("todos.success.deleted"));
     } catch (err) {
-      toast.error("Erreur lors de la suppression");
+      toast.error(t("todos.errors.delete"));
       console.error(err);
     }
   };
@@ -101,9 +103,9 @@ export const PersonalTodoWidget = () => {
       });
       setTodos(todos.map((t) => (t.id === id ? updated : t)));
       setEditingId(null);
-      toast.success("To-do modifiée");
+      toast.success(t("todos.success.updated"));
     } catch (err) {
-      toast.error("Erreur lors de la modification");
+      toast.error(t("todos.errors.update"));
       console.error(err);
     }
   };
@@ -117,7 +119,9 @@ export const PersonalTodoWidget = () => {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">📝 Ma To-Do</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            📝 {t("todos.title")}
+          </h2>
         </div>
         <div className="p-6">
           <div className="flex items-center justify-center h-32">
@@ -132,7 +136,9 @@ export const PersonalTodoWidget = () => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Header - même style que "Mes tâches à venir" */}
       <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">📝 Ma To-Do</h2>
+        <h2 className="text-lg font-semibold text-gray-900">
+          📝 {t("todos.title")}
+        </h2>
         <span className="text-sm text-gray-500">
           {activeTodos.length}/{todos.length}
         </span>
@@ -147,7 +153,7 @@ export const PersonalTodoWidget = () => {
             value={newTodoText}
             onChange={(e) => setNewTodoText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
-            placeholder="Ajouter une to-do..."
+            placeholder={t("todos.placeholder")}
             disabled={adding || todos.length >= MAX_TODOS}
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
           />
@@ -158,21 +164,21 @@ export const PersonalTodoWidget = () => {
             }
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition text-sm font-medium"
           >
-            {adding ? "..." : "+ Ajouter"}
+            {adding ? t("todos.addingButton") : t("todos.addButton")}
           </button>
         </div>
 
         {/* Warning limite */}
         {todos.length >= MAX_TODOS && (
           <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-            ⚠️ Limite de {MAX_TODOS} to-dos atteinte
+            {t("todos.limitReached", { max: MAX_TODOS })}
           </div>
         )}
 
         {/* Liste To-dos */}
         {todos.length === 0 ? (
           <p className="text-gray-500 text-center py-8 text-sm">
-            Aucune to-do pour le moment
+            {t("todos.empty")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -219,14 +225,14 @@ export const PersonalTodoWidget = () => {
                     <span
                       className="flex-1 text-sm text-gray-900 cursor-pointer"
                       onDoubleClick={() => handleStartEdit(todo)}
-                      title="Double-cliquer pour éditer"
+                      title={t("todos.editHint")}
                     >
                       {todo.text}
                     </span>
                     <button
                       onClick={() => handleDelete(todo.id)}
                       className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 transition flex-shrink-0 text-sm"
-                      title="Supprimer"
+                      title={t("todos.deleteHint")}
                     >
                       🗑️
                     </button>
@@ -241,7 +247,9 @@ export const PersonalTodoWidget = () => {
                 {activeTodos.length > 0 && (
                   <div className="pt-2 pb-1">
                     <div className="text-xs font-semibold text-gray-500 uppercase">
-                      Complétées ({completedTodos.length})
+                      {t("todos.completedSection", {
+                        count: completedTodos.length,
+                      })}
                     </div>
                   </div>
                 )}
@@ -262,7 +270,7 @@ export const PersonalTodoWidget = () => {
                     <button
                       onClick={() => handleDelete(todo.id)}
                       className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 transition flex-shrink-0 text-sm"
-                      title="Supprimer"
+                      title={t("todos.deleteHint")}
                     >
                       🗑️
                     </button>

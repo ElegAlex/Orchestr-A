@@ -7,6 +7,7 @@ import {
   getStatusColorClass,
   getStatusLabel,
 } from "@/utils/dependencyValidation";
+import { useTranslations } from "next-intl";
 
 interface TaskDependencyInfoProps {
   task: Task;
@@ -23,6 +24,7 @@ export function TaskDependencyInfo({
   onEdit,
   onNavigate,
 }: TaskDependencyInfoProps) {
+  const t = useTranslations("tasks.detail");
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -130,8 +132,7 @@ export function TaskDependencyInfo({
                   />
                 </svg>
                 <span>
-                  {conflicts.length} conflit{conflicts.length > 1 ? "s" : ""} de
-                  dates
+                  {conflicts.length} {t("dependencies.conflictCount", { count: conflicts.length }).replace(/^\d+\s/, "")}
                 </span>
               </div>
             </div>
@@ -153,10 +154,12 @@ export function TaskDependencyInfo({
                   d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
                 />
               </svg>
-              Depend de ({dependencies.length})
+              {t("dependencies.dependsOn", { count: dependencies.length })}
             </h4>
             {dependencies.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">Aucune dependance</p>
+              <p className="text-sm text-gray-500 italic">
+                {t("sections.noDependencies")}
+              </p>
             ) : (
               <div className="space-y-1">
                 {dependencies.map((dep) => {
@@ -190,7 +193,7 @@ export function TaskDependencyInfo({
                           </svg>
                         )}
                         <span className="text-sm text-gray-900 truncate">
-                          {depTask?.title || "Tache supprimee"}
+                          {depTask?.title || t("sections.deletedTask")}
                         </span>
                       </div>
                       {depTask && (
@@ -223,11 +226,11 @@ export function TaskDependencyInfo({
                   d="M13 5l7 7-7 7M5 5l7 7-7 7"
                 />
               </svg>
-              Bloque ({dependents.length})
+              {t("dependencies.blocks", { count: dependents.length })}
             </h4>
             {dependents.length === 0 ? (
               <p className="text-sm text-gray-500 italic">
-                Aucune tache dependante
+                {t("dependencies.noDependents")}
               </p>
             ) : (
               <div className="space-y-1">
@@ -258,13 +261,13 @@ export function TaskDependencyInfo({
             onClick={() => onNavigate(task.id)}
             className="text-sm text-blue-600 hover:text-blue-800 font-medium"
           >
-            Voir les details
+            {t("dependencies.viewDetails")}
           </button>
           <button
             onClick={onEdit}
             className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
           >
-            Modifier les dependances
+            {t("dependencies.modifyTitle")}
           </button>
         </div>
       </div>

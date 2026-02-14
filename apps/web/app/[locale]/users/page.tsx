@@ -800,13 +800,13 @@ export default function UsersPage() {
                   onClick={() => setShowCreateModal(false)}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
-                  Annuler
+                  {t("createModal.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  Créer
+                  {t("createModal.create")}
                 </button>
               </div>
             </form>

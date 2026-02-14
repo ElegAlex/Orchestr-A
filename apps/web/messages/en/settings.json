@@ -1,122 +1,122 @@
 {
-  "settings": {
-    "title": "Settings",
-    "subtitle": "Global application configuration",
-    "reset": "Reset",
-    "save": "Save",
-    "saving": "Saving...",
-    "unsavedChanges": "You have unsaved changes.",
-    "tabs": {
-      "display": "Display",
-      "holidays": "Holidays"
-    },
-    "display": {
-      "title": "Display Settings",
-      "dateFormat": {
-        "label": "Date Format",
-        "example": "Example:",
-        "options": {
-          "ddMMyyyy": "DD/MM/YYYY (31/12/2025)",
-          "MMddyyyy": "MM/DD/YYYY (12/31/2025)",
-          "yyyyMMdd": "YYYY-MM-DD (2025-12-31)",
-          "dMMMMyyyy": "D Month YYYY (31 December 2025)",
-          "EEEEdMMMMyyyy": "Day D Month YYYY (Wednesday 31 December 2025)"
-        }
-      },
-      "timeFormat": {
-        "label": "Time Format",
-        "options": {
-          "HHmm": "24h (14:30)",
-          "HHmmss": "24h with seconds (14:30:45)",
-          "hhmmaa": "12h (02:30 PM)"
-        }
-      },
-      "locale": {
-        "label": "Language / Region",
-        "hint": "Affects month and weekday names formatting",
-        "options": {
-          "frFR": "Français (France)",
-          "enUS": "English (US)"
-        }
-      },
-      "weekStart": {
-        "label": "First day of the week",
-        "options": {
-          "monday": "Monday",
-          "sunday": "Sunday"
-        }
-      }
-    },
-    "messages": {
-      "loadError": "Error loading settings",
-      "saveSuccess": "Settings saved successfully",
-      "saveError": "Error saving settings",
-      "resetConfirm": "Are you sure you want to reset all settings to their default values?",
-      "resetSuccess": "Settings reset",
-      "resetError": "Error resetting settings"
-    },
-    "loading": "Loading..."
+  "title": "Settings",
+  "subtitle": "Global application configuration",
+  "reset": "Reset",
+  "save": "Save",
+  "saving": "Saving...",
+  "unsavedChanges": "You have unsaved changes.",
+  "tabs": {
+    "display": "Display",
+    "holidays": "Holidays"
   },
-  "profile": {
-    "title": "My Profile",
-    "subtitle": "Manage your personal information and preferences",
-    "tabs": {
-      "personal": "Personal Information",
-      "security": "Security",
-      "preferences": "Preferences"
-    },
-    "personal": {
-      "title": "Personal Information",
-      "firstName": "First Name",
-      "lastName": "Last Name",
-      "email": "Email",
-      "login": "Login",
-      "department": "Department",
-      "services": "Services",
-      "memberSince": "Member Since"
-    },
-    "security": {
-      "title": "Security",
-      "password": {
-        "title": "Password",
-        "description": "Change your password to secure your account",
-        "changeButton": "Change Password"
-      },
-      "loginHistory": {
-        "title": "Login History",
-        "lastLogin": "Last login:"
-      },
-      "changePasswordModal": {
-        "title": "Change Password",
-        "currentPassword": "Current password *",
-        "newPassword": "New password *",
-        "confirmPassword": "Confirm new password *",
-        "minLength": "At least 8 characters",
-        "cancel": "Cancel",
-        "save": "Update"
+  "display": {
+    "title": "Display Settings",
+    "dateFormat": {
+      "label": "Date Format",
+      "example": "Example:",
+      "options": {
+        "ddMMyyyy": "DD/MM/YYYY (31/12/2025)",
+        "MMddyyyy": "MM/DD/YYYY (12/31/2025)",
+        "yyyyMMdd": "YYYY-MM-DD (2025-12-31)",
+        "dMMMMyyyy": "D Month YYYY (31 December 2025)",
+        "EEEEdMMMMyyyy": "Day D Month YYYY (Wednesday 31 December 2025)"
       }
     },
-    "preferences": {
-      "title": "Preferences",
-      "language": {
-        "title": "Language",
-        "fr": "Français",
-        "en": "English"
+    "timeFormat": {
+      "label": "Time Format",
+      "options": {
+        "HHmm": "24h (14:30)",
+        "HHmmss": "24h with seconds (14:30:45)",
+        "hhmmaa": "12h (02:30 PM)"
+      }
+    },
+    "locale": {
+      "label": "Language / Region",
+      "hint": "Affects month and weekday names formatting",
+      "options": {
+        "frFR": "Français (France)",
+        "enUS": "English (US)"
+      }
+    },
+    "weekStart": {
+      "label": "First day of the week",
+      "options": {
+        "monday": "Monday",
+        "sunday": "Sunday"
+      }
+    }
+  },
+  "messages": {
+    "loadError": "Error loading settings",
+    "saveSuccess": "Settings saved successfully",
+    "saveError": "Error saving settings",
+    "resetConfirm": "Are you sure you want to reset all settings to their default values?",
+    "resetSuccess": "Settings reset",
+    "resetError": "Error resetting settings"
+  },
+  "loading": "Loading...",
+  "holidays": {
+    "title": "Holidays",
+    "importButton": "Import French holidays {year}",
+    "addButton": "Add a holiday",
+    "table": {
+      "headers": {
+        "date": "Date",
+        "name": "Name",
+        "type": "Type",
+        "isWorkDay": "Work day",
+        "description": "Description",
+        "actions": "Actions"
       },
-      "theme": {
-        "title": "Theme",
-        "light": "Light",
-        "dark": "Dark",
-        "auto": "Automatic"
+      "empty": "No holidays declared for {year}"
+    },
+    "stats": {
+      "total": "Total holidays",
+      "nonWorkDays": "Non-working days",
+      "workDays": "Working days",
+      "legal": "Legal holidays"
+    },
+    "modal": {
+      "titleEdit": "Edit holiday",
+      "titleCreate": "Add a holiday",
+      "fields": {
+        "date": "Date",
+        "name": "Name",
+        "type": "Type",
+        "description": "Description (optional)",
+        "isWorkDay": "Work day",
+        "isWorkDayHint": "If enabled, this day counts as a working day",
+        "recurring": "Recurring",
+        "recurringHint": "Automatically repeats each year"
       },
-      "save": "Save Preferences"
+      "placeholders": {
+        "name": "Ex: New Year's Day",
+        "description": "Notes or details..."
+      },
+      "buttons": {
+        "update": "Update",
+        "saving": "Saving..."
+      }
     },
     "messages": {
-      "passwordMismatch": "Passwords do not match",
-      "passwordTooShort": "Password must be at least 8 characters",
-      "passwordChangeSuccess": "Password changed successfully",
-      "passwordChangeError": "Error changing password"
+      "loadError": "Error loading holidays",
+      "deleteSuccess": "Holiday deleted",
+      "deleteError": "Error deleting holiday",
+      "importSuccess": "Import completed: {created} created, {skipped} already existing",
+      "importError": "Error during import",
+      "updateStatusSuccess": "Status updated",
+      "updateStatusError": "Error updating status",
+      "updateSuccess": "Holiday updated",
+      "createSuccess": "Holiday created successfully",
+      "saveError": "Error saving holiday",
+      "nameRequired": "Holiday name is required",
+      "dateRequired": "Date is required"
     },
-    "loading": "Loading profile..."
+    "tooltips": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    }
   }
 }

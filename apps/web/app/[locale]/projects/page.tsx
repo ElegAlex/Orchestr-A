@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
 import { projectsService } from "@/services/projects.service";
@@ -21,6 +21,7 @@ import toast from "react-hot-toast";
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations('projects');
   const tCommon = useTranslations('common');
   const user = useAuthStore((state) => state.user);
@@ -357,7 +358,7 @@ export default function ProjectsPage() {
             filteredProjects.map((project) => (
               <div
                 key={project.id}
-                onClick={() => router.push(`/projects/${project.id}`)}
+                onClick={() => router.push(`/${locale}/projects/${project.id}`)}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-blue-500 transition cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-3">

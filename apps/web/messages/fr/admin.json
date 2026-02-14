@@ -223,6 +223,7 @@
   "roles": {
     "title": "Gestion des rôles",
     "description": "Configurer les rôles et permissions",
+    "loading": "Chargement...",
     "table": {
       "name": "Nom",
       "code": "Code",
@@ -231,6 +232,8 @@
     },
     "create": "Créer un rôle",
     "delete": "Supprimer le rôle",
+    "edit": "Modifier",
+    "close": "Fermer",
     "systemBadge": "Système",
     "permissionMatrix": "Matrice des permissions",
     "selectAll": "Tout sélectionner",
@@ -239,6 +242,20 @@
     "noRoles": "Aucun rôle configuré",
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce rôle ?",
     "cannotDeleteSystem": "Les rôles système ne peuvent pas être supprimés",
+    "messages": {
+      "loadError": "Erreur lors du chargement des rôles",
+      "loadPermissionsError": "Erreur lors du chargement des permissions",
+      "createSuccess": "Rôle créé avec succès",
+      "createError": "Erreur lors de la création",
+      "updateSuccess": "Rôle modifié avec succès",
+      "updateError": "Erreur lors de la modification",
+      "deleteSuccess": "Rôle supprimé",
+      "deleteError": "Erreur lors de la suppression",
+      "saveSuccess": "Permissions sauvegardées",
+      "saveError": "Erreur lors de la sauvegarde",
+      "initSuccess": "{permissionsCreated} permissions et {rolesCreated} rôles initialisés",
+      "initError": "Erreur lors de l'initialisation"
+    },
     "modules": {
       "projects": "Projets",
       "tasks": "Tâches",

@@ -59,7 +59,7 @@ export default function RolesPage() {
       const data = await roleManagementService.getAllRoles();
       setRoles(data);
     } catch (err) {
-      toast.error("Erreur lors du chargement des rôles");
+      toast.error(t("messages.loadError"));
       console.error(err);
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ export default function RolesPage() {
       const data = await roleManagementService.getAllPermissions();
       setPermissions(data);
     } catch (err) {
-      console.error("Erreur lors du chargement des permissions:", err);
+      console.error(t("messages.loadPermissionsError"), err);
     }
   };
 
@@ -83,7 +83,7 @@ export default function RolesPage() {
         name: formData.name,
         description: formData.description || undefined,
       });
-      toast.success("Rôle créé avec succès");
+      toast.success(t("messages.createSuccess"));
       setShowCreateModal(false);
       setFormData({ code: "", name: "", description: "" });
       fetchRoles();
@@ -91,7 +91,7 @@ export default function RolesPage() {
       openEditModal(newRole);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || "Erreur lors de la création");
+      toast.error(axiosError.response?.data?.message || t("messages.createError"));
     }
   };
 
@@ -129,11 +129,11 @@ export default function RolesPage() {
           };
 
       await roleManagementService.updateRole(editingRole.id, updateData);
-      toast.success("Rôle modifié avec succès");
+      toast.success(t("messages.updateSuccess"));
       fetchRoles();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || "Erreur lors de la modification");
+      toast.error(axiosError.response?.data?.message || t("messages.updateError"));
     }
   };
 
@@ -145,14 +145,14 @@ export default function RolesPage() {
         editingRole.id,
         Array.from(selectedPermissions),
       );
-      toast.success("Permissions sauvegardées");
+      toast.success(t("messages.saveSuccess"));
       fetchRoles();
       // Refresh editing role
       const updatedRole = await roleManagementService.getRole(editingRole.id);
       setEditingRole(updatedRole);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || "Erreur lors de la sauvegarde");
+      toast.error(axiosError.response?.data?.message || t("messages.saveError"));
     }
   };
 
@@ -168,11 +168,11 @@ export default function RolesPage() {
 
     try {
       await roleManagementService.deleteRole(role.id);
-      toast.success("Rôle supprimé");
+      toast.success(t("messages.deleteSuccess"));
       fetchRoles();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || "Erreur lors de la suppression");
+      toast.error(axiosError.response?.data?.message || t("messages.deleteError"));
     }
   };
 
@@ -186,7 +186,7 @@ export default function RolesPage() {
       fetchPermissions();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || "Erreur lors de l'initialisation");
+      toast.error(axiosError.response?.data?.message || t("messages.initError"));
     }
   };
 
@@ -254,7 +254,7 @@ export default function RolesPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">Chargement...</p>
+            <p className="mt-4 text-gray-600">{t("loading")}</p>
           </div>
         </div>
       </MainLayout>
@@ -364,7 +364,7 @@ export default function RolesPage() {
                           onClick={() => openEditModal(role)}
                           className="text-blue-600 hover:text-blue-900"
                         >
-                          Modifier
+                          {t("edit")}
                         </button>
                         <button
                           onClick={() => handleDelete(role)}
@@ -455,13 +455,13 @@ export default function RolesPage() {
                   }}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
-                  Annuler
+                  {tCommon("actions.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  Créer
+                  {tCommon("actions.create")}
                 </button>
               </div>
             </form>
@@ -653,7 +653,7 @@ export default function RolesPage() {
                 }}
                 className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
               >
-                Fermer
+                {t("close")}
               </button>
             </div>
           </div>

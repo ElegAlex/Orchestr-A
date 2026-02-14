@@ -79,6 +79,22 @@
       "team": "Équipe",
       "gantt": "📊 Gantt"
     },
+    "milestones": {
+      "title": "Jalons",
+      "status": {
+        "pending": "À venir",
+        "inProgress": "En cours",
+        "completed": "Terminé"
+      },
+      "editMilestone": "Modifier le jalon",
+      "noDate": "Pas de date",
+      "taskCount": "{{count}} tâche(s)",
+      "progress": "Progression",
+      "show": "Voir",
+      "hide": "Masquer",
+      "noTasks": "Aucune tâche associée",
+      "taskStatusUpdated": "Statut de la tâche mis à jour"
+    },
     "actions": {
       "edit": "Modifier",
       "delete": "Supprimer"

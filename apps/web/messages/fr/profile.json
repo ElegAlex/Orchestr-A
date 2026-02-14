@@ -1,0 +1,62 @@
+{
+  "title": "Mon profil",
+  "subtitle": "Gérez vos informations personnelles et vos préférences",
+  "tabs": {
+    "personal": "Informations personnelles",
+    "security": "Sécurité",
+    "preferences": "Préférences"
+  },
+  "personal": {
+    "title": "Informations personnelles",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "Email",
+    "login": "Login",
+    "department": "Département",
+    "services": "Services",
+    "memberSince": "Membre depuis"
+  },
+  "security": {
+    "title": "Sécurité",
+    "password": {
+      "title": "Mot de passe",
+      "description": "Modifiez votre mot de passe pour sécuriser votre compte",
+      "changeButton": "Changer le mot de passe"
+    },
+    "loginHistory": {
+      "title": "Historique de connexion",
+      "lastLogin": "Dernière connexion :"
+    },
+    "changePasswordModal": {
+      "title": "Changer le mot de passe",
+      "currentPassword": "Mot de passe actuel *",
+      "newPassword": "Nouveau mot de passe *",
+      "confirmPassword": "Confirmer le nouveau mot de passe *",
+      "minLength": "Au moins 8 caractères",
+      "cancel": "Annuler",
+      "save": "Modifier"
+    }
+  },
+  "preferences": {
+    "title": "Préférences",
+    "language": {
+      "title": "Langue",
+      "fr": "Français",
+      "en": "English"
+    },
+    "theme": {
+      "title": "Thème",
+      "light": "Clair",
+      "dark": "Sombre",
+      "auto": "Automatique"
+    },
+    "save": "Enregistrer les préférences"
+  },
+  "messages": {
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+    "passwordChangeSuccess": "Mot de passe modifié avec succès",
+    "passwordChangeError": "Erreur lors du changement de mot de passe"
+  },
+  "loading": "Chargement du profil..."
+}

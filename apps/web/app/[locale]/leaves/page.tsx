@@ -919,7 +919,7 @@ export default function LeavesPage() {
                   }}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Annuler
+                  {tc("actions.cancel")}
                 </button>
                 <button
                   type="submit"
@@ -1043,13 +1043,13 @@ export default function LeavesPage() {
                   }}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Annuler
+                  {tc("actions.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Enregistrer
+                  {tc("actions.save")}
                 </button>
               </div>
             </form>
@@ -1086,7 +1086,7 @@ export default function LeavesPage() {
                   }}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Annuler
+                  {tc("actions.cancel")}
                 </button>
                 <button
                   onClick={handleReject}
@@ -1188,7 +1188,7 @@ export default function LeavesPage() {
                   }}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Annuler
+                  {tc("actions.cancel")}
                 </button>
                 <button
                   type="submit"

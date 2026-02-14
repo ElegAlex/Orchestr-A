@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
 import { tasksService } from "@/services/tasks.service";
@@ -22,6 +22,7 @@ import toast from "react-hot-toast";
 
 export default function TasksPage() {
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations('tasks');
   const tCommon = useTranslations('common');
   const user = useAuthStore((state) => state.user);
@@ -317,10 +318,10 @@ export default function TasksPage() {
     if (draggedTask && draggedTask.status !== newStatus) {
       try {
         await tasksService.update(draggedTask.id, { status: newStatus });
-        toast.success("Statut mis à jour");
+        toast.success(t('messages.statusUpdateSuccess'));
         fetchData();
       } catch {
-        toast.error("Erreur lors de la mise à jour du statut");
+        toast.error(t('messages.statusUpdateError'));
       }
     }
 
@@ -331,20 +332,20 @@ export default function TasksPage() {
   const handleTaskClick = (task: Task) => {
     // Only navigate if not dragging
     if (!isDragging) {
-      router.push(`/tasks/${task.id}`);
+      router.push(`/${locale}/tasks/${task.id}`);
     }
   };
 
   const columns: { status: TaskStatus; title: string; color: string }[] = [
-    { status: TaskStatus.TODO, title: "À faire", color: "bg-gray-100" },
+    { status: TaskStatus.TODO, title: t('status.TODO'), color: "bg-gray-100" },
     {
       status: TaskStatus.IN_PROGRESS,
-      title: "En cours",
+      title: t('status.IN_PROGRESS'),
       color: "bg-blue-100",
     },
-    { status: TaskStatus.IN_REVIEW, title: "En revue", color: "bg-yellow-100" },
-    { status: TaskStatus.DONE, title: "Terminé", color: "bg-green-100" },
-    { status: TaskStatus.BLOCKED, title: "Bloqué", color: "bg-red-100" },
+    { status: TaskStatus.IN_REVIEW, title: t('status.IN_REVIEW'), color: "bg-yellow-100" },
+    { status: TaskStatus.DONE, title: t('status.DONE'), color: "bg-green-100" },
+    { status: TaskStatus.BLOCKED, title: t('status.BLOCKED'), color: "bg-red-100" },
   ];
 
   if (loading) {
@@ -464,7 +465,7 @@ export default function TasksPage() {
                   >
                     {columnTasks.length === 0 ? (
                       <p className="text-gray-400 text-sm text-center py-8">
-                        Aucune tâche
+                        {t('noTasks')}
                       </p>
                     ) : (
                       columnTasks.map((task) => (
@@ -526,7 +527,7 @@ export default function TasksPage() {
                               ) : (
                                 <div className="flex items-center space-x-2 text-xs text-orange-500 mb-2">
                                   <span>📋</span>
-                                  <span>Tache independante</span>
+                                  <span>{t('card.orphanLabel')}</span>
                                 </div>
                               )}
 
@@ -556,7 +557,7 @@ export default function TasksPage() {
                                   <span className="ml-1">
                                     {task.assignees.length === 1
                                       ? `${task.assignees[0].user?.firstName} ${task.assignees[0].user?.lastName}`
-                                      : `${task.assignees.length} assignés`}
+                                      : t('card.assignees', { count: task.assignees.length })}
                                   </span>
                                 </div>
                               ) : (
@@ -576,14 +577,14 @@ export default function TasksPage() {
 
                               {task.estimatedHours && (
                                 <div className="text-xs text-gray-500">
-                                  ⏱️ {task.estimatedHours}h estimées
+                                  {t('card.estimatedHours', { hours: task.estimatedHours })}
                                 </div>
                               )}
 
                               {task.progress > 0 && (
                                 <div className="mt-3">
                                   <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                                    <span>Progression</span>
+                                    <span>{t('card.progress')}</span>
                                     <span>{task.progress}%</span>
                                   </div>
                                   <div className="w-full bg-gray-200 rounded-full h-1.5">

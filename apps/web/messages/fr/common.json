@@ -82,7 +82,9 @@
     "serverError": "Erreur serveur",
     "networkError": "Erreur réseau",
     "validationError": "Erreur de validation",
-    "forbidden": "Accès interdit"
+    "forbidden": "Accès interdit",
+    "loadError": "Erreur lors du chargement des données",
+    "saveError": "Erreur lors de l'enregistrement"
   },
   "table": {
     "empty": "Aucune donnée",
@@ -136,6 +138,55 @@
     "notDefined": "Non définie",
     "invalidDate": "Date invalide",
     "noData": "Aucune donnée",
-    "completed": "Complétées"
+    "completed": "Complétées",
+    "noUserFound": "Aucun utilisateur trouvé"
+  },
+  "presence": {
+    "title": "Présence du jour",
+    "button": "Présence",
+    "onSite": "Sur site",
+    "remote": "Télétravail",
+    "absent": "Absents",
+    "onSiteCount": "{count} sur site",
+    "remoteCount": "{count} télétravail",
+    "absentCount": "{count} absents",
+    "emptyOnSite": "Aucun collaborateur sur site",
+    "emptyRemote": "Aucun collaborateur en télétravail",
+    "emptyAbsent": "Aucun collaborateur absent",
+    "loadError": "Erreur lors du chargement des données"
+  },
+  "import": {
+    "status": {
+      "valid": "Valide",
+      "warning": "Avertissement",
+      "duplicate": "Doublon",
+      "error": "Erreur"
+    },
+    "summary": {
+      "total": "Total",
+      "valid": "Valides",
+      "warnings": "Avertissements",
+      "duplicates": "Doublons",
+      "errors": "Erreurs"
+    },
+    "tabs": {
+      "all": "Tous ({{count}})",
+      "valid": "Valides ({{count}})",
+      "warnings": "Avertissements ({{count}})",
+      "duplicates": "Doublons ({{count}})",
+      "errors": "Erreurs ({{count}})"
+    },
+    "table": {
+      "line": "Ligne {{lineNumber}}",
+      "noItems": "Aucun element dans cette categorie"
+    },
+    "footer": {
+      "willImport": "<strong>{{count}}</strong> element(s) seront importes",
+      "duplicatesIgnored": "({{count}} doublon(s) ignores)",
+      "errorsNotImported": "({{count}} erreur(s) non importees)",
+      "noValidItems": "Aucun element valide a importer",
+      "importing": "Import en cours...",
+      "confirm": "Confirmer l'import ({{count}})"
+    }
   }
 }

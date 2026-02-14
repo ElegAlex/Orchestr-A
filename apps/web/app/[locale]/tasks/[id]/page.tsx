@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { tasksService } from "@/services/tasks.service";
 import { milestonesService } from "@/services/milestones.service";
@@ -45,6 +45,7 @@ interface TaskWithRelations extends Omit<Task, "epic" | "milestone"> {
 export default function TaskDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations('tasks');
   const tCommon = useTranslations('common');
   const taskId = params.id as string;
@@ -176,7 +177,7 @@ export default function TaskDetailPage() {
       } catch (err) {
         toast.error(t('messages.loadTaskError'));
         console.error(err);
-        router.push("/tasks");
+        router.push(`/${locale}/tasks`);
       } finally {
         setLoading(false);
       }
@@ -285,7 +286,7 @@ export default function TaskDetailPage() {
     try {
       await tasksService.delete(taskId);
       toast.success(t('messages.deleteSuccess'));
-      router.push("/tasks");
+      router.push(`/${locale}/tasks`);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
@@ -758,7 +759,7 @@ export default function TaskDetailPage() {
                             key={dep.id || dep.dependsOnTaskId}
                             onClick={() =>
                               dep.dependsOnTask &&
-                              router.push(`/tasks/${dep.dependsOnTask.id}`)
+                              router.push(`/${locale}/tasks/${dep.dependsOnTask.id}`)
                             }
                             className={`
                               flex items-center justify-between p-3 rounded-lg cursor-pointer
@@ -813,7 +814,7 @@ export default function TaskDetailPage() {
                   {t('detail.sections.project')}
                 </h2>
                 <button
-                  onClick={() => router.push(`/projects/${task.project?.id}`)}
+                  onClick={() => router.push(`/${locale}/projects/${task.project?.id}`)}
                   className="text-blue-600 hover:text-blue-800 font-medium"
                 >
                   {task.project.name}

@@ -74,7 +74,7 @@ export default function TimeTrackingPage() {
     } catch (err) {
       const axiosError = err as { response?: { status?: number } };
       if (axiosError.response?.status !== 404) {
-        toast.error("Erreur lors du chargement des données");
+        toast.error(t("messages.loadError"));
         console.error(err);
       }
     } finally {
@@ -90,14 +90,14 @@ export default function TimeTrackingPage() {
     e.preventDefault();
     try {
       await timeTrackingService.create(formData);
-      toast.success("Temps enregistré avec succès");
+      toast.success(t("messages.created"));
       setShowCreateModal(false);
       resetForm();
       fetchData();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || "Erreur lors de l'enregistrement",
+        axiosError.response?.data?.message || t("messages.saveError"),
       );
     }
   };
@@ -107,10 +107,10 @@ export default function TimeTrackingPage() {
 
     try {
       await timeTrackingService.delete(id);
-      toast.success("Entrée supprimée");
+      toast.success(t("messages.deleted"));
       fetchData();
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error(t("messages.deleteError"));
     }
   };
 
@@ -200,7 +200,7 @@ export default function TimeTrackingPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">Chargement...</p>
+            <p className="mt-4 text-gray-600">{t("loading")}</p>
           </div>
         </div>
       </MainLayout>
@@ -300,7 +300,7 @@ export default function TimeTrackingPage() {
           {getFilteredEntries().length === 0 ? (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">⏱️</div>
-              <p className="text-gray-500">Aucune entrée de temps</p>
+              <p className="text-gray-500">{t("noEntries")}</p>
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="mt-4 text-blue-600 hover:text-blue-800"
@@ -365,7 +365,7 @@ export default function TimeTrackingPage() {
                       onClick={() => handleDelete(entry.id)}
                       className="text-red-600 hover:text-red-800 text-sm"
                     >
-                      Supprimer
+                      {t("actions.delete")}
                     </button>
                   </div>
                 </div>
@@ -459,7 +459,7 @@ export default function TimeTrackingPage() {
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">Aucun projet</option>
+                  <option value="">{t("fields.noProject")}</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id}>
                       {project.name}
@@ -480,7 +480,7 @@ export default function TimeTrackingPage() {
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="">Aucune tâche</option>
+                    <option value="">{t("fields.noTask")}</option>
                     {getAvailableTasksForProject().map((task) => (
                       <option key={task.id} value={task.id}>
                         {task.title}
@@ -514,13 +514,13 @@ export default function TimeTrackingPage() {
                   }}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
-                  Annuler
+                  {tc("actions.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  Enregistrer
+                  {tc("actions.save")}
                 </button>
               </div>
             </form>

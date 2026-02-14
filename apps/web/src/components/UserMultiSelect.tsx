@@ -156,7 +156,7 @@ export function UserMultiSelect({
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {filteredUsers.length === 0 ? (
             <div className="px-3 py-2 text-sm text-gray-500 text-center">
-              Aucun utilisateur trouve
+              No user found
             </div>
           ) : (
             filteredUsers.map((user) => {

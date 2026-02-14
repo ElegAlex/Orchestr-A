@@ -11,6 +11,7 @@ import {
 } from "@/utils/dependencyValidation";
 import { tasksService } from "@/services/tasks.service";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 interface TaskDependencyModalProps {
   task: Task;
@@ -25,6 +26,8 @@ export function TaskDependencyModal({
   onClose,
   onSave,
 }: TaskDependencyModalProps) {
+  const t = useTranslations("tasks");
+  const tCommon = useTranslations("common");
   const [selectedDependencyIds, setSelectedDependencyIds] = useState<string[]>(
     [],
   );
@@ -95,14 +98,14 @@ export function TaskDependencyModal({
         await tasksService.addDependency(task.id, depId);
       }
 
-      toast.success("Dependances mises a jour");
+      toast.success(t("messages.dependenciesUpdateSuccess"));
       onSave();
       onClose();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
         axiosError.response?.data?.message ||
-          "Erreur lors de la mise a jour des dependances",
+          t("messages.dependenciesUpdateError"),
       );
       console.error(err);
     } finally {
@@ -129,7 +132,7 @@ export function TaskDependencyModal({
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold text-gray-900 truncate">
-                Modifier les dependances
+                {t("detail.dependencies.modifyTitle")}
               </h2>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-sm text-gray-600 truncate">
@@ -185,8 +188,7 @@ export function TaskDependencyModal({
             availableTasks={allTasks}
             onChange={handleDependencyChange}
             disabled={saving}
-            label="Taches prealables"
-            placeholder="Selectionner les taches dont depend cette tache"
+            label={t("detail.dependencies.prerequisitesLabel")}
           />
 
           {/* Summary */}
@@ -195,17 +197,15 @@ export function TaskDependencyModal({
               <span className="font-medium">
                 {selectedDependencyIds.length}
               </span>{" "}
-              dependance
-              {selectedDependencyIds.length !== 1 ? "s" : ""} selectionnee
-              {selectedDependencyIds.length !== 1 ? "s" : ""}
+              {t("detail.dependencies.selectedCount", {
+                count: selectedDependencyIds.length,
+              }).replace(/^\d+\s/, "")}
               {conflicts.length > 0 && (
                 <span className="text-amber-600">
                   {" "}
-                  dont <span className="font-medium">
-                    {conflicts.length}
-                  </span>{" "}
-                  conflit
-                  {conflicts.length > 1 ? "s" : ""} de dates
+                  {t("detail.dependencies.conflictCount", {
+                    count: conflicts.length,
+                  })}
                 </span>
               )}
             </p>
@@ -219,7 +219,7 @@ export function TaskDependencyModal({
             disabled={saving}
             className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium disabled:opacity-50"
           >
-            Annuler
+            {tCommon("actions.cancel")}
           </button>
           <button
             onClick={handleSave}
@@ -247,7 +247,7 @@ export function TaskDependencyModal({
                 />
               </svg>
             )}
-            Enregistrer
+            {tCommon("actions.save")}
           </button>
         </div>
       </div>

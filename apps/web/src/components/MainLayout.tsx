@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useAuthStore } from "@/stores/auth.store";
 import { Role } from "@/types";
 import { Logo, LogoIcon } from "@/components/Logo";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+
 
 interface NavItem {
   key: string;
@@ -18,28 +18,29 @@ interface NavItem {
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const locale = useLocale();
   const t = useTranslations('common');
   const { user, logout } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const navigation: NavItem[] = [
-    { key: "dashboard", href: "/dashboard", icon: "🎯" },
-    { key: "projects", href: "/projects", icon: "📁" },
-    { key: "tasks", href: "/tasks", icon: "✓" },
-    { key: "events", href: "/events", icon: "📅" },
-    { key: "planning", href: "/planning", icon: "🗓️" },
-    { key: "timeTracking", href: "/time-tracking", icon: "⏱️" },
-    { key: "leaves", href: "/leaves", icon: "🏖️" },
-    { key: "telework", href: "/telework", icon: "🏠" },
+    { key: "dashboard", href: `/${locale}/dashboard`, icon: "🎯" },
+    { key: "projects", href: `/${locale}/projects`, icon: "📁" },
+    { key: "tasks", href: `/${locale}/tasks`, icon: "✓" },
+    { key: "events", href: `/${locale}/events`, icon: "📅" },
+    { key: "planning", href: `/${locale}/planning`, icon: "🗓️" },
+    { key: "timeTracking", href: `/${locale}/time-tracking`, icon: "⏱️" },
+    { key: "leaves", href: `/${locale}/leaves`, icon: "🏖️" },
+    { key: "telework", href: `/${locale}/telework`, icon: "🏠" },
   ];
 
   const adminNavigation: NavItem[] = [
-    { key: "reports", href: "/reports", icon: "📊" },
-    { key: "users", href: "/users", icon: "👥" },
-    { key: "departments", href: "/departments", icon: "🏢" },
-    { key: "skills", href: "/skills", icon: "⭐" },
-    { key: "roleManagement", href: "/admin/roles", icon: "🛡️", adminOnly: true },
-    { key: "settings", href: "/settings", icon: "⚙️", adminOnly: true },
+    { key: "reports", href: `/${locale}/reports`, icon: "📊" },
+    { key: "users", href: `/${locale}/users`, icon: "👥" },
+    { key: "departments", href: `/${locale}/departments`, icon: "🏢" },
+    { key: "skills", href: `/${locale}/skills`, icon: "⭐" },
+    { key: "roleManagement", href: `/${locale}/admin/roles`, icon: "🛡️", adminOnly: true },
+    { key: "settings", href: `/${locale}/settings`, icon: "⚙️", adminOnly: true },
   ];
 
   const isManager =
@@ -59,7 +60,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-[var(--border)]">
-          <Link href="/dashboard" className="flex items-center">
+          <Link href={`/${locale}/dashboard`} className="flex items-center">
             {sidebarOpen ? (
               <Logo
                 size="sm"
@@ -89,7 +90,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
                   isActive
-                    ? "bg-[var(--primary)] bg-opacity-10 text-[var(--primary)]"
+                    ? "bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-200"
                     : "text-[var(--foreground)] hover:bg-[var(--accent)]"
                 }`}
               >
@@ -118,7 +119,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
                         isActive
-                          ? "bg-[var(--primary)] bg-opacity-10 text-[var(--primary)]"
+                          ? "bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-200"
                           : "text-[var(--foreground)] hover:bg-[var(--accent)]"
                       }`}
                     >
@@ -134,7 +135,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         {/* User menu */}
         <div className="border-t border-[var(--border)] p-4">
           <Link
-            href="/profile"
+            href={`/${locale}/profile`}
             className="flex items-center hover:bg-[var(--accent)] rounded-lg p-2 -m-2 transition"
           >
             <div className="w-10 h-10 rounded-full bg-[var(--primary)] text-white flex items-center justify-center font-semibold">
@@ -169,11 +170,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           sidebarOpen ? "ml-64" : "ml-20"
         }`}
       >
-        {/* Header with language switcher */}
-        <header className="h-16 bg-[var(--card)] border-b border-[var(--border)] px-6 flex items-center justify-end">
-          <LanguageSwitcher />
-        </header>
-
         {/* Page content */}
         <main className="p-6">{children}</main>
       </div>

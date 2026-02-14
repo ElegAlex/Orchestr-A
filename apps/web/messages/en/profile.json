@@ -1,0 +1,62 @@
+{
+  "title": "My Profile",
+  "subtitle": "Manage your personal information and preferences",
+  "tabs": {
+    "personal": "Personal Information",
+    "security": "Security",
+    "preferences": "Preferences"
+  },
+  "personal": {
+    "title": "Personal Information",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "login": "Login",
+    "department": "Department",
+    "services": "Services",
+    "memberSince": "Member Since"
+  },
+  "security": {
+    "title": "Security",
+    "password": {
+      "title": "Password",
+      "description": "Change your password to secure your account",
+      "changeButton": "Change Password"
+    },
+    "loginHistory": {
+      "title": "Login History",
+      "lastLogin": "Last login:"
+    },
+    "changePasswordModal": {
+      "title": "Change Password",
+      "currentPassword": "Current password *",
+      "newPassword": "New password *",
+      "confirmPassword": "Confirm new password *",
+      "minLength": "At least 8 characters",
+      "cancel": "Cancel",
+      "save": "Update"
+    }
+  },
+  "preferences": {
+    "title": "Preferences",
+    "language": {
+      "title": "Language",
+      "fr": "Français",
+      "en": "English"
+    },
+    "theme": {
+      "title": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "auto": "Automatic"
+    },
+    "save": "Save Preferences"
+  },
+  "messages": {
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordChangeSuccess": "Password changed successfully",
+    "passwordChangeError": "Error changing password"
+  },
+  "loading": "Loading profile..."
+}

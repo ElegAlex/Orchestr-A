@@ -246,7 +246,7 @@ export const PlanningGrid = ({
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">{t("planning.loading")}</p>
+          <p className="mt-4 text-gray-600">{t("loading")}</p>
         </div>
       </div>
     );
@@ -320,7 +320,7 @@ export const PlanningGrid = ({
                     colSpan={displayDays.length + 1}
                     className="px-4 py-8 text-center text-gray-500"
                   >
-                    {t("planning.noResources")}
+                    {t("noResources")}
                   </td>
                 </tr>
               ) : (

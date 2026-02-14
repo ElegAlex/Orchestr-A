@@ -1,122 +1,122 @@
 {
-  "settings": {
-    "title": "Paramètres",
-    "subtitle": "Configuration globale de l'application",
-    "reset": "Réinitialiser",
-    "save": "Enregistrer",
-    "saving": "Enregistrement...",
-    "unsavedChanges": "Vous avez des modifications non enregistrées.",
-    "tabs": {
-      "display": "Affichage",
-      "holidays": "Jours feries"
-    },
-    "display": {
-      "title": "Paramètres d'affichage",
-      "dateFormat": {
-        "label": "Format de date",
-        "example": "Exemple :",
-        "options": {
-          "ddMMyyyy": "JJ/MM/AAAA (31/12/2025)",
-          "MMddyyyy": "MM/JJ/AAAA (12/31/2025)",
-          "yyyyMMdd": "AAAA-MM-JJ (2025-12-31)",
-          "dMMMMyyyy": "J Mois AAAA (31 décembre 2025)",
-          "EEEEdMMMMyyyy": "Jour J Mois AAAA (mercredi 31 décembre 2025)"
-        }
-      },
-      "timeFormat": {
-        "label": "Format d'heure",
-        "options": {
-          "HHmm": "24h (14:30)",
-          "HHmmss": "24h avec secondes (14:30:45)",
-          "hhmmaa": "12h (02:30 PM)"
-        }
-      },
-      "locale": {
-        "label": "Langue / Région",
-        "hint": "Affecte le format des noms de mois et jours de la semaine",
-        "options": {
-          "frFR": "Français (France)",
-          "enUS": "English (US)"
-        }
-      },
-      "weekStart": {
-        "label": "Premier jour de la semaine",
-        "options": {
-          "monday": "Lundi",
-          "sunday": "Dimanche"
-        }
-      }
-    },
-    "messages": {
-      "loadError": "Erreur lors du chargement des paramètres",
-      "saveSuccess": "Paramètres enregistrés avec succès",
-      "saveError": "Erreur lors de la sauvegarde",
-      "resetConfirm": "Êtes-vous sûr de vouloir réinitialiser tous les paramètres à leurs valeurs par défaut ?",
-      "resetSuccess": "Paramètres réinitialisés",
-      "resetError": "Erreur lors de la réinitialisation"
-    },
-    "loading": "Chargement..."
+  "title": "Paramètres",
+  "subtitle": "Configuration globale de l'application",
+  "reset": "Réinitialiser",
+  "save": "Enregistrer",
+  "saving": "Enregistrement...",
+  "unsavedChanges": "Vous avez des modifications non enregistrées.",
+  "tabs": {
+    "display": "Affichage",
+    "holidays": "Jours fériés"
   },
-  "profile": {
-    "title": "Mon profil",
-    "subtitle": "Gérez vos informations personnelles et vos préférences",
-    "tabs": {
-      "personal": "Informations personnelles",
-      "security": "Sécurité",
-      "preferences": "Préférences"
-    },
-    "personal": {
-      "title": "Informations personnelles",
-      "firstName": "Prénom",
-      "lastName": "Nom",
-      "email": "Email",
-      "login": "Login",
-      "department": "Département",
-      "services": "Services",
-      "memberSince": "Membre depuis"
-    },
-    "security": {
-      "title": "Sécurité",
-      "password": {
-        "title": "Mot de passe",
-        "description": "Modifiez votre mot de passe pour sécuriser votre compte",
-        "changeButton": "Changer le mot de passe"
-      },
-      "loginHistory": {
-        "title": "Historique de connexion",
-        "lastLogin": "Dernière connexion :"
-      },
-      "changePasswordModal": {
-        "title": "Changer le mot de passe",
-        "currentPassword": "Mot de passe actuel *",
-        "newPassword": "Nouveau mot de passe *",
-        "confirmPassword": "Confirmer le nouveau mot de passe *",
-        "minLength": "Au moins 8 caractères",
-        "cancel": "Annuler",
-        "save": "Modifier"
+  "display": {
+    "title": "Paramètres d'affichage",
+    "dateFormat": {
+      "label": "Format de date",
+      "example": "Exemple :",
+      "options": {
+        "ddMMyyyy": "JJ/MM/AAAA (31/12/2025)",
+        "MMddyyyy": "MM/JJ/AAAA (12/31/2025)",
+        "yyyyMMdd": "AAAA-MM-JJ (2025-12-31)",
+        "dMMMMyyyy": "J Mois AAAA (31 décembre 2025)",
+        "EEEEdMMMMyyyy": "Jour J Mois AAAA (mercredi 31 décembre 2025)"
       }
     },
-    "preferences": {
-      "title": "Préférences",
-      "language": {
-        "title": "Langue",
-        "fr": "Français",
-        "en": "English"
+    "timeFormat": {
+      "label": "Format d'heure",
+      "options": {
+        "HHmm": "24h (14:30)",
+        "HHmmss": "24h avec secondes (14:30:45)",
+        "hhmmaa": "12h (02:30 PM)"
+      }
+    },
+    "locale": {
+      "label": "Langue / Région",
+      "hint": "Affecte le format des noms de mois et jours de la semaine",
+      "options": {
+        "frFR": "Français (France)",
+        "enUS": "English (US)"
+      }
+    },
+    "weekStart": {
+      "label": "Premier jour de la semaine",
+      "options": {
+        "monday": "Lundi",
+        "sunday": "Dimanche"
+      }
+    }
+  },
+  "messages": {
+    "loadError": "Erreur lors du chargement des paramètres",
+    "saveSuccess": "Paramètres enregistrés avec succès",
+    "saveError": "Erreur lors de la sauvegarde",
+    "resetConfirm": "Êtes-vous sûr de vouloir réinitialiser tous les paramètres à leurs valeurs par défaut ?",
+    "resetSuccess": "Paramètres réinitialisés",
+    "resetError": "Erreur lors de la réinitialisation"
+  },
+  "loading": "Chargement...",
+  "holidays": {
+    "title": "Jours fériés",
+    "importButton": "Importer fériés FR {year}",
+    "addButton": "Ajouter un jour",
+    "table": {
+      "headers": {
+        "date": "Date",
+        "name": "Libellé",
+        "type": "Type",
+        "isWorkDay": "Jour ouvré",
+        "description": "Description",
+        "actions": "Actions"
       },
-      "theme": {
-        "title": "Thème",
-        "light": "Clair",
-        "dark": "Sombre",
-        "auto": "Automatique"
+      "empty": "Aucun jour férié déclaré pour {year}"
+    },
+    "stats": {
+      "total": "Total jours fériés",
+      "nonWorkDays": "Jours chômés",
+      "workDays": "Jours ouvrés",
+      "legal": "Fériés légaux"
+    },
+    "modal": {
+      "titleEdit": "Modifier le jour férié",
+      "titleCreate": "Ajouter un jour férié",
+      "fields": {
+        "date": "Date",
+        "name": "Nom",
+        "type": "Type",
+        "description": "Description (optionnel)",
+        "isWorkDay": "Jour ouvré",
+        "isWorkDayHint": "Si activé, ce jour compte comme un jour travaillé",
+        "recurring": "Récurrent",
+        "recurringHint": "Se répète automatiquement chaque année"
       },
-      "save": "Enregistrer les préférences"
+      "placeholders": {
+        "name": "Ex: Jour de l'An",
+        "description": "Notes ou précisions..."
+      },
+      "buttons": {
+        "update": "Mettre à jour",
+        "saving": "Enregistrement..."
+      }
     },
     "messages": {
-      "passwordMismatch": "Les mots de passe ne correspondent pas",
-      "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
-      "passwordChangeSuccess": "Mot de passe modifié avec succès",
-      "passwordChangeError": "Erreur lors du changement de mot de passe"
+      "loadError": "Erreur lors du chargement des jours fériés",
+      "deleteSuccess": "Jour férié supprimé",
+      "deleteError": "Erreur lors de la suppression",
+      "importSuccess": "Import terminé : {created} créé(s), {skipped} déjà existant(s)",
+      "importError": "Erreur lors de l'import",
+      "updateStatusSuccess": "Statut mis à jour",
+      "updateStatusError": "Erreur lors de la mise à jour",
+      "updateSuccess": "Jour férié mis à jour",
+      "createSuccess": "Jour férié créé avec succès",
+      "saveError": "Erreur lors de l'enregistrement",
+      "nameRequired": "Le nom du jour férié est obligatoire",
+      "dateRequired": "La date est obligatoire"
     },
-    "loading": "Chargement du profil..."
+    "tooltips": {
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "confirm": "Confirmer",
+      "cancel": "Annuler"
+    }
   }
 }

@@ -10,6 +10,7 @@ import {
 } from "@/types";
 import { holidaysService } from "@/services/holidays.service";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 interface HolidayModalProps {
   isOpen: boolean;
@@ -26,6 +27,9 @@ export function HolidayModal({
   holiday,
   defaultYear,
 }: HolidayModalProps) {
+  const t = useTranslations("settings.holidays");
+  const tCommon = useTranslations("common.actions");
+
   const isEditing = !!holiday;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -65,12 +69,12 @@ export function HolidayModal({
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      toast.error("Le nom du jour ferie est obligatoire");
+      toast.error(t("messages.nameRequired"));
       return;
     }
 
     if (!formData.date) {
-      toast.error("La date est obligatoire");
+      toast.error(t("messages.dateRequired"));
       return;
     }
 
@@ -87,17 +91,17 @@ export function HolidayModal({
           recurring: formData.recurring,
         };
         await holidaysService.update(holiday.id, updateData);
-        toast.success("Jour ferie mis a jour");
+        toast.success(t("messages.updateSuccess"));
       } else {
         await holidaysService.create(formData);
-        toast.success("Jour ferie cree avec succes");
+        toast.success(t("messages.createSuccess"));
       }
       onSuccess();
       onClose();
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       const message =
-        error.response?.data?.message || "Erreur lors de l'enregistrement";
+        error.response?.data?.message || t("messages.saveError");
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -123,7 +127,7 @@ export function HolidayModal({
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">
-              {isEditing ? "Modifier le jour ferie" : "Ajouter un jour ferie"}
+              {isEditing ? t("modal.titleEdit") : t("modal.titleCreate")}
             </h2>
             <button
               onClick={onClose}
@@ -150,7 +154,7 @@ export function HolidayModal({
           {/* Date */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Date <span className="text-red-500">*</span>
+              {t("modal.fields.date")} <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
@@ -171,7 +175,7 @@ export function HolidayModal({
           {/* Nom */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Nom <span className="text-red-500">*</span>
+              {t("modal.fields.name")} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -181,7 +185,7 @@ export function HolidayModal({
                 setFormData({ ...formData, name: e.target.value })
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Ex: Jour de l'An"
+              placeholder={t("modal.placeholders.name")}
               maxLength={100}
             />
           </div>
@@ -189,7 +193,7 @@ export function HolidayModal({
           {/* Type */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Type
+              {t("modal.fields.type")}
             </label>
             <select
               value={formData.type}
@@ -212,7 +216,7 @@ export function HolidayModal({
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Description (optionnel)
+              {t("modal.fields.description")}
             </label>
             <textarea
               value={formData.description}
@@ -221,7 +225,7 @@ export function HolidayModal({
               }
               rows={3}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              placeholder="Notes ou precisions..."
+              placeholder={t("modal.placeholders.description")}
               maxLength={255}
             />
           </div>
@@ -230,10 +234,10 @@ export function HolidayModal({
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
               <label className="text-sm font-medium text-gray-900">
-                Jour ouvre
+                {t("modal.fields.isWorkDay")}
               </label>
               <p className="text-sm text-gray-500">
-                Si active, ce jour compte comme un jour travaille
+                {t("modal.fields.isWorkDayHint")}
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -253,10 +257,10 @@ export function HolidayModal({
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
               <label className="text-sm font-medium text-gray-900">
-                Recurrent
+                {t("modal.fields.recurring")}
               </label>
               <p className="text-sm text-gray-500">
-                Se repete automatiquement chaque annee
+                {t("modal.fields.recurringHint")}
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -280,7 +284,7 @@ export function HolidayModal({
               disabled={isSubmitting}
               className="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
             >
-              Annuler
+              {tCommon("cancel")}
             </button>
             <button
               type="submit"
@@ -309,10 +313,10 @@ export function HolidayModal({
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  <span>Enregistrement...</span>
+                  <span>{t("modal.buttons.saving")}</span>
                 </>
               ) : (
-                <span>{isEditing ? "Mettre a jour" : "Creer"}</span>
+                <span>{isEditing ? t("modal.buttons.update") : tCommon("create")}</span>
               )}
             </button>
           </div>

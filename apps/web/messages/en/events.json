@@ -1,11 +1,9 @@
 {
-  "events": {
-    "title": "Events",
-    "count": "{count} event",
-    "countPlural": "{count} events",
-    "noEvents": "No events found",
-    "createEvent": "Create an event"
-  },
+  "title": "Events",
+  "count": "{count} event",
+  "countPlural": "{count} events",
+  "noEvents": "No events found",
+  "createEvent": "Create an event",
   "view": {
     "list": "List",
     "calendar": "Calendar",

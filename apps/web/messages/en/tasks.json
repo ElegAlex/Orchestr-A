@@ -108,7 +108,21 @@
       "schedule": "Schedule"
     },
     "dependencies": {
-      "selectPlaceholder": "Select tasks this task depends on"
+      "label": "Dependencies",
+      "selectPlaceholder": "Select tasks this task depends on",
+      "noTaskFound": "No task found",
+      "noTaskAvailable": "No task available",
+      "dateConflict": "Potential date conflict",
+      "helperText": "Select tasks that must be completed before this one",
+      "endLabel": "End:",
+      "modifyTitle": "Modify dependencies",
+      "prerequisitesLabel": "Prerequisites",
+      "selectedCount": "{{count}} dependenc{{count, plural, one {y} other {ies}}} selected",
+      "conflictCount": "including {{count}} date conflict{{count, plural, one {} other {s}}}",
+      "dependsOn": "Depends on ({{count}})",
+      "blocks": "Blocks ({{count}})",
+      "noDependents": "No dependent tasks",
+      "viewDetails": "View details"
     }
   },
 

@@ -2,19 +2,21 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import { useAuthStore } from "@/stores/auth.store";
 
 export default function Home() {
   const router = useRouter();
+  const locale = useLocale();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.isLoading);
 
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated) {
-        router.push("/dashboard");
+        router.push(`/${locale}/dashboard`);
       } else {
-        router.push("/login");
+        router.push(`/${locale}/login`);
       }
     }
   }, [isAuthenticated, isLoading, router]);

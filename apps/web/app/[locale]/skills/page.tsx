@@ -61,7 +61,7 @@ export default function SkillsPage() {
       );
       setSkills(response.data || []);
     } catch (err) {
-      console.error("Erreur lors du chargement des compétences:", err);
+      console.error(t("messages.loadError"), err);
     } finally {
       setLoading(false);
     }
@@ -78,7 +78,7 @@ export default function SkillsPage() {
         setSelectedUser((prev) => prev || usersData[0].id);
       }
     } catch (err) {
-      console.error("Erreur lors du chargement des utilisateurs:", err);
+      console.error("Error loading users:", err);
     }
   }, []);
 
@@ -100,7 +100,7 @@ export default function SkillsPage() {
       setUserSkills(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error(
-        "Erreur lors du chargement des compétences utilisateur:",
+        "Error loading user skills:",
         err,
       );
       setUserSkills([]);
@@ -126,7 +126,7 @@ export default function SkillsPage() {
       });
       fetchSkills();
     } catch {
-      toast.error("Erreur lors de la création");
+      toast.error(t("messages.createError"));
     }
   };
 
@@ -152,7 +152,7 @@ export default function SkillsPage() {
       });
       fetchSkills();
     } catch {
-      toast.error("Erreur lors de la modification");
+      toast.error(t("messages.updateError"));
     }
   };
 
@@ -164,7 +164,7 @@ export default function SkillsPage() {
       toast.success(t("messages.deleted"));
       fetchSkills();
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error(t("messages.deleteError"));
     }
   };
 
@@ -212,7 +212,7 @@ export default function SkillsPage() {
       setSkillsToAssign([]);
       await fetchUserSkills(selectedUser);
     } catch {
-      toast.error("Erreur lors de l'assignation");
+      toast.error(t("messages.assignError"));
     }
   };
 
@@ -224,7 +224,7 @@ export default function SkillsPage() {
       toast.success(t("messages.removed"));
       fetchUserSkills(userId);
     } catch {
-      toast.error("Erreur lors du retrait");
+      toast.error(t("messages.removeError"));
     }
   };
 
@@ -238,7 +238,7 @@ export default function SkillsPage() {
       toast.success(t("messages.levelUpdated"));
       fetchUserSkills(userId);
     } catch {
-      toast.error("Erreur lors de la mise à jour");
+      toast.error(t("messages.levelUpdateError"));
     }
   };
 
@@ -284,7 +284,7 @@ export default function SkillsPage() {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-96">
-          <p className="text-gray-600">Chargement...</p>
+          <p className="text-gray-600">{t("loading")}</p>
         </div>
       </MainLayout>
     );
@@ -409,13 +409,13 @@ export default function SkillsPage() {
                     <div className="text-center py-12">
                       <div className="text-6xl mb-4">🎯</div>
                       <p className="text-gray-500 mb-4">
-                        Aucune compétence assignée
+                        {t("userView.noSkills")}
                       </p>
                       <button
                         onClick={() => setShowAssignModal(true)}
                         className="text-blue-600 hover:text-blue-800"
                       >
-                        Ajouter des compétences
+                        {t("userView.addSkillsPrompt")}
                       </button>
                     </div>
                   ) : (
@@ -525,10 +525,10 @@ export default function SkillsPage() {
             {/* Table des compétences */}
             <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
               {loading ? (
-                <div className="p-4 text-center">Chargement...</div>
+                <div className="p-4 text-center">{t("loading")}</div>
               ) : skills.length === 0 ? (
                 <div className="p-4 text-center text-gray-500">
-                  Aucune compétence trouvée
+                  {t("skillsView.noSkills")}
                 </div>
               ) : (
                 <table className="min-w-full divide-y divide-gray-200">
@@ -584,7 +584,7 @@ export default function SkillsPage() {
                               onClick={() => openEditModal(skill)}
                               className="text-blue-600 hover:text-blue-900 mr-4"
                             >
-                              Modifier
+                              {t("actions.edit")}
                             </button>
                             <button
                               onClick={() =>
@@ -592,7 +592,7 @@ export default function SkillsPage() {
                               }
                               className="text-red-600 hover:text-red-900"
                             >
-                              Supprimer
+                              {t("actions.delete")}
                             </button>
                           </td>
                         )}
@@ -648,7 +648,7 @@ export default function SkillsPage() {
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="">Sélectionner</option>
+                    <option value="">{t("modals.categorySelect")}</option>
                     <option value="TECHNICAL">Technique</option>
                     <option value="METHODOLOGY">Méthodologie</option>
                     <option value="SOFT_SKILL">Soft Skills</option>
@@ -699,13 +699,13 @@ export default function SkillsPage() {
                     onClick={() => setShowCreateSkillModal(false)}
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
-                    Annuler
+                    {tc("actions.cancel")}
                   </button>
                   <button
                     type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
-                    Créer
+                    {tc("actions.create")}
                   </button>
                 </div>
               </form>
@@ -800,13 +800,13 @@ export default function SkillsPage() {
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
-                    Annuler
+                    {tc("actions.cancel")}
                   </button>
                   <button
                     type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
-                    Modifier
+                    {t("actions.edit")}
                   </button>
                 </div>
               </form>
@@ -904,7 +904,7 @@ export default function SkillsPage() {
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
-                    Annuler
+                    {tc("actions.cancel")}
                   </button>
                   <button
                     type="submit"

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { PlanningView } from "@/components/planning/PlanningView";
 import { useAuthStore } from "@/stores/auth.store";
@@ -22,6 +22,7 @@ const MAX_TODOS = 20;
 
 export default function DashboardPage() {
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
   const user = useAuthStore((state) => state.user);
@@ -515,7 +516,7 @@ export default function DashboardPage() {
                   <div
                     key={task.id}
                     className="p-4 bg-[var(--muted)] rounded-lg hover:bg-[var(--accent)] transition cursor-pointer"
-                    onClick={() => router.push(`/tasks/${task.id}`)}
+                    onClick={() => router.push(`/${locale}/tasks/${task.id}`)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -653,7 +654,7 @@ export default function DashboardPage() {
                 {myProjects.map((project) => (
                   <div
                     key={project.id}
-                    onClick={() => router.push(`/projects/${project.id}`)}
+                    onClick={() => router.push(`/${locale}/projects/${project.id}`)}
                     className="p-4 border border-[var(--border)] rounded-lg hover:border-[var(--primary)] transition cursor-pointer"
                   >
                     <h3 className="font-semibold text-[var(--foreground)]">

@@ -8,7 +8,7 @@ import { Task as FullTask } from "@/types";
 import { TaskDependencyInfo } from "./TaskDependencyInfo";
 import { TaskDependencyModal } from "./TaskDependencyModal";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 interface GanttTask {
   id: string;
@@ -46,6 +46,7 @@ export default function GanttChart({
   onDependencyChange,
 }: GanttChartProps) {
   const t = useTranslations("projects");
+  const locale = useLocale();
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const [ganttTasks, setGanttTasks] = useState<Task[]>([]);
@@ -106,7 +107,7 @@ export default function GanttChart({
   const handleNavigate = useCallback(
     (taskId: string) => {
       setSelectedTaskForInfo(null);
-      router.push(`/tasks/${taskId}`);
+      router.push(`/${locale}/tasks/${taskId}`);
     },
     [router],
   );

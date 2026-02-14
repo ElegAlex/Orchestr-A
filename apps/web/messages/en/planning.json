@@ -1,14 +1,12 @@
 {
-  "planning": {
-    "title": "Resource Planning",
-    "week": "Week",
-    "month": "Month",
-    "today": "Today",
-    "createTask": "Create a task",
-    "weekOf": "Week of {start} to {end}",
-    "loading": "Loading planning...",
-    "noResources": "No resources to display"
-  },
+  "title": "Resource Planning",
+  "week": "Week",
+  "month": "Month",
+  "today": "Today",
+  "createTask": "Create a task",
+  "weekOf": "Week of {start} to {end}",
+  "loading": "Loading planning...",
+  "noResources": "No resources to display",
   "filters": {
     "services": "Services:",
     "noService": "No service",

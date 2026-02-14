@@ -167,10 +167,10 @@ export const PlanningView = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title || t("planning.title")}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{title || t("title")}</h1>
           <p className="text-gray-600 mt-1">
             {viewMode === "week"
-              ? t("planning.weekOf", {
+              ? t("weekOf", {
                   start: format(displayDays[0] || new Date(), "dd MMM", {
                     locale: dateLocale,
                   }),
@@ -193,7 +193,7 @@ export const PlanningView = ({
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
             >
               <span>+</span>
-              <span>{t("planning.createTask")}</span>
+              <span>{t("createTask")}</span>
             </button>
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
@@ -204,7 +204,7 @@ export const PlanningView = ({
                     : "text-gray-600"
                 }`}
               >
-                {t("planning.week")}
+                {t("week")}
               </button>
               <button
                 onClick={() => setViewMode("month")}
@@ -214,7 +214,7 @@ export const PlanningView = ({
                     : "text-gray-600"
                 }`}
               >
-                {t("planning.month")}
+                {t("month")}
               </button>
             </div>
             <button
@@ -237,7 +237,7 @@ export const PlanningView = ({
               onClick={() => setCurrentDate(new Date())}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
             >
-              {t("planning.today")}
+              {t("today")}
             </button>
             <button
               onClick={() =>

@@ -163,6 +163,7 @@
   "skills": {
     "title": "Gestion des Compétences",
     "subtitle": "Gérez les compétences des utilisateurs",
+    "loading": "Chargement...",
     "newSkill": "Nouvelle compétence",
     "categories": {
       "TECHNICAL": "Technique",
@@ -262,11 +263,19 @@
       "confirmDelete": "Êtes-vous sûr de vouloir supprimer \"{name}\" ?",
       "confirmRemove": "Retirer cette compétence ?",
       "matrixUpdated": "Competence retiree",
-      "matrixLevelUpdated": "Niveau mis a jour"
+      "matrixLevelUpdated": "Niveau mis a jour",
+      "loadError": "Erreur lors du chargement des compétences",
+      "createError": "Erreur lors de la création",
+      "updateError": "Erreur lors de la modification",
+      "deleteError": "Erreur lors de la suppression",
+      "assignError": "Erreur lors de l'assignation",
+      "removeError": "Erreur lors du retrait",
+      "levelUpdateError": "Erreur lors de la mise à jour"
     }
   },
   "timeTracking": {
     "title": "Temps passé",
+    "loading": "Chargement...",
     "newEntry": "Saisir du temps",
     "stats": "{count} entrée(s) - {hours}h au total",
     "noEntries": "Aucune entrée de temps",
@@ -308,7 +317,10 @@
       "created": "Temps enregistré avec succès",
       "deleted": "Entrée supprimée",
       "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette entrée ?",
-      "createdOn": "Créé le"
+      "createdOn": "Créé le",
+      "loadError": "Erreur lors du chargement des données",
+      "saveError": "Erreur lors de l'enregistrement",
+      "deleteError": "Erreur lors de la suppression"
     }
   }
 }

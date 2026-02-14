@@ -223,6 +223,7 @@
   "roles": {
     "title": "Role Management",
     "description": "Configure roles and permissions",
+    "loading": "Loading...",
     "table": {
       "name": "Name",
       "code": "Code",
@@ -231,6 +232,8 @@
     },
     "create": "Create Role",
     "delete": "Delete Role",
+    "edit": "Edit",
+    "close": "Close",
     "systemBadge": "System",
     "permissionMatrix": "Permission Matrix",
     "selectAll": "Select All",
@@ -239,6 +242,20 @@
     "noRoles": "No roles configured",
     "confirmDelete": "Are you sure you want to delete this role?",
     "cannotDeleteSystem": "System roles cannot be deleted",
+    "messages": {
+      "loadError": "Error loading roles",
+      "loadPermissionsError": "Error loading permissions",
+      "createSuccess": "Role created successfully",
+      "createError": "Error creating role",
+      "updateSuccess": "Role updated successfully",
+      "updateError": "Error updating role",
+      "deleteSuccess": "Role deleted",
+      "deleteError": "Error deleting role",
+      "saveSuccess": "Permissions saved",
+      "saveError": "Error saving permissions",
+      "initSuccess": "{permissionsCreated} permissions and {rolesCreated} roles initialized",
+      "initError": "Error initializing"
+    },
     "modules": {
       "projects": "Projects",
       "tasks": "Tasks",

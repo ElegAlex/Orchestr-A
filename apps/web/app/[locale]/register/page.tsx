@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
@@ -10,6 +11,8 @@ import toast from "react-hot-toast";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("auth");
   const setUser = useAuthStore((state) => state.setUser);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,7 +29,7 @@ export default function RegisterPage() {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas");
+      toast.error(t("register.errors.passwordMismatch"));
       return;
     }
 
@@ -37,12 +40,12 @@ export default function RegisterPage() {
       const { confirmPassword: _unused, ...registerData } = formData;
       const response = await authService.register(registerData);
       setUser(response.user);
-      toast.success("Inscription réussie !");
-      router.push("/dashboard");
+      toast.success(t("register.success"));
+      router.push(`/${locale}/dashboard`);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || "Erreur lors de l'inscription",
+        axiosError.response?.data?.message || t("register.errors.generic"),
       );
     } finally {
       setLoading(false);
@@ -54,9 +57,9 @@ export default function RegisterPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            ORCHESTR&apos;A V2
+            {t("appName")}
           </h1>
-          <p className="text-gray-600">Créer un compte</p>
+          <p className="text-gray-600">{t("register.subtitle")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -66,7 +69,7 @@ export default function RegisterPage() {
                 htmlFor="firstName"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Prénom
+                {t("register.firstName")}
               </label>
               <input
                 id="firstName"
@@ -85,7 +88,7 @@ export default function RegisterPage() {
                 htmlFor="lastName"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Nom
+                {t("register.lastName")}
               </label>
               <input
                 id="lastName"
@@ -105,7 +108,7 @@ export default function RegisterPage() {
               htmlFor="email"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Email
+              {t("register.email")}
             </label>
             <input
               id="email"
@@ -124,7 +127,7 @@ export default function RegisterPage() {
               htmlFor="login"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Identifiant
+              {t("register.loginLabel")}
             </label>
             <input
               id="login"
@@ -143,7 +146,7 @@ export default function RegisterPage() {
               htmlFor="password"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Mot de passe
+              {t("register.password")}
             </label>
             <input
               id="password"
@@ -162,7 +165,7 @@ export default function RegisterPage() {
               htmlFor="confirmPassword"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Confirmer le mot de passe
+              {t("register.confirmPassword")}
             </label>
             <input
               id="confirmPassword"
@@ -181,18 +184,18 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {loading ? "Inscription..." : "S'inscrire"}
+            {loading ? t("register.submitting") : t("register.submit")}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Déjà un compte ?{" "}
+            {t("register.hasAccount")}{" "}
             <Link
-              href="/login"
+              href={`/${locale}/login`}
               className="text-blue-600 hover:text-blue-700 font-medium"
             >
-              Se connecter
+              {t("register.login")}
             </Link>
           </p>
         </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Milestone, Task, MilestoneStatus, TaskStatus } from "@/types";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { tasksService } from "@/services/tasks.service";
 import toast from "react-hot-toast";
 
@@ -22,20 +23,25 @@ export function MilestoneCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations('projects.detail.milestones');
+  const tTask = useTranslations('tasks.status');
+  const tProjects = useTranslations('projects.messages');
+  const tProjectTasks = useTranslations('projects.detail.tasks');
 
   // Handler pour changer le statut d'une tâche
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     setUpdatingTaskId(taskId);
     try {
       await tasksService.update(taskId, { status: newStatus });
-      toast.success("Statut de la tâche mis à jour");
+      toast.success(t('taskStatusUpdated'));
       if (onTaskUpdate) {
         onTaskUpdate();
       }
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || "Erreur lors de la mise à jour",
+        error.response?.data?.message || tProjects('statusUpdateError'),
       );
     } finally {
       setUpdatingTaskId(null);
@@ -47,31 +53,31 @@ export function MilestoneCard({
     switch (status) {
       case TaskStatus.DONE:
         return {
-          label: "Terminé",
+          label: tTask('DONE'),
           bgClass: "bg-green-100",
           textClass: "text-green-800",
         };
       case TaskStatus.IN_PROGRESS:
         return {
-          label: "En cours",
+          label: tTask('IN_PROGRESS'),
           bgClass: "bg-blue-100",
           textClass: "text-blue-800",
         };
       case TaskStatus.IN_REVIEW:
         return {
-          label: "En revue",
+          label: tTask('IN_REVIEW'),
           bgClass: "bg-yellow-100",
           textClass: "text-yellow-800",
         };
       case TaskStatus.BLOCKED:
         return {
-          label: "Bloqué",
+          label: tTask('BLOCKED'),
           bgClass: "bg-red-100",
           textClass: "text-red-800",
         };
       default:
         return {
-          label: "À faire",
+          label: tTask('TODO'),
           bgClass: "bg-gray-100",
           textClass: "text-gray-800",
         };
@@ -87,7 +93,7 @@ export function MilestoneCard({
     if (tasks.length === 0) {
       return {
         status: MilestoneStatus.PENDING,
-        label: "À venir",
+        label: t('status.pending'),
         color: "#9e9e9e",
       };
     }
@@ -102,20 +108,20 @@ export function MilestoneCard({
     if (completedTasks.length === tasks.length) {
       return {
         status: MilestoneStatus.COMPLETED,
-        label: "Terminé",
+        label: t('status.completed'),
         color: "#4caf50",
       };
     }
     if (inProgressTasks.length > 0 || completedTasks.length > 0) {
       return {
         status: MilestoneStatus.IN_PROGRESS,
-        label: "En cours",
+        label: t('status.inProgress'),
         color: "#ff9800",
       };
     }
     return {
       status: MilestoneStatus.PENDING,
-      label: "À venir",
+      label: t('status.pending'),
       color: "#9e9e9e",
     };
   };
@@ -162,7 +168,7 @@ export function MilestoneCard({
               <button
                 onClick={onEdit}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
-                title="Modifier le jalon"
+                title={t('editMilestone')}
               >
                 <svg
                   className="w-4 h-4"
@@ -195,12 +201,12 @@ export function MilestoneCard({
             <span>📅</span>
             <span>
               {milestone.dueDate
-                ? new Date(milestone.dueDate).toLocaleDateString("fr-FR", {
+                ? new Date(milestone.dueDate).toLocaleDateString(locale, {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",
                   })
-                : "Pas de date"}
+                : t('noDate')}
             </span>
           </div>
         </div>
@@ -208,7 +214,7 @@ export function MilestoneCard({
         {/* Tâches et contributeurs */}
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm text-gray-600">
-            {tasks.length} tâche{tasks.length > 1 ? "s" : ""}
+            {t('taskCount', { count: tasks.length })}
           </div>
           {contributors.length > 0 && (
             <div className="flex -space-x-2">
@@ -229,7 +235,7 @@ export function MilestoneCard({
         {/* Barre de progression */}
         <div className="mb-4">
           <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-            <span>Progression</span>
+            <span>{t('progress')}</span>
             <span className="font-medium">{progressPercent}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -249,8 +255,8 @@ export function MilestoneCard({
           className="w-full flex items-center justify-center space-x-2 text-sm text-gray-600 hover:text-gray-900 py-2 hover:bg-gray-50 rounded-lg transition"
         >
           <span>
-            {isExpanded ? "▲" : "▼"} {isExpanded ? "Masquer" : "Voir"}{" "}
-            {tasks.length} tâche{tasks.length > 1 ? "s" : ""}
+            {isExpanded ? "▲" : "▼"} {isExpanded ? t('hide') : t('show')}{" "}
+            {t('taskCount', { count: tasks.length })}
           </span>
         </button>
 
@@ -259,7 +265,7 @@ export function MilestoneCard({
           <div className="mt-4 space-y-2 border-t border-gray-200 pt-4">
             {tasks.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-4">
-                Aucune tâche associée
+                {t('noTasks')}
               </p>
             ) : (
               tasks.map((task) => {
@@ -276,14 +282,14 @@ export function MilestoneCard({
                         </span>
                         <span
                           className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600"
-                          onClick={() => router.push(`/tasks/${task.id}`)}
+                          onClick={() => router.push(`/${locale}/tasks/${task.id}`)}
                         >
                           {task.title}
                         </span>
                       </div>
                       {task.estimatedHours && (
                         <div className="text-xs text-gray-500 ml-5 mt-1">
-                          ⏱️ {task.estimatedHours}h estimées
+                          {tProjectTasks('estimatedHours', { hours: task.estimatedHours })}
                         </div>
                       )}
                     </div>
@@ -303,31 +309,31 @@ export function MilestoneCard({
                         value={TaskStatus.TODO}
                         className="bg-white text-gray-800"
                       >
-                        À faire
+                        {tTask('TODO')}
                       </option>
                       <option
                         value={TaskStatus.IN_PROGRESS}
                         className="bg-white text-gray-800"
                       >
-                        En cours
+                        {tTask('IN_PROGRESS')}
                       </option>
                       <option
                         value={TaskStatus.IN_REVIEW}
                         className="bg-white text-gray-800"
                       >
-                        En revue
+                        {tTask('IN_REVIEW')}
                       </option>
                       <option
                         value={TaskStatus.BLOCKED}
                         className="bg-white text-gray-800"
                       >
-                        Bloqué
+                        {tTask('BLOCKED')}
                       </option>
                       <option
                         value={TaskStatus.DONE}
                         className="bg-white text-gray-800"
                       >
-                        Terminé
+                        {tTask('DONE')}
                       </option>
                     </select>
                   </div>

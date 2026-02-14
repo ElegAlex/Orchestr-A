@@ -7,6 +7,7 @@ import {
   getStatusColorClass,
   getStatusLabel,
 } from "@/utils/dependencyValidation";
+import { useTranslations } from "next-intl";
 
 interface TaskDependencySelectorProps {
   currentTaskId: string;
@@ -26,13 +27,17 @@ export function TaskDependencySelector({
   availableTasks,
   onChange,
   disabled = false,
-  label = "Dependances",
-  placeholder = "Selectionner les taches dont depend cette tache",
+  label,
+  placeholder,
 }: TaskDependencySelectorProps) {
+  const t = useTranslations("tasks.detail.dependencies");
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const defaultLabel = label || t("label");
+  const defaultPlaceholder = placeholder || t("selectPlaceholder");
 
   // Close on outside click
   useEffect(() => {
@@ -77,9 +82,9 @@ export function TaskDependencySelector({
 
   return (
     <div className="relative" ref={containerRef}>
-      {label && (
+      {defaultLabel && (
         <label className="block text-sm font-medium text-gray-900 mb-2">
-          {label}
+          {defaultLabel}
         </label>
       )}
 
@@ -155,13 +160,17 @@ export function TaskDependencySelector({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsOpen(true)}
-            placeholder={selectedTasks.length === 0 ? placeholder : ""}
+            placeholder={
+              selectedTasks.length === 0 ? defaultPlaceholder : ""
+            }
             className="flex-1 min-w-[150px] outline-none bg-transparent text-gray-900 placeholder-gray-500"
           />
         )}
 
         {selectedTasks.length === 0 && disabled && (
-          <span className="text-gray-500 text-sm">Aucune dependance</span>
+          <span className="text-gray-500 text-sm">
+            {t("../../sections.noDependencies")}
+          </span>
         )}
       </div>
 
@@ -170,7 +179,7 @@ export function TaskDependencySelector({
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {filteredTasks.length === 0 ? (
             <div className="px-3 py-4 text-sm text-gray-500 text-center">
-              {searchQuery ? "Aucune tache trouvee" : "Aucune tache disponible"}
+              {searchQuery ? t("noTaskFound") : t("noTaskAvailable")}
             </div>
           ) : (
             filteredTasks.map((task) => {
@@ -220,7 +229,7 @@ export function TaskDependencySelector({
                         {task.title}
                       </span>
                       {hasConflict && (
-                        <span title="Conflit de dates potentiel">
+                        <span title={t("dateConflict")}>
                           <svg
                             className="w-4 h-4 text-amber-500 flex-shrink-0"
                             fill="none"
@@ -245,7 +254,7 @@ export function TaskDependencySelector({
                       </span>
                       {task.endDate && (
                         <span className="text-xs text-gray-500">
-                          Fin:{" "}
+                          {t("endLabel")}{" "}
                           {new Date(task.endDate).toLocaleDateString("fr-FR")}
                         </span>
                       )}
@@ -259,9 +268,7 @@ export function TaskDependencySelector({
       )}
 
       {/* Helper text */}
-      <p className="mt-1 text-xs text-gray-500">
-        Selectionnez les taches qui doivent etre terminees avant celle-ci
-      </p>
+      <p className="mt-1 text-xs text-gray-500">{t("helperText")}</p>
     </div>
   );
 }
