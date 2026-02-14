@@ -3,6 +3,11 @@
   "week": "Semaine",
   "month": "Mois",
   "today": "Aujourd'hui",
+  "create": "Créer",
+  "createMenu": {
+    "task": "Tâche",
+    "event": "Événement"
+  },
   "createTask": "Créer une tâche",
   "weekOf": "Semaine du {start} au {end}",
   "loading": "Chargement du planning...",

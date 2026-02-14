@@ -5,6 +5,7 @@ import { addWeeks, subWeeks, format } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import { PlanningGrid } from "./PlanningGrid";
 import { TaskCreateModal } from "./TaskCreateModal";
+import { EventCreateModal } from "./EventCreateModal";
 import { usePlanningData } from "@/hooks/usePlanningData";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePlanningViewStore } from "@/stores/planningView.store";
@@ -43,6 +44,9 @@ export const PlanningView = ({
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [hasInitializedServices, setHasInitializedServices] = useState(false);
   const [showTaskCreateModal, setShowTaskCreateModal] = useState(false);
+  const [showEventCreateModal, setShowEventCreateModal] = useState(false);
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const createMenuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { user: currentUser } = useAuthStore();
@@ -143,6 +147,20 @@ export const PlanningView = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fermer le menu créer quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        createMenuRef.current &&
+        !createMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowCreateMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const toggleService = (serviceId: string) => {
     setSelectedServices((prev) =>
       prev.includes(serviceId)
@@ -187,14 +205,43 @@ export const PlanningView = ({
         </div>
         {showControls && (
           <div className="flex items-center space-x-4">
-            {/* Bouton Créer une tâche */}
-            <button
-              onClick={() => setShowTaskCreateModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
-            >
-              <span>+</span>
-              <span>{t("createTask")}</span>
-            </button>
+            {/* Bouton Créer avec dropdown */}
+            <div className="relative" ref={createMenuRef}>
+              <button
+                onClick={() => setShowCreateMenu(!showCreateMenu)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
+              >
+                <span>+</span>
+                <span>{t("create")}</span>
+                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showCreateMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-1">
+                  <button
+                    onClick={() => {
+                      setShowTaskCreateModal(true);
+                      setShowCreateMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition flex items-center space-x-2"
+                  >
+                    <span>📋</span>
+                    <span>{t("createMenu.task")}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowEventCreateModal(true);
+                      setShowCreateMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition flex items-center space-x-2"
+                  >
+                    <span>📅</span>
+                    <span>{t("createMenu.event")}</span>
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setViewMode("week")}
@@ -500,6 +547,11 @@ export const PlanningView = ({
       <TaskCreateModal
         isOpen={showTaskCreateModal}
         onClose={() => setShowTaskCreateModal(false)}
+        onSuccess={() => refetch()}
+      />
+      <EventCreateModal
+        isOpen={showEventCreateModal}
+        onClose={() => setShowEventCreateModal(false)}
         onSuccess={() => refetch()}
       />
     </div>
