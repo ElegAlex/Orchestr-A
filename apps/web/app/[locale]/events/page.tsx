@@ -7,6 +7,7 @@ import {
   eventsService,
   Event,
   CreateEventDto,
+  UpdateEventDto,
 } from "@/services/events.service";
 import { projectsService } from "@/services/projects.service";
 import { usersService } from "@/services/users.service";
@@ -24,6 +25,7 @@ export default function EventsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>("ALL");
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
 
@@ -128,6 +130,52 @@ export default function EventsPage() {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
         axiosError.response?.data?.message || t("create.error"),
+      );
+    }
+  };
+
+  const handleEdit = (event: Event) => {
+    setEditingEvent(event);
+    setFormData({
+      title: event.title,
+      description: event.description || "",
+      date: typeof event.date === "string" ? event.date.split("T")[0] : new Date(event.date).toISOString().split("T")[0],
+      startTime: event.startTime || "",
+      endTime: event.endTime || "",
+      isAllDay: event.isAllDay,
+      projectId: event.projectId || "",
+      participantIds: event.participants?.map((p) => p.userId) || [],
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEvent) return;
+    try {
+      const eventData: UpdateEventDto = {
+        title: formData.title,
+        description: formData.description || undefined,
+        date: formData.date,
+        startTime: formData.startTime || undefined,
+        endTime: formData.endTime || undefined,
+        isAllDay: formData.isAllDay,
+        projectId: formData.projectId || undefined,
+        participantIds:
+          formData.participantIds.length > 0
+            ? formData.participantIds
+            : undefined,
+      };
+      await eventsService.update(editingEvent.id, eventData);
+      toast.success(t("edit.success"));
+      setShowCreateModal(false);
+      setEditingEvent(null);
+      resetForm();
+      fetchData();
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message || t("edit.error"),
       );
     }
   };
@@ -368,14 +416,24 @@ export default function EventsPage() {
                         )}
                       </div>
 
-                      {canDeleteEvent() && (
-                        <button
-                          onClick={() => handleDelete(event.id)}
-                          className="text-red-600 hover:bg-red-50 px-3 py-1 rounded transition"
-                        >
-                          {tCommon("actions.delete")}
-                        </button>
-                      )}
+                      <div className="flex items-center space-x-2">
+                        {canCreateEvent() && (
+                          <button
+                            onClick={() => handleEdit(event)}
+                            className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded transition"
+                          >
+                            {tCommon("actions.edit")}
+                          </button>
+                        )}
+                        {canDeleteEvent() && (
+                          <button
+                            onClick={() => handleDelete(event.id)}
+                            className="text-red-600 hover:bg-red-50 px-3 py-1 rounded transition"
+                          >
+                            {tCommon("actions.delete")}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -418,9 +476,9 @@ export default function EventsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {t("create.title")}
+              {editingEvent ? t("edit.title") : t("create.title")}
             </h2>
-            <form onSubmit={handleCreate} className="space-y-4">
+            <form onSubmit={editingEvent ? handleUpdate : handleCreate} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t("create.titleField")}
@@ -549,6 +607,7 @@ export default function EventsPage() {
                   type="button"
                   onClick={() => {
                     setShowCreateModal(false);
+                    setEditingEvent(null);
                     resetForm();
                   }}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
@@ -559,7 +618,7 @@ export default function EventsPage() {
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  {t("create.createButton")}
+                  {editingEvent ? t("edit.saveButton") : t("create.createButton")}
                 </button>
               </div>
             </form>

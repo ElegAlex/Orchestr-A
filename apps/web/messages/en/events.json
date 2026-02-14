@@ -37,6 +37,12 @@
     "success": "Event created successfully",
     "error": "Error creating event"
   },
+  "edit": {
+    "title": "Edit event",
+    "saveButton": "Save",
+    "success": "Event updated successfully",
+    "error": "Error updating event"
+  },
   "delete": {
     "confirm": "Are you sure you want to delete this event?",
     "success": "Event deleted",

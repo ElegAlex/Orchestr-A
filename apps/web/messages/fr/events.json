@@ -37,6 +37,12 @@
     "success": "Événement créé avec succès",
     "error": "Erreur lors de la création"
   },
+  "edit": {
+    "title": "Modifier l'événement",
+    "saveButton": "Enregistrer",
+    "success": "Événement modifié avec succès",
+    "error": "Erreur lors de la modification"
+  },
   "delete": {
     "confirm": "Êtes-vous sûr de vouloir supprimer cet événement ?",
     "success": "Événement supprimé",
