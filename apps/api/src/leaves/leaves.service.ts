@@ -324,76 +324,121 @@ export class LeavesService {
    * Récupérer les demandes de congé en attente de validation pour un validateur
    */
   async getPendingForValidator(validatorId: string) {
-    // Vérifier si l'utilisateur est un délégué actif
-    const today = new Date();
-    const activeDelegation =
-      await this.prisma.leaveValidationDelegate.findFirst({
-        where: {
-          delegateId: validatorId,
-          isActive: true,
-          startDate: { lte: today },
-          endDate: { gte: today },
-        },
-      });
-
     const user = await this.prisma.user.findUnique({
       where: { id: validatorId },
     });
 
-    // Un utilisateur peut valider si:
-    // 1. Il est ADMIN, RESPONSABLE ou MANAGER
-    // 2. Il est un délégué actif
-    // 3. Il est assigné comme validateur d'une demande
-    const canValidate =
-      user?.role === Role.ADMIN ||
-      user?.role === Role.RESPONSABLE ||
-      user?.role === Role.MANAGER ||
-      activeDelegation !== null;
-
-    if (!canValidate) {
+    if (!user) {
       return [];
     }
 
-    const leaves = await this.prisma.leave.findMany({
-      where: {
-        status: LeaveStatus.PENDING,
-        OR: [
-          { validatorId },
-          // Les ADMIN et RESPONSABLE peuvent voir toutes les demandes en attente
-          ...(user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE
-            ? [{ validatorId: { not: null } }, { validatorId: null }]
-            : []),
-        ],
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            department: {
-              select: {
-                id: true,
-                name: true,
+    // ADMIN → all pending leaves
+    if (user.role === Role.ADMIN) {
+      return this.prisma.leave.findMany({
+        where: {
+          status: LeaveStatus.PENDING,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              department: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
           },
-        },
-        validator: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+          validator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-    });
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
+    }
 
-    return leaves;
+    // RESPONSABLE or MANAGER → pending leaves from same services + managed services
+    if (user.role === Role.RESPONSABLE || user.role === Role.MANAGER) {
+      // 1. Find services the user belongs to via user_services
+      const userServices = await this.prisma.userService.findMany({
+        where: { userId: validatorId },
+        select: { serviceId: true },
+      });
+
+      // 2. Find services where user is manager
+      const managedServices = await this.prisma.service.findMany({
+        where: { managerId: validatorId },
+        select: { id: true },
+      });
+
+      // Combine service IDs
+      const serviceIds = [
+        ...userServices.map((us) => us.serviceId),
+        ...managedServices.map((s) => s.id),
+      ];
+
+      // If no services, return empty array
+      if (serviceIds.length === 0) {
+        return [];
+      }
+
+      // 3. Find all users in those services
+      const usersInServices = await this.prisma.userService.findMany({
+        where: {
+          serviceId: { in: serviceIds },
+        },
+        select: { userId: true },
+      });
+
+      const userIds = usersInServices.map((us) => us.userId);
+
+      // 4. Query pending leaves for those users
+      return this.prisma.leave.findMany({
+        where: {
+          status: LeaveStatus.PENDING,
+          userId: { in: userIds },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              department: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          validator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
+    }
+
+    // Other roles → empty list
+    return [];
   }
 
   /**

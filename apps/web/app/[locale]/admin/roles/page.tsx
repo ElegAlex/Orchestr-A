@@ -572,7 +572,7 @@ export default function RolesPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
                         Module
                       </th>
                       {getUniqueActions().map((action) => (
@@ -596,8 +596,8 @@ export default function RolesPage() {
                         const uniqueActions = getUniqueActions();
 
                         return (
-                          <tr key={module} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white">
+                          <tr key={module} className="group hover:bg-gray-50">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white group-hover:bg-gray-50 z-10">
                               {t(`modules.${module}`, {
                                 defaultValue: module,
                               })}

@@ -37,6 +37,12 @@ describe('LeavesService', () => {
       findMany: vi.fn(),
       update: vi.fn(),
     },
+    userService: {
+      findMany: vi.fn(),
+    },
+    service: {
+      findMany: vi.fn(),
+    },
   };
 
   const mockUser = {
@@ -475,78 +481,118 @@ describe('LeavesService', () => {
   // GET PENDING FOR VALIDATOR
   // ============================================
   describe('getPendingForValidator', () => {
-    it('should return pending leaves for ADMIN', async () => {
+    it('should return all pending leaves for ADMIN', async () => {
       const adminUser = { ...mockUser, role: Role.ADMIN };
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
-        null,
-      );
       mockPrismaService.user.findUnique.mockResolvedValue(adminUser);
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
 
       const result = await service.getPendingForValidator('admin-1');
 
       expect(result).toHaveLength(1);
+      expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { status: LeaveStatus.PENDING },
+        }),
+      );
     });
 
-    it('should return pending leaves for RESPONSABLE', async () => {
+    it('should return pending leaves from same services for RESPONSABLE', async () => {
       const responsableUser = { ...mockUser, role: Role.RESPONSABLE };
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
-        null,
-      );
+      const userServices = [{ serviceId: 'service-1' }];
+      const managedServices = [{ id: 'service-2' }];
+      const usersInServices = [{ userId: 'user-1' }, { userId: 'user-2' }];
+
       mockPrismaService.user.findUnique.mockResolvedValue(responsableUser);
+      mockPrismaService.userService.findMany
+        .mockResolvedValueOnce(userServices) // User's services
+        .mockResolvedValueOnce(usersInServices); // Users in those services
+      mockPrismaService.service.findMany.mockResolvedValue(managedServices);
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
 
       const result = await service.getPendingForValidator('responsable-1');
 
       expect(result).toHaveLength(1);
+      expect(mockPrismaService.userService.findMany).toHaveBeenCalledWith({
+        where: { userId: 'responsable-1' },
+        select: { serviceId: true },
+      });
+      expect(mockPrismaService.service.findMany).toHaveBeenCalledWith({
+        where: { managerId: 'responsable-1' },
+        select: { id: true },
+      });
+      expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: LeaveStatus.PENDING,
+            userId: { in: ['user-1', 'user-2'] },
+          },
+        }),
+      );
     });
 
-    it('should return pending leaves for MANAGER', async () => {
+    it('should return pending leaves from managed services for MANAGER', async () => {
       const managerUser = { ...mockUser, role: Role.MANAGER };
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
-        null,
-      );
+      const userServices = []; // Manager not in any service as user
+      const managedServices = [{ id: 'service-1' }]; // But manages service-1
+      const usersInServices = [{ userId: 'user-3' }];
+
       mockPrismaService.user.findUnique.mockResolvedValue(managerUser);
+      mockPrismaService.userService.findMany
+        .mockResolvedValueOnce(userServices)
+        .mockResolvedValueOnce(usersInServices);
+      mockPrismaService.service.findMany.mockResolvedValue(managedServices);
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
 
       const result = await service.getPendingForValidator('manager-1');
 
       expect(result).toHaveLength(1);
+      expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: LeaveStatus.PENDING,
+            userId: { in: ['user-3'] },
+          },
+        }),
+      );
     });
 
-    it('should return pending leaves for active delegate', async () => {
-      const today = new Date();
-      const activeDelegation = {
-        id: 'delegation-1',
-        isActive: true,
-        startDate: new Date(today.getTime() - 86400000),
-        endDate: new Date(today.getTime() + 86400000),
-      };
+    it('should return empty array for RESPONSABLE with no services', async () => {
+      const responsableUser = { ...mockUser, role: Role.RESPONSABLE };
+      mockPrismaService.user.findUnique.mockResolvedValue(responsableUser);
+      mockPrismaService.userService.findMany.mockResolvedValue([]);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
 
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
-        activeDelegation,
-      );
-      mockPrismaService.user.findUnique.mockResolvedValue({
-        ...mockUser,
-        role: Role.CONTRIBUTEUR,
-      });
-      mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
+      const result = await service.getPendingForValidator('responsable-1');
 
-      const result = await service.getPendingForValidator('delegate-1');
+      expect(result).toEqual([]);
+    });
 
-      expect(result).toHaveLength(1);
+    it('should return empty array for MANAGER with no services', async () => {
+      const managerUser = { ...mockUser, role: Role.MANAGER };
+      mockPrismaService.user.findUnique.mockResolvedValue(managerUser);
+      mockPrismaService.userService.findMany.mockResolvedValue([]);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+
+      const result = await service.getPendingForValidator('manager-1');
+
+      expect(result).toEqual([]);
     });
 
     it('should return empty array for user without validation rights', async () => {
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
-        null,
-      );
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
         role: Role.CONTRIBUTEUR,
       });
 
       const result = await service.getPendingForValidator('user-1');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when user not found', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.getPendingForValidator('nonexistent');
 
       expect(result).toEqual([]);
     });

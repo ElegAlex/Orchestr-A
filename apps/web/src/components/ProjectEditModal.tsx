@@ -171,9 +171,19 @@ export function ProjectEditModal({
               <input
                 type="date"
                 value={formData.startDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, startDate: e.target.value })
-                }
+                onChange={(e) => {
+                  const newStartDate = e.target.value;
+                  const currentEndDate = formData.endDate;
+                  const newEndDate =
+                    currentEndDate && currentEndDate < newStartDate
+                      ? newStartDate
+                      : currentEndDate;
+                  setFormData({
+                    ...formData,
+                    startDate: newStartDate,
+                    endDate: newEndDate,
+                  });
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               />
             </div>
@@ -185,6 +195,7 @@ export function ProjectEditModal({
               <input
                 type="date"
                 value={formData.endDate}
+                min={formData.startDate || undefined}
                 onChange={(e) =>
                   setFormData({ ...formData, endDate: e.target.value })
                 }
