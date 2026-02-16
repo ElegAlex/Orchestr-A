@@ -47,6 +47,9 @@ export const EventCreateModal = ({
 
   useEffect(() => {
     if (isOpen) {
+      if (user?.id) {
+        setFormData((prev) => ({ ...prev, participantIds: [user.id] }));
+      }
       fetchInitialData();
     }
   }, [isOpen]);
@@ -104,9 +107,9 @@ export const EventCreateModal = ({
       };
       await eventsService.create(eventData);
       toast.success(t("success"));
+      if (onSuccess) await onSuccess();
       resetForm();
       onClose();
-      if (onSuccess) onSuccess();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(

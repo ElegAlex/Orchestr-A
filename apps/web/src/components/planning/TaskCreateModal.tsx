@@ -55,6 +55,9 @@ export const TaskCreateModal = ({
 
   useEffect(() => {
     if (isOpen) {
+      if (user?.id) {
+        setFormData((prev) => ({ ...prev, assigneeIds: [user.id] }));
+      }
       fetchInitialData();
     }
   }, [isOpen]);
@@ -140,9 +143,9 @@ export const TaskCreateModal = ({
       };
       await tasksService.create(taskData);
       toast.success(t("success"));
+      if (onSuccess) await onSuccess();
       resetForm();
       onClose();
-      if (onSuccess) onSuccess();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
