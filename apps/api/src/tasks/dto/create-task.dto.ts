@@ -170,4 +170,12 @@ export class CreateTaskDto {
   })
   @IsOptional()
   tags?: string[];
+
+  @ApiProperty({
+    description: 'Intervention externe',
+    required: false,
+    default: false,
+  })
+  @IsOptional()
+  isExternalIntervention?: boolean;
 }
