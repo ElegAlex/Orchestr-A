@@ -1,39 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { Task, TaskStatus } from "@/types";
-import { tasksService } from "@/services/tasks.service";
-import { getPriorityColor } from "@/lib/planning-utils";
+import { Event, eventsService } from "@/services/events.service";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 
-interface TaskModalProps {
-  task: Task | null;
+interface EventModalProps {
+  event: Event | null;
   isOpen: boolean;
   onClose: () => void;
   onRefresh?: () => void;
 }
 
-export const TaskModal = ({ task, isOpen, onClose, onRefresh }: TaskModalProps) => {
-  const t = useTranslations("planning.taskModal");
+export const EventModal = ({ event, isOpen, onClose, onRefresh }: EventModalProps) => {
+  const t = useTranslations("planning.eventModal");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const locale = useLocale();
   const [deleting, setDeleting] = useState(false);
 
-  if (!isOpen || !task) return null;
+  if (!isOpen || !event) return null;
 
   const handleEdit = () => {
     onClose();
-    router.push(`/${locale}/tasks/${task.id}`);
+    router.push(`/${locale}/events`);
   };
 
   const handleDelete = async () => {
     if (!confirm(t("confirmDelete"))) return;
     try {
       setDeleting(true);
-      await tasksService.delete(task.id);
+      await eventsService.delete(event.id);
       toast.success(t("deleteSuccess"));
       onClose();
       if (onRefresh) onRefresh();
@@ -44,11 +42,23 @@ export const TaskModal = ({ task, isOpen, onClose, onRefresh }: TaskModalProps) 
     }
   };
 
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900">{task.title}</h2>
+          <div className="flex items-center space-x-2">
+            <span className="text-xl">{event.isExternalIntervention ? "🔴" : "📅"}</span>
+            <h2 className="text-xl font-bold text-gray-900">{event.title}</h2>
+          </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
@@ -57,66 +67,62 @@ export const TaskModal = ({ task, isOpen, onClose, onRefresh }: TaskModalProps) 
           </button>
         </div>
         <div className="space-y-4">
-          {task.description && (
+          {event.description && (
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">{t("description")}</h3>
-              <p className="text-gray-700">{task.description}</p>
+              <p className="text-gray-700">{event.description}</p>
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">{t("status")}</h3>
-              <span
-                className={`inline-block px-3 py-1 rounded text-sm ${
-                  task.status === TaskStatus.DONE
-                    ? "bg-green-100 text-green-800"
-                    : "bg-blue-100 text-blue-800"
-                }`}
-              >
-                {tCommon(`taskStatus.${task.status}`)}
-              </span>
+              <h3 className="font-semibold text-gray-900 mb-2">{t("date")}</h3>
+              <p className="text-gray-700">{formatDate(event.date)}</p>
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">{t("priority")}</h3>
-              <span
-                className={`inline-block px-3 py-1 rounded text-sm ${getPriorityColor(task.priority)}`}
-              >
-                {tCommon(`priority.${task.priority}`)}
-              </span>
-            </div>
-            {task.estimatedHours && (
+            {event.isAllDay ? (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">{t("estimation")}</h3>
-                <p className="text-gray-700">{task.estimatedHours}h</p>
+                <h3 className="font-semibold text-gray-900 mb-2">{t("schedule")}</h3>
+                <span className="inline-block px-3 py-1 rounded text-sm bg-gray-100 text-gray-800">
+                  {t("allDay")}
+                </span>
               </div>
-            )}
-            {(task.startTime || task.endTime) && (
+            ) : (event.startTime || event.endTime) ? (
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">{t("schedule")}</h3>
                 <p className="text-gray-700">
-                  {task.startTime || "--:--"} - {task.endTime || "--:--"}
+                  {event.startTime || "--:--"} - {event.endTime || "--:--"}
                 </p>
               </div>
-            )}
-            {task.progress !== undefined && (
+            ) : null}
+            {event.isExternalIntervention && (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  {t("progress")}
-                </h3>
-                <div className="flex items-center space-x-2">
-                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full"
-                      style={{ width: `${task.progress}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-sm text-gray-600">
-                    {task.progress}%
-                  </span>
-                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">{t("type")}</h3>
+                <span className="inline-block px-3 py-1 rounded text-sm bg-orange-100 text-orange-800">
+                  {t("externalIntervention")}
+                </span>
+              </div>
+            )}
+            {event.project && (
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">{t("project")}</h3>
+                <p className="text-gray-700">{event.project.name}</p>
               </div>
             )}
           </div>
+          {event.participants && event.participants.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">{t("participants")}</h3>
+              <div className="flex flex-wrap gap-2">
+                {event.participants.map((p) => (
+                  <span
+                    key={p.userId}
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+                  >
+                    {p.user.firstName} {p.user.lastName}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex justify-between mt-6 pt-4 border-t border-gray-200">
           <button

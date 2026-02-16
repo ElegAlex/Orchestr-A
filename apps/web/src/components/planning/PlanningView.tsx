@@ -46,6 +46,7 @@ export const PlanningView = ({
   const [showTaskCreateModal, setShowTaskCreateModal] = useState(false);
   const [showEventCreateModal, setShowEventCreateModal] = useState(false);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const createMenuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -488,6 +489,7 @@ export const PlanningView = ({
         filterServiceIds={effectiveFilterServiceIds}
         viewFilter={viewFilter}
         showGroupHeaders={showGroupHeaders}
+        refreshTrigger={refreshTrigger}
       />
 
       {/* Legend */}
@@ -547,12 +549,12 @@ export const PlanningView = ({
       <TaskCreateModal
         isOpen={showTaskCreateModal}
         onClose={() => setShowTaskCreateModal(false)}
-        onSuccess={() => refetch()}
+        onSuccess={() => { refetch(); setRefreshTrigger((prev) => prev + 1); }}
       />
       <EventCreateModal
         isOpen={showEventCreateModal}
         onClose={() => setShowEventCreateModal(false)}
-        onSuccess={() => refetch()}
+        onSuccess={() => { refetch(); setRefreshTrigger((prev) => prev + 1); }}
       />
     </div>
   );

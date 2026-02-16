@@ -1,4 +1,5 @@
 import { Task } from "@/types";
+import { Event } from "@/services/events.service";
 import { DayCell as DayCellData } from "@/hooks/usePlanningData";
 import {
   getPriorityColor,
@@ -17,6 +18,7 @@ interface DayCellProps {
   onDragEnd: () => void;
   onDrop: (userId: string, date: Date) => void;
   onTaskClick: (task: Task) => void;
+  onEventClick: (event: Event) => void;
 }
 
 export const DayCell = ({
@@ -29,6 +31,7 @@ export const DayCell = ({
   onDragEnd,
   onDrop,
   onTaskClick,
+  onEventClick,
 }: DayCellProps) => {
   const t = useTranslations("planning");
   const hasLeave = cell.leaves.length > 0;
@@ -210,7 +213,8 @@ export const DayCell = ({
             return (
               <div
                 key={event.id}
-                className={`rounded border-2 ${eventBorderClass} ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
+                onClick={() => onEventClick(event)}
+                className={`rounded border-2 cursor-pointer hover:shadow-md transition ${eventBorderClass} ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
               >
                 {viewMode === "month" ? (
                   <div className="text-center" title={event.title}>

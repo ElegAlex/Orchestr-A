@@ -80,7 +80,24 @@
     "status": "Statut",
     "priority": "Priorité",
     "estimation": "Estimation",
-    "progress": "Progression"
+    "schedule": "Horaires",
+    "progress": "Progression",
+    "confirmDelete": "Supprimer cette tâche ?",
+    "deleteSuccess": "Tâche supprimée",
+    "deleteError": "Erreur lors de la suppression"
+  },
+  "eventModal": {
+    "description": "Description",
+    "date": "Date",
+    "schedule": "Horaires",
+    "allDay": "Journée entière",
+    "type": "Type",
+    "externalIntervention": "Intervention extérieure",
+    "project": "Projet",
+    "participants": "Participants",
+    "confirmDelete": "Supprimer cet événement ?",
+    "deleteSuccess": "Événement supprimé",
+    "deleteError": "Erreur lors de la suppression"
   },
   "taskCreate": {
     "title": "Créer une tâche",

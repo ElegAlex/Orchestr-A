@@ -80,7 +80,24 @@
     "status": "Status",
     "priority": "Priority",
     "estimation": "Estimation",
-    "progress": "Progress"
+    "schedule": "Schedule",
+    "progress": "Progress",
+    "confirmDelete": "Delete this task?",
+    "deleteSuccess": "Task deleted",
+    "deleteError": "Error deleting task"
+  },
+  "eventModal": {
+    "description": "Description",
+    "date": "Date",
+    "schedule": "Schedule",
+    "allDay": "All day",
+    "type": "Type",
+    "externalIntervention": "External intervention",
+    "project": "Project",
+    "participants": "Participants",
+    "confirmDelete": "Delete this event?",
+    "deleteSuccess": "Event deleted",
+    "deleteError": "Error deleting event"
   },
   "taskCreate": {
     "title": "Create a task",

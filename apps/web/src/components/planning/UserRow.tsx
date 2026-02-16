@@ -1,4 +1,5 @@
 import { User, Task, Role } from "@/types";
+import { Event } from "@/services/events.service";
 import { ServiceGroup, DayCell as DayCellData } from "@/hooks/usePlanningData";
 import { DayCell } from "./DayCell";
 import { getGroupColors } from "@/lib/planning-utils";
@@ -15,6 +16,7 @@ interface UserRowProps {
   onDragEnd: () => void;
   onDrop: (userId: string, date: Date) => void;
   onTaskClick: (task: Task) => void;
+  onEventClick: (event: Event) => void;
 }
 
 export const UserRow = ({
@@ -28,6 +30,7 @@ export const UserRow = ({
   onDragEnd,
   onDrop,
   onTaskClick,
+  onEventClick,
 }: UserRowProps) => {
   const tCommon = useTranslations("common");
   const tPlanning = useTranslations("planning");
@@ -76,6 +79,7 @@ export const UserRow = ({
             onDragEnd={onDragEnd}
             onDrop={onDrop}
             onTaskClick={onTaskClick}
+            onEventClick={onEventClick}
           />
         );
       })}

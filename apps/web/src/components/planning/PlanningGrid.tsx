@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Task } from "@/types";
+import { Event } from "@/services/events.service";
 import {
   usePlanningData,
   ServiceGroup,
@@ -10,6 +11,7 @@ import {
 import { GroupHeader } from "./GroupHeader";
 import { UserRow } from "./UserRow";
 import { TaskModal } from "./TaskModal";
+import { EventModal } from "./EventModal";
 import { teleworkService } from "@/services/telework.service";
 import { tasksService } from "@/services/tasks.service";
 import { usePlanningViewStore } from "@/stores/planningView.store";
@@ -33,6 +35,7 @@ interface CollapsibleServiceSectionProps {
   onDragEnd: () => void;
   onDrop: (userId: string, date: Date) => void;
   onTaskClick: (task: Task) => void;
+  onEventClick: (event: Event) => void;
 }
 
 const CollapsibleServiceSection = ({
@@ -47,6 +50,7 @@ const CollapsibleServiceSection = ({
   onDragEnd,
   onDrop,
   onTaskClick,
+  onEventClick,
 }: CollapsibleServiceSectionProps) => {
   const { collapsedServices } = usePlanningViewStore();
   const isCollapsed = collapsedServices[group.id] ?? false;
@@ -76,6 +80,7 @@ const CollapsibleServiceSection = ({
             onDragEnd={onDragEnd}
             onDrop={onDrop}
             onTaskClick={onTaskClick}
+            onEventClick={onEventClick}
           />
         ))}
     </React.Fragment>
@@ -89,6 +94,7 @@ interface PlanningGridProps {
   filterServiceIds?: string[]; // Pour filtrer sur un ou plusieurs services
   viewFilter?: ViewFilter; // Filtre d'affichage (default: 'all')
   showGroupHeaders?: boolean; // Afficher les headers de groupes (default: true)
+  refreshTrigger?: number; // Incrémenter pour forcer un refresh
 }
 
 export const PlanningGrid = ({
@@ -98,6 +104,7 @@ export const PlanningGrid = ({
   filterServiceIds,
   viewFilter = "all",
   showGroupHeaders = true,
+  refreshTrigger = 0,
 }: PlanningGridProps) => {
   const t = useTranslations("planning");
   const locale = useLocale();
@@ -122,6 +129,18 @@ export const PlanningGrid = ({
   const [dragSourceUserId, setDragSourceUserId] = useState<string | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+
+  // Refetch quand refreshTrigger change (skip le montage initial)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    silentRefetch();
+  }, [refreshTrigger]);
 
   const handleTeleworkToggle = async (userId: string, date: Date) => {
     try {
@@ -191,7 +210,7 @@ export const PlanningGrid = ({
           toast(
             t("taskMove.multiAssignDateError"),
             {
-              icon: "ℹ️",
+              icon: "\u2139\uFE0F",
               duration: 3000,
               id: `multi-assignee-${Date.now()}`,
             },
@@ -200,7 +219,7 @@ export const PlanningGrid = ({
         }
         if (targetAlreadyAssigned) {
           toast(t("taskMove.alreadyAssigned"), {
-            icon: "ℹ️",
+            icon: "\u2139\uFE0F",
             duration: 2000,
             id: `already-assigned-${Date.now()}`,
           });
@@ -218,7 +237,7 @@ export const PlanningGrid = ({
         toast(
           t("taskMove.reassignOnly"),
           {
-            icon: "ℹ️",
+            icon: "\u2139\uFE0F",
             duration: 3000,
             id: `reassign-only-${Date.now()}`,
           },
@@ -236,9 +255,19 @@ export const PlanningGrid = ({
     setShowTaskModal(true);
   };
 
-  const handleCloseModal = () => {
+  const handleEventClick = (event: Event) => {
+    setSelectedEvent(event);
+    setShowEventModal(true);
+  };
+
+  const handleCloseTaskModal = () => {
     setShowTaskModal(false);
     setSelectedTask(null);
+  };
+
+  const handleCloseEventModal = () => {
+    setShowEventModal(false);
+    setSelectedEvent(null);
   };
 
   if (loading) {
@@ -342,6 +371,7 @@ export const PlanningGrid = ({
                         onDragEnd={handleDragEnd}
                         onDrop={handleDrop}
                         onTaskClick={handleTaskClick}
+                        onEventClick={handleEventClick}
                       />
                     );
                   })}
@@ -356,7 +386,16 @@ export const PlanningGrid = ({
       <TaskModal
         task={selectedTask}
         isOpen={showTaskModal}
-        onClose={handleCloseModal}
+        onClose={handleCloseTaskModal}
+        onRefresh={silentRefetch}
+      />
+
+      {/* Event Modal */}
+      <EventModal
+        event={selectedEvent}
+        isOpen={showEventModal}
+        onClose={handleCloseEventModal}
+        onRefresh={silentRefetch}
       />
     </>
   );
