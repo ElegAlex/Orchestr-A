@@ -211,6 +211,8 @@ export class RoleManagementService implements OnModuleInit {
           'comments:read',
           'comments:update',
           'comments:delete',
+          'leaves:read',
+          'leaves:approve',
         ],
       },
       {

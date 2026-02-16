@@ -703,6 +703,34 @@ export class LeavesService {
       return true;
     }
 
+    // MANAGER peut valider les congés des agents de ses services
+    if (validator.role === Role.MANAGER) {
+      const userServices = await this.prisma.userService.findMany({
+        where: { userId: validatorId },
+        select: { serviceId: true },
+      });
+      const managedServices = await this.prisma.service.findMany({
+        where: { managerId: validatorId },
+        select: { id: true },
+      });
+      const serviceIds = [
+        ...new Set([
+          ...userServices.map((us) => us.serviceId),
+          ...managedServices.map((s) => s.id),
+        ]),
+      ];
+
+      if (serviceIds.length > 0) {
+        const leaveUserService = await this.prisma.userService.findFirst({
+          where: {
+            userId: leave.userId,
+            serviceId: { in: serviceIds },
+          },
+        });
+        if (leaveUserService) return true;
+      }
+    }
+
     // Vérifier les délégations actives
     const today = new Date();
     const activeDelegation =
