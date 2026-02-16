@@ -15,6 +15,8 @@ import {
   UserSkill,
 } from "@/types";
 import { SkillsMatrix } from "@/components/SkillsMatrix";
+import { ImportPreviewModal } from "@/components/ImportPreviewModal";
+import { parseCSV } from "@/lib/csv-parser";
 import toast from "react-hot-toast";
 
 export default function SkillsPage() {
@@ -47,6 +49,13 @@ export default function SkillsPage() {
   const [skillsToAssign, setSkillsToAssign] = useState<
     Array<{ skillId: string; level: SkillLevel }>
   >([]);
+
+  // Import CSV state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showSkillsPreview, setShowSkillsPreview] = useState(false);
+  const [importingSkills, setImportingSkills] = useState(false);
+  const [skillsPreview, setSkillsPreview] = useState<any>(null);
+  const [pendingSkillsImport, setPendingSkillsImport] = useState<any[]>([]);
 
   const canManageSkills =
     currentUser?.role === Role.ADMIN || currentUser?.role === Role.RESPONSABLE;
@@ -242,6 +251,110 @@ export default function SkillsPage() {
     }
   };
 
+  // Import handlers
+  const downloadSkillsTemplate = async () => {
+    try {
+      const response = await skillsService.getImportTemplate();
+      const blob = new Blob([response.template], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "skills-template.csv";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch {
+      toast.error(t("import.downloadError"));
+    }
+  };
+
+  const handleImportSkillsFile = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const rows = parseCSV(text);
+
+      if (rows.length === 0) {
+        toast.error("Fichier CSV vide");
+        return;
+      }
+
+      // Parse skills from CSV
+      const skills = rows.map((row) => ({
+        name: row.name || "",
+        category: row.category || "",
+        description: row.description || undefined,
+        requiredCount:
+          row.requiredCount && !isNaN(Number(row.requiredCount))
+            ? Number(row.requiredCount)
+            : undefined,
+      }));
+
+      // Validate
+      const preview = await skillsService.validateImport(skills);
+      setSkillsPreview(preview);
+      setPendingSkillsImport(skills);
+      setShowImportModal(false);
+      setShowSkillsPreview(true);
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error("Erreur lors de la lecture du fichier");
+    }
+
+    // Reset input
+    e.target.value = "";
+  };
+
+  const handleConfirmSkillsImport = async () => {
+    if (!pendingSkillsImport.length) return;
+
+    try {
+      setImportingSkills(true);
+      const result = await skillsService.importSkills(pendingSkillsImport);
+
+      if (result.created > 0) {
+        toast.success(
+          t("import.success", { count: result.created }).replace(
+            "{count}",
+            result.created.toString(),
+          ),
+        );
+      }
+      if (result.skipped > 0) {
+        toast(
+          t("import.skipped", { count: result.skipped }).replace(
+            "{count}",
+            result.skipped.toString(),
+          ),
+          { icon: "⚠️" },
+        );
+      }
+      if (result.errors > 0) {
+        toast.error(
+          t("import.errors", { count: result.errors }).replace(
+            "{count}",
+            result.errors.toString(),
+          ),
+        );
+      }
+
+      setShowSkillsPreview(false);
+      setSkillsPreview(null);
+      setPendingSkillsImport([]);
+      await fetchSkills();
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error("Erreur lors de l'import");
+    } finally {
+      setImportingSkills(false);
+    }
+  };
+
   const getCategoryLabel = (category: SkillCategory): string => {
     const labels: Record<SkillCategory, string> = {
       TECHNICAL: t("categories.TECHNICAL"),
@@ -336,20 +449,28 @@ export default function SkillsPage() {
               </button>
             </div>
             {canManageSkills && viewMode === "skills" && (
-              <button
-                onClick={() => {
-                  setSkillForm({
-                    name: "",
-                    category: "",
-                    description: "",
-                    requiredCount: 1,
-                  });
-                  setShowCreateSkillModal(true);
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              >
-                + Nouvelle compétence
-              </button>
+              <>
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                >
+                  {t("import.button")}
+                </button>
+                <button
+                  onClick={() => {
+                    setSkillForm({
+                      name: "",
+                      category: "",
+                      description: "",
+                      requiredCount: 1,
+                    });
+                    setShowCreateSkillModal(true);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  + Nouvelle compétence
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -917,6 +1038,114 @@ export default function SkillsPage() {
               </form>
             </div>
           </div>
+        )}
+
+        {/* Modal Import CSV */}
+        {showImportModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                {t("import.modalTitle")}
+              </h2>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  {t("import.description")}
+                </p>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                    {t("import.columnsTitle")}
+                  </h3>
+                  <p className="text-sm text-gray-700 mb-2">
+                    {t("import.columnsDescription")}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {t("import.requiredFields")}
+                  </p>
+                </div>
+
+                <button
+                  onClick={downloadSkillsTemplate}
+                  className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                >
+                  📥 {t("import.downloadTemplate")}
+                </button>
+
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleImportSkillsFile}
+                    className="hidden"
+                    id="skills-csv-input"
+                  />
+                  <label
+                    htmlFor="skills-csv-input"
+                    className="cursor-pointer text-blue-600 hover:text-blue-800"
+                  >
+                    {t("import.selectFile")}
+                  </label>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowImportModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    {tc("actions.cancel")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Preview Modal */}
+        {showSkillsPreview && skillsPreview && (
+          <ImportPreviewModal
+            isOpen={showSkillsPreview}
+            onClose={() => {
+              setShowSkillsPreview(false);
+              setSkillsPreview(null);
+              setPendingSkillsImport([]);
+            }}
+            onConfirm={handleConfirmSkillsImport}
+            title={t("import.previewTitle")}
+            items={{
+              valid: skillsPreview.valid.map((item: any) => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.skill,
+              })),
+              duplicates: skillsPreview.duplicates.map((item: any) => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.skill,
+              })),
+              errors: skillsPreview.errors.map((item: any) => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.skill,
+              })),
+              warnings: skillsPreview.warnings.map((item: any) => ({
+                lineNumber: item.lineNumber,
+                status: item.status,
+                messages: item.messages,
+                data: item.skill,
+              })),
+            }}
+            summary={skillsPreview.summary}
+            columns={[
+              { key: "name", label: "Nom" },
+              { key: "category", label: "Catégorie" },
+              { key: "description", label: "Description" },
+              { key: "requiredCount", label: "Ressources req." },
+            ]}
+            isImporting={importingSkills}
+          />
         )}
       </div>
     </MainLayout>

@@ -170,4 +170,27 @@ export const leavesService = {
   async deactivateDelegation(id: string): Promise<void> {
     await api.delete(`/leaves/delegations/${id}`);
   },
+
+  // Import CSV
+  async getImportTemplate(): Promise<string> {
+    const response = await api.get<{ template: string }>(
+      "/leaves/import-template",
+    );
+    return response.data.template;
+  },
+
+  async validateImport(leaves: any[]): Promise<any> {
+    const response = await api.post("/leaves/import/validate", { leaves });
+    return response.data;
+  },
+
+  async importLeaves(leaves: any[]): Promise<{
+    created: number;
+    skipped: number;
+    errors: number;
+    errorDetails: string[];
+  }> {
+    const response = await api.post("/leaves/import", { leaves });
+    return response.data;
+  },
 };

@@ -26,9 +26,11 @@
     },
     "fields": {
       "leaveType": "Leave Type",
+      "userEmail": "User Email",
       "startDate": "Start Date",
       "endDate": "End Date",
       "reason": "Reason (optional)",
+      "comment": "Comment",
       "reasonPlaceholder": "Specify the reason if necessary...",
       "rejectReason": "Rejection Reason (optional)",
       "rejectReasonPlaceholder": "Explain the reason for rejection...",
@@ -124,6 +126,21 @@
       "typeSystemCannotDelete": "System types cannot be deleted",
       "typeDeleteConfirm": "This type is used by {count} leave(s). It will be deactivated instead of deleted. Continue?",
       "typeDeleteConfirmSimple": "Are you sure you want to delete this leave type?"
+    },
+    "import": {
+      "button": "Import CSV",
+      "modalTitle": "Import Leaves (CSV)",
+      "description": "Import multiple leave requests from a CSV file. Accepted delimiters: comma (,) or semicolon (;).",
+      "columnsTitle": "Available columns:",
+      "columnsDescription": "userEmail*, leaveTypeName*, startDate*, endDate*, halfDay, comment",
+      "requiredFields": "* Required fields. halfDay: MORNING or AFTERNOON (only for single-day leave)",
+      "downloadTemplate": "Download CSV template",
+      "selectFile": "Click to select a CSV file",
+      "importing": "Importing...",
+      "previewTitle": "Leave Import Preview",
+      "success": "{count} leave(s) imported successfully",
+      "skipped": "{count} leave(s) skipped (duplicates/overlaps)",
+      "errors": "{count} error(s) during import"
     }
   },
   "telework": {
@@ -271,6 +288,22 @@
       "assignError": "Error assigning skill",
       "removeError": "Error removing skill",
       "levelUpdateError": "Error updating level"
+    },
+    "import": {
+      "button": "Import CSV",
+      "modalTitle": "Import Skills (CSV)",
+      "description": "Import multiple skills from a CSV file. Accepted separators: comma (,) or semicolon (;).",
+      "columnsTitle": "Available columns:",
+      "columnsDescription": "name*, category*, description, requiredCount",
+      "requiredFields": "* Required fields. Categories: TECHNICAL, METHODOLOGY, SOFT_SKILL, BUSINESS",
+      "downloadTemplate": "Download CSV template",
+      "selectFile": "Click to select a CSV file",
+      "importing": "Importing...",
+      "previewTitle": "Skills Import Preview",
+      "success": "{count} skill(s) imported successfully",
+      "skipped": "{count} skill(s) skipped (duplicates)",
+      "errors": "{count} error(s) during import",
+      "downloadError": "Error downloading template"
     }
   },
   "timeTracking": {

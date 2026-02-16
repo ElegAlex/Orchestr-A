@@ -26,9 +26,11 @@
     },
     "fields": {
       "leaveType": "Type de congé",
+      "userEmail": "Email utilisateur",
       "startDate": "Date de début",
       "endDate": "Date de fin",
       "reason": "Motif (optionnel)",
+      "comment": "Commentaire",
       "reasonPlaceholder": "Précisez le motif si nécessaire...",
       "rejectReason": "Motif du refus (optionnel)",
       "rejectReasonPlaceholder": "Expliquez la raison du refus...",
@@ -124,6 +126,21 @@
       "typeSystemCannotDelete": "Les types système ne peuvent pas être supprimés",
       "typeDeleteConfirm": "Ce type est utilisé par {count} congé(s). Il sera désactivé au lieu d'être supprimé. Continuer ?",
       "typeDeleteConfirmSimple": "Êtes-vous sûr de vouloir supprimer ce type de congé ?"
+    },
+    "import": {
+      "button": "Importer CSV",
+      "modalTitle": "Importer des congés (CSV)",
+      "description": "Importez plusieurs demandes de congé depuis un fichier CSV. Séparateurs acceptés : virgule (,) ou point-virgule (;).",
+      "columnsTitle": "Colonnes disponibles :",
+      "columnsDescription": "userEmail*, leaveTypeName*, startDate*, endDate*, halfDay, comment",
+      "requiredFields": "* Champs obligatoires. halfDay : MORNING ou AFTERNOON (uniquement pour congé d'une journée)",
+      "downloadTemplate": "Télécharger le modèle CSV",
+      "selectFile": "Cliquez pour sélectionner un fichier CSV",
+      "importing": "Import en cours...",
+      "previewTitle": "Prévisualisation de l'import des congés",
+      "success": "{count} congé(s) importé(s) avec succès",
+      "skipped": "{count} congé(s) ignoré(s) (doublons/chevauchements)",
+      "errors": "{count} erreur(s) lors de l'import"
     }
   },
   "telework": {
@@ -271,6 +288,22 @@
       "assignError": "Erreur lors de l'assignation",
       "removeError": "Erreur lors du retrait",
       "levelUpdateError": "Erreur lors de la mise à jour"
+    },
+    "import": {
+      "button": "Importer CSV",
+      "modalTitle": "Importer des compétences (CSV)",
+      "description": "Importez plusieurs compétences depuis un fichier CSV. Séparateurs acceptés : virgule (,) ou point-virgule (;).",
+      "columnsTitle": "Colonnes disponibles :",
+      "columnsDescription": "name*, category*, description, requiredCount",
+      "requiredFields": "* Champs obligatoires. Catégories : TECHNICAL, METHODOLOGY, SOFT_SKILL, BUSINESS",
+      "downloadTemplate": "Télécharger le modèle CSV",
+      "selectFile": "Cliquez pour sélectionner un fichier CSV",
+      "importing": "Import en cours...",
+      "previewTitle": "Prévisualisation de l'import des compétences",
+      "success": "{count} compétence(s) importée(s) avec succès",
+      "skipped": "{count} compétence(s) ignorée(s) (doublons)",
+      "errors": "{count} erreur(s) lors de l'import",
+      "downloadError": "Erreur lors du téléchargement du modèle"
     }
   },
   "timeTracking": {

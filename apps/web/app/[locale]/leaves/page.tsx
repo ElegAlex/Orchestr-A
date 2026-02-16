@@ -14,6 +14,8 @@ import {
   LeaveTypeConfig,
 } from "@/services/leave-types.service";
 import { LeaveTypesManager } from "@/components/LeaveTypesManager";
+import { ImportPreviewModal } from "@/components/ImportPreviewModal";
+import { parseCSV } from "@/lib/csv-parser";
 import { Leave, LeaveType, LeaveStatus, HalfDay, User, Role } from "@/types";
 import toast from "react-hot-toast";
 
@@ -59,6 +61,13 @@ export default function LeavesPage() {
     startDate: "",
     endDate: "",
   });
+
+  // Import state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showLeavesPreview, setShowLeavesPreview] = useState(false);
+  const [importingLeaves, setImportingLeaves] = useState(false);
+  const [leavesPreview, setLeavesPreview] = useState<any>(null);
+  const [pendingLeavesImport, setPendingLeavesImport] = useState<any[]>([]);
 
   const isAdmin = user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE;
   const isManager = user?.role === Role.MANAGER;
@@ -355,6 +364,96 @@ export default function LeavesPage() {
     return leaveType?.icon || "🌴";
   };
 
+  // Import handlers
+  const downloadLeavesTemplate = async () => {
+    try {
+      const template = await leavesService.getImportTemplate();
+      const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "template-import-conges.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(tc("errors.generic"));
+    }
+  };
+
+  const handleImportLeavesFile = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const parsed = parseCSV(text);
+
+      // Filtrer les lignes de commentaires (commençant par #)
+      const filtered = parsed.filter(
+        (row) => !row.userEmail?.startsWith("#") && row.userEmail?.trim(),
+      );
+
+      if (filtered.length === 0) {
+        toast.error(t("import.errors") || "Aucune donnée valide trouvée");
+        return;
+      }
+
+      // Valider avant import
+      const preview = await leavesService.validateImport(filtered);
+      setLeavesPreview(preview);
+      setPendingLeavesImport(filtered);
+      setShowImportModal(false);
+      setShowLeavesPreview(true);
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message || tc("errors.validationError"),
+      );
+    }
+
+    // Reset input
+    e.target.value = "";
+  };
+
+  const handleConfirmLeavesImport = async () => {
+    if (!pendingLeavesImport.length) return;
+
+    setImportingLeaves(true);
+    try {
+      const result = await leavesService.importLeaves(pendingLeavesImport);
+      toast.success(
+        t("import.success", { count: result.created }) ||
+          `${result.created} congé(s) importé(s)`,
+      );
+      if (result.skipped > 0) {
+        toast(
+          t("import.skipped", { count: result.skipped }) ||
+            `${result.skipped} congé(s) ignoré(s)`,
+          { icon: "⚠️" },
+        );
+      }
+      if (result.errors > 0) {
+        toast.error(
+          t("import.errors", { count: result.errors }) ||
+            `${result.errors} erreur(s)`,
+        );
+      }
+      setShowLeavesPreview(false);
+      setPendingLeavesImport([]);
+      setLeavesPreview(null);
+      fetchAll();
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message || tc("errors.validationError"),
+      );
+    } finally {
+      setImportingLeaves(false);
+    }
+  };
+
   const getLeaveStatusBadgeColor = (status: LeaveStatus) => {
     switch (status) {
       case LeaveStatus.APPROVED:
@@ -543,13 +642,24 @@ export default function LeavesPage() {
               </p>
             )}
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
-          >
-            <span>+</span>
-            <span>{t("newRequest")}</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            {isAdmin && (
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center space-x-2"
+              >
+                <span>📥</span>
+                <span>{t("import.button")}</span>
+              </button>
+            )}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
+            >
+              <span>+</span>
+              <span>{t("newRequest")}</span>
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -1230,6 +1340,105 @@ export default function LeavesPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              {t("import.modalTitle")}
+            </h2>
+            <div className="space-y-4">
+              <p className="text-gray-600 text-sm">
+                {t("import.description")}
+              </p>
+
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <p className="text-sm font-medium text-gray-900">
+                  {t("import.columnsTitle")}
+                </p>
+                <p className="text-sm text-gray-600 font-mono">
+                  {t("import.columnsDescription")}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  {t("import.requiredFields")}
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <button
+                  onClick={downloadLeavesTemplate}
+                  className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+                >
+                  📥 {t("import.downloadTemplate")}
+                </button>
+              </div>
+
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleImportLeavesFile}
+                  className="hidden"
+                  id="leaves-csv-upload"
+                />
+                <label
+                  htmlFor="leaves-csv-upload"
+                  className="cursor-pointer text-gray-600 hover:text-blue-600"
+                >
+                  <div className="text-4xl mb-2">📄</div>
+                  <p>{t("import.selectFile")}</p>
+                </label>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowImportModal(false)}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  {tc("actions.cancel")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Preview Modal */}
+      {showLeavesPreview && leavesPreview && (
+        <ImportPreviewModal
+          isOpen={showLeavesPreview}
+          onClose={() => {
+            setShowLeavesPreview(false);
+            setPendingLeavesImport([]);
+            setLeavesPreview(null);
+          }}
+          onConfirm={handleConfirmLeavesImport}
+          title={t("import.previewTitle")}
+          items={{
+            valid: leavesPreview.valid || [],
+            duplicates: leavesPreview.duplicates || [],
+            errors: leavesPreview.errors || [],
+            warnings: leavesPreview.warnings || [],
+          }}
+          summary={leavesPreview.summary}
+          columns={[
+            { key: "userEmail", label: t("fields.userEmail") || "Email" },
+            {
+              key: "leaveTypeName",
+              label: t("fields.leaveType") || "Type",
+            },
+            {
+              key: "startDate",
+              label: t("fields.startDate") || "Début",
+            },
+            { key: "endDate", label: t("fields.endDate") || "Fin" },
+            { key: "halfDay", label: t("halfDay.label") || "Demi-journée" },
+            { key: "comment", label: t("fields.comment") || "Commentaire" },
+          ]}
+          isImporting={importingLeaves}
+        />
       )}
     </MainLayout>
   );

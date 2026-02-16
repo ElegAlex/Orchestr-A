@@ -16,6 +16,7 @@ import { servicesService } from "@/services/services.service";
 import { User, Role, Department, Service } from "@/types";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import { parseCSV as parseCSVRaw } from "@/lib/csv-parser";
 
 export default function UsersPage() {
   const t = useTranslations("admin.users");
@@ -329,25 +330,25 @@ export default function UsersPage() {
   };
 
   const parseCSV = (text: string): ImportUserData[] => {
-    const lines = text.trim().split("\n");
-    if (lines.length < 2) return [];
-
-    const headers = lines[0].split(";").map((h) => h.trim().toLowerCase());
+    const rows = parseCSVRaw(text);
     const users: ImportUserData[] = [];
 
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(";").map((v) => v.trim());
-      if (values.length < 6) continue;
+    for (const row of rows) {
+      // Normalize header keys to lowercase for case-insensitive matching
+      const normalizedRow: Record<string, string> = {};
+      Object.keys(row).forEach((key) => {
+        normalizedRow[key.toLowerCase()] = row[key];
+      });
 
       const user: ImportUserData = {
-        email: values[headers.indexOf("email")] || "",
-        login: values[headers.indexOf("login")] || "",
-        password: values[headers.indexOf("password")] || "",
-        firstName: values[headers.indexOf("firstname")] || "",
-        lastName: values[headers.indexOf("lastname")] || "",
-        role: values[headers.indexOf("role")] || "CONTRIBUTEUR",
-        departmentName: values[headers.indexOf("departmentname")] || undefined,
-        serviceNames: values[headers.indexOf("servicenames")] || undefined,
+        email: normalizedRow.email || "",
+        login: normalizedRow.login || "",
+        password: normalizedRow.password || "",
+        firstName: normalizedRow.firstname || "",
+        lastName: normalizedRow.lastname || "",
+        role: normalizedRow.role || "CONTRIBUTEUR",
+        departmentName: normalizedRow.departmentname || undefined,
+        serviceNames: normalizedRow.servicenames || undefined,
       };
 
       if (

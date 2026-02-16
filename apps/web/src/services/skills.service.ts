@@ -156,4 +156,24 @@ export const skillsService = {
     );
     return response.data;
   },
+
+  // Récupérer le template CSV pour l'import
+  async getImportTemplate(): Promise<{ template: string }> {
+    const response = await api.get<{ template: string }>(
+      "/skills/import-template",
+    );
+    return response.data;
+  },
+
+  // Valider des compétences avant import
+  async validateImport(skills: any[]): Promise<any> {
+    const response = await api.post("/skills/import/validate", { skills });
+    return response.data;
+  },
+
+  // Importer des compétences en masse
+  async importSkills(skills: any[]): Promise<any> {
+    const response = await api.post("/skills/import", { skills });
+    return response.data;
+  },
 };

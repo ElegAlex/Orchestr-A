@@ -8,6 +8,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSkillDto } from './dto/create-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
 import { AssignSkillDto } from './dto/assign-skill.dto';
+import {
+  ImportSkillDto,
+  ImportSkillsResultDto,
+  SkillsValidationPreviewDto,
+  SkillPreviewItemDto,
+  SkillPreviewStatus,
+} from './dto/import-skills.dto';
 import { SkillCategory, SkillLevel } from 'database';
 import { Prisma } from 'database';
 
@@ -512,5 +519,210 @@ export class SkillsService {
         skillLevel: us.level,
       })),
     };
+  }
+
+  /**
+   * Générer le template CSV pour l'import de compétences
+   */
+  getImportTemplate(): string {
+    const headers = ['name', 'category', 'description', 'requiredCount'];
+    const exampleComment = [
+      '# React',
+      '# TECHNICAL',
+      '# Bibliothèque UI',
+      '# 2',
+    ];
+    return headers.join(';') + '\n' + exampleComment.join(';');
+  }
+
+  /**
+   * Valider les compétences avant import (dry-run)
+   */
+  async validateImport(
+    skills: ImportSkillDto[],
+  ): Promise<SkillsValidationPreviewDto> {
+    const result: SkillsValidationPreviewDto = {
+      valid: [],
+      duplicates: [],
+      errors: [],
+      warnings: [],
+      summary: {
+        total: skills.length,
+        valid: 0,
+        duplicates: 0,
+        errors: 0,
+        warnings: 0,
+      },
+    };
+
+    // Récupérer les compétences existantes pour détecter les doublons
+    const existingSkills = await this.prisma.skill.findMany({
+      select: { name: true },
+    });
+    const existingNames = new Set(
+      existingSkills.map((s) => s.name.toLowerCase()),
+    );
+
+    // Suivre les noms déjà vus dans le fichier
+    const seenNames = new Set<string>();
+
+    for (let i = 0; i < skills.length; i++) {
+      const skillData = skills[i];
+      const lineNum = i + 2; // +2 car ligne 1 = header, index commence à 0
+
+      const previewItem: SkillPreviewItemDto = {
+        lineNumber: lineNum,
+        skill: skillData,
+        status: 'valid' as SkillPreviewStatus,
+        messages: [],
+      };
+
+      // Vérifier les champs obligatoires
+      if (!skillData.name || skillData.name.trim() === '') {
+        previewItem.status = 'error';
+        previewItem.messages.push('Le nom est obligatoire');
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      // Vérifier la longueur du nom
+      if (skillData.name.length < 2 || skillData.name.length > 100) {
+        previewItem.status = 'error';
+        previewItem.messages.push('Le nom doit contenir entre 2 et 100 caractères');
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      // Vérifier les doublons dans la base de données (case-insensitive)
+      const nameLower = skillData.name.toLowerCase();
+      if (existingNames.has(nameLower)) {
+        previewItem.status = 'duplicate';
+        previewItem.messages.push('Une compétence avec ce nom existe déjà');
+        result.duplicates.push(previewItem);
+        result.summary.duplicates++;
+        continue;
+      }
+
+      // Vérifier les doublons dans le fichier (case-insensitive)
+      if (seenNames.has(nameLower)) {
+        previewItem.status = 'duplicate';
+        previewItem.messages.push('Doublon détecté dans le fichier');
+        result.duplicates.push(previewItem);
+        result.summary.duplicates++;
+        continue;
+      }
+
+      // Vérifier la catégorie
+      if (!skillData.category) {
+        previewItem.status = 'error';
+        previewItem.messages.push('La catégorie est obligatoire');
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      if (!Object.values(SkillCategory).includes(skillData.category)) {
+        previewItem.status = 'error';
+        previewItem.messages.push(
+          `Catégorie "${skillData.category}" invalide. Valeurs acceptées: TECHNICAL, METHODOLOGY, SOFT_SKILL, BUSINESS`,
+        );
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      // Vérifier requiredCount si fourni
+      if (
+        skillData.requiredCount !== undefined &&
+        skillData.requiredCount !== null &&
+        skillData.requiredCount < 1
+      ) {
+        previewItem.status = 'warning';
+        previewItem.messages.push(
+          'Le nombre de ressources requises doit être au moins 1, la valeur par défaut (1) sera utilisée',
+        );
+      }
+
+      // Ajouter aux résultats selon le statut
+      if (previewItem.status === 'warning') {
+        result.warnings.push(previewItem);
+        result.summary.warnings++;
+      } else {
+        previewItem.messages.push('Prêt à être importé');
+        result.valid.push(previewItem);
+        result.summary.valid++;
+      }
+
+      // Ajouter le nom à l'ensemble pour éviter les doublons dans le même fichier
+      seenNames.add(nameLower);
+    }
+
+    return result;
+  }
+
+  /**
+   * Importer des compétences en masse
+   */
+  async importSkills(
+    skills: ImportSkillDto[],
+  ): Promise<ImportSkillsResultDto> {
+    const result: ImportSkillsResultDto = {
+      created: 0,
+      skipped: 0,
+      errors: 0,
+      errorDetails: [],
+    };
+
+    // Récupérer les compétences existantes pour détecter les doublons
+    const existingSkills = await this.prisma.skill.findMany({
+      select: { name: true },
+    });
+    const existingNames = new Set(
+      existingSkills.map((s) => s.name.toLowerCase()),
+    );
+
+    for (let i = 0; i < skills.length; i++) {
+      const skillData = skills[i];
+      const lineNum = i + 2; // +2 car ligne 1 = header, index commence à 0
+
+      try {
+        // Vérifier que le nom n'existe pas déjà (case-insensitive)
+        const nameLower = skillData.name.toLowerCase();
+        if (existingNames.has(nameLower)) {
+          result.skipped++;
+          result.errorDetails.push(
+            `Ligne ${lineNum}: Compétence "${skillData.name}" existe déjà`,
+          );
+          continue;
+        }
+
+        // Créer la compétence
+        await this.prisma.skill.create({
+          data: {
+            name: skillData.name,
+            category: skillData.category,
+            description: skillData.description || null,
+            requiredCount:
+              skillData.requiredCount !== undefined &&
+              skillData.requiredCount >= 1
+                ? skillData.requiredCount
+                : 1,
+          },
+        });
+
+        // Ajouter le nom à l'ensemble pour éviter les doublons dans le même fichier
+        existingNames.add(nameLower);
+        result.created++;
+      } catch (err) {
+        result.errors++;
+        const errorMessage =
+          err instanceof Error ? err.message : 'Erreur inconnue';
+        result.errorDetails.push(`Ligne ${lineNum}: ${errorMessage}`);
+      }
+    }
+
+    return result;
   }
 }

@@ -24,6 +24,11 @@ import {
 import { LeavesService } from './leaves.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
+import {
+  ImportLeavesDto,
+  ImportLeavesResultDto,
+  LeavesValidationPreviewDto,
+} from './dto/import-leaves.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
@@ -134,6 +139,61 @@ export class LeavesController {
   })
   getPendingForValidation(@CurrentUser('id') userId: string) {
     return this.leavesService.getPendingForValidator(userId);
+  }
+
+  @Get('import-template')
+  @ApiOperation({ summary: 'Télécharger le modèle CSV pour import de congés' })
+  @ApiResponse({
+    status: 200,
+    description: 'Modèle CSV',
+    schema: {
+      type: 'object',
+      properties: {
+        template: { type: 'string' },
+      },
+    },
+  })
+  getImportTemplate() {
+    return { template: this.leavesService.getImportTemplate() };
+  }
+
+  @Post('import/validate')
+  @Permissions('leaves:create')
+  @ApiOperation({ summary: 'Valider des congés avant import (dry-run)' })
+  @ApiResponse({
+    status: 200,
+    description: "Prévisualisation de l'import",
+    type: LeavesValidationPreviewDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides',
+  })
+  validateImport(@Body() importLeavesDto: ImportLeavesDto) {
+    return this.leavesService.validateLeavesImport(importLeavesDto.leaves);
+  }
+
+  @Post('import')
+  @Permissions('leaves:create')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Importer des congés en masse via CSV' })
+  @ApiResponse({
+    status: 200,
+    description: 'Résultat de l\'import',
+    type: ImportLeavesResultDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides',
+  })
+  importLeaves(
+    @Body() importLeavesDto: ImportLeavesDto,
+    @CurrentUser('id') currentUserId: string,
+  ) {
+    return this.leavesService.importLeaves(
+      importLeavesDto.leaves,
+      currentUserId,
+    );
   }
 
   @Get('balance/:userId')

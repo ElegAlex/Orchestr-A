@@ -1189,4 +1189,493 @@ export class LeavesService {
 
     return overlappingLeaves.length > 0;
   }
+
+  // ===========================
+  // IMPORT CSV
+  // ===========================
+
+  /**
+   * Récupérer le modèle CSV pour l'import de congés
+   */
+  getImportTemplate(): string {
+    const headers = [
+      'userEmail',
+      'leaveTypeName',
+      'startDate',
+      'endDate',
+      'halfDay',
+      'comment',
+    ];
+    const exampleComment = [
+      '# user@example.com',
+      '# Congé Payé',
+      '# 2026-03-01',
+      '# 2026-03-05',
+      '#',
+      '# Vacances',
+    ];
+    const exampleHalfDay = [
+      '# user@example.com',
+      '# RTT',
+      '# 2026-03-10',
+      '# 2026-03-10',
+      '# MORNING',
+      '# Demi-journée matin',
+    ];
+    return (
+      headers.join(';') +
+      '\n' +
+      exampleComment.join(';') +
+      '\n' +
+      exampleHalfDay.join(';')
+    );
+  }
+
+  /**
+   * Valider des congés avant import (dry-run)
+   */
+  async validateLeavesImport(
+    leaves: Array<{
+      userEmail: string;
+      leaveTypeName: string;
+      startDate: string;
+      endDate: string;
+      halfDay?: string;
+      comment?: string;
+    }>,
+  ) {
+    const result: {
+      valid: any[];
+      duplicates: any[];
+      errors: any[];
+      warnings: any[];
+      summary: {
+        total: number;
+        valid: number;
+        duplicates: number;
+        errors: number;
+        warnings: number;
+      };
+    } = {
+      valid: [],
+      duplicates: [],
+      errors: [],
+      warnings: [],
+      summary: {
+        total: leaves.length,
+        valid: 0,
+        duplicates: 0,
+        errors: 0,
+        warnings: 0,
+      },
+    };
+
+    // Récupérer tous les utilisateurs actifs
+    const users = await this.prisma.user.findMany({
+      where: { isActive: true },
+    });
+    const usersByEmail = new Map(
+      users.map((u) => [
+        u.email.toLowerCase(),
+        { id: u.id, email: u.email, name: `${u.firstName} ${u.lastName}` },
+      ]),
+    );
+
+    // Récupérer tous les types de congés actifs
+    const leaveTypes = await this.prisma.leaveTypeConfig.findMany({
+      where: { isActive: true },
+    });
+    const leaveTypesByName = new Map(
+      leaveTypes.map((lt) => [
+        lt.name.toLowerCase(),
+        { id: lt.id, name: lt.name, code: lt.code },
+      ]),
+    );
+
+    // Récupérer les congés existants (PENDING/APPROVED) pour détection chevauchement
+    const existingLeaves = await this.prisma.leave.findMany({
+      where: {
+        status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
+      },
+      select: {
+        userId: true,
+        startDate: true,
+        endDate: true,
+      },
+    });
+
+    // Map pour détecter les doublons dans le fichier
+    const leavesInFile = new Map<string, Array<{ start: Date; end: Date }>>();
+
+    for (let i = 0; i < leaves.length; i++) {
+      const leaveData = leaves[i];
+      const lineNum = i + 2; // +2 car ligne 1 = header, index commence à 0
+
+      const previewItem: {
+        lineNumber: number;
+        leave: any;
+        status: 'valid' | 'duplicate' | 'error' | 'warning';
+        messages: string[];
+        resolvedUser?: { id: string; email: string; name: string };
+        resolvedLeaveType?: { id: string; name: string; code: string };
+      } = {
+        lineNumber: lineNum,
+        leave: leaveData,
+        status: 'valid',
+        messages: [],
+        resolvedUser: undefined,
+        resolvedLeaveType: undefined,
+      };
+
+      // Vérifier les champs obligatoires
+      if (!leaveData.userEmail || leaveData.userEmail.trim() === '') {
+        previewItem.status = 'error';
+        previewItem.messages.push("L'email utilisateur est obligatoire");
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      if (!leaveData.leaveTypeName || leaveData.leaveTypeName.trim() === '') {
+        previewItem.status = 'error';
+        previewItem.messages.push('Le type de congé est obligatoire');
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      if (!leaveData.startDate || leaveData.startDate.trim() === '') {
+        previewItem.status = 'error';
+        previewItem.messages.push('La date de début est obligatoire');
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      if (!leaveData.endDate || leaveData.endDate.trim() === '') {
+        previewItem.status = 'error';
+        previewItem.messages.push('La date de fin est obligatoire');
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      // Résoudre l'utilisateur par email
+      const resolvedUser = usersByEmail.get(leaveData.userEmail.toLowerCase());
+      if (!resolvedUser) {
+        previewItem.status = 'error';
+        previewItem.messages.push(
+          `Utilisateur "${leaveData.userEmail}" introuvable ou inactif`,
+        );
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+      previewItem.resolvedUser = resolvedUser;
+
+      // Résoudre le type de congé par nom
+      const resolvedLeaveType = leaveTypesByName.get(
+        leaveData.leaveTypeName.toLowerCase(),
+      );
+      if (!resolvedLeaveType) {
+        previewItem.status = 'error';
+        previewItem.messages.push(
+          `Type de congé "${leaveData.leaveTypeName}" introuvable ou inactif`,
+        );
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+      previewItem.resolvedLeaveType = resolvedLeaveType;
+
+      // Valider le format des dates
+      const startDate = new Date(leaveData.startDate);
+      const endDate = new Date(leaveData.endDate);
+
+      if (isNaN(startDate.getTime())) {
+        previewItem.status = 'error';
+        previewItem.messages.push(
+          `Date de début invalide: "${leaveData.startDate}" (format attendu: YYYY-MM-DD)`,
+        );
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      if (isNaN(endDate.getTime())) {
+        previewItem.status = 'error';
+        previewItem.messages.push(
+          `Date de fin invalide: "${leaveData.endDate}" (format attendu: YYYY-MM-DD)`,
+        );
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      // Vérifier que endDate >= startDate
+      if (endDate < startDate) {
+        previewItem.status = 'error';
+        previewItem.messages.push(
+          'La date de fin doit être postérieure ou égale à la date de début',
+        );
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
+
+      // Valider halfDay uniquement sur une seule journée
+      if (leaveData.halfDay) {
+        if (startDate.getTime() !== endDate.getTime()) {
+          previewItem.status = 'warning';
+          previewItem.messages.push(
+            'halfDay est ignoré pour les congés de plusieurs jours',
+          );
+        }
+      }
+
+      // Vérifier les chevauchements avec les congés existants
+      const hasOverlap = existingLeaves.some(
+        (existing) =>
+          existing.userId === resolvedUser.id &&
+          existing.startDate <= endDate &&
+          existing.endDate >= startDate,
+      );
+
+      if (hasOverlap) {
+        previewItem.status = 'duplicate';
+        previewItem.messages.push(
+          'Chevauchement avec un congé existant pour cet utilisateur',
+        );
+        result.duplicates.push(previewItem);
+        result.summary.duplicates++;
+        continue;
+      }
+
+      // Vérifier les chevauchements dans le fichier
+      const userLeavesInFile = leavesInFile.get(resolvedUser.id) || [];
+      const hasOverlapInFile = userLeavesInFile.some(
+        (leave) => leave.start <= endDate && leave.end >= startDate,
+      );
+
+      if (hasOverlapInFile) {
+        previewItem.status = 'duplicate';
+        previewItem.messages.push(
+          'Chevauchement avec un autre congé dans le fichier pour cet utilisateur',
+        );
+        result.duplicates.push(previewItem);
+        result.summary.duplicates++;
+        continue;
+      }
+
+      // Ajouter à la map pour détection de doublons
+      userLeavesInFile.push({ start: startDate, end: endDate });
+      leavesInFile.set(resolvedUser.id, userLeavesInFile);
+
+      // Si tout est OK
+      if (previewItem.status === 'warning') {
+        result.warnings.push(previewItem);
+        result.summary.warnings++;
+      } else {
+        result.valid.push(previewItem);
+        result.summary.valid++;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Importer des congés en masse
+   */
+  async importLeaves(
+    leaves: Array<{
+      userEmail: string;
+      leaveTypeName: string;
+      startDate: string;
+      endDate: string;
+      halfDay?: string;
+      comment?: string;
+    }>,
+    currentUserId: string,
+  ) {
+    const result: {
+      created: number;
+      skipped: number;
+      errors: number;
+      errorDetails: string[];
+    } = {
+      created: 0,
+      skipped: 0,
+      errors: 0,
+      errorDetails: [],
+    };
+
+    // Récupérer tous les utilisateurs actifs
+    const users = await this.prisma.user.findMany({
+      where: { isActive: true },
+    });
+    const usersByEmail = new Map(
+      users.map((u) => [u.email.toLowerCase(), u]),
+    );
+
+    // Récupérer tous les types de congés actifs
+    const leaveTypes = await this.prisma.leaveTypeConfig.findMany({
+      where: { isActive: true },
+    });
+    const leaveTypesByName = new Map(
+      leaveTypes.map((lt) => [lt.name.toLowerCase(), lt]),
+    );
+
+    // Récupérer les congés existants (PENDING/APPROVED) pour détection chevauchement
+    const existingLeaves = await this.prisma.leave.findMany({
+      where: {
+        status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
+      },
+      select: {
+        userId: true,
+        startDate: true,
+        endDate: true,
+      },
+    });
+
+    // Map pour détecter les doublons dans le fichier
+    const leavesInFile = new Map<string, Array<{ start: Date; end: Date }>>();
+
+    for (let i = 0; i < leaves.length; i++) {
+      const leaveData = leaves[i];
+      const lineNum = i + 2;
+
+      try {
+        // Résoudre l'utilisateur
+        const user = usersByEmail.get(leaveData.userEmail.toLowerCase());
+        if (!user) {
+          result.skipped++;
+          result.errorDetails.push(
+            `Ligne ${lineNum}: Utilisateur "${leaveData.userEmail}" introuvable`,
+          );
+          continue;
+        }
+
+        // Résoudre le type de congé
+        const leaveType = leaveTypesByName.get(
+          leaveData.leaveTypeName.toLowerCase(),
+        );
+        if (!leaveType) {
+          result.skipped++;
+          result.errorDetails.push(
+            `Ligne ${lineNum}: Type de congé "${leaveData.leaveTypeName}" introuvable`,
+          );
+          continue;
+        }
+
+        // Valider les dates
+        const startDate = new Date(leaveData.startDate);
+        const endDate = new Date(leaveData.endDate);
+
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          result.skipped++;
+          result.errorDetails.push(`Ligne ${lineNum}: Dates invalides`);
+          continue;
+        }
+
+        if (endDate < startDate) {
+          result.skipped++;
+          result.errorDetails.push(
+            `Ligne ${lineNum}: Date de fin antérieure à la date de début`,
+          );
+          continue;
+        }
+
+        // Vérifier les chevauchements avec les congés existants
+        const hasOverlap = existingLeaves.some(
+          (existing) =>
+            existing.userId === user.id &&
+            existing.startDate <= endDate &&
+            existing.endDate >= startDate,
+        );
+
+        if (hasOverlap) {
+          result.skipped++;
+          result.errorDetails.push(
+            `Ligne ${lineNum}: Chevauchement avec un congé existant`,
+          );
+          continue;
+        }
+
+        // Vérifier les chevauchements dans le fichier
+        const userLeavesInFile = leavesInFile.get(user.id) || [];
+        const hasOverlapInFile = userLeavesInFile.some(
+          (leave) => leave.start <= endDate && leave.end >= startDate,
+        );
+
+        if (hasOverlapInFile) {
+          result.skipped++;
+          result.errorDetails.push(
+            `Ligne ${lineNum}: Chevauchement avec un autre congé dans le fichier`,
+          );
+          continue;
+        }
+
+        // Calculer le nombre de jours
+        const halfDay =
+          leaveData.halfDay &&
+          startDate.getTime() === endDate.getTime() &&
+          (leaveData.halfDay === 'MORNING' || leaveData.halfDay === 'AFTERNOON')
+            ? leaveData.halfDay
+            : null;
+
+        const days = this.calculateLeaveDays(
+          startDate,
+          endDate,
+          halfDay,
+          undefined,
+        );
+
+        // Trouver le validateur approprié
+        const validatorId = leaveType.requiresApproval
+          ? await this.findValidatorForUser(user.id)
+          : null;
+
+        // Déterminer le statut initial
+        const initialStatus = leaveType.requiresApproval
+          ? LeaveStatus.PENDING
+          : LeaveStatus.APPROVED;
+
+        // Déterminer le type enum (pour rétrocompatibilité)
+        const validEnumTypes = Object.values(LeaveType);
+        const enumType = validEnumTypes.includes(leaveType.code as LeaveType)
+          ? (leaveType.code as LeaveType)
+          : LeaveType.OTHER;
+
+        // Créer le congé
+        await this.prisma.leave.create({
+          data: {
+            userId: user.id,
+            leaveTypeId: leaveType.id,
+            type: enumType,
+            startDate,
+            endDate,
+            halfDay: halfDay || undefined,
+            days,
+            comment: leaveData.comment || undefined,
+            status: initialStatus,
+            validatorId,
+          },
+        });
+
+        // Ajouter à la map pour détection de doublons
+        userLeavesInFile.push({ start: startDate, end: endDate });
+        leavesInFile.set(user.id, userLeavesInFile);
+
+        result.created++;
+      } catch (error) {
+        result.errors++;
+        result.errorDetails.push(
+          `Ligne ${lineNum}: ${error.message || 'Erreur inconnue'}`,
+        );
+      }
+    }
+
+    return result;
+  }
 }

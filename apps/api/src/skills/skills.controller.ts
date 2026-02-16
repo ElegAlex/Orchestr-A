@@ -24,6 +24,11 @@ import { SkillsService } from './skills.service';
 import { CreateSkillDto } from './dto/create-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
 import { AssignSkillDto } from './dto/assign-skill.dto';
+import {
+  ImportSkillsDto,
+  ImportSkillsResultDto,
+  SkillsValidationPreviewDto,
+} from './dto/import-skills.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
@@ -111,6 +116,42 @@ export class SkillsController {
     @Query('minLevel') minLevel?: SkillLevel,
   ) {
     return this.skillsService.findUsersBySkill(skillId, minLevel);
+  }
+
+  @Get('import-template')
+  @ApiOperation({
+    summary: "Télécharger le template CSV pour l'import de compétences",
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Template CSV',
+  })
+  getImportTemplate() {
+    return { template: this.skillsService.getImportTemplate() };
+  }
+
+  @Post('import/validate')
+  @Permissions('skills:create')
+  @ApiOperation({ summary: 'Valider des compétences avant import (dry-run)' })
+  @ApiResponse({
+    status: 200,
+    description: "Prévisualisation de l'import",
+    type: SkillsValidationPreviewDto,
+  })
+  validateImport(@Body() importSkillsDto: ImportSkillsDto) {
+    return this.skillsService.validateImport(importSkillsDto.skills);
+  }
+
+  @Post('import')
+  @Permissions('skills:create')
+  @ApiOperation({ summary: 'Importer des compétences en masse via CSV' })
+  @ApiResponse({
+    status: 201,
+    description: "Résultat de l'import",
+    type: ImportSkillsResultDto,
+  })
+  importSkills(@Body() importSkillsDto: ImportSkillsDto) {
+    return this.skillsService.importSkills(importSkillsDto.skills);
   }
 
   @Get(':id')
