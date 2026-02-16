@@ -72,160 +72,201 @@
   },
 
   "detail": {
+    "backToProjects": "← Back to projects",
+    "editProject": "Edit project",
+    "edit": "Edit",
+    "deleteProject": "Delete project",
+    "delete": "Delete",
     "tabs": {
       "overview": "Overview",
-      "tasks": "Tasks",
-      "milestones": "Milestones",
-      "team": "Team",
+      "tasks": "Tasks ({count})",
+      "milestones": "Milestones ({count})",
+      "team": "Team ({count})",
       "gantt": "📊 Gantt"
     },
-    "milestones": {
-      "title": "Milestones",
-      "status": {
-        "pending": "Upcoming",
-        "inProgress": "In Progress",
-        "completed": "Completed"
-      },
-      "editMilestone": "Edit milestone",
-      "noDate": "No date",
-      "taskCount": "{count} task(s)",
+    "stats": {
       "progress": "Progress",
-      "show": "Show",
-      "hide": "Hide",
-      "noTasks": "No associated tasks",
-      "taskStatusUpdated": "Task status updated"
+      "tasks": "Tasks",
+      "tasksDetails": "{inProgress} in progress, {blocked} blocked",
+      "budget": "Budget",
+      "budgetDetails": "of {total}h ({remaining}h remaining)",
+      "team": "Team",
+      "teamDetails": "{epics} epics, {milestones} milestones"
     },
-    "actions": {
-      "edit": "Edit",
-      "delete": "Delete"
+    "projectInfo": {
+      "title": "Project Information",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "budgetHours": "Budget hours",
+      "createdAt": "Created on",
+      "createdBy": "Created by",
+      "notSpecified": "Not specified"
     },
-    "overview": {
-      "stats": {
-        "progress": "Progress",
-        "tasks": "Tasks",
-        "budget": "Budget",
-        "team": "Team",
-        "tasksDetail": "{completed}/{total}",
-        "tasksInProgress": "{inProgress} in progress, {blocked} blocked",
-        "budgetDetail": "{logged}h",
-        "budgetRemaining": "of {total}h ({remaining}h remaining)",
-        "teamCount": "{count}",
-        "teamDetail": "{epics} epics, {milestones} milestones"
-      },
-      "info": {
-        "title": "Project Information",
-        "startDate": "Start date",
-        "endDate": "End date",
-        "budgetHours": "Budget hours",
-        "createdAt": "Created on",
-        "createdBy": "Created by",
-        "notSpecified": "Not specified"
-      }
-    },
-    "tasks": {
+    "tasksBoard": {
       "title": "Task Board",
-      "importCsv": "Import CSV",
-      "newTask": "+ New Task",
-      "columns": {
-        "todo": "To Do",
-        "inProgress": "In Progress",
-        "inReview": "In Review",
-        "done": "Done",
-        "blocked": "Blocked"
-      },
-      "noTasks": "No tasks",
-      "estimatedHours": "⏱️ {hours}h estimated",
-      "assignees": "{count} assignees",
-      "progress": "Progress"
-    },
-    "milestones": {
-      "title": "Milestones"
+      "importCSV": "Import CSV",
+      "newTask": "+ New Task"
     },
     "team": {
       "title": "Team Members",
       "addMember": "+ Add Member",
       "noMembers": "No members",
-      "allocation": "Allocation: {percent}%",
-      "removeConfirm": "Do you really want to remove {firstName} {lastName} from the team?"
+      "allocation": "Allocation: {value}%",
+      "confirmRemove": "Do you really want to remove {name} from the team?",
+      "removeMember": "Remove from project"
     },
     "gantt": {
-      "hint": "Click on a task to see its dependencies, double-click to edit them."
-    }
-  },
-
-  "members": {
-    "modal": {
+      "tip": "Click on a task to see its dependencies, double-click to edit them."
+    },
+    "addMemberModal": {
       "title": "Add Member",
       "userLabel": "User *",
-      "userPlaceholder": "Select a user",
+      "selectUser": "Select a user",
       "roleLabel": "Project role",
-      "rolePlaceholder": "Select a role",
+      "selectRole": "Select a role",
       "allocationLabel": "Allocation (%)",
-      "cancel": "Cancel",
-      "submit": "Add"
+      "add": "Add"
     },
-    "roles": {
-      "sponsor": "Sponsor",
-      "projectManager": "Project Manager",
-      "technicalLead": "Technical Lead",
-      "architect": "Architect",
-      "techLead": "Tech Lead",
-      "seniorDeveloper": "Senior Developer",
-      "developer": "Developer",
-      "juniorDeveloper": "Junior Developer",
-      "devOps": "DevOps",
-      "qaLead": "QA Lead",
-      "tester": "Tester",
-      "uxUiDesigner": "UX/UI Designer",
-      "productOwner": "Product Owner",
-      "scrumMaster": "Scrum Master",
-      "businessAnalyst": "Business Analyst",
-      "member": "Member",
-      "observer": "Observer"
+    "importTasksModal": {
+      "title": "Import Tasks (CSV)",
+      "description": "Import your tasks from a CSV file. Accepted separators: comma (,) or semicolon (;).",
+      "columnsTitle": "Available columns:",
+      "columnsDescription": "title*, description, status, priority, assigneeEmail, milestoneName, estimatedHours, startDate, endDate",
+      "requiredField": "* Required field",
+      "downloadTemplate": "📥 Download CSV template",
+      "importing": "Importing...",
+      "selectFile": "Click to select a CSV file"
+    },
+    "importMilestonesModal": {
+      "title": "Import Milestones (CSV)",
+      "description": "Import your milestones from a CSV file. Accepted separators: comma (,) or semicolon (;).",
+      "columnsTitle": "Available columns:",
+      "columnsDescription": "name*, description, dueDate*",
+      "requiredFields": "* Required fields (dueDate in YYYY-MM-DD format)",
+      "downloadTemplate": "📥 Download CSV template",
+      "importing": "Importing...",
+      "selectFile": "Click to select a CSV file"
+    },
+    "previewModal": {
+      "tasksTitle": "Tasks Import Preview",
+      "milestonesTitle": "Milestones Import Preview"
+    },
+    "deleteModal": {
+      "title": "Delete Project",
+      "confirmMessage": "Are you sure you want to permanently delete the project \"{name}\"?",
+      "warning": "This action is irreversible. The project and all its data (tasks, milestones, members) will be permanently deleted.",
+      "confirmButton": "Delete permanently"
+    },
+    "milestones": {
+      "taskStatusUpdated": "Task status updated",
+      "status": {
+        "pending": "Pending",
+        "completed": "Completed",
+        "inProgress": "In Progress"
+      },
+      "editMilestone": "Edit milestone",
+      "noDate": "No date",
+      "taskCount": "{count} task(s)",
+      "progress": "Progress",
+      "hide": "Hide",
+      "show": "Show",
+      "noTasks": "No tasks in this milestone"
+    },
+    "tasks": {
+      "estimatedHours": "{hours}h estimated"
     }
   },
 
-  "import": {
-    "tasks": {
-      "modalTitle": "Import Tasks (CSV)",
-      "description": "Import your tasks from a CSV file. Accepted separators: comma (,) or semicolon (;).",
-      "columnsTitle": "Available columns:",
-      "columns": "title*, description, status, priority, assigneeEmail, milestoneName, estimatedHours, startDate, endDate",
-      "requiredNote": "* Required field",
-      "downloadTemplate": "Download CSV template",
-      "dropzoneIdle": "Click to select a CSV file",
-      "dropzoneImporting": "Importing...",
-      "close": "Close"
+  "milestoneRoadmap": {
+    "title": "Roadmap",
+    "description": "Chronological view of project milestones and tasks",
+    "newTask": "+ New Task",
+    "importCSV": "Import CSV",
+    "newMilestone": "+ New Milestone",
+    "metrics": {
+      "milestones": "Milestones",
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "tasks": "Tasks"
     },
-    "milestones": {
-      "modalTitle": "Import Milestones (CSV)",
-      "description": "Import your milestones from a CSV file. Accepted separators: comma (,) or semicolon (;).",
-      "columnsTitle": "Available columns:",
-      "columns": "name*, description, dueDate*",
-      "requiredNote": "* Required fields (dueDate in YYYY-MM-DD format)",
-      "downloadTemplate": "Download CSV template",
-      "dropzoneIdle": "Click to select a CSV file",
-      "dropzoneImporting": "Importing...",
-      "close": "Close"
-    },
-    "preview": {
-      "tasksTitle": "Tasks Import Preview",
-      "milestonesTitle": "Milestones Import Preview",
-      "columnTitle": "Title",
-      "columnStatus": "Status",
-      "columnPriority": "Priority",
-      "columnAssignee": "Assignee",
-      "columnName": "Name",
-      "columnDescription": "Description",
-      "columnDueDate": "Due Date",
-      "confirm": "Confirm Import",
-      "cancel": "Cancel"
+    "emptyState": {
+      "title": "No milestones defined",
+      "description": "Create your first milestone to structure your project",
+      "createButton": "+ Create Milestone"
     }
+  },
+
+  "ganttChart": {
+    "emptyState": {
+      "title": "No tasks with dates",
+      "description": "Add start and end dates to tasks to see them in the Gantt chart"
+    },
+    "viewLabel": "View",
+    "viewDay": "Day",
+    "viewWeek": "Week",
+    "viewMonth": "Month"
+  },
+
+  "teamRoles": {
+    "sponsor": "Sponsor",
+    "projectManager": "Project Manager",
+    "technicalLead": "Technical Lead",
+    "architect": "Architect",
+    "techLead": "Tech Lead",
+    "seniorDeveloper": "Senior Developer",
+    "developer": "Developer",
+    "juniorDeveloper": "Junior Developer",
+    "devops": "DevOps",
+    "qaLead": "QA Lead",
+    "tester": "Tester",
+    "uxuiDesigner": "UX/UI Designer",
+    "productOwner": "Product Owner",
+    "scrumMaster": "Scrum Master",
+    "businessAnalyst": "Business Analyst",
+    "member": "Member",
+    "observer": "Observer"
+  },
+
+  "milestoneModal": {
+    "nameLabel": "Milestone name",
+    "descriptionLabel": "Description",
+    "dueDateLabel": "Due date",
+    "editTitle": "Edit Milestone",
+    "createTitle": "Create Milestone",
+    "nameRequired": "Milestone name is required",
+    "namePlaceholder": "E.g.: Version 1.0",
+    "descriptionPlaceholder": "Milestone description...",
+    "statusLabel": "Status",
+    "statusAutoTitle": "Status calculated automatically",
+    "statusAutoDescription": "Milestone status is determined based on its tasks progress",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "updateButton": "Update",
+    "createButton": "Create"
+  },
+
+  "projectEditModal": {
+    "title": "Edit Project",
+    "nameLabel": "Project name *",
+    "namePlaceholder": "E.g.: Website redesign",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Detailed project description...",
+    "statusLabel": "Status",
+    "priorityLabel": "Priority",
+    "startDateLabel": "Start date",
+    "endDateLabel": "End date",
+    "budgetHoursLabel": "Budget hours",
+    "budgetHoursPlaceholder": "E.g.: 50000",
+    "cancel": "Cancel",
+    "save": "Save changes",
+    "saving": "Saving...",
+    "errorSaving": "Error saving"
   },
 
   "messages": {
     "loadError": "Error loading projects",
     "loadDetailError": "Error loading project",
+    "loadUsersError": "Error loading users",
     "createSuccess": "Project created successfully",
     "createError": "Error creating project",
     "updateSuccess": "Project updated successfully",
@@ -233,19 +274,30 @@
     "deleteSuccess": "Project permanently deleted",
     "deleteError": "Error deleting project",
     "memberAddSuccess": "Member added successfully",
-    "memberAddError": "Error adding member",
+    "addMemberError": "Error adding member",
     "memberRemoveSuccess": "Member removed successfully",
     "memberRemoveError": "Error removing member",
+    "selectUserRequired": "Please select a user",
     "statusUpdateSuccess": "Status updated",
     "statusUpdateError": "Error updating status",
+    "milestoneUpdateSuccess": "Milestone updated successfully",
+    "milestoneCreateSuccess": "Milestone created successfully",
+    "requiredFieldsMissing": "Please fill in all required fields",
+    "savingError": "Error saving",
     "taskImportSuccess": "{count} task(s) imported successfully",
     "taskImportSkipped": "{count} task(s) skipped (duplicates)",
     "taskImportError": "{count} error(s) during import",
+    "milestonesImportSuccess": "{count} milestone(s) imported successfully",
+    "milestonesImportSkipped": "{count} milestone(s) skipped (duplicates)",
+    "milestonesImportErrors": "{count} error(s) during import",
     "milestoneImportSuccess": "{count} milestone(s) imported successfully",
     "milestoneImportSkipped": "{count} milestone(s) skipped (duplicates)",
     "milestoneImportError": "{count} error(s) during import",
     "csvEmpty": "CSV file is empty or invalid",
+    "csvEmptyOrInvalid": "CSV file is empty or invalid",
+    "validationError": "Validation error",
     "csvValidationError": "Validation error",
+    "importError": "Import error",
     "templateDownloadError": "Error downloading template"
   }
 }

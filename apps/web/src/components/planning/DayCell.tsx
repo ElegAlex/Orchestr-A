@@ -147,9 +147,13 @@ export const DayCell = ({
           cell.tasks.map((task) => {
             // Style spécial pour intervention extérieure
             const isExternal = task.isExternalIntervention;
+            // Distinction visuelle : tâche avec projet vs tâche orpheline
+            const isOrphan = !task.projectId;
             const baseClass = isExternal
               ? "bg-red-100 text-red-900 border-red-400 border-2"
-              : getPriorityColor(task.priority);
+              : isOrphan
+                ? "bg-slate-100 text-slate-800 border-slate-400"
+                : getPriorityColor(task.priority);
 
             return (
               <div

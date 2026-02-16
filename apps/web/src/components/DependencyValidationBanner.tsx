@@ -5,6 +5,7 @@ import {
   DateConflict,
   formatConflictMessage,
 } from "@/utils/dependencyValidation";
+import { useTranslations } from "next-intl";
 
 interface DependencyValidationBannerProps {
   conflicts: DateConflict[];
@@ -18,6 +19,7 @@ export function DependencyValidationBanner({
   compact = false,
 }: DependencyValidationBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const t = useTranslations("tasks.detail.dependencies.validationBanner");
 
   if (conflicts.length === 0) {
     return null;
@@ -43,7 +45,7 @@ export function DependencyValidationBanner({
           />
         </svg>
         <span className="text-sm text-amber-800">
-          {conflicts.length} conflit{conflicts.length > 1 ? "s" : ""} de dates
+          {t("compactText", { count: conflicts.length })}
         </span>
       </div>
     );
@@ -68,7 +70,7 @@ export function DependencyValidationBanner({
 
         <div className="flex-1">
           <h4 className="text-sm font-medium text-amber-800 mb-2">
-            Attention : incoherences de dates detectees
+            {t("title")}
           </h4>
 
           <ul className="space-y-1">
@@ -87,9 +89,7 @@ export function DependencyValidationBanner({
               onClick={() => setIsExpanded(true)}
               className="mt-2 text-sm text-amber-600 hover:text-amber-800 font-medium"
             >
-              Voir {conflicts.length - 2} autre
-              {conflicts.length - 2 > 1 ? "s" : ""} conflit
-              {conflicts.length - 2 > 1 ? "s" : ""}
+              {t("showMore", { count: conflicts.length - 2 })}
             </button>
           )}
 
@@ -98,7 +98,7 @@ export function DependencyValidationBanner({
               onClick={() => setIsExpanded(false)}
               className="mt-2 text-sm text-amber-600 hover:text-amber-800 font-medium"
             >
-              Reduire
+              {t("showLess")}
             </button>
           )}
         </div>

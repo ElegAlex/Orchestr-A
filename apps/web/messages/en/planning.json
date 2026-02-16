@@ -45,6 +45,8 @@
   "legend": {
     "title": "Legend",
     "task": "Task",
+    "projectTask": "Project task",
+    "orphanTask": "Orphan task",
     "leave": "Leave",
     "telework": "Telework",
     "office": "Office",

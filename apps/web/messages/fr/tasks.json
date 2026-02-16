@@ -122,7 +122,13 @@
       "dependsOn": "Depend de ({count})",
       "blocks": "Bloque ({count})",
       "noDependents": "Aucune tache dependante",
-      "viewDetails": "Voir les details"
+      "viewDetails": "Voir les details",
+      "validationBanner": {
+        "compactText": "{count} conflit(s) de dates",
+        "title": "Attention : incohérences de dates détectées",
+        "showMore": "Voir {count} autre(s) conflit(s)",
+        "showLess": "Réduire"
+      }
     }
   },
 

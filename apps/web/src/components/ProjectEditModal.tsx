@@ -174,8 +174,10 @@ export function ProjectEditModal({
                 onChange={(e) => {
                   const newStartDate = e.target.value;
                   const currentEndDate = formData.endDate;
+                  // If endDate is empty or before newStartDate, set it to newStartDate
+                  // This ensures the endDate picker opens on startDate's month
                   const newEndDate =
-                    currentEndDate && currentEndDate < newStartDate
+                    !currentEndDate || currentEndDate < newStartDate
                       ? newStartDate
                       : currentEndDate;
                   setFormData({

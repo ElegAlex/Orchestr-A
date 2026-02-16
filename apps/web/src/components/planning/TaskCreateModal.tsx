@@ -98,20 +98,27 @@ export const TaskCreateModal = ({
   };
 
   const handleFormProjectChange = async (projectId: string) => {
-    setFormData({ ...formData, projectId, assigneeIds: [] });
-
     if (projectId) {
       try {
         const project = await projectsService.getById(projectId);
         const members =
           (project.members?.map((m) => m.user).filter(Boolean) as User[]) || [];
         setProjectMembers(members);
+
+        // Keep only assignees who are members of the selected project
+        const memberIds = members.map(m => m.id);
+        const filteredAssigneeIds = formData.assigneeIds.filter(id => memberIds.includes(id));
+
+        setFormData({ ...formData, projectId, assigneeIds: filteredAssigneeIds });
       } catch (error) {
         console.error("Error fetching project members:", error);
         setProjectMembers([]);
+        setFormData({ ...formData, projectId, assigneeIds: [] });
       }
     } else {
+      // No project selected (orphan task) → all users are eligible, keep assignees
       setProjectMembers([]);
+      setFormData({ ...formData, projectId, assigneeIds: formData.assigneeIds });
     }
   };
 

@@ -72,160 +72,201 @@
   },
 
   "detail": {
+    "backToProjects": "← Retour aux projets",
+    "editProject": "Modifier le projet",
+    "edit": "Modifier",
+    "deleteProject": "Supprimer le projet",
+    "delete": "Supprimer",
     "tabs": {
       "overview": "Vue d'ensemble",
-      "tasks": "Tâches",
-      "milestones": "Jalons",
-      "team": "Équipe",
+      "tasks": "Tâches ({count})",
+      "milestones": "Jalons ({count})",
+      "team": "Équipe ({count})",
       "gantt": "📊 Gantt"
     },
-    "milestones": {
-      "title": "Jalons",
-      "status": {
-        "pending": "À venir",
-        "inProgress": "En cours",
-        "completed": "Terminé"
-      },
-      "editMilestone": "Modifier le jalon",
-      "noDate": "Pas de date",
-      "taskCount": "{count} tâche(s)",
+    "stats": {
       "progress": "Progression",
-      "show": "Voir",
-      "hide": "Masquer",
-      "noTasks": "Aucune tâche associée",
-      "taskStatusUpdated": "Statut de la tâche mis à jour"
+      "tasks": "Tâches",
+      "tasksDetails": "{inProgress} en cours, {blocked} bloquées",
+      "budget": "Budget",
+      "budgetDetails": "sur {total}h ({remaining}h restantes)",
+      "team": "Équipe",
+      "teamDetails": "{epics} épopées, {milestones} jalons"
     },
-    "actions": {
-      "edit": "Modifier",
-      "delete": "Supprimer"
+    "projectInfo": {
+      "title": "Informations du projet",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "budgetHours": "Budget heures",
+      "createdAt": "Créé le",
+      "createdBy": "Créé par",
+      "notSpecified": "Non renseigné"
     },
-    "overview": {
-      "stats": {
-        "progress": "Progression",
-        "tasks": "Tâches",
-        "budget": "Budget",
-        "team": "Équipe",
-        "tasksDetail": "{completed}/{total}",
-        "tasksInProgress": "{inProgress} en cours, {blocked} bloquées",
-        "budgetDetail": "{logged}h",
-        "budgetRemaining": "sur {total}h ({remaining}h restantes)",
-        "teamCount": "{count}",
-        "teamDetail": "{epics} épopées, {milestones} jalons"
-      },
-      "info": {
-        "title": "Informations du projet",
-        "startDate": "Date de début",
-        "endDate": "Date de fin",
-        "budgetHours": "Budget heures",
-        "createdAt": "Créé le",
-        "createdBy": "Créé par",
-        "notSpecified": "Non renseigné"
-      }
-    },
-    "tasks": {
+    "tasksBoard": {
       "title": "Tableau des tâches",
-      "importCsv": "Importer CSV",
-      "newTask": "+ Nouvelle tâche",
-      "columns": {
-        "todo": "À faire",
-        "inProgress": "En cours",
-        "inReview": "En revue",
-        "done": "Terminé",
-        "blocked": "Bloqué"
-      },
-      "noTasks": "Aucune tâche",
-      "estimatedHours": "⏱️ {hours}h estimées",
-      "assignees": "{count} assignés",
-      "progress": "Progression"
-    },
-    "milestones": {
-      "title": "Jalons"
+      "importCSV": "Importer CSV",
+      "newTask": "+ Nouvelle tâche"
     },
     "team": {
       "title": "Membres de l'équipe",
       "addMember": "+ Ajouter un membre",
       "noMembers": "Aucun membre",
-      "allocation": "Allocation: {percent}%",
-      "removeConfirm": "Voulez-vous vraiment retirer {firstName} {lastName} de l'équipe ?"
+      "allocation": "Allocation: {value}%",
+      "confirmRemove": "Voulez-vous vraiment retirer {name} de l'équipe ?",
+      "removeMember": "Retirer du projet"
     },
     "gantt": {
-      "hint": "Cliquez sur une tache pour voir ses dependances, double-cliquez pour les modifier."
-    }
-  },
-
-  "members": {
-    "modal": {
+      "tip": "Cliquez sur une tache pour voir ses dependances, double-cliquez pour les modifier."
+    },
+    "addMemberModal": {
       "title": "Ajouter un membre",
       "userLabel": "Utilisateur *",
-      "userPlaceholder": "Sélectionnez un utilisateur",
+      "selectUser": "Sélectionnez un utilisateur",
       "roleLabel": "Rôle dans le projet",
-      "rolePlaceholder": "Sélectionnez un rôle",
+      "selectRole": "Sélectionnez un rôle",
       "allocationLabel": "Allocation (%)",
-      "cancel": "Annuler",
-      "submit": "Ajouter"
+      "add": "Ajouter"
     },
-    "roles": {
-      "sponsor": "Sponsor",
-      "projectManager": "Chef de projet",
-      "technicalLead": "Responsable technique",
-      "architect": "Architecte",
-      "techLead": "Tech Lead",
-      "seniorDeveloper": "Développeur Senior",
-      "developer": "Développeur",
-      "juniorDeveloper": "Développeur Junior",
-      "devOps": "DevOps",
-      "qaLead": "QA Lead",
-      "tester": "Testeur",
-      "uxUiDesigner": "UX/UI Designer",
-      "productOwner": "Product Owner",
-      "scrumMaster": "Scrum Master",
-      "businessAnalyst": "Analyste métier",
-      "member": "Membre",
-      "observer": "Observateur"
+    "importTasksModal": {
+      "title": "Importer des tâches (CSV)",
+      "description": "Importez vos tâches depuis un fichier CSV. Séparateurs acceptés : virgule (,) ou point-virgule (;).",
+      "columnsTitle": "Colonnes disponibles :",
+      "columnsDescription": "title*, description, status, priority, assigneeEmail, milestoneName, estimatedHours, startDate, endDate",
+      "requiredField": "* Champ obligatoire",
+      "downloadTemplate": "📥 Télécharger le template CSV",
+      "importing": "Import en cours...",
+      "selectFile": "Cliquez pour sélectionner un fichier CSV"
+    },
+    "importMilestonesModal": {
+      "title": "Importer des jalons (CSV)",
+      "description": "Importez vos jalons depuis un fichier CSV. Séparateurs acceptés : virgule (,) ou point-virgule (;).",
+      "columnsTitle": "Colonnes disponibles :",
+      "columnsDescription": "name*, description, dueDate*",
+      "requiredFields": "* Champs obligatoires (dueDate au format YYYY-MM-DD)",
+      "downloadTemplate": "📥 Télécharger le template CSV",
+      "importing": "Import en cours...",
+      "selectFile": "Cliquez pour sélectionner un fichier CSV"
+    },
+    "previewModal": {
+      "tasksTitle": "Previsualisation de l'import des taches",
+      "milestonesTitle": "Previsualisation de l'import des jalons"
+    },
+    "deleteModal": {
+      "title": "Supprimer le projet",
+      "confirmMessage": "Êtes-vous sûr de vouloir supprimer définitivement le projet \"{name}\" ?",
+      "warning": "Cette action est irréversible. Le projet et toutes ses données (tâches, jalons, membres) seront supprimés définitivement.",
+      "confirmButton": "Supprimer définitivement"
+    },
+    "milestones": {
+      "taskStatusUpdated": "Statut de la tâche mis à jour",
+      "status": {
+        "pending": "En attente",
+        "completed": "Terminé",
+        "inProgress": "En cours"
+      },
+      "editMilestone": "Modifier le jalon",
+      "noDate": "Aucune date",
+      "taskCount": "{count} tâche(s)",
+      "progress": "Progression",
+      "hide": "Masquer",
+      "show": "Afficher",
+      "noTasks": "Aucune tâche dans ce jalon"
+    },
+    "tasks": {
+      "estimatedHours": "{hours}h estimées"
     }
   },
 
-  "import": {
-    "tasks": {
-      "modalTitle": "Importer des tâches (CSV)",
-      "description": "Importez vos tâches depuis un fichier CSV. Séparateurs acceptés : virgule (,) ou point-virgule (;).",
-      "columnsTitle": "Colonnes disponibles :",
-      "columns": "title*, description, status, priority, assigneeEmail, milestoneName, estimatedHours, startDate, endDate",
-      "requiredNote": "* Champ obligatoire",
-      "downloadTemplate": "Télécharger le template CSV",
-      "dropzoneIdle": "Cliquez pour sélectionner un fichier CSV",
-      "dropzoneImporting": "Import en cours...",
-      "close": "Fermer"
+  "milestoneRoadmap": {
+    "title": "Feuille de route",
+    "description": "Vue chronologique des jalons et des tâches du projet",
+    "newTask": "+ Nouvelle tâche",
+    "importCSV": "Importer CSV",
+    "newMilestone": "+ Nouveau jalon",
+    "metrics": {
+      "milestones": "Jalons",
+      "completed": "Terminés",
+      "inProgress": "En cours",
+      "tasks": "Tâches"
     },
-    "milestones": {
-      "modalTitle": "Importer des jalons (CSV)",
-      "description": "Importez vos jalons depuis un fichier CSV. Séparateurs acceptés : virgule (,) ou point-virgule (;).",
-      "columnsTitle": "Colonnes disponibles :",
-      "columns": "name*, description, dueDate*",
-      "requiredNote": "* Champs obligatoires (dueDate au format YYYY-MM-DD)",
-      "downloadTemplate": "Télécharger le template CSV",
-      "dropzoneIdle": "Cliquez pour sélectionner un fichier CSV",
-      "dropzoneImporting": "Import en cours...",
-      "close": "Fermer"
-    },
-    "preview": {
-      "tasksTitle": "Previsualisation de l'import des taches",
-      "milestonesTitle": "Previsualisation de l'import des jalons",
-      "columnTitle": "Titre",
-      "columnStatus": "Statut",
-      "columnPriority": "Priorite",
-      "columnAssignee": "Assignee",
-      "columnName": "Nom",
-      "columnDescription": "Description",
-      "columnDueDate": "Echeance",
-      "confirm": "Confirmer l'import",
-      "cancel": "Annuler"
+    "emptyState": {
+      "title": "Aucun jalon défini",
+      "description": "Créez votre premier jalon pour structurer votre projet",
+      "createButton": "+ Créer un jalon"
     }
+  },
+
+  "ganttChart": {
+    "emptyState": {
+      "title": "Aucune tâche avec des dates",
+      "description": "Ajoutez des dates de début et de fin aux tâches pour les voir dans le Gantt"
+    },
+    "viewLabel": "Vue",
+    "viewDay": "Jour",
+    "viewWeek": "Semaine",
+    "viewMonth": "Mois"
+  },
+
+  "teamRoles": {
+    "sponsor": "Sponsor",
+    "projectManager": "Chef de projet",
+    "technicalLead": "Responsable technique",
+    "architect": "Architecte",
+    "techLead": "Tech Lead",
+    "seniorDeveloper": "Développeur Senior",
+    "developer": "Développeur",
+    "juniorDeveloper": "Développeur Junior",
+    "devops": "DevOps",
+    "qaLead": "QA Lead",
+    "tester": "Testeur",
+    "uxuiDesigner": "UX/UI Designer",
+    "productOwner": "Product Owner",
+    "scrumMaster": "Scrum Master",
+    "businessAnalyst": "Analyste métier",
+    "member": "Membre",
+    "observer": "Observateur"
+  },
+
+  "milestoneModal": {
+    "nameLabel": "Nom du jalon",
+    "descriptionLabel": "Description",
+    "dueDateLabel": "Date d'échéance",
+    "editTitle": "Modifier le jalon",
+    "createTitle": "Créer un jalon",
+    "nameRequired": "Le nom du jalon est requis",
+    "namePlaceholder": "Ex: Version 1.0",
+    "descriptionPlaceholder": "Description du jalon...",
+    "statusLabel": "Statut",
+    "statusAutoTitle": "Statut calculé automatiquement",
+    "statusAutoDescription": "Le statut du jalon est déterminé en fonction de l'avancement de ses tâches",
+    "cancel": "Annuler",
+    "saving": "Enregistrement...",
+    "updateButton": "Mettre à jour",
+    "createButton": "Créer"
+  },
+
+  "projectEditModal": {
+    "title": "Modifier le projet",
+    "nameLabel": "Nom du projet *",
+    "namePlaceholder": "Ex: Refonte du site web",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Description détaillée du projet...",
+    "statusLabel": "Statut",
+    "priorityLabel": "Priorité",
+    "startDateLabel": "Date de début",
+    "endDateLabel": "Date de fin",
+    "budgetHoursLabel": "Budget en heures",
+    "budgetHoursPlaceholder": "Ex: 50000",
+    "cancel": "Annuler",
+    "save": "Enregistrer les modifications",
+    "saving": "Enregistrement...",
+    "errorSaving": "Erreur lors de l'enregistrement"
   },
 
   "messages": {
     "loadError": "Erreur lors du chargement des projets",
     "loadDetailError": "Erreur lors du chargement du projet",
+    "loadUsersError": "Erreur lors du chargement des utilisateurs",
     "createSuccess": "Projet créé avec succès",
     "createError": "Erreur lors de la création",
     "updateSuccess": "Projet mis à jour avec succès",
@@ -233,19 +274,30 @@
     "deleteSuccess": "Projet supprimé définitivement",
     "deleteError": "Erreur lors de la suppression définitive",
     "memberAddSuccess": "Membre ajouté avec succès",
-    "memberAddError": "Erreur lors de l'ajout du membre",
+    "addMemberError": "Erreur lors de l'ajout du membre",
     "memberRemoveSuccess": "Membre retiré avec succès",
     "memberRemoveError": "Erreur lors du retrait du membre",
+    "selectUserRequired": "Veuillez sélectionner un utilisateur",
     "statusUpdateSuccess": "Statut mis à jour",
     "statusUpdateError": "Erreur lors de la mise à jour du statut",
+    "milestoneUpdateSuccess": "Jalon mis à jour avec succès",
+    "milestoneCreateSuccess": "Jalon créé avec succès",
+    "requiredFieldsMissing": "Veuillez remplir tous les champs obligatoires",
+    "savingError": "Erreur lors de l'enregistrement",
     "taskImportSuccess": "{count} tache(s) importee(s) avec succes",
     "taskImportSkipped": "{count} tache(s) ignoree(s) (doublons)",
     "taskImportError": "{count} erreur(s) lors de l'import",
+    "milestonesImportSuccess": "{count} jalon(s) importe(s) avec succes",
+    "milestonesImportSkipped": "{count} jalon(s) ignore(s) (doublons)",
+    "milestonesImportErrors": "{count} erreur(s) lors de l'import",
     "milestoneImportSuccess": "{count} jalon(s) importe(s) avec succes",
     "milestoneImportSkipped": "{count} jalon(s) ignore(s) (doublons)",
     "milestoneImportError": "{count} erreur(s) lors de l'import",
     "csvEmpty": "Le fichier CSV est vide ou invalide",
+    "csvEmptyOrInvalid": "Le fichier CSV est vide ou invalide",
+    "validationError": "Erreur lors de la validation",
     "csvValidationError": "Erreur lors de la validation",
+    "importError": "Erreur lors de l'import",
     "templateDownloadError": "Erreur lors du téléchargement du template"
   }
 }

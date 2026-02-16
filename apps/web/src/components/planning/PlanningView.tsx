@@ -466,7 +466,11 @@ export const PlanningView = ({
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <span className="flex items-center">
                   <span className="w-3 h-3 bg-blue-500 rounded mr-1"></span>
-                  {t("legend.task")}
+                  {t("legend.projectTask")}
+                </span>
+                <span className="flex items-center">
+                  <span className="w-3 h-3 bg-slate-400 rounded mr-1"></span>
+                  {t("legend.orphanTask")}
                 </span>
                 <span className="flex items-center">
                   <span className="w-3 h-3 bg-green-500 rounded mr-1"></span>
@@ -516,6 +520,14 @@ export const PlanningView = ({
             <div className="flex items-center space-x-2">
               <span>⊗</span>
               <span>{tCommon("taskStatus.BLOCKED")}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block w-3 h-3 bg-blue-500 rounded"></span>
+              <span>{t("legend.projectTask")}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block w-3 h-3 bg-slate-400 rounded"></span>
+              <span>{t("legend.orphanTask")}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span>🏠</span>

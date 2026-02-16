@@ -45,6 +45,8 @@
   "legend": {
     "title": "Légende",
     "task": "Tâche",
+    "projectTask": "Tâche projet",
+    "orphanTask": "Tâche sans projet",
     "leave": "Congé",
     "telework": "Télétravail",
     "office": "Bureau",

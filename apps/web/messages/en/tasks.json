@@ -122,7 +122,13 @@
       "dependsOn": "Depends on ({count})",
       "blocks": "Blocks ({count})",
       "noDependents": "No dependent tasks",
-      "viewDetails": "View details"
+      "viewDetails": "View details",
+      "validationBanner": {
+        "compactText": "{count} date conflict(s)",
+        "title": "Warning: date inconsistencies detected",
+        "showMore": "Show {count} more conflict(s)",
+        "showLess": "Show less"
+      }
     }
   },
 

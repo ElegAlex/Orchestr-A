@@ -227,11 +227,28 @@ export function TaskModal({
               <select
                 value={formData.projectId}
                 onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    projectId: e.target.value,
-                    milestoneId: "", // Reset milestone when project changes
-                  });
+                  const newProjectId = e.target.value;
+
+                  if (newProjectId) {
+                    // Filter assignees: keep only those who are in the selected project
+                    const selectedProject = projects.find(p => p.id === newProjectId);
+                    const projectMemberIds = selectedProject?.members?.map(m => m.userId) || [];
+                    const filteredAssigneeIds = formData.assigneeIds.filter(id => projectMemberIds.includes(id));
+
+                    setFormData({
+                      ...formData,
+                      projectId: newProjectId,
+                      milestoneId: "", // Reset milestone when project changes
+                      assigneeIds: filteredAssigneeIds,
+                    });
+                  } else {
+                    // No project → keep all assignees (orphan task)
+                    setFormData({
+                      ...formData,
+                      projectId: newProjectId,
+                      milestoneId: "",
+                    });
+                  }
                 }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
