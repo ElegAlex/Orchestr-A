@@ -376,10 +376,10 @@ export const usePlanningData = ({
         return holidayDateStr === dateStr;
       });
 
-      // Vérifier si c'est une intervention extérieure (via événement)
-      const hasExternalIntervention = dayEvents.some(
-        (e) => e.isExternalIntervention,
-      );
+      // Vérifier si c'est une intervention extérieure (via tâche ou événement)
+      const hasExternalIntervention =
+        dayTasks.some((t) => t.isExternalIntervention) ||
+        dayEvents.some((e) => e.isExternalIntervention);
 
       // Appliquer le filtre d'affichage
       let filteredTasks = dayTasks;
