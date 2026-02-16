@@ -214,6 +214,7 @@ export class LeavesController {
   }
 
   @Post(':id/approve')
+  @Permissions('leaves:approve')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
@@ -253,6 +254,7 @@ export class LeavesController {
   }
 
   @Post(':id/reject')
+  @Permissions('leaves:approve')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
