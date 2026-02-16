@@ -23,10 +23,12 @@ export class LeavesService {
       type,
       startDate,
       endDate,
+      halfDay,
       startHalfDay,
       endHalfDay,
       reason,
     } = createLeaveDto;
+    const effectiveHalfDay = halfDay || startHalfDay;
 
     // Vérifier que l'utilisateur existe
     const user = await this.prisma.user.findUnique({
@@ -64,7 +66,7 @@ export class LeavesService {
     }
 
     // Calculer le nombre de jours
-    const days = this.calculateLeaveDays(start, end, startHalfDay, endHalfDay);
+    const days = this.calculateLeaveDays(start, end, effectiveHalfDay, endHalfDay);
 
     // Vérifier les chevauchements
     const hasOverlap = await this.checkOverlap(userId, start, end);
@@ -123,7 +125,7 @@ export class LeavesService {
         type: enumType,
         startDate: start,
         endDate: end,
-        halfDay: startHalfDay || undefined,
+        halfDay: effectiveHalfDay || undefined,
         days,
         comment: reason,
         status: initialStatus,
@@ -564,8 +566,9 @@ export class LeavesService {
       );
     }
 
-    const { type, startDate, endDate, startHalfDay, endHalfDay, reason } =
+    const { type, startDate, endDate, halfDay, startHalfDay, endHalfDay, reason } =
       updateLeaveDto;
+    const effectiveHalfDay = halfDay || startHalfDay;
 
     // Recalculer les jours si les dates changent
     const start = startDate ? new Date(startDate) : existingLeave.startDate;
@@ -580,7 +583,7 @@ export class LeavesService {
     const days = this.calculateLeaveDays(
       start,
       end,
-      startHalfDay ?? existingLeave.halfDay,
+      effectiveHalfDay ?? existingLeave.halfDay,
       undefined,
     );
 
@@ -621,8 +624,7 @@ export class LeavesService {
         ...(type && { type }),
         ...(startDate && { startDate: start }),
         ...(endDate && { endDate: end }),
-        ...(startHalfDay && { startHalfDay }),
-        ...(endHalfDay && { endHalfDay }),
+        ...(effectiveHalfDay && { halfDay: effectiveHalfDay }),
         ...(reason !== undefined && { comment: reason }),
         days,
       },

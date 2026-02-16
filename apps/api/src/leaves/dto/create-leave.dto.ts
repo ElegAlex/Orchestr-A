@@ -43,7 +43,16 @@ export class CreateLeaveDto {
   endDate: string;
 
   @ApiProperty({
-    description: 'Demi-journée de début (MORNING ou AFTERNOON)',
+    description: 'Demi-journée (MORNING ou AFTERNOON)',
+    enum: HalfDay,
+    required: false,
+  })
+  @IsEnum(HalfDay)
+  @IsOptional()
+  halfDay?: HalfDay;
+
+  @ApiProperty({
+    description: 'Demi-journée de début (MORNING ou AFTERNOON) - déprécié, utiliser halfDay',
     enum: HalfDay,
     required: false,
   })
@@ -52,7 +61,7 @@ export class CreateLeaveDto {
   startHalfDay?: HalfDay;
 
   @ApiProperty({
-    description: 'Demi-journée de fin (MORNING ou AFTERNOON)',
+    description: 'Demi-journée de fin (MORNING ou AFTERNOON) - déprécié, utiliser halfDay',
     enum: HalfDay,
     required: false,
   })
