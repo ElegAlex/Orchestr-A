@@ -372,24 +372,74 @@ export default function ProjectDetailPage() {
     try {
       const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
+
+      // Temporarily remove overflow clipping to capture the full Gantt
+      const overflowEls = container.querySelectorAll<HTMLElement>(".overflow-x-auto, .overflow-y-auto, .overflow-auto");
+      const savedOverflows: { el: HTMLElement; value: string }[] = [];
+      overflowEls.forEach((el) => {
+        savedOverflows.push({ el, value: el.style.overflow });
+        el.style.overflow = "visible";
+      });
+      // Also expand the container itself
+      const savedContainerOverflow = container.style.overflow;
+      container.style.overflow = "visible";
+
       const dataUrl = await toPng(container, {
         pixelRatio: 2,
         backgroundColor: "#ffffff",
       });
+
+      // Restore overflow
+      container.style.overflow = savedContainerOverflow;
+      savedOverflows.forEach(({ el, value }) => {
+        el.style.overflow = value;
+      });
+
       const img = new Image();
       img.src = dataUrl;
       await new Promise((resolve) => {
         img.onload = resolve;
       });
-      const pdf = new jsPDF("landscape", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const ratio = Math.min(pdfWidth / img.width, pdfHeight / img.height);
-      const width = img.width * ratio;
-      const height = img.height * ratio;
-      const x = (pdfWidth - width) / 2;
-      const y = (pdfHeight - height) / 2;
-      pdf.addImage(dataUrl, "PNG", x, y, width, height);
+
+      // Portrait A4 with 10mm margins
+      const margin = 10;
+      const pdf = new jsPDF("portrait", "mm", "a4");
+      const pageW = pdf.internal.pageSize.getWidth() - margin * 2;
+      const pageH = pdf.internal.pageSize.getHeight() - margin * 2;
+
+      // Scale image to fit the full page width, preserving aspect ratio
+      const imgAspect = img.height / img.width;
+      const fitWidth = pageW;
+      const fitHeight = fitWidth * imgAspect;
+
+      if (fitHeight <= pageH) {
+        // Fits on one page
+        pdf.addImage(dataUrl, "PNG", margin, margin, fitWidth, fitHeight);
+      } else {
+        // Multi-page: slice the image across pages
+        const scaleFactor = fitWidth / img.width;
+        const sliceHeightPx = pageH / scaleFactor;
+        const totalPages = Math.ceil(img.height / sliceHeightPx);
+
+        for (let page = 0; page < totalPages; page++) {
+          if (page > 0) pdf.addPage();
+          const srcY = page * sliceHeightPx;
+          const srcH = Math.min(sliceHeightPx, img.height - srcY);
+          const destH = srcH * scaleFactor;
+
+          // Draw slice using a temporary canvas
+          const sliceCanvas = document.createElement("canvas");
+          sliceCanvas.width = img.width;
+          sliceCanvas.height = srcH;
+          const ctx = sliceCanvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, srcY, img.width, srcH, 0, 0, img.width, srcH);
+            const sliceData = sliceCanvas.toDataURL("image/png");
+            pdf.addImage(sliceData, "PNG", margin, margin, fitWidth, destH);
+          }
+        }
+      }
+
       const sanitizedName =
         project?.name?.replace(/[^a-zA-Z0-9-_]/g, "_") || "project";
       pdf.save(`gantt-${sanitizedName}.pdf`);
