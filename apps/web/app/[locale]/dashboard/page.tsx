@@ -105,7 +105,9 @@ export default function DashboardPage() {
               .sort((a, b) => {
                 if (!a.endDate) return 1;
                 if (!b.endDate) return -1;
-                return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+                return (
+                  new Date(a.endDate).getTime() - new Date(b.endDate).getTime()
+                );
               })
           : [];
 
@@ -234,7 +236,10 @@ export default function DashboardPage() {
                   .sort((a, b) => {
                     if (!a.endDate) return 1;
                     if (!b.endDate) return -1;
-                    return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+                    return (
+                      new Date(a.endDate).getTime() -
+                      new Date(b.endDate).getTime()
+                    );
                   })
               : [];
 
@@ -707,24 +712,36 @@ export default function DashboardPage() {
                 {myProjects.map((project) => (
                   <div
                     key={project.id}
-                    onClick={() => router.push(`/${locale}/projects/${project.id}`)}
+                    onClick={() =>
+                      router.push(`/${locale}/projects/${project.id}`)
+                    }
                     className="bg-white rounded-lg shadow-sm border border-gray-200 px-5 py-3 hover:shadow-md hover:border-blue-500 transition cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${getPriorityBadgeColor(project.priority)}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${getPriorityBadgeColor(project.priority)}`}
+                      >
                         {tCommon(`priority.${project.priority}`)}
                       </span>
                       <h3 className="text-base font-semibold text-gray-900 truncate min-w-0 flex-1">
                         {project.name}
                       </h3>
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${getStatusBadgeColor(project.status)}`}>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${getStatusBadgeColor(project.status)}`}
+                      >
                         {tCommon(`projectStatus.${project.status}`)}
                       </span>
                       {(project.startDate || project.endDate) && (
                         <span className="text-xs text-gray-500 shrink-0 hidden sm:inline">
-                          {project.startDate && new Date(project.startDate).toLocaleDateString("fr-FR")}
+                          {project.startDate &&
+                            new Date(project.startDate).toLocaleDateString(
+                              "fr-FR",
+                            )}
                           {project.startDate && project.endDate && " → "}
-                          {project.endDate && new Date(project.endDate).toLocaleDateString("fr-FR")}
+                          {project.endDate &&
+                            new Date(project.endDate).toLocaleDateString(
+                              "fr-FR",
+                            )}
                         </span>
                       )}
                       <div className="flex items-center gap-1.5 shrink-0 hidden sm:flex w-24">
@@ -751,7 +768,10 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <p className="text-sm text-gray-500 truncate mt-0.5">
-                      {project.description || tCommon("common.noDescription", { defaultValue: "Aucune description" })}
+                      {project.description ||
+                        tCommon("common.noDescription", {
+                          defaultValue: "Aucune description",
+                        })}
                     </p>
                   </div>
                 ))}
