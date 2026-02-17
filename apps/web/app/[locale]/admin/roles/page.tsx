@@ -26,9 +26,8 @@ export default function RolesPage() {
   // Modales
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingRole, setEditingRole] = useState<RoleConfigWithPermissions | null>(
-    null,
-  );
+  const [editingRole, setEditingRole] =
+    useState<RoleConfigWithPermissions | null>(null);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -91,7 +90,9 @@ export default function RolesPage() {
       openEditModal(newRole);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || t("messages.createError"));
+      toast.error(
+        axiosError.response?.data?.message || t("messages.createError"),
+      );
     }
   };
 
@@ -133,7 +134,9 @@ export default function RolesPage() {
       fetchRoles();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || t("messages.updateError"));
+      toast.error(
+        axiosError.response?.data?.message || t("messages.updateError"),
+      );
     }
   };
 
@@ -152,7 +155,9 @@ export default function RolesPage() {
       setEditingRole(updatedRole);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || t("messages.saveError"));
+      toast.error(
+        axiosError.response?.data?.message || t("messages.saveError"),
+      );
     }
   };
 
@@ -172,7 +177,9 @@ export default function RolesPage() {
       fetchRoles();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || t("messages.deleteError"));
+      toast.error(
+        axiosError.response?.data?.message || t("messages.deleteError"),
+      );
     }
   };
 
@@ -186,7 +193,9 @@ export default function RolesPage() {
       fetchPermissions();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || t("messages.initError"));
+      toast.error(
+        axiosError.response?.data?.message || t("messages.initError"),
+      );
     }
   };
 
@@ -405,7 +414,10 @@ export default function RolesPage() {
                   required
                   value={formData.code}
                   onChange={(e) =>
-                    setFormData({ ...formData, code: e.target.value.toUpperCase() })
+                    setFormData({
+                      ...formData,
+                      code: e.target.value.toUpperCase(),
+                    })
                   }
                   placeholder="EX: CUSTOM_ROLE"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -509,7 +521,10 @@ export default function RolesPage() {
                     disabled={editingRole.isSystem}
                     value={formData.code}
                     onChange={(e) =>
-                      setFormData({ ...formData, code: e.target.value.toUpperCase() })
+                      setFormData({
+                        ...formData,
+                        code: e.target.value.toUpperCase(),
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />

@@ -106,10 +106,16 @@ export const TaskCreateModal = ({
         setProjectMembers(members);
 
         // Keep only assignees who are members of the selected project
-        const memberIds = members.map(m => m.id);
-        const filteredAssigneeIds = formData.assigneeIds.filter(id => memberIds.includes(id));
+        const memberIds = members.map((m) => m.id);
+        const filteredAssigneeIds = formData.assigneeIds.filter((id) =>
+          memberIds.includes(id),
+        );
 
-        setFormData({ ...formData, projectId, assigneeIds: filteredAssigneeIds });
+        setFormData({
+          ...formData,
+          projectId,
+          assigneeIds: filteredAssigneeIds,
+        });
       } catch (error) {
         console.error("Error fetching project members:", error);
         setProjectMembers([]);
@@ -118,7 +124,11 @@ export const TaskCreateModal = ({
     } else {
       // No project selected (orphan task) → all users are eligible, keep assignees
       setProjectMembers([]);
-      setFormData({ ...formData, projectId, assigneeIds: formData.assigneeIds });
+      setFormData({
+        ...formData,
+        projectId,
+        assigneeIds: formData.assigneeIds,
+      });
     }
   };
 
@@ -155,9 +165,7 @@ export const TaskCreateModal = ({
       onClose();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        axiosError.response?.data?.message || t("error"),
-      );
+      toast.error(axiosError.response?.data?.message || t("error"));
     } finally {
       setLoading(false);
     }
@@ -186,9 +194,7 @@ export const TaskCreateModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          {t("title")}
-        </h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">{t("title")}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -262,11 +268,21 @@ export const TaskCreateModal = ({
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value={TaskStatus.TODO}>{tCommon("taskStatus.TODO")}</option>
-                <option value={TaskStatus.IN_PROGRESS}>{tCommon("taskStatus.IN_PROGRESS")}</option>
-                <option value={TaskStatus.IN_REVIEW}>{tCommon("taskStatus.IN_REVIEW")}</option>
-                <option value={TaskStatus.DONE}>{tCommon("taskStatus.DONE")}</option>
-                <option value={TaskStatus.BLOCKED}>{tCommon("taskStatus.BLOCKED")}</option>
+                <option value={TaskStatus.TODO}>
+                  {tCommon("taskStatus.TODO")}
+                </option>
+                <option value={TaskStatus.IN_PROGRESS}>
+                  {tCommon("taskStatus.IN_PROGRESS")}
+                </option>
+                <option value={TaskStatus.IN_REVIEW}>
+                  {tCommon("taskStatus.IN_REVIEW")}
+                </option>
+                <option value={TaskStatus.DONE}>
+                  {tCommon("taskStatus.DONE")}
+                </option>
+                <option value={TaskStatus.BLOCKED}>
+                  {tCommon("taskStatus.BLOCKED")}
+                </option>
               </select>
             </div>
 
@@ -285,9 +301,15 @@ export const TaskCreateModal = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value={Priority.LOW}>{tCommon("priority.LOW")}</option>
-                <option value={Priority.NORMAL}>{tCommon("priority.NORMAL")}</option>
-                <option value={Priority.HIGH}>{tCommon("priority.HIGH")}</option>
-                <option value={Priority.CRITICAL}>{tCommon("priority.CRITICAL")}</option>
+                <option value={Priority.NORMAL}>
+                  {tCommon("priority.NORMAL")}
+                </option>
+                <option value={Priority.HIGH}>
+                  {tCommon("priority.HIGH")}
+                </option>
+                <option value={Priority.CRITICAL}>
+                  {tCommon("priority.CRITICAL")}
+                </option>
               </select>
             </div>
           </div>

@@ -130,9 +130,7 @@ export default function EventsPage() {
       fetchData();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        axiosError.response?.data?.message || t("create.error"),
-      );
+      toast.error(axiosError.response?.data?.message || t("create.error"));
     }
   };
 
@@ -141,7 +139,10 @@ export default function EventsPage() {
     setFormData({
       title: event.title,
       description: event.description || "",
-      date: typeof event.date === "string" ? event.date.split("T")[0] : new Date(event.date).toISOString().split("T")[0],
+      date:
+        typeof event.date === "string"
+          ? event.date.split("T")[0]
+          : new Date(event.date).toISOString().split("T")[0],
       startTime: event.startTime || "",
       endTime: event.endTime || "",
       isAllDay: event.isAllDay,
@@ -178,9 +179,7 @@ export default function EventsPage() {
       fetchData();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        axiosError.response?.data?.message || t("edit.error"),
-      );
+      toast.error(axiosError.response?.data?.message || t("edit.error"));
     }
   };
 
@@ -393,39 +392,45 @@ export default function EventsPage() {
                             </div>
                           )}
 
-                          {event.participants && event.participants.length > 0 && (
-                            <div className="flex items-center space-x-2 text-sm text-gray-500">
-                              <span>👥</span>
-                              <span>
-                                {event.participants.length === 1
-                                  ? t("details.participants", { count: event.participants.length })
-                                  : t("details.participantsPlural", { count: event.participants.length })}
-                              </span>
-                            </div>
-                          )}
+                          {event.participants &&
+                            event.participants.length > 0 && (
+                              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                                <span>👥</span>
+                                <span>
+                                  {event.participants.length === 1
+                                    ? t("details.participants", {
+                                        count: event.participants.length,
+                                      })
+                                    : t("details.participantsPlural", {
+                                        count: event.participants.length,
+                                      })}
+                                </span>
+                              </div>
+                            )}
                         </div>
 
-                        {event.participants && event.participants.length > 0 && (
-                          <div className="flex items-center space-x-1 mt-2 ml-11">
-                            <div className="flex -space-x-1">
-                              {event.participants.slice(0, 5).map((p) => (
-                                <div
-                                  key={p.userId}
-                                  className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs border border-white"
-                                  title={`${p.user.firstName} ${p.user.lastName}`}
-                                >
-                                  {p.user.firstName[0]}
-                                  {p.user.lastName[0]}
-                                </div>
-                              ))}
-                              {event.participants.length > 5 && (
-                                <div className="w-6 h-6 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs border border-white">
-                                  +{event.participants.length - 5}
-                                </div>
-                              )}
+                        {event.participants &&
+                          event.participants.length > 0 && (
+                            <div className="flex items-center space-x-1 mt-2 ml-11">
+                              <div className="flex -space-x-1">
+                                {event.participants.slice(0, 5).map((p) => (
+                                  <div
+                                    key={p.userId}
+                                    className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs border border-white"
+                                    title={`${p.user.firstName} ${p.user.lastName}`}
+                                  >
+                                    {p.user.firstName[0]}
+                                    {p.user.lastName[0]}
+                                  </div>
+                                ))}
+                                {event.participants.length > 5 && (
+                                  <div className="w-6 h-6 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs border border-white">
+                                    +{event.participants.length - 5}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
                       </div>
 
                       <div className="flex items-center space-x-2">
@@ -460,9 +465,7 @@ export default function EventsPage() {
             <div className="text-center text-gray-500 py-12">
               <span className="text-4xl mb-4 block">📅</span>
               <p>{t("view.calendarSimplified")}</p>
-              <p className="text-sm mt-2">
-                {t("view.calendarDescription")}
-              </p>
+              <p className="text-sm mt-2">{t("view.calendarDescription")}</p>
               <div className="mt-6 space-y-4">
                 {getFilteredEvents().map((event) => (
                   <div
@@ -490,7 +493,10 @@ export default function EventsPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               {editingEvent ? t("edit.title") : t("create.title")}
             </h2>
-            <form onSubmit={editingEvent ? handleUpdate : handleCreate} className="space-y-4">
+            <form
+              onSubmit={editingEvent ? handleUpdate : handleCreate}
+              className="space-y-4"
+            >
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t("create.titleField")}
@@ -558,11 +564,17 @@ export default function EventsPage() {
                     id="isExternalIntervention"
                     checked={formData.isExternalIntervention}
                     onChange={(e) =>
-                      setFormData({ ...formData, isExternalIntervention: e.target.checked })
+                      setFormData({
+                        ...formData,
+                        isExternalIntervention: e.target.checked,
+                      })
                     }
                     className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                   />
-                  <label htmlFor="isExternalIntervention" className="text-sm text-gray-700">
+                  <label
+                    htmlFor="isExternalIntervention"
+                    className="text-sm text-gray-700"
+                  >
                     {t("create.externalIntervention")}
                   </label>
                 </div>
@@ -646,7 +658,9 @@ export default function EventsPage() {
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  {editingEvent ? t("edit.saveButton") : t("create.createButton")}
+                  {editingEvent
+                    ? t("edit.saveButton")
+                    : t("create.createButton")}
                 </button>
               </div>
             </form>

@@ -188,7 +188,8 @@ export function TaskModal({
           {/* Titre */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              {t("modal.create.titleLabel")} <span className="text-red-500">*</span>
+              {t("modal.create.titleLabel")}{" "}
+              <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -231,9 +232,14 @@ export function TaskModal({
 
                   if (newProjectId) {
                     // Filter assignees: keep only those who are in the selected project
-                    const selectedProject = projects.find(p => p.id === newProjectId);
-                    const projectMemberIds = selectedProject?.members?.map(m => m.userId) || [];
-                    const filteredAssigneeIds = formData.assigneeIds.filter(id => projectMemberIds.includes(id));
+                    const selectedProject = projects.find(
+                      (p) => p.id === newProjectId,
+                    );
+                    const projectMemberIds =
+                      selectedProject?.members?.map((m) => m.userId) || [];
+                    const filteredAssigneeIds = formData.assigneeIds.filter(
+                      (id) => projectMemberIds.includes(id),
+                    );
 
                     setFormData({
                       ...formData,
@@ -282,9 +288,15 @@ export function TaskModal({
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value={TaskStatus.TODO}>{t("status.TODO")}</option>
-                <option value={TaskStatus.IN_PROGRESS}>{t("status.IN_PROGRESS")}</option>
-                <option value={TaskStatus.IN_REVIEW}>{t("status.IN_REVIEW")}</option>
-                <option value={TaskStatus.BLOCKED}>{t("status.BLOCKED")}</option>
+                <option value={TaskStatus.IN_PROGRESS}>
+                  {t("status.IN_PROGRESS")}
+                </option>
+                <option value={TaskStatus.IN_REVIEW}>
+                  {t("status.IN_REVIEW")}
+                </option>
+                <option value={TaskStatus.BLOCKED}>
+                  {t("status.BLOCKED")}
+                </option>
                 <option value={TaskStatus.DONE}>{t("status.DONE")}</option>
               </select>
             </div>
@@ -306,7 +318,9 @@ export function TaskModal({
                 <option value={Priority.LOW}>{t("priority.LOW")}</option>
                 <option value={Priority.NORMAL}>{t("priority.NORMAL")}</option>
                 <option value={Priority.HIGH}>{t("priority.HIGH")}</option>
-                <option value={Priority.CRITICAL}>{t("priority.CRITICAL")}</option>
+                <option value={Priority.CRITICAL}>
+                  {t("priority.CRITICAL")}
+                </option>
               </select>
             </div>
           </div>
@@ -482,7 +496,9 @@ export function TaskModal({
                   <span>{t("modal.create.saving")}</span>
                 </>
               ) : (
-                <span>{task ? t("modal.edit.submit") : t("modal.create.submit")}</span>
+                <span>
+                  {task ? t("modal.edit.submit") : t("modal.create.submit")}
+                </span>
               )}
             </button>
           </div>

@@ -1,16 +1,17 @@
-import { getRequestConfig } from 'next-intl/server';
+import { getRequestConfig } from "next-intl/server";
 
 export default getRequestConfig(async ({ requestLocale }) => {
   let locale = await requestLocale;
 
-  if (!locale || !['fr', 'en'].includes(locale)) {
-    locale = 'fr';
+  if (!locale || !["fr", "en"].includes(locale)) {
+    locale = "fr";
   }
 
   const messages = {
     common: (await import(`../../messages/${locale}/common.json`)).default,
     auth: (await import(`../../messages/${locale}/auth.json`)).default,
-    dashboard: (await import(`../../messages/${locale}/dashboard.json`)).default,
+    dashboard: (await import(`../../messages/${locale}/dashboard.json`))
+      .default,
     projects: (await import(`../../messages/${locale}/projects.json`)).default,
     tasks: (await import(`../../messages/${locale}/tasks.json`)).default,
     planning: (await import(`../../messages/${locale}/planning.json`)).default,

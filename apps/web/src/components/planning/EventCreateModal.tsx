@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Project, Role, User } from "@/types";
-import {
-  eventsService,
-  CreateEventDto,
-} from "@/services/events.service";
+import { eventsService, CreateEventDto } from "@/services/events.service";
 import { projectsService } from "@/services/projects.service";
 import { usersService } from "@/services/users.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
@@ -112,9 +109,7 @@ export const EventCreateModal = ({
       onClose();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        axiosError.response?.data?.message || t("error"),
-      );
+      toast.error(axiosError.response?.data?.message || t("error"));
     } finally {
       setLoading(false);
     }
@@ -139,9 +134,7 @@ export const EventCreateModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          {t("title")}
-        </h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">{t("title")}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -210,11 +203,17 @@ export const EventCreateModal = ({
                 id="eventIsExternalIntervention"
                 checked={formData.isExternalIntervention}
                 onChange={(e) =>
-                  setFormData({ ...formData, isExternalIntervention: e.target.checked })
+                  setFormData({
+                    ...formData,
+                    isExternalIntervention: e.target.checked,
+                  })
                 }
                 className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
               />
-              <label htmlFor="eventIsExternalIntervention" className="text-sm text-gray-700">
+              <label
+                htmlFor="eventIsExternalIntervention"
+                className="text-sm text-gray-700"
+              >
                 {t("externalIntervention")}
               </label>
             </div>

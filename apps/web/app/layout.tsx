@@ -37,7 +37,7 @@ export default async function RootLayout({
   children,
   params,
 }: RootLayoutProps) {
-  const locale = (await params)?.locale || 'fr';
+  const locale = (await params)?.locale || "fr";
 
   return (
     <html lang={locale} suppressHydrationWarning>

@@ -23,8 +23,8 @@ import toast from "react-hot-toast";
 export default function TasksPage() {
   const router = useRouter();
   const locale = useLocale();
-  const t = useTranslations('tasks');
-  const tCommon = useTranslations('common');
+  const t = useTranslations("tasks");
+  const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -129,7 +129,7 @@ export default function TasksPage() {
         }
       }
     } catch (err) {
-      toast.error(t('messages.loadError'));
+      toast.error(t("messages.loadError"));
       console.error(err);
     } finally {
       setLoading(false);
@@ -160,14 +160,14 @@ export default function TasksPage() {
         isExternalIntervention: formData.isExternalIntervention,
       };
       await tasksService.create(taskData);
-      toast.success(t('messages.createSuccess'));
+      toast.success(t("messages.createSuccess"));
       setShowCreateModal(false);
       resetForm();
       fetchData();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || t('messages.createError'),
+        axiosError.response?.data?.message || t("messages.createError"),
       );
     }
   };
@@ -175,10 +175,10 @@ export default function TasksPage() {
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
       await tasksService.update(taskId, { status: newStatus });
-      toast.success(t('messages.statusUpdateSuccess'));
+      toast.success(t("messages.statusUpdateSuccess"));
       fetchData();
     } catch {
-      toast.error(t('messages.statusUpdateError'));
+      toast.error(t("messages.statusUpdateError"));
     }
   };
 
@@ -318,10 +318,10 @@ export default function TasksPage() {
     if (draggedTask && draggedTask.status !== newStatus) {
       try {
         await tasksService.update(draggedTask.id, { status: newStatus });
-        toast.success(t('messages.statusUpdateSuccess'));
+        toast.success(t("messages.statusUpdateSuccess"));
         fetchData();
       } catch {
-        toast.error(t('messages.statusUpdateError'));
+        toast.error(t("messages.statusUpdateError"));
       }
     }
 
@@ -337,15 +337,23 @@ export default function TasksPage() {
   };
 
   const columns: { status: TaskStatus; title: string; color: string }[] = [
-    { status: TaskStatus.TODO, title: t('status.TODO'), color: "bg-gray-100" },
+    { status: TaskStatus.TODO, title: t("status.TODO"), color: "bg-gray-100" },
     {
       status: TaskStatus.IN_PROGRESS,
-      title: t('status.IN_PROGRESS'),
+      title: t("status.IN_PROGRESS"),
       color: "bg-blue-100",
     },
-    { status: TaskStatus.IN_REVIEW, title: t('status.IN_REVIEW'), color: "bg-yellow-100" },
-    { status: TaskStatus.DONE, title: t('status.DONE'), color: "bg-green-100" },
-    { status: TaskStatus.BLOCKED, title: t('status.BLOCKED'), color: "bg-red-100" },
+    {
+      status: TaskStatus.IN_REVIEW,
+      title: t("status.IN_REVIEW"),
+      color: "bg-yellow-100",
+    },
+    { status: TaskStatus.DONE, title: t("status.DONE"), color: "bg-green-100" },
+    {
+      status: TaskStatus.BLOCKED,
+      title: t("status.BLOCKED"),
+      color: "bg-red-100",
+    },
   ];
 
   if (loading) {
@@ -354,7 +362,7 @@ export default function TasksPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">{tCommon('actions.loading')}</p>
+            <p className="mt-4 text-gray-600">{tCommon("actions.loading")}</p>
           </div>
         </div>
       </MainLayout>
@@ -367,9 +375,9 @@ export default function TasksPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
             <p className="text-gray-600 mt-1">
-              {t('taskCount', { count: getFilteredTasks().length })}
+              {t("taskCount", { count: getFilteredTasks().length })}
             </p>
           </div>
           {canCreateTask() && (
@@ -378,7 +386,7 @@ export default function TasksPage() {
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
             >
               <span>+</span>
-              <span>{t('createTask')}</span>
+              <span>{t("createTask")}</span>
             </button>
           )}
         </div>
@@ -389,15 +397,15 @@ export default function TasksPage() {
             {/* Project Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('filters.project')}
+                {t("filters.project")}
               </label>
               <select
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="ALL">{t('filters.allProjects')}</option>
-                <option value="ORPHAN">{t('filters.orphanTasks')}</option>
+                <option value="ALL">{t("filters.allProjects")}</option>
+                <option value="ORPHAN">{t("filters.orphanTasks")}</option>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
@@ -409,7 +417,7 @@ export default function TasksPage() {
             {/* Priority Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('filters.priority')}
+                {t("filters.priority")}
               </label>
               <select
                 value={selectedPriority}
@@ -418,11 +426,13 @@ export default function TasksPage() {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="ALL">{t('filters.allPriorities')}</option>
-                <option value={Priority.CRITICAL}>{t('priority.CRITICAL')}</option>
-                <option value={Priority.HIGH}>{t('priority.HIGH')}</option>
-                <option value={Priority.NORMAL}>{t('priority.NORMAL')}</option>
-                <option value={Priority.LOW}>{t('priority.LOW')}</option>
+                <option value="ALL">{t("filters.allPriorities")}</option>
+                <option value={Priority.CRITICAL}>
+                  {t("priority.CRITICAL")}
+                </option>
+                <option value={Priority.HIGH}>{t("priority.HIGH")}</option>
+                <option value={Priority.NORMAL}>{t("priority.NORMAL")}</option>
+                <option value={Priority.LOW}>{t("priority.LOW")}</option>
               </select>
             </div>
           </div>
@@ -465,7 +475,7 @@ export default function TasksPage() {
                   >
                     {columnTasks.length === 0 ? (
                       <p className="text-gray-400 text-sm text-center py-8">
-                        {t('noTasks')}
+                        {t("noTasks")}
                       </p>
                     ) : (
                       columnTasks.map((task) => (
@@ -527,7 +537,7 @@ export default function TasksPage() {
                               ) : (
                                 <div className="flex items-center space-x-2 text-xs text-orange-500 mb-2">
                                   <span>📋</span>
-                                  <span>{t('card.orphanLabel')}</span>
+                                  <span>{t("card.orphanLabel")}</span>
                                 </div>
                               )}
 
@@ -557,7 +567,9 @@ export default function TasksPage() {
                                   <span className="ml-1">
                                     {task.assignees.length === 1
                                       ? `${task.assignees[0].user?.firstName} ${task.assignees[0].user?.lastName}`
-                                      : t('card.assignees', { count: task.assignees.length })}
+                                      : t("card.assignees", {
+                                          count: task.assignees.length,
+                                        })}
                                   </span>
                                 </div>
                               ) : (
@@ -577,14 +589,16 @@ export default function TasksPage() {
 
                               {task.estimatedHours && (
                                 <div className="text-xs text-gray-500">
-                                  {t('card.estimatedHours', { hours: task.estimatedHours })}
+                                  {t("card.estimatedHours", {
+                                    hours: task.estimatedHours,
+                                  })}
                                 </div>
                               )}
 
                               {task.progress > 0 && (
                                 <div className="mt-3">
                                   <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                                    <span>{t('card.progress')}</span>
+                                    <span>{t("card.progress")}</span>
                                     <span>{task.progress}%</span>
                                   </div>
                                   <div className="w-full bg-gray-200 rounded-full h-1.5">
@@ -656,12 +670,12 @@ export default function TasksPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {t('modal.create.title')}
+              {t("modal.create.title")}
             </h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('modal.create.titleLabel')}
+                  {t("modal.create.titleLabel")}
                 </label>
                 <input
                   type="text"
@@ -671,13 +685,13 @@ export default function TasksPage() {
                     setFormData({ ...formData, title: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t('modal.create.titlePlaceholder')}
+                  placeholder={t("modal.create.titlePlaceholder")}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('modal.create.descriptionLabel')}
+                  {t("modal.create.descriptionLabel")}
                 </label>
                 <textarea
                   value={formData.description}
@@ -686,20 +700,20 @@ export default function TasksPage() {
                   }
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t('modal.create.descriptionPlaceholder')}
+                  placeholder={t("modal.create.descriptionPlaceholder")}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('modal.create.projectLabel')}
+                  {t("modal.create.projectLabel")}
                 </label>
                 <select
                   value={formData.projectId || ""}
                   onChange={(e) => handleFormProjectChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">{t('modal.create.projectNone')}</option>
+                  <option value="">{t("modal.create.projectNone")}</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id}>
                       {project.name}
@@ -707,24 +721,24 @@ export default function TasksPage() {
                   ))}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  {t('modal.create.projectHint')}
+                  {t("modal.create.projectHint")}
                 </p>
               </div>
 
               {/* Assignee multi-selector */}
               <UserMultiSelect
-                label={t('modal.create.assigneesLabel')}
+                label={t("modal.create.assigneesLabel")}
                 users={getAvailableAssignees()}
                 selectedIds={formData.assigneeIds}
                 onChange={(ids) =>
                   setFormData({ ...formData, assigneeIds: ids })
                 }
-                placeholder={t('modal.create.assigneesPlaceholder')}
+                placeholder={t("modal.create.assigneesPlaceholder")}
                 hint={
                   formData.projectId && projectMembers.length > 0
-                    ? t('modal.create.assigneesHintMembers')
+                    ? t("modal.create.assigneesHintMembers")
                     : formData.projectId && projectMembers.length === 0
-                      ? t('modal.create.assigneesHintNoMembers')
+                      ? t("modal.create.assigneesHintNoMembers")
                       : undefined
                 }
               />
@@ -732,7 +746,7 @@ export default function TasksPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.statusLabel')}
+                    {t("modal.create.statusLabel")}
                   </label>
                   <select
                     value={formData.status}
@@ -744,17 +758,23 @@ export default function TasksPage() {
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value={TaskStatus.TODO}>{t('status.TODO')}</option>
-                    <option value={TaskStatus.IN_PROGRESS}>{t('status.IN_PROGRESS')}</option>
-                    <option value={TaskStatus.IN_REVIEW}>{t('status.IN_REVIEW')}</option>
-                    <option value={TaskStatus.DONE}>{t('status.DONE')}</option>
-                    <option value={TaskStatus.BLOCKED}>{t('status.BLOCKED')}</option>
+                    <option value={TaskStatus.TODO}>{t("status.TODO")}</option>
+                    <option value={TaskStatus.IN_PROGRESS}>
+                      {t("status.IN_PROGRESS")}
+                    </option>
+                    <option value={TaskStatus.IN_REVIEW}>
+                      {t("status.IN_REVIEW")}
+                    </option>
+                    <option value={TaskStatus.DONE}>{t("status.DONE")}</option>
+                    <option value={TaskStatus.BLOCKED}>
+                      {t("status.BLOCKED")}
+                    </option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.priorityLabel')}
+                    {t("modal.create.priorityLabel")}
                   </label>
                   <select
                     value={formData.priority}
@@ -766,10 +786,14 @@ export default function TasksPage() {
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value={Priority.LOW}>{t('priority.LOW')}</option>
-                    <option value={Priority.NORMAL}>{t('priority.NORMAL')}</option>
-                    <option value={Priority.HIGH}>{t('priority.HIGH')}</option>
-                    <option value={Priority.CRITICAL}>{t('priority.CRITICAL')}</option>
+                    <option value={Priority.LOW}>{t("priority.LOW")}</option>
+                    <option value={Priority.NORMAL}>
+                      {t("priority.NORMAL")}
+                    </option>
+                    <option value={Priority.HIGH}>{t("priority.HIGH")}</option>
+                    <option value={Priority.CRITICAL}>
+                      {t("priority.CRITICAL")}
+                    </option>
                   </select>
                 </div>
               </div>
@@ -777,7 +801,7 @@ export default function TasksPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.startDateLabel')}
+                    {t("modal.create.startDateLabel")}
                   </label>
                   <input
                     type="date"
@@ -801,7 +825,7 @@ export default function TasksPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.endDateLabel')}
+                    {t("modal.create.endDateLabel")}
                   </label>
                   <input
                     type="date"
@@ -818,7 +842,7 @@ export default function TasksPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.startTimeLabel')}
+                    {t("modal.create.startTimeLabel")}
                   </label>
                   <input
                     type="time"
@@ -832,7 +856,7 @@ export default function TasksPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.endTimeLabel')}
+                    {t("modal.create.endTimeLabel")}
                   </label>
                   <input
                     type="time"
@@ -847,7 +871,7 @@ export default function TasksPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('modal.create.estimatedHoursLabel')}
+                  {t("modal.create.estimatedHoursLabel")}
                 </label>
                 <input
                   type="number"
@@ -863,7 +887,7 @@ export default function TasksPage() {
                     })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t('modal.create.estimatedHoursPlaceholder')}
+                  placeholder={t("modal.create.estimatedHoursPlaceholder")}
                 />
               </div>
 
@@ -884,7 +908,7 @@ export default function TasksPage() {
                   htmlFor="isExternalIntervention"
                   className="ml-2 block text-sm font-medium text-gray-700"
                 >
-                  {t('modal.create.externalInterventionLabel')}
+                  {t("modal.create.externalInterventionLabel")}
                 </label>
               </div>
 
@@ -897,13 +921,13 @@ export default function TasksPage() {
                   }}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
-                  {t('modal.create.cancel')}
+                  {t("modal.create.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  {t('modal.create.submit')}
+                  {t("modal.create.submit")}
                 </button>
               </div>
             </form>

@@ -194,9 +194,7 @@ export default function TeleworkPage() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {t("title")}
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
           <p className="text-gray-600 mt-1">
             {t("stats", { count: getTeleworkStats() })}
           </p>
@@ -219,23 +217,33 @@ export default function TeleworkPage() {
 
         {/* Legend */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <h3 className="font-semibold text-gray-900 mb-3">{t("legend.title")}</h3>
+          <h3 className="font-semibold text-gray-900 mb-3">
+            {t("legend.title")}
+          </h3>
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center space-x-2">
               <div className="w-6 h-6 bg-blue-100 border border-blue-300 rounded"></div>
-              <span className="text-sm text-gray-700">{t("legend.telework")}</span>
+              <span className="text-sm text-gray-700">
+                {t("legend.telework")}
+              </span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-6 h-6 bg-gray-100 border border-gray-300 rounded"></div>
-              <span className="text-sm text-gray-700">{t("legend.office")}</span>
+              <span className="text-sm text-gray-700">
+                {t("legend.office")}
+              </span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-6 h-6 bg-white border border-gray-200 rounded"></div>
-              <span className="text-sm text-gray-700">{t("legend.notDeclared")}</span>
+              <span className="text-sm text-gray-700">
+                {t("legend.notDeclared")}
+              </span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-6 h-6 bg-gray-50 border border-gray-200 rounded"></div>
-              <span className="text-sm text-gray-700">{t("legend.weekend")}</span>
+              <span className="text-sm text-gray-700">
+                {t("legend.weekend")}
+              </span>
             </div>
           </div>
         </div>

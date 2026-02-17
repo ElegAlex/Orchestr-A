@@ -100,8 +100,7 @@ export function HolidayModal({
       onClose();
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
-      const message =
-        error.response?.data?.message || t("messages.saveError");
+      const message = error.response?.data?.message || t("messages.saveError");
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -316,7 +315,9 @@ export function HolidayModal({
                   <span>{t("modal.buttons.saving")}</span>
                 </>
               ) : (
-                <span>{isEditing ? t("modal.buttons.update") : tCommon("create")}</span>
+                <span>
+                  {isEditing ? t("modal.buttons.update") : tCommon("create")}
+                </span>
               )}
             </button>
           </div>

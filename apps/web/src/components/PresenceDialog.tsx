@@ -83,9 +83,9 @@ export function PresenceDialog() {
   const [data, setData] = useState<PresenceData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"onsite" | "remote" | "external" | "absent">(
-    "onsite",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "onsite" | "remote" | "external" | "absent"
+  >("onsite");
 
   useEffect(() => {
     if (open) {

@@ -13,7 +13,12 @@ interface EventModalProps {
   onRefresh?: () => void;
 }
 
-export const EventModal = ({ event, isOpen, onClose, onRefresh }: EventModalProps) => {
+export const EventModal = ({
+  event,
+  isOpen,
+  onClose,
+  onRefresh,
+}: EventModalProps) => {
   const t = useTranslations("planning.eventModal");
   const tCommon = useTranslations("common");
   const router = useRouter();
@@ -43,12 +48,15 @@ export const EventModal = ({ event, isOpen, onClose, onRefresh }: EventModalProp
   };
 
   const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return new Date(date).toLocaleDateString(
+      locale === "en" ? "en-US" : "fr-FR",
+      {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      },
+    );
   };
 
   return (
@@ -56,7 +64,9 @@ export const EventModal = ({ event, isOpen, onClose, onRefresh }: EventModalProp
       <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <span className="text-xl">{event.isExternalIntervention ? "🔴" : "📅"}</span>
+            <span className="text-xl">
+              {event.isExternalIntervention ? "🔴" : "📅"}
+            </span>
             <h2 className="text-xl font-bold text-gray-900">{event.title}</h2>
           </div>
           <button
@@ -69,7 +79,9 @@ export const EventModal = ({ event, isOpen, onClose, onRefresh }: EventModalProp
         <div className="space-y-4">
           {event.description && (
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">{t("description")}</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                {t("description")}
+              </h3>
               <p className="text-gray-700">{event.description}</p>
             </div>
           )}
@@ -80,14 +92,18 @@ export const EventModal = ({ event, isOpen, onClose, onRefresh }: EventModalProp
             </div>
             {event.isAllDay ? (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">{t("schedule")}</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  {t("schedule")}
+                </h3>
                 <span className="inline-block px-3 py-1 rounded text-sm bg-gray-100 text-gray-800">
                   {t("allDay")}
                 </span>
               </div>
-            ) : (event.startTime || event.endTime) ? (
+            ) : event.startTime || event.endTime ? (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">{t("schedule")}</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  {t("schedule")}
+                </h3>
                 <p className="text-gray-700">
                   {event.startTime || "--:--"} - {event.endTime || "--:--"}
                 </p>
@@ -95,7 +111,9 @@ export const EventModal = ({ event, isOpen, onClose, onRefresh }: EventModalProp
             ) : null}
             {event.isExternalIntervention && (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">{t("type")}</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  {t("type")}
+                </h3>
                 <span className="inline-block px-3 py-1 rounded text-sm bg-orange-100 text-orange-800">
                   {t("externalIntervention")}
                 </span>
@@ -103,14 +121,18 @@ export const EventModal = ({ event, isOpen, onClose, onRefresh }: EventModalProp
             )}
             {event.project && (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">{t("project")}</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  {t("project")}
+                </h3>
                 <p className="text-gray-700">{event.project.name}</p>
               </div>
             )}
           </div>
           {event.participants && event.participants.length > 0 && (
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">{t("participants")}</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                {t("participants")}
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {event.participants.map((p) => (
                   <span

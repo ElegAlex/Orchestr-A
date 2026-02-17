@@ -41,7 +41,6 @@ const DATE_FORMAT_OPTIONS = [
   },
 ];
 
-
 export default function SettingsPage() {
   const t = useTranslations("settings");
   const locale = useLocale();
@@ -103,11 +102,7 @@ export default function SettingsPage() {
   };
 
   const handleReset = async () => {
-    if (
-      !confirm(
-        t("messages.resetConfirm"),
-      )
-    ) {
+    if (!confirm(t("messages.resetConfirm"))) {
       return;
     }
 
@@ -151,9 +146,7 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-            <p className="text-gray-600 mt-1">
-              {t("subtitle")}
-            </p>
+            <p className="text-gray-600 mt-1">{t("subtitle")}</p>
           </div>
           <div className="flex items-center space-x-3">
             <button
@@ -182,9 +175,7 @@ export default function SettingsPage() {
 
         {hasChanges && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-            <p className="text-sm text-yellow-800">
-              {t("unsavedChanges")}
-            </p>
+            <p className="text-sm text-yellow-800">{t("unsavedChanges")}</p>
           </div>
         )}
 
@@ -233,11 +224,21 @@ export default function SettingsPage() {
                   onChange={(e) => handleChange("dateFormat", e.target.value)}
                   className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="dd/MM/yyyy">{t("display.dateFormat.options.ddMMyyyy")}</option>
-                  <option value="MM/dd/yyyy">{t("display.dateFormat.options.MMddyyyy")}</option>
-                  <option value="yyyy-MM-dd">{t("display.dateFormat.options.yyyyMMdd")}</option>
-                  <option value="d MMMM yyyy">{t("display.dateFormat.options.dMMMMyyyy")}</option>
-                  <option value="EEEE d MMMM yyyy">{t("display.dateFormat.options.EEEEdMMMMyyyy")}</option>
+                  <option value="dd/MM/yyyy">
+                    {t("display.dateFormat.options.ddMMyyyy")}
+                  </option>
+                  <option value="MM/dd/yyyy">
+                    {t("display.dateFormat.options.MMddyyyy")}
+                  </option>
+                  <option value="yyyy-MM-dd">
+                    {t("display.dateFormat.options.yyyyMMdd")}
+                  </option>
+                  <option value="d MMMM yyyy">
+                    {t("display.dateFormat.options.dMMMMyyyy")}
+                  </option>
+                  <option value="EEEE d MMMM yyyy">
+                    {t("display.dateFormat.options.EEEEdMMMMyyyy")}
+                  </option>
                 </select>
                 <p className="text-sm text-gray-500 mt-1">
                   {t("display.dateFormat.example")}{" "}
@@ -257,9 +258,15 @@ export default function SettingsPage() {
                   onChange={(e) => handleChange("timeFormat", e.target.value)}
                   className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="HH:mm">{t("display.timeFormat.options.HHmm")}</option>
-                  <option value="HH:mm:ss">{t("display.timeFormat.options.HHmmss")}</option>
-                  <option value="hh:mm a">{t("display.timeFormat.options.hhmmaa")}</option>
+                  <option value="HH:mm">
+                    {t("display.timeFormat.options.HHmm")}
+                  </option>
+                  <option value="HH:mm:ss">
+                    {t("display.timeFormat.options.HHmmss")}
+                  </option>
+                  <option value="hh:mm a">
+                    {t("display.timeFormat.options.hhmmaa")}
+                  </option>
                 </select>
               </div>
 
@@ -275,8 +282,12 @@ export default function SettingsPage() {
                   }
                   className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value={1}>{t("display.weekStart.options.monday")}</option>
-                  <option value={0}>{t("display.weekStart.options.sunday")}</option>
+                  <option value={1}>
+                    {t("display.weekStart.options.monday")}
+                  </option>
+                  <option value={0}>
+                    {t("display.weekStart.options.sunday")}
+                  </option>
                 </select>
               </div>
             </div>

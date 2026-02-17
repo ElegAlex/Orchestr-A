@@ -23,8 +23,8 @@ const MAX_TODOS = 20;
 export default function DashboardPage() {
   const router = useRouter();
   const locale = useLocale();
-  const t = useTranslations('dashboard');
-  const tCommon = useTranslations('common');
+  const t = useTranslations("dashboard");
+  const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [myProjects, setMyProjects] = useState<Project[]>([]);
@@ -48,11 +48,11 @@ export default function DashboardPage() {
 
   // Fonction pour formater les dates
   const formatDate = (dateString?: string) => {
-    if (!dateString) return tCommon('common.notDefined');
+    if (!dateString) return tCommon("common.notDefined");
     try {
       return format(new Date(dateString), "dd MMM yyyy", { locale: fr });
     } catch {
-      return tCommon('common.invalidDate');
+      return tCommon("common.invalidDate");
     }
   };
 
@@ -60,7 +60,7 @@ export default function DashboardPage() {
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
       await tasksService.update(taskId, { status: newStatus });
-      toast.success(t('tasks.success.statusUpdated'));
+      toast.success(t("tasks.success.statusUpdated"));
 
       // Refresh les tâches
       if (user?.id) {
@@ -91,7 +91,7 @@ export default function DashboardPage() {
         }));
       }
     } catch (err) {
-      toast.error(t('tasks.errors.statusUpdate'));
+      toast.error(t("tasks.errors.statusUpdate"));
       console.error(err);
     }
   };
@@ -119,12 +119,10 @@ export default function DashboardPage() {
       });
       setTodos([newTodo, ...todos]);
       setNewTodoText("");
-      toast.success(t('todos.success.added'));
+      toast.success(t("todos.success.added"));
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        axiosError.response?.data?.message || t('todos.errors.add'),
-      );
+      toast.error(axiosError.response?.data?.message || t("todos.errors.add"));
     } finally {
       setAddingTodo(false);
     }
@@ -137,7 +135,7 @@ export default function DashboardPage() {
       });
       setTodos(todos.map((t) => (t.id === todo.id ? updated : t)));
     } catch {
-      toast.error(t('todos.errors.update'));
+      toast.error(t("todos.errors.update"));
     }
   };
 
@@ -145,9 +143,9 @@ export default function DashboardPage() {
     try {
       await personalTodosService.delete(id);
       setTodos(todos.filter((t) => t.id !== id));
-      toast.success(t('todos.success.deleted'));
+      toast.success(t("todos.success.deleted"));
     } catch {
-      toast.error(t('todos.errors.delete'));
+      toast.error(t("todos.errors.delete"));
     }
   };
 
@@ -167,9 +165,9 @@ export default function DashboardPage() {
       });
       setTodos(todos.map((t) => (t.id === id ? updated : t)));
       setEditingTodoId(null);
-      toast.success(t('todos.success.updated'));
+      toast.success(t("todos.success.updated"));
     } catch {
-      toast.error(t('todos.errors.update'));
+      toast.error(t("todos.errors.update"));
     }
   };
 
@@ -241,7 +239,7 @@ export default function DashboardPage() {
           });
         }
       } catch (err) {
-        toast.error(t('errors.loadData'));
+        toast.error(t("errors.loadData"));
         console.error(err);
       } finally {
         setLoading(false);
@@ -258,7 +256,9 @@ export default function DashboardPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-[var(--muted-foreground)]">{t('loading')}</p>
+            <p className="mt-4 text-[var(--muted-foreground)]">
+              {t("loading")}
+            </p>
           </div>
         </div>
       </MainLayout>
@@ -272,10 +272,10 @@ export default function DashboardPage() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[var(--foreground)]">
-              {t('welcome', { name: user?.firstName || '' })}
+              {t("welcome", { name: user?.firstName || "" })}
             </h1>
             <p className="text-[var(--muted-foreground)] mt-1">
-              {t('activityOverview')}
+              {t("activityOverview")}
             </p>
           </div>
           <PresenceDialog />
@@ -288,7 +288,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                  {t('stats.activeProjects')}
+                  {t("stats.activeProjects")}
                 </p>
                 <p className="text-3xl font-bold text-[var(--foreground)] mt-2">
                   {stats.activeProjects}
@@ -297,7 +297,7 @@ export default function DashboardPage() {
               <div className="text-4xl">📁</div>
             </div>
             <p className="text-xs text-[var(--muted-foreground)] mt-2">
-              {t('stats.onProjects', { total: stats.totalProjects })}
+              {t("stats.onProjects", { total: stats.totalProjects })}
             </p>
           </div>
 
@@ -305,7 +305,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                  {t('stats.tasksInProgress')}
+                  {t("stats.tasksInProgress")}
                 </p>
                 <p className="text-3xl font-bold text-[var(--foreground)] mt-2">
                   {stats.tasksInProgress}
@@ -314,7 +314,7 @@ export default function DashboardPage() {
               <div className="text-4xl">⏳</div>
             </div>
             <p className="text-xs text-[var(--muted-foreground)] mt-2">
-              {t('stats.onTasks', { total: stats.totalTasks })}
+              {t("stats.onTasks", { total: stats.totalTasks })}
             </p>
           </div>
 
@@ -322,7 +322,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                  {t('stats.tasksCompleted')}
+                  {t("stats.tasksCompleted")}
                 </p>
                 <p className="text-3xl font-bold text-[var(--foreground)] mt-2">
                   {stats.tasksDone}
@@ -331,10 +331,11 @@ export default function DashboardPage() {
               <div className="text-4xl">✅</div>
             </div>
             <p className="text-xs text-[var(--muted-foreground)] mt-2">
-              {t('stats.percentCompleted', {
-                percent: stats.totalTasks > 0
-                  ? Math.round((stats.tasksDone / stats.totalTasks) * 100)
-                  : 0
+              {t("stats.percentCompleted", {
+                percent:
+                  stats.totalTasks > 0
+                    ? Math.round((stats.tasksDone / stats.totalTasks) * 100)
+                    : 0,
               })}
             </p>
           </div>
@@ -343,7 +344,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                  {t('stats.tasksBlocked')}
+                  {t("stats.tasksBlocked")}
                 </p>
                 <p className="text-3xl font-bold text-[var(--foreground)] mt-2">
                   {stats.tasksBlocked}
@@ -351,7 +352,9 @@ export default function DashboardPage() {
               </div>
               <div className="text-4xl">🚫</div>
             </div>
-            <p className="text-xs text-[var(--muted-foreground)] mt-2">{t('stats.needAttention')}</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-2">
+              {t("stats.needAttention")}
+            </p>
           </div>
         </div>
 
@@ -359,7 +362,7 @@ export default function DashboardPage() {
         {user && (
           <PlanningView
             filterUserId={user.id}
-            title={t('planning.title')}
+            title={t("planning.title")}
             showFilters={false}
             showGroupHeaders={false}
             showLegend={false}
@@ -369,7 +372,9 @@ export default function DashboardPage() {
         {/* Personal To-Do List */}
         <div className="bg-[var(--card)] rounded-lg shadow-sm border border-[var(--border)]">
           <div className="px-6 py-4 border-b border-[var(--border)]">
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">📝 {t('todos.title')}</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">
+              📝 {t("todos.title")}
+            </h2>
           </div>
           <div className="p-6">
             {/* Input Add */}
@@ -379,7 +384,7 @@ export default function DashboardPage() {
                 value={newTodoText}
                 onChange={(e) => setNewTodoText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
-                placeholder={t('todos.placeholder')}
+                placeholder={t("todos.placeholder")}
                 disabled={addingTodo || todos.length >= MAX_TODOS}
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
@@ -390,21 +395,23 @@ export default function DashboardPage() {
                 }
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition font-medium"
               >
-                {addingTodo ? t('todos.addingButton') : t('todos.addButton')}
+                {addingTodo ? t("todos.addingButton") : t("todos.addButton")}
               </button>
             </div>
 
             {todos.length >= MAX_TODOS && (
               <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                {t('todos.limitReached', { max: MAX_TODOS })}
+                {t("todos.limitReached", { max: MAX_TODOS })}
               </div>
             )}
 
             {loadingTodos ? (
-              <p className="text-[var(--muted-foreground)] text-center py-8">{t('loading')}</p>
+              <p className="text-[var(--muted-foreground)] text-center py-8">
+                {t("loading")}
+              </p>
             ) : todos.length === 0 ? (
               <p className="text-[var(--muted-foreground)] text-center py-8">
-                {t('todos.empty')}
+                {t("todos.empty")}
               </p>
             ) : (
               <div className="space-y-3">
@@ -441,7 +448,7 @@ export default function DashboardPage() {
                             <span
                               className="flex-1 text-[var(--foreground)] cursor-pointer"
                               onDoubleClick={() => handleStartEditTodo(todo)}
-                              title={t('todos.editHint')}
+                              title={t("todos.editHint")}
                             >
                               {todo.text}
                             </span>
@@ -450,7 +457,7 @@ export default function DashboardPage() {
                         <button
                           onClick={() => handleDeleteTodo(todo.id)}
                           className="ml-4 text-red-600 hover:text-red-800 transition"
-                          title={t('todos.deleteHint')}
+                          title={t("todos.deleteHint")}
                         >
                           🗑️
                         </button>
@@ -460,7 +467,9 @@ export default function DashboardPage() {
                 {todos.filter((t) => t.completed).length > 0 && (
                   <>
                     <div className="pt-2 text-xs font-semibold text-[var(--muted-foreground)] uppercase">
-                      {t('todos.completedSection', { count: todos.filter((t) => t.completed).length })}
+                      {t("todos.completedSection", {
+                        count: todos.filter((t) => t.completed).length,
+                      })}
                     </div>
                     {todos
                       .filter((t) => t.completed)
@@ -484,7 +493,7 @@ export default function DashboardPage() {
                             <button
                               onClick={() => handleDeleteTodo(todo.id)}
                               className="ml-4 text-red-600 hover:text-red-800 transition"
-                              title={t('todos.deleteHint')}
+                              title={t("todos.deleteHint")}
                             >
                               🗑️
                             </button>
@@ -502,13 +511,13 @@ export default function DashboardPage() {
         <div className="bg-[var(--card)] rounded-lg shadow-sm border border-[var(--border)]">
           <div className="px-6 py-4 border-b border-[var(--border)]">
             <h2 className="text-lg font-semibold text-[var(--foreground)]">
-              {t('tasks.title')}
+              {t("tasks.title")}
             </h2>
           </div>
           <div className="p-6">
             {myTasks.length === 0 ? (
               <p className="text-[var(--muted-foreground)] text-center py-8">
-                {t('tasks.empty')}
+                {t("tasks.empty")}
               </p>
             ) : (
               <div className="space-y-3">
@@ -546,7 +555,9 @@ export default function DashboardPage() {
                                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                               />
                             </svg>
-                            <span className="font-medium">{t('tasks.startDate')}</span>
+                            <span className="font-medium">
+                              {t("tasks.startDate")}
+                            </span>
                             <span>{formatDate(task.startDate)}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
@@ -563,7 +574,9 @@ export default function DashboardPage() {
                                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                               />
                             </svg>
-                            <span className="font-medium">{t('tasks.endDate')}</span>
+                            <span className="font-medium">
+                              {t("tasks.endDate")}
+                            </span>
                             <span>{formatDate(task.endDate)}</span>
                           </div>
                           {task.estimatedHours && (
@@ -581,8 +594,14 @@ export default function DashboardPage() {
                                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                                 />
                               </svg>
-                              <span className="font-medium">{t('tasks.estimated')}</span>
-                              <span>{t('tasks.hours', { hours: task.estimatedHours })}</span>
+                              <span className="font-medium">
+                                {t("tasks.estimated")}
+                              </span>
+                              <span>
+                                {t("tasks.hours", {
+                                  hours: task.estimatedHours,
+                                })}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -611,11 +630,21 @@ export default function DashboardPage() {
                                     : "bg-red-100 text-red-800"
                           }`}
                         >
-                          <option value="TODO">{tCommon('taskStatus.TODO')}</option>
-                          <option value="IN_PROGRESS">{tCommon('taskStatus.IN_PROGRESS')}</option>
-                          <option value="IN_REVIEW">{tCommon('taskStatus.IN_REVIEW')}</option>
-                          <option value="DONE">{tCommon('taskStatus.DONE')}</option>
-                          <option value="BLOCKED">{tCommon('taskStatus.BLOCKED')}</option>
+                          <option value="TODO">
+                            {tCommon("taskStatus.TODO")}
+                          </option>
+                          <option value="IN_PROGRESS">
+                            {tCommon("taskStatus.IN_PROGRESS")}
+                          </option>
+                          <option value="IN_REVIEW">
+                            {tCommon("taskStatus.IN_REVIEW")}
+                          </option>
+                          <option value="DONE">
+                            {tCommon("taskStatus.DONE")}
+                          </option>
+                          <option value="BLOCKED">
+                            {tCommon("taskStatus.BLOCKED")}
+                          </option>
                         </select>
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
@@ -642,19 +671,23 @@ export default function DashboardPage() {
         {/* My projects */}
         <div className="bg-[var(--card)] rounded-lg shadow-sm border border-[var(--border)]">
           <div className="px-6 py-4 border-b border-[var(--border)]">
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">{t('projects.title')}</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">
+              {t("projects.title")}
+            </h2>
           </div>
           <div className="p-6">
             {myProjects.length === 0 ? (
               <p className="text-[var(--muted-foreground)] text-center py-8">
-                {t('projects.empty')}
+                {t("projects.empty")}
               </p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {myProjects.map((project) => (
                   <div
                     key={project.id}
-                    onClick={() => router.push(`/${locale}/projects/${project.id}`)}
+                    onClick={() =>
+                      router.push(`/${locale}/projects/${project.id}`)
+                    }
                     className="p-4 border border-[var(--border)] rounded-lg hover:border-[var(--primary)] transition cursor-pointer"
                   >
                     <h3 className="font-semibold text-[var(--foreground)]">

@@ -61,8 +61,7 @@ export function ProjectEditModal({
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       setError(
-        axiosError.response?.data?.message ||
-          t("projectEditModal.errorSaving"),
+        axiosError.response?.data?.message || t("projectEditModal.errorSaving"),
       );
     } finally {
       setSaving(false);
@@ -134,10 +133,18 @@ export function ProjectEditModal({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
                 <option value={ProjectStatus.DRAFT}>{t("status.DRAFT")}</option>
-                <option value={ProjectStatus.ACTIVE}>{t("status.ACTIVE")}</option>
-                <option value={ProjectStatus.SUSPENDED}>{t("status.SUSPENDED")}</option>
-                <option value={ProjectStatus.COMPLETED}>{t("status.COMPLETED")}</option>
-                <option value={ProjectStatus.CANCELLED}>{t("status.CANCELLED")}</option>
+                <option value={ProjectStatus.ACTIVE}>
+                  {t("status.ACTIVE")}
+                </option>
+                <option value={ProjectStatus.SUSPENDED}>
+                  {t("status.SUSPENDED")}
+                </option>
+                <option value={ProjectStatus.COMPLETED}>
+                  {t("status.COMPLETED")}
+                </option>
+                <option value={ProjectStatus.CANCELLED}>
+                  {t("status.CANCELLED")}
+                </option>
               </select>
             </div>
 
@@ -158,7 +165,9 @@ export function ProjectEditModal({
                 <option value={Priority.LOW}>{t("priority.LOW")}</option>
                 <option value={Priority.NORMAL}>{t("priority.NORMAL")}</option>
                 <option value={Priority.HIGH}>{t("priority.HIGH")}</option>
-                <option value={Priority.CRITICAL}>{t("priority.CRITICAL")}</option>
+                <option value={Priority.CRITICAL}>
+                  {t("priority.CRITICAL")}
+                </option>
               </select>
             </div>
           </div>
@@ -244,7 +253,11 @@ export function ProjectEditModal({
               {saving && (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               )}
-              <span>{saving ? t("projectEditModal.saving") : t("projectEditModal.save")}</span>
+              <span>
+                {saving
+                  ? t("projectEditModal.saving")
+                  : t("projectEditModal.save")}
+              </span>
             </button>
           </div>
         </form>

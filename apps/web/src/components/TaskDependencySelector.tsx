@@ -160,9 +160,7 @@ export function TaskDependencySelector({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsOpen(true)}
-            placeholder={
-              selectedTasks.length === 0 ? defaultPlaceholder : ""
-            }
+            placeholder={selectedTasks.length === 0 ? defaultPlaceholder : ""}
             className="flex-1 min-w-[150px] outline-none bg-transparent text-gray-900 placeholder-gray-500"
           />
         )}

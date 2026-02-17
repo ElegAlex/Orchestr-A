@@ -24,24 +24,24 @@ export function MilestoneCard({
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const router = useRouter();
   const locale = useLocale();
-  const t = useTranslations('projects.detail.milestones');
-  const tTask = useTranslations('tasks.status');
-  const tProjects = useTranslations('projects.messages');
-  const tProjectTasks = useTranslations('projects.detail.tasks');
+  const t = useTranslations("projects.detail.milestones");
+  const tTask = useTranslations("tasks.status");
+  const tProjects = useTranslations("projects.messages");
+  const tProjectTasks = useTranslations("projects.detail.tasks");
 
   // Handler pour changer le statut d'une tâche
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     setUpdatingTaskId(taskId);
     try {
       await tasksService.update(taskId, { status: newStatus });
-      toast.success(t('taskStatusUpdated'));
+      toast.success(t("taskStatusUpdated"));
       if (onTaskUpdate) {
         onTaskUpdate();
       }
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       toast.error(
-        error.response?.data?.message || tProjects('statusUpdateError'),
+        error.response?.data?.message || tProjects("statusUpdateError"),
       );
     } finally {
       setUpdatingTaskId(null);
@@ -53,31 +53,31 @@ export function MilestoneCard({
     switch (status) {
       case TaskStatus.DONE:
         return {
-          label: tTask('DONE'),
+          label: tTask("DONE"),
           bgClass: "bg-green-100",
           textClass: "text-green-800",
         };
       case TaskStatus.IN_PROGRESS:
         return {
-          label: tTask('IN_PROGRESS'),
+          label: tTask("IN_PROGRESS"),
           bgClass: "bg-blue-100",
           textClass: "text-blue-800",
         };
       case TaskStatus.IN_REVIEW:
         return {
-          label: tTask('IN_REVIEW'),
+          label: tTask("IN_REVIEW"),
           bgClass: "bg-yellow-100",
           textClass: "text-yellow-800",
         };
       case TaskStatus.BLOCKED:
         return {
-          label: tTask('BLOCKED'),
+          label: tTask("BLOCKED"),
           bgClass: "bg-red-100",
           textClass: "text-red-800",
         };
       default:
         return {
-          label: tTask('TODO'),
+          label: tTask("TODO"),
           bgClass: "bg-gray-100",
           textClass: "text-gray-800",
         };
@@ -93,7 +93,7 @@ export function MilestoneCard({
     if (tasks.length === 0) {
       return {
         status: MilestoneStatus.PENDING,
-        label: t('status.pending'),
+        label: t("status.pending"),
         color: "#9e9e9e",
       };
     }
@@ -108,20 +108,20 @@ export function MilestoneCard({
     if (completedTasks.length === tasks.length) {
       return {
         status: MilestoneStatus.COMPLETED,
-        label: t('status.completed'),
+        label: t("status.completed"),
         color: "#4caf50",
       };
     }
     if (inProgressTasks.length > 0 || completedTasks.length > 0) {
       return {
         status: MilestoneStatus.IN_PROGRESS,
-        label: t('status.inProgress'),
+        label: t("status.inProgress"),
         color: "#ff9800",
       };
     }
     return {
       status: MilestoneStatus.PENDING,
-      label: t('status.pending'),
+      label: t("status.pending"),
       color: "#9e9e9e",
     };
   };
@@ -168,7 +168,7 @@ export function MilestoneCard({
               <button
                 onClick={onEdit}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
-                title={t('editMilestone')}
+                title={t("editMilestone")}
               >
                 <svg
                   className="w-4 h-4"
@@ -206,7 +206,7 @@ export function MilestoneCard({
                     month: "short",
                     year: "numeric",
                   })
-                : t('noDate')}
+                : t("noDate")}
             </span>
           </div>
         </div>
@@ -214,7 +214,7 @@ export function MilestoneCard({
         {/* Tâches et contributeurs */}
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm text-gray-600">
-            {t('taskCount', { count: tasks.length })}
+            {t("taskCount", { count: tasks.length })}
           </div>
           {contributors.length > 0 && (
             <div className="flex -space-x-2">
@@ -235,7 +235,7 @@ export function MilestoneCard({
         {/* Barre de progression */}
         <div className="mb-4">
           <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-            <span>{t('progress')}</span>
+            <span>{t("progress")}</span>
             <span className="font-medium">{progressPercent}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -255,8 +255,8 @@ export function MilestoneCard({
           className="w-full flex items-center justify-center space-x-2 text-sm text-gray-600 hover:text-gray-900 py-2 hover:bg-gray-50 rounded-lg transition"
         >
           <span>
-            {isExpanded ? "▲" : "▼"} {isExpanded ? t('hide') : t('show')}{" "}
-            {t('taskCount', { count: tasks.length })}
+            {isExpanded ? "▲" : "▼"} {isExpanded ? t("hide") : t("show")}{" "}
+            {t("taskCount", { count: tasks.length })}
           </span>
         </button>
 
@@ -265,7 +265,7 @@ export function MilestoneCard({
           <div className="mt-4 space-y-2 border-t border-gray-200 pt-4">
             {tasks.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-4">
-                {t('noTasks')}
+                {t("noTasks")}
               </p>
             ) : (
               tasks.map((task) => {
@@ -282,14 +282,18 @@ export function MilestoneCard({
                         </span>
                         <span
                           className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600"
-                          onClick={() => router.push(`/${locale}/tasks/${task.id}`)}
+                          onClick={() =>
+                            router.push(`/${locale}/tasks/${task.id}`)
+                          }
                         >
                           {task.title}
                         </span>
                       </div>
                       {task.estimatedHours && (
                         <div className="text-xs text-gray-500 ml-5 mt-1">
-                          {tProjectTasks('estimatedHours', { hours: task.estimatedHours })}
+                          {tProjectTasks("estimatedHours", {
+                            hours: task.estimatedHours,
+                          })}
                         </div>
                       )}
                     </div>
@@ -309,31 +313,31 @@ export function MilestoneCard({
                         value={TaskStatus.TODO}
                         className="bg-white text-gray-800"
                       >
-                        {tTask('TODO')}
+                        {tTask("TODO")}
                       </option>
                       <option
                         value={TaskStatus.IN_PROGRESS}
                         className="bg-white text-gray-800"
                       >
-                        {tTask('IN_PROGRESS')}
+                        {tTask("IN_PROGRESS")}
                       </option>
                       <option
                         value={TaskStatus.IN_REVIEW}
                         className="bg-white text-gray-800"
                       >
-                        {tTask('IN_REVIEW')}
+                        {tTask("IN_REVIEW")}
                       </option>
                       <option
                         value={TaskStatus.BLOCKED}
                         className="bg-white text-gray-800"
                       >
-                        {tTask('BLOCKED')}
+                        {tTask("BLOCKED")}
                       </option>
                       <option
                         value={TaskStatus.DONE}
                         className="bg-white text-gray-800"
                       >
-                        {tTask('DONE')}
+                        {tTask("DONE")}
                       </option>
                     </select>
                   </div>

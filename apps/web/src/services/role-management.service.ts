@@ -24,7 +24,9 @@ export const roleManagementService = {
   /**
    * Créer un rôle custom
    */
-  async createRole(data: CreateRoleConfigDto): Promise<RoleConfigWithPermissions> {
+  async createRole(
+    data: CreateRoleConfigDto,
+  ): Promise<RoleConfigWithPermissions> {
     const response = await api.post<RoleConfigWithPermissions>(
       "/role-management/roles",
       data,

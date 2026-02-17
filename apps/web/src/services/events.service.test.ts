@@ -1,4 +1,8 @@
-import { eventsService, CreateEventDto, UpdateEventDto } from "./events.service";
+import {
+  eventsService,
+  CreateEventDto,
+  UpdateEventDto,
+} from "./events.service";
 import { api } from "@/lib/api";
 
 jest.mock("@/lib/api", () => ({

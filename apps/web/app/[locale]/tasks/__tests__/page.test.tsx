@@ -7,9 +7,9 @@ jest.mock("next-intl", () => ({
   useTranslations: () => {
     const t = (key: string, params?: Record<string, unknown>) => {
       const translations: Record<string, string> = {
-        "title": "Tâches",
-        "loading": "Chargement des tâches...",
-        "taskCount": `${params?.count ?? 0} tâche(s)`,
+        title: "Tâches",
+        loading: "Chargement des tâches...",
+        taskCount: `${params?.count ?? 0} tâche(s)`,
         "columns.TODO": "À faire",
         "columns.IN_PROGRESS": "En cours",
         "columns.IN_REVIEW": "En revue",
@@ -20,9 +20,9 @@ jest.mock("next-intl", () => ({
         "status.IN_REVIEW": "En revue",
         "status.DONE": "Terminé",
         "status.BLOCKED": "Bloqué",
-        "emptyColumn": "Aucune tâche",
-        "noTasks": "Aucune tâche",
-        "createTask": "Créer une tâche",
+        emptyColumn: "Aucune tâche",
+        noTasks: "Aucune tâche",
+        createTask: "Créer une tâche",
         "modal.create.title": "Créer une tâche",
         "modal.cancel": "Annuler",
         "modal.create.cancel": "Annuler",

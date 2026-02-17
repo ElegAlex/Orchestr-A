@@ -22,8 +22,8 @@ import toast from "react-hot-toast";
 export default function ProjectsPage() {
   const router = useRouter();
   const locale = useLocale();
-  const t = useTranslations('projects');
-  const tCommon = useTranslations('common');
+  const t = useTranslations("projects");
+  const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -82,7 +82,7 @@ export default function ProjectsPage() {
     } catch (err) {
       setProjects([]);
       setFilteredProjects([]);
-      toast.error(t('messages.loadError'));
+      toast.error(t("messages.loadError"));
       console.error(err);
     } finally {
       setLoading(false);
@@ -147,14 +147,14 @@ export default function ProjectsPage() {
       }
 
       await projectsService.create(projectData);
-      toast.success(t('messages.createSuccess'));
+      toast.success(t("messages.createSuccess"));
       setShowCreateModal(false);
       resetForm();
       fetchProjects();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || t('messages.createError'),
+        axiosError.response?.data?.message || t("messages.createError"),
       );
     }
   };
@@ -253,7 +253,7 @@ export default function ProjectsPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">{tCommon('actions.loading')}</p>
+            <p className="mt-4 text-gray-600">{tCommon("actions.loading")}</p>
           </div>
         </div>
       </MainLayout>
@@ -266,11 +266,14 @@ export default function ProjectsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
             <p className="text-gray-600 mt-1">
               {filteredProjects.length !== projects.length
-                ? t('projectCountFiltered', { filtered: filteredProjects.length, total: projects.length })
-                : t('projectCount', { count: filteredProjects.length })}
+                ? t("projectCountFiltered", {
+                    filtered: filteredProjects.length,
+                    total: projects.length,
+                  })
+                : t("projectCount", { count: filteredProjects.length })}
             </p>
           </div>
           {canCreateProject() && (
@@ -282,7 +285,7 @@ export default function ProjectsPage() {
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
             >
               <span>+</span>
-              <span>{t('createProject')}</span>
+              <span>{t("createProject")}</span>
             </button>
           )}
         </div>
@@ -293,13 +296,13 @@ export default function ProjectsPage() {
             {/* Search */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('filters.search')}
+                {t("filters.search")}
               </label>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('filters.searchPlaceholder')}
+                placeholder={t("filters.searchPlaceholder")}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -307,7 +310,7 @@ export default function ProjectsPage() {
             {/* Status Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('filters.status')}
+                {t("filters.status")}
               </label>
               <select
                 value={statusFilter}
@@ -316,19 +319,27 @@ export default function ProjectsPage() {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="ALL">{t('filters.all')}</option>
-                <option value={ProjectStatus.DRAFT}>{t('status.DRAFT')}</option>
-                <option value={ProjectStatus.ACTIVE}>{t('status.ACTIVE')}</option>
-                <option value={ProjectStatus.SUSPENDED}>{t('status.SUSPENDED')}</option>
-                <option value={ProjectStatus.COMPLETED}>{t('status.COMPLETED')}</option>
-                <option value={ProjectStatus.CANCELLED}>{t('status.CANCELLED')}</option>
+                <option value="ALL">{t("filters.all")}</option>
+                <option value={ProjectStatus.DRAFT}>{t("status.DRAFT")}</option>
+                <option value={ProjectStatus.ACTIVE}>
+                  {t("status.ACTIVE")}
+                </option>
+                <option value={ProjectStatus.SUSPENDED}>
+                  {t("status.SUSPENDED")}
+                </option>
+                <option value={ProjectStatus.COMPLETED}>
+                  {t("status.COMPLETED")}
+                </option>
+                <option value={ProjectStatus.CANCELLED}>
+                  {t("status.CANCELLED")}
+                </option>
               </select>
             </div>
 
             {/* Priority Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('filters.priority')}
+                {t("filters.priority")}
               </label>
               <select
                 value={priorityFilter}
@@ -337,11 +348,13 @@ export default function ProjectsPage() {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="ALL">{t('filters.allPriorities')}</option>
-                <option value={Priority.CRITICAL}>{t('priority.CRITICAL')}</option>
-                <option value={Priority.HIGH}>{t('priority.HIGH')}</option>
-                <option value={Priority.NORMAL}>{t('priority.NORMAL')}</option>
-                <option value={Priority.LOW}>{t('priority.LOW')}</option>
+                <option value="ALL">{t("filters.allPriorities")}</option>
+                <option value={Priority.CRITICAL}>
+                  {t("priority.CRITICAL")}
+                </option>
+                <option value={Priority.HIGH}>{t("priority.HIGH")}</option>
+                <option value={Priority.NORMAL}>{t("priority.NORMAL")}</option>
+                <option value={Priority.LOW}>{t("priority.LOW")}</option>
               </select>
             </div>
           </div>
@@ -352,7 +365,7 @@ export default function ProjectsPage() {
           {filteredProjects.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <div className="text-6xl mb-4">📁</div>
-              <p className="text-gray-500">{t('noProjects')}</p>
+              <p className="text-gray-500">{t("noProjects")}</p>
             </div>
           ) : (
             filteredProjects.map((project) => (
@@ -375,7 +388,7 @@ export default function ProjectsPage() {
                 </div>
 
                 <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                  {project.description || t('card.noDescription')}
+                  {project.description || t("card.noDescription")}
                 </p>
 
                 <div className="flex items-center justify-between">
@@ -389,7 +402,7 @@ export default function ProjectsPage() {
 
                   {project.budgetHours && (
                     <span className="text-sm text-gray-500">
-                      ⏱️ {t('card.budgetHours', { hours: project.budgetHours })}
+                      ⏱️ {t("card.budgetHours", { hours: project.budgetHours })}
                     </span>
                   )}
                 </div>
@@ -399,7 +412,7 @@ export default function ProjectsPage() {
                     <div className="flex items-center justify-between text-xs text-gray-500">
                       {project.startDate && (
                         <span>
-                          {t('card.startDate')}{" "}
+                          {t("card.startDate")}{" "}
                           {new Date(project.startDate).toLocaleDateString(
                             "fr-FR",
                           )}
@@ -407,7 +420,7 @@ export default function ProjectsPage() {
                       )}
                       {project.endDate && (
                         <span>
-                          {t('card.endDate')}{" "}
+                          {t("card.endDate")}{" "}
                           {new Date(project.endDate).toLocaleDateString(
                             "fr-FR",
                           )}
@@ -427,12 +440,12 @@ export default function ProjectsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {t('modal.create.title')}
+              {t("modal.create.title")}
             </h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('modal.create.nameLabel')}
+                  {t("modal.create.nameLabel")}
                 </label>
                 <input
                   type="text"
@@ -442,13 +455,13 @@ export default function ProjectsPage() {
                     setFormData({ ...formData, name: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t('modal.create.namePlaceholder')}
+                  placeholder={t("modal.create.namePlaceholder")}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('modal.create.descriptionLabel')}
+                  {t("modal.create.descriptionLabel")}
                 </label>
                 <textarea
                   value={formData.description}
@@ -457,14 +470,14 @@ export default function ProjectsPage() {
                   }
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t('modal.create.descriptionPlaceholder')}
+                  placeholder={t("modal.create.descriptionPlaceholder")}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.statusLabel')}
+                    {t("modal.create.statusLabel")}
                   </label>
                   <select
                     value={formData.status}
@@ -476,15 +489,21 @@ export default function ProjectsPage() {
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value={ProjectStatus.DRAFT}>{t('status.DRAFT')}</option>
-                    <option value={ProjectStatus.ACTIVE}>{t('status.ACTIVE')}</option>
-                    <option value={ProjectStatus.SUSPENDED}>{t('status.SUSPENDED')}</option>
+                    <option value={ProjectStatus.DRAFT}>
+                      {t("status.DRAFT")}
+                    </option>
+                    <option value={ProjectStatus.ACTIVE}>
+                      {t("status.ACTIVE")}
+                    </option>
+                    <option value={ProjectStatus.SUSPENDED}>
+                      {t("status.SUSPENDED")}
+                    </option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.priorityLabel')}
+                    {t("modal.create.priorityLabel")}
                   </label>
                   <select
                     value={formData.priority}
@@ -496,10 +515,14 @@ export default function ProjectsPage() {
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value={Priority.LOW}>{t('priority.LOW')}</option>
-                    <option value={Priority.NORMAL}>{t('priority.NORMAL')}</option>
-                    <option value={Priority.HIGH}>{t('priority.HIGH')}</option>
-                    <option value={Priority.CRITICAL}>{t('priority.CRITICAL')}</option>
+                    <option value={Priority.LOW}>{t("priority.LOW")}</option>
+                    <option value={Priority.NORMAL}>
+                      {t("priority.NORMAL")}
+                    </option>
+                    <option value={Priority.HIGH}>{t("priority.HIGH")}</option>
+                    <option value={Priority.CRITICAL}>
+                      {t("priority.CRITICAL")}
+                    </option>
                   </select>
                 </div>
               </div>
@@ -507,7 +530,7 @@ export default function ProjectsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.startDateLabel')}
+                    {t("modal.create.startDateLabel")}
                   </label>
                   <input
                     type="date"
@@ -534,7 +557,7 @@ export default function ProjectsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.endDateLabel')}
+                    {t("modal.create.endDateLabel")}
                   </label>
                   <input
                     type="date"
@@ -552,7 +575,7 @@ export default function ProjectsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.managerLabel')}
+                    {t("modal.create.managerLabel")}
                   </label>
                   <select
                     required
@@ -562,7 +585,9 @@ export default function ProjectsPage() {
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="">{t('modal.create.managerPlaceholder')}</option>
+                    <option value="">
+                      {t("modal.create.managerPlaceholder")}
+                    </option>
                     {managers.map((manager) => (
                       <option key={manager.id} value={manager.id}>
                         {manager.firstName} {manager.lastName} ({manager.role})
@@ -573,7 +598,7 @@ export default function ProjectsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.departmentLabel')}
+                    {t("modal.create.departmentLabel")}
                   </label>
                   <select
                     value={formData.departmentId || ""}
@@ -585,7 +610,9 @@ export default function ProjectsPage() {
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="">{t('modal.create.departmentPlaceholder')}</option>
+                    <option value="">
+                      {t("modal.create.departmentPlaceholder")}
+                    </option>
                     {departments.map((dept) => (
                       <option key={dept.id} value={dept.id}>
                         {dept.name}
@@ -598,7 +625,7 @@ export default function ProjectsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('modal.create.budgetHoursLabel')}
+                    {t("modal.create.budgetHoursLabel")}
                   </label>
                   <input
                     type="number"
@@ -613,7 +640,7 @@ export default function ProjectsPage() {
                       })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder={t('modal.create.budgetHoursPlaceholder')}
+                    placeholder={t("modal.create.budgetHoursPlaceholder")}
                   />
                 </div>
               </div>
@@ -627,13 +654,13 @@ export default function ProjectsPage() {
                   }}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
-                  {t('modal.create.cancel')}
+                  {t("modal.create.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  {t('modal.create.submit')}
+                  {t("modal.create.submit")}
                 </button>
               </div>
             </form>

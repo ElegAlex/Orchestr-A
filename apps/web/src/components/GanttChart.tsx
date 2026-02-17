@@ -218,9 +218,7 @@ export default function GanttChart({
     return (
       <div className="text-center py-12">
         <div className="text-6xl mb-4">📊</div>
-        <p className="text-gray-500">
-          {t("ganttChart.emptyState.title")}
-        </p>
+        <p className="text-gray-500">{t("ganttChart.emptyState.title")}</p>
         <p className="text-sm text-gray-400 mt-2">
           {t("ganttChart.emptyState.description")}
         </p>
@@ -232,7 +230,9 @@ export default function GanttChart({
     <div className="bg-white rounded-lg gantt-chart">
       {/* View Mode Selector */}
       <div className="flex items-center space-x-2 mb-4">
-        <span className="text-sm font-medium text-gray-900">{t("ganttChart.viewLabel")}:</span>
+        <span className="text-sm font-medium text-gray-900">
+          {t("ganttChart.viewLabel")}:
+        </span>
         <button
           onClick={() => setViewMode(ViewMode.Day)}
           className={`px-3 py-1 rounded text-sm ${

@@ -11,7 +11,7 @@ import toast from "react-hot-toast";
 export default function LoginPage() {
   const router = useRouter();
   const locale = useLocale();
-  const t = useTranslations('auth');
+  const t = useTranslations("auth");
   const setUser = useAuthStore((state) => state.setUser);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,12 +26,12 @@ export default function LoginPage() {
     try {
       const response = await authService.login(formData);
       setUser(response.user);
-      toast.success(t('login.success'));
+      toast.success(t("login.success"));
       router.push(`/${locale}/dashboard`);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || t('login.errors.generic'),
+        axiosError.response?.data?.message || t("login.errors.generic"),
       );
     } finally {
       setLoading(false);
@@ -46,11 +46,9 @@ export default function LoginPage() {
             <Logo size="xl" />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            {t('appName')}
+            {t("appName")}
           </h1>
-          <p className="text-[var(--muted-foreground)]">
-            {t('tagline')}
-          </p>
+          <p className="text-[var(--muted-foreground)]">{t("tagline")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -59,7 +57,7 @@ export default function LoginPage() {
               htmlFor="login"
               className="block text-sm font-medium text-[var(--foreground)] mb-2"
             >
-              {t('login.loginLabel')}
+              {t("login.loginLabel")}
             </label>
             <input
               id="login"
@@ -70,7 +68,7 @@ export default function LoginPage() {
                 setFormData({ ...formData, login: e.target.value })
               }
               className="w-full px-4 py-2 border border-[var(--input-border)] bg-[var(--background)] text-[var(--input-text)] rounded-lg focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent"
-              placeholder={t('login.loginPlaceholder')}
+              placeholder={t("login.loginPlaceholder")}
             />
           </div>
 
@@ -79,7 +77,7 @@ export default function LoginPage() {
               htmlFor="password"
               className="block text-sm font-medium text-[var(--foreground)] mb-2"
             >
-              {t('login.password')}
+              {t("login.password")}
             </label>
             <input
               id="password"
@@ -90,7 +88,7 @@ export default function LoginPage() {
                 setFormData({ ...formData, password: e.target.value })
               }
               className="w-full px-4 py-2 border border-[var(--input-border)] bg-[var(--background)] text-[var(--input-text)] rounded-lg focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent"
-              placeholder={t('login.passwordPlaceholder')}
+              placeholder={t("login.passwordPlaceholder")}
             />
           </div>
 
@@ -99,7 +97,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-[var(--primary)] text-[var(--primary-foreground)] py-2 px-4 rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {loading ? t('login.submitting') : t('login.submit')}
+            {loading ? t("login.submitting") : t("login.submit")}
           </button>
         </form>
       </div>

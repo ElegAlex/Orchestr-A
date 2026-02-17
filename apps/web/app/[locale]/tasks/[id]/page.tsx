@@ -46,8 +46,8 @@ export default function TaskDetailPage() {
   const params = useParams();
   const router = useRouter();
   const locale = useLocale();
-  const t = useTranslations('tasks');
-  const tCommon = useTranslations('common');
+  const t = useTranslations("tasks");
+  const tCommon = useTranslations("common");
   const taskId = params.id as string;
   const { user } = useAuthStore();
 
@@ -175,7 +175,7 @@ export default function TaskDetailPage() {
           endTime: taskData.endTime || "",
         });
       } catch (err) {
-        toast.error(t('messages.loadTaskError'));
+        toast.error(t("messages.loadTaskError"));
         console.error(err);
         router.push(`/${locale}/tasks`);
       } finally {
@@ -232,11 +232,11 @@ export default function TaskDetailPage() {
       const updatedTask = await tasksService.update(taskId, updateData);
       setTask(updatedTask);
       setIsEditing(false);
-      toast.success(t('messages.updateSuccess'));
+      toast.success(t("messages.updateSuccess"));
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || t('messages.updateError'),
+        axiosError.response?.data?.message || t("messages.updateError"),
       );
       console.error(err);
     }
@@ -279,18 +279,18 @@ export default function TaskDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm(t('messages.deleteConfirm'))) {
+    if (!confirm(t("messages.deleteConfirm"))) {
       return;
     }
 
     try {
       await tasksService.delete(taskId);
-      toast.success(t('messages.deleteSuccess'));
+      toast.success(t("messages.deleteSuccess"));
       router.push(`/${locale}/tasks`);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || t('messages.deleteError'),
+        axiosError.response?.data?.message || t("messages.deleteError"),
       );
       console.error(err);
     }
@@ -333,12 +333,12 @@ export default function TaskDetailPage() {
           (d: TaskDependency) => d.dependsOnTaskId,
         ) || [];
       setSelectedDependencyIds(updatedDepIds);
-      toast.success(t('messages.dependenciesUpdateSuccess'));
+      toast.success(t("messages.dependenciesUpdateSuccess"));
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
         axiosError.response?.data?.message ||
-          t('messages.dependenciesUpdateError'),
+          t("messages.dependenciesUpdateError"),
       );
       console.error(err);
       // Reset to original
@@ -400,7 +400,7 @@ export default function TaskDetailPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">{tCommon('actions.loading')}</p>
+            <p className="mt-4 text-gray-600">{tCommon("actions.loading")}</p>
           </div>
         </div>
       </MainLayout>
@@ -417,7 +417,7 @@ export default function TaskDetailPage() {
             className="text-blue-600 hover:text-blue-800 mb-4 flex items-center space-x-1"
           >
             <span>←</span>
-            <span>{t('back')}</span>
+            <span>{t("back")}</span>
           </button>
 
           <div className="flex items-start justify-between">
@@ -462,13 +462,13 @@ export default function TaskDetailPage() {
                     onClick={handleDelete}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
                   >
-                    {t('detail.actions.delete')}
+                    {t("detail.actions.delete")}
                   </button>
                   <button
                     onClick={() => setIsEditing(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                   >
-                    {t('detail.actions.edit')}
+                    {t("detail.actions.edit")}
                   </button>
                 </>
               )}
@@ -478,13 +478,13 @@ export default function TaskDetailPage() {
                     onClick={handleCancel}
                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
                   >
-                    {t('detail.actions.cancel')}
+                    {t("detail.actions.cancel")}
                   </button>
                   <button
                     onClick={handleSave}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
                   >
-                    {t('detail.actions.save')}
+                    {t("detail.actions.save")}
                   </button>
                 </>
               )}
@@ -499,7 +499,7 @@ export default function TaskDetailPage() {
             {/* Description */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                {t('detail.sections.description')}
+                {t("detail.sections.description")}
               </h2>
               {isEditing ? (
                 <textarea
@@ -508,11 +508,11 @@ export default function TaskDetailPage() {
                     setFormData({ ...formData, description: e.target.value })
                   }
                   className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder={t('modal.create.descriptionPlaceholder')}
+                  placeholder={t("modal.create.descriptionPlaceholder")}
                 />
               ) : (
                 <p className="text-gray-700 whitespace-pre-wrap">
-                  {task.description || t('detail.sections.noDescription')}
+                  {task.description || t("detail.sections.noDescription")}
                 </p>
               )}
             </div>
@@ -521,13 +521,13 @@ export default function TaskDetailPage() {
             {isEditing && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('detail.sections.settings')}
+                  {t("detail.sections.settings")}
                 </h2>
                 <div className="space-y-4">
                   {/* Status */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('detail.fields.status')}
+                      {t("detail.fields.status")}
                     </label>
                     <select
                       value={formData.status}
@@ -539,18 +539,28 @@ export default function TaskDetailPage() {
                       }
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value={TaskStatus.TODO}>{t('status.TODO')}</option>
-                      <option value={TaskStatus.IN_PROGRESS}>{t('status.IN_PROGRESS')}</option>
-                      <option value={TaskStatus.IN_REVIEW}>{t('status.IN_REVIEW')}</option>
-                      <option value={TaskStatus.DONE}>{t('status.DONE')}</option>
-                      <option value={TaskStatus.BLOCKED}>{t('status.BLOCKED')}</option>
+                      <option value={TaskStatus.TODO}>
+                        {t("status.TODO")}
+                      </option>
+                      <option value={TaskStatus.IN_PROGRESS}>
+                        {t("status.IN_PROGRESS")}
+                      </option>
+                      <option value={TaskStatus.IN_REVIEW}>
+                        {t("status.IN_REVIEW")}
+                      </option>
+                      <option value={TaskStatus.DONE}>
+                        {t("status.DONE")}
+                      </option>
+                      <option value={TaskStatus.BLOCKED}>
+                        {t("status.BLOCKED")}
+                      </option>
                     </select>
                   </div>
 
                   {/* Priority */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('detail.fields.priority')}
+                      {t("detail.fields.priority")}
                     </label>
                     <select
                       value={formData.priority}
@@ -562,17 +572,23 @@ export default function TaskDetailPage() {
                       }
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value={Priority.LOW}>{t('priority.LOW')}</option>
-                      <option value={Priority.NORMAL}>{t('priority.NORMAL')}</option>
-                      <option value={Priority.HIGH}>{t('priority.HIGH')}</option>
-                      <option value={Priority.CRITICAL}>{t('priority.CRITICAL')}</option>
+                      <option value={Priority.LOW}>{t("priority.LOW")}</option>
+                      <option value={Priority.NORMAL}>
+                        {t("priority.NORMAL")}
+                      </option>
+                      <option value={Priority.HIGH}>
+                        {t("priority.HIGH")}
+                      </option>
+                      <option value={Priority.CRITICAL}>
+                        {t("priority.CRITICAL")}
+                      </option>
                     </select>
                   </div>
 
                   {/* Milestone */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('detail.fields.milestone')}
+                      {t("detail.fields.milestone")}
                     </label>
                     <select
                       value={formData.milestoneId}
@@ -584,7 +600,9 @@ export default function TaskDetailPage() {
                       }
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">{t('detail.fields.milestoneNone')}</option>
+                      <option value="">
+                        {t("detail.fields.milestoneNone")}
+                      </option>
                       {milestones.map((milestone) => (
                         <option key={milestone.id} value={milestone.id}>
                           {milestone.name}
@@ -595,19 +613,19 @@ export default function TaskDetailPage() {
 
                   {/* Assignees */}
                   <UserMultiSelect
-                    label={t('detail.fields.assignees')}
+                    label={t("detail.fields.assignees")}
                     users={users}
                     selectedIds={formData.assigneeIds}
                     onChange={(ids) =>
                       setFormData({ ...formData, assigneeIds: ids })
                     }
-                    placeholder={t('detail.fields.assigneesPlaceholder')}
+                    placeholder={t("detail.fields.assigneesPlaceholder")}
                   />
 
                   {/* Project */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('detail.fields.project')}
+                      {t("detail.fields.project")}
                     </label>
                     <select
                       value={formData.projectId}
@@ -616,7 +634,7 @@ export default function TaskDetailPage() {
                       }
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">{t('detail.fields.projectNone')}</option>
+                      <option value="">{t("detail.fields.projectNone")}</option>
                       {projects.map((project) => (
                         <option key={project.id} value={project.id}>
                           {project.name}
@@ -628,7 +646,7 @@ export default function TaskDetailPage() {
                   {/* Start Date */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('detail.fields.startDate')}
+                      {t("detail.fields.startDate")}
                     </label>
                     <input
                       type="date"
@@ -653,7 +671,7 @@ export default function TaskDetailPage() {
                   {/* End Date */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('detail.fields.endDate')}
+                      {t("detail.fields.endDate")}
                     </label>
                     <input
                       type="date"
@@ -669,7 +687,7 @@ export default function TaskDetailPage() {
                   {/* Start Time */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('detail.fields.startTime')}
+                      {t("detail.fields.startTime")}
                     </label>
                     <input
                       type="time"
@@ -684,7 +702,7 @@ export default function TaskDetailPage() {
                   {/* End Time */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('detail.fields.endTime')}
+                      {t("detail.fields.endTime")}
                     </label>
                     <input
                       type="time"
@@ -703,11 +721,13 @@ export default function TaskDetailPage() {
             {!isEditing && task.progress > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('detail.sections.progress')}
+                  {t("detail.sections.progress")}
                 </h2>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">{t('detail.sections.progressLabel')}</span>
+                    <span className="text-sm text-gray-600">
+                      {t("detail.sections.progressLabel")}
+                    </span>
                     <span className="text-sm font-medium text-gray-900">
                       {task.progress}%
                     </span>
@@ -726,7 +746,7 @@ export default function TaskDetailPage() {
             {task.projectId && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('detail.sections.dependencies')}
+                  {t("detail.sections.dependencies")}
                 </h2>
 
                 {/* Date conflict warnings */}
@@ -750,13 +770,13 @@ export default function TaskDetailPage() {
                     onChange={handleDependencyChange}
                     disabled={savingDependencies}
                     label=""
-                    placeholder={t('detail.dependencies.selectPlaceholder')}
+                    placeholder={t("detail.dependencies.selectPlaceholder")}
                   />
                 ) : (
                   <div className="space-y-2">
                     {!task.dependencies || task.dependencies.length === 0 ? (
                       <p className="text-sm text-gray-500 italic">
-                        {t('detail.sections.noDependencies')}
+                        {t("detail.sections.noDependencies")}
                       </p>
                     ) : (
                       task.dependencies.map((dep) => {
@@ -770,7 +790,9 @@ export default function TaskDetailPage() {
                             key={dep.id || dep.dependsOnTaskId}
                             onClick={() =>
                               dep.dependsOnTask &&
-                              router.push(`/${locale}/tasks/${dep.dependsOnTask.id}`)
+                              router.push(
+                                `/${locale}/tasks/${dep.dependsOnTask.id}`,
+                              )
                             }
                             className={`
                               flex items-center justify-between p-3 rounded-lg cursor-pointer
@@ -794,7 +816,8 @@ export default function TaskDetailPage() {
                                 </svg>
                               )}
                               <span className="text-sm text-gray-900">
-                                {dep.dependsOnTask?.title || t('detail.sections.deletedTask')}
+                                {dep.dependsOnTask?.title ||
+                                  t("detail.sections.deletedTask")}
                               </span>
                             </div>
                             <span
@@ -822,10 +845,12 @@ export default function TaskDetailPage() {
             {task.project && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('detail.sections.project')}
+                  {t("detail.sections.project")}
                 </h2>
                 <button
-                  onClick={() => router.push(`/${locale}/projects/${task.project?.id}`)}
+                  onClick={() =>
+                    router.push(`/${locale}/projects/${task.project?.id}`)
+                  }
                   className="text-blue-600 hover:text-blue-800 font-medium"
                 >
                   {task.project.name}
@@ -839,8 +864,8 @@ export default function TaskDetailPage() {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   {task.assignees && task.assignees.length > 1
-                    ? t('detail.sections.assignees')
-                    : t('detail.sections.assignedTo')}
+                    ? t("detail.sections.assignees")
+                    : t("detail.sections.assignedTo")}
                 </h2>
                 <div className="space-y-3">
                   {task.assignees && task.assignees.length > 0
@@ -888,14 +913,14 @@ export default function TaskDetailPage() {
             {task.milestone && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('detail.sections.milestone')}
+                  {t("detail.sections.milestone")}
                 </h2>
                 <p className="font-medium text-gray-900">
                   {task.milestone.name}
                 </p>
                 {task.milestone.dueDate && (
                   <p className="text-sm text-gray-600 mt-1">
-                    {t('detail.fields.dueDate')}{" "}
+                    {t("detail.fields.dueDate")}{" "}
                     {new Date(task.milestone.dueDate).toLocaleDateString(
                       "fr-FR",
                     )}
@@ -908,7 +933,7 @@ export default function TaskDetailPage() {
             {task.epic && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('detail.sections.epic')}
+                  {t("detail.sections.epic")}
                 </h2>
                 <p className="font-medium text-gray-900">{task.epic.name}</p>
               </div>
@@ -917,12 +942,14 @@ export default function TaskDetailPage() {
             {/* Details */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                {t('detail.sections.details')}
+                {t("detail.sections.details")}
               </h2>
               <div className="space-y-3 text-sm">
                 {task.estimatedHours && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">{t('detail.fields.estimation')}</span>
+                    <span className="text-gray-600">
+                      {t("detail.fields.estimation")}
+                    </span>
                     <span className="font-medium text-gray-900">
                       {task.estimatedHours}h
                     </span>
@@ -930,7 +957,9 @@ export default function TaskDetailPage() {
                 )}
                 {task.startDate && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">{t('detail.fields.startDate')}</span>
+                    <span className="text-gray-600">
+                      {t("detail.fields.startDate")}
+                    </span>
                     <span className="font-medium text-gray-900">
                       {new Date(task.startDate).toLocaleDateString("fr-FR")}
                     </span>
@@ -938,7 +967,9 @@ export default function TaskDetailPage() {
                 )}
                 {task.endDate && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">{t('detail.fields.endDate')}</span>
+                    <span className="text-gray-600">
+                      {t("detail.fields.endDate")}
+                    </span>
                     <span className="font-medium text-gray-900">
                       {new Date(task.endDate).toLocaleDateString("fr-FR")}
                     </span>
@@ -946,20 +977,26 @@ export default function TaskDetailPage() {
                 )}
                 {(task.startTime || task.endTime) && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">{t('detail.fields.schedule')}</span>
+                    <span className="text-gray-600">
+                      {t("detail.fields.schedule")}
+                    </span>
                     <span className="font-medium text-gray-900">
                       {task.startTime || "--:--"} - {task.endTime || "--:--"}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between pt-3 border-t border-gray-200">
-                  <span className="text-gray-600">{t('detail.fields.createdAt')}</span>
+                  <span className="text-gray-600">
+                    {t("detail.fields.createdAt")}
+                  </span>
                   <span className="font-medium text-gray-900">
                     {new Date(task.createdAt).toLocaleDateString("fr-FR")}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">{t('detail.fields.updatedAt')}</span>
+                  <span className="text-gray-600">
+                    {t("detail.fields.updatedAt")}
+                  </span>
                   <span className="font-medium text-gray-900">
                     {new Date(task.updatedAt).toLocaleDateString("fr-FR")}
                   </span>

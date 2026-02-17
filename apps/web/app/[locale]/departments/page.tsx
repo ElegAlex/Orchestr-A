@@ -128,12 +128,7 @@ export default function DepartmentsPage() {
   };
 
   const handleDeleteDepartment = async (id: string) => {
-    if (
-      !confirm(
-        t("messages.deleteDeptConfirm"),
-      )
-    )
-      return;
+    if (!confirm(t("messages.deleteDeptConfirm"))) return;
 
     try {
       await departmentsService.delete(id);
@@ -221,9 +216,7 @@ export default function DepartmentsPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {t("accessRestricted.title")}
             </h2>
-            <p className="text-gray-600">
-              {t("accessRestricted.message")}
-            </p>
+            <p className="text-gray-600">{t("accessRestricted.message")}</p>
           </div>
         </div>
       </MainLayout>
@@ -249,11 +242,10 @@ export default function DepartmentsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {t("title")}
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
             <p className="text-gray-600 mt-1">
-              {departments.length} {t("count")} - {services.length} {t("servicesCount")}
+              {departments.length} {t("count")} - {services.length}{" "}
+              {t("servicesCount")}
             </p>
           </div>
           <div className="flex items-center space-x-3">
@@ -285,12 +277,8 @@ export default function DepartmentsPage() {
           <div className="flex items-start space-x-3">
             <div className="text-2xl">ℹ️</div>
             <div>
-              <h3 className="font-semibold text-blue-900">
-                {t("infoTitle")}
-              </h3>
-              <p className="text-sm text-blue-800 mt-1">
-                {t("infoText")}
-              </p>
+              <h3 className="font-semibold text-blue-900">{t("infoTitle")}</h3>
+              <p className="text-sm text-blue-800 mt-1">{t("infoText")}</p>
             </div>
           </div>
         </div>
@@ -374,7 +362,9 @@ export default function DepartmentsPage() {
 
                           {department.manager && (
                             <div className="flex items-center space-x-2 text-sm text-gray-700">
-                              <span className="font-medium">{t("manager")}</span>
+                              <span className="font-medium">
+                                {t("manager")}
+                              </span>
                               <span>
                                 {department.manager.firstName}{" "}
                                 {department.manager.lastName}
@@ -588,7 +578,9 @@ export default function DepartmentsPage() {
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  {editingDepartment ? t("departmentModal.edit") : t("departmentModal.create")}
+                  {editingDepartment
+                    ? t("departmentModal.edit")
+                    : t("departmentModal.create")}
                 </button>
               </div>
             </form>
@@ -601,7 +593,9 @@ export default function DepartmentsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-lg w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {editingService ? t("serviceModal.titleEdit") : t("serviceModal.titleCreate")}
+              {editingService
+                ? t("serviceModal.titleEdit")
+                : t("serviceModal.titleCreate")}
             </h2>
             <form onSubmit={handleCreateService} className="space-y-4">
               <div>
@@ -707,7 +701,9 @@ export default function DepartmentsPage() {
                   type="submit"
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                 >
-                  {editingService ? t("serviceModal.edit") : t("serviceModal.create")}
+                  {editingService
+                    ? t("serviceModal.edit")
+                    : t("serviceModal.create")}
                 </button>
               </div>
             </form>

@@ -207,14 +207,11 @@ export const PlanningGrid = ({
       } else {
         // Tâche multi-assignés: on change seulement l'assignation (pas les dates)
         if (isSameUser) {
-          toast(
-            t("taskMove.multiAssignDateError"),
-            {
-              icon: "\u2139\uFE0F",
-              duration: 3000,
-              id: `multi-assignee-${Date.now()}`,
-            },
-          );
+          toast(t("taskMove.multiAssignDateError"), {
+            icon: "\u2139\uFE0F",
+            duration: 3000,
+            id: `multi-assignee-${Date.now()}`,
+          });
           return;
         }
         if (targetAlreadyAssigned) {
@@ -234,14 +231,11 @@ export const PlanningGrid = ({
         });
 
         // Informer que seul l'assigné a changé (pas la date)
-        toast(
-          t("taskMove.reassignOnly"),
-          {
-            icon: "\u2139\uFE0F",
-            duration: 3000,
-            id: `reassign-only-${Date.now()}`,
-          },
-        );
+        toast(t("taskMove.reassignOnly"), {
+          icon: "\u2139\uFE0F",
+          duration: 3000,
+          id: `reassign-only-${Date.now()}`,
+        });
       }
 
       silentRefetch();

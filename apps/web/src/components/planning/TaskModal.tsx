@@ -15,7 +15,12 @@ interface TaskModalProps {
   onRefresh?: () => void;
 }
 
-export const TaskModal = ({ task, isOpen, onClose, onRefresh }: TaskModalProps) => {
+export const TaskModal = ({
+  task,
+  isOpen,
+  onClose,
+  onRefresh,
+}: TaskModalProps) => {
   const t = useTranslations("planning.taskModal");
   const tCommon = useTranslations("common");
   const router = useRouter();
@@ -59,13 +64,17 @@ export const TaskModal = ({ task, isOpen, onClose, onRefresh }: TaskModalProps) 
         <div className="space-y-4">
           {task.description && (
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">{t("description")}</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                {t("description")}
+              </h3>
               <p className="text-gray-700">{task.description}</p>
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">{t("status")}</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                {t("status")}
+              </h3>
               <span
                 className={`inline-block px-3 py-1 rounded text-sm ${
                   task.status === TaskStatus.DONE
@@ -77,7 +86,9 @@ export const TaskModal = ({ task, isOpen, onClose, onRefresh }: TaskModalProps) 
               </span>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">{t("priority")}</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                {t("priority")}
+              </h3>
               <span
                 className={`inline-block px-3 py-1 rounded text-sm ${getPriorityColor(task.priority)}`}
               >
@@ -86,13 +97,17 @@ export const TaskModal = ({ task, isOpen, onClose, onRefresh }: TaskModalProps) 
             </div>
             {task.estimatedHours && (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">{t("estimation")}</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  {t("estimation")}
+                </h3>
                 <p className="text-gray-700">{task.estimatedHours}h</p>
               </div>
             )}
             {(task.startTime || task.endTime) && (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">{t("schedule")}</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  {t("schedule")}
+                </h3>
                 <p className="text-gray-700">
                   {task.startTime || "--:--"} - {task.endTime || "--:--"}
                 </p>

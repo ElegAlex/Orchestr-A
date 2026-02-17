@@ -214,7 +214,12 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   createdById?: string;
-  createdBy?: { id: string; firstName: string; lastName: string; login: string } | null;
+  createdBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    login: string;
+  } | null;
   members?: ProjectMember[];
   epics?: Epic[];
   milestones?: Milestone[];

@@ -38,8 +38,14 @@ export const GroupHeader = ({
               className={`mr-2 p-1 rounded hover:bg-black/10 transition-transform duration-200 ${
                 isCollapsed ? "" : "rotate-90"
               }`}
-              aria-label={isCollapsed ? t("actions.expand") : t("actions.collapse")}
-              title={isCollapsed ? t("actions.expandService") : t("actions.collapseService")}
+              aria-label={
+                isCollapsed ? t("actions.expand") : t("actions.collapse")
+              }
+              title={
+                isCollapsed
+                  ? t("actions.expandService")
+                  : t("actions.collapseService")
+              }
             >
               <svg
                 className={`w-4 h-4 ${colors.text}`}

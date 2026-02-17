@@ -254,7 +254,9 @@ export default function LeavesPage() {
       fetchAll();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || tc("errors.validationError"));
+      toast.error(
+        axiosError.response?.data?.message || tc("errors.validationError"),
+      );
     }
   };
 
@@ -279,8 +281,7 @@ export default function LeavesPage() {
   };
 
   const handleDeactivateDelegation = async (delegationId: string) => {
-    if (!confirm(t("messages.confirmDeactivate")))
-      return;
+    if (!confirm(t("messages.confirmDeactivate"))) return;
     try {
       await leavesService.deactivateDelegation(delegationId);
       toast.success(t("messages.delegationDeactivated"));
@@ -541,7 +542,8 @@ export default function LeavesPage() {
                 })}
               </div>
               <div className="font-semibold text-blue-600">
-                {leave.days} {t("fields.days")}{leave.days > 1 ? "s" : ""}
+                {leave.days} {t("fields.days")}
+                {leave.days > 1 ? "s" : ""}
               </div>
             </div>
 
@@ -554,8 +556,8 @@ export default function LeavesPage() {
             {/* Validation info */}
             {leave.validator && leave.status === LeaveStatus.PENDING && (
               <p className="text-xs text-gray-500 mt-2">
-                {t("validation.assignedValidator")} : {leave.validator.firstName}{" "}
-                {leave.validator.lastName}
+                {t("validation.assignedValidator")} :{" "}
+                {leave.validator.firstName} {leave.validator.lastName}
               </p>
             )}
             {leave.validatedBy && leave.status !== LeaveStatus.PENDING && (
@@ -637,9 +639,7 @@ export default function LeavesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {t("title")}
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
             {pendingLeaves.length > 0 && canValidate && (
               <p className="text-orange-600 mt-1 font-medium">
                 {pendingLeaves.length} {t("pendingRequests")}
@@ -765,9 +765,7 @@ export default function LeavesPage() {
               {pendingLeaves.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">✅</div>
-                  <p className="text-gray-500">
-                    {t("noPendingValidation")}
-                  </p>
+                  <p className="text-gray-500">{t("noPendingValidation")}</p>
                 </div>
               ) : (
                 <div>
@@ -1008,8 +1006,12 @@ export default function LeavesPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">{t("halfDay.fullDay")}</option>
-                      <option value={HalfDay.MORNING}>{t("halfDay.MORNING")}</option>
-                      <option value={HalfDay.AFTERNOON}>{t("halfDay.AFTERNOON")}</option>
+                      <option value={HalfDay.MORNING}>
+                        {t("halfDay.MORNING")}
+                      </option>
+                      <option value={HalfDay.AFTERNOON}>
+                        {t("halfDay.AFTERNOON")}
+                      </option>
                     </select>
                   </div>
                 )}
@@ -1149,8 +1151,12 @@ export default function LeavesPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">{t("halfDay.fullDay")}</option>
-                      <option value={HalfDay.MORNING}>{t("halfDay.MORNING")}</option>
-                      <option value={HalfDay.AFTERNOON}>{t("halfDay.AFTERNOON")}</option>
+                      <option value={HalfDay.MORNING}>
+                        {t("halfDay.MORNING")}
+                      </option>
+                      <option value={HalfDay.AFTERNOON}>
+                        {t("halfDay.AFTERNOON")}
+                      </option>
                     </select>
                   </div>
                 )}
@@ -1354,9 +1360,7 @@ export default function LeavesPage() {
               {t("import.modalTitle")}
             </h2>
             <div className="space-y-4">
-              <p className="text-gray-600 text-sm">
-                {t("import.description")}
-              </p>
+              <p className="text-gray-600 text-sm">{t("import.description")}</p>
 
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 <p className="text-sm font-medium text-gray-900">

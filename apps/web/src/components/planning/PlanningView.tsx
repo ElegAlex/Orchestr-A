@@ -186,7 +186,9 @@ export const PlanningView = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title || t("title")}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {title || t("title")}
+          </h1>
           <p className="text-gray-600 mt-1">
             {viewMode === "week"
               ? t("weekOf", {
@@ -214,8 +216,18 @@ export const PlanningView = ({
               >
                 <span>+</span>
                 <span>{t("create")}</span>
-                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <svg
+                  className="w-4 h-4 ml-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </button>
               {showCreateMenu && (
@@ -328,8 +340,12 @@ export const PlanningView = ({
                     : selectedServices.length === groupedUsers.length
                       ? t("filters.allServices")
                       : selectedServices.length === 1
-                        ? t("filters.servicesCount", { count: selectedServices.length })
-                        : t("filters.servicesCountPlural", { count: selectedServices.length })}
+                        ? t("filters.servicesCount", {
+                            count: selectedServices.length,
+                          })
+                        : t("filters.servicesCountPlural", {
+                            count: selectedServices.length,
+                          })}
                 </span>
                 <span className="ml-2">
                   {showServiceDropdown ? "\u25B2" : "\u25BC"}
@@ -411,7 +427,9 @@ export const PlanningView = ({
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">{t("filters.displayAll")}</option>
-                <option value="availability">{t("filters.displayAvailability")}</option>
+                <option value="availability">
+                  {t("filters.displayAvailability")}
+                </option>
                 <option value="activity">{t("filters.displayActivity")}</option>
               </select>
             </div>
@@ -477,7 +495,8 @@ export const PlanningView = ({
                   {t("legend.leave")}
                 </span>
                 <span className="flex items-center">
-                  <span>🏠</span>{t("legend.telework")}
+                  <span>🏠</span>
+                  {t("legend.telework")}
                 </span>
               </div>
             </div>
@@ -499,7 +518,9 @@ export const PlanningView = ({
       {/* Legend */}
       {showLegend && (
         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">{t("legend.title")}</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+            {t("legend.title")}
+          </h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs">
             <div className="flex items-center space-x-2">
               <span>○</span>
@@ -561,12 +582,18 @@ export const PlanningView = ({
       <TaskCreateModal
         isOpen={showTaskCreateModal}
         onClose={() => setShowTaskCreateModal(false)}
-        onSuccess={() => { refetch(); setRefreshTrigger((prev) => prev + 1); }}
+        onSuccess={() => {
+          refetch();
+          setRefreshTrigger((prev) => prev + 1);
+        }}
       />
       <EventCreateModal
         isOpen={showEventCreateModal}
         onClose={() => setShowEventCreateModal(false)}
-        onSuccess={() => { refetch(); setRefreshTrigger((prev) => prev + 1); }}
+        onSuccess={() => {
+          refetch();
+          setRefreshTrigger((prev) => prev + 1);
+        }}
       />
     </div>
   );

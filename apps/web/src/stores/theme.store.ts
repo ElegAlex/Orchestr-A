@@ -22,7 +22,10 @@ export const useThemeStore = create<ThemeState>()(
         if (theme !== "girly") {
           set({ theme, previousTheme: theme });
         } else {
-          set({ theme, previousTheme: currentTheme !== "girly" ? currentTheme : "light" });
+          set({
+            theme,
+            previousTheme: currentTheme !== "girly" ? currentTheme : "light",
+          });
         }
         if (typeof window !== "undefined") {
           const root = document.documentElement;

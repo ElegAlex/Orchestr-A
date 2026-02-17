@@ -133,7 +133,9 @@ export function MilestoneRoadmap({
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">{t("milestoneRoadmap.metrics.milestones")}</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t("milestoneRoadmap.metrics.milestones")}
+              </p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {metrics.total}
               </p>
@@ -145,7 +147,9 @@ export function MilestoneRoadmap({
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">{t("milestoneRoadmap.metrics.completed")}</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t("milestoneRoadmap.metrics.completed")}
+              </p>
               <p className="text-2xl font-bold text-green-600 mt-1">
                 {metrics.completed}
               </p>
@@ -157,7 +161,9 @@ export function MilestoneRoadmap({
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">{t("milestoneRoadmap.metrics.inProgress")}</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t("milestoneRoadmap.metrics.inProgress")}
+              </p>
               <p className="text-2xl font-bold text-orange-600 mt-1">
                 {metrics.inProgress}
               </p>
@@ -169,7 +175,9 @@ export function MilestoneRoadmap({
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">{t("milestoneRoadmap.metrics.tasks")}</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t("milestoneRoadmap.metrics.tasks")}
+              </p>
               <p className="text-2xl font-bold text-blue-600 mt-1">
                 {metrics.totalTasks}
               </p>
@@ -183,7 +191,9 @@ export function MilestoneRoadmap({
       {sortedMilestones.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 text-center py-16">
           <div className="text-6xl mb-4">📅</div>
-          <p className="text-gray-500 text-lg mb-4">{t("milestoneRoadmap.emptyState.title")}</p>
+          <p className="text-gray-500 text-lg mb-4">
+            {t("milestoneRoadmap.emptyState.title")}
+          </p>
           <p className="text-gray-400 text-sm mb-6">
             {t("milestoneRoadmap.emptyState.description")}
           </p>

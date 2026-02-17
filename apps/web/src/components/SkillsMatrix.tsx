@@ -49,7 +49,6 @@ const LEVEL_COLORS_HOVER: Record<SkillLevel, string> = {
   MASTER: "hover:bg-purple-200",
 };
 
-
 const CATEGORY_COLORS: Record<SkillCategory, string> = {
   TECHNICAL: "bg-blue-50 border-blue-200",
   METHODOLOGY: "bg-purple-50 border-purple-200",
@@ -122,11 +121,13 @@ function LevelCell({
         className="w-16 h-8 text-xs border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">-</option>
-        {(["BEGINNER", "INTERMEDIATE", "EXPERT", "MASTER"] as SkillLevel[]).map((lvl) => (
-          <option key={lvl} value={lvl}>
-            {t(`levels.${lvl}`)}
-          </option>
-        ))}
+        {(["BEGINNER", "INTERMEDIATE", "EXPERT", "MASTER"] as SkillLevel[]).map(
+          (lvl) => (
+            <option key={lvl} value={lvl}>
+              {t(`levels.${lvl}`)}
+            </option>
+          ),
+        )}
       </select>
     );
   }
@@ -432,7 +433,10 @@ export function SkillsMatrix() {
   const exportToCSV = () => {
     if (!data) return;
 
-    const headers = [t("matrix.collaborator"), ...filteredSkills.map((s) => s.name)];
+    const headers = [
+      t("matrix.collaborator"),
+      ...filteredSkills.map((s) => s.name),
+    ];
     const rows = filteredUsers.map((row) => {
       const skillsMap = new Map(row.skills.map((s) => [s.skillId, s.level]));
       return [
@@ -484,7 +488,9 @@ export function SkillsMatrix() {
       {/* Analytics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-500">{t("matrix.collaborators")}</div>
+          <div className="text-sm text-gray-500">
+            {t("matrix.collaborators")}
+          </div>
           <div className="text-2xl font-bold text-gray-900">
             {data.matrix.length}
           </div>
@@ -496,7 +502,9 @@ export function SkillsMatrix() {
           </div>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-500">{t("matrix.averageCoverage")}</div>
+          <div className="text-sm text-gray-500">
+            {t("matrix.averageCoverage")}
+          </div>
           <div className="text-2xl font-bold text-gray-900">
             {Math.round(
               Object.values(userCoverage).reduce((a, b) => a + b, 0) /
@@ -510,7 +518,9 @@ export function SkillsMatrix() {
           <div className="text-2xl font-bold text-red-600">
             {skillGaps.length}
           </div>
-          <div className="text-xs text-gray-400">{t("matrix.skillGapsToReinforce")}</div>
+          <div className="text-xs text-gray-400">
+            {t("matrix.skillGapsToReinforce")}
+          </div>
         </div>
       </div>
 
@@ -605,7 +615,9 @@ export function SkillsMatrix() {
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="all">{t("matrix.allLevels")}</option>
-          {(["BEGINNER", "INTERMEDIATE", "EXPERT", "MASTER"] as SkillLevel[]).map((lvl) => (
+          {(
+            ["BEGINNER", "INTERMEDIATE", "EXPERT", "MASTER"] as SkillLevel[]
+          ).map((lvl) => (
             <option key={lvl} value={lvl}>
               {t("levels.min")} {t(`levels.${lvl}`)}
             </option>
@@ -660,15 +672,19 @@ export function SkillsMatrix() {
 
       {/* Legend */}
       <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-sm text-gray-500 mr-2">{t("matrix.legend")}:</span>
-        {(["BEGINNER", "INTERMEDIATE", "EXPERT", "MASTER"] as SkillLevel[]).map((lvl) => (
-          <span
-            key={lvl}
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium border ${LEVEL_COLORS[lvl]}`}
-          >
-            {t(`levelShort.${lvl}`)} = {t(`levels.${lvl}`)}
-          </span>
-        ))}
+        <span className="text-sm text-gray-500 mr-2">
+          {t("matrix.legend")}:
+        </span>
+        {(["BEGINNER", "INTERMEDIATE", "EXPERT", "MASTER"] as SkillLevel[]).map(
+          (lvl) => (
+            <span
+              key={lvl}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium border ${LEVEL_COLORS[lvl]}`}
+            >
+              {t(`levelShort.${lvl}`)} = {t(`levels.${lvl}`)}
+            </span>
+          ),
+        )}
         <span className="text-xs text-gray-400 ml-4">
           {t("matrix.clickToEdit")}
         </span>

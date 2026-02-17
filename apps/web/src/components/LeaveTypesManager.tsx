@@ -152,7 +152,9 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
       onTypeChange?.();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || tc("errors.serverError"));
+      toast.error(
+        axiosError.response?.data?.message || tc("errors.serverError"),
+      );
     }
   };
 
@@ -373,7 +375,9 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                               ? "text-gray-500 hover:text-yellow-600 hover:bg-yellow-50"
                               : "text-gray-500 hover:text-green-600 hover:bg-green-50"
                           }`}
-                          title={type.isActive ? t("deactivate") : t("reactivate")}
+                          title={
+                            type.isActive ? t("deactivate") : t("reactivate")
+                          }
                         >
                           {type.isActive ? (
                             <svg

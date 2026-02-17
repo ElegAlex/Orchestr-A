@@ -401,10 +401,10 @@ export const usePlanningData = ({
 
       // Tri chronologique par heure de début
       filteredTasks.sort((a, b) =>
-        (a.startTime || "00:00").localeCompare(b.startTime || "00:00")
+        (a.startTime || "00:00").localeCompare(b.startTime || "00:00"),
       );
       filteredEvents.sort((a, b) =>
-        (a.startTime || "00:00").localeCompare(b.startTime || "00:00")
+        (a.startTime || "00:00").localeCompare(b.startTime || "00:00"),
       );
 
       return {

@@ -110,10 +110,7 @@ export default function SkillsPage() {
       // Le service retourne directement UserSkill[]
       setUserSkills(Array.isArray(response) ? response : []);
     } catch (err) {
-      console.error(
-        "Error loading user skills:",
-        err,
-      );
+      console.error("Error loading user skills:", err);
       setUserSkills([]);
     }
   };

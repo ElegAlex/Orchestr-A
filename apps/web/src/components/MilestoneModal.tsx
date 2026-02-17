@@ -93,7 +93,9 @@ export function MilestoneModal({
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">
-              {milestone ? t("milestoneModal.editTitle") : t("milestoneModal.createTitle")}
+              {milestone
+                ? t("milestoneModal.editTitle")
+                : t("milestoneModal.createTitle")}
             </h2>
             <button
               onClick={onClose}
@@ -120,7 +122,8 @@ export function MilestoneModal({
           {/* Nom du jalon */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              {t("milestoneModal.nameLabel")} <span className="text-red-500">*</span>
+              {t("milestoneModal.nameLabel")}{" "}
+              <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -237,7 +240,11 @@ export function MilestoneModal({
                   <span>{t("milestoneModal.saving")}</span>
                 </>
               ) : (
-                <span>{milestone ? t("milestoneModal.updateButton") : t("milestoneModal.createButton")}</span>
+                <span>
+                  {milestone
+                    ? t("milestoneModal.updateButton")
+                    : t("milestoneModal.createButton")}
+                </span>
               )}
             </button>
           </div>

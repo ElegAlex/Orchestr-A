@@ -130,9 +130,7 @@ export default function ReportsPage() {
       }
     } catch (error) {
       console.error("Error exporting report:", error);
-      alert(
-        t("errors.exportError"),
-      );
+      alert(t("errors.exportError"));
     }
   };
 
@@ -156,9 +154,7 @@ export default function ReportsPage() {
         <div className="p-8">
           <div className="border-l-4 border-red-500 bg-red-50 p-4">
             <h3 className="font-semibold text-red-800">{t("errors.title")}</h3>
-            <p className="text-sm text-red-700">
-              {t("errors.loadFailed")}
-            </p>
+            <p className="text-sm text-red-700">{t("errors.loadFailed")}</p>
           </div>
         </div>
       </MainLayout>

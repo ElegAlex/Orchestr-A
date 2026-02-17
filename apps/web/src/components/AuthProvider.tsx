@@ -16,21 +16,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isLoading) {
       // Extract locale from pathname (e.g., /fr/dashboard -> fr)
-      const segments = pathname.split('/');
-      const locale = ['fr', 'en'].includes(segments[1]) ? segments[1] : 'fr';
+      const segments = pathname.split("/");
+      const locale = ["fr", "en"].includes(segments[1]) ? segments[1] : "fr";
 
       // Check if pathname matches public routes (with locale prefix)
-      const isPublicRoute = pathname === "/" ||
-                           pathname.match(/^\/(fr|en)$/) ||
-                           pathname.match(/^\/(fr|en)\/login$/) ||
-                           pathname.match(/^\/(fr|en)\/register$/);
+      const isPublicRoute =
+        pathname === "/" ||
+        pathname.match(/^\/(fr|en)$/) ||
+        pathname.match(/^\/(fr|en)\/login$/) ||
+        pathname.match(/^\/(fr|en)\/register$/);
 
       if (!isAuthenticated && !isPublicRoute) {
         router.push(`/${locale}/login`);
       } else if (
         isAuthenticated &&
         (pathname.match(/^\/(fr|en)\/login$/) ||
-         pathname.match(/^\/(fr|en)\/register$/))
+          pathname.match(/^\/(fr|en)\/register$/))
       ) {
         router.push(`/${locale}/dashboard`);
       }

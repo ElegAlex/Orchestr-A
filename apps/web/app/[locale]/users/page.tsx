@@ -222,8 +222,7 @@ export default function UsersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t("messages.deactivateConfirm")))
-      return;
+    if (!confirm(t("messages.deactivateConfirm"))) return;
 
     try {
       await usersService.delete(id);
@@ -396,7 +395,8 @@ export default function UsersPage() {
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || t("messages.importValidationError"),
+        axiosError.response?.data?.message ||
+          t("messages.importValidationError"),
       );
     } finally {
       setImporting(false);
@@ -473,7 +473,9 @@ export default function UsersPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-            <p className="text-gray-600 mt-1">{users.length} {t("count")}</p>
+            <p className="text-gray-600 mt-1">
+              {users.length} {t("count")}
+            </p>
           </div>
           {canManageUsers && (
             <div className="flex items-center space-x-3">
@@ -572,7 +574,9 @@ export default function UsersPage() {
                           : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {user.isActive ? tCommon("status.active") : tCommon("status.inactive")}
+                      {user.isActive
+                        ? tCommon("status.active")
+                        : tCommon("status.inactive")}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -717,14 +721,24 @@ export default function UsersPage() {
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value={Role.CONTRIBUTEUR}>{tCommon("roles.CONTRIBUTEUR")}</option>
-                  <option value={Role.OBSERVATEUR}>{tCommon("roles.OBSERVATEUR")}</option>
+                  <option value={Role.CONTRIBUTEUR}>
+                    {tCommon("roles.CONTRIBUTEUR")}
+                  </option>
+                  <option value={Role.OBSERVATEUR}>
+                    {tCommon("roles.OBSERVATEUR")}
+                  </option>
                   <option value={Role.REFERENT_TECHNIQUE}>
                     {tCommon("roles.REFERENT_TECHNIQUE")}
                   </option>
-                  <option value={Role.CHEF_DE_PROJET}>{tCommon("roles.CHEF_DE_PROJET")}</option>
-                  <option value={Role.MANAGER}>{tCommon("roles.MANAGER")}</option>
-                  <option value={Role.RESPONSABLE}>{tCommon("roles.RESPONSABLE")}</option>
+                  <option value={Role.CHEF_DE_PROJET}>
+                    {tCommon("roles.CHEF_DE_PROJET")}
+                  </option>
+                  <option value={Role.MANAGER}>
+                    {tCommon("roles.MANAGER")}
+                  </option>
+                  <option value={Role.RESPONSABLE}>
+                    {tCommon("roles.RESPONSABLE")}
+                  </option>
                   <option value={Role.ADMIN}>{tCommon("roles.ADMIN")}</option>
                 </select>
               </div>
@@ -852,10 +866,12 @@ export default function UsersPage() {
                     <strong>role</strong> - {t("import.columns.role")}
                   </li>
                   <li>
-                    <strong>departmentName</strong> - {t("import.columns.departmentName")}
+                    <strong>departmentName</strong> -{" "}
+                    {t("import.columns.departmentName")}
                   </li>
                   <li>
-                    <strong>serviceNames</strong> - {t("import.columns.serviceNames")}
+                    <strong>serviceNames</strong> -{" "}
+                    {t("import.columns.serviceNames")}
                   </li>
                 </ul>
                 <button
@@ -883,7 +899,8 @@ export default function UsersPage() {
               {csvPreview.length > 0 && (
                 <div>
                   <h3 className="font-medium text-gray-900 mb-2">
-                    {t("import.preview")} ({csvPreview.length} {t("import.detected")})
+                    {t("import.preview")} ({csvPreview.length}{" "}
+                    {t("import.detected")})
                   </h3>
                   <div className="border border-gray-200 rounded-lg overflow-x-auto max-h-60">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -930,7 +947,8 @@ export default function UsersPage() {
                     </table>
                     {csvPreview.length > 10 && (
                       <p className="text-center text-sm text-gray-500 py-2">
-                        {t("import.andMore")} {csvPreview.length - 10} {t("import.others")}
+                        {t("import.andMore")} {csvPreview.length - 10}{" "}
+                        {t("import.others")}
                       </p>
                     )}
                   </div>
@@ -952,19 +970,25 @@ export default function UsersPage() {
                       <span className="text-green-700 font-semibold">
                         {importResult.created}
                       </span>
-                      <span className="text-gray-600 ml-1">{t("import.created")}</span>
+                      <span className="text-gray-600 ml-1">
+                        {t("import.created")}
+                      </span>
                     </div>
                     <div>
                       <span className="text-gray-700 font-semibold">
                         {importResult.skipped}
                       </span>
-                      <span className="text-gray-600 ml-1">{t("import.skipped")}</span>
+                      <span className="text-gray-600 ml-1">
+                        {t("import.skipped")}
+                      </span>
                     </div>
                     <div>
                       <span className="text-red-700 font-semibold">
                         {importResult.errors}
                       </span>
-                      <span className="text-gray-600 ml-1">{t("import.errors")}</span>
+                      <span className="text-gray-600 ml-1">
+                        {t("import.errors")}
+                      </span>
                     </div>
                   </div>
                   {importResult.errorDetails.length > 0 && (
@@ -1102,14 +1126,24 @@ export default function UsersPage() {
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value={Role.CONTRIBUTEUR}>{tCommon("roles.CONTRIBUTEUR")}</option>
-                  <option value={Role.OBSERVATEUR}>{tCommon("roles.OBSERVATEUR")}</option>
+                  <option value={Role.CONTRIBUTEUR}>
+                    {tCommon("roles.CONTRIBUTEUR")}
+                  </option>
+                  <option value={Role.OBSERVATEUR}>
+                    {tCommon("roles.OBSERVATEUR")}
+                  </option>
                   <option value={Role.REFERENT_TECHNIQUE}>
                     {tCommon("roles.REFERENT_TECHNIQUE")}
                   </option>
-                  <option value={Role.CHEF_DE_PROJET}>{tCommon("roles.CHEF_DE_PROJET")}</option>
-                  <option value={Role.MANAGER}>{tCommon("roles.MANAGER")}</option>
-                  <option value={Role.RESPONSABLE}>{tCommon("roles.RESPONSABLE")}</option>
+                  <option value={Role.CHEF_DE_PROJET}>
+                    {tCommon("roles.CHEF_DE_PROJET")}
+                  </option>
+                  <option value={Role.MANAGER}>
+                    {tCommon("roles.MANAGER")}
+                  </option>
+                  <option value={Role.RESPONSABLE}>
+                    {tCommon("roles.RESPONSABLE")}
+                  </option>
                   <option value={Role.ADMIN}>{tCommon("roles.ADMIN")}</option>
                 </select>
               </div>
@@ -1346,7 +1380,8 @@ export default function UsersPage() {
             {!checkingDependencies && userDependencies?.canDelete && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-yellow-800">
-                  <strong>{t("deleteModal.warningTitle")}</strong> {t("deleteModal.warningText")}
+                  <strong>{t("deleteModal.warningTitle")}</strong>{" "}
+                  {t("deleteModal.warningText")}
                 </p>
               </div>
             )}

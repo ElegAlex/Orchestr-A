@@ -43,9 +43,9 @@ export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
   const locale = useLocale();
-  const t = useTranslations('projects');
-  const tTasks = useTranslations('tasks');
-  const tCommon = useTranslations('common');
+  const t = useTranslations("projects");
+  const tTasks = useTranslations("tasks");
+  const tCommon = useTranslations("common");
   const projectId = params.id as string;
 
   const [loading, setLoading] = useState(true);
@@ -155,7 +155,7 @@ export default function ProjectDetailPage() {
           }
         }
       } catch (err) {
-        toast.error(t('messages.loadDetailError'));
+        toast.error(t("messages.loadDetailError"));
         console.error(err);
         router.push(`/${locale}/projects`);
       } finally {
@@ -238,12 +238,12 @@ export default function ProjectDetailPage() {
     if (draggedTask && draggedTask.status !== newStatus) {
       try {
         await tasksService.update(draggedTask.id, { status: newStatus });
-        toast.success(t('messages.statusUpdateSuccess'));
+        toast.success(t("messages.statusUpdateSuccess"));
         // Refresh tasks
         const tasksData = await tasksService.getByProject(projectId);
         setTasks(Array.isArray(tasksData) ? tasksData : []);
       } catch {
-        toast.error(t('messages.statusUpdateError'));
+        toast.error(t("messages.statusUpdateError"));
       }
     }
 
@@ -277,14 +277,14 @@ export default function ProjectDetailPage() {
       setAvailableUsers(available);
       setShowAddMemberModal(true);
     } catch {
-      toast.error(t('messages.loadUsersError'));
+      toast.error(t("messages.loadUsersError"));
     }
   };
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUserId) {
-      toast.error(t('messages.selectUserRequired'));
+      toast.error(t("messages.selectUserRequired"));
       return;
     }
 
@@ -294,7 +294,7 @@ export default function ProjectDetailPage() {
         role: memberRole,
         allocation: memberAllocation,
       });
-      toast.success(t('messages.memberAddSuccess'));
+      toast.success(t("messages.memberAddSuccess"));
       setShowAddMemberModal(false);
       setSelectedUserId("");
       setMemberRole("");
@@ -305,8 +305,7 @@ export default function ProjectDetailPage() {
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message ||
-          t('messages.addMemberError'),
+        axiosError.response?.data?.message || t("messages.addMemberError"),
       );
     }
   };
@@ -326,11 +325,11 @@ export default function ProjectDetailPage() {
     try {
       if (editingMilestone) {
         await milestonesService.update(editingMilestone.id, data);
-        toast.success(t('messages.milestoneUpdateSuccess'));
+        toast.success(t("messages.milestoneUpdateSuccess"));
       } else {
         // Ensure required fields are present for creation
         if (!data.name || !data.projectId) {
-          toast.error(t('messages.requiredFieldsMissing'));
+          toast.error(t("messages.requiredFieldsMissing"));
           return;
         }
         await milestonesService.create({
@@ -339,7 +338,7 @@ export default function ProjectDetailPage() {
           dueDate: data.dueDate || new Date().toISOString(),
           projectId: data.projectId,
         });
-        toast.success(t('messages.milestoneCreateSuccess'));
+        toast.success(t("messages.milestoneCreateSuccess"));
       }
 
       // Refresh milestones
@@ -353,7 +352,7 @@ export default function ProjectDetailPage() {
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || t('messages.savingError'),
+        axiosError.response?.data?.message || t("messages.savingError"),
       );
       throw err;
     }
@@ -379,12 +378,12 @@ export default function ProjectDetailPage() {
     try {
       if (editingTask) {
         await tasksService.update(editingTask.id, data);
-        toast.success(tTasks('messages.updateSuccess'));
+        toast.success(tTasks("messages.updateSuccess"));
       } else {
         await tasksService.create(
           data as { title: string; [key: string]: unknown },
         );
-        toast.success(tTasks('messages.createSuccess'));
+        toast.success(tTasks("messages.createSuccess"));
       }
 
       // Refresh tasks
@@ -396,7 +395,7 @@ export default function ProjectDetailPage() {
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || tTasks('messages.saveError'),
+        axiosError.response?.data?.message || tTasks("messages.saveError"),
       );
     }
   };
@@ -429,7 +428,7 @@ export default function ProjectDetailPage() {
       });
 
       if (filteredRows.length === 0) {
-        toast.error(t('messages.csvEmptyOrInvalid'));
+        toast.error(t("messages.csvEmptyOrInvalid"));
         setImportingTasks(false);
         e.target.value = "";
         return;
@@ -461,7 +460,7 @@ export default function ProjectDetailPage() {
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || t('messages.validationError'),
+        axiosError.response?.data?.message || t("messages.validationError"),
       );
       console.error("Validation error:", err);
     } finally {
@@ -479,13 +478,15 @@ export default function ProjectDetailPage() {
       );
 
       if (result.created > 0) {
-        toast.success(tTasks('messages.importSuccess', { count: result.created }));
+        toast.success(
+          tTasks("messages.importSuccess", { count: result.created }),
+        );
       }
       if (result.skipped > 0) {
-        toast(tTasks('messages.importSkipped', { count: result.skipped }));
+        toast(tTasks("messages.importSkipped", { count: result.skipped }));
       }
       if (result.errors > 0) {
-        toast.error(tTasks('messages.importErrors', { count: result.errors }));
+        toast.error(tTasks("messages.importErrors", { count: result.errors }));
         console.error("Import errors:", result.errorDetails);
       }
 
@@ -499,7 +500,7 @@ export default function ProjectDetailPage() {
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || t('messages.importError'),
+        axiosError.response?.data?.message || t("messages.importError"),
       );
       console.error("Import error:", err);
     } finally {
@@ -525,7 +526,7 @@ export default function ProjectDetailPage() {
       });
 
       if (filteredRows.length === 0) {
-        toast.error(t('messages.csvEmptyOrInvalid'));
+        toast.error(t("messages.csvEmptyOrInvalid"));
         setImportingMilestones(false);
         e.target.value = "";
         return;
@@ -549,7 +550,7 @@ export default function ProjectDetailPage() {
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || t('messages.validationError'),
+        axiosError.response?.data?.message || t("messages.validationError"),
       );
       console.error("Validation error:", err);
     } finally {
@@ -567,13 +568,17 @@ export default function ProjectDetailPage() {
       );
 
       if (result.created > 0) {
-        toast.success(t('messages.milestonesImportSuccess', { count: result.created }));
+        toast.success(
+          t("messages.milestonesImportSuccess", { count: result.created }),
+        );
       }
       if (result.skipped > 0) {
-        toast(t('messages.milestonesImportSkipped', { count: result.skipped }));
+        toast(t("messages.milestonesImportSkipped", { count: result.skipped }));
       }
       if (result.errors > 0) {
-        toast.error(t('messages.milestonesImportErrors', { count: result.errors }));
+        toast.error(
+          t("messages.milestonesImportErrors", { count: result.errors }),
+        );
         console.error("Import errors:", result.errorDetails);
       }
 
@@ -590,7 +595,7 @@ export default function ProjectDetailPage() {
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message || t('messages.importError'),
+        axiosError.response?.data?.message || t("messages.importError"),
       );
       console.error("Import error:", err);
     } finally {
@@ -609,7 +614,7 @@ export default function ProjectDetailPage() {
       link.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error(t('messages.templateDownloadError'));
+      toast.error(t("messages.templateDownloadError"));
     }
   };
 
@@ -624,7 +629,7 @@ export default function ProjectDetailPage() {
       link.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error(t('messages.templateDownloadError'));
+      toast.error(t("messages.templateDownloadError"));
     }
   };
 
@@ -639,7 +644,7 @@ export default function ProjectDetailPage() {
   // Project update handler
   const handleUpdateProject = async (data: UpdateProjectDto) => {
     await projectsService.update(projectId, data);
-    toast.success(t('messages.updateSuccess'));
+    toast.success(t("messages.updateSuccess"));
     // Refresh project data
     const projectData = await projectsService.getById(projectId);
     setProject(projectData);
@@ -650,13 +655,12 @@ export default function ProjectDetailPage() {
     setDeleting(true);
     try {
       await projectsService.hardDelete(projectId);
-      toast.success(t('messages.deleteSuccess'));
+      toast.success(t("messages.deleteSuccess"));
       router.push(`/${locale}/projects`);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
-        axiosError.response?.data?.message ||
-          t('messages.deleteError'),
+        axiosError.response?.data?.message || t("messages.deleteError"),
       );
     } finally {
       setDeleting(false);
@@ -670,7 +674,7 @@ export default function ProjectDetailPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">{tCommon('loading')}</p>
+            <p className="mt-4 text-gray-600">{tCommon("loading")}</p>
           </div>
         </div>
       </MainLayout>
@@ -687,7 +691,7 @@ export default function ProjectDetailPage() {
             className="text-blue-600 hover:text-blue-800 mb-4 flex items-center space-x-1"
           >
             <span>←</span>
-            <span>{t('detail.backToProjects')}</span>
+            <span>{t("detail.backToProjects")}</span>
           </button>
 
           <div className="flex items-start justify-between">
@@ -717,7 +721,7 @@ export default function ProjectDetailPage() {
                 <button
                   onClick={() => setShowEditModal(true)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
-                  title={t('detail.editProject')}
+                  title={t("detail.editProject")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -727,14 +731,14 @@ export default function ProjectDetailPage() {
                   >
                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                   </svg>
-                  <span>{t('detail.edit')}</span>
+                  <span>{t("detail.edit")}</span>
                 </button>
               )}
               {canDeleteProject && (
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center space-x-2"
-                  title={t('detail.deleteProject')}
+                  title={t("detail.deleteProject")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -748,7 +752,7 @@ export default function ProjectDetailPage() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span>{t('detail.delete')}</span>
+                  <span>{t("detail.delete")}</span>
                 </button>
               )}
             </div>
@@ -766,7 +770,7 @@ export default function ProjectDetailPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
             >
-              {t('detail.tabs.overview')}
+              {t("detail.tabs.overview")}
             </button>
             <button
               onClick={() => setActiveTab("tasks")}
@@ -776,7 +780,7 @@ export default function ProjectDetailPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
             >
-              {t('detail.tabs.tasks', { count: tasks.length })}
+              {t("detail.tabs.tasks", { count: tasks.length })}
             </button>
             <button
               onClick={() => setActiveTab("milestones")}
@@ -786,7 +790,7 @@ export default function ProjectDetailPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
             >
-              {t('detail.tabs.milestones', { count: milestones.length })}
+              {t("detail.tabs.milestones", { count: milestones.length })}
             </button>
             <button
               onClick={() => setActiveTab("team")}
@@ -796,7 +800,7 @@ export default function ProjectDetailPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
             >
-              {t('detail.tabs.team', { count: project.members?.length || 0 })}
+              {t("detail.tabs.team", { count: project.members?.length || 0 })}
             </button>
             <button
               onClick={() => setActiveTab("gantt")}
@@ -806,7 +810,7 @@ export default function ProjectDetailPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
             >
-              {t('detail.tabs.gantt')}
+              {t("detail.tabs.gantt")}
             </button>
           </nav>
         </div>
@@ -821,7 +825,7 @@ export default function ProjectDetailPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">
-                        {t('detail.stats.progress')}
+                        {t("detail.stats.progress")}
                       </p>
                       <p className="text-3xl font-bold text-gray-900 mt-2">
                         {Math.round(stats.progress)}%
@@ -843,7 +847,7 @@ export default function ProjectDetailPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">
-                        {t('detail.stats.tasks')}
+                        {t("detail.stats.tasks")}
                       </p>
                       <p className="text-3xl font-bold text-gray-900 mt-2">
                         {stats.completedTasks}/{stats.totalTasks}
@@ -852,9 +856,9 @@ export default function ProjectDetailPage() {
                     <div className="text-4xl">✓</div>
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    {t('detail.stats.tasksDetails', {
+                    {t("detail.stats.tasksDetails", {
                       inProgress: stats.inProgressTasks,
-                      blocked: stats.blockedTasks
+                      blocked: stats.blockedTasks,
                     })}
                   </p>
                 </div>
@@ -863,7 +867,7 @@ export default function ProjectDetailPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">
-                        {t('detail.stats.budget')}
+                        {t("detail.stats.budget")}
                       </p>
                       <p className="text-3xl font-bold text-gray-900 mt-2">
                         {stats.loggedHours}h
@@ -872,9 +876,9 @@ export default function ProjectDetailPage() {
                     <div className="text-4xl">⏱️</div>
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    {t('detail.stats.budgetDetails', {
+                    {t("detail.stats.budgetDetails", {
                       total: stats.totalHours,
-                      remaining: stats.remainingHours
+                      remaining: stats.remainingHours,
                     })}
                   </p>
                 </div>
@@ -883,7 +887,7 @@ export default function ProjectDetailPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">
-                        {t('detail.stats.team')}
+                        {t("detail.stats.team")}
                       </p>
                       <p className="text-3xl font-bold text-gray-900 mt-2">
                         {stats.membersCount}
@@ -892,9 +896,9 @@ export default function ProjectDetailPage() {
                     <div className="text-4xl">👥</div>
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    {t('detail.stats.teamDetails', {
+                    {t("detail.stats.teamDetails", {
                       epics: stats.epicsCount,
-                      milestones: stats.milestonesCount
+                      milestones: stats.milestonesCount,
                     })}
                   </p>
                 </div>
@@ -905,7 +909,7 @@ export default function ProjectDetailPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-900">
-                  {t('detail.projectInfo.title')}
+                  {t("detail.projectInfo.title")}
                 </h2>
               </div>
               <div className="p-6 space-y-4">
@@ -913,7 +917,7 @@ export default function ProjectDetailPage() {
                   {project.startDate && (
                     <div>
                       <p className="text-sm font-medium text-gray-600">
-                        {t('detail.projectInfo.startDate')}
+                        {t("detail.projectInfo.startDate")}
                       </p>
                       <p className="text-lg text-gray-900 mt-1">
                         {new Date(project.startDate).toLocaleDateString(
@@ -925,7 +929,7 @@ export default function ProjectDetailPage() {
                   {project.endDate && (
                     <div>
                       <p className="text-sm font-medium text-gray-600">
-                        {t('detail.projectInfo.endDate')}
+                        {t("detail.projectInfo.endDate")}
                       </p>
                       <p className="text-lg text-gray-900 mt-1">
                         {new Date(project.endDate).toLocaleDateString("fr-FR")}
@@ -935,7 +939,7 @@ export default function ProjectDetailPage() {
                   {project.budgetHours && (
                     <div>
                       <p className="text-sm font-medium text-gray-600">
-                        {t('detail.projectInfo.budgetHours')}
+                        {t("detail.projectInfo.budgetHours")}
                       </p>
                       <p className="text-lg text-gray-900 mt-1">
                         {project.budgetHours}h
@@ -943,17 +947,25 @@ export default function ProjectDetailPage() {
                     </div>
                   )}
                   <div>
-                    <p className="text-sm font-medium text-gray-600">{t('detail.projectInfo.createdAt')}</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      {t("detail.projectInfo.createdAt")}
+                    </p>
                     <p className="text-lg text-gray-900 mt-1">
                       {new Date(project.createdAt).toLocaleDateString("fr-FR")}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">{t('detail.projectInfo.createdBy')}</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      {t("detail.projectInfo.createdBy")}
+                    </p>
                     <p className="text-lg text-gray-900 mt-1">
-                      {(project as Project & { createdBy?: { firstName: string; lastName: string } }).createdBy
+                      {(
+                        project as Project & {
+                          createdBy?: { firstName: string; lastName: string };
+                        }
+                      ).createdBy
                         ? `${(project as Project & { createdBy?: { firstName: string; lastName: string } }).createdBy!.firstName} ${(project as Project & { createdBy?: { firstName: string; lastName: string } }).createdBy!.lastName}`
-                        : t('detail.projectInfo.notSpecified')}
+                        : t("detail.projectInfo.notSpecified")}
                     </p>
                   </div>
                 </div>
@@ -967,20 +979,20 @@ export default function ProjectDetailPage() {
             {/* Header with Add Task Button */}
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">
-                {t('detail.tasksBoard.title')}
+                {t("detail.tasksBoard.title")}
               </h2>
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setShowImportTasksModal(true)}
                   className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
                 >
-                  {t('detail.tasksBoard.importCSV')}
+                  {t("detail.tasksBoard.importCSV")}
                 </button>
                 <button
                   onClick={handleCreateTask}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
                 >
-                  {t('detail.tasksBoard.newTask')}
+                  {t("detail.tasksBoard.newTask")}
                 </button>
               </div>
             </div>
@@ -991,27 +1003,27 @@ export default function ProjectDetailPage() {
                 {[
                   {
                     status: TaskStatus.TODO,
-                    title: tTasks('status.TODO'),
+                    title: tTasks("status.TODO"),
                     color: "bg-gray-100",
                   },
                   {
                     status: TaskStatus.IN_PROGRESS,
-                    title: tTasks('status.IN_PROGRESS'),
+                    title: tTasks("status.IN_PROGRESS"),
                     color: "bg-blue-100",
                   },
                   {
                     status: TaskStatus.IN_REVIEW,
-                    title: tTasks('status.IN_REVIEW'),
+                    title: tTasks("status.IN_REVIEW"),
                     color: "bg-yellow-100",
                   },
                   {
                     status: TaskStatus.DONE,
-                    title: tTasks('status.DONE'),
+                    title: tTasks("status.DONE"),
                     color: "bg-green-100",
                   },
                   {
                     status: TaskStatus.BLOCKED,
-                    title: tTasks('status.BLOCKED'),
+                    title: tTasks("status.BLOCKED"),
                     color: "bg-red-100",
                   },
                 ].map((column) => {
@@ -1048,7 +1060,7 @@ export default function ProjectDetailPage() {
                       >
                         {columnTasks.length === 0 ? (
                           <p className="text-gray-400 text-sm text-center py-8">
-                            {tTasks('kanban.noTasks')}
+                            {tTasks("kanban.noTasks")}
                           </p>
                         ) : (
                           columnTasks.map((task) => (
@@ -1125,7 +1137,9 @@ export default function ProjectDetailPage() {
                                       <span className="ml-1">
                                         {task.assignees.length === 1
                                           ? `${task.assignees[0].user?.firstName} ${task.assignees[0].user?.lastName}`
-                                          : tTasks('kanban.assignees', { count: task.assignees.length })}
+                                          : tTasks("kanban.assignees", {
+                                              count: task.assignees.length,
+                                            })}
                                       </span>
                                     </div>
                                   ) : (
@@ -1145,14 +1159,17 @@ export default function ProjectDetailPage() {
 
                                   {task.estimatedHours && (
                                     <div className="text-xs text-gray-500">
-                                      ⏱️ {tTasks('kanban.estimatedHours', { hours: task.estimatedHours })}
+                                      ⏱️{" "}
+                                      {tTasks("kanban.estimatedHours", {
+                                        hours: task.estimatedHours,
+                                      })}
                                     </div>
                                   )}
 
                                   {task.progress > 0 && (
                                     <div className="mt-3">
                                       <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                                        <span>{tTasks('kanban.progress')}</span>
+                                        <span>{tTasks("kanban.progress")}</span>
                                         <span>{task.progress}%</span>
                                       </div>
                                       <div className="w-full bg-gray-200 rounded-full h-1.5">
@@ -1192,13 +1209,13 @@ export default function ProjectDetailPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
-                {t('detail.team.title')}
+                {t("detail.team.title")}
               </h2>
               <button
                 onClick={handleOpenAddMemberModal}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
               >
-                {t('detail.team.addMember')}
+                {t("detail.team.addMember")}
               </button>
             </div>
 
@@ -1206,7 +1223,7 @@ export default function ProjectDetailPage() {
               {!project.members || project.members.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">👥</div>
-                  <p className="text-gray-500">{t('detail.team.noMembers')}</p>
+                  <p className="text-gray-500">{t("detail.team.noMembers")}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-200">
@@ -1231,7 +1248,9 @@ export default function ProjectDetailPage() {
                           <div className="text-right">
                             {member.allocation && (
                               <p className="text-sm text-gray-600">
-                                {t('detail.team.allocation', { value: member.allocation })}
+                                {t("detail.team.allocation", {
+                                  value: member.allocation,
+                                })}
                               </p>
                             )}
                           </div>
@@ -1239,8 +1258,8 @@ export default function ProjectDetailPage() {
                             onClick={async () => {
                               if (
                                 confirm(
-                                  t('detail.team.confirmRemove', {
-                                    name: `${member.user?.firstName} ${member.user?.lastName}`
+                                  t("detail.team.confirmRemove", {
+                                    name: `${member.user?.firstName} ${member.user?.lastName}`,
                                   }),
                                 )
                               ) {
@@ -1249,21 +1268,21 @@ export default function ProjectDetailPage() {
                                     project.id,
                                     member.userId,
                                   );
-                                  toast.success(t('messages.memberRemoveSuccess'));
+                                  toast.success(
+                                    t("messages.memberRemoveSuccess"),
+                                  );
                                   // Reload project data
                                   const updated = await projectsService.getById(
                                     project.id,
                                   );
                                   setProject(updated);
                                 } catch {
-                                  toast.error(
-                                    t('messages.memberRemoveError'),
-                                  );
+                                  toast.error(t("messages.memberRemoveError"));
                                 }
                               }
                             }}
                             className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                            title={t('detail.team.removeMember')}
+                            title={t("detail.team.removeMember")}
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -1292,9 +1311,7 @@ export default function ProjectDetailPage() {
         {activeTab === "gantt" && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                {t('detail.gantt.tip')}
-              </p>
+              <p className="text-sm text-blue-800">{t("detail.gantt.tip")}</p>
             </div>
             <GanttChart
               tasks={tasks}
@@ -1316,12 +1333,12 @@ export default function ProjectDetailPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-md w-full p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">
-                {t('detail.addMemberModal.title')}
+                {t("detail.addMemberModal.title")}
               </h2>
               <form onSubmit={handleAddMember} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-1">
-                    {t('detail.addMemberModal.userLabel')}
+                    {t("detail.addMemberModal.userLabel")}
                   </label>
                   <select
                     required
@@ -1330,7 +1347,7 @@ export default function ProjectDetailPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   >
                     <option value="" className="text-gray-500">
-                      {t('detail.addMemberModal.selectUser')}
+                      {t("detail.addMemberModal.selectUser")}
                     </option>
                     {availableUsers.map((user) => (
                       <option
@@ -1346,7 +1363,7 @@ export default function ProjectDetailPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-1">
-                    {t('detail.addMemberModal.roleLabel')}
+                    {t("detail.addMemberModal.roleLabel")}
                   </label>
                   <select
                     value={memberRole}
@@ -1354,74 +1371,74 @@ export default function ProjectDetailPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   >
                     <option value="" className="text-gray-500">
-                      {t('detail.addMemberModal.selectRole')}
+                      {t("detail.addMemberModal.selectRole")}
                     </option>
                     <option value="Sponsor" className="text-gray-900">
-                      {t('teamRoles.sponsor')}
+                      {t("teamRoles.sponsor")}
                     </option>
                     <option value="Chef de projet" className="text-gray-900">
-                      {t('teamRoles.projectManager')}
+                      {t("teamRoles.projectManager")}
                     </option>
                     <option
                       value="Responsable technique"
                       className="text-gray-900"
                     >
-                      {t('teamRoles.technicalLead')}
+                      {t("teamRoles.technicalLead")}
                     </option>
                     <option value="Architecte" className="text-gray-900">
-                      {t('teamRoles.architect')}
+                      {t("teamRoles.architect")}
                     </option>
                     <option value="Tech Lead" className="text-gray-900">
-                      {t('teamRoles.techLead')}
+                      {t("teamRoles.techLead")}
                     </option>
                     <option
                       value="Développeur Senior"
                       className="text-gray-900"
                     >
-                      {t('teamRoles.seniorDeveloper')}
+                      {t("teamRoles.seniorDeveloper")}
                     </option>
                     <option value="Développeur" className="text-gray-900">
-                      {t('teamRoles.developer')}
+                      {t("teamRoles.developer")}
                     </option>
                     <option
                       value="Développeur Junior"
                       className="text-gray-900"
                     >
-                      {t('teamRoles.juniorDeveloper')}
+                      {t("teamRoles.juniorDeveloper")}
                     </option>
                     <option value="DevOps" className="text-gray-900">
-                      {t('teamRoles.devops')}
+                      {t("teamRoles.devops")}
                     </option>
                     <option value="QA Lead" className="text-gray-900">
-                      {t('teamRoles.qaLead')}
+                      {t("teamRoles.qaLead")}
                     </option>
                     <option value="Testeur" className="text-gray-900">
-                      {t('teamRoles.tester')}
+                      {t("teamRoles.tester")}
                     </option>
                     <option value="UX/UI Designer" className="text-gray-900">
-                      {t('teamRoles.uxuiDesigner')}
+                      {t("teamRoles.uxuiDesigner")}
                     </option>
                     <option value="Product Owner" className="text-gray-900">
-                      {t('teamRoles.productOwner')}
+                      {t("teamRoles.productOwner")}
                     </option>
                     <option value="Scrum Master" className="text-gray-900">
-                      {t('teamRoles.scrumMaster')}
+                      {t("teamRoles.scrumMaster")}
                     </option>
                     <option value="Analyste métier" className="text-gray-900">
-                      {t('teamRoles.businessAnalyst')}
+                      {t("teamRoles.businessAnalyst")}
                     </option>
                     <option value="Membre" className="text-gray-900">
-                      {t('teamRoles.member')}
+                      {t("teamRoles.member")}
                     </option>
                     <option value="Observateur" className="text-gray-900">
-                      {t('teamRoles.observer')}
+                      {t("teamRoles.observer")}
                     </option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-1">
-                    {t('detail.addMemberModal.allocationLabel')}
+                    {t("detail.addMemberModal.allocationLabel")}
                   </label>
                   <input
                     type="number"
@@ -1446,13 +1463,13 @@ export default function ProjectDetailPage() {
                     }}
                     className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                   >
-                    {tCommon('cancel')}
+                    {tCommon("cancel")}
                   </button>
                   <button
                     type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                   >
-                    {t('detail.addMemberModal.add')}
+                    {t("detail.addMemberModal.add")}
                   </button>
                 </div>
               </form>
@@ -1491,28 +1508,28 @@ export default function ProjectDetailPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-lg w-full p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">
-                {t('detail.importTasksModal.title')}
+                {t("detail.importTasksModal.title")}
               </h2>
               <div className="space-y-4">
                 <p className="text-gray-600 text-sm">
-                  {t('detail.importTasksModal.description')}
+                  {t("detail.importTasksModal.description")}
                 </p>
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-blue-900 mb-2">
-                    {t('detail.importTasksModal.columnsTitle')}
+                    {t("detail.importTasksModal.columnsTitle")}
                   </h3>
                   <p className="text-blue-800 text-sm">
-                    {t('detail.importTasksModal.columnsDescription')}
+                    {t("detail.importTasksModal.columnsDescription")}
                   </p>
                   <p className="text-blue-600 text-xs mt-2">
-                    {t('detail.importTasksModal.requiredField')}
+                    {t("detail.importTasksModal.requiredField")}
                   </p>
                 </div>
                 <button
                   onClick={downloadTasksTemplate}
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                 >
-                  {t('detail.importTasksModal.downloadTemplate')}
+                  {t("detail.importTasksModal.downloadTemplate")}
                 </button>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                   <input
@@ -1530,8 +1547,8 @@ export default function ProjectDetailPage() {
                     <div className="text-4xl mb-2">📄</div>
                     <p className="text-gray-600">
                       {importingTasks
-                        ? t('detail.importTasksModal.importing')
-                        : t('detail.importTasksModal.selectFile')}
+                        ? t("detail.importTasksModal.importing")
+                        : t("detail.importTasksModal.selectFile")}
                     </p>
                   </label>
                 </div>
@@ -1542,7 +1559,7 @@ export default function ProjectDetailPage() {
                   disabled={importingTasks}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
-                  {tCommon('close')}
+                  {tCommon("close")}
                 </button>
               </div>
             </div>
@@ -1554,28 +1571,28 @@ export default function ProjectDetailPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-lg w-full p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">
-                {t('detail.importMilestonesModal.title')}
+                {t("detail.importMilestonesModal.title")}
               </h2>
               <div className="space-y-4">
                 <p className="text-gray-600 text-sm">
-                  {t('detail.importMilestonesModal.description')}
+                  {t("detail.importMilestonesModal.description")}
                 </p>
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-blue-900 mb-2">
-                    {t('detail.importMilestonesModal.columnsTitle')}
+                    {t("detail.importMilestonesModal.columnsTitle")}
                   </h3>
                   <p className="text-blue-800 text-sm">
-                    {t('detail.importMilestonesModal.columnsDescription')}
+                    {t("detail.importMilestonesModal.columnsDescription")}
                   </p>
                   <p className="text-blue-600 text-xs mt-2">
-                    {t('detail.importMilestonesModal.requiredFields')}
+                    {t("detail.importMilestonesModal.requiredFields")}
                   </p>
                 </div>
                 <button
                   onClick={downloadMilestonesTemplate}
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                 >
-                  {t('detail.importMilestonesModal.downloadTemplate')}
+                  {t("detail.importMilestonesModal.downloadTemplate")}
                 </button>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                   <input
@@ -1593,8 +1610,8 @@ export default function ProjectDetailPage() {
                     <div className="text-4xl mb-2">📄</div>
                     <p className="text-gray-600">
                       {importingMilestones
-                        ? t('detail.importMilestonesModal.importing')
-                        : t('detail.importMilestonesModal.selectFile')}
+                        ? t("detail.importMilestonesModal.importing")
+                        : t("detail.importMilestonesModal.selectFile")}
                     </p>
                   </label>
                 </div>
@@ -1605,7 +1622,7 @@ export default function ProjectDetailPage() {
                   disabled={importingMilestones}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
-                  {tCommon('close')}
+                  {tCommon("close")}
                 </button>
               </div>
             </div>
@@ -1622,7 +1639,7 @@ export default function ProjectDetailPage() {
               setPendingTasksImport([]);
             }}
             onConfirm={handleConfirmTasksImport}
-            title={t('detail.previewModal.tasksTitle')}
+            title={t("detail.previewModal.tasksTitle")}
             items={{
               valid: tasksPreview.valid.map((item) => ({
                 lineNumber: item.lineNumber,
@@ -1667,10 +1684,13 @@ export default function ProjectDetailPage() {
             }}
             summary={tasksPreview.summary}
             columns={[
-              { key: "title", label: tTasks('modal.create.titleLabel') },
-              { key: "status", label: tTasks('modal.create.statusLabel') },
-              { key: "priority", label: tTasks('modal.create.priorityLabel') },
-              { key: "assigneeEmail", label: tTasks('modal.create.assigneesLabel') },
+              { key: "title", label: tTasks("modal.create.titleLabel") },
+              { key: "status", label: tTasks("modal.create.statusLabel") },
+              { key: "priority", label: tTasks("modal.create.priorityLabel") },
+              {
+                key: "assigneeEmail",
+                label: tTasks("modal.create.assigneesLabel"),
+              },
             ]}
             isImporting={importingTasks}
           />
@@ -1686,7 +1706,7 @@ export default function ProjectDetailPage() {
               setPendingMilestonesImport([]);
             }}
             onConfirm={handleConfirmMilestonesImport}
-            title={t('detail.previewModal.milestonesTitle')}
+            title={t("detail.previewModal.milestonesTitle")}
             items={{
               valid: milestonesPreview.valid.map((item) => ({
                 lineNumber: item.lineNumber,
@@ -1715,9 +1735,12 @@ export default function ProjectDetailPage() {
             }}
             summary={milestonesPreview.summary}
             columns={[
-              { key: "name", label: t('milestoneModal.nameLabel') },
-              { key: "description", label: t('milestoneModal.descriptionLabel') },
-              { key: "dueDate", label: t('milestoneModal.dueDateLabel') },
+              { key: "name", label: t("milestoneModal.nameLabel") },
+              {
+                key: "description",
+                label: t("milestoneModal.descriptionLabel"),
+              },
+              { key: "dueDate", label: t("milestoneModal.dueDateLabel") },
             ]}
             isImporting={importingMilestones}
           />
@@ -1753,17 +1776,19 @@ export default function ProjectDetailPage() {
                   </svg>
                 </div>
                 <h2 className="text-xl font-bold text-gray-900">
-                  {t('detail.deleteModal.title')}
+                  {t("detail.deleteModal.title")}
                 </h2>
               </div>
 
               <p className="text-gray-600 mb-4">
-                {t('detail.deleteModal.confirmMessage', { name: project?.name })}
+                {t("detail.deleteModal.confirmMessage", {
+                  name: project?.name,
+                })}
               </p>
 
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                 <p className="text-sm text-red-800">
-                  {t('detail.deleteModal.warning')}
+                  {t("detail.deleteModal.warning")}
                 </p>
               </div>
 
@@ -1773,7 +1798,7 @@ export default function ProjectDetailPage() {
                   disabled={deleting}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
                 >
-                  {tCommon('cancel')}
+                  {tCommon("cancel")}
                 </button>
                 <button
                   onClick={handleHardDeleteProject}
@@ -1783,7 +1808,7 @@ export default function ProjectDetailPage() {
                   {deleting && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   )}
-                  <span>{t('detail.deleteModal.confirmButton')}</span>
+                  <span>{t("detail.deleteModal.confirmButton")}</span>
                 </button>
               </div>
             </div>

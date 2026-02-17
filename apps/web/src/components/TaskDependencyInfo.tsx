@@ -132,7 +132,10 @@ export function TaskDependencyInfo({
                   />
                 </svg>
                 <span>
-                  {conflicts.length} {t("dependencies.conflictCount", { count: conflicts.length }).replace(/^\d+\s/, "")}
+                  {conflicts.length}{" "}
+                  {t("dependencies.conflictCount", {
+                    count: conflicts.length,
+                  }).replace(/^\d+\s/, "")}
                 </span>
               </div>
             </div>

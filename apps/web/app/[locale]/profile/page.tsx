@@ -76,7 +76,9 @@ export default function ProfilePage() {
       });
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || t("messages.passwordChangeError"));
+      toast.error(
+        axiosError.response?.data?.message || t("messages.passwordChangeError"),
+      );
     }
   };
 
@@ -96,9 +98,7 @@ export default function ProfilePage() {
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-          <p className="text-gray-600 mt-1">
-            {t("subtitle")}
-          </p>
+          <p className="text-gray-600 mt-1">{t("subtitle")}</p>
         </div>
 
         {/* Profile Card */}
@@ -133,7 +133,9 @@ export default function ProfilePage() {
                       : "bg-red-100 text-red-800"
                   }`}
                 >
-                  {user.isActive ? tCommon("status.active") : tCommon("status.inactive")}
+                  {user.isActive
+                    ? tCommon("status.active")
+                    : tCommon("status.inactive")}
                 </span>
               </div>
             </div>
@@ -246,11 +248,14 @@ export default function ProfilePage() {
                   {t("personal.memberSince")}
                 </label>
                 <p className="text-gray-900">
-                  {new Date(user.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
+                  {new Date(user.createdAt).toLocaleDateString(
+                    locale === "en" ? "en-US" : "fr-FR",
+                    {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    },
+                  )}
                 </p>
               </div>
             </div>
@@ -260,7 +265,9 @@ export default function ProfilePage() {
         {activeTab === "security" && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">{t("security.title")}</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {t("security.title")}
+              </h2>
             </div>
             <div className="p-6 space-y-6">
               <div>
@@ -284,13 +291,16 @@ export default function ProfilePage() {
                 </h3>
                 <p className="text-sm text-gray-600">
                   {t("security.loginHistory.lastLogin")}{" "}
-                  {new Date().toLocaleDateString(locale === "en" ? "en-US" : "fr-FR", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {new Date().toLocaleDateString(
+                    locale === "en" ? "en-US" : "fr-FR",
+                    {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )}
                 </p>
               </div>
             </div>
@@ -306,13 +316,18 @@ export default function ProfilePage() {
             </div>
             <div className="p-6 space-y-6">
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">{t("preferences.language.title")}</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  {t("preferences.language.title")}
+                </h3>
                 <select
                   value={locale}
                   onChange={(e) => {
                     const newLocale = e.target.value;
                     if (newLocale !== locale) {
-                      const newPath = pathname.replace(`/${locale}/`, `/${newLocale}/`);
+                      const newPath = pathname.replace(
+                        `/${locale}/`,
+                        `/${newLocale}/`,
+                      );
                       router.push(newPath);
                     }
                   }}
@@ -324,13 +339,17 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">{t("preferences.theme.title")}</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  {t("preferences.theme.title")}
+                </h3>
                 <select
                   value={theme === "girly" ? "light" : theme}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val === "auto") {
-                      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+                      const prefersDark = window.matchMedia(
+                        "(prefers-color-scheme: dark)",
+                      ).matches;
                       setTheme(prefersDark ? "dark" : "light");
                     } else {
                       setTheme(val as Theme);

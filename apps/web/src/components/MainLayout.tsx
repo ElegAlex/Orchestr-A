@@ -8,7 +8,6 @@ import { useAuthStore } from "@/stores/auth.store";
 import { Role } from "@/types";
 import { Logo, LogoIcon } from "@/components/Logo";
 
-
 interface NavItem {
   key: string;
   href: string;
@@ -19,7 +18,7 @@ interface NavItem {
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const locale = useLocale();
-  const t = useTranslations('common');
+  const t = useTranslations("common");
   const { user, logout } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -39,8 +38,18 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     { key: "users", href: `/${locale}/users`, icon: "👥" },
     { key: "departments", href: `/${locale}/departments`, icon: "🏢" },
     { key: "skills", href: `/${locale}/skills`, icon: "⭐" },
-    { key: "roleManagement", href: `/${locale}/admin/roles`, icon: "🛡️", adminOnly: true },
-    { key: "settings", href: `/${locale}/settings`, icon: "⚙️", adminOnly: true },
+    {
+      key: "roleManagement",
+      href: `/${locale}/admin/roles`,
+      icon: "🛡️",
+      adminOnly: true,
+    },
+    {
+      key: "settings",
+      href: `/${locale}/settings`,
+      icon: "⚙️",
+      adminOnly: true,
+    },
   ];
 
   const isManager =
@@ -105,7 +114,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               <div className="pt-4 pb-2">
                 {sidebarOpen && (
                   <p className="px-3 text-xs font-semibold text-[var(--muted-foreground)] uppercase">
-                    {t('common.administration')}
+                    {t("common.administration")}
                   </p>
                 )}
               </div>
@@ -158,7 +167,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               onClick={logout}
               className="mt-3 w-full px-3 py-2 text-sm text-left text-[var(--destructive)] hover:bg-[var(--destructive)] hover:bg-opacity-10 rounded-lg transition"
             >
-              {t('common.logout')}
+              {t("common.logout")}
             </button>
           )}
         </div>

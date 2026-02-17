@@ -64,9 +64,7 @@ export function HolidaysManager() {
       fetchHolidays();
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        error.response?.data?.message || t("messages.deleteError"),
-      );
+      toast.error(error.response?.data?.message || t("messages.deleteError"));
     }
     setDeleteConfirmId(null);
   };
@@ -76,7 +74,10 @@ export function HolidaysManager() {
     try {
       const result = await holidaysService.importFrench(selectedYear);
       toast.success(
-        t("messages.importSuccess", { created: result.created, skipped: result.skipped }),
+        t("messages.importSuccess", {
+          created: result.created,
+          skipped: result.skipped,
+        }),
       );
       fetchHolidays();
     } catch (err) {

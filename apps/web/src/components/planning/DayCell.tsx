@@ -1,10 +1,7 @@
 import { Task } from "@/types";
 import { Event } from "@/services/events.service";
 import { DayCell as DayCellData } from "@/hooks/usePlanningData";
-import {
-  getPriorityColor,
-  getStatusIcon,
-} from "@/lib/planning-utils";
+import { getPriorityColor, getStatusIcon } from "@/lib/planning-utils";
 import { isToday, getDay } from "date-fns";
 import { useTranslations } from "next-intl";
 
@@ -117,12 +114,15 @@ export const DayCell = ({
       )}
 
       {/* Telework Background Overlay - en arrière-plan pour que les tâches restent visibles */}
-      {cell.isTelework && !hasLeave && !cell.isHoliday && !cell.isExternalIntervention && (
-        <div
-          className="absolute inset-0 z-0 bg-orange-100/40 border-2 border-orange-300 rounded-sm pointer-events-none"
-          aria-hidden="true"
-        />
-      )}
+      {cell.isTelework &&
+        !hasLeave &&
+        !cell.isHoliday &&
+        !cell.isExternalIntervention && (
+          <div
+            className="absolute inset-0 z-0 bg-orange-100/40 border-2 border-orange-300 rounded-sm pointer-events-none"
+            aria-hidden="true"
+          />
+        )}
 
       <div
         className={`relative z-10 space-y-1 ${viewMode === "month" ? "min-h-[40px]" : "min-h-[60px]"}`}
@@ -135,7 +135,9 @@ export const DayCell = ({
               className={`${viewMode === "month" ? "text-[10px]" : "text-lg"} transition ${
                 cell.isTelework ? "opacity-100" : "opacity-30 hover:opacity-60"
               }`}
-              title={cell.isTelework ? t("telework.label") : t("telework.office")}
+              title={
+                cell.isTelework ? t("telework.label") : t("telework.office")
+              }
             >
               {cell.isTelework ? "🏠" : "🏢"}
             </button>
@@ -168,7 +170,9 @@ export const DayCell = ({
                   <div className="text-center" title={task.title}>
                     <span>{getStatusIcon(task.status)}</span>
                     {isExternal && (
-                      <div className="text-[6px] font-bold">{t("dayCell.externalShort")}</div>
+                      <div className="text-[6px] font-bold">
+                        {t("dayCell.externalShort")}
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -227,7 +231,9 @@ export const DayCell = ({
                 ) : (
                   <>
                     <div className="flex items-start space-x-1">
-                      <span className="text-xs">{isExtEvent ? "🔴" : "📅"}</span>
+                      <span className="text-xs">
+                        {isExtEvent ? "🔴" : "📅"}
+                      </span>
                       <span className="flex-1 font-medium line-clamp-2">
                         {event.title}
                       </span>
@@ -237,7 +243,9 @@ export const DayCell = ({
                         {t("dayCell.externalIntervention")}
                       </div>
                     )}
-                    <div className={`flex items-center space-x-2 text-[10px] ${eventTimeClass} mt-1`}>
+                    <div
+                      className={`flex items-center space-x-2 text-[10px] ${eventTimeClass} mt-1`}
+                    >
                       {(event.startTime || event.endTime) && (
                         <span>
                           🕐 {event.startTime || "--:--"} -{" "}
