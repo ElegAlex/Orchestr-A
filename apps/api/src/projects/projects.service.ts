@@ -127,6 +127,11 @@ export class ProjectsService {
               },
             },
           },
+          tasks: {
+            select: {
+              status: true,
+            },
+          },
           _count: {
             select: {
               members: true,
@@ -143,8 +148,19 @@ export class ProjectsService {
       this.prisma.project.count({ where }),
     ]);
 
+    const projectsWithProgress = projects.map(({ tasks, ...project }) => ({
+      ...project,
+      progress:
+        tasks.length > 0
+          ? Math.round(
+              (tasks.filter((t) => t.status === 'DONE').length / tasks.length) *
+                100,
+            )
+          : 0,
+    }));
+
     return {
-      data: projects,
+      data: projectsWithProgress,
       meta: {
         total,
         page,
@@ -419,7 +435,7 @@ export class ProjectsService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    return this.prisma.project.findMany({
+    const projects = await this.prisma.project.findMany({
       where: {
         members: {
           some: {
@@ -440,6 +456,11 @@ export class ProjectsService {
             },
           },
         },
+        tasks: {
+          select: {
+            status: true,
+          },
+        },
         _count: {
           select: {
             members: true,
@@ -451,6 +472,17 @@ export class ProjectsService {
         startDate: 'desc',
       },
     });
+
+    return projects.map(({ tasks, ...project }) => ({
+      ...project,
+      progress:
+        tasks.length > 0
+          ? Math.round(
+              (tasks.filter((t) => t.status === 'DONE').length / tasks.length) *
+                100,
+            )
+          : 0,
+    }));
   }
 
   /**

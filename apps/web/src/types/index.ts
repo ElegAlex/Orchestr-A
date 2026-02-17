@@ -211,6 +211,7 @@ export interface Project {
   startDate?: string;
   endDate?: string;
   budgetHours?: number;
+  progress?: number;
   createdAt: string;
   updatedAt: string;
   createdById?: string;

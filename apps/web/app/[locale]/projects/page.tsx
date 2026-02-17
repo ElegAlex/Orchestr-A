@@ -397,6 +397,23 @@ export default function ProjectsPage() {
                         new Date(project.endDate).toLocaleDateString("fr-FR")}
                     </span>
                   )}
+                  <div className="flex items-center gap-1.5 shrink-0 hidden sm:flex w-24">
+                    <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          (project.progress ?? 0) === 100
+                            ? "bg-green-500"
+                            : (project.progress ?? 0) >= 50
+                              ? "bg-blue-500"
+                              : "bg-amber-500"
+                        }`}
+                        style={{ width: `${project.progress ?? 0}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-600 font-medium w-8 text-right">
+                      {project.progress ?? 0}%
+                    </span>
+                  </div>
                   {project.budgetHours && (
                     <span className="text-xs text-gray-500 shrink-0 hidden md:inline">
                       ⏱️ {t("card.budgetHours", { hours: project.budgetHours })}
