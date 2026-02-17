@@ -37,6 +37,13 @@
     "progress": "Progression"
   },
 
+  "kanban": {
+    "noTasks": "Aucune tâche",
+    "assignees": "{count} assignés",
+    "estimatedHours": "⏱️ {hours}h estimées",
+    "progress": "Progression"
+  },
+
   "modal": {
     "create": {
       "title": "Créer une tâche",

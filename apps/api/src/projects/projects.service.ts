@@ -495,6 +495,9 @@ export class ProjectsService {
     const inProgressTasks = project.tasks.filter(
       (t) => t.status === 'IN_PROGRESS',
     ).length;
+    const blockedTasks = project.tasks.filter(
+      (t) => t.status === 'BLOCKED',
+    ).length;
 
     const totalEstimatedHours = project.tasks.reduce(
       (sum, t) => sum + (t.estimatedHours || 0),
@@ -524,7 +527,8 @@ export class ProjectsService {
         total: totalTasks,
         completed: completedTasks,
         inProgress: inProgressTasks,
-        todo: totalTasks - completedTasks - inProgressTasks,
+        blocked: blockedTasks,
+        todo: totalTasks - completedTasks - inProgressTasks - blockedTasks,
       },
       hours: {
         estimated: totalEstimatedHours,

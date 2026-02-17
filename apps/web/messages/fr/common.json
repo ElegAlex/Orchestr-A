@@ -141,6 +141,9 @@
     "completed": "Complétées",
     "noUserFound": "Aucun utilisateur trouvé"
   },
+  "loading": "Chargement...",
+  "cancel": "Annuler",
+  "close": "Fermer",
   "presence": {
     "title": "Présence du jour",
     "button": "Présence",

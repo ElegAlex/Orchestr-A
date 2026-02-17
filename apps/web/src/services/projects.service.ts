@@ -37,8 +37,22 @@ export const projectsService = {
   },
 
   async getStats(id: string): Promise<ProjectStats> {
-    const response = await api.get<ProjectStats>(`/projects/${id}/stats`);
-    return response.data;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await api.get<any>(`/projects/${id}/stats`);
+    const d = response.data;
+    return {
+      totalTasks: d.tasks?.total ?? 0,
+      completedTasks: d.tasks?.completed ?? 0,
+      inProgressTasks: d.tasks?.inProgress ?? 0,
+      blockedTasks: d.tasks?.blocked ?? 0,
+      progress: d.progress ?? 0,
+      totalHours: d.hours?.estimated ?? 0,
+      loggedHours: d.hours?.actual ?? 0,
+      remainingHours: d.hours?.remaining ?? 0,
+      membersCount: d.team?.totalMembers ?? 0,
+      epicsCount: d.epics?.total ?? 0,
+      milestonesCount: d.milestones?.total ?? 0,
+    };
   },
 
   async create(data: CreateProjectDto): Promise<Project> {

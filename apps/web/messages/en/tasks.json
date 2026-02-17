@@ -37,6 +37,13 @@
     "progress": "Progress"
   },
 
+  "kanban": {
+    "noTasks": "No tasks",
+    "assignees": "{count} assignees",
+    "estimatedHours": "⏱️ {hours}h estimated",
+    "progress": "Progress"
+  },
+
   "modal": {
     "create": {
       "title": "Create Task",

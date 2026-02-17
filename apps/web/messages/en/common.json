@@ -141,6 +141,9 @@
     "completed": "Completed",
     "noUserFound": "No user found"
   },
+  "loading": "Loading...",
+  "cancel": "Cancel",
+  "close": "Close",
   "presence": {
     "title": "Today's Presence",
     "button": "Presence",
