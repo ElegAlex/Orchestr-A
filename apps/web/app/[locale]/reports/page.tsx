@@ -164,93 +164,96 @@ export default function ReportsPage() {
   return (
     <MainLayout>
       <div className="p-8 space-y-8">
-        {/* Header */}
-        <div className="flex justify-between items-center">
+        {/* Header: title + tabs */}
+        <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">{t("title")}</h1>
-
-          <div className="flex items-center gap-4">
-            <div className="flex border-b border-gray-200">
-              <button
-                onClick={() => setActiveTab(0)}
-                className={`px-4 py-2 font-medium ${
-                  activeTab === 0
-                    ? "border-b-2 border-blue-600 text-blue-600"
-                    : "text-gray-900 hover:text-gray-900"
-                }`}
-              >
-                {t("tabs.overview")}
-              </button>
-              <button
-                onClick={() => setActiveTab(1)}
-                className={`px-4 py-2 font-medium ${
-                  activeTab === 1
-                    ? "border-b-2 border-blue-600 text-blue-600"
-                    : "text-gray-900 hover:text-gray-900"
-                }`}
-              >
-                {t("tabs.advanced")}
-              </button>
-              <button
-                onClick={() => setActiveTab(2)}
-                className={`px-4 py-2 font-medium ${
-                  activeTab === 2
-                    ? "border-b-2 border-blue-600 text-blue-600"
-                    : "text-gray-900 hover:text-gray-900"
-                }`}
-              >
-                {t("tabs.gantt")}
-              </button>
-            </div>
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value as DateRange)}
-              className="px-4 py-2 border rounded-md"
-            >
-              <option value="week">{t("dateRange.week")}</option>
-              <option value="month">{t("dateRange.month")}</option>
-              <option value="quarter">{t("dateRange.quarter")}</option>
-              <option value="year">{t("dateRange.year")}</option>
-            </select>
-
-            <select
-              value={selectedProject}
-              onChange={(e) => setSelectedProject(e.target.value)}
-              className="px-4 py-2 border rounded-md"
-            >
-              <option value="all">{t("filters.allProjects")}</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-
+          <div className="flex border-b border-gray-200">
             <button
-              onClick={loadAnalytics}
-              className="px-4 py-2 border rounded-md hover:bg-gray-100"
+              onClick={() => setActiveTab(0)}
+              className={`px-4 py-2 font-medium ${
+                activeTab === 0
+                  ? "border-b-2 border-blue-600 text-blue-600"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
             >
-              {t("filters.refresh")}
+              {t("tabs.overview")}
             </button>
-
-            <select
-              value={exportFormat}
-              onChange={(e) =>
-                setExportFormat(e.target.value as "json" | "pdf" | "excel")
-              }
-              className="px-4 py-2 border rounded-md"
-            >
-              <option value="pdf">{t("exportFormats.pdf")}</option>
-              <option value="excel">{t("exportFormats.excel")}</option>
-              <option value="json">{t("exportFormats.json")}</option>
-            </select>
-
             <button
-              onClick={exportReport}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              onClick={() => setActiveTab(1)}
+              className={`px-4 py-2 font-medium ${
+                activeTab === 1
+                  ? "border-b-2 border-blue-600 text-blue-600"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
             >
-              {t("filters.export")}
+              {t("tabs.advanced")}
+            </button>
+            <button
+              onClick={() => setActiveTab(2)}
+              className={`px-4 py-2 font-medium ${
+                activeTab === 2
+                  ? "border-b-2 border-blue-600 text-blue-600"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              {t("tabs.gantt")}
             </button>
           </div>
+        </div>
+
+        {/* Toolbar: filters + actions */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value as DateRange)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          >
+            <option value="week">{t("dateRange.week")}</option>
+            <option value="month">{t("dateRange.month")}</option>
+            <option value="quarter">{t("dateRange.quarter")}</option>
+            <option value="year">{t("dateRange.year")}</option>
+          </select>
+
+          <select
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          >
+            <option value="all">{t("filters.allProjects")}</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={loadAnalytics}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition"
+          >
+            {t("filters.refresh")}
+          </button>
+
+          <div className="flex-1" />
+
+          <select
+            value={exportFormat}
+            onChange={(e) =>
+              setExportFormat(e.target.value as "json" | "pdf" | "excel")
+            }
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          >
+            <option value="pdf">{t("exportFormats.pdf")}</option>
+            <option value="excel">{t("exportFormats.excel")}</option>
+            <option value="json">{t("exportFormats.json")}</option>
+          </select>
+
+          <button
+            onClick={exportReport}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
+          >
+            {t("filters.export")}
+          </button>
         </div>
 
         {/* Tab: Analytics */}
