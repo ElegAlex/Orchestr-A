@@ -7,7 +7,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
-import { TaskStatus, RACIRole, Role } from 'database';
+import { TaskStatus, RACIRole, Role, Priority } from 'database';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -16,6 +16,7 @@ describe('TasksService', () => {
     task: {
       create: vi.fn(),
       findMany: vi.fn(),
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
       count: vi.fn(),
       update: vi.fn(),
@@ -29,6 +30,7 @@ describe('TasksService', () => {
     },
     milestone: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
     },
     user: {
       findUnique: vi.fn(),
@@ -750,6 +752,728 @@ describe('TasksService', () => {
 
       await expect(service.getTasksByProject('invalid')).rejects.toThrow(
         NotFoundException,
+      );
+    });
+  });
+
+  describe('importTasks', () => {
+    const projectId = 'project-1';
+    const mockProject = { id: projectId, name: 'Test Project' };
+
+    it('should throw NotFoundException when project does not exist', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(service.importTasks(projectId, [])).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should import a valid task successfully', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
+
+      const tasks = [{ title: 'New Task' }];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.created).toBe(1);
+      expect(result.skipped).toBe(0);
+      expect(result.errors).toBe(0);
+      expect(mockPrismaService.task.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            title: 'New Task',
+            projectId,
+            status: TaskStatus.TODO,
+            priority: Priority.NORMAL,
+          }) as object,
+        }),
+      );
+    });
+
+    it('should skip tasks that already exist in the project', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findFirst.mockResolvedValue({
+        id: 'existing-task',
+        title: 'Existing Task',
+      });
+
+      const tasks = [{ title: 'Existing Task' }];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.skipped).toBe(1);
+      expect(result.created).toBe(0);
+      expect(result.errorDetails).toContain(
+        'Ligne 2: Tâche "Existing Task" existe déjà',
+      );
+    });
+
+    it('should resolve assignee by email', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'user-1',
+          email: 'john@example.com',
+          isActive: true,
+        },
+      ]);
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
+
+      const tasks = [
+        { title: 'Task with assignee', assigneeEmail: 'john@example.com' },
+      ];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.created).toBe(1);
+      expect(mockPrismaService.task.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            assigneeId: 'user-1',
+          }) as object,
+        }),
+      );
+    });
+
+    it('should error when assignee email is not found', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+
+      const tasks = [
+        {
+          title: 'Task with unknown assignee',
+          assigneeEmail: 'unknown@example.com',
+        },
+      ];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.errors).toBe(1);
+      expect(result.created).toBe(0);
+      expect(result.errorDetails[0]).toContain('unknown@example.com');
+    });
+
+    it('should resolve milestone by name', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([
+        { id: 'ms-1', name: 'Sprint 1', projectId },
+      ]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
+
+      const tasks = [
+        { title: 'Task with milestone', milestoneName: 'Sprint 1' },
+      ];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.created).toBe(1);
+      expect(mockPrismaService.task.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            milestoneId: 'ms-1',
+          }) as object,
+        }),
+      );
+    });
+
+    it('should error when milestone name is not found', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+
+      const tasks = [
+        {
+          title: 'Task with unknown milestone',
+          milestoneName: 'Unknown Sprint',
+        },
+      ];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.errors).toBe(1);
+      expect(result.created).toBe(0);
+      expect(result.errorDetails[0]).toContain('Unknown Sprint');
+    });
+
+    it('should parse valid status and priority', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
+
+      const tasks = [
+        { title: 'Task', status: 'in_progress', priority: 'high' },
+      ];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.created).toBe(1);
+      expect(mockPrismaService.task.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: TaskStatus.IN_PROGRESS,
+            priority: Priority.HIGH,
+          }) as object,
+        }),
+      );
+    });
+
+    it('should default to TODO/NORMAL for unrecognized status/priority', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
+
+      const tasks = [
+        { title: 'Task', status: 'INVALID_STATUS', priority: 'INVALID_PRIO' },
+      ];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.created).toBe(1);
+      expect(mockPrismaService.task.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: TaskStatus.TODO,
+            priority: Priority.NORMAL,
+          }) as object,
+        }),
+      );
+    });
+
+    it('should handle task creation errors gracefully', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.create.mockRejectedValue(
+        new Error('Database error'),
+      );
+
+      const tasks = [{ title: 'Task that fails' }];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.errors).toBe(1);
+      expect(result.created).toBe(0);
+      expect(result.errorDetails[0]).toContain('Database error');
+    });
+
+    it('should import multiple tasks and count results correctly', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'existing', title: 'Task B' })
+        .mockResolvedValueOnce(null);
+      mockPrismaService.task.create.mockResolvedValue({ id: 'new' });
+
+      const tasks = [
+        { title: 'Task A' },
+        { title: 'Task B' },
+        { title: 'Task C' },
+      ];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.created).toBe(2);
+      expect(result.skipped).toBe(1);
+    });
+
+    it('should parse dates and estimated hours in task data', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
+
+      const tasks = [
+        {
+          title: 'Task with dates',
+          startDate: '2025-01-15',
+          endDate: '2025-01-20',
+          estimatedHours: 8,
+          description: 'Some desc',
+        },
+      ];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.created).toBe(1);
+      expect(mockPrismaService.task.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            startDate: new Date('2025-01-15'),
+            endDate: new Date('2025-01-20'),
+            estimatedHours: 8,
+            description: 'Some desc',
+          }) as object,
+        }),
+      );
+    });
+  });
+
+  describe('validateImport', () => {
+    const projectId = 'project-1';
+    const mockProject = { id: projectId, name: 'Test Project' };
+
+    const setupValidationMocks = () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+    };
+
+    it('should throw NotFoundException when project does not exist', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(service.validateImport(projectId, [])).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should validate a valid task as ready for import', async () => {
+      setupValidationMocks();
+
+      const tasks = [{ title: 'New Task' }];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.valid).toHaveLength(1);
+      expect(result.valid[0].status).toBe('valid');
+      expect(result.valid[0].messages).toContain('Prêt à être importé');
+      expect(result.summary.valid).toBe(1);
+      expect(result.summary.total).toBe(1);
+    });
+
+    it('should flag tasks with empty title as error', async () => {
+      setupValidationMocks();
+
+      const tasks = [{ title: '' }];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].status).toBe('error');
+      expect(result.errors[0].messages).toContain('Le titre est obligatoire');
+      expect(result.summary.errors).toBe(1);
+    });
+
+    it('should flag duplicate tasks', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([
+        { title: 'Existing Task' },
+      ]);
+
+      const tasks = [{ title: 'Existing Task' }];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.duplicates).toHaveLength(1);
+      expect(result.duplicates[0].status).toBe('duplicate');
+      expect(result.summary.duplicates).toBe(1);
+    });
+
+    it('should detect duplicates within the same import batch', async () => {
+      setupValidationMocks();
+
+      const tasks = [{ title: 'Same Title' }, { title: 'Same Title' }];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      // First one should be valid, second should be duplicate
+      expect(result.valid).toHaveLength(1);
+      expect(result.duplicates).toHaveLength(1);
+      expect(result.summary.valid).toBe(1);
+      expect(result.summary.duplicates).toBe(1);
+    });
+
+    it('should error when assignee email is not found', async () => {
+      setupValidationMocks();
+
+      const tasks = [
+        { title: 'Task', assigneeEmail: 'nonexistent@example.com' },
+      ];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].messages[0]).toContain('nonexistent@example.com');
+      expect(result.summary.errors).toBe(1);
+    });
+
+    it('should resolve assignee and include in preview item', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'user-1',
+          email: 'john@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          isActive: true,
+        },
+      ]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+
+      const tasks = [{ title: 'Task', assigneeEmail: 'john@example.com' }];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.valid).toHaveLength(1);
+      expect(result.valid[0].resolvedAssignee).toEqual({
+        id: 'user-1',
+        email: 'john@example.com',
+        name: 'John Doe',
+      });
+    });
+
+    it('should error when milestone name is not found', async () => {
+      setupValidationMocks();
+
+      const tasks = [{ title: 'Task', milestoneName: 'Unknown Sprint' }];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].messages[0]).toContain('Unknown Sprint');
+      expect(result.summary.errors).toBe(1);
+    });
+
+    it('should resolve milestone and include in preview item', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([
+        { id: 'ms-1', name: 'Sprint 1', projectId },
+      ]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+
+      const tasks = [{ title: 'Task', milestoneName: 'Sprint 1' }];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.valid).toHaveLength(1);
+      expect(result.valid[0].resolvedMilestone).toEqual({
+        id: 'ms-1',
+        name: 'Sprint 1',
+      });
+    });
+
+    it('should warn on unrecognized status', async () => {
+      setupValidationMocks();
+
+      const tasks = [{ title: 'Task', status: 'INVALID_STATUS' }];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].status).toBe('warning');
+      expect(result.warnings[0].messages[0]).toContain('Statut');
+      expect(result.warnings[0].messages[0]).toContain('INVALID_STATUS');
+      expect(result.summary.warnings).toBe(1);
+    });
+
+    it('should warn on unrecognized priority', async () => {
+      setupValidationMocks();
+
+      const tasks = [{ title: 'Task', priority: 'INVALID_PRIO' }];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].messages[0]).toContain('Priorité');
+      expect(result.warnings[0].messages[0]).toContain('INVALID_PRIO');
+      expect(result.summary.warnings).toBe(1);
+    });
+
+    it('should error on invalid start date', async () => {
+      setupValidationMocks();
+
+      const tasks = [
+        { title: 'Task', startDate: 'not-a-date', endDate: '2025-01-20' },
+      ];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].messages[0]).toContain('Date de début invalide');
+      expect(result.summary.errors).toBe(1);
+    });
+
+    it('should error on invalid end date', async () => {
+      setupValidationMocks();
+
+      const tasks = [
+        { title: 'Task', startDate: '2025-01-15', endDate: 'not-a-date' },
+      ];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].messages[0]).toContain('Date de fin invalide');
+      expect(result.summary.errors).toBe(1);
+    });
+
+    it('should warn when end date is before or equal to start date', async () => {
+      setupValidationMocks();
+
+      const tasks = [
+        { title: 'Task', startDate: '2025-01-20', endDate: '2025-01-15' },
+      ];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].messages[0]).toContain('antérieure ou égale');
+      expect(result.summary.warnings).toBe(1);
+    });
+
+    it('should handle a mix of valid, duplicate, error, and warning items', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([
+        { title: 'Duplicate Task' },
+      ]);
+
+      const tasks = [
+        { title: 'Valid Task' },
+        { title: 'Duplicate Task' },
+        { title: '' },
+        { title: 'Warn Task', status: 'BOGUS' },
+      ];
+
+      const result = await service.validateImport(projectId, tasks as any);
+
+      expect(result.summary.total).toBe(4);
+      expect(result.summary.valid).toBe(1);
+      expect(result.summary.duplicates).toBe(1);
+      expect(result.summary.errors).toBe(1);
+      expect(result.summary.warnings).toBe(1);
+    });
+  });
+
+  describe('getImportTemplate', () => {
+    it('should return a CSV template string with headers', () => {
+      const template = service.getImportTemplate();
+
+      expect(template).toContain('title');
+      expect(template).toContain('description');
+      expect(template).toContain('status');
+      expect(template).toContain('priority');
+      expect(template).toContain('assigneeEmail');
+      expect(template).toContain('milestoneName');
+      expect(template).toContain('estimatedHours');
+      expect(template).toContain('startDate');
+      expect(template).toContain('endDate');
+    });
+
+    it('should use semicolon as separator', () => {
+      const template = service.getImportTemplate();
+      const firstLine = template.split('\n')[0];
+
+      expect(firstLine).toBe(
+        'title;description;status;priority;assigneeEmail;milestoneName;estimatedHours;startDate;endDate',
+      );
+    });
+
+    it('should include example comments on second line', () => {
+      const template = service.getImportTemplate();
+      const lines = template.split('\n');
+
+      expect(lines).toHaveLength(2);
+      expect(lines[1]).toContain('# Exemple');
+    });
+  });
+
+  describe('findOrphans', () => {
+    it('should return tasks without a project', async () => {
+      const orphanTasks = [
+        {
+          id: 'task-1',
+          title: 'Orphan 1',
+          projectId: null,
+          assignee: null,
+          assignees: [],
+          _count: { dependencies: 0, dependents: 0, comments: 0 },
+        },
+        {
+          id: 'task-2',
+          title: 'Orphan 2',
+          projectId: null,
+          assignee: null,
+          assignees: [],
+          _count: { dependencies: 0, dependents: 0, comments: 0 },
+        },
+      ];
+
+      mockPrismaService.task.findMany.mockResolvedValue(orphanTasks);
+
+      const result = await service.findOrphans();
+
+      expect(result).toHaveLength(2);
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { projectId: null },
+        }),
+      );
+    });
+
+    it('should return empty array when no orphan tasks exist', async () => {
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+
+      const result = await service.findOrphans();
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should include assignee and counts in returned orphans', async () => {
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+
+      await service.findOrphans();
+
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            assignee: expect.any(Object),
+            assignees: expect.any(Object),
+            _count: expect.any(Object),
+          }) as object,
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
+    });
+  });
+
+  describe('attachToProject', () => {
+    it('should attach an orphan task to a project', async () => {
+      const mockTask = { id: 'task-1', projectId: null };
+      const mockProject = { id: 'project-1', name: 'Test Project' };
+      const updatedTask = {
+        ...mockTask,
+        projectId: 'project-1',
+        project: { id: 'project-1', name: 'Test Project' },
+        assignee: null,
+      };
+
+      mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.task.update.mockResolvedValue(updatedTask);
+
+      const result = await service.attachToProject('task-1', 'project-1');
+
+      expect(result.projectId).toBe('project-1');
+      expect(mockPrismaService.task.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'task-1' },
+          data: { projectId: 'project-1' },
+        }),
+      );
+    });
+
+    it('should throw NotFoundException when task does not exist', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.attachToProject('nonexistent', 'project-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when project does not exist', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: null,
+      });
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.attachToProject('task-1', 'nonexistent'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('detachFromProject', () => {
+    it('should detach a task from its project', async () => {
+      const mockTask = { id: 'task-1', projectId: 'project-1' };
+      const detachedTask = {
+        ...mockTask,
+        projectId: null,
+        epicId: null,
+        milestoneId: null,
+        assignee: null,
+      };
+
+      mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
+      mockPrismaService.task.update.mockResolvedValue(detachedTask);
+
+      const result = await service.detachFromProject('task-1');
+
+      expect(result.projectId).toBeNull();
+      expect(mockPrismaService.task.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'task-1' },
+          data: {
+            projectId: null,
+            epicId: null,
+            milestoneId: null,
+          },
+        }),
+      );
+    });
+
+    it('should throw NotFoundException when task does not exist', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue(null);
+
+      await expect(service.detachFromProject('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should clear epicId and milestoneId when detaching', async () => {
+      const mockTask = {
+        id: 'task-1',
+        projectId: 'project-1',
+        epicId: 'epic-1',
+        milestoneId: 'ms-1',
+      };
+
+      mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
+      mockPrismaService.task.update.mockResolvedValue({
+        ...mockTask,
+        projectId: null,
+        epicId: null,
+        milestoneId: null,
+        assignee: null,
+      });
+
+      await service.detachFromProject('task-1');
+
+      expect(mockPrismaService.task.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            projectId: null,
+            epicId: null,
+            milestoneId: null,
+          }) as object,
+        }),
       );
     });
   });

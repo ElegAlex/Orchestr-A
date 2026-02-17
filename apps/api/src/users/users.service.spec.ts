@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Role } from 'database';
 
@@ -21,14 +25,48 @@ describe('UsersService', () => {
     },
     department: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
     },
     service: {
       findMany: vi.fn(),
+      count: vi.fn(),
     },
     userService: {
       createMany: vi.fn(),
       deleteMany: vi.fn(),
     },
+    projectMember: {
+      count: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+    leave: {
+      count: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+    personalTodo: {
+      deleteMany: vi.fn(),
+    },
+    timeEntry: {
+      deleteMany: vi.fn(),
+    },
+    comment: {
+      deleteMany: vi.fn(),
+    },
+    userSkill: {
+      deleteMany: vi.fn(),
+    },
+    teleworkSchedule: {
+      deleteMany: vi.fn(),
+    },
+    leaveValidationDelegate: {
+      deleteMany: vi.fn(),
+    },
+    task: {
+      count: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+    $transaction: vi.fn(async (callback) => callback(mockPrismaService)),
   };
 
   beforeEach(async () => {
@@ -399,6 +437,391 @@ describe('UsersService', () => {
       await expect(
         service.changePassword('nonexistent', changePasswordDto),
       ).rejects.toThrow('Utilisateur introuvable');
+    });
+  });
+
+  describe('checkDependencies', () => {
+    it('should return canDelete true when no dependencies', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+      });
+      mockPrismaService.task.count.mockResolvedValue(0);
+      mockPrismaService.projectMember.count.mockResolvedValue(0);
+      mockPrismaService.leave.count.mockResolvedValue(0);
+      mockPrismaService.department.count.mockResolvedValue(0);
+      mockPrismaService.service.count.mockResolvedValue(0);
+
+      const result = await service.checkDependencies('user-1');
+
+      expect(result.userId).toBe('user-1');
+      expect(result.canDelete).toBe(true);
+      expect(result.dependencies).toHaveLength(0);
+    });
+
+    it('should return canDelete false with dependencies', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+      });
+      mockPrismaService.task.count.mockResolvedValue(3);
+      mockPrismaService.projectMember.count.mockResolvedValue(2);
+      mockPrismaService.leave.count.mockResolvedValue(0);
+      mockPrismaService.department.count.mockResolvedValue(1);
+      mockPrismaService.service.count.mockResolvedValue(0);
+
+      const result = await service.checkDependencies('user-1');
+
+      expect(result.canDelete).toBe(false);
+      expect(result.dependencies.length).toBeGreaterThan(0);
+
+      const taskDep = result.dependencies.find((d) => d.type === 'TASKS');
+      expect(taskDep).toBeDefined();
+      expect(taskDep!.count).toBe(3);
+
+      const projectDep = result.dependencies.find((d) => d.type === 'PROJECTS');
+      expect(projectDep).toBeDefined();
+      expect(projectDep!.count).toBe(2);
+
+      const deptDep = result.dependencies.find((d) => d.type === 'DEPARTMENTS');
+      expect(deptDep).toBeDefined();
+      expect(deptDep!.count).toBe(1);
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.checkDependencies('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('hardDelete', () => {
+    it('should hard delete a user successfully', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+      });
+      // checkDependencies mocks (no dependencies)
+      mockPrismaService.task.count.mockResolvedValue(0);
+      mockPrismaService.projectMember.count.mockResolvedValue(0);
+      mockPrismaService.leave.count.mockResolvedValue(0);
+      mockPrismaService.department.count.mockResolvedValue(0);
+      mockPrismaService.service.count.mockResolvedValue(0);
+      // Transaction mocks
+      mockPrismaService.personalTodo.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.timeEntry.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.comment.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.userSkill.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.teleworkSchedule.deleteMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.leaveValidationDelegate.deleteMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.projectMember.deleteMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.userService.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.leave.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.task.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.user.delete.mockResolvedValue({ id: 'user-1' });
+
+      const result = await service.hardDelete('user-1', 'admin-1');
+
+      expect(result).toEqual({
+        success: true,
+        message: 'Utilisateur supprimé définitivement',
+      });
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.hardDelete('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.hardDelete('nonexistent')).rejects.toThrow(
+        'Utilisateur introuvable',
+      );
+    });
+
+    it('should throw BadRequestException on self-deletion', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+      });
+
+      await expect(service.hardDelete('user-1', 'user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.hardDelete('user-1', 'user-1')).rejects.toThrow(
+        'Vous ne pouvez pas supprimer votre propre compte',
+      );
+    });
+
+    it('should throw ConflictException when dependencies exist', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+      });
+      // checkDependencies mocks (has dependencies)
+      mockPrismaService.task.count.mockResolvedValue(5);
+      mockPrismaService.projectMember.count.mockResolvedValue(0);
+      mockPrismaService.leave.count.mockResolvedValue(0);
+      mockPrismaService.department.count.mockResolvedValue(0);
+      mockPrismaService.service.count.mockResolvedValue(0);
+
+      await expect(service.hardDelete('user-1', 'admin-1')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('should reset password successfully', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+      });
+      mockPrismaService.user.update.mockResolvedValue({
+        id: 'user-1',
+      });
+
+      const result = await service.resetPassword('user-1', 'newpassword123');
+
+      expect(result).toEqual({
+        message: 'Mot de passe réinitialisé avec succès',
+      });
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: { passwordHash: expect.any(String) },
+        }),
+      );
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.resetPassword('nonexistent', 'newpassword123'),
+      ).rejects.toThrow(NotFoundException);
+
+      await expect(
+        service.resetPassword('nonexistent', 'newpassword123'),
+      ).rejects.toThrow('Utilisateur introuvable');
+    });
+  });
+
+  describe('getUsersByDepartment', () => {
+    it('should return users for a department', async () => {
+      const mockUsers = [
+        {
+          id: 'user-1',
+          firstName: 'Jean',
+          lastName: 'Dupont',
+          email: 'jean.dupont@example.com',
+          role: 'CONTRIBUTEUR',
+          userServices: [],
+        },
+        {
+          id: 'user-2',
+          firstName: 'Marie',
+          lastName: 'Martin',
+          email: 'marie.martin@example.com',
+          role: 'MANAGER',
+          userServices: [],
+        },
+      ];
+
+      mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
+
+      const result = await service.getUsersByDepartment('dept-1');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].firstName).toBe('Jean');
+      expect(result[1].firstName).toBe('Marie');
+      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            departmentId: 'dept-1',
+            isActive: true,
+          },
+        }),
+      );
+    });
+  });
+
+  describe('getUsersByService', () => {
+    it('should return users for a service', async () => {
+      const mockUsers = [
+        {
+          id: 'user-1',
+          firstName: 'Jean',
+          lastName: 'Dupont',
+          email: 'jean.dupont@example.com',
+          role: 'CONTRIBUTEUR',
+        },
+      ];
+
+      mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
+
+      const result = await service.getUsersByService('service-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('user-1');
+      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userServices: {
+              some: {
+                serviceId: 'service-1',
+              },
+            },
+            isActive: true,
+          },
+        }),
+      );
+    });
+  });
+
+  describe('getUsersByRole', () => {
+    it('should return users for a role', async () => {
+      const mockUsers = [
+        {
+          id: 'user-1',
+          firstName: 'Admin',
+          lastName: 'User',
+          email: 'admin@example.com',
+          departmentId: 'dept-1',
+        },
+      ];
+
+      mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
+
+      const result = await service.getUsersByRole(Role.ADMIN);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].email).toBe('admin@example.com');
+      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            role: Role.ADMIN,
+            isActive: true,
+          },
+        }),
+      );
+    });
+  });
+
+  describe('importUsers', () => {
+    it('should import users successfully', async () => {
+      const importData = [
+        {
+          email: 'new@example.com',
+          login: 'new.user',
+          password: 'password123',
+          firstName: 'New',
+          lastName: 'User',
+          role: Role.CONTRIBUTEUR,
+          departmentName: 'Informatique',
+        },
+      ];
+
+      mockPrismaService.department.findMany.mockResolvedValue([
+        { id: 'dept-1', name: 'Informatique' },
+      ]);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
+      mockPrismaService.user.create.mockResolvedValue({
+        id: 'new-1',
+        email: 'new@example.com',
+        login: 'new.user',
+        firstName: 'New',
+        lastName: 'User',
+        role: Role.CONTRIBUTEUR,
+        departmentId: 'dept-1',
+      });
+
+      const result = await service.importUsers(importData);
+
+      expect(result.created).toBe(1);
+      expect(result.skipped).toBe(0);
+      expect(result.errors).toBe(0);
+      expect(result.createdUsers).toHaveLength(1);
+    });
+
+    it('should skip existing users', async () => {
+      const importData = [
+        {
+          email: 'existing@example.com',
+          login: 'existing.user',
+          password: 'password123',
+          firstName: 'Existing',
+          lastName: 'User',
+          role: Role.CONTRIBUTEUR,
+        },
+      ];
+
+      mockPrismaService.department.findMany.mockResolvedValue([]);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findFirst.mockResolvedValue({
+        id: 'existing-1',
+        email: 'existing@example.com',
+        login: 'existing.user',
+      });
+
+      const result = await service.importUsers(importData);
+
+      expect(result.created).toBe(0);
+      expect(result.skipped).toBe(1);
+      expect(result.errorDetails.length).toBeGreaterThan(0);
+    });
+
+    it('should report error when department not found', async () => {
+      const importData = [
+        {
+          email: 'new@example.com',
+          login: 'new.user',
+          password: 'password123',
+          firstName: 'New',
+          lastName: 'User',
+          role: Role.CONTRIBUTEUR,
+          departmentName: 'Unknown Dept',
+        },
+      ];
+
+      mockPrismaService.department.findMany.mockResolvedValue([]);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
+
+      const result = await service.importUsers(importData);
+
+      expect(result.created).toBe(0);
+      expect(result.errors).toBe(1);
+      expect(result.errorDetails[0]).toContain('introuvable');
+    });
+  });
+
+  describe('getImportTemplate', () => {
+    it('should return a CSV template string', () => {
+      const template = service.getImportTemplate();
+
+      expect(typeof template).toBe('string');
+      expect(template).toContain('email');
+      expect(template).toContain('login');
+      expect(template).toContain('password');
+      expect(template).toContain('firstName');
+      expect(template).toContain('lastName');
+      expect(template).toContain('role');
+      expect(template).toContain('departmentName');
+      expect(template).toContain('serviceNames');
+      // Verify it has at least header line and example line
+      const lines = template.split('\n');
+      expect(lines.length).toBeGreaterThanOrEqual(2);
     });
   });
 });

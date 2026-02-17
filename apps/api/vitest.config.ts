@@ -24,6 +24,7 @@ export default defineConfig({
         'src/main.ts',
         'vitest.config.ts',
         'src/__mocks__/**',
+        'src/**/dto/**',
       ],
       thresholds: {
         lines: 65,
