@@ -8,6 +8,6 @@ export async function login(
   await page.goto("/login");
   await page.locator('input[id="login"]').fill(username);
   await page.locator('input[id="password"]').fill(password);
-  await page.getByRole("button", { name: /se connecter/i }).click();
+  await page.getByTestId("login-submit").click();
   await page.waitForURL("**/dashboard", { timeout: 15000 });
 }

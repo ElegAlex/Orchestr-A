@@ -61,6 +61,7 @@ export default function LoginPage() {
             </label>
             <input
               id="login"
+              data-testid="login-username"
               type="text"
               required
               value={formData.login}
@@ -81,6 +82,7 @@ export default function LoginPage() {
             </label>
             <input
               id="password"
+              data-testid="login-password"
               type="password"
               required
               value={formData.password}
@@ -94,6 +96,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
+            data-testid="login-submit"
             disabled={loading}
             className="w-full bg-[var(--primary)] text-[var(--primary-foreground)] py-2 px-4 rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >

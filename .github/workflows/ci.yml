@@ -233,18 +233,18 @@ jobs:
           DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
           JWT_SECRET: test-jwt-secret-key
           REDIS_URL: redis://localhost:6379
-          API_URL: http://localhost:3001
+          API_URL: http://localhost:4000
 
       - name: Start Backend API
         run: |
-          pnpm --filter api start &
+          pnpm --filter api start > /tmp/api.log 2>&1 &
           echo "Waiting for API to be ready..."
-          timeout 60 bash -c 'until curl -f http://localhost:3001/api/health 2>/dev/null; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:4000/api/health 2>/dev/null; do sleep 2; done'
         env:
           DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
           JWT_SECRET: test-jwt-secret-key
           REDIS_URL: redis://localhost:6379
-          PORT: 3001
+          PORT: 4000
           ALLOWED_ORIGINS: http://localhost:3000
 
       - name: Start Frontend
@@ -253,7 +253,20 @@ jobs:
           echo "Waiting for frontend to be ready..."
           timeout 60 bash -c 'until curl -f http://localhost:3000 2>/dev/null; do sleep 2; done'
         env:
-          API_URL: http://localhost:3001
+          API_URL: http://localhost:4000
+
+      - name: Debug API proxy
+        run: |
+          echo "--- Testing API directly ---"
+          curl -sf http://localhost:4000/api/health || echo "API NOT REACHABLE on 4000"
+          curl -v http://localhost:4000/api/auth/login -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"login":"admin","password":"admin123"}'
+          echo ""
+          echo "--- Testing via Next.js proxy ---"
+          curl -v http://localhost:3000/api/auth/login -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"login":"admin","password":"admin123"}'
 
       - name: Run Playwright E2E Tests
         run: pnpm --filter web exec playwright test --config ../../playwright.config.ts
@@ -267,6 +280,14 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+      - name: Upload API logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-logs
+          path: /tmp/api.log
+          if-no-files-found: ignore
 
   # Job 5: Build Validation
   build:

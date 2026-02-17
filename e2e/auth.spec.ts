@@ -15,10 +15,10 @@ test.describe("Authentication", () => {
 
     await page.locator('input[id="login"]').fill("wronguser");
     await page.locator('input[id="password"]').fill("wrongpass");
-    await page.getByRole("button", { name: /se connecter/i }).click();
+    await page.getByTestId("login-submit").click();
 
     // Wait a bit for potential redirect, then verify we're still on login
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState("networkidle");
     await expect(page).toHaveURL(/.*login/);
     // Form should still be visible (not redirected)
     await expect(page.locator('input[id="login"]')).toBeVisible();
@@ -29,7 +29,7 @@ test.describe("Authentication", () => {
 
     await page.locator('input[id="login"]').fill("admin");
     await page.locator('input[id="password"]').fill("admin123");
-    await page.getByRole("button", { name: /se connecter/i }).click();
+    await page.getByTestId("login-submit").click();
 
     // Wait for redirect to dashboard
     await page.waitForURL("**/dashboard", { timeout: 15000 });

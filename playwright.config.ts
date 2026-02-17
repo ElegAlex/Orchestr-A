@@ -9,7 +9,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  timeout: process.env.CI ? 60000 : 30000,
+  timeout: Number(process.env.PLAYWRIGHT_TIMEOUT) || (process.env.CI ? 45000 : 30000),
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
