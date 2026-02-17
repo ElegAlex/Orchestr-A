@@ -1419,7 +1419,9 @@ export class TasksService {
   /**
    * Exporter les tâches d'un projet en CSV
    */
-  async exportProjectTasksCsv(projectId: string): Promise<{ csv: string; filename: string }> {
+  async exportProjectTasksCsv(
+    projectId: string,
+  ): Promise<{ csv: string; filename: string }> {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
     });
@@ -1436,8 +1438,18 @@ export class TasksService {
       orderBy: { createdAt: 'asc' },
     });
 
-    const headers = ['title', 'description', 'status', 'priority', 'assigneeEmail', 'milestoneName', 'estimatedHours', 'startDate', 'endDate'];
-    const rows = tasks.map(task => [
+    const headers = [
+      'title',
+      'description',
+      'status',
+      'priority',
+      'assigneeEmail',
+      'milestoneName',
+      'estimatedHours',
+      'startDate',
+      'endDate',
+    ];
+    const rows = tasks.map((task) => [
       task.title,
       task.description || '',
       task.status,
@@ -1458,7 +1470,7 @@ export class TasksService {
 
     const csv = [
       headers.join(';'),
-      ...rows.map(row => row.map(escapeField).join(';')),
+      ...rows.map((row) => row.map(escapeField).join(';')),
     ].join('\n');
 
     const sanitizedName = project.name.replace(/[^a-zA-Z0-9-_]/g, '_');

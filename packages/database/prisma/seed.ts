@@ -423,14 +423,14 @@ async function main() {
     migrationProject = await prisma.project.create({
       data: {
         name: "Migration SI - Collectivité Grand Lyon",
-      description:
-        "Projet de migration du système d'information de la collectivité vers une infrastructure modernisée. Inclut la refonte des applicatifs métier, la migration des données et la formation des agents.",
-      status: "ACTIVE",
-      priority: "HIGH",
-      startDate: new Date("2026-01-13"),
-      endDate: new Date("2026-04-30"),
-      budgetHours: 2400,
-      createdById: admin.id,
+        description:
+          "Projet de migration du système d'information de la collectivité vers une infrastructure modernisée. Inclut la refonte des applicatifs métier, la migration des données et la formation des agents.",
+        status: "ACTIVE",
+        priority: "HIGH",
+        startDate: new Date("2026-01-13"),
+        endDate: new Date("2026-04-30"),
+        budgetHours: 2400,
+        createdById: admin.id,
       },
     });
   }
@@ -659,8 +659,7 @@ async function main() {
     },
     {
       title: "Validation du budget par la direction",
-      description:
-        "Présentation et arbitrage budgétaire avec la DGS",
+      description: "Présentation et arbitrage budgétaire avec la DGS",
       status: "DONE",
       priority: "CRITICAL",
       epicId: epics[0].id,

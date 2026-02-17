@@ -285,7 +285,9 @@ export class MilestonesService {
   /**
    * Exporter les jalons d'un projet en CSV
    */
-  async exportProjectMilestonesCsv(projectId: string): Promise<{ csv: string; filename: string }> {
+  async exportProjectMilestonesCsv(
+    projectId: string,
+  ): Promise<{ csv: string; filename: string }> {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
     });
@@ -299,7 +301,7 @@ export class MilestonesService {
     });
 
     const headers = ['name', 'description', 'dueDate'];
-    const rows = milestones.map(m => [
+    const rows = milestones.map((m) => [
       m.name,
       m.description || '',
       m.dueDate.toISOString().split('T')[0],
@@ -314,7 +316,7 @@ export class MilestonesService {
 
     const csv = [
       headers.join(';'),
-      ...rows.map(row => row.map(escapeField).join(';')),
+      ...rows.map((row) => row.map(escapeField).join(';')),
     ].join('\n');
 
     const sanitizedName = project.name.replace(/[^a-zA-Z0-9-_]/g, '_');

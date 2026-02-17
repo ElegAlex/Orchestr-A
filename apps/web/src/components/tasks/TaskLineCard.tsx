@@ -214,12 +214,14 @@ export function TaskLineCard({
       {/* Row 2: description + milestone + project */}
       {(task.description ||
         task.milestone ||
-        (showProject && (task as Task & { project?: { name: string } }).project)) && (
+        (showProject &&
+          (task as Task & { project?: { name: string } }).project)) && (
         <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
           {showProject &&
             (task as Task & { project?: { name: string } }).project && (
               <span className="shrink-0">
-                📁 {(task as Task & { project?: { name: string } }).project!.name}
+                📁{" "}
+                {(task as Task & { project?: { name: string } }).project!.name}
               </span>
             )}
           {task.milestone && (

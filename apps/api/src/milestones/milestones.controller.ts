@@ -142,14 +142,15 @@ export class MilestonesController {
   }
 
   @Get('project/:projectId/export')
-  @ApiOperation({ summary: 'Exporter les jalons d\'un projet en CSV' })
+  @ApiOperation({ summary: "Exporter les jalons d'un projet en CSV" })
   @ApiResponse({ status: 200, description: 'Fichier CSV des jalons' })
   @ApiResponse({ status: 404, description: 'Projet introuvable' })
   async exportProjectMilestones(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Res() reply: FastifyReply,
   ) {
-    const { csv, filename } = await this.milestonesService.exportProjectMilestonesCsv(projectId);
+    const { csv, filename } =
+      await this.milestonesService.exportProjectMilestonesCsv(projectId);
     reply
       .header('Content-Type', 'text/csv; charset=utf-8')
       .header('Content-Disposition', `attachment; filename="${filename}"`)
