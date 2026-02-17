@@ -288,6 +288,36 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await tasksService.delete(taskId);
+      toast.success("Tâche supprimée");
+      const tasksData = await tasksService.getByProject(projectId);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message || "Erreur lors de la suppression",
+      );
+    }
+  };
+
+  const handleTaskDateChange = async (
+    taskId: string,
+    field: "startDate" | "endDate",
+    value: string,
+  ) => {
+    try {
+      await tasksService.update(taskId, {
+        [field]: new Date(value).toISOString(),
+      });
+      const tasksData = await tasksService.getByProject(projectId);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+    } catch {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
   const handleExportTasksCsv = async () => {
     try {
       const response = await api.get(`/tasks/project/${projectId}/export`, {
@@ -1163,6 +1193,8 @@ export default function ProjectDetailPage() {
                 tasks={filteredTasks}
                 onStatusChange={handleTaskStatusChange}
                 onTaskClick={handleTaskClick}
+                onDelete={handleDeleteTask}
+                onDateChange={handleTaskDateChange}
               />
             ) : (
             <div className="overflow-x-auto pb-4">

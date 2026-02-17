@@ -9,6 +9,12 @@ interface TaskListViewProps {
   tasks: Task[];
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
   onTaskClick?: (task: Task) => void;
+  onDelete?: (taskId: string) => void;
+  onDateChange?: (
+    taskId: string,
+    field: "startDate" | "endDate",
+    value: string,
+  ) => void;
   showProject?: boolean;
 }
 
@@ -48,13 +54,53 @@ export function TaskListView({
   tasks,
   onStatusChange,
   onTaskClick,
+  onDelete,
+  onDateChange,
   showProject = false,
 }: TaskListViewProps) {
   const t = useTranslations("tasks");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [dragOverSection, setDragOverSection] = useState<TaskStatus | null>(
+    null,
+  );
 
   const toggleSection = (status: string) => {
     setCollapsed((prev) => ({ ...prev, [status]: !prev[status] }));
+  };
+
+  const handleDragStart = (e: React.DragEvent, task: Task) => {
+    setDraggedTask(task);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", task.id);
+    (e.currentTarget as HTMLElement).style.opacity = "0.4";
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedTask(null);
+    setDragOverSection(null);
+    (e.currentTarget as HTMLElement).style.opacity = "1";
+  };
+
+  const handleDragOver = (e: React.DragEvent, status: TaskStatus) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverSection(status);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverSection(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, newStatus: TaskStatus) => {
+    e.preventDefault();
+    setDragOverSection(null);
+
+    if (draggedTask && draggedTask.status !== newStatus && onStatusChange) {
+      onStatusChange(draggedTask.id, newStatus);
+    }
+
+    setDraggedTask(null);
   };
 
   return (
@@ -62,11 +108,19 @@ export function TaskListView({
       {statusConfig.map(({ status, colorDot, colorBg }) => {
         const sectionTasks = tasks.filter((task) => task.status === status);
         const isCollapsed = collapsed[status] || false;
+        const isDropTarget = dragOverSection === status;
 
         return (
           <div
             key={status}
-            className="bg-white rounded-lg border border-gray-200 overflow-hidden"
+            className={`bg-white rounded-lg border overflow-hidden transition-colors ${
+              isDropTarget
+                ? "border-2 border-dashed border-blue-400 bg-blue-50"
+                : "border-gray-200"
+            }`}
+            onDragOver={(e) => handleDragOver(e, status)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, status)}
           >
             {/* Section header */}
             <button
@@ -103,8 +157,13 @@ export function TaskListView({
                     key={task.id}
                     task={task}
                     onStatusChange={onStatusChange}
+                    onDelete={onDelete}
+                    onDateChange={onDateChange}
                     onClick={onTaskClick}
                     showProject={showProject}
+                    draggable={!!onStatusChange}
+                    onDragStart={(e) => handleDragStart(e, task)}
+                    onDragEnd={handleDragEnd}
                   />
                 ))}
               </div>

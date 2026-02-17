@@ -184,6 +184,35 @@ export default function TasksPage() {
     }
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await tasksService.delete(taskId);
+      toast.success(t("messages.deleteSuccess", { defaultValue: "Tâche supprimée" }));
+      fetchData();
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message ||
+          t("messages.deleteError", { defaultValue: "Erreur lors de la suppression" }),
+      );
+    }
+  };
+
+  const handleDateChange = async (
+    taskId: string,
+    field: "startDate" | "endDate",
+    value: string,
+  ) => {
+    try {
+      await tasksService.update(taskId, {
+        [field]: new Date(value).toISOString(),
+      });
+      fetchData();
+    } catch {
+      toast.error(t("messages.updateError", { defaultValue: "Erreur lors de la mise à jour" }));
+    }
+  };
+
   // Fetch project members when a project is selected in the form
   const handleFormProjectChange = async (projectId: string) => {
     setFormData({ ...formData, projectId, assigneeIds: [] }); // Reset assignees when project changes
@@ -692,6 +721,8 @@ export default function TasksPage() {
             tasks={getFilteredTasks()}
             onStatusChange={handleStatusChange}
             onTaskClick={handleTaskClick}
+            onDelete={handleDeleteTask}
+            onDateChange={handleDateChange}
             showProject={true}
           />
         )}
