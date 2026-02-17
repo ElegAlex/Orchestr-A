@@ -1364,19 +1364,6 @@ export default function ProjectDetailPage() {
 
         {activeTab === "milestones" && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">
-                {t("detail.tabs.milestones", { count: milestones.length })}
-              </h2>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={handleExportMilestonesCsv}
-                  className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm"
-                >
-                  Export CSV
-                </button>
-              </div>
-            </div>
             <MilestoneRoadmap
               milestones={milestones}
               tasks={tasks}
@@ -1384,6 +1371,7 @@ export default function ProjectDetailPage() {
               onEditMilestone={handleEditMilestone}
               onTaskUpdate={handleTaskUpdate}
               onImportMilestones={() => setShowImportMilestonesModal(true)}
+              onExportCsv={handleExportMilestonesCsv}
             />
           </div>
         )}

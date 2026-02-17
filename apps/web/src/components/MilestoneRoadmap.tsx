@@ -13,6 +13,7 @@ interface MilestoneRoadmapProps {
   onCreateTask?: () => void;
   onTaskUpdate?: () => void;
   onImportMilestones?: () => void;
+  onExportCsv?: () => void;
 }
 
 export function MilestoneRoadmap({
@@ -23,6 +24,7 @@ export function MilestoneRoadmap({
   onCreateTask,
   onTaskUpdate,
   onImportMilestones,
+  onExportCsv,
 }: MilestoneRoadmapProps) {
   const t = useTranslations("projects");
 
@@ -107,6 +109,14 @@ export function MilestoneRoadmap({
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
             >
               {t("milestoneRoadmap.newTask")}
+            </button>
+          )}
+          {onExportCsv && (
+            <button
+              onClick={onExportCsv}
+              className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm"
+            >
+              Export CSV
             </button>
           )}
           {onImportMilestones && (
