@@ -105,7 +105,8 @@
     "tasksBoard": {
       "title": "Tableau des tâches",
       "importCSV": "Importer CSV",
-      "newTask": "+ Nouvelle tâche"
+      "newTask": "+ Nouvelle tâche",
+      "searchPlaceholder": "Rechercher une tâche..."
     },
     "team": {
       "title": "Membres de l'équipe",
