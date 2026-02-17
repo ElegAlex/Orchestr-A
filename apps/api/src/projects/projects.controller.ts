@@ -128,7 +128,8 @@ export class ProjectsController {
   @Patch(':id')
   @Permissions('projects:update')
   @ApiOperation({
-    summary: 'Mettre à jour un projet (Admin/Responsable/Manager/Chef de projet)',
+    summary:
+      'Mettre à jour un projet (Admin/Responsable/Manager/Chef de projet)',
   })
   @ApiResponse({
     status: 200,
@@ -188,7 +189,8 @@ export class ProjectsController {
   @Post(':id/members')
   @Permissions('projects:manage_members')
   @ApiOperation({
-    summary: 'Ajouter un membre au projet (Admin/Responsable/Manager/Chef de projet)',
+    summary:
+      'Ajouter un membre au projet (Admin/Responsable/Manager/Chef de projet)',
   })
   @ApiResponse({
     status: 201,
@@ -213,7 +215,8 @@ export class ProjectsController {
   @Permissions('projects:manage_members')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Retirer un membre du projet (Admin/Responsable/Manager/Chef de projet)',
+    summary:
+      'Retirer un membre du projet (Admin/Responsable/Manager/Chef de projet)',
   })
   @ApiResponse({
     status: 200,

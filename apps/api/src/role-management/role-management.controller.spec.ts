@@ -28,9 +28,7 @@ describe('RoleManagementController', () => {
       ],
     }).compile();
 
-    controller = module.get<RoleManagementController>(
-      RoleManagementController,
-    );
+    controller = module.get<RoleManagementController>(RoleManagementController);
   });
 
   describe('findAllRoles', () => {
@@ -136,8 +134,18 @@ describe('RoleManagementController', () => {
     it('should return all permissions grouped by module', async () => {
       const mockPermissions = {
         projects: [
-          { id: '1', code: 'projects:create', module: 'projects', action: 'create' },
-          { id: '2', code: 'projects:read', module: 'projects', action: 'read' },
+          {
+            id: '1',
+            code: 'projects:create',
+            module: 'projects',
+            action: 'create',
+          },
+          {
+            id: '2',
+            code: 'projects:read',
+            module: 'projects',
+            action: 'read',
+          },
         ],
         tasks: [
           { id: '3', code: 'tasks:create', module: 'tasks', action: 'create' },

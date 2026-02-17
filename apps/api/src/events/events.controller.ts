@@ -89,10 +89,7 @@ export class EventsController {
     status: 400,
     description: 'Paramètres manquants ou invalides',
   })
-  getEventsByRange(
-    @Query('start') start: string,
-    @Query('end') end: string,
-  ) {
+  getEventsByRange(@Query('start') start: string, @Query('end') end: string) {
     return this.eventsService.getEventsByRange(start, end);
   }
 
@@ -111,7 +108,9 @@ export class EventsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Récupérer un événement par ID avec tous les détails' })
+  @ApiOperation({
+    summary: 'Récupérer un événement par ID avec tous les détails',
+  })
   @ApiResponse({
     status: 200,
     description: "Détails complets de l'événement",

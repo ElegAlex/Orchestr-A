@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -5,7 +6,6 @@ import { Role, User } from '@prisma/client';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PermissionsGuard } from './permissions.guard';
 import { RoleManagementService } from '../../role-management/role-management.service';
-import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 
 describe('PermissionsGuard', () => {
   let guard: PermissionsGuard;
@@ -78,7 +78,9 @@ describe('PermissionsGuard', () => {
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
-      expect(roleManagementService.getPermissionsForRole).not.toHaveBeenCalled();
+      expect(
+        roleManagementService.getPermissionsForRole,
+      ).not.toHaveBeenCalled();
     });
 
     it('should allow access when @Permissions() decorator is empty', async () => {
@@ -88,38 +90,44 @@ describe('PermissionsGuard', () => {
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
-      expect(roleManagementService.getPermissionsForRole).not.toHaveBeenCalled();
+      expect(
+        roleManagementService.getPermissionsForRole,
+      ).not.toHaveBeenCalled();
     });
 
     it('should deny access when user is not authenticated', async () => {
-      vi
-        .spyOn(reflector, 'getAllAndOverride')
-        .mockReturnValue(['tasks:create']);
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([
+        'tasks:create',
+      ]);
       const context = createMockExecutionContext(undefined);
 
       const result = await guard.canActivate(context);
 
       expect(result).toBe(false);
-      expect(roleManagementService.getPermissionsForRole).not.toHaveBeenCalled();
+      expect(
+        roleManagementService.getPermissionsForRole,
+      ).not.toHaveBeenCalled();
     });
 
     it('should deny access when user has no role', async () => {
-      vi
-        .spyOn(reflector, 'getAllAndOverride')
-        .mockReturnValue(['tasks:create']);
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([
+        'tasks:create',
+      ]);
       const userWithoutRole = { ...mockUser, role: null };
       const context = createMockExecutionContext(userWithoutRole as any);
 
       const result = await guard.canActivate(context);
 
       expect(result).toBe(false);
-      expect(roleManagementService.getPermissionsForRole).not.toHaveBeenCalled();
+      expect(
+        roleManagementService.getPermissionsForRole,
+      ).not.toHaveBeenCalled();
     });
 
     it('should allow access when user has the required permission', async () => {
-      vi
-        .spyOn(reflector, 'getAllAndOverride')
-        .mockReturnValue(['tasks:create_orphan']);
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([
+        'tasks:create_orphan',
+      ]);
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'tasks:create_orphan',
         'tasks:read',
@@ -136,9 +144,10 @@ describe('PermissionsGuard', () => {
     });
 
     it('should allow access when user has all required permissions', async () => {
-      vi
-        .spyOn(reflector, 'getAllAndOverride')
-        .mockReturnValue(['tasks:read', 'tasks:create_orphan']);
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([
+        'tasks:read',
+        'tasks:create_orphan',
+      ]);
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'tasks:create_orphan',
         'tasks:read',
@@ -156,9 +165,9 @@ describe('PermissionsGuard', () => {
     });
 
     it('should deny access when user lacks the required permission', async () => {
-      vi
-        .spyOn(reflector, 'getAllAndOverride')
-        .mockReturnValue(['projects:create']);
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([
+        'projects:create',
+      ]);
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'tasks:create_orphan',
         'tasks:read',
@@ -175,9 +184,10 @@ describe('PermissionsGuard', () => {
     });
 
     it('should deny access when user lacks one of multiple required permissions', async () => {
-      vi
-        .spyOn(reflector, 'getAllAndOverride')
-        .mockReturnValue(['tasks:read', 'tasks:delete']);
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([
+        'tasks:read',
+        'tasks:delete',
+      ]);
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'tasks:create_orphan',
         'tasks:read',
@@ -194,9 +204,7 @@ describe('PermissionsGuard', () => {
     });
 
     it('should use cache from RoleManagementService (Redis)', async () => {
-      vi
-        .spyOn(reflector, 'getAllAndOverride')
-        .mockReturnValue(['tasks:read']);
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['tasks:read']);
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'tasks:read',
       ]);
@@ -207,9 +215,9 @@ describe('PermissionsGuard', () => {
 
       // Verify that getPermissionsForRole was called twice
       // (Redis cache is handled internally by RoleManagementService)
-      expect(
-        roleManagementService.getPermissionsForRole,
-      ).toHaveBeenCalledTimes(2);
+      expect(roleManagementService.getPermissionsForRole).toHaveBeenCalledTimes(
+        2,
+      );
     });
 
     it('should work with ADMIN role having all permissions', async () => {
@@ -240,9 +248,9 @@ describe('PermissionsGuard', () => {
 
     it('should work with OBSERVATEUR role having only read permissions', async () => {
       const observateurUser = { ...mockUser, role: 'OBSERVATEUR' as Role };
-      vi
-        .spyOn(reflector, 'getAllAndOverride')
-        .mockReturnValue(['projects:read']);
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([
+        'projects:read',
+      ]);
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'projects:read',
         'tasks:read',

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventsService } from './events.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -230,9 +231,9 @@ describe('EventsService', () => {
 
       mockPrismaService.event.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('invalid-id', updateEventDto)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update('invalid-id', updateEventDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

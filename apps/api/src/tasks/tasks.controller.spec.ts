@@ -87,7 +87,10 @@ describe('TasksController', () => {
       const result = await controller.create(createTaskDto, mockUser);
 
       expect(result).toEqual(expectedTask);
-      expect(mockTasksService.create).toHaveBeenCalledWith(createTaskDto, mockUser);
+      expect(mockTasksService.create).toHaveBeenCalledWith(
+        createTaskDto,
+        mockUser,
+      );
       expect(mockTasksService.create).toHaveBeenCalledTimes(1);
     });
 

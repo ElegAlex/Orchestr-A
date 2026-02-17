@@ -73,7 +73,7 @@ export const TaskCreateModal = ({
         try {
           projectsData = await projectsService.getByUser(user.id);
           projectsData = Array.isArray(projectsData) ? projectsData : [];
-        } catch (err) {
+        } catch {
           projectsData = [];
         }
       }
@@ -88,7 +88,7 @@ export const TaskCreateModal = ({
         try {
           const usersData = await usersService.getAll();
           setUsers(Array.isArray(usersData) ? usersData : []);
-        } catch (err) {
+        } catch {
           setUsers([]);
         }
       }

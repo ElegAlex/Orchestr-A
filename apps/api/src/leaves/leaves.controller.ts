@@ -179,7 +179,7 @@ export class LeavesController {
   @ApiOperation({ summary: 'Importer des congés en masse via CSV' })
   @ApiResponse({
     status: 200,
-    description: 'Résultat de l\'import',
+    description: "Résultat de l'import",
     type: ImportLeavesResultDto,
   })
   @ApiResponse({

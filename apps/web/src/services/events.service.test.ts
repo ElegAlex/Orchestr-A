@@ -1,13 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { eventsService, CreateEventDto, UpdateEventDto } from "./events.service";
 import { api } from "@/lib/api";
 
-vi.mock("@/lib/api", () => ({
+jest.mock("@/lib/api", () => ({
   api: {
-    get: vi.fn(),
-    post: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
+    get: jest.fn(),
+    post: jest.fn(),
+    patch: jest.fn(),
+    delete: jest.fn(),
   },
 }));
 
@@ -35,13 +34,13 @@ describe("eventsService", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   describe("getAll", () => {
     it("should fetch all events", async () => {
       const events = [mockEvent];
-      (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: events });
+      (api.get as jest.Mock).mockResolvedValue({ data: events });
 
       const result = await eventsService.getAll();
 
@@ -51,7 +50,7 @@ describe("eventsService", () => {
 
     it("should fetch events with filters", async () => {
       const events = [mockEvent];
-      (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: events });
+      (api.get as jest.Mock).mockResolvedValue({ data: events });
 
       const result = await eventsService.getAll(
         "2025-11-01",
@@ -69,7 +68,7 @@ describe("eventsService", () => {
 
   describe("getById", () => {
     it("should fetch an event by id", async () => {
-      (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+      (api.get as jest.Mock).mockResolvedValue({
         data: mockEvent,
       });
 
@@ -83,7 +82,7 @@ describe("eventsService", () => {
   describe("getByUser", () => {
     it("should fetch events by user", async () => {
       const events = [mockEvent];
-      (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: events });
+      (api.get as jest.Mock).mockResolvedValue({ data: events });
 
       const result = await eventsService.getByUser("user-1");
 
@@ -95,7 +94,7 @@ describe("eventsService", () => {
   describe("getByRange", () => {
     it("should fetch events by date range", async () => {
       const events = [mockEvent];
-      (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: events });
+      (api.get as jest.Mock).mockResolvedValue({ data: events });
 
       const result = await eventsService.getByRange("2025-11-01", "2025-11-30");
 
@@ -118,7 +117,7 @@ describe("eventsService", () => {
         projectId: "project-1",
         participantIds: ["user-2"],
       };
-      (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({
+      (api.post as jest.Mock).mockResolvedValue({
         data: mockEvent,
       });
 
@@ -135,7 +134,7 @@ describe("eventsService", () => {
         title: "Réunion mise à jour",
       };
       const updatedEvent = { ...mockEvent, ...updateEventDto };
-      (api.patch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      (api.patch as jest.Mock).mockResolvedValue({
         data: updatedEvent,
       });
 
@@ -148,7 +147,7 @@ describe("eventsService", () => {
 
   describe("delete", () => {
     it("should delete an event", async () => {
-      (api.delete as ReturnType<typeof vi.fn>).mockResolvedValue({});
+      (api.delete as jest.Mock).mockResolvedValue({});
 
       await eventsService.delete("1");
 
@@ -158,7 +157,7 @@ describe("eventsService", () => {
 
   describe("addParticipant", () => {
     it("should add a participant to an event", async () => {
-      (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({});
+      (api.post as jest.Mock).mockResolvedValue({});
 
       await eventsService.addParticipant("event-1", "user-2");
 
@@ -170,7 +169,7 @@ describe("eventsService", () => {
 
   describe("removeParticipant", () => {
     it("should remove a participant from an event", async () => {
-      (api.delete as ReturnType<typeof vi.fn>).mockResolvedValue({});
+      (api.delete as jest.Mock).mockResolvedValue({});
 
       await eventsService.removeParticipant("event-1", "user-2");
 

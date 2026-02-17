@@ -234,7 +234,6 @@ function MatrixLoadingSkeleton() {
 
 export function SkillsMatrix() {
   const t = useTranslations("hr.skills");
-  const tc = useTranslations("common");
   const [data, setData] = useState<MatrixData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

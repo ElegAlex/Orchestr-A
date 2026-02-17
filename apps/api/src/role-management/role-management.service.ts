@@ -52,13 +52,21 @@ export class RoleManagementService implements OnModuleInit {
       { code: 'projects:read', module: 'projects', action: 'read' },
       { code: 'projects:update', module: 'projects', action: 'update' },
       { code: 'projects:delete', module: 'projects', action: 'delete' },
-      { code: 'projects:manage_members', module: 'projects', action: 'manage_members' },
+      {
+        code: 'projects:manage_members',
+        module: 'projects',
+        action: 'manage_members',
+      },
       // Tasks
       { code: 'tasks:create', module: 'tasks', action: 'create' },
       { code: 'tasks:read', module: 'tasks', action: 'read' },
       { code: 'tasks:update', module: 'tasks', action: 'update' },
       { code: 'tasks:delete', module: 'tasks', action: 'delete' },
-      { code: 'tasks:create_in_project', module: 'tasks', action: 'create_in_project' },
+      {
+        code: 'tasks:create_in_project',
+        module: 'tasks',
+        action: 'create_in_project',
+      },
       { code: 'tasks:create_orphan', module: 'tasks', action: 'create_orphan' },
       // Events
       { code: 'events:create', module: 'events', action: 'create' },
@@ -81,7 +89,11 @@ export class RoleManagementService implements OnModuleInit {
       { code: 'leaves:update', module: 'leaves', action: 'update' },
       { code: 'leaves:delete', module: 'leaves', action: 'delete' },
       { code: 'leaves:approve', module: 'leaves', action: 'approve' },
-      { code: 'leaves:manage_delegations', module: 'leaves', action: 'manage_delegations' },
+      {
+        code: 'leaves:manage_delegations',
+        module: 'leaves',
+        action: 'manage_delegations',
+      },
       // Telework
       { code: 'telework:create', module: 'telework', action: 'create' },
       { code: 'telework:read', module: 'telework', action: 'read' },
@@ -93,13 +105,33 @@ export class RoleManagementService implements OnModuleInit {
       { code: 'skills:read', module: 'skills', action: 'read' },
       { code: 'skills:update', module: 'skills', action: 'update' },
       { code: 'skills:delete', module: 'skills', action: 'delete' },
-      { code: 'skills:manage_matrix', module: 'skills', action: 'manage_matrix' },
+      {
+        code: 'skills:manage_matrix',
+        module: 'skills',
+        action: 'manage_matrix',
+      },
       // Time Tracking
-      { code: 'time_tracking:create', module: 'time_tracking', action: 'create' },
+      {
+        code: 'time_tracking:create',
+        module: 'time_tracking',
+        action: 'create',
+      },
       { code: 'time_tracking:read', module: 'time_tracking', action: 'read' },
-      { code: 'time_tracking:update', module: 'time_tracking', action: 'update' },
-      { code: 'time_tracking:delete', module: 'time_tracking', action: 'delete' },
-      { code: 'time_tracking:read_reports', module: 'time_tracking', action: 'read_reports' },
+      {
+        code: 'time_tracking:update',
+        module: 'time_tracking',
+        action: 'update',
+      },
+      {
+        code: 'time_tracking:delete',
+        module: 'time_tracking',
+        action: 'delete',
+      },
+      {
+        code: 'time_tracking:read_reports',
+        module: 'time_tracking',
+        action: 'read_reports',
+      },
       // Users
       { code: 'users:create', module: 'users', action: 'create' },
       { code: 'users:read', module: 'users', action: 'read' },
@@ -167,7 +199,8 @@ export class RoleManagementService implements OnModuleInit {
         isSystem: true,
         permissions: permissionsData
           .filter(
-            (p) => p.code !== 'users:manage_roles' && p.code !== 'settings:update',
+            (p) =>
+              p.code !== 'users:manage_roles' && p.code !== 'settings:update',
           )
           .map((p) => p.code),
       },
@@ -451,9 +484,7 @@ export class RoleManagementService implements OnModuleInit {
     }
 
     if (role.isSystem) {
-      throw new BadRequestException(
-        'Impossible de supprimer un rôle système',
-      );
+      throw new BadRequestException('Impossible de supprimer un rôle système');
     }
 
     await this.prisma.roleConfig.delete({ where: { id } });
@@ -501,7 +532,9 @@ export class RoleManagementService implements OnModuleInit {
     });
 
     if (permissions.length !== permissionIds.length) {
-      throw new BadRequestException('Une ou plusieurs permissions introuvables');
+      throw new BadRequestException(
+        'Une ou plusieurs permissions introuvables',
+      );
     }
 
     // Supprimer toutes les anciennes permissions

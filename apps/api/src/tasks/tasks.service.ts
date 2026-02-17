@@ -28,10 +28,7 @@ export class TasksService {
    * Créer une nouvelle tâche
    * Le projectId est optionnel pour permettre les tâches orphelines (réunions, tâches transverses)
    */
-  async create(
-    createTaskDto: CreateTaskDto,
-    user: { id: string; role: Role },
-  ) {
+  async create(createTaskDto: CreateTaskDto, user: { id: string; role: Role }) {
     const {
       projectId,
       epicId,

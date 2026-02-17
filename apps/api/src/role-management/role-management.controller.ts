@@ -32,9 +32,7 @@ import { Role } from 'database';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class RoleManagementController {
-  constructor(
-    private readonly roleManagementService: RoleManagementService,
-  ) {}
+  constructor(private readonly roleManagementService: RoleManagementService) {}
 
   @Get('roles')
   @Roles(Role.ADMIN)
@@ -117,7 +115,9 @@ export class RoleManagementController {
 
   @Get('permissions')
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Liste toutes les permissions (groupées par module)' })
+  @ApiOperation({
+    summary: 'Liste toutes les permissions (groupées par module)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Liste des permissions groupées par module',
@@ -128,7 +128,7 @@ export class RoleManagementController {
 
   @Put('roles/:id/permissions')
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Remplacer les permissions d\'un rôle' })
+  @ApiOperation({ summary: "Remplacer les permissions d'un rôle" })
   @ApiResponse({
     status: 200,
     description: 'Permissions mises à jour',
@@ -153,7 +153,10 @@ export class RoleManagementController {
 
   @Post('seed')
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Seeder les permissions et rôles initiaux (admin only, idempotent)' })
+  @ApiOperation({
+    summary:
+      'Seeder les permissions et rôles initiaux (admin only, idempotent)',
+  })
   @ApiResponse({
     status: 201,
     description: 'Seed effectué avec succès',

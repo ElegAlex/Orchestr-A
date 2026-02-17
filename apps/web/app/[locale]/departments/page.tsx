@@ -19,7 +19,6 @@ import { useTranslations } from "next-intl";
 
 export default function DepartmentsPage() {
   const t = useTranslations("admin.departments");
-  const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState<Department[]>([]);

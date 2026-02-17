@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 // Mock next-intl
 jest.mock("next-intl", () => ({
+  useLocale: () => "fr",
   useTranslations: () => {
     const t = (key: string, params?: Record<string, unknown>) => {
       const translations: Record<string, string> = {
@@ -14,7 +15,13 @@ jest.mock("next-intl", () => ({
         "columns.IN_REVIEW": "En revue",
         "columns.DONE": "Terminé",
         "columns.BLOCKED": "Bloqué",
+        "status.TODO": "À faire",
+        "status.IN_PROGRESS": "En cours",
+        "status.IN_REVIEW": "En revue",
+        "status.DONE": "Terminé",
+        "status.BLOCKED": "Bloqué",
         "emptyColumn": "Aucune tâche",
+        "noTasks": "Aucune tâche",
         "createTask": "Créer une tâche",
         "modal.create.title": "Créer une tâche",
         "modal.cancel": "Annuler",
@@ -111,8 +118,15 @@ const mockProjects = [
 jest.mock("@/services/tasks.service", () => ({
   tasksService: {
     getByAssignee: jest.fn(),
+    getOrphans: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+  },
+}));
+
+jest.mock("@/services/users.service", () => ({
+  usersService: {
+    getAll: jest.fn(),
   },
 }));
 
@@ -142,14 +156,17 @@ jest.mock("@/components/MainLayout", () => ({
 import TasksPage from "../page";
 import { tasksService } from "@/services/tasks.service";
 import { projectsService } from "@/services/projects.service";
+import { usersService } from "@/services/users.service";
 import toast from "react-hot-toast";
 
 describe("TasksPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (tasksService.getByAssignee as jest.Mock).mockResolvedValue(mockTasks);
+    (tasksService.getOrphans as jest.Mock).mockResolvedValue([]);
     (tasksService.create as jest.Mock).mockResolvedValue({ id: "new-task" });
     (tasksService.update as jest.Mock).mockResolvedValue({});
+    (usersService.getAll as jest.Mock).mockResolvedValue([]);
     (projectsService.getAll as jest.Mock).mockResolvedValue({
       data: mockProjects,
     });
@@ -300,7 +317,7 @@ describe("TasksPage", () => {
 
     // Le mock du router devrait être appelé
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/tasks/task-1");
+      expect(mockPush).toHaveBeenCalledWith("/fr/tasks/task-1");
     });
   });
 

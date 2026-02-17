@@ -589,7 +589,9 @@ export class SkillsService {
       // Vérifier la longueur du nom
       if (skillData.name.length < 2 || skillData.name.length > 100) {
         previewItem.status = 'error';
-        previewItem.messages.push('Le nom doit contenir entre 2 et 100 caractères');
+        previewItem.messages.push(
+          'Le nom doit contenir entre 2 et 100 caractères',
+        );
         result.errors.push(previewItem);
         result.summary.errors++;
         continue;
@@ -665,9 +667,7 @@ export class SkillsService {
   /**
    * Importer des compétences en masse
    */
-  async importSkills(
-    skills: ImportSkillDto[],
-  ): Promise<ImportSkillsResultDto> {
+  async importSkills(skills: ImportSkillDto[]): Promise<ImportSkillsResultDto> {
     const result: ImportSkillsResultDto = {
       created: 0,
       skipped: 0,

@@ -109,7 +109,7 @@ export default function GanttChart({
       setSelectedTaskForInfo(null);
       router.push(`/${locale}/tasks/${taskId}`);
     },
-    [router],
+    [router, locale],
   );
 
   // Handle dependency modal save

@@ -166,12 +166,14 @@ export const skillsService = {
   },
 
   // Valider des compétences avant import
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async validateImport(skills: any[]): Promise<any> {
     const response = await api.post("/skills/import/validate", { skills });
     return response.data;
   },
 
   // Importer des compétences en masse
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async importSkills(skills: any[]): Promise<any> {
     const response = await api.post("/skills/import", { skills });
     return response.data;

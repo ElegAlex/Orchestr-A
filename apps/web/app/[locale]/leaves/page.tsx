@@ -66,7 +66,9 @@ export default function LeavesPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showLeavesPreview, setShowLeavesPreview] = useState(false);
   const [importingLeaves, setImportingLeaves] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [leavesPreview, setLeavesPreview] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [pendingLeavesImport, setPendingLeavesImport] = useState<any[]>([]);
 
   const isAdmin = user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE;
@@ -375,7 +377,7 @@ export default function LeavesPage() {
       link.download = "template-import-conges.csv";
       link.click();
       URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch {
       toast.error(tc("errors.generic"));
     }
   };
@@ -468,11 +470,13 @@ export default function LeavesPage() {
   };
 
   const getLeaveStatusLabel = (status: LeaveStatus) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return t(`status.${status}` as any) || status;
   };
 
   const getHalfDayLabel = (halfDay?: HalfDay) => {
     if (!halfDay) return "";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return t(`halfDay.${halfDay}` as any);
   };
 

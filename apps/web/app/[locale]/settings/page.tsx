@@ -41,25 +41,6 @@ const DATE_FORMAT_OPTIONS = [
   },
 ];
 
-const TIME_FORMAT_OPTIONS = [
-  { value: "HH:mm", label: "24h (14:30)", example: "14:30" },
-  {
-    value: "HH:mm:ss",
-    label: "24h avec secondes (14:30:45)",
-    example: "14:30:45",
-  },
-  { value: "hh:mm a", label: "12h (02:30 PM)", example: "02:30 PM" },
-];
-
-const LOCALE_OPTIONS = [
-  { value: "fr-FR", label: "Français (France)" },
-  { value: "en-US", label: "English (US)" },
-];
-
-const WEEK_START_OPTIONS = [
-  { value: 1, label: "Lundi" },
-  { value: 0, label: "Dimanche" },
-];
 
 export default function SettingsPage() {
   const t = useTranslations("settings");

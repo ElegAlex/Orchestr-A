@@ -54,7 +54,9 @@ export default function SkillsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSkillsPreview, setShowSkillsPreview] = useState(false);
   const [importingSkills, setImportingSkills] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [skillsPreview, setSkillsPreview] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [pendingSkillsImport, setPendingSkillsImport] = useState<any[]>([]);
 
   const canManageSkills =
@@ -1111,32 +1113,34 @@ export default function SkillsPage() {
             }}
             onConfirm={handleConfirmSkillsImport}
             title={t("import.previewTitle")}
+            /* eslint-disable @typescript-eslint/no-explicit-any */
             items={{
-              valid: skillsPreview.valid.map((item: any) => ({
+              valid: (skillsPreview.valid || []).map((item: any) => ({
                 lineNumber: item.lineNumber,
                 status: item.status,
                 messages: item.messages,
                 data: item.skill,
               })),
-              duplicates: skillsPreview.duplicates.map((item: any) => ({
+              duplicates: (skillsPreview.duplicates || []).map((item: any) => ({
                 lineNumber: item.lineNumber,
                 status: item.status,
                 messages: item.messages,
                 data: item.skill,
               })),
-              errors: skillsPreview.errors.map((item: any) => ({
+              errors: (skillsPreview.errors || []).map((item: any) => ({
                 lineNumber: item.lineNumber,
                 status: item.status,
                 messages: item.messages,
                 data: item.skill,
               })),
-              warnings: skillsPreview.warnings.map((item: any) => ({
+              warnings: (skillsPreview.warnings || []).map((item: any) => ({
                 lineNumber: item.lineNumber,
                 status: item.status,
                 messages: item.messages,
                 data: item.skill,
               })),
             }}
+            /* eslint-enable @typescript-eslint/no-explicit-any */
             summary={skillsPreview.summary}
             columns={[
               { key: "name", label: "Nom" },

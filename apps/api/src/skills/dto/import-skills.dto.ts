@@ -33,7 +33,10 @@ export class ImportSkillDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty({ description: 'Nombre de ressources requises', required: false })
+  @ApiProperty({
+    description: 'Nombre de ressources requises',
+    required: false,
+  })
   @IsNumber()
   @IsOptional()
   @Min(1)

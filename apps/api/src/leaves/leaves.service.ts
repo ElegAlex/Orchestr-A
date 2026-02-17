@@ -66,7 +66,12 @@ export class LeavesService {
     }
 
     // Calculer le nombre de jours
-    const days = this.calculateLeaveDays(start, end, effectiveHalfDay, endHalfDay);
+    const days = this.calculateLeaveDays(
+      start,
+      end,
+      effectiveHalfDay,
+      endHalfDay,
+    );
 
     // Vérifier les chevauchements
     const hasOverlap = await this.checkOverlap(userId, start, end);
@@ -566,8 +571,16 @@ export class LeavesService {
       );
     }
 
-    const { type, startDate, endDate, halfDay, startHalfDay, endHalfDay, reason } =
-      updateLeaveDto;
+    const {
+      type,
+      startDate,
+      endDate,
+      halfDay,
+      startHalfDay,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      endHalfDay,
+      reason,
+    } = updateLeaveDto;
     const effectiveHalfDay = halfDay || startHalfDay;
 
     // Recalculer les jours si les dates changent
@@ -1496,6 +1509,7 @@ export class LeavesService {
       halfDay?: string;
       comment?: string;
     }>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     currentUserId: string,
   ) {
     const result: {
@@ -1514,9 +1528,7 @@ export class LeavesService {
     const users = await this.prisma.user.findMany({
       where: { isActive: true },
     });
-    const usersByEmail = new Map(
-      users.map((u) => [u.email.toLowerCase(), u]),
-    );
+    const usersByEmail = new Map(users.map((u) => [u.email.toLowerCase(), u]));
 
     // Récupérer tous les types de congés actifs
     const leaveTypes = await this.prisma.leaveTypeConfig.findMany({

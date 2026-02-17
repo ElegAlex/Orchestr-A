@@ -8,7 +8,7 @@ import {
   roleManagementService,
   PermissionsGroupedByModule,
 } from "@/services/role-management.service";
-import type { RoleConfigWithPermissions, Permission } from "@/types";
+import type { RoleConfigWithPermissions } from "@/types";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 

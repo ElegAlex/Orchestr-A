@@ -73,7 +73,9 @@ export class ImportLeavesResultDto {
   @ApiProperty({ description: 'Nombre de congés créés' })
   created: number;
 
-  @ApiProperty({ description: 'Nombre de congés ignorés (doublons/chevauchements)' })
+  @ApiProperty({
+    description: 'Nombre de congés ignorés (doublons/chevauchements)',
+  })
   skipped: number;
 
   @ApiProperty({ description: "Nombre d'erreurs" })

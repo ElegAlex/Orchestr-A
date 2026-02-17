@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 // Mock next-intl
 jest.mock("next-intl", () => ({
   useTranslations: () => {
-    const t = (key: string, params?: Record<string, unknown>) => {
+    const t = (key: string) => {
       const translations: Record<string, string> = {
         "title": "Utilisateurs",
         "loading": "Chargement...",

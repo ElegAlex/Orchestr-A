@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import toast from "react-hot-toast";
 import { useThemeStore } from "@/stores/theme.store";
 

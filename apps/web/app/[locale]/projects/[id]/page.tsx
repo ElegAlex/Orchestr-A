@@ -951,8 +951,8 @@ export default function ProjectDetailPage() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">{t('detail.projectInfo.createdBy')}</p>
                     <p className="text-lg text-gray-900 mt-1">
-                      {(project as any).createdBy
-                        ? `${(project as any).createdBy.firstName} ${(project as any).createdBy.lastName}`
+                      {(project as Project & { createdBy?: { firstName: string; lastName: string } }).createdBy
+                        ? `${(project as Project & { createdBy?: { firstName: string; lastName: string } }).createdBy!.firstName} ${(project as Project & { createdBy?: { firstName: string; lastName: string } }).createdBy!.lastName}`
                         : t('detail.projectInfo.notSpecified')}
                     </p>
                   </div>

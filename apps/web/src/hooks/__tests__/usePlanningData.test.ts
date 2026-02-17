@@ -6,6 +6,7 @@ import { leavesService } from "@/services/leaves.service";
 import { teleworkService } from "@/services/telework.service";
 import { servicesService } from "@/services/services.service";
 import { holidaysService } from "@/services/holidays.service";
+import { eventsService } from "@/services/events.service";
 import { Role, TaskStatus, Priority, LeaveStatus, LeaveType } from "@/types";
 
 // Mock all services
@@ -41,6 +42,12 @@ jest.mock("@/services/services.service", () => ({
 
 jest.mock("@/services/holidays.service", () => ({
   holidaysService: {
+    getByRange: jest.fn(),
+  },
+}));
+
+jest.mock("@/services/events.service", () => ({
+  eventsService: {
     getByRange: jest.fn(),
   },
 }));
@@ -160,6 +167,7 @@ describe("usePlanningData", () => {
     );
     (servicesService.getAll as jest.Mock).mockResolvedValue(mockServices);
     (holidaysService.getByRange as jest.Mock).mockResolvedValue([]);
+    (eventsService.getByRange as jest.Mock).mockResolvedValue([]);
   });
 
   it("should initialize with loading state", () => {

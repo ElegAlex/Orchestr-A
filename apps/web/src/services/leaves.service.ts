@@ -179,11 +179,13 @@ export const leavesService = {
     return response.data.template;
   },
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async validateImport(leaves: any[]): Promise<any> {
     const response = await api.post("/leaves/import/validate", { leaves });
     return response.data;
   },
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async importLeaves(leaves: any[]): Promise<{
     created: number;
     skipped: number;
