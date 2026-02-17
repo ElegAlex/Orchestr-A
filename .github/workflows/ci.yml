@@ -7,8 +7,8 @@ on:
     branches: [master, develop]
 
 env:
-  NODE_VERSION: '22.x'
-  PNPM_VERSION: '9.15.9'
+  NODE_VERSION: "22.x"
+  PNPM_VERSION: "9.15.9"
 
 jobs:
   # Job 1: Lint & Format Check
@@ -29,7 +29,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -86,7 +86,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -139,7 +139,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -162,11 +162,11 @@ jobs:
           name: frontend-coverage
         continue-on-error: true
 
-  # Job 4: E2E Tests (disabled - works locally but fails in CI due to CORS/networking issues)
+  # Job 4: E2E Tests
   e2e-tests:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
-    if: false  # TODO: Fix CORS/networking issues in CI environment
+    needs: [lint]
 
     services:
       postgres:
@@ -206,7 +206,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -233,7 +233,6 @@ jobs:
           DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
           JWT_SECRET: test-jwt-secret-key
           REDIS_URL: redis://localhost:6379
-          NEXT_PUBLIC_API_URL: http://localhost:3001
           API_URL: http://localhost:3001
 
       - name: Start Backend API
@@ -246,6 +245,7 @@ jobs:
           JWT_SECRET: test-jwt-secret-key
           REDIS_URL: redis://localhost:6379
           PORT: 3001
+          ALLOWED_ORIGINS: http://localhost:3000
 
       - name: Start Frontend
         run: |
@@ -253,14 +253,12 @@ jobs:
           echo "Waiting for frontend to be ready..."
           timeout 60 bash -c 'until curl -f http://localhost:3000 2>/dev/null; do sleep 2; done'
         env:
-          NEXT_PUBLIC_API_URL: http://localhost:3001
           API_URL: http://localhost:3001
 
       - name: Run Playwright E2E Tests
         run: pnpm --filter web exec playwright test --config ../../playwright.config.ts
         env:
-          DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
-          NEXT_PUBLIC_API_URL: http://localhost:3001
+          CI: true
 
       - name: Upload E2E Test Report
         uses: actions/upload-artifact@v4
@@ -289,7 +287,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -303,7 +301,6 @@ jobs:
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
           JWT_SECRET: build-jwt-secret
           REDIS_URL: redis://localhost:6379
-          NEXT_PUBLIC_API_URL: http://localhost:3001
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
