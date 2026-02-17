@@ -1,7 +1,7 @@
 {
   "title": "Tasks",
   "taskCount": "{count} task(s)",
-  "createTask": "+ Create Task",
+  "createTask": "Create Task",
   "noTasks": "No tasks",
   "back": "Back",
 
