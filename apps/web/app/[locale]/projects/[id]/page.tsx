@@ -370,21 +370,26 @@ export default function ProjectDetailPage() {
       return;
     }
     try {
-      const html2canvas = (await import("html2canvas")).default;
+      const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
-      const canvas = await html2canvas(container, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
+      const dataUrl = await toPng(container, {
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+      });
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
       const pdf = new jsPDF("landscape", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const width = imgWidth * ratio;
-      const height = imgHeight * ratio;
+      const ratio = Math.min(pdfWidth / img.width, pdfHeight / img.height);
+      const width = img.width * ratio;
+      const height = img.height * ratio;
       const x = (pdfWidth - width) / 2;
       const y = (pdfHeight - height) / 2;
-      pdf.addImage(imgData, "PNG", x, y, width, height);
+      pdf.addImage(dataUrl, "PNG", x, y, width, height);
       const sanitizedName =
         project?.name?.replace(/[^a-zA-Z0-9-_]/g, "_") || "project";
       pdf.save(`gantt-${sanitizedName}.pdf`);
