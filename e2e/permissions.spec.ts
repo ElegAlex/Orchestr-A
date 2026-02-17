@@ -48,7 +48,7 @@ test.describe("Role-Based Access Control", () => {
 
       // Vérifier la présence des actions (edit, delete)
       const actionButtons = page.locator(
-        'button[aria-label="Modifier"], button[aria-label="Supprimer"], button:has(svg)',
+        'button:has-text("Modifier"), button:has-text("Supprimer"), button:has-text("Désactiver")',
       );
       const hasActions = (await actionButtons.count()) > 0;
       expect(hasActions).toBeTruthy();
@@ -202,9 +202,7 @@ test.describe("Role-Based Access Control", () => {
       await page.waitForLoadState("networkidle");
 
       expect(page.url()).toContain("/login");
-      await expect(
-        page.getByRole("button", { name: /se connecter/i }),
-      ).toBeVisible();
+      await expect(page.getByTestId("login-submit")).toBeVisible();
     });
 
     test("should access register page without redirection", async ({
@@ -235,7 +233,8 @@ test.describe("Role-Based Access Control", () => {
       });
 
       // Tenter d'accéder à une page protégée
-      await page.goto("/projects");
+      // Navigation may abort due to client-side auth redirect
+      await page.goto("/projects").catch(() => {});
       await page.waitForLoadState("networkidle");
 
       // Devrait être redirigé vers login
