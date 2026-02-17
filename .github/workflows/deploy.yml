@@ -118,6 +118,8 @@ jobs:
         run: |
           if [ "${{ needs.deploy.result }}" == "success" ]; then
             echo "✅ Deployment completed successfully!"
+          elif [ "${{ needs.deploy.result }}" == "skipped" ]; then
+            echo "⏭️ Deployment skipped (CI did not pass or workflow_run condition not met)."
           else
             echo "❌ Deployment failed. Check logs for details."
             exit 1
