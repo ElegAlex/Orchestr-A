@@ -33,6 +33,7 @@ import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
 import { parseCSV } from "@/lib/csv-parser";
 import { TaskListView } from "@/components/tasks/TaskListView";
+import api from "@/lib/api";
 
 const GanttChart = dynamic(() => import("@/components/GanttChart"), {
   ssr: false,
@@ -287,12 +288,49 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleExportTasksCsv = () => {
-    window.open(`/api/tasks/project/${projectId}/export`, "_blank");
+  const handleExportTasksCsv = async () => {
+    try {
+      const response = await api.get(`/tasks/project/${projectId}/export`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      const disposition = response.headers["content-disposition"];
+      const filename = disposition
+        ? disposition.split("filename=")[1]?.replace(/"/g, "")
+        : "tasks.csv";
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Erreur lors de l'export CSV");
+    }
   };
 
-  const handleExportMilestonesCsv = () => {
-    window.open(`/api/milestones/project/${projectId}/export`, "_blank");
+  const handleExportMilestonesCsv = async () => {
+    try {
+      const response = await api.get(
+        `/milestones/project/${projectId}/export`,
+        { responseType: "blob" },
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      const disposition = response.headers["content-disposition"];
+      const filename = disposition
+        ? disposition.split("filename=")[1]?.replace(/"/g, "")
+        : "milestones.csv";
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Erreur lors de l'export CSV");
+    }
   };
 
   const handleExportGanttPdf = async () => {
