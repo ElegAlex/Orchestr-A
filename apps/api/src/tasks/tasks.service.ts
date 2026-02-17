@@ -1417,6 +1417,55 @@ export class TasksService {
   }
 
   /**
+   * Exporter les tâches d'un projet en CSV
+   */
+  async exportProjectTasksCsv(projectId: string): Promise<{ csv: string; filename: string }> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+
+    const tasks = await this.prisma.task.findMany({
+      where: { projectId },
+      include: {
+        assignee: { select: { email: true } },
+        milestone: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const headers = ['title', 'description', 'status', 'priority', 'assigneeEmail', 'milestoneName', 'estimatedHours', 'startDate', 'endDate'];
+    const rows = tasks.map(task => [
+      task.title,
+      task.description || '',
+      task.status,
+      task.priority,
+      task.assignee?.email || '',
+      task.milestone?.name || '',
+      task.estimatedHours?.toString() || '',
+      task.startDate ? task.startDate.toISOString().split('T')[0] : '',
+      task.endDate ? task.endDate.toISOString().split('T')[0] : '',
+    ]);
+
+    const escapeField = (field: string) => {
+      if (field.includes(';') || field.includes('"') || field.includes('\n')) {
+        return '"' + field.replace(/"/g, '""') + '"';
+      }
+      return field;
+    };
+
+    const csv = [
+      headers.join(';'),
+      ...rows.map(row => row.map(escapeField).join(';')),
+    ].join('\n');
+
+    const sanitizedName = project.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+    return { csv, filename: `tasks-export-${sanitizedName}.csv` };
+  }
+
+  /**
    * Détache une tâche de son projet (la rend orpheline)
    */
   async detachFromProject(taskId: string) {

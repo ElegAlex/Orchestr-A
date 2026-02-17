@@ -18,6 +18,7 @@ import {
 } from "@/types";
 import { usersService } from "@/services/users.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
+import { TaskListView } from "@/components/tasks/TaskListView";
 import toast from "react-hot-toast";
 
 export default function TasksPage() {
@@ -37,6 +38,7 @@ export default function TasksPage() {
   const [selectedPriority, setSelectedPriority] = useState<Priority | "ALL">(
     "ALL",
   );
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -380,15 +382,36 @@ export default function TasksPage() {
               {t("taskCount", { count: getFilteredTasks().length })}
             </p>
           </div>
-          {canCreateTask() && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
-            >
-              <span>+</span>
-              <span>{t("createTask")}</span>
-            </button>
-          )}
+          <div className="flex items-center space-x-3">
+            {/* View toggle */}
+            <div className="flex bg-gray-100 rounded-lg p-0.5">
+              <button
+                onClick={() => setViewMode("kanban")}
+                className={`px-3 py-1.5 rounded text-sm transition ${
+                  viewMode === "kanban" ? "bg-white shadow-sm font-medium" : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Kanban
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`px-3 py-1.5 rounded text-sm transition ${
+                  viewMode === "list" ? "bg-white shadow-sm font-medium" : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Liste
+              </button>
+            </div>
+            {canCreateTask() && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
+              >
+                <span>+</span>
+                <span>{t("createTask")}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filters */}
@@ -438,7 +461,8 @@ export default function TasksPage() {
           </div>
         </div>
 
-        {/* Kanban Board */}
+        {/* Kanban Board / List View */}
+        {viewMode === "kanban" ? (
         <div className="overflow-x-auto pb-4">
           <div className="flex space-x-4 min-w-max">
             {columns.map((column) => {
@@ -663,6 +687,14 @@ export default function TasksPage() {
             })}
           </div>
         </div>
+        ) : (
+          <TaskListView
+            tasks={getFilteredTasks()}
+            onStatusChange={handleStatusChange}
+            onTaskClick={handleTaskClick}
+            showProject={true}
+          />
+        )}
       </div>
 
       {/* Create Modal */}

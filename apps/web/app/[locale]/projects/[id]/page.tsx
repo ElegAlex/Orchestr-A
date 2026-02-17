@@ -32,6 +32,7 @@ import {
 import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
 import { parseCSV } from "@/lib/csv-parser";
+import { TaskListView } from "@/components/tasks/TaskListView";
 
 const GanttChart = dynamic(() => import("@/components/GanttChart"), {
   ssr: false,
@@ -104,6 +105,8 @@ export default function ProjectDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [taskSearchQuery, setTaskSearchQuery] = useState("");
+  const [taskViewMode, setTaskViewMode] = useState<"kanban" | "list">("kanban");
 
   // Get current user from auth store
   const { user: currentUser } = useAuthStore();
@@ -257,8 +260,70 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const filteredTasks = tasks.filter((task) => {
+    if (!taskSearchQuery) return true;
+    const query = taskSearchQuery.toLowerCase();
+    return (
+      task.title.toLowerCase().includes(query) ||
+      task.description?.toLowerCase().includes(query)
+    );
+  });
+
   const getTasksByStatus = (status: TaskStatus) => {
-    return tasks.filter((t) => t.status === status);
+    return filteredTasks.filter((t) => t.status === status);
+  };
+
+  const handleTaskStatusChange = async (
+    taskId: string,
+    newStatus: TaskStatus,
+  ) => {
+    try {
+      await tasksService.update(taskId, { status: newStatus });
+      toast.success(t("messages.statusUpdateSuccess"));
+      const tasksData = await tasksService.getByProject(projectId);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+    } catch {
+      toast.error(t("messages.statusUpdateError"));
+    }
+  };
+
+  const handleExportTasksCsv = () => {
+    window.open(`/api/tasks/project/${projectId}/export`, "_blank");
+  };
+
+  const handleExportMilestonesCsv = () => {
+    window.open(`/api/milestones/project/${projectId}/export`, "_blank");
+  };
+
+  const handleExportGanttPdf = async () => {
+    const container = document.getElementById("gantt-container");
+    if (!container) {
+      toast.error("Gantt chart not found");
+      return;
+    }
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+      const canvas = await html2canvas(container, { scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("landscape", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const width = imgWidth * ratio;
+      const height = imgHeight * ratio;
+      const x = (pdfWidth - width) / 2;
+      const y = (pdfHeight - height) / 2;
+      pdf.addImage(imgData, "PNG", x, y, width, height);
+      const sanitizedName =
+        project?.name?.replace(/[^a-zA-Z0-9-_]/g, "_") || "project";
+      pdf.save(`gantt-${sanitizedName}.pdf`);
+    } catch (err) {
+      console.error("PDF export error:", err);
+      toast.error("Erreur lors de l'export PDF");
+    }
   };
 
   // Add member functions
@@ -976,18 +1041,49 @@ export default function ProjectDetailPage() {
 
         {activeTab === "tasks" && (
           <div className="space-y-4">
-            {/* Header with Add Task Button */}
+            {/* Header */}
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">
                 {t("detail.tasksBoard.title")}
               </h2>
               <div className="flex items-center space-x-2">
+                {/* Export CSV */}
+                <button
+                  onClick={handleExportTasksCsv}
+                  className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm"
+                >
+                  Export CSV
+                </button>
+                {/* Import CSV */}
                 <button
                   onClick={() => setShowImportTasksModal(true)}
                   className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
                 >
                   {t("detail.tasksBoard.importCSV")}
                 </button>
+                {/* View toggle */}
+                <div className="flex bg-gray-100 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setTaskViewMode("kanban")}
+                    className={`px-3 py-1.5 rounded text-sm transition ${
+                      taskViewMode === "kanban"
+                        ? "bg-white shadow-sm font-medium"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Kanban
+                  </button>
+                  <button
+                    onClick={() => setTaskViewMode("list")}
+                    className={`px-3 py-1.5 rounded text-sm transition ${
+                      taskViewMode === "list"
+                        ? "bg-white shadow-sm font-medium"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Liste
+                  </button>
+                </div>
                 <button
                   onClick={handleCreateTask}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
@@ -997,7 +1093,40 @@ export default function ProjectDetailPage() {
               </div>
             </div>
 
-            {/* Kanban Board */}
+            {/* Search bar */}
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                value={taskSearchQuery}
+                onChange={(e) => setTaskSearchQuery(e.target.value)}
+                placeholder={t("detail.tasksBoard.searchPlaceholder", {
+                  defaultValue: "Rechercher une tâche...",
+                })}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              />
+            </div>
+
+            {/* Kanban or List view */}
+            {taskViewMode === "list" ? (
+              <TaskListView
+                tasks={filteredTasks}
+                onStatusChange={handleTaskStatusChange}
+                onTaskClick={handleTaskClick}
+              />
+            ) : (
             <div className="overflow-x-auto pb-4">
               <div className="flex space-x-4 min-w-max">
                 {[
@@ -1191,18 +1320,29 @@ export default function ProjectDetailPage() {
                 })}
               </div>
             </div>
+            )}
           </div>
         )}
 
         {activeTab === "milestones" && (
-          <MilestoneRoadmap
-            milestones={milestones}
-            tasks={tasks}
-            onCreateMilestone={handleCreateMilestone}
-            onEditMilestone={handleEditMilestone}
-            onTaskUpdate={handleTaskUpdate}
-            onImportMilestones={() => setShowImportMilestonesModal(true)}
-          />
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <button
+                onClick={handleExportMilestonesCsv}
+                className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm"
+              >
+                Export CSV
+              </button>
+            </div>
+            <MilestoneRoadmap
+              milestones={milestones}
+              tasks={tasks}
+              onCreateMilestone={handleCreateMilestone}
+              onEditMilestone={handleEditMilestone}
+              onTaskUpdate={handleTaskUpdate}
+              onImportMilestones={() => setShowImportMilestonesModal(true)}
+            />
+          </div>
         )}
 
         {activeTab === "team" && (
@@ -1310,21 +1450,31 @@ export default function ProjectDetailPage() {
         {/* Gantt Tab */}
         {activeTab === "gantt" && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">{t("detail.gantt.tip")}</p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex-1">
+                <p className="text-sm text-blue-800">{t("detail.gantt.tip")}</p>
+              </div>
+              <button
+                onClick={handleExportGanttPdf}
+                className="ml-4 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm shrink-0"
+              >
+                Export PDF
+              </button>
             </div>
-            <GanttChart
-              tasks={tasks}
-              milestones={milestones}
-              projectStartDate={
-                project.startDate ? new Date(project.startDate) : undefined
-              }
-              projectEndDate={
-                project.endDate ? new Date(project.endDate) : undefined
-              }
-              fullTasks={tasks}
-              onDependencyChange={handleTaskUpdate}
-            />
+            <div id="gantt-container">
+              <GanttChart
+                tasks={tasks}
+                milestones={milestones}
+                projectStartDate={
+                  project.startDate ? new Date(project.startDate) : undefined
+                }
+                projectEndDate={
+                  project.endDate ? new Date(project.endDate) : undefined
+                }
+                fullTasks={tasks}
+                onDependencyChange={handleTaskUpdate}
+              />
+            </div>
           </div>
         )}
 

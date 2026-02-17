@@ -12,7 +12,9 @@ import {
   HttpStatus,
   ParseIntPipe,
   ParseUUIDPipe,
+  Res,
 } from '@nestjs/common';
+import type { FastifyReply } from 'fastify';
 import {
   ApiTags,
   ApiOperation,
@@ -138,6 +140,21 @@ export class TasksController {
   })
   getTasksByProject(@Param('projectId', ParseUUIDPipe) projectId: string) {
     return this.tasksService.getTasksByProject(projectId);
+  }
+
+  @Get('project/:projectId/export')
+  @ApiOperation({ summary: 'Exporter les tâches d\'un projet en CSV' })
+  @ApiResponse({ status: 200, description: 'Fichier CSV des tâches' })
+  @ApiResponse({ status: 404, description: 'Projet introuvable' })
+  async exportProjectTasks(
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Res() reply: FastifyReply,
+  ) {
+    const { csv, filename } = await this.tasksService.exportProjectTasksCsv(projectId);
+    reply
+      .header('Content-Type', 'text/csv; charset=utf-8')
+      .header('Content-Disposition', `attachment; filename="${filename}"`)
+      .send(csv);
   }
 
   @Get('orphans')

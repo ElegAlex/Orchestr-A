@@ -360,10 +360,10 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Projects List */}
+        <div className="flex flex-col gap-3">
           {filteredProjects.length === 0 ? (
-            <div className="col-span-full text-center py-12">
+            <div className="text-center py-12">
               <div className="text-6xl mb-4">📁</div>
               <p className="text-gray-500">{t("noProjects")}</p>
             </div>
@@ -372,63 +372,40 @@ export default function ProjectsPage() {
               <div
                 key={project.id}
                 onClick={() => router.push(`/${locale}/projects/${project.id}`)}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-blue-500 transition cursor-pointer"
+                className="bg-white rounded-lg shadow-sm border border-gray-200 px-5 py-3 hover:shadow-md hover:border-blue-500 transition cursor-pointer"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 flex-1">
-                    {project.name}
-                  </h3>
+                <div className="flex items-center gap-3">
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityBadgeColor(
-                      project.priority,
-                    )}`}
+                    className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${getPriorityBadgeColor(project.priority)}`}
                   >
                     {getPriorityLabel(project.priority)}
                   </span>
-                </div>
-
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                  {project.description || t("card.noDescription")}
-                </p>
-
-                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-gray-900 truncate min-w-0 flex-1">
+                    {project.name}
+                  </h3>
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(
-                      project.status,
-                    )}`}
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${getStatusBadgeColor(project.status)}`}
                   >
                     {getStatusLabel(project.status)}
                   </span>
-
+                  {(project.startDate || project.endDate) && (
+                    <span className="text-xs text-gray-500 shrink-0 hidden sm:inline">
+                      {project.startDate &&
+                        new Date(project.startDate).toLocaleDateString("fr-FR")}
+                      {project.startDate && project.endDate && " → "}
+                      {project.endDate &&
+                        new Date(project.endDate).toLocaleDateString("fr-FR")}
+                    </span>
+                  )}
                   {project.budgetHours && (
-                    <span className="text-sm text-gray-500">
+                    <span className="text-xs text-gray-500 shrink-0 hidden md:inline">
                       ⏱️ {t("card.budgetHours", { hours: project.budgetHours })}
                     </span>
                   )}
                 </div>
-
-                {(project.startDate || project.endDate) && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      {project.startDate && (
-                        <span>
-                          {t("card.startDate")}{" "}
-                          {new Date(project.startDate).toLocaleDateString(
-                            "fr-FR",
-                          )}
-                        </span>
-                      )}
-                      {project.endDate && (
-                        <span>
-                          {t("card.endDate")}{" "}
-                          {new Date(project.endDate).toLocaleDateString(
-                            "fr-FR",
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <p className="text-sm text-gray-500 truncate mt-0.5">
+                  {project.description || t("card.noDescription")}
+                </p>
               </div>
             ))
           )}

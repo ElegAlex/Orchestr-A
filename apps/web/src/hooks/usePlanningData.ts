@@ -168,7 +168,14 @@ export const usePlanningData = ({
             : [];
 
         setUsers(
-          Array.isArray(usersList) ? usersList.filter((u) => u.isActive) : [],
+          Array.isArray(usersList)
+            ? usersList.filter(
+                (u) =>
+                  u.isActive &&
+                  (u.departmentId ||
+                    (u.userServices && u.userServices.length > 0)),
+              )
+            : [],
         );
         setTasks(Array.isArray(tasksData) ? tasksData : []);
         setLeaves(Array.isArray(leavesData) ? leavesData : []);

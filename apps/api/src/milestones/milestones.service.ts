@@ -283,6 +283,45 @@ export class MilestonesService {
   }
 
   /**
+   * Exporter les jalons d'un projet en CSV
+   */
+  async exportProjectMilestonesCsv(projectId: string): Promise<{ csv: string; filename: string }> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+
+    const milestones = await this.prisma.milestone.findMany({
+      where: { projectId },
+      orderBy: { dueDate: 'asc' },
+    });
+
+    const headers = ['name', 'description', 'dueDate'];
+    const rows = milestones.map(m => [
+      m.name,
+      m.description || '',
+      m.dueDate.toISOString().split('T')[0],
+    ]);
+
+    const escapeField = (field: string) => {
+      if (field.includes(';') || field.includes('"') || field.includes('\n')) {
+        return '"' + field.replace(/"/g, '""') + '"';
+      }
+      return field;
+    };
+
+    const csv = [
+      headers.join(';'),
+      ...rows.map(row => row.map(escapeField).join(';')),
+    ].join('\n');
+
+    const sanitizedName = project.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+    return { csv, filename: `milestones-export-${sanitizedName}.csv` };
+  }
+
+  /**
    * Générer le template CSV pour l'import de jalons
    */
   getImportTemplate(): string {

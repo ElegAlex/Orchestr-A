@@ -34,6 +34,15 @@ describe("projectsService", () => {
   };
 
   const mockStats = {
+    tasks: { total: 10, completed: 5, inProgress: 3, blocked: 2 },
+    progress: 50,
+    hours: { estimated: 100, actual: 50, remaining: 50 },
+    team: { totalMembers: 5 },
+    epics: { total: 2 },
+    milestones: { total: 3 },
+  };
+
+  const expectedStats = {
     totalTasks: 10,
     completedTasks: 5,
     inProgressTasks: 3,
@@ -117,7 +126,7 @@ describe("projectsService", () => {
       const result = await projectsService.getStats("project-1");
 
       expect(api.get).toHaveBeenCalledWith("/projects/project-1/stats");
-      expect(result).toEqual(mockStats);
+      expect(result).toEqual(expectedStats);
     });
   });
 
