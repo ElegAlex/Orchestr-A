@@ -117,10 +117,12 @@ const mockProjects = [
 
 jest.mock("@/services/tasks.service", () => ({
   tasksService: {
+    getAll: jest.fn(),
     getByAssignee: jest.fn(),
     getOrphans: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    delete: jest.fn(),
   },
 }));
 
@@ -162,6 +164,11 @@ import toast from "react-hot-toast";
 describe("TasksPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Admin user calls getAll instead of getByAssignee
+    (tasksService.getAll as jest.Mock).mockResolvedValue({
+      data: mockTasks,
+      meta: { total: mockTasks.length, page: 1, limit: 1000, totalPages: 1 },
+    });
     (tasksService.getByAssignee as jest.Mock).mockResolvedValue(mockTasks);
     (tasksService.getOrphans as jest.Mock).mockResolvedValue([]);
     (tasksService.create as jest.Mock).mockResolvedValue({ id: "new-task" });
@@ -427,7 +434,16 @@ describe("TasksPage", () => {
 describe("TasksPage - Empty State", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (tasksService.getAll as jest.Mock).mockResolvedValue({
+      data: [],
+      meta: { total: 0, page: 1, limit: 1000, totalPages: 0 },
+    });
     (tasksService.getByAssignee as jest.Mock).mockResolvedValue([]);
+    (tasksService.getOrphans as jest.Mock).mockResolvedValue([]);
+    (usersService.getAll as jest.Mock).mockResolvedValue([]);
+    (projectsService.getAll as jest.Mock).mockResolvedValue({
+      data: [],
+    });
   });
 
   it("should display empty message when no tasks", async () => {
@@ -442,9 +458,17 @@ describe("TasksPage - Empty State", () => {
 describe("TasksPage - Error Handling", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (tasksService.getAll as jest.Mock).mockRejectedValue(
+      new Error("Network error"),
+    );
     (tasksService.getByAssignee as jest.Mock).mockRejectedValue(
       new Error("Network error"),
     );
+    (tasksService.getOrphans as jest.Mock).mockResolvedValue([]);
+    (usersService.getAll as jest.Mock).mockResolvedValue([]);
+    (projectsService.getAll as jest.Mock).mockResolvedValue({
+      data: [],
+    });
   });
 
   // TODO: Fix - error message may differ or toast may not be called

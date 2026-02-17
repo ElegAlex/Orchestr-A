@@ -12,7 +12,7 @@ import {
   personalTodosService,
   PersonalTodo,
 } from "@/services/personal-todos.service";
-import { Project, Task, TaskStatus } from "@/types";
+import { Project, Task, TaskStatus, ProjectStatus, Priority } from "@/types";
 import { PresenceDialog } from "@/components/PresenceDialog";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
@@ -56,6 +56,39 @@ export default function DashboardPage() {
     }
   };
 
+  // Helper functions for project badges
+  const getStatusBadgeColor = (status: ProjectStatus) => {
+    switch (status) {
+      case "DRAFT":
+        return "bg-gray-100 text-gray-800";
+      case "ACTIVE":
+        return "bg-green-100 text-green-800";
+      case "SUSPENDED":
+        return "bg-yellow-100 text-yellow-800";
+      case "COMPLETED":
+        return "bg-blue-100 text-blue-800";
+      case "CANCELLED":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getPriorityBadgeColor = (priority: Priority) => {
+    switch (priority) {
+      case "CRITICAL":
+        return "bg-red-100 text-red-800";
+      case "HIGH":
+        return "bg-orange-100 text-orange-800";
+      case "NORMAL":
+        return "bg-blue-100 text-blue-800";
+      case "LOW":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   // Fonction pour changer le statut d'une tâche
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
@@ -65,17 +98,15 @@ export default function DashboardPage() {
       // Refresh les tâches
       if (user?.id) {
         const tasks = await tasksService.getByAssignee(user.id);
-        const now = new Date();
-        const in15Days = new Date();
-        in15Days.setDate(now.getDate() + 15);
 
         const filteredTasks = Array.isArray(tasks)
-          ? tasks.filter((task) => {
-              if (task.status === "DONE") return false;
-              if (!task.endDate) return true;
-              const endDate = new Date(task.endDate);
-              return endDate >= now && endDate <= in15Days;
-            })
+          ? tasks
+              .filter((task) => task.status !== "DONE")
+              .sort((a, b) => {
+                if (!a.endDate) return 1;
+                if (!b.endDate) return -1;
+                return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+              })
           : [];
 
         setMyTasks(filteredTasks);
@@ -197,23 +228,14 @@ export default function DashboardPage() {
           try {
             tasks = await tasksService.getByAssignee(user.id);
 
-            // Filtrer : tâches non terminées avec échéance dans les 15 prochains jours
-            const now = new Date();
-            const in15Days = new Date();
-            in15Days.setDate(now.getDate() + 15);
-
             const filteredTasks = Array.isArray(tasks)
-              ? tasks.filter((task) => {
-                  // Exclure les tâches terminées
-                  if (task.status === "DONE") return false;
-
-                  // Si pas de date de fin, on inclut la tâche
-                  if (!task.endDate) return true;
-
-                  // Vérifier que l'échéance est dans les 15 prochains jours
-                  const endDate = new Date(task.endDate);
-                  return endDate >= now && endDate <= in15Days;
-                })
+              ? tasks
+                  .filter((task) => task.status !== "DONE")
+                  .sort((a, b) => {
+                    if (!a.endDate) return 1;
+                    if (!b.endDate) return -1;
+                    return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+                  })
               : [];
 
             setMyTasks(filteredTasks);
@@ -681,41 +703,56 @@ export default function DashboardPage() {
                 {t("projects.empty")}
               </p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-3">
                 {myProjects.map((project) => (
                   <div
                     key={project.id}
-                    onClick={() =>
-                      router.push(`/${locale}/projects/${project.id}`)
-                    }
-                    className="p-4 border border-[var(--border)] rounded-lg hover:border-[var(--primary)] transition cursor-pointer"
+                    onClick={() => router.push(`/${locale}/projects/${project.id}`)}
+                    className="bg-white rounded-lg shadow-sm border border-gray-200 px-5 py-3 hover:shadow-md hover:border-blue-500 transition cursor-pointer"
                   >
-                    <h3 className="font-semibold text-[var(--foreground)]">
-                      {project.name}
-                    </h3>
-                    <p className="text-sm text-[var(--muted-foreground)] mt-1">
-                      {project.description?.slice(0, 80)}
-                      {project.description &&
-                        project.description.length > 80 &&
-                        "..."}
-                    </p>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          project.status === "DRAFT"
-                            ? "bg-gray-200 text-gray-800"
-                            : project.status === "ACTIVE"
-                              ? "bg-green-100 text-green-800"
-                              : project.status === "SUSPENDED"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : project.status === "COMPLETED"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-red-100 text-red-800"
-                        }`}
-                      >
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${getPriorityBadgeColor(project.priority)}`}>
+                        {tCommon(`priority.${project.priority}`)}
+                      </span>
+                      <h3 className="text-base font-semibold text-gray-900 truncate min-w-0 flex-1">
+                        {project.name}
+                      </h3>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${getStatusBadgeColor(project.status)}`}>
                         {tCommon(`projectStatus.${project.status}`)}
                       </span>
+                      {(project.startDate || project.endDate) && (
+                        <span className="text-xs text-gray-500 shrink-0 hidden sm:inline">
+                          {project.startDate && new Date(project.startDate).toLocaleDateString("fr-FR")}
+                          {project.startDate && project.endDate && " → "}
+                          {project.endDate && new Date(project.endDate).toLocaleDateString("fr-FR")}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1.5 shrink-0 hidden sm:flex w-24">
+                        <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              (project.progress ?? 0) === 100
+                                ? "bg-green-500"
+                                : (project.progress ?? 0) >= 50
+                                  ? "bg-blue-500"
+                                  : "bg-amber-500"
+                            }`}
+                            style={{ width: `${project.progress ?? 0}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-600 font-medium w-8 text-right">
+                          {project.progress ?? 0}%
+                        </span>
+                      </div>
+                      {project.budgetHours && (
+                        <span className="text-xs text-gray-500 shrink-0 hidden md:inline">
+                          ⏱️ {project.budgetHours}h
+                        </span>
+                      )}
                     </div>
+                    <p className="text-sm text-gray-500 truncate mt-0.5">
+                      {project.description || tCommon("common.noDescription", { defaultValue: "Aucune description" })}
+                    </p>
                   </div>
                 ))}
               </div>

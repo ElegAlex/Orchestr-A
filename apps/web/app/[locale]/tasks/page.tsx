@@ -86,8 +86,14 @@ export default function TasksPage() {
       let tasksData: Task[] = [];
       if (user?.id) {
         try {
-          tasksData = await tasksService.getByAssignee(user.id);
-          tasksData = Array.isArray(tasksData) ? tasksData : [];
+          if (user.role === Role.ADMIN || user.role === Role.RESPONSABLE) {
+            // Admin/Responsable see ALL tasks
+            const response = await tasksService.getAll(1, 1000);
+            tasksData = Array.isArray(response.data) ? response.data : [];
+          } else {
+            tasksData = await tasksService.getByAssignee(user.id);
+            tasksData = Array.isArray(tasksData) ? tasksData : [];
+          }
         } catch (err) {
           tasksData = [];
           const axiosError = err as { response?: { status?: number } };

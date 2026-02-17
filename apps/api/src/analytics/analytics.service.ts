@@ -122,29 +122,14 @@ export class AnalyticsService {
 
   private async calculateProjectProgress(projectId: string): Promise<number> {
     const tasks = await this.prisma.task.findMany({
-      where: {
-        projectId,
-      },
-      select: {
-        status: true,
-        estimatedHours: true,
-      },
+      where: { projectId },
+      select: { status: true },
     });
 
     if (tasks.length === 0) return 0;
 
-    let totalHours = 0;
-    let completedHours = 0;
-
-    tasks.forEach((task) => {
-      const hours = task.estimatedHours || 1;
-      totalHours += hours;
-      if (task.status === 'DONE') {
-        completedHours += hours;
-      }
-    });
-
-    return totalHours > 0 ? Math.round((completedHours / totalHours) * 100) : 0;
+    const doneCount = tasks.filter((t) => t.status === 'DONE').length;
+    return Math.round((doneCount / tasks.length) * 100);
   }
 
   private async getTasks(startDate: Date, projectId?: string): Promise<Task[]> {
