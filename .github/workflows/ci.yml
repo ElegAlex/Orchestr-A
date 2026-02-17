@@ -35,7 +35,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
-        run: pnpm --filter database prisma generate
+        run: pnpm --filter database db:generate
 
       - name: Run ESLint
         run: pnpm run lint
@@ -92,10 +92,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
-        run: pnpm --filter database prisma generate
+        run: pnpm --filter database db:generate
 
       - name: Run Database Migrations
-        run: pnpm --filter database prisma migrate deploy
+        run: pnpm --filter database db:migrate:deploy
         env:
           DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_test
 
@@ -215,15 +215,15 @@ jobs:
         run: pnpm --filter web exec playwright install --with-deps chromium
 
       - name: Generate Prisma Client
-        run: pnpm --filter database prisma generate
+        run: pnpm --filter database db:generate
 
       - name: Run Database Migrations
-        run: pnpm --filter database prisma migrate deploy
+        run: pnpm --filter database db:migrate:deploy
         env:
           DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
 
       - name: Seed Database
-        run: pnpm --filter database prisma db seed
+        run: pnpm --filter database db:seed
         env:
           DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
 
@@ -293,7 +293,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
-        run: pnpm --filter database prisma generate
+        run: pnpm --filter database db:generate
 
       - name: Build All Projects
         run: pnpm run build
