@@ -190,9 +190,8 @@ test.describe("Role-Based Access Control", () => {
 
       for (const path of protectedPages) {
         await page.goto(path);
-        await page.waitForLoadState("domcontentloaded");
-
-        // Devrait être redirigé vers /login
+        // Client-side auth redirect happens after JS loads, so wait for URL change
+        await page.waitForURL(/\/login/, { timeout: 10000 });
         expect(page.url()).toContain("/login");
       }
     });
@@ -235,9 +234,8 @@ test.describe("Role-Based Access Control", () => {
       // Tenter d'accéder à une page protégée
       // Navigation may abort due to client-side auth redirect
       await page.goto("/projects").catch(() => {});
-      await page.waitForLoadState("domcontentloaded");
-
-      // Devrait être redirigé vers login
+      // Client-side auth redirect happens after JS loads, so wait for URL change
+      await page.waitForURL(/\/login/, { timeout: 10000 });
       expect(page.url()).toContain("/login");
     });
   });
