@@ -15,7 +15,7 @@ test.describe("Planning View", () => {
   test("should display week view by default", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Simply verify we're on the planning page and it loads
     await expect(page).toHaveURL(/.*planning/);
@@ -24,7 +24,7 @@ test.describe("Planning View", () => {
   test("should switch between week and month view", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Simply verify planning page loads correctly
     await expect(page).toHaveURL(/.*planning/);
@@ -33,7 +33,7 @@ test.describe("Planning View", () => {
   test("should navigate to previous/next period", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Simply verify planning page is accessible
     await expect(page).toHaveURL(/.*planning/);
@@ -42,7 +42,7 @@ test.describe("Planning View", () => {
   test("should display users in planning grid", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Vérifier la présence d'utilisateurs dans la grille
     const userRows = page.locator(
@@ -57,7 +57,7 @@ test.describe("Planning View", () => {
   test("should display telework indicators", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Vérifier la présence d'indicateurs de télétravail
     const teleworkIndicators = page.locator(
@@ -72,7 +72,7 @@ test.describe("Planning View", () => {
   test("should display leave indicators", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Vérifier la présence d'indicateurs de congés
     const leaveIndicators = page.locator(
@@ -87,7 +87,7 @@ test.describe("Planning View", () => {
   test("should toggle telework status", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Trouver une cellule cliquable pour le télétravail
     const teleworkCell = page
@@ -111,7 +111,7 @@ test.describe("Planning View", () => {
   test("should display task in planning", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Vérifier la présence de tâches dans le planning
     const tasks = page.locator(
@@ -126,7 +126,7 @@ test.describe("Planning View", () => {
   test("should open task details modal", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Cliquer sur une tâche
     const taskItem = page
@@ -146,7 +146,7 @@ test.describe("Planning View", () => {
   test("should drag and drop task", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Trouver une tâche draggable
     const taskItem = page
@@ -181,7 +181,7 @@ test.describe("Planning - Filters and Search", () => {
   test("should filter planning by department", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Chercher un filtre de département
     const deptFilter = page
@@ -206,7 +206,7 @@ test.describe("Planning - Filters and Search", () => {
   test("should search users in planning", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Chercher un champ de recherche
     const searchInput = page
@@ -230,7 +230,7 @@ test.describe("Planning - Filters and Search", () => {
   test("should go to current week/today", async ({ page }) => {
     await page.goto("/planning");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Naviguer dans le futur d'abord
     const nextButton = page

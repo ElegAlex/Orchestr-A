@@ -18,7 +18,7 @@ test.describe("Authentication", () => {
     await page.getByTestId("login-submit").click();
 
     // Wait a bit for potential redirect, then verify we're still on login
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await expect(page).toHaveURL(/.*login/);
     // Form should still be visible (not redirected)
     await expect(page.locator('input[id="login"]')).toBeVisible();

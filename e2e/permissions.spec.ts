@@ -24,7 +24,7 @@ test.describe("Role-Based Access Control", () => {
 
       for (const path of pages) {
         await page.goto(path);
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         // Vérifier qu'on n'est pas redirigé vers login ou page d'erreur
         const currentUrl = page.url();
@@ -36,7 +36,7 @@ test.describe("Role-Based Access Control", () => {
 
     test("admin should see user management options", async ({ page }) => {
       await page.goto("/users");
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
 
       // Vérifier la présence du bouton de création d'utilisateur
       const createButton = page
@@ -56,7 +56,7 @@ test.describe("Role-Based Access Control", () => {
 
     test("admin should access settings", async ({ page }) => {
       await page.goto("/settings");
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
 
       await expect(page.locator("h1")).toContainText(/paramètres|settings/i);
     });
@@ -129,7 +129,7 @@ test.describe("Role-Based Access Control", () => {
 
       for (const path of allowedPages) {
         await page.goto(path);
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         const currentUrl = page.url();
         // Ne devrait pas être redirigé vers une page d'erreur
@@ -157,7 +157,7 @@ test.describe("Role-Based Access Control", () => {
 
       // Aller sur la page utilisateurs
       await page.goto("/users");
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
 
       // Le bouton de création ne devrait pas être visible pour un utilisateur standard
       const createUserButton = page
@@ -190,7 +190,7 @@ test.describe("Role-Based Access Control", () => {
 
       for (const path of protectedPages) {
         await page.goto(path);
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         // Devrait être redirigé vers /login
         expect(page.url()).toContain("/login");
@@ -199,7 +199,7 @@ test.describe("Role-Based Access Control", () => {
 
     test("should access login page without redirection", async ({ page }) => {
       await page.goto("/login");
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
 
       expect(page.url()).toContain("/login");
       await expect(page.getByTestId("login-submit")).toBeVisible();
@@ -209,7 +209,7 @@ test.describe("Role-Based Access Control", () => {
       page,
     }) => {
       await page.goto("/register");
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
 
       // Soit on est sur register, soit on est redirigé vers login (si register est désactivé)
       const isOnRegister = page.url().includes("/register");
@@ -235,7 +235,7 @@ test.describe("Role-Based Access Control", () => {
       // Tenter d'accéder à une page protégée
       // Navigation may abort due to client-side auth redirect
       await page.goto("/projects").catch(() => {});
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
 
       // Devrait être redirigé vers login
       expect(page.url()).toContain("/login");
@@ -264,7 +264,7 @@ test.describe("Role-Based Access Control", () => {
 
       // Naviguer vers une page qui fait des appels API
       await page.goto("/projects");
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
 
       // Attendre un peu pour s'assurer que les requêtes sont parties
       await page.waitForTimeout(1000);
@@ -281,7 +281,7 @@ test.describe("Role-Specific Features", () => {
 
   test("should display role in user profile", async ({ page }) => {
     await page.goto("/profile");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Le rôle devrait être affiché quelque part
     const roleIndicator = page.locator(
@@ -292,7 +292,7 @@ test.describe("Role-Specific Features", () => {
 
   test("admin should see delete buttons", async ({ page }) => {
     await page.goto("/users");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Les boutons de suppression devraient être visibles pour l'admin
     const deleteButtons = page.locator(
@@ -308,7 +308,7 @@ test.describe("Role-Specific Features", () => {
     page,
   }) => {
     await page.goto("/projects");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Cliquer sur un projet
     const projectCard = page
@@ -319,7 +319,7 @@ test.describe("Role-Specific Features", () => {
 
     if (await projectCard.isVisible()) {
       await projectCard.click();
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
 
       // Vérifier la présence des boutons d'action (edit, members, delete)
       const editButton = page

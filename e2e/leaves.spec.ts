@@ -16,7 +16,7 @@ test.describe("Leaves Management", () => {
     await page.goto("/leaves");
 
     // Attendre que la page soit chargée
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Vérifier que la liste ou un message "aucun congé" s'affiche
     const hasList = await page
@@ -111,7 +111,7 @@ test.describe("Leaves Management", () => {
   test("should filter leaves by status", async ({ page }) => {
     await page.goto("/leaves");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Chercher un filtre de statut
     const statusFilter = page
@@ -134,7 +134,7 @@ test.describe("Leaves Management", () => {
   test("should display leave details", async ({ page }) => {
     await page.goto("/leaves");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Cliquer sur le premier congé dans la liste
     const firstLeave = page
@@ -160,7 +160,7 @@ test.describe("Leave Approval Workflow", () => {
   test("should display pending leaves for approval", async ({ page }) => {
     await page.goto("/leaves");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Filtrer par statut "En attente"
     const pendingFilter = page
@@ -186,7 +186,7 @@ test.describe("Leave Approval Workflow", () => {
   test("should approve a leave request", async ({ page }) => {
     await page.goto("/leaves");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Trouver un congé en attente
     const pendingLeave = page
@@ -223,7 +223,7 @@ test.describe("Leave Approval Workflow", () => {
   test("should reject a leave request", async ({ page }) => {
     await page.goto("/leaves");
 
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Trouver un congé en attente
     const pendingLeave = page
