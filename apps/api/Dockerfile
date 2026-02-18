@@ -4,7 +4,7 @@
 FROM node:22-alpine AS builder
 
 # Installation de pnpm
-RUN npm install -g pnpm@9.15.0
+RUN npm install -g pnpm@9.15.9
 
 # Création du répertoire de travail
 WORKDIR /app
@@ -32,7 +32,7 @@ RUN pnpm --filter api run build
 FROM node:22-alpine AS production
 
 # Installation de pnpm, netcat (pour healthcheck) et postgresql-client (pour seed)
-RUN npm install -g pnpm@9.15.0 && apk add --no-cache netcat-openbsd postgresql-client
+RUN npm install -g pnpm@9.15.9 && apk add --no-cache netcat-openbsd postgresql-client
 
 # Création de l'utilisateur non-root
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001

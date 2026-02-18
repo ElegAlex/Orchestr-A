@@ -7,7 +7,7 @@
 FROM node:22-alpine AS api-builder
 
 WORKDIR /build
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 # Copy monorepo config
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
@@ -26,7 +26,7 @@ RUN pnpm run build --filter=api
 FROM node:22-alpine AS web-builder
 
 WORKDIR /build
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 # Copy monorepo config
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
@@ -85,7 +85,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm globally
-RUN npm install -g pnpm@9.15.0
+RUN npm install -g pnpm@9.15.9
 
 # Get PostgreSQL version dynamically
 RUN PG_VERSION=$(ls /usr/lib/postgresql/) && echo "PostgreSQL version: $PG_VERSION" && echo "$PG_VERSION" > /tmp/pg_version

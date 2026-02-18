@@ -4,7 +4,7 @@
 FROM node:22-alpine AS deps
 
 # Installation de pnpm
-RUN npm install -g pnpm@9.15.0
+RUN npm install -g pnpm@9.15.9
 
 WORKDIR /app
 
@@ -27,7 +27,7 @@ RUN cd packages/database && pnpm prisma generate || true
 FROM node:22-alpine AS builder
 
 # Installation de pnpm
-RUN npm install -g pnpm@9.15.0
+RUN npm install -g pnpm@9.15.9
 
 WORKDIR /app
 
@@ -62,7 +62,7 @@ RUN pnpm --filter web run build
 FROM node:22-alpine AS production
 
 # Installation de pnpm
-RUN npm install -g pnpm@9.15.0
+RUN npm install -g pnpm@9.15.9
 
 # Création de l'utilisateur non-root
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001

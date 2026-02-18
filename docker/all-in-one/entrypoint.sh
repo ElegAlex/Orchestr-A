@@ -101,7 +101,7 @@ echo "  Interface web: http://localhost:3000"
 echo "  API:          http://localhost:3000/api"
 echo "  Documentation: http://localhost:3000/api/docs"
 echo ""
-echo "  Login par défaut: admin@orchestr-a.local / admin123"
+echo "  Login par défaut: admin / admin123"
 echo "════════════════════════════════════════════════════════════"
 echo ""
 
