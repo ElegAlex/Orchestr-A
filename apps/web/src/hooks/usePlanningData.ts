@@ -30,6 +30,8 @@ import { getServiceStyle } from "@/lib/planning-utils";
 import { useSettingsStore } from "@/stores/settings.store";
 import toast from "react-hot-toast";
 
+const DEFAULT_VISIBLE_DAYS: number[] = [1, 2, 3, 4, 5];
+
 export type ViewFilter = "all" | "availability" | "activity";
 
 export interface DayCell {
@@ -99,8 +101,10 @@ export const usePlanningData = ({
   const [holidays, setHolidays] = useState<Holiday[]>([]);
 
   // Lire les jours visibles depuis les paramètres (ISO: 1=Lun, 7=Dim)
-  const visibleDays = useSettingsStore((state) =>
-    state.getSetting<number[]>("planning.visibleDays", [1, 2, 3, 4, 5]),
+  const visibleDays = useSettingsStore(
+    (state) =>
+      (state.settings["planning.visibleDays"] as number[] | undefined) ??
+      DEFAULT_VISIBLE_DAYS,
   );
 
   // Calculer les jours à afficher

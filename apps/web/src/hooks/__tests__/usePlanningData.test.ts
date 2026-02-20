@@ -60,18 +60,12 @@ jest.mock("react-hot-toast", () => ({
   },
 }));
 
-const mockGetSetting = jest.fn(
-  <T,>(key: string, defaultValue?: T): T => {
-    if (key === "planning.visibleDays") return [1, 2, 3, 4, 5] as T;
-    return defaultValue as T;
-  },
-);
+let mockVisibleDays: number[] = [1, 2, 3, 4, 5];
 
 jest.mock("@/stores/settings.store", () => ({
   useSettingsStore: jest.fn((selector: unknown) => {
     const state = {
-      settings: { "planning.visibleDays": [1, 2, 3, 4, 5] },
-      getSetting: mockGetSetting,
+      settings: { "planning.visibleDays": mockVisibleDays },
     };
     return typeof selector === "function"
       ? (selector as (s: typeof state) => unknown)(state)
@@ -179,6 +173,7 @@ describe("usePlanningData", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockVisibleDays = [1, 2, 3, 4, 5];
     (usersService.getAll as jest.Mock).mockResolvedValue(mockUsers);
     (tasksService.getByDateRange as jest.Mock).mockResolvedValue(mockTasks);
     (leavesService.getByDateRange as jest.Mock).mockResolvedValue(mockLeaves);
@@ -440,13 +435,7 @@ describe("usePlanningData", () => {
   });
 
   it("should generate 7 display days for week view when all days visible", async () => {
-    mockGetSetting.mockImplementation(
-      <T,>(key: string, defaultValue?: T): T => {
-        if (key === "planning.visibleDays")
-          return [1, 2, 3, 4, 5, 6, 7] as T;
-        return defaultValue as T;
-      },
-    );
+    mockVisibleDays = [1, 2, 3, 4, 5, 6, 7];
 
     const { result } = renderHook(() =>
       usePlanningData({
@@ -463,12 +452,7 @@ describe("usePlanningData", () => {
   });
 
   it("should generate only selected days for week view", async () => {
-    mockGetSetting.mockImplementation(
-      <T,>(key: string, defaultValue?: T): T => {
-        if (key === "planning.visibleDays") return [1, 3, 5] as T;
-        return defaultValue as T;
-      },
-    );
+    mockVisibleDays = [1, 3, 5];
 
     const { result } = renderHook(() =>
       usePlanningData({
@@ -488,13 +472,7 @@ describe("usePlanningData", () => {
   });
 
   it("should include weekends in month view when configured", async () => {
-    mockGetSetting.mockImplementation(
-      <T,>(key: string, defaultValue?: T): T => {
-        if (key === "planning.visibleDays")
-          return [1, 2, 3, 4, 5, 6, 7] as T;
-        return defaultValue as T;
-      },
-    );
+    mockVisibleDays = [1, 2, 3, 4, 5, 6, 7];
 
     const { result } = renderHook(() =>
       usePlanningData({
