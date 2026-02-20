@@ -60,6 +60,25 @@ jest.mock("react-hot-toast", () => ({
   },
 }));
 
+const mockGetSetting = jest.fn(
+  <T,>(key: string, defaultValue?: T): T => {
+    if (key === "planning.visibleDays") return [1, 2, 3, 4, 5] as T;
+    return defaultValue as T;
+  },
+);
+
+jest.mock("@/stores/settings.store", () => ({
+  useSettingsStore: jest.fn((selector: unknown) => {
+    const state = {
+      settings: { "planning.visibleDays": [1, 2, 3, 4, 5] },
+      getSetting: mockGetSetting,
+    };
+    return typeof selector === "function"
+      ? (selector as (s: typeof state) => unknown)(state)
+      : state;
+  }),
+}));
+
 describe("usePlanningData", () => {
   const mockUsers = [
     {
@@ -418,5 +437,79 @@ describe("usePlanningData", () => {
 
     // Should still extract users correctly
     expect(result.current.users.length).toBeGreaterThan(0);
+  });
+
+  it("should generate 7 display days for week view when all days visible", async () => {
+    mockGetSetting.mockImplementation(
+      <T,>(key: string, defaultValue?: T): T => {
+        if (key === "planning.visibleDays")
+          return [1, 2, 3, 4, 5, 6, 7] as T;
+        return defaultValue as T;
+      },
+    );
+
+    const { result } = renderHook(() =>
+      usePlanningData({
+        currentDate: new Date(2025, 5, 15),
+        viewMode: "week",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.displayDays).toHaveLength(7);
+  });
+
+  it("should generate only selected days for week view", async () => {
+    mockGetSetting.mockImplementation(
+      <T,>(key: string, defaultValue?: T): T => {
+        if (key === "planning.visibleDays") return [1, 3, 5] as T;
+        return defaultValue as T;
+      },
+    );
+
+    const { result } = renderHook(() =>
+      usePlanningData({
+        currentDate: new Date(2025, 5, 16), // Monday June 16, 2025
+        viewMode: "week",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.displayDays).toHaveLength(3); // Mon, Wed, Fri
+    expect(result.current.displayDays.map((d) => d.getDay())).toEqual([
+      1, 3, 5,
+    ]);
+  });
+
+  it("should include weekends in month view when configured", async () => {
+    mockGetSetting.mockImplementation(
+      <T,>(key: string, defaultValue?: T): T => {
+        if (key === "planning.visibleDays")
+          return [1, 2, 3, 4, 5, 6, 7] as T;
+        return defaultValue as T;
+      },
+    );
+
+    const { result } = renderHook(() =>
+      usePlanningData({
+        currentDate: new Date(2025, 5, 1), // June 2025
+        viewMode: "month",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    const dayNumbers = result.current.displayDays.map((d) => d.getDay());
+    // Should include Saturday (6) and Sunday (0)
+    expect(dayNumbers).toContain(6);
+    expect(dayNumbers).toContain(0);
   });
 });

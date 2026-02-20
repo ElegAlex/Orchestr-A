@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 // Types for settings
-type SettingValue = string | number | boolean;
+type SettingValue = string | number | boolean | number[];
 
 interface SettingConfig {
   value: SettingValue;
@@ -64,6 +64,13 @@ const DEFAULT_SETTINGS: Record<string, SettingConfig> = {
     value: 3,
     category: 'general',
     description: 'Nombre maximum de jours de télétravail par semaine',
+  },
+  // Planning settings
+  'planning.visibleDays': {
+    value: [1, 2, 3, 4, 5],
+    category: 'planning',
+    description:
+      'Jours visibles dans le planning (1=Lundi, 2=Mardi, ..., 7=Dimanche)',
   },
 };
 

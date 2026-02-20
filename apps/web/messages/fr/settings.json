@@ -7,6 +7,7 @@
   "unsavedChanges": "Vous avez des modifications non enregistrées.",
   "tabs": {
     "display": "Affichage",
+    "planning": "Planning",
     "holidays": "Jours fériés"
   },
   "display": {
@@ -44,6 +45,23 @@
         "monday": "Lundi",
         "sunday": "Dimanche"
       }
+    }
+  },
+  "planning": {
+    "title": "Paramètres du planning",
+    "visibleDays": {
+      "label": "Jours visibles dans le planning",
+      "hint": "Sélectionnez les jours à afficher dans les vues semaine et mois.",
+      "minWarning": "Au moins un jour doit rester sélectionné."
+    },
+    "days": {
+      "monday": "Lundi",
+      "tuesday": "Mardi",
+      "wednesday": "Mercredi",
+      "thursday": "Jeudi",
+      "friday": "Vendredi",
+      "saturday": "Samedi",
+      "sunday": "Dimanche"
     }
   },
   "messages": {

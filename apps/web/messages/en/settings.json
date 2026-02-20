@@ -7,6 +7,7 @@
   "unsavedChanges": "You have unsaved changes.",
   "tabs": {
     "display": "Display",
+    "planning": "Planning",
     "holidays": "Holidays"
   },
   "display": {
@@ -44,6 +45,23 @@
         "monday": "Monday",
         "sunday": "Sunday"
       }
+    }
+  },
+  "planning": {
+    "title": "Planning Settings",
+    "visibleDays": {
+      "label": "Visible days in planning",
+      "hint": "Select the weekdays to display in planning views (week and month).",
+      "minWarning": "At least one day must remain selected."
+    },
+    "days": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
     }
   },
   "messages": {

@@ -27,6 +27,7 @@ import {
   Holiday,
 } from "@/types";
 import { getServiceStyle } from "@/lib/planning-utils";
+import { useSettingsStore } from "@/stores/settings.store";
 import toast from "react-hot-toast";
 
 export type ViewFilter = "all" | "availability" | "activity";
@@ -97,11 +98,21 @@ export const usePlanningData = ({
   >([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
 
+  // Lire les jours visibles depuis les paramètres (ISO: 1=Lun, 7=Dim)
+  const visibleDays = useSettingsStore((state) =>
+    state.getSetting<number[]>("planning.visibleDays", [1, 2, 3, 4, 5]),
+  );
+
   // Calculer les jours à afficher
   const displayDays = useMemo(() => {
+    // Convertir ISO (1=Lun..7=Dim) en JS getDay() (0=Dim..6=Sam)
+    const jsVisibleDays = visibleDays.map((d) => (d === 7 ? 0 : d));
+
     if (viewMode === "week") {
       const start = startOfWeek(currentDate, { locale: fr, weekStartsOn: 1 });
-      return Array.from({ length: 5 }, (_, i) => addDays(start, i));
+      return Array.from({ length: 7 }, (_, i) => addDays(start, i)).filter(
+        (d) => jsVisibleDays.includes(d.getDay()),
+      );
     } else {
       const start = startOfWeek(
         new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
@@ -118,11 +129,10 @@ export const usePlanningData = ({
       ).filter(
         (d) =>
           d.getMonth() === currentDate.getMonth() &&
-          d.getDay() !== 0 &&
-          d.getDay() !== 6,
+          jsVisibleDays.includes(d.getDay()),
       );
     }
-  }, [currentDate, viewMode]);
+  }, [currentDate, viewMode, visibleDays]);
 
   // Fetch data
   const fetchData = useCallback(

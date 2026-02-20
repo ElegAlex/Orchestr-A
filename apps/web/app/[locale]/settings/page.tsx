@@ -11,7 +11,17 @@ import { useRouter } from "next/navigation";
 import { HolidaysManager } from "@/components/holidays/HolidaysManager";
 import { useTranslations, useLocale } from "next-intl";
 
-type CategoryTab = "display" | "holidays";
+type CategoryTab = "display" | "planning" | "holidays";
+
+const WEEKDAY_OPTIONS = [
+  { isoDay: 1, labelKey: "planning.days.monday" },
+  { isoDay: 2, labelKey: "planning.days.tuesday" },
+  { isoDay: 3, labelKey: "planning.days.wednesday" },
+  { isoDay: 4, labelKey: "planning.days.thursday" },
+  { isoDay: 5, labelKey: "planning.days.friday" },
+  { isoDay: 6, labelKey: "planning.days.saturday" },
+  { isoDay: 7, labelKey: "planning.days.sunday" },
+];
 
 const DATE_FORMAT_OPTIONS = [
   {
@@ -193,6 +203,16 @@ export default function SettingsPage() {
               {t("tabs.display")}
             </button>
             <button
+              onClick={() => setActiveTab("planning")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "planning"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              {t("tabs.planning")}
+            </button>
+            <button
               onClick={() => setActiveTab("holidays")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === "holidays"
@@ -289,6 +309,60 @@ export default function SettingsPage() {
                     {t("display.weekStart.options.sunday")}
                   </option>
                 </select>
+              </div>
+            </div>
+          )}
+
+          {/* Planning Settings */}
+          {activeTab === "planning" && (
+            <div className="p-6 space-y-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                {t("planning.title")}
+              </h2>
+
+              {/* Visible Days */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t("planning.visibleDays.label")}
+                </label>
+                <p className="text-sm text-gray-500 mb-3">
+                  {t("planning.visibleDays.hint")}
+                </p>
+                <div className="space-y-2">
+                  {WEEKDAY_OPTIONS.map((day) => {
+                    const currentDays = (settings["planning.visibleDays"] as number[]) || [1, 2, 3, 4, 5];
+                    const isChecked = currentDays.includes(day.isoDay);
+                    const isLastChecked = isChecked && currentDays.length === 1;
+
+                    return (
+                      <label
+                        key={day.isoDay}
+                        className="flex items-center space-x-3 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          disabled={isLastChecked}
+                          onChange={() => {
+                            const newDays = isChecked
+                              ? currentDays.filter((d) => d !== day.isoDay)
+                              : [...currentDays, day.isoDay].sort((a, b) => a - b);
+                            handleChange("planning.visibleDays", newDays);
+                          }}
+                          className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50"
+                        />
+                        <span className={`text-sm ${isLastChecked ? "text-gray-400" : "text-gray-700"}`}>
+                          {t(day.labelKey)}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {((settings["planning.visibleDays"] as number[]) || []).length === 1 && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    {t("planning.visibleDays.minWarning")}
+                  </p>
+                )}
               </div>
             </div>
           )}

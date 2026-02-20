@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   appName: "ORCHESTR'A",
   defaultLeaveDays: 25,
   maxTeleworkDaysPerWeek: 3,
+  "planning.visibleDays": [1, 2, 3, 4, 5],
 };
 
 export const useSettingsStore = create<SettingsState>()(
