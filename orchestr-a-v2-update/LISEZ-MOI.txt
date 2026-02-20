@@ -1,0 +1,11 @@
+MISE A JOUR ORCHESTR'A V2
+==========================
+
+1. Copier ce dossier sur le serveur
+2. Ouvrir un terminal dans ce dossier
+3. Lancer : bash update.sh
+4. Suivre les instructions a l'ecran
+
+En cas de probleme : bash rollback.sh
+Verification :       bash verify.sh
+Documentation :      docs/GUIDE-MISE-A-JOUR.md

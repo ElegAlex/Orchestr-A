@@ -149,7 +149,8 @@ ENV NODE_ENV=production \
     JWT_SECRET=change-me-in-production-minimum-32-characters \
     JWT_EXPIRES_IN=7d \
     CORS_ORIGIN=http://localhost:3000 \
-    ALLOWED_ORIGINS=http://localhost:3000
+    ALLOWED_ORIGINS=http://localhost:3000 \
+    SWAGGER_ENABLED=false
 
 # Exposed port (nginx reverse proxy)
 EXPOSE 3000
