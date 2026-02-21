@@ -20,11 +20,8 @@ const sizeMap = {
 };
 
 function getAvatarSrc(avatarUrl: string): string {
-  if (avatarUrl.startsWith("http")) return avatarUrl;
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_URL?.replace(/\/api$/, "") ||
-    "http://localhost:4000";
-  return `${apiBase}/${avatarUrl}`;
+  if (avatarUrl.startsWith("http") || avatarUrl.startsWith("/")) return avatarUrl;
+  return `/${avatarUrl}`;
 }
 
 export function UserAvatar({ user, size = "md", className = "" }: UserAvatarProps) {

@@ -1273,7 +1273,7 @@ export class UsersService {
 
     return this.prisma.user.update({
       where: { id: userId },
-      data: { avatarUrl: `uploads/avatars/${filename}`, avatarPreset: null },
+      data: { avatarUrl: `/api/uploads/avatars/${filename}`, avatarPreset: null },
       select: this.AVATAR_SELECT,
     });
   }
@@ -1297,7 +1297,8 @@ export class UsersService {
     });
 
     if (user?.avatarUrl) {
-      const filePath = join(process.cwd(), user.avatarUrl);
+      const relativePath = user.avatarUrl.replace(/^\/api\//, '');
+      const filePath = join(process.cwd(), relativePath);
       await fs.unlink(filePath).catch(() => null);
     }
 
