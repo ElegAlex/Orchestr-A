@@ -27,7 +27,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     { key: "dashboard", href: `/${locale}/dashboard`, icon: "🎯" },
     { key: "projects", href: `/${locale}/projects`, icon: "📁" },
     { key: "tasks", href: `/${locale}/tasks`, icon: "✓" },
-    { key: "events", href: `/${locale}/events`, icon: "🎉" },
+    { key: "events", href: `/${locale}/events`, icon: "📣" },
     { key: "planning", href: `/${locale}/planning`, icon: "🗓️" },
     { key: "timeTracking", href: `/${locale}/time-tracking`, icon: "⏱️" },
     { key: "leaves", href: `/${locale}/leaves`, icon: "🏖️" },
