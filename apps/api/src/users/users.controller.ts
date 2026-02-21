@@ -12,6 +12,8 @@ import {
   HttpStatus,
   ParseIntPipe,
   ParseUUIDPipe,
+  Req,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,7 +21,9 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import type { FastifyRequest } from 'fastify';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -28,6 +32,7 @@ import {
   ImportUsersDto,
   UsersValidationPreviewDto,
 } from './dto/import-users.dto';
+import { AvatarPresetDto } from './dto/avatar-preset.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
@@ -199,6 +204,44 @@ export class UsersController {
   })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.findOne(id);
+  }
+
+  @Post('me/avatar')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Uploader un avatar (jpg, png, webp, max 2MB)" })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: 'Avatar mis à jour' })
+  async uploadAvatar(
+    @CurrentUser('id') userId: string,
+    @Req() req: FastifyRequest,
+  ) {
+    if (!req.isMultipart()) {
+      throw new BadRequestException('La requête doit être multipart/form-data');
+    }
+    const file = await req.file();
+    if (!file) {
+      throw new BadRequestException('Aucun fichier fourni');
+    }
+    return this.usersService.uploadAvatar(userId, file);
+  }
+
+  @Patch('me/avatar/preset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Choisir un avatar prédéfini' })
+  @ApiResponse({ status: 200, description: 'Preset avatar mis à jour' })
+  setAvatarPreset(
+    @CurrentUser('id') userId: string,
+    @Body() dto: AvatarPresetDto,
+  ) {
+    return this.usersService.setAvatarPreset(userId, dto.preset);
+  }
+
+  @Delete('me/avatar')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Supprimer l'avatar" })
+  @ApiResponse({ status: 200, description: 'Avatar supprimé' })
+  deleteAvatar(@CurrentUser('id') userId: string) {
+    return this.usersService.deleteAvatar(userId);
   }
 
   @Patch('me/change-password')

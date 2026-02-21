@@ -168,6 +168,7 @@ export default function DepartmentsPage() {
       description: service.description || "",
       departmentId: service.departmentId,
       managerId: service.manager?.id || "",
+      color: service.color || undefined,
     });
     setShowServiceModal(true);
   };
@@ -187,6 +188,7 @@ export default function DepartmentsPage() {
       description: "",
       departmentId: "",
       managerId: "",
+      color: undefined,
     });
     setEditingService(null);
   };
@@ -422,6 +424,12 @@ export default function DepartmentsPage() {
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center space-x-3 mb-1">
+                                  {service.color && (
+                                    <div
+                                      className="w-3 h-3 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: service.color }}
+                                    />
+                                  )}
                                   <h3 className="text-lg font-semibold text-gray-900">
                                     {service.name}
                                   </h3>
@@ -654,6 +662,83 @@ export default function DepartmentsPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder={t("serviceModal.descriptionPlaceholder")}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Couleur
+                </label>
+                <div className="space-y-2">
+                  <div className="flex items-center flex-wrap gap-2">
+                    {[
+                      "#3B82F6",
+                      "#10B981",
+                      "#8B5CF6",
+                      "#F59E0B",
+                      "#EF4444",
+                      "#EC4899",
+                      "#06B6D4",
+                      "#F97316",
+                    ].map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() =>
+                          setServiceForm({ ...serviceForm, color })
+                        }
+                        className="w-8 h-8 rounded-full transition-all focus:outline-none"
+                        style={{
+                          backgroundColor: color,
+                          boxShadow:
+                            serviceForm.color === color
+                              ? `0 0 0 2px white, 0 0 0 4px ${color}`
+                              : "none",
+                          outline:
+                            serviceForm.color === color
+                              ? `2px solid ${color}`
+                              : "none",
+                        }}
+                        title={color}
+                      />
+                    ))}
+                    {serviceForm.color && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setServiceForm({ ...serviceForm, color: undefined })
+                        }
+                        className="w-8 h-8 rounded-full border-2 border-gray-300 bg-white flex items-center justify-center text-gray-500 hover:border-gray-400 transition-all text-sm leading-none"
+                        title="Effacer la couleur"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {serviceForm.color && (
+                      <div
+                        className="w-6 h-6 rounded-full border border-gray-300 flex-shrink-0"
+                        style={{ backgroundColor: serviceForm.color }}
+                      />
+                    )}
+                    <input
+                      type="text"
+                      value={serviceForm.color || ""}
+                      onChange={(e) =>
+                        setServiceForm({
+                          ...serviceForm,
+                          color: e.target.value || undefined,
+                        })
+                      }
+                      placeholder="#000000"
+                      className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                      maxLength={7}
+                    />
+                    <span className="text-xs text-gray-400">
+                      Code hexadécimal (optionnel)
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div>

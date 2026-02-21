@@ -1,14 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
 import { usersService } from "@/services/users.service";
 import { useThemeStore, Theme } from "@/stores/theme.store";
 import { Role } from "@/types";
+import { UserAvatar } from "@/components/UserAvatar";
 import toast from "react-hot-toast";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter, usePathname } from "next/navigation";
+
+const AVATAR_PRESETS = [
+  "avatar_01",
+  "avatar_02",
+  "avatar_03",
+  "avatar_04",
+  "avatar_05",
+  "avatar_06",
+  "avatar_07",
+  "avatar_08",
+  "avatar_09",
+  "avatar_10",
+] as const;
 
 type TabType = "personal" | "security" | "preferences";
 
@@ -20,13 +34,58 @@ export default function ProfilePage() {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const { theme, setTheme } = useThemeStore();
+  const setUser = useAuthStore((state) => state.setUser);
   const [activeTab, setActiveTab] = useState<TabType>("personal");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
+
+  const handleAvatarPreset = async (preset: string) => {
+    try {
+      setAvatarLoading(true);
+      const updated = await usersService.setAvatarPreset(preset);
+      setUser({ ...user!, ...updated });
+      toast.success("Avatar mis à jour");
+    } catch {
+      toast.error("Erreur lors de la mise à jour de l'avatar");
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setAvatarLoading(true);
+      const updated = await usersService.uploadAvatar(file);
+      setUser({ ...user!, ...updated });
+      toast.success("Avatar mis à jour");
+    } catch {
+      toast.error("Erreur lors de l'upload. Format accepté : jpg, png, webp (max 2MB)");
+    } finally {
+      setAvatarLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    try {
+      setAvatarLoading(true);
+      const updated = await usersService.deleteAvatar();
+      setUser({ ...user!, ...updated });
+      toast.success("Avatar supprimé");
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
 
   const getRoleBadgeColor = (role: Role) => {
     switch (role) {
@@ -106,10 +165,7 @@ export default function ProfilePage() {
           <div className="flex items-start space-x-6">
             {/* Avatar */}
             <div className="flex-shrink-0">
-              <div className="w-24 h-24 rounded-full bg-blue-600 text-white flex items-center justify-center text-3xl font-bold">
-                {user.firstName[0]}
-                {user.lastName[0]}
-              </div>
+              <UserAvatar user={user} size="lg" />
             </div>
 
             {/* Info */}
@@ -315,6 +371,76 @@ export default function ProfilePage() {
               </h2>
             </div>
             <div className="p-6 space-y-6">
+              {/* Avatar section */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-4">Avatar</h3>
+                <div className="flex items-start gap-6">
+                  {/* Current avatar preview */}
+                  <div className="flex-shrink-0">
+                    <UserAvatar user={user} size="lg" />
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    {/* Preset grid */}
+                    <div>
+                      <p className="text-sm text-gray-600 mb-3">Choisir un avatar prédéfini :</p>
+                      <div className="grid grid-cols-5 gap-2">
+                        {AVATAR_PRESETS.map((preset) => (
+                          <button
+                            key={preset}
+                            onClick={() => handleAvatarPreset(preset)}
+                            disabled={avatarLoading}
+                            className={`w-14 h-14 rounded-full overflow-hidden border-2 transition hover:scale-105 disabled:opacity-50 ${
+                              user.avatarPreset === preset
+                                ? "border-blue-500 ring-2 ring-blue-300"
+                                : "border-transparent hover:border-gray-300"
+                            }`}
+                            title={preset}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={`/avatars/${preset}.svg`}
+                              alt={preset}
+                              className="w-full h-full object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Upload & Delete */}
+                    <div className="flex items-center gap-3 pt-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={avatarLoading}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm disabled:opacity-50"
+                      >
+                        Télécharger une image
+                      </button>
+                      {(user.avatarUrl || user.avatarPreset) && (
+                        <button
+                          onClick={handleAvatarDelete}
+                          disabled={avatarLoading}
+                          className="px-4 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition text-sm disabled:opacity-50"
+                        >
+                          Supprimer
+                        </button>
+                      )}
+                      {avatarLoading && (
+                        <span className="text-sm text-gray-500">Chargement...</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-gray-200"></div>
+
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">
                   {t("preferences.language.title")}

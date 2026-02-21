@@ -24,11 +24,29 @@ export const GroupHeader = ({
     toggleService(group.id);
   };
 
+  // If the service has a custom hex color, use inline styles; otherwise use Tailwind classes
+  const hex = group.hexColor;
+  const headerStyle = hex
+    ? {
+        background: `linear-gradient(to right, ${hex}22, ${hex}11)`,
+        borderLeft: `4px solid ${hex}`,
+      }
+    : undefined;
+  const headerClass = hex
+    ? "px-4 py-3 font-semibold"
+    : `px-4 py-3 font-semibold ${colors.header}`;
+  const textClass = hex ? "text-gray-900" : colors.text;
+  const badgeStyle = hex ? { backgroundColor: hex } : undefined;
+  const badgeClass = hex
+    ? "text-white text-xs font-bold px-2 py-1 rounded-full"
+    : `${colors.badge} text-white text-xs font-bold px-2 py-1 rounded-full`;
+
   return (
     <tr className="sticky top-[48px] z-20">
       <td
         colSpan={colSpan}
-        className={`px-4 py-3 font-semibold ${colors.header}`}
+        className={headerClass}
+        style={headerStyle}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -48,7 +66,7 @@ export const GroupHeader = ({
               }
             >
               <svg
-                className={`w-4 h-4 ${colors.text}`}
+                className={`w-4 h-4 ${textClass}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -64,26 +82,24 @@ export const GroupHeader = ({
 
             {group.icon && <span className="text-2xl mr-3">{group.icon}</span>}
             <div>
-              <span className={`text-base font-bold ${colors.text}`}>
+              <span className={`text-base font-bold ${textClass}`}>
                 {group.name}
               </span>
               <span
-                className={`ml-3 text-xs font-normal ${colors.text} opacity-75`}
+                className={`ml-3 text-xs font-normal ${textClass} opacity-75`}
               >
                 {group.users.length}{" "}
                 {group.users.length > 1 ? t("group.people") : t("group.person")}
               </span>
               {isCollapsed && (
-                <span className={`ml-2 text-xs ${colors.text} opacity-60`}>
+                <span className={`ml-2 text-xs ${textClass} opacity-60`}>
                   {t("group.collapsed")}
                 </span>
               )}
             </div>
           </div>
           {taskCount > 0 && (
-            <div
-              className={`${colors.badge} text-white text-xs font-bold px-2 py-1 rounded-full`}
-            >
+            <div className={badgeClass} style={badgeStyle}>
               {taskCount} {taskCount > 1 ? t("group.tasks") : t("group.task")}
             </div>
           )}

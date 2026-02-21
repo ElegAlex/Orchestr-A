@@ -6,6 +6,7 @@ import {
   IsUUID,
   MaxLength,
   MinLength,
+  Matches,
 } from 'class-validator';
 
 export class CreateServiceDto {
@@ -46,4 +47,16 @@ export class CreateServiceDto {
   @IsUUID()
   @IsOptional()
   managerId?: string;
+
+  @ApiProperty({
+    description: 'Couleur du service au format hexadécimal',
+    example: '#3B82F6',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @Matches(/^#[0-9A-Fa-f]{6}$/, {
+    message: 'La couleur doit être au format hexadécimal (#RRGGBB)',
+  })
+  color?: string;
 }

@@ -119,6 +119,27 @@ export const usersService = {
     const response = await api.get<PresenceData>(`/users/presence${params}`);
     return response.data;
   },
+
+  async uploadAvatar(file: File): Promise<User> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post<User>("/users/me/avatar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
+  async setAvatarPreset(preset: string): Promise<User> {
+    const response = await api.patch<User>("/users/me/avatar/preset", {
+      preset,
+    });
+    return response.data;
+  },
+
+  async deleteAvatar(): Promise<User> {
+    const response = await api.delete<User>("/users/me/avatar");
+    return response.data;
+  },
 };
 
 export interface ImportUserData {

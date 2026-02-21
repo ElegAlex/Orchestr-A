@@ -15,8 +15,12 @@ import {
   UserPreviewItemDto,
   UserPreviewStatus,
 } from './dto/import-users.dto';
+import { VALID_PRESETS } from './dto/avatar-preset.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from 'database';
+import { promises as fs } from 'fs';
+import { join, extname } from 'path';
+import type { MultipartFile } from '@fastify/multipart';
 
 /** Type de dépendance utilisateur */
 export interface UserDependency {
@@ -1215,6 +1219,93 @@ export class UsersService {
         total: users.length,
       },
     };
+  }
+
+  private readonly AVATAR_SELECT = {
+    id: true,
+    email: true,
+    login: true,
+    firstName: true,
+    lastName: true,
+    role: true,
+    departmentId: true,
+    avatarUrl: true,
+    avatarPreset: true,
+    isActive: true,
+    updatedAt: true,
+  } as const;
+
+  async uploadAvatar(userId: string, file: MultipartFile) {
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        'Format non supporté. Utilisez jpg, png ou webp.',
+      );
+    }
+
+    const extMap: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+    };
+    const ext = extMap[file.mimetype];
+    const filename = `${userId}${ext}`;
+    const uploadsDir = join(process.cwd(), 'uploads', 'avatars');
+
+    // Create dir if needed
+    await fs.mkdir(uploadsDir, { recursive: true });
+
+    // Remove old avatar files for this user
+    try {
+      const existing = await fs.readdir(uploadsDir);
+      for (const f of existing) {
+        if (f.startsWith(userId + '.') || f.startsWith(userId + '_')) {
+          await fs.unlink(join(uploadsDir, f)).catch(() => null);
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // Read and save the buffer
+    const buffer = await file.toBuffer();
+    await fs.writeFile(join(uploadsDir, filename), buffer);
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: `uploads/avatars/${filename}`, avatarPreset: null },
+      select: this.AVATAR_SELECT,
+    });
+  }
+
+  async setAvatarPreset(userId: string, preset: string) {
+    if (!(VALID_PRESETS as readonly string[]).includes(preset)) {
+      throw new BadRequestException('Preset invalide');
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarPreset: preset, avatarUrl: null },
+      select: this.AVATAR_SELECT,
+    });
+  }
+
+  async deleteAvatar(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarUrl: true },
+    });
+
+    if (user?.avatarUrl) {
+      const filePath = join(process.cwd(), user.avatarUrl);
+      await fs.unlink(filePath).catch(() => null);
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: null, avatarPreset: null },
+      select: this.AVATAR_SELECT,
+    });
   }
 
   getImportTemplate(): string {

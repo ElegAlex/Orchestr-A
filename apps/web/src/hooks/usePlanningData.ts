@@ -53,6 +53,7 @@ export interface ServiceGroup {
   isManagement: boolean;
   users: User[];
   color: string;
+  hexColor?: string | null;
 }
 
 interface UsePlanningDataOptions {
@@ -289,6 +290,7 @@ export const usePlanningData = ({
             a.lastName.localeCompare(b.lastName),
           ),
           color: style.color,
+          hexColor: service.color || null,
         });
       }
     }

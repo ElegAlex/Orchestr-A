@@ -7,12 +7,27 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import fastifyMultipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ logger: true }),
   );
+
+  // Multipart (file uploads)
+  await app.register(
+    fastifyMultipart as Parameters<typeof app.register>[0],
+    { limits: { fileSize: 2 * 1024 * 1024 } },
+  );
+
+  // Static files (avatars uploads)
+  await app.register(fastifyStatic as Parameters<typeof app.register>[0], {
+    root: join(process.cwd(), 'uploads'),
+    prefix: '/api/uploads/',
+  });
 
   // Security
   await app.register(helmet as Parameters<typeof app.register>[0], {

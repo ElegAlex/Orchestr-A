@@ -119,7 +119,8 @@ export interface User {
   role: Role;
   departmentId?: string;
   isActive: boolean;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
+  avatarPreset?: string | null;
   createdAt: string;
   updatedAt: string;
   department?: Department;
@@ -177,6 +178,7 @@ export interface Service {
   description?: string;
   departmentId: string;
   managerId?: string;
+  color?: string | null;
   createdAt: string;
   updatedAt: string;
   manager?: User;
@@ -196,6 +198,7 @@ export interface CreateServiceDto {
   description?: string;
   departmentId: string;
   managerId?: string;
+  color?: string;
 }
 
 // ===========================

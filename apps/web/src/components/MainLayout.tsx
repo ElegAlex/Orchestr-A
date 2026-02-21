@@ -7,6 +7,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useAuthStore } from "@/stores/auth.store";
 import { Role } from "@/types";
 import { Logo, LogoIcon } from "@/components/Logo";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface NavItem {
   key: string;
@@ -26,7 +27,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     { key: "dashboard", href: `/${locale}/dashboard`, icon: "🎯" },
     { key: "projects", href: `/${locale}/projects`, icon: "📁" },
     { key: "tasks", href: `/${locale}/tasks`, icon: "✓" },
-    { key: "events", href: `/${locale}/events`, icon: "📅" },
+    { key: "events", href: `/${locale}/events`, icon: "🎉" },
     { key: "planning", href: `/${locale}/planning`, icon: "🗓️" },
     { key: "timeTracking", href: `/${locale}/time-tracking`, icon: "⏱️" },
     { key: "leaves", href: `/${locale}/leaves`, icon: "🏖️" },
@@ -147,10 +148,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             href={`/${locale}/profile`}
             className="flex items-center hover:bg-[var(--accent)] rounded-lg p-2 -m-2 transition"
           >
-            <div className="w-10 h-10 rounded-full bg-[var(--primary)] text-white flex items-center justify-center font-semibold">
-              {user?.firstName?.[0]}
-              {user?.lastName?.[0]}
-            </div>
+            {user && (
+              <UserAvatar user={user} size="sm" />
+            )}
             {sidebarOpen && (
               <div className="ml-3 flex-1">
                 <p className="text-sm font-medium text-[var(--foreground)]">
