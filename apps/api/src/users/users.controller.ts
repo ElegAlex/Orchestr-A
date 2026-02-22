@@ -208,7 +208,7 @@ export class UsersController {
 
   @Post('me/avatar')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Uploader un avatar (jpg, png, webp, max 2MB)" })
+  @ApiOperation({ summary: 'Uploader un avatar (jpg, png, webp, max 2MB)' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: 'Avatar mis à jour' })
   async uploadAvatar(

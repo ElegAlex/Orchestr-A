@@ -16,7 +16,13 @@ export class EventsService {
    * Créer un nouvel événement
    */
   async create(createEventDto: CreateEventDto, createdById: string) {
-    const { projectId, participantIds: rawParticipantIds, serviceIds, date, ...eventData } = createEventDto;
+    const {
+      projectId,
+      participantIds: rawParticipantIds,
+      serviceIds,
+      date,
+      ...eventData
+    } = createEventDto;
 
     // Résoudre les serviceIds en userIds et fusionner avec participantIds
     let participantIds = rawParticipantIds;
@@ -238,7 +244,13 @@ export class EventsService {
       throw new NotFoundException('Événement introuvable');
     }
 
-    const { projectId, participantIds: rawParticipantIds, serviceIds, date, ...eventData } = updateEventDto;
+    const {
+      projectId,
+      participantIds: rawParticipantIds,
+      serviceIds,
+      date,
+      ...eventData
+    } = updateEventDto;
 
     // Résoudre les serviceIds en userIds et fusionner avec participantIds
     let participantIds = rawParticipantIds;

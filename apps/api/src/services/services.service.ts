@@ -16,7 +16,8 @@ export class ServicesService {
    * Créer un nouveau service
    */
   async create(createServiceDto: CreateServiceDto) {
-    const { name, description, departmentId, managerId, color } = createServiceDto;
+    const { name, description, departmentId, managerId, color } =
+      createServiceDto;
 
     // Vérifier que le département existe
     const department = await this.prisma.department.findUnique({
@@ -194,7 +195,8 @@ export class ServicesService {
       throw new NotFoundException('Service introuvable');
     }
 
-    const { name, description, departmentId, managerId, color } = updateServiceDto;
+    const { name, description, departmentId, managerId, color } =
+      updateServiceDto;
 
     // Vérifier le département si modifié
     if (departmentId && departmentId !== existingService.departmentId) {

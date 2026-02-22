@@ -105,7 +105,8 @@ export class CreateEventDto {
   participantIds?: string[];
 
   @ApiProperty({
-    description: 'Liste des IDs des services à inviter (tous les membres seront ajoutés)',
+    description:
+      'Liste des IDs des services à inviter (tous les membres seront ajoutés)',
     example: ['uuid-service-1'],
     required: false,
     type: [String],

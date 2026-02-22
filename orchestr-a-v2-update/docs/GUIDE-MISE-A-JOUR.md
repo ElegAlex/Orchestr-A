@@ -97,6 +97,7 @@ bash update.sh
 ```
 
 Le script va :
+
 1. Vérifier que Docker fonctionne
 2. Vérifier que l'application tourne
 3. Créer un backup de votre base de données
@@ -273,6 +274,7 @@ bash rollback.sh
 ```
 
 Ce script :
+
 1. Remet la version précédente
 2. Restaure la base de données depuis le backup
 3. Vérifie que tout fonctionne
@@ -327,6 +329,7 @@ docker logs orchestr-a
 ```
 
 Causes fréquentes :
+
 - Le port 3000 est déjà utilisé par un autre programme
 - Le volume de données est corrompu
 
@@ -380,18 +383,18 @@ sudo systemctl enable docker
 
 ## 5. Commandes utiles (aide-mémoire)
 
-| Je veux...                              | Je tape...                                   |
-|-----------------------------------------|----------------------------------------------|
-| Voir si l'app tourne                    | `docker ps`                                  |
-| Voir les logs                           | `docker logs orchestr-a`                     |
-| Voir les derniers logs en direct        | `docker logs orchestr-a -f --tail 50`        |
-| Redémarrer l'application                | `docker restart orchestr-a`                  |
-| Arrêter l'application                   | `docker stop orchestr-a`                     |
-| Démarrer l'application                  | `docker start orchestr-a`                    |
-| Voir l'espace disque Docker             | `docker system df`                           |
-| Voir l'état des services internes       | `docker exec orchestr-a supervisorctl status` |
-| Faire un backup de la base              | `docker exec orchestr-a gosu postgres pg_dump -d orchestr_a > backup.sql` |
-| Vérification complète                   | `bash verify.sh`                             |
+| Je veux...                        | Je tape...                                                                |
+| --------------------------------- | ------------------------------------------------------------------------- |
+| Voir si l'app tourne              | `docker ps`                                                               |
+| Voir les logs                     | `docker logs orchestr-a`                                                  |
+| Voir les derniers logs en direct  | `docker logs orchestr-a -f --tail 50`                                     |
+| Redémarrer l'application          | `docker restart orchestr-a`                                               |
+| Arrêter l'application             | `docker stop orchestr-a`                                                  |
+| Démarrer l'application            | `docker start orchestr-a`                                                 |
+| Voir l'espace disque Docker       | `docker system df`                                                        |
+| Voir l'état des services internes | `docker exec orchestr-a supervisorctl status`                             |
+| Faire un backup de la base        | `docker exec orchestr-a gosu postgres pg_dump -d orchestr_a > backup.sql` |
+| Vérification complète             | `bash verify.sh`                                                          |
 
 ---
 
@@ -400,5 +403,6 @@ sudo systemctl enable docker
 En cas de problème non résolu par ce guide :
 
 **Alexandre BERGE**
+
 - Fournissez les logs : `docker logs orchestr-a > erreur.log`
 - Fournissez le résultat de : `bash verify.sh > diagnostic.txt`

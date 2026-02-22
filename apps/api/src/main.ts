@@ -18,10 +18,9 @@ async function bootstrap() {
   );
 
   // Multipart (file uploads)
-  await app.register(
-    fastifyMultipart as Parameters<typeof app.register>[0],
-    { limits: { fileSize: 2 * 1024 * 1024 } },
-  );
+  await app.register(fastifyMultipart as Parameters<typeof app.register>[0], {
+    limits: { fileSize: 2 * 1024 * 1024 },
+  });
 
   // Static files (avatars uploads)
   await app.register(fastifyStatic as Parameters<typeof app.register>[0], {

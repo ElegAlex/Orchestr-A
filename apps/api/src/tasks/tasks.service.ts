@@ -553,7 +553,8 @@ export class TasksService {
     // Si assigneeIds est fourni avec des valeurs, on utilise le premier comme assigneeId principal
     // Vérifier que assigneeIds est EXPLICITEMENT présent dans le DTO original
     const hasAssigneeIds =
-      ('assigneeIds' in updateTaskDto || (serviceIds && serviceIds.length > 0)) &&
+      ('assigneeIds' in updateTaskDto ||
+        (serviceIds && serviceIds.length > 0)) &&
       Array.isArray(assigneeIds) &&
       assigneeIds.length > 0;
     let primaryAssigneeId: string | undefined = assigneeId;
