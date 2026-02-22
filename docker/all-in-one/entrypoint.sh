@@ -182,6 +182,13 @@ gosu postgres /usr/lib/postgresql/$PG_VERSION/bin/pg_ctl -D /data/postgresql -w 
 # ─── Initialisation Redis ────────────────────────────────────────
 
 mkdir -p /data/redis
+
+# ─── Uploads persistés ───────────────────────────────────────────
+
+mkdir -p /data/uploads/avatars
+rm -rf /app/uploads
+ln -sf /data/uploads /app/uploads
+log_ok "Uploads liés à /data/uploads (persisté)"
 chmod 755 /data/redis
 
 # ─── Démarrage ───────────────────────────────────────────────────
