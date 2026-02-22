@@ -103,4 +103,15 @@ export class CreateEventDto {
   @IsUUID('4', { each: true })
   @IsOptional()
   participantIds?: string[];
+
+  @ApiProperty({
+    description: 'Liste des IDs des services à inviter (tous les membres seront ajoutés)',
+    example: ['uuid-service-1'],
+    required: false,
+    type: [String],
+  })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  serviceIds?: string[];
 }

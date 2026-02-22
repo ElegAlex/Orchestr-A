@@ -48,6 +48,7 @@ export interface CreateEventDto {
   isAllDay?: boolean;
   projectId?: string;
   participantIds?: string[];
+  serviceIds?: string[];
 }
 
 export interface UpdateEventDto {
@@ -59,6 +60,7 @@ export interface UpdateEventDto {
   isAllDay?: boolean;
   projectId?: string;
   participantIds?: string[];
+  serviceIds?: string[];
 }
 
 // ===========================

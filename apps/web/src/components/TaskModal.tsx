@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Task, TaskStatus, Priority, Milestone, User, Project } from "@/types";
+import { Task, TaskStatus, Priority, Milestone, User, Project, Service } from "@/types";
 import { UserMultiSelect } from "./UserMultiSelect";
+import { ServiceMultiSelect } from "./ServiceMultiSelect";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 
@@ -15,6 +16,8 @@ interface TaskModalProps {
   projects?: Project[]; // Liste des projets disponibles
   milestones?: Milestone[];
   users?: User[];
+  services?: Service[];
+  memberCounts?: Record<string, number>;
 }
 
 export function TaskModal({
@@ -26,6 +29,8 @@ export function TaskModal({
   projects = [],
   milestones = [],
   users = [],
+  services = [],
+  memberCounts = {},
 }: TaskModalProps) {
   const t = useTranslations("tasks");
 
@@ -37,6 +42,7 @@ export function TaskModal({
     projectId: projectId || "",
     milestoneId: "",
     assigneeIds: [] as string[],
+    serviceIds: [] as string[],
     estimatedHours: "",
     startDate: "",
     endDate: "",
@@ -69,6 +75,7 @@ export function TaskModal({
         projectId: task.projectId || "",
         milestoneId: task.milestoneId || "",
         assigneeIds,
+        serviceIds: [],
         estimatedHours: task.estimatedHours?.toString() || "",
         startDate: task.startDate
           ? new Date(task.startDate).toISOString().split("T")[0]
@@ -88,6 +95,7 @@ export function TaskModal({
         projectId: projectId || "",
         milestoneId: "",
         assigneeIds: [],
+        serviceIds: [],
         estimatedHours: "",
         startDate: "",
         endDate: "",
@@ -126,6 +134,9 @@ export function TaskModal({
         taskData.assigneeIds = formData.assigneeIds;
       } else {
         taskData.assigneeIds = [];
+      }
+      if (formData.serviceIds.length > 0) {
+        taskData.serviceIds = formData.serviceIds;
       }
       if (formData.estimatedHours)
         taskData.estimatedHours = parseFloat(formData.estimatedHours);
@@ -364,6 +375,20 @@ export function TaskModal({
               />
             </div>
           </div>
+
+          {/* Services */}
+          {services.length > 0 && (
+            <ServiceMultiSelect
+              label={t("modal.create.servicesLabel") || "Services"}
+              services={services}
+              selectedIds={formData.serviceIds}
+              onChange={(ids) =>
+                setFormData({ ...formData, serviceIds: ids })
+              }
+              placeholder={t("modal.create.servicesPlaceholder") || "Inviter des services entiers"}
+              memberCounts={memberCounts}
+            />
+          )}
 
           {/* Estimation et dates */}
           <div className="grid grid-cols-3 gap-4">

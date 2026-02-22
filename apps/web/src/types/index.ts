@@ -389,6 +389,7 @@ export interface CreateTaskDto {
   milestoneId?: string;
   assigneeId?: string; // Assigné principal (rétrocompatibilité)
   assigneeIds?: string[]; // Assignés multiples
+  serviceIds?: string[]; // Services à inviter (résolution en membres)
   estimatedHours?: number;
   startDate?: string;
   endDate?: string;
@@ -406,6 +407,7 @@ export interface UpdateTaskDto {
   milestoneId?: string;
   assigneeId?: string; // Assigné principal (rétrocompatibilité)
   assigneeIds?: string[]; // Assignés multiples
+  serviceIds?: string[]; // Services à inviter (résolution en membres)
   estimatedHours?: number;
   progress?: number;
   startDate?: string;

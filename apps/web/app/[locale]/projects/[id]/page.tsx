@@ -16,6 +16,7 @@ import {
 import { ImportPreviewModal } from "@/components/ImportPreviewModal";
 import { ProjectEditModal } from "@/components/ProjectEditModal";
 import { usersService } from "@/services/users.service";
+import { servicesService } from "@/services/services.service";
 import { useAuthStore } from "@/stores/auth.store";
 import {
   Project,
@@ -26,6 +27,7 @@ import {
   TaskStatus,
   Milestone,
   User,
+  Service,
   Role,
   UpdateProjectDto,
 } from "@/types";
@@ -71,6 +73,8 @@ export default function ProjectDetailPage() {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allServices, setAllServices] = useState<Service[]>([]);
+  const [serviceMemberCounts, setServiceMemberCounts] = useState<Record<string, number>>({});
   const [showImportTasksModal, setShowImportTasksModal] = useState(false);
   const [showImportMilestonesModal, setShowImportMilestonesModal] =
     useState(false);
@@ -560,6 +564,14 @@ export default function ProjectDetailPage() {
     } catch (err) {
       console.error("Error loading users:", err);
       setAllUsers([]);
+    }
+    // Load services
+    try {
+      const { services, memberCounts } = await servicesService.getAllWithMemberCounts();
+      setAllServices(services);
+      setServiceMemberCounts(memberCounts);
+    } catch {
+      setAllServices([]);
     }
     setShowTaskModal(true);
   };
@@ -1775,6 +1787,8 @@ export default function ProjectDetailPage() {
           projectId={projectId}
           milestones={milestones}
           users={allUsers}
+          services={allServices}
+          memberCounts={serviceMemberCounts}
         />
 
         {/* Import Tasks Modal */}

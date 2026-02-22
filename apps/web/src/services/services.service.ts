@@ -43,4 +43,20 @@ export const servicesService = {
     const response = await api.get<User[]>(`/services/${id}/members`);
     return response.data;
   },
+
+  async getAllWithMemberCounts(): Promise<{ services: Service[]; memberCounts: Record<string, number> }> {
+    const services = await this.getAll();
+    const memberCounts: Record<string, number> = {};
+    await Promise.all(
+      services.map(async (service) => {
+        try {
+          const members = await this.getMembers(service.id);
+          memberCounts[service.id] = members.length;
+        } catch {
+          memberCounts[service.id] = 0;
+        }
+      }),
+    );
+    return { services, memberCounts };
+  },
 };

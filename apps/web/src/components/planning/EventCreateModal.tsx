@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Project, Role, User } from "@/types";
+import { Project, Role, User, Service } from "@/types";
 import { eventsService, CreateEventDto } from "@/services/events.service";
 import { projectsService } from "@/services/projects.service";
 import { usersService } from "@/services/users.service";
+import { servicesService } from "@/services/services.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
+import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import { useAuthStore } from "@/stores/auth.store";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
@@ -26,10 +28,12 @@ export const EventCreateModal = ({
   const user = useAuthStore((state) => state.user);
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState<
-    CreateEventDto & { participantIds: string[] }
+    CreateEventDto & { participantIds: string[]; serviceIds: string[] }
   >({
     title: "",
     description: "",
@@ -40,6 +44,7 @@ export const EventCreateModal = ({
     isExternalIntervention: false,
     projectId: "",
     participantIds: [],
+    serviceIds: [],
   });
 
   useEffect(() => {
@@ -79,6 +84,16 @@ export const EventCreateModal = ({
           setUsers([]);
         }
       }
+
+      // Fetch services
+      try {
+        const { services: servicesData, memberCounts: counts } =
+          await servicesService.getAllWithMemberCounts();
+        setServices(servicesData);
+        setMemberCounts(counts);
+      } catch {
+        setServices([]);
+      }
     } catch (err) {
       console.error("Error fetching initial data:", err);
     }
@@ -101,6 +116,8 @@ export const EventCreateModal = ({
           formData.participantIds.length > 0
             ? formData.participantIds
             : undefined,
+        serviceIds:
+          formData.serviceIds.length > 0 ? formData.serviceIds : undefined,
       };
       await eventsService.create(eventData);
       toast.success(t("success"));
@@ -126,6 +143,7 @@ export const EventCreateModal = ({
       isExternalIntervention: false,
       projectId: "",
       participantIds: [],
+      serviceIds: [],
     });
   };
 
@@ -279,6 +297,19 @@ export const EventCreateModal = ({
             }
             placeholder={t("participantsPlaceholder")}
           />
+
+          {services.length > 0 && (
+            <ServiceMultiSelect
+              label={t("services") || "Services"}
+              services={services}
+              selectedIds={formData.serviceIds}
+              onChange={(ids) =>
+                setFormData({ ...formData, serviceIds: ids })
+              }
+              placeholder={t("servicesPlaceholder") || "Inviter des services entiers"}
+              memberCounts={memberCounts}
+            />
+          )}
 
           <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
             <button

@@ -163,6 +163,17 @@ export class CreateTaskDto {
   endTime?: string;
 
   @ApiProperty({
+    description: 'Liste des IDs des services à inviter (tous les membres seront ajoutés)',
+    example: ['uuid-service-1'],
+    required: false,
+    type: [String],
+  })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  serviceIds?: string[];
+
+  @ApiProperty({
     description: 'Tags pour catégoriser la tâche',
     example: ['backend', 'auth'],
     required: false,

@@ -16,7 +16,19 @@ export class EventsService {
    * Créer un nouvel événement
    */
   async create(createEventDto: CreateEventDto, createdById: string) {
-    const { projectId, participantIds, date, ...eventData } = createEventDto;
+    const { projectId, participantIds: rawParticipantIds, serviceIds, date, ...eventData } = createEventDto;
+
+    // Résoudre les serviceIds en userIds et fusionner avec participantIds
+    let participantIds = rawParticipantIds;
+    if (serviceIds && serviceIds.length > 0) {
+      const serviceMembers = await this.prisma.userService.findMany({
+        where: { serviceId: { in: serviceIds } },
+        select: { userId: true },
+      });
+      const serviceUserIds = serviceMembers.map((m) => m.userId);
+      const merged = [...(rawParticipantIds || []), ...serviceUserIds];
+      participantIds = [...new Set(merged)];
+    }
 
     // Vérifier que le projet existe si fourni
     if (projectId) {
@@ -226,7 +238,19 @@ export class EventsService {
       throw new NotFoundException('Événement introuvable');
     }
 
-    const { projectId, participantIds, date, ...eventData } = updateEventDto;
+    const { projectId, participantIds: rawParticipantIds, serviceIds, date, ...eventData } = updateEventDto;
+
+    // Résoudre les serviceIds en userIds et fusionner avec participantIds
+    let participantIds = rawParticipantIds;
+    if (serviceIds && serviceIds.length > 0) {
+      const serviceMembers = await this.prisma.userService.findMany({
+        where: { serviceId: { in: serviceIds } },
+        select: { userId: true },
+      });
+      const serviceUserIds = serviceMembers.map((m) => m.userId);
+      const merged = [...(rawParticipantIds || []), ...serviceUserIds];
+      participantIds = [...new Set(merged)];
+    }
 
     // Vérifier le projet si fourni
     if (projectId) {

@@ -34,11 +34,24 @@ export class TasksService {
       epicId,
       milestoneId,
       assigneeId,
-      assigneeIds,
+      assigneeIds: rawAssigneeIds,
+      serviceIds,
       startDate,
       endDate,
       ...taskData
     } = createTaskDto;
+
+    // Résoudre les serviceIds en userIds et fusionner avec assigneeIds
+    let assigneeIds = rawAssigneeIds;
+    if (serviceIds && serviceIds.length > 0) {
+      const serviceMembers = await this.prisma.userService.findMany({
+        where: { serviceId: { in: serviceIds } },
+        select: { userId: true },
+      });
+      const serviceUserIds = serviceMembers.map((m) => m.userId);
+      const merged = [...(rawAssigneeIds || []), ...serviceUserIds];
+      assigneeIds = [...new Set(merged)];
+    }
 
     // Vérification des permissions en fonction du rôle
     if (user.role === Role.CONTRIBUTEUR && projectId) {
@@ -466,11 +479,24 @@ export class TasksService {
       epicId,
       milestoneId,
       assigneeId,
-      assigneeIds,
+      assigneeIds: rawAssigneeIds,
+      serviceIds,
       startDate,
       endDate,
       ...taskData
     } = updateTaskDto;
+
+    // Résoudre les serviceIds en userIds et fusionner avec assigneeIds
+    let assigneeIds = rawAssigneeIds;
+    if (serviceIds && serviceIds.length > 0) {
+      const serviceMembers = await this.prisma.userService.findMany({
+        where: { serviceId: { in: serviceIds } },
+        select: { userId: true },
+      });
+      const serviceUserIds = serviceMembers.map((m) => m.userId);
+      const merged = [...(rawAssigneeIds || []), ...serviceUserIds];
+      assigneeIds = [...new Set(merged)];
+    }
 
     // Vérifications similaires à create si les champs sont fournis
     if (projectId) {
@@ -527,11 +553,11 @@ export class TasksService {
     // Si assigneeIds est fourni avec des valeurs, on utilise le premier comme assigneeId principal
     // Vérifier que assigneeIds est EXPLICITEMENT présent dans le DTO original
     const hasAssigneeIds =
-      'assigneeIds' in updateTaskDto &&
+      ('assigneeIds' in updateTaskDto || (serviceIds && serviceIds.length > 0)) &&
       Array.isArray(assigneeIds) &&
       assigneeIds.length > 0;
     let primaryAssigneeId: string | undefined = assigneeId;
-    if (hasAssigneeIds) {
+    if (hasAssigneeIds && assigneeIds) {
       primaryAssigneeId = assigneeIds[0];
     }
 
@@ -539,7 +565,7 @@ export class TasksService {
     const task = await this.prisma.$transaction(async (tx) => {
       // Si assigneeIds est EXPLICITEMENT fourni dans le body avec des valeurs non-vides,
       // mettre à jour les assignations. Sinon, on ne touche pas aux assignations existantes.
-      if (hasAssigneeIds) {
+      if (hasAssigneeIds && assigneeIds) {
         // Supprimer toutes les anciennes assignations
         await tx.taskAssignee.deleteMany({
           where: { taskId: id },

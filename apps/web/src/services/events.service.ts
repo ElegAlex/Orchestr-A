@@ -50,6 +50,7 @@ export interface CreateEventDto {
   isExternalIntervention?: boolean;
   projectId?: string;
   participantIds?: string[];
+  serviceIds?: string[];
 }
 
 export interface UpdateEventDto {
@@ -62,6 +63,7 @@ export interface UpdateEventDto {
   isExternalIntervention?: boolean;
   projectId?: string;
   participantIds?: string[];
+  serviceIds?: string[];
 }
 
 export const eventsService = {

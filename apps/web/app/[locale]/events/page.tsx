@@ -11,8 +11,10 @@ import {
 } from "@/services/events.service";
 import { projectsService } from "@/services/projects.service";
 import { usersService } from "@/services/users.service";
-import { Project, Role, User } from "@/types";
+import { servicesService } from "@/services/services.service";
+import { Project, Role, User, Service } from "@/types";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
+import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 
@@ -24,13 +26,15 @@ export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>("ALL");
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
 
   const [formData, setFormData] = useState<
-    CreateEventDto & { participantIds: string[] }
+    CreateEventDto & { participantIds: string[]; serviceIds: string[] }
   >({
     title: "",
     description: "",
@@ -41,6 +45,7 @@ export default function EventsPage() {
     isExternalIntervention: false,
     projectId: "",
     participantIds: [],
+    serviceIds: [],
   });
 
   const fetchData = useCallback(async () => {
@@ -94,6 +99,16 @@ export default function EventsPage() {
             console.error("Error fetching users:", err);
         }
       }
+
+      // Fetch services
+      try {
+        const { services: servicesData, memberCounts: counts } =
+          await servicesService.getAllWithMemberCounts();
+        setServices(servicesData);
+        setMemberCounts(counts);
+      } catch {
+        setServices([]);
+      }
     } catch (err) {
       toast.error(t("errors.loadData"));
       console.error(err);
@@ -122,6 +137,8 @@ export default function EventsPage() {
           formData.participantIds.length > 0
             ? formData.participantIds
             : undefined,
+        serviceIds:
+          formData.serviceIds.length > 0 ? formData.serviceIds : undefined,
       };
       await eventsService.create(eventData);
       toast.success(t("create.success"));
@@ -149,6 +166,7 @@ export default function EventsPage() {
       isExternalIntervention: event.isExternalIntervention || false,
       projectId: event.projectId || "",
       participantIds: event.participants?.map((p) => p.userId) || [],
+      serviceIds: [],
     });
     setShowCreateModal(true);
   };
@@ -170,6 +188,8 @@ export default function EventsPage() {
           formData.participantIds.length > 0
             ? formData.participantIds
             : undefined,
+        serviceIds:
+          formData.serviceIds.length > 0 ? formData.serviceIds : undefined,
       };
       await eventsService.update(editingEvent.id, eventData);
       toast.success(t("edit.success"));
@@ -206,6 +226,7 @@ export default function EventsPage() {
       isExternalIntervention: false,
       projectId: "",
       participantIds: [],
+      serviceIds: [],
     });
   };
 
@@ -654,6 +675,19 @@ export default function EventsPage() {
                 }
                 placeholder={t("create.participantsPlaceholder")}
               />
+
+              {services.length > 0 && (
+                <ServiceMultiSelect
+                  label={t("create.services") || "Services"}
+                  services={services}
+                  selectedIds={formData.serviceIds}
+                  onChange={(ids) =>
+                    setFormData({ ...formData, serviceIds: ids })
+                  }
+                  placeholder={t("create.servicesPlaceholder") || "Inviter des services entiers"}
+                  memberCounts={memberCounts}
+                />
+              )}
 
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
                 <button
