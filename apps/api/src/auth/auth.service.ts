@@ -61,6 +61,7 @@ export class AuthService {
         role: true,
         departmentId: true,
         avatarUrl: true,
+        avatarPreset: true,
         department: {
           select: {
             id: true,
@@ -199,6 +200,7 @@ export class AuthService {
         role: true,
         departmentId: true,
         avatarUrl: true,
+        avatarPreset: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,

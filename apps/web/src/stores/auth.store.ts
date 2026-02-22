@@ -17,11 +17,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   isLoading: true,
 
-  setUser: (user) =>
+  setUser: (user) => {
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    }
     set({
       user,
       isAuthenticated: !!user,
-    }),
+    });
+  },
 
   setLoading: (loading) =>
     set({
