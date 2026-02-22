@@ -118,6 +118,8 @@
     "estimationHours": "Estimation (hours)",
     "estimationPlaceholder": "e.g., 8",
     "externalIntervention": "External intervention",
+    "services": "Services",
+    "servicesPlaceholder": "Invite entire services",
     "creating": "Creating...",
     "createButton": "Create task",
     "success": "Task created successfully",

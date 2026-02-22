@@ -34,6 +34,8 @@
     "participants": "Participants",
     "participantsPlaceholder": "Sélectionner les participants",
     "externalIntervention": "Intervention extérieure",
+    "services": "Services",
+    "servicesPlaceholder": "Inviter des services entiers",
     "creating": "Création...",
     "createButton": "Créer l'événement",
     "success": "Événement créé avec succès",
