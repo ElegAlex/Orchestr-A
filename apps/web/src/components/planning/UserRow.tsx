@@ -3,6 +3,7 @@ import { Event } from "@/services/events.service";
 import { ServiceGroup, DayCell as DayCellData } from "@/hooks/usePlanningData";
 import { DayCell } from "./DayCell";
 import { getGroupColors } from "@/lib/planning-utils";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useTranslations } from "next-intl";
 
 interface UserRowProps {
@@ -41,12 +42,7 @@ export const UserRow = ({
       <td className="sticky left-0 bg-white z-10 px-4 py-4 border-r border-gray-200">
         <div className="flex items-center space-x-3 pl-2">
           <div className="relative">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${colors.avatar} text-white`}
-            >
-              {user.firstName[0]}
-              {user.lastName[0]}
-            </div>
+            <UserAvatar user={user} size="sm" />
             {group.isManagement && (
               <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center">
                 <span className="text-[8px]">⭐</span>

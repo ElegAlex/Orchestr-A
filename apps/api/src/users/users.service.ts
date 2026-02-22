@@ -155,6 +155,7 @@ export class UsersService {
           role: true,
           departmentId: true,
           avatarUrl: true,
+          avatarPreset: true,
           isActive: true,
           createdAt: true,
           department: {
