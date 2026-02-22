@@ -15,9 +15,12 @@ import {
   Project,
   Role,
   User,
+  Service,
 } from "@/types";
 import { usersService } from "@/services/users.service";
+import { servicesService } from "@/services/services.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
+import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import toast from "react-hot-toast";
 
@@ -32,6 +35,8 @@ export default function TasksPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string>("ALL");
   const [orphanTasks, setOrphanTasks] = useState<Task[]>([]);
@@ -44,7 +49,7 @@ export default function TasksPage() {
   const [isDragging, setIsDragging] = useState(false);
 
   const [formData, setFormData] = useState<
-    CreateTaskDto & { assigneeIds: string[] }
+    CreateTaskDto & { assigneeIds: string[]; serviceIds: string[] }
   >({
     title: "",
     description: "",
@@ -52,6 +57,7 @@ export default function TasksPage() {
     priority: Priority.NORMAL,
     projectId: "",
     assigneeIds: [],
+    serviceIds: [],
     estimatedHours: undefined,
     startDate: "",
     endDate: "",
@@ -136,6 +142,16 @@ export default function TasksPage() {
             console.error("Error fetching users:", err);
         }
       }
+
+      // Fetch services
+      try {
+        const { services: servicesData, memberCounts: counts } =
+          await servicesService.getAllWithMemberCounts();
+        setServices(servicesData);
+        setMemberCounts(counts);
+      } catch {
+        setServices([]);
+      }
     } catch (err) {
       toast.error(t("messages.loadError"));
       console.error(err);
@@ -160,6 +176,8 @@ export default function TasksPage() {
         projectId: formData.projectId || null,
         assigneeIds:
           formData.assigneeIds.length > 0 ? formData.assigneeIds : undefined,
+        serviceIds:
+          formData.serviceIds.length > 0 ? formData.serviceIds : undefined,
         estimatedHours: formData.estimatedHours || undefined,
         startDate: formData.startDate || undefined,
         endDate: formData.endDate || undefined,
@@ -262,6 +280,7 @@ export default function TasksPage() {
       priority: Priority.NORMAL,
       projectId: "",
       assigneeIds: [],
+      serviceIds: [],
       estimatedHours: undefined,
       startDate: "",
       endDate: "",
@@ -824,6 +843,20 @@ export default function TasksPage() {
                       : undefined
                 }
               />
+
+              {/* Service multi-selector */}
+              {services.length > 0 && (
+                <ServiceMultiSelect
+                  label={t("modal.create.servicesLabel") || "Services"}
+                  services={services}
+                  selectedIds={formData.serviceIds}
+                  onChange={(ids) =>
+                    setFormData({ ...formData, serviceIds: ids })
+                  }
+                  placeholder={t("modal.create.servicesPlaceholder") || "Inviter des services entiers"}
+                  memberCounts={memberCounts}
+                />
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

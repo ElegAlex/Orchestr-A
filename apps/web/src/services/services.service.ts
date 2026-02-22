@@ -1,6 +1,10 @@
 import { api } from "@/lib/api";
 import { Service, CreateServiceDto, User } from "@/types";
 
+interface ServiceWithCount extends Service {
+  _count?: { userServices?: number };
+}
+
 export const servicesService = {
   async getAll(): Promise<Service[]> {
     const response = await api.get<{ data: Service[] } | Service[]>(
@@ -45,18 +49,20 @@ export const servicesService = {
   },
 
   async getAllWithMemberCounts(): Promise<{ services: Service[]; memberCounts: Record<string, number> }> {
-    const services = await this.getAll();
-    const memberCounts: Record<string, number> = {};
-    await Promise.all(
-      services.map(async (service) => {
-        try {
-          const members = await this.getMembers(service.id);
-          memberCounts[service.id] = members.length;
-        } catch {
-          memberCounts[service.id] = 0;
-        }
-      }),
+    // Fetch with high limit to get all services (backend paginates at 10 by default)
+    const response = await api.get<{ data: ServiceWithCount[] } | ServiceWithCount[]>(
+      "/services?limit=1000",
     );
+    let services: ServiceWithCount[];
+    if (response.data && "data" in response.data) {
+      services = response.data.data;
+    } else {
+      services = Array.isArray(response.data) ? response.data : [];
+    }
+    const memberCounts: Record<string, number> = {};
+    for (const service of services) {
+      memberCounts[service.id] = service._count?.userServices ?? 0;
+    }
     return { services, memberCounts };
   },
 };
