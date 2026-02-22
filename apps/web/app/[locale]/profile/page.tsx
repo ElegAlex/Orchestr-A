@@ -67,7 +67,9 @@ export default function ProfilePage() {
       setUser({ ...user!, ...updated });
       toast.success("Avatar mis à jour");
     } catch {
-      toast.error("Erreur lors de l'upload. Format accepté : jpg, png, webp (max 2MB)");
+      toast.error(
+        "Erreur lors de l'upload. Format accepté : jpg, png, webp (max 2MB)",
+      );
     } finally {
       setAvatarLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -382,7 +384,9 @@ export default function ProfilePage() {
                   <div className="flex-1 space-y-4">
                     {/* Preset grid */}
                     <div>
-                      <p className="text-sm text-gray-600 mb-3">Choisir un avatar prédéfini :</p>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Choisir un avatar prédéfini :
+                      </p>
                       <div className="grid grid-cols-5 gap-2">
                         {AVATAR_PRESETS.map((preset) => (
                           <button
@@ -432,7 +436,9 @@ export default function ProfilePage() {
                         </button>
                       )}
                       {avatarLoading && (
-                        <span className="text-sm text-gray-500">Chargement...</span>
+                        <span className="text-sm text-gray-500">
+                          Chargement...
+                        </span>
                       )}
                     </div>
                   </div>

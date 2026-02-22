@@ -20,11 +20,16 @@ const sizeMap = {
 };
 
 function getAvatarSrc(avatarUrl: string): string {
-  if (avatarUrl.startsWith("http") || avatarUrl.startsWith("/")) return avatarUrl;
+  if (avatarUrl.startsWith("http") || avatarUrl.startsWith("/"))
+    return avatarUrl;
   return `/${avatarUrl}`;
 }
 
-export function UserAvatar({ user, size = "md", className = "" }: UserAvatarProps) {
+export function UserAvatar({
+  user,
+  size = "md",
+  className = "",
+}: UserAvatarProps) {
   const { px, text } = sizeMap[size];
   const style = { width: px, height: px };
 

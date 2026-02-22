@@ -278,7 +278,9 @@ export const TaskCreateModal = ({
               services={services}
               selectedIds={formData.serviceIds}
               onChange={(ids) => setFormData({ ...formData, serviceIds: ids })}
-              placeholder={t("servicesPlaceholder") || "Inviter des services entiers"}
+              placeholder={
+                t("servicesPlaceholder") || "Inviter des services entiers"
+              }
               memberCounts={memberCounts}
             />
           )}

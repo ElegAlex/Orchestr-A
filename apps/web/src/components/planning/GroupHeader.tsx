@@ -43,11 +43,7 @@ export const GroupHeader = ({
 
   return (
     <tr className="sticky top-[48px] z-20">
-      <td
-        colSpan={colSpan}
-        className={headerClass}
-        style={headerStyle}
-      >
+      <td colSpan={colSpan} className={headerClass} style={headerStyle}>
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             {/* Bouton collapse/expand */}

@@ -853,7 +853,10 @@ export default function TasksPage() {
                   onChange={(ids) =>
                     setFormData({ ...formData, serviceIds: ids })
                   }
-                  placeholder={t("modal.create.servicesPlaceholder") || "Inviter des services entiers"}
+                  placeholder={
+                    t("modal.create.servicesPlaceholder") ||
+                    "Inviter des services entiers"
+                  }
                   memberCounts={memberCounts}
                 />
               )}

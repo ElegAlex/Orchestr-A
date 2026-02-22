@@ -148,9 +148,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             href={`/${locale}/profile`}
             className="flex items-center hover:bg-[var(--accent)] rounded-lg p-2 -m-2 transition"
           >
-            {user && (
-              <UserAvatar user={user} size="sm" />
-            )}
+            {user && <UserAvatar user={user} size="sm" />}
             {sidebarOpen && (
               <div className="ml-3 flex-1">
                 <p className="text-sm font-medium text-[var(--foreground)]">

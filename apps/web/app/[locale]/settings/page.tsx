@@ -330,7 +330,9 @@ export default function SettingsPage() {
                 </p>
                 <div className="space-y-2">
                   {WEEKDAY_OPTIONS.map((day) => {
-                    const currentDays = (settings["planning.visibleDays"] as number[]) || [1, 2, 3, 4, 5];
+                    const currentDays = (settings[
+                      "planning.visibleDays"
+                    ] as number[]) || [1, 2, 3, 4, 5];
                     const isChecked = currentDays.includes(day.isoDay);
                     const isLastChecked = isChecked && currentDays.length === 1;
 
@@ -346,19 +348,24 @@ export default function SettingsPage() {
                           onChange={() => {
                             const newDays = isChecked
                               ? currentDays.filter((d) => d !== day.isoDay)
-                              : [...currentDays, day.isoDay].sort((a, b) => a - b);
+                              : [...currentDays, day.isoDay].sort(
+                                  (a, b) => a - b,
+                                );
                             handleChange("planning.visibleDays", newDays);
                           }}
                           className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50"
                         />
-                        <span className={`text-sm ${isLastChecked ? "text-gray-400" : "text-gray-700"}`}>
+                        <span
+                          className={`text-sm ${isLastChecked ? "text-gray-400" : "text-gray-700"}`}
+                        >
                           {t(day.labelKey)}
                         </span>
                       </label>
                     );
                   })}
                 </div>
-                {((settings["planning.visibleDays"] as number[]) || []).length === 1 && (
+                {((settings["planning.visibleDays"] as number[]) || [])
+                  .length === 1 && (
                   <p className="text-xs text-amber-600 mt-2">
                     {t("planning.visibleDays.minWarning")}
                   </p>

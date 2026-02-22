@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Task, TaskStatus, Priority, Milestone, User, Project, Service } from "@/types";
+import {
+  Task,
+  TaskStatus,
+  Priority,
+  Milestone,
+  User,
+  Project,
+  Service,
+} from "@/types";
 import { UserMultiSelect } from "./UserMultiSelect";
 import { ServiceMultiSelect } from "./ServiceMultiSelect";
 import toast from "react-hot-toast";
@@ -382,10 +390,11 @@ export function TaskModal({
               label={t("modal.create.servicesLabel") || "Services"}
               services={services}
               selectedIds={formData.serviceIds}
-              onChange={(ids) =>
-                setFormData({ ...formData, serviceIds: ids })
+              onChange={(ids) => setFormData({ ...formData, serviceIds: ids })}
+              placeholder={
+                t("modal.create.servicesPlaceholder") ||
+                "Inviter des services entiers"
               }
-              placeholder={t("modal.create.servicesPlaceholder") || "Inviter des services entiers"}
               memberCounts={memberCounts}
             />
           )}

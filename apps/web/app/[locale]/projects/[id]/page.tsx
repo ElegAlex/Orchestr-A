@@ -74,7 +74,9 @@ export default function ProjectDetailPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allServices, setAllServices] = useState<Service[]>([]);
-  const [serviceMemberCounts, setServiceMemberCounts] = useState<Record<string, number>>({});
+  const [serviceMemberCounts, setServiceMemberCounts] = useState<
+    Record<string, number>
+  >({});
   const [showImportTasksModal, setShowImportTasksModal] = useState(false);
   const [showImportMilestonesModal, setShowImportMilestonesModal] =
     useState(false);
@@ -567,7 +569,8 @@ export default function ProjectDetailPage() {
     }
     // Load services
     try {
-      const { services, memberCounts } = await servicesService.getAllWithMemberCounts();
+      const { services, memberCounts } =
+        await servicesService.getAllWithMemberCounts();
       setAllServices(services);
       setServiceMemberCounts(memberCounts);
     } catch {

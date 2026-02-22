@@ -98,9 +98,7 @@ export function ServiceMultiSelect({
                 style={{ backgroundColor: service.color }}
               />
             )}
-            <span className="max-w-[150px] truncate">
-              {service.name}
-            </span>
+            <span className="max-w-[150px] truncate">{service.name}</span>
             {memberCounts[service.id] !== undefined && (
               <span className="text-purple-600 text-xs">
                 ({memberCounts[service.id]})

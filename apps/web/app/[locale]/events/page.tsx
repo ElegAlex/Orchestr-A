@@ -684,7 +684,10 @@ export default function EventsPage() {
                   onChange={(ids) =>
                     setFormData({ ...formData, serviceIds: ids })
                   }
-                  placeholder={t("create.servicesPlaceholder") || "Inviter des services entiers"}
+                  placeholder={
+                    t("create.servicesPlaceholder") ||
+                    "Inviter des services entiers"
+                  }
                   memberCounts={memberCounts}
                 />
               )}

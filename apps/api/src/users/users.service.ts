@@ -1274,7 +1274,10 @@ export class UsersService {
 
     return this.prisma.user.update({
       where: { id: userId },
-      data: { avatarUrl: `/api/uploads/avatars/${filename}`, avatarPreset: null },
+      data: {
+        avatarUrl: `/api/uploads/avatars/${filename}`,
+        avatarPreset: null,
+      },
       select: this.AVATAR_SELECT,
     });
   }

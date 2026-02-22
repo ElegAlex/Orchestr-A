@@ -48,11 +48,14 @@ export const servicesService = {
     return response.data;
   },
 
-  async getAllWithMemberCounts(): Promise<{ services: Service[]; memberCounts: Record<string, number> }> {
+  async getAllWithMemberCounts(): Promise<{
+    services: Service[];
+    memberCounts: Record<string, number>;
+  }> {
     // Fetch with high limit to get all services (backend paginates at 10 by default)
-    const response = await api.get<{ data: ServiceWithCount[] } | ServiceWithCount[]>(
-      "/services?limit=1000",
-    );
+    const response = await api.get<
+      { data: ServiceWithCount[] } | ServiceWithCount[]
+    >("/services?limit=1000");
     let services: ServiceWithCount[];
     if (response.data && "data" in response.data) {
       services = response.data.data;
