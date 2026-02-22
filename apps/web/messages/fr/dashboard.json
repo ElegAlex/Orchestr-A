@@ -39,6 +39,7 @@
   "tasks": {
     "title": "Mes tâches à venir",
     "empty": "Aucune tâche assignée",
+    "noProject": "Sans projet",
     "startDate": "Début:",
     "endDate": "Fin:",
     "estimated": "Estimé:",

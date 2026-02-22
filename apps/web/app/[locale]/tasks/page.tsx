@@ -22,6 +22,7 @@ import { servicesService } from "@/services/services.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import { TaskListView } from "@/components/tasks/TaskListView";
+import { getTaskProgress } from "@/lib/task-progress";
 import toast from "react-hot-toast";
 
 export default function TasksPage() {
@@ -403,6 +404,11 @@ export default function TasksPage() {
   const columns: { status: TaskStatus; title: string; color: string }[] = [
     { status: TaskStatus.TODO, title: t("status.TODO"), color: "bg-gray-100" },
     {
+      status: TaskStatus.STARTED,
+      title: t("status.STARTED"),
+      color: "bg-sky-100",
+    },
+    {
       status: TaskStatus.IN_PROGRESS,
       title: t("status.IN_PROGRESS"),
       color: "bg-blue-100",
@@ -686,16 +692,20 @@ export default function TasksPage() {
                                   </div>
                                 )}
 
-                                {task.progress > 0 && (
+                                {getTaskProgress(task.status) > 0 && (
                                   <div className="mt-3">
                                     <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                                       <span>{t("card.progress")}</span>
-                                      <span>{task.progress}%</span>
+                                      <span>
+                                        {getTaskProgress(task.status)}%
+                                      </span>
                                     </div>
                                     <div className="w-full bg-gray-200 rounded-full h-1.5">
                                       <div
                                         className="bg-blue-600 h-1.5 rounded-full transition-all"
-                                        style={{ width: `${task.progress}%` }}
+                                        style={{
+                                          width: `${getTaskProgress(task.status)}%`,
+                                        }}
                                       ></div>
                                     </div>
                                   </div>
@@ -877,6 +887,9 @@ export default function TasksPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value={TaskStatus.TODO}>{t("status.TODO")}</option>
+                    <option value={TaskStatus.STARTED}>
+                      {t("status.STARTED")}
+                    </option>
                     <option value={TaskStatus.IN_PROGRESS}>
                       {t("status.IN_PROGRESS")}
                     </option>

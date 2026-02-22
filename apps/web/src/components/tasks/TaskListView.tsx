@@ -29,6 +29,11 @@ const statusConfig: {
     colorBg: "bg-gray-50",
   },
   {
+    status: TaskStatus.STARTED,
+    colorDot: "bg-sky-400",
+    colorBg: "bg-sky-50",
+  },
+  {
     status: TaskStatus.IN_PROGRESS,
     colorDot: "bg-blue-500",
     colorBg: "bg-blue-50",

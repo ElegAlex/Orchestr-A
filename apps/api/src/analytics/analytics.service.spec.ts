@@ -219,7 +219,7 @@ describe('AnalyticsService', () => {
 
       const result = await service.getAnalytics({});
 
-      expect(result.taskStatusData).toHaveLength(4);
+      expect(result.taskStatusData).toHaveLength(6);
       const todoStatus = result.taskStatusData.find(
         (s) => s.name === 'À faire',
       );
@@ -457,7 +457,7 @@ describe('AnalyticsService', () => {
 
       expect(result.metrics).toHaveLength(4);
       expect(result.projectProgressData).toHaveLength(0);
-      expect(result.taskStatusData).toHaveLength(4);
+      expect(result.taskStatusData).toHaveLength(6);
       expect(result.projectDetails).toHaveLength(0);
     });
 

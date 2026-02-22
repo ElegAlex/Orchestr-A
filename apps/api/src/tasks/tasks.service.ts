@@ -19,6 +19,7 @@ import {
 } from './dto/import-tasks.dto';
 import { TaskStatus, Priority, RACIRole, Role } from 'database';
 import { Prisma } from 'database';
+import { getTaskProgress } from './task-progress.helper';
 
 @Injectable()
 export class TasksService {
@@ -169,6 +170,7 @@ export class TasksService {
       assigneeId ||
       (assigneeIds && assigneeIds.length > 0 ? assigneeIds[0] : null);
 
+    const taskStatus = createTaskDto.status || TaskStatus.TODO;
     const task = await this.prisma.task.create({
       data: {
         ...taskData,
@@ -176,7 +178,8 @@ export class TasksService {
         epicId,
         milestoneId,
         assigneeId: primaryAssigneeId,
-        status: createTaskDto.status || TaskStatus.TODO,
+        status: taskStatus,
+        progress: getTaskProgress(taskStatus),
         ...(startDate && { startDate: new Date(startDate) }),
         ...(endDate && { endDate: new Date(endDate) }),
         // Créer les assignations multiples
@@ -591,6 +594,9 @@ export class TasksService {
           }),
           ...(startDate && { startDate: new Date(startDate) }),
           ...(endDate && { endDate: new Date(endDate) }),
+          ...(taskData.status && {
+            progress: getTaskProgress(taskData.status),
+          }),
         },
         include: {
           project: {

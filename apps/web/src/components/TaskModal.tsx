@@ -26,6 +26,7 @@ interface TaskModalProps {
   users?: User[];
   services?: Service[];
   memberCounts?: Record<string, number>;
+  hiddenStatuses?: TaskStatus[];
 }
 
 export function TaskModal({
@@ -39,8 +40,22 @@ export function TaskModal({
   users = [],
   services = [],
   memberCounts = {},
+  hiddenStatuses = [],
 }: TaskModalProps) {
   const t = useTranslations("tasks");
+
+  const allStatuses = [
+    TaskStatus.TODO,
+    TaskStatus.STARTED,
+    TaskStatus.IN_PROGRESS,
+    TaskStatus.IN_REVIEW,
+    TaskStatus.DONE,
+    TaskStatus.BLOCKED,
+  ];
+  // Always show current task status even if hidden
+  const visibleStatuses = allStatuses.filter(
+    (s) => !hiddenStatuses.includes(s) || s === task?.status,
+  );
 
   const [formData, setFormData] = useState({
     title: "",
@@ -306,17 +321,11 @@ export function TaskModal({
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value={TaskStatus.TODO}>{t("status.TODO")}</option>
-                <option value={TaskStatus.IN_PROGRESS}>
-                  {t("status.IN_PROGRESS")}
-                </option>
-                <option value={TaskStatus.IN_REVIEW}>
-                  {t("status.IN_REVIEW")}
-                </option>
-                <option value={TaskStatus.BLOCKED}>
-                  {t("status.BLOCKED")}
-                </option>
-                <option value={TaskStatus.DONE}>{t("status.DONE")}</option>
+                {visibleStatuses.map((s) => (
+                  <option key={s} value={s}>
+                    {t(`status.${s}`)}
+                  </option>
+                ))}
               </select>
             </div>
 

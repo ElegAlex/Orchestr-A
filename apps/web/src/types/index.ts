@@ -22,6 +22,7 @@ export enum ProjectStatus {
 
 export enum TaskStatus {
   TODO = "TODO",
+  STARTED = "STARTED",
   IN_PROGRESS = "IN_PROGRESS",
   IN_REVIEW = "IN_REVIEW",
   DONE = "DONE",
@@ -215,6 +216,7 @@ export interface Project {
   endDate?: string;
   budgetHours?: number;
   progress?: number;
+  hiddenStatuses?: TaskStatus[];
   createdAt: string;
   updatedAt: string;
   createdById?: string;
@@ -279,6 +281,7 @@ export interface UpdateProjectDto {
   budget?: number;
   estimatedHours?: number;
   budgetHours?: number;
+  hiddenStatuses?: TaskStatus[];
 }
 
 export interface AddMemberDto {

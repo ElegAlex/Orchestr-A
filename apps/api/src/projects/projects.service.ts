@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
-import { ProjectStatus } from 'database';
+import { ProjectStatus, TaskStatus } from 'database';
 
 @Injectable()
 export class ProjectsService {
@@ -255,7 +255,8 @@ export class ProjectsService {
       throw new NotFoundException('Projet introuvable');
     }
 
-    const { startDate, endDate, ...projectData } = updateProjectDto;
+    const { startDate, endDate, hiddenStatuses, ...projectData } =
+      updateProjectDto;
 
     // Vérifier les dates si fournies
     if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
@@ -264,12 +265,25 @@ export class ProjectsService {
       );
     }
 
+    // Rejeter TODO et DONE dans hiddenStatuses
+    if (hiddenStatuses) {
+      if (
+        hiddenStatuses.includes(TaskStatus.TODO) ||
+        hiddenStatuses.includes(TaskStatus.DONE)
+      ) {
+        throw new BadRequestException(
+          'Les statuts TODO et DONE ne peuvent pas être masqués',
+        );
+      }
+    }
+
     const project = await this.prisma.project.update({
       where: { id },
       data: {
         ...projectData,
         ...(startDate && { startDate: new Date(startDate) }),
         ...(endDate && { endDate: new Date(endDate) }),
+        ...(hiddenStatuses !== undefined && { hiddenStatuses }),
       },
       include: {
         members: {

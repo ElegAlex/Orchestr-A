@@ -35,6 +35,7 @@ import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
 import { parseCSV } from "@/lib/csv-parser";
 import { TaskListView } from "@/components/tasks/TaskListView";
+import { getTaskProgress } from "@/lib/task-progress";
 import api from "@/lib/api";
 
 const GanttChart = dynamic(() => import("@/components/GanttChart"), {
@@ -114,6 +115,11 @@ export default function ProjectDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
   const [taskViewMode, setTaskViewMode] = useState<"kanban" | "list">("kanban");
+  const [hiddenStatuses, setHiddenStatuses] = useState<TaskStatus[]>([]);
+  const [showStatusConfig, setShowStatusConfig] = useState(false);
+  const [tempHiddenStatuses, setTempHiddenStatuses] = useState<TaskStatus[]>(
+    [],
+  );
 
   // Get current user from auth store
   const { user: currentUser } = useAuthStore();
@@ -126,6 +132,7 @@ export default function ProjectDetailPage() {
         // Fetch project details
         const projectData = await projectsService.getById(projectId);
         setProject(projectData);
+        setHiddenStatuses(projectData.hiddenStatuses || []);
 
         // Fetch project stats
         try {
@@ -319,6 +326,20 @@ export default function ProjectDetailPage() {
       });
       const tasksData = await tasksService.getByProject(projectId);
       setTasks(Array.isArray(tasksData) ? tasksData : []);
+    } catch {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  const handleSaveHiddenStatuses = async () => {
+    try {
+      const updated = await projectsService.update(projectId, {
+        hiddenStatuses: tempHiddenStatuses,
+      });
+      setHiddenStatuses(updated.hiddenStatuses || tempHiddenStatuses);
+      setProject(updated);
+      setShowStatusConfig(false);
+      toast.success("Configuration des statuts mise à jour");
     } catch {
       toast.error("Erreur lors de la mise à jour");
     }
@@ -1187,6 +1208,16 @@ export default function ProjectDetailPage() {
                 {t("detail.tasksBoard.title")}
               </h2>
               <div className="flex items-center space-x-2">
+                {/* Configure statuses */}
+                <button
+                  onClick={() => {
+                    setTempHiddenStatuses(hiddenStatuses);
+                    setShowStatusConfig(true);
+                  }}
+                  className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm"
+                >
+                  ⚙️ Statuts
+                </button>
                 {/* Export CSV */}
                 <button
                   onClick={handleExportTasksCsv}
@@ -1278,6 +1309,11 @@ export default function ProjectDetailPage() {
                       color: "bg-gray-100",
                     },
                     {
+                      status: TaskStatus.STARTED,
+                      title: tTasks("status.STARTED"),
+                      color: "bg-sky-100",
+                    },
+                    {
                       status: TaskStatus.IN_PROGRESS,
                       title: tTasks("status.IN_PROGRESS"),
                       color: "bg-blue-100",
@@ -1297,7 +1333,11 @@ export default function ProjectDetailPage() {
                       title: tTasks("status.BLOCKED"),
                       color: "bg-red-100",
                     },
-                  ].map((column) => {
+                  ]
+                    .filter(
+                      (column) => !hiddenStatuses.includes(column.status),
+                    )
+                    .map((column) => {
                     const columnTasks = getTasksByStatus(column.status);
                     const isDropTarget = dragOverColumn === column.status;
 
@@ -1437,19 +1477,21 @@ export default function ProjectDetailPage() {
                                       </div>
                                     )}
 
-                                    {task.progress > 0 && (
+                                    {getTaskProgress(task.status) > 0 && (
                                       <div className="mt-3">
                                         <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                                           <span>
                                             {tTasks("kanban.progress")}
                                           </span>
-                                          <span>{task.progress}%</span>
+                                          <span>
+                                            {getTaskProgress(task.status)}%
+                                          </span>
                                         </div>
                                         <div className="w-full bg-gray-200 rounded-full h-1.5">
                                           <div
                                             className="bg-blue-600 h-1.5 rounded-full transition-all"
                                             style={{
-                                              width: `${task.progress}%`,
+                                              width: `${getTaskProgress(task.status)}%`,
                                             }}
                                           ></div>
                                         </div>
@@ -1792,6 +1834,7 @@ export default function ProjectDetailPage() {
           users={allUsers}
           services={allServices}
           memberCounts={serviceMemberCounts}
+          hiddenStatuses={hiddenStatuses}
         />
 
         {/* Import Tasks Modal */}
@@ -2045,6 +2088,108 @@ export default function ProjectDetailPage() {
             onSave={handleUpdateProject}
             project={project}
           />
+        )}
+
+        {/* Status Config Modal */}
+        {showStatusConfig && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Configurer les statuts visibles
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Les colonnes masquées n&apos;apparaîtront pas dans le Kanban.
+              </p>
+              <div className="space-y-3">
+                {(
+                  [
+                    {
+                      status: TaskStatus.TODO,
+                      label: tTasks("status.TODO"),
+                      required: true,
+                    },
+                    {
+                      status: TaskStatus.STARTED,
+                      label: tTasks("status.STARTED"),
+                      required: false,
+                    },
+                    {
+                      status: TaskStatus.IN_PROGRESS,
+                      label: tTasks("status.IN_PROGRESS"),
+                      required: false,
+                    },
+                    {
+                      status: TaskStatus.IN_REVIEW,
+                      label: tTasks("status.IN_REVIEW"),
+                      required: false,
+                    },
+                    {
+                      status: TaskStatus.DONE,
+                      label: tTasks("status.DONE"),
+                      required: true,
+                    },
+                    {
+                      status: TaskStatus.BLOCKED,
+                      label: tTasks("status.BLOCKED"),
+                      required: false,
+                    },
+                  ] as { status: TaskStatus; label: string; required: boolean }[]
+                ).map(({ status, label, required }) => {
+                  const isVisible = !tempHiddenStatuses.includes(status);
+                  return (
+                    <label
+                      key={status}
+                      className={`flex items-center space-x-3 p-2 rounded-lg border ${
+                        required
+                          ? "border-gray-200 bg-gray-50"
+                          : "border-gray-200 cursor-pointer hover:bg-gray-50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isVisible}
+                        disabled={required}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setTempHiddenStatuses((prev) =>
+                              prev.filter((s) => s !== status),
+                            );
+                          } else {
+                            setTempHiddenStatuses((prev) => [...prev, status]);
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span
+                        className={`text-sm ${required ? "text-gray-500" : "text-gray-800"}`}
+                      >
+                        {label}
+                        {required && (
+                          <span className="ml-1 text-xs text-gray-400">
+                            (obligatoire)
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowStatusConfig(false)}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  {tCommon("cancel")}
+                </button>
+                <button
+                  onClick={handleSaveHiddenStatuses}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  Enregistrer
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Delete Confirmation Modal */}

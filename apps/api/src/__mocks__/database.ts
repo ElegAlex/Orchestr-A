@@ -31,6 +31,7 @@ export const LeaveType = {
 
 export const TaskStatus = {
   TODO: 'TODO',
+  STARTED: 'STARTED',
   IN_PROGRESS: 'IN_PROGRESS',
   IN_REVIEW: 'IN_REVIEW',
   DONE: 'DONE',

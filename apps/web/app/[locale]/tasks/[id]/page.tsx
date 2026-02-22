@@ -25,6 +25,7 @@ import {
   getStatusColorClass,
   getStatusLabel as getDependencyStatusLabel,
 } from "@/utils/dependencyValidation";
+import { getTaskProgress } from "@/lib/task-progress";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/auth.store";
 
@@ -542,6 +543,9 @@ export default function TaskDetailPage() {
                       <option value={TaskStatus.TODO}>
                         {t("status.TODO")}
                       </option>
+                      <option value={TaskStatus.STARTED}>
+                        {t("status.STARTED")}
+                      </option>
                       <option value={TaskStatus.IN_PROGRESS}>
                         {t("status.IN_PROGRESS")}
                       </option>
@@ -718,7 +722,7 @@ export default function TaskDetailPage() {
             )}
 
             {/* Progress */}
-            {!isEditing && task.progress > 0 && (
+            {!isEditing && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   {t("detail.sections.progress")}
@@ -729,13 +733,13 @@ export default function TaskDetailPage() {
                       {t("detail.sections.progressLabel")}
                     </span>
                     <span className="text-sm font-medium text-gray-900">
-                      {task.progress}%
+                      {getTaskProgress(task.status)}%
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
                     <div
                       className="bg-blue-600 h-3 rounded-full transition-all"
-                      style={{ width: `${task.progress}%` }}
+                      style={{ width: `${getTaskProgress(task.status)}%` }}
                     ></div>
                   </div>
                 </div>

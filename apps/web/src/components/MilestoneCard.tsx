@@ -57,6 +57,12 @@ export function MilestoneCard({
           bgClass: "bg-green-100",
           textClass: "text-green-800",
         };
+      case TaskStatus.STARTED:
+        return {
+          label: tTask("STARTED"),
+          bgClass: "bg-sky-100",
+          textClass: "text-sky-800",
+        };
       case TaskStatus.IN_PROGRESS:
         return {
           label: tTask("IN_PROGRESS"),
@@ -101,6 +107,7 @@ export function MilestoneCard({
     const completedTasks = tasks.filter((t) => t.status === TaskStatus.DONE);
     const inProgressTasks = tasks.filter(
       (t) =>
+        t.status === TaskStatus.STARTED ||
         t.status === TaskStatus.IN_PROGRESS ||
         t.status === TaskStatus.IN_REVIEW,
     );
@@ -314,6 +321,12 @@ export function MilestoneCard({
                         className="bg-white text-gray-800"
                       >
                         {tTask("TODO")}
+                      </option>
+                      <option
+                        value={TaskStatus.STARTED}
+                        className="bg-white text-gray-800"
+                      >
+                        {tTask("STARTED")}
                       </option>
                       <option
                         value={TaskStatus.IN_PROGRESS}

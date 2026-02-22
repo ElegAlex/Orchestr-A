@@ -7,7 +7,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
-import { ProjectStatus } from '../__mocks__/database';
+import { ProjectStatus, TaskStatus } from '../__mocks__/database';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -328,6 +328,48 @@ describe('ProjectsService', () => {
       });
 
       expect(result).toBeDefined();
+    });
+
+    it('should throw BadRequestException when hiddenStatuses contains TODO', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+
+      await expect(
+        service.update('project-1', {
+          hiddenStatuses: [TaskStatus.TODO] as any,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when hiddenStatuses contains DONE', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+
+      await expect(
+        service.update('project-1', {
+          hiddenStatuses: [TaskStatus.DONE] as any,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should update hiddenStatuses with valid statuses', async () => {
+      const updatedProject = {
+        ...mockProject,
+        hiddenStatuses: [TaskStatus.STARTED, TaskStatus.BLOCKED],
+      };
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.project.update.mockResolvedValue(updatedProject);
+
+      const result = await service.update('project-1', {
+        hiddenStatuses: [TaskStatus.STARTED, TaskStatus.BLOCKED] as any,
+      });
+
+      expect(result).toBeDefined();
+      expect(mockPrismaService.project.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            hiddenStatuses: [TaskStatus.STARTED, TaskStatus.BLOCKED],
+          }) as object,
+        }),
+      );
     });
   });
 

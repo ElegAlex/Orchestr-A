@@ -8,6 +8,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { TaskStatus, RACIRole, Role, Priority } from 'database';
+import { getTaskProgress } from './task-progress.helper';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -1407,6 +1408,145 @@ describe('TasksService', () => {
       await expect(
         service.attachToProject('task-1', 'nonexistent'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getTaskProgress helper', () => {
+    it('should return 0 for TODO', () => {
+      expect(getTaskProgress(TaskStatus.TODO)).toBe(0);
+    });
+
+    it('should return 25 for STARTED', () => {
+      expect(getTaskProgress('STARTED' as TaskStatus)).toBe(25);
+    });
+
+    it('should return 50 for IN_PROGRESS', () => {
+      expect(getTaskProgress(TaskStatus.IN_PROGRESS)).toBe(50);
+    });
+
+    it('should return 75 for IN_REVIEW', () => {
+      expect(getTaskProgress('IN_REVIEW' as TaskStatus)).toBe(75);
+    });
+
+    it('should return 100 for DONE', () => {
+      expect(getTaskProgress(TaskStatus.DONE)).toBe(100);
+    });
+
+    it('should return 25 for BLOCKED', () => {
+      expect(getTaskProgress(TaskStatus.BLOCKED)).toBe(25);
+    });
+  });
+
+  describe('create - auto progress', () => {
+    const mockUser = { id: 'user-1', role: Role.ADMIN };
+
+    it('should set progress=0 when creating with TODO status', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'p1' });
+      mockPrismaService.task.create.mockResolvedValue({
+        id: '1',
+        title: 'T',
+        status: TaskStatus.TODO,
+        progress: 0,
+      });
+
+      await service.create({ title: 'T', projectId: 'p1', status: TaskStatus.TODO }, mockUser);
+
+      expect(mockPrismaService.task.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ progress: 0 }) as object,
+        }),
+      );
+    });
+
+    it('should set progress=50 when creating with IN_PROGRESS status', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'p1' });
+      mockPrismaService.task.create.mockResolvedValue({
+        id: '1',
+        title: 'T',
+        status: TaskStatus.IN_PROGRESS,
+        progress: 50,
+      });
+
+      await service.create({ title: 'T', projectId: 'p1', status: TaskStatus.IN_PROGRESS }, mockUser);
+
+      expect(mockPrismaService.task.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ progress: 50 }) as object,
+        }),
+      );
+    });
+
+    it('should default to TODO progress=0 when no status provided', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'p1' });
+      mockPrismaService.task.create.mockResolvedValue({ id: '1', title: 'T' });
+
+      await service.create({ title: 'T', projectId: 'p1' }, mockUser);
+
+      expect(mockPrismaService.task.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ progress: 0 }) as object,
+        }),
+      );
+    });
+  });
+
+  describe('update - auto progress', () => {
+    it('should recalculate progress when status changes to DONE', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: '1',
+        status: TaskStatus.TODO,
+      });
+      mockPrismaService.task.update.mockResolvedValue({
+        id: '1',
+        status: TaskStatus.DONE,
+        progress: 100,
+      });
+
+      await service.update('1', { status: TaskStatus.DONE });
+
+      expect(mockPrismaService.task.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ progress: 100 }) as object,
+        }),
+      );
+    });
+
+    it('should recalculate progress when status changes to IN_REVIEW', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: '1',
+        status: TaskStatus.IN_PROGRESS,
+      });
+      mockPrismaService.task.update.mockResolvedValue({
+        id: '1',
+        status: 'IN_REVIEW',
+        progress: 75,
+      });
+
+      await service.update('1', { status: 'IN_REVIEW' as TaskStatus });
+
+      expect(mockPrismaService.task.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ progress: 75 }) as object,
+        }),
+      );
+    });
+
+    it('should not set progress when status is not changed', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: '1',
+        title: 'Old',
+      });
+      mockPrismaService.task.update.mockResolvedValue({
+        id: '1',
+        title: 'New',
+      });
+
+      await service.update('1', { title: 'New' });
+
+      const callArg = mockPrismaService.task.update.mock.calls[0][0] as {
+        data: Record<string, unknown>;
+      };
+      expect(callArg.data).not.toHaveProperty('progress');
     });
   });
 

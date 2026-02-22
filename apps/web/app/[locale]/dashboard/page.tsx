@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { PlanningView } from "@/components/planning/PlanningView";
@@ -559,6 +560,21 @@ export default function DashboardPage() {
                         <h3 className="font-medium text-[var(--foreground)] hover:text-blue-600 transition">
                           {task.title}
                         </h3>
+                        <div className="mt-1">
+                          {task.project ? (
+                            <Link
+                              href={`/${locale}/projects/${task.project.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition"
+                            >
+                              📁 {task.project.name}
+                            </Link>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+                              {t("tasks.noProject")}
+                            </span>
+                          )}
+                        </div>
                         {task.description && (
                           <p className="text-sm text-[var(--muted-foreground)] mt-1">
                             {task.description.slice(0, 100)}
