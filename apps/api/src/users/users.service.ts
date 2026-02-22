@@ -19,7 +19,7 @@ import { VALID_PRESETS } from './dto/avatar-preset.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from 'database';
 import { promises as fs } from 'fs';
-import { join, extname } from 'path';
+import { join } from 'path';
 import type { MultipartFile } from '@fastify/multipart';
 
 /** Type de dépendance utilisateur */
