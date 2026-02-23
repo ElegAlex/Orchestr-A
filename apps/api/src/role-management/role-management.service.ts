@@ -28,17 +28,7 @@ export class RoleManagementService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    await this.seedPermissionsAndRolesIfEmpty();
-  }
-
-  /**
-   * Seed automatique au démarrage si la table role_configs est vide
-   */
-  private async seedPermissionsAndRolesIfEmpty() {
-    const existingRoles = await this.prisma.roleConfig.count();
-    if (existingRoles === 0) {
-      await this.seedPermissionsAndRoles();
-    }
+    await this.seedPermissionsAndRoles();
   }
 
   /**
