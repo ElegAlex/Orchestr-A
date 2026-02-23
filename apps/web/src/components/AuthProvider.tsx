@@ -8,8 +8,13 @@ import { permissionsService } from "@/services/permissions.service";
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading, checkAuth, setPermissions } =
-    useAuthStore();
+  const {
+    isAuthenticated,
+    isLoading,
+    checkAuth,
+    setPermissions,
+    permissionsLoaded,
+  } = useAuthStore();
 
   useEffect(() => {
     checkAuth();
@@ -53,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, isLoading, pathname, router]);
 
-  if (isLoading) {
+  if (isLoading || (isAuthenticated && !permissionsLoaded)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
