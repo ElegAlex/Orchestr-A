@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeleworkService } from './telework.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
@@ -23,6 +25,10 @@ describe('TeleworkService', () => {
     user: {
       findUnique: vi.fn(),
     },
+  };
+
+  const mockRoleManagementService = {
+    getPermissionsForRole: vi.fn(),
   };
 
   const mockTelework = {
@@ -50,6 +56,10 @@ describe('TeleworkService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: RoleManagementService,
+          useValue: mockRoleManagementService,
+        },
       ],
     }).compile();
 
@@ -61,7 +71,7 @@ describe('TeleworkService', () => {
   });
 
   describe('create', () => {
-    it('should create a telework request successfully', async () => {
+    it('should create a telework request for self (allowed for all)', async () => {
       const createDto = {
         date: '2025-11-20',
         isTelework: true,
@@ -71,20 +81,27 @@ describe('TeleworkService', () => {
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
       mockPrismaService.teleworkSchedule.create.mockResolvedValue(mockTelework);
 
-      const result = await service.create('user-1', createDto);
+      const result = await service.create('user-1', 'CONTRIBUTEUR', createDto);
 
       expect(result).toBeDefined();
       expect(result.userId).toBe('user-1');
       expect(mockPrismaService.teleworkSchedule.create).toHaveBeenCalled();
+      expect(
+        mockRoleManagementService.getPermissionsForRole,
+      ).not.toHaveBeenCalled();
     });
 
-    it('should create telework for different user when admin', async () => {
+    it('should create telework for different user when having telework:manage_others permission', async () => {
       const createDto = {
         date: '2025-11-20',
         isTelework: true,
         userId: 'user-2',
       };
 
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:manage_others',
+        'telework:create',
+      ]);
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-2' });
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
       mockPrismaService.teleworkSchedule.create.mockResolvedValue({
@@ -92,9 +109,32 @@ describe('TeleworkService', () => {
         userId: 'user-2',
       });
 
-      const result = await service.create('admin-1', createDto);
+      const result = await service.create('admin-1', 'ADMIN', createDto);
 
       expect(result.userId).toBe('user-2');
+      expect(
+        mockRoleManagementService.getPermissionsForRole,
+      ).toHaveBeenCalledWith('ADMIN');
+    });
+
+    it('should throw ForbiddenException when creating for others without telework:manage_others', async () => {
+      const createDto = {
+        date: '2025-11-20',
+        isTelework: true,
+        userId: 'user-2',
+      };
+
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:read',
+      ]);
+
+      await expect(
+        service.create('user-1', 'CONTRIBUTEUR', createDto),
+      ).rejects.toThrow(ForbiddenException);
+      expect(
+        mockRoleManagementService.getPermissionsForRole,
+      ).toHaveBeenCalledWith('CONTRIBUTEUR');
     });
 
     it('should throw error when user not found', async () => {
@@ -105,9 +145,9 @@ describe('TeleworkService', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.create('nonexistent', createDto)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.create('nonexistent', 'CONTRIBUTEUR', createDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw error when telework already exists for date', async () => {
@@ -121,9 +161,9 @@ describe('TeleworkService', () => {
         mockTelework,
       );
 
-      await expect(service.create('user-1', createDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.create('user-1', 'CONTRIBUTEUR', createDto),
+      ).rejects.toThrow(ConflictException);
     });
   });
 

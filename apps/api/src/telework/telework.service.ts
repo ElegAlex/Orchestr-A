@@ -3,26 +3,46 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 import { CreateTeleworkDto } from './dto/create-telework.dto';
 import { UpdateTeleworkDto } from './dto/update-telework.dto';
 import { Prisma } from 'database';
 
 @Injectable()
 export class TeleworkService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly roleManagementService: RoleManagementService,
+  ) {}
 
   /**
    * Créer une journée de télétravail
    */
-  async create(currentUserId: string, createTeleworkDto: CreateTeleworkDto) {
+  async create(
+    currentUserId: string,
+    currentUserRole: string,
+    createTeleworkDto: CreateTeleworkDto,
+  ) {
     const {
       date,
       isTelework = true,
       isException = false,
       userId: targetUserId,
     } = createTeleworkDto;
+
+    // Si le userId du DTO est différent de l'utilisateur connecté, vérifier la permission
+    if (targetUserId && targetUserId !== currentUserId) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('telework:manage_others')) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission de saisir le télétravail pour autrui",
+        );
+      }
+    }
 
     // Utiliser le userId du DTO si fourni (admin/manager), sinon l'utilisateur connecté
     const userId = targetUserId || currentUserId;

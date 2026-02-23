@@ -255,7 +255,7 @@ export class ProjectsService {
       throw new NotFoundException('Projet introuvable');
     }
 
-    const { startDate, endDate, hiddenStatuses, ...projectData } =
+    const { startDate, endDate, hiddenStatuses, visibleStatuses, ...projectData } =
       updateProjectDto;
 
     // Vérifier les dates si fournies
@@ -284,6 +284,7 @@ export class ProjectsService {
         ...(startDate && { startDate: new Date(startDate) }),
         ...(endDate && { endDate: new Date(endDate) }),
         ...(hiddenStatuses !== undefined && { hiddenStatuses }),
+        ...(visibleStatuses !== undefined && { visibleStatuses }),
       },
       include: {
         members: {

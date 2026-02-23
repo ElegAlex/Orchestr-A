@@ -437,7 +437,7 @@ export default function UsersPage() {
   const downloadTemplate = () => {
     // Template without fake data - just headers and explanatory comments
     const template =
-      "email;login;password;firstName;lastName;role;departmentName;serviceNames\n# email@domaine.com;# prenom.nom;# motdepasse (min 6 car.);# Prenom;# Nom;# ADMIN|RESPONSABLE|MANAGER|CHEF_DE_PROJET|REFERENT_TECHNIQUE|CONTRIBUTEUR|OBSERVATEUR;# Nom departement existant;# Service1, Service2";
+      "email;login;password;firstName;lastName;role;departmentName;serviceNames\n# email@domaine.com;# prenom.nom;# motdepasse (min 6 car.);# Prenom;# Nom;# ADMIN|RESPONSABLE|MANAGER|CHEF_DE_PROJET|REFERENT_TECHNIQUE|CONTRIBUTEUR|OBSERVATEUR|TECHNICIEN_SUPPORT|GESTIONNAIRE_PARC|ADMINISTRATEUR_IML|DEVELOPPEUR_CONCEPTEUR|CORRESPONDANT_FONCTIONNEL_APPLICATION|CHARGE_DE_MISSION|GESTIONNAIRE_IML|CONSULTANT_TECHNOLOGIE_SI;# Nom departement existant;# Service1, Service2";
     const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -740,6 +740,32 @@ export default function UsersPage() {
                     {tCommon("roles.RESPONSABLE")}
                   </option>
                   <option value={Role.ADMIN}>{tCommon("roles.ADMIN")}</option>
+                  <option value={Role.TECHNICIEN_SUPPORT}>
+                    {tCommon("roles.TECHNICIEN_SUPPORT")}
+                  </option>
+                  <option value={Role.GESTIONNAIRE_PARC}>
+                    {tCommon("roles.GESTIONNAIRE_PARC")}
+                  </option>
+                  <option value={Role.ADMINISTRATEUR_IML}>
+                    {tCommon("roles.ADMINISTRATEUR_IML")}
+                  </option>
+                  <option value={Role.DEVELOPPEUR_CONCEPTEUR}>
+                    {tCommon("roles.DEVELOPPEUR_CONCEPTEUR")}
+                  </option>
+                  <option value={Role.CORRESPONDANT_FONCTIONNEL_APPLICATION}>
+                    {tCommon(
+                      "roles.CORRESPONDANT_FONCTIONNEL_APPLICATION",
+                    )}
+                  </option>
+                  <option value={Role.CHARGE_DE_MISSION}>
+                    {tCommon("roles.CHARGE_DE_MISSION")}
+                  </option>
+                  <option value={Role.GESTIONNAIRE_IML}>
+                    {tCommon("roles.GESTIONNAIRE_IML")}
+                  </option>
+                  <option value={Role.CONSULTANT_TECHNOLOGIE_SI}>
+                    {tCommon("roles.CONSULTANT_TECHNOLOGIE_SI")}
+                  </option>
                 </select>
               </div>
 
@@ -1145,6 +1171,32 @@ export default function UsersPage() {
                     {tCommon("roles.RESPONSABLE")}
                   </option>
                   <option value={Role.ADMIN}>{tCommon("roles.ADMIN")}</option>
+                  <option value={Role.TECHNICIEN_SUPPORT}>
+                    {tCommon("roles.TECHNICIEN_SUPPORT")}
+                  </option>
+                  <option value={Role.GESTIONNAIRE_PARC}>
+                    {tCommon("roles.GESTIONNAIRE_PARC")}
+                  </option>
+                  <option value={Role.ADMINISTRATEUR_IML}>
+                    {tCommon("roles.ADMINISTRATEUR_IML")}
+                  </option>
+                  <option value={Role.DEVELOPPEUR_CONCEPTEUR}>
+                    {tCommon("roles.DEVELOPPEUR_CONCEPTEUR")}
+                  </option>
+                  <option value={Role.CORRESPONDANT_FONCTIONNEL_APPLICATION}>
+                    {tCommon(
+                      "roles.CORRESPONDANT_FONCTIONNEL_APPLICATION",
+                    )}
+                  </option>
+                  <option value={Role.CHARGE_DE_MISSION}>
+                    {tCommon("roles.CHARGE_DE_MISSION")}
+                  </option>
+                  <option value={Role.GESTIONNAIRE_IML}>
+                    {tCommon("roles.GESTIONNAIRE_IML")}
+                  </option>
+                  <option value={Role.CONSULTANT_TECHNOLOGIE_SI}>
+                    {tCommon("roles.CONSULTANT_TECHNOLOGIE_SI")}
+                  </option>
                 </select>
               </div>
 

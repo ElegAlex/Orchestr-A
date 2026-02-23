@@ -10,6 +10,14 @@ export enum Role {
   REFERENT_TECHNIQUE = "REFERENT_TECHNIQUE",
   CONTRIBUTEUR = "CONTRIBUTEUR",
   OBSERVATEUR = "OBSERVATEUR",
+  TECHNICIEN_SUPPORT = "TECHNICIEN_SUPPORT",
+  GESTIONNAIRE_PARC = "GESTIONNAIRE_PARC",
+  ADMINISTRATEUR_IML = "ADMINISTRATEUR_IML",
+  DEVELOPPEUR_CONCEPTEUR = "DEVELOPPEUR_CONCEPTEUR",
+  CORRESPONDANT_FONCTIONNEL_APPLICATION = "CORRESPONDANT_FONCTIONNEL_APPLICATION",
+  CHARGE_DE_MISSION = "CHARGE_DE_MISSION",
+  GESTIONNAIRE_IML = "GESTIONNAIRE_IML",
+  CONSULTANT_TECHNOLOGIE_SI = "CONSULTANT_TECHNOLOGIE_SI",
 }
 
 export enum ProjectStatus {
@@ -217,6 +225,7 @@ export interface Project {
   budgetHours?: number;
   progress?: number;
   hiddenStatuses?: TaskStatus[];
+  visibleStatuses?: string[];
   createdAt: string;
   updatedAt: string;
   createdById?: string;
@@ -282,6 +291,7 @@ export interface UpdateProjectDto {
   estimatedHours?: number;
   budgetHours?: number;
   hiddenStatuses?: TaskStatus[];
+  visibleStatuses?: string[];
 }
 
 export interface AddMemberDto {
@@ -660,9 +670,11 @@ export const HOLIDAY_TYPE_COLORS: Record<HolidayType, string> = {
 
 export interface Permission {
   id: string;
-  name: string;
+  code: string;
+  module: string;
   action: string;
-  resource: string;
+  name?: string;
+  resource?: string;
   description?: string;
   createdAt: string;
   updatedAt: string;

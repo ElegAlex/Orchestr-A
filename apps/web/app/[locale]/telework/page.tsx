@@ -5,7 +5,9 @@ import { useTranslations } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
 import { teleworkService } from "@/services/telework.service";
-import { TeleworkSchedule } from "@/types";
+import { roleManagementService } from "@/services/role-management.service";
+import { usersService } from "@/services/users.service";
+import { TeleworkSchedule, User } from "@/types";
 import toast from "react-hot-toast";
 import { format, isSameDay } from "date-fns";
 
@@ -16,9 +18,36 @@ export default function TeleworkPage() {
   const [loading, setLoading] = useState(true);
   const [teleworkDays, setTeleworkDays] = useState<TeleworkSchedule[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [canManageOthers, setCanManageOthers] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>(
+    user?.id || "",
+  );
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+
+  // Vérifier la permission telework:manage_others et charger les utilisateurs si autorisé
+  useEffect(() => {
+    if (!user) return;
+    setSelectedUserId(user.id);
+
+    roleManagementService.getAllRoles().then((roles) => {
+      const userRole = roles.find((r) => r.code === user.role);
+      const hasPermission =
+        userRole?.permissions.some(
+          (rp) => rp.permission.code === "telework:manage_others",
+        ) ?? false;
+      setCanManageOthers(hasPermission);
+
+      if (hasPermission) {
+        usersService.getAll().then((data) => {
+          setAllUsers(Array.isArray(data) ? data : []);
+        });
+      }
+    });
+  }, [user]);
 
   // Charger les données de télétravail
   const fetchTeleworkData = useCallback(async () => {
+    if (!selectedUserId) return;
     try {
       setLoading(true);
       // Récupérer les 6 prochains mois de données
@@ -36,6 +65,7 @@ export default function TeleworkPage() {
       const data = await teleworkService.getByDateRange(
         format(startDate, "yyyy-MM-dd"),
         format(endDate, "yyyy-MM-dd"),
+        selectedUserId,
       );
       setTeleworkDays(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -44,7 +74,7 @@ export default function TeleworkPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentMonth, tc]);
+  }, [currentMonth, selectedUserId, tc]);
 
   useEffect(() => {
     fetchTeleworkData();
@@ -96,14 +126,14 @@ export default function TeleworkPage() {
   };
 
   const getTeleworkStatus = (date: Date): TeleworkSchedule | undefined => {
-    if (!user) return undefined;
+    if (!selectedUserId) return undefined;
     return teleworkDays.find(
-      (d) => d.userId === user.id && isSameDay(new Date(d.date), date),
+      (d) => d.userId === selectedUserId && isSameDay(new Date(d.date), date),
     );
   };
 
   const handleDayClick = async (date: Date) => {
-    if (isWeekend(date) || !user) return;
+    if (isWeekend(date) || !selectedUserId) return;
 
     try {
       const existingStatus = getTeleworkStatus(date);
@@ -114,7 +144,7 @@ export default function TeleworkPage() {
           date: formatDate(date),
           isTelework: true,
           isException: false,
-          userId: user.id,
+          userId: selectedUserId,
         });
         toast.success(t("messages.recorded"));
       } else if (existingStatus.isTelework) {
@@ -161,10 +191,12 @@ export default function TeleworkPage() {
   };
 
   const getTeleworkStats = () => {
-    if (!user) return 0;
-    return teleworkDays.filter((d) => d.userId === user.id && d.isTelework)
-      .length;
+    return teleworkDays.filter(
+      (d) => d.userId === selectedUserId && d.isTelework,
+    ).length;
   };
+
+  const selectedUser = allUsers.find((u) => u.id === selectedUserId) ?? user;
 
   const weekDays = [
     t("weekDays.mon"),
@@ -193,11 +225,42 @@ export default function TeleworkPage() {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-          <p className="text-gray-600 mt-1">
-            {t("stats", { count: getTeleworkStats() })}
-          </p>
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
+            <p className="text-gray-600 mt-1">
+              {t("stats", { count: getTeleworkStats() })}
+            </p>
+          </div>
+
+          {canManageOthers && allUsers.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="user-selector"
+                className="text-sm font-medium text-gray-700"
+              >
+                Collaborateur :
+              </label>
+              <select
+                id="user-selector"
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                {allUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.firstName} {u.lastName}
+                    {u.id === user?.id ? " (moi)" : ""}
+                  </option>
+                ))}
+              </select>
+              {selectedUser && selectedUser.id !== user?.id && (
+                <span className="text-xs text-blue-600 font-medium">
+                  Vue de {selectedUser.firstName} {selectedUser.lastName}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Info Card */}

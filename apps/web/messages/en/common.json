@@ -41,7 +41,15 @@
     "CHEF_DE_PROJET": "Project Manager",
     "REFERENT_TECHNIQUE": "Technical Lead",
     "CONTRIBUTEUR": "Contributor",
-    "OBSERVATEUR": "Observer"
+    "OBSERVATEUR": "Observer",
+    "TECHNICIEN_SUPPORT": "Support Technician",
+    "GESTIONNAIRE_PARC": "Fleet Manager",
+    "ADMINISTRATEUR_IML": "IML Administrator",
+    "DEVELOPPEUR_CONCEPTEUR": "Developer Designer",
+    "CORRESPONDANT_FONCTIONNEL_APPLICATION": "Functional Application Correspondent",
+    "CHARGE_DE_MISSION": "Mission Officer",
+    "GESTIONNAIRE_IML": "IML Manager",
+    "CONSULTANT_TECHNOLOGIE_SI": "IT Technology Consultant"
   },
   "status": {
     "active": "Active",

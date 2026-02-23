@@ -51,9 +51,10 @@ export class TeleworkController {
   })
   create(
     @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
     @Body() createTeleworkDto: CreateTeleworkDto,
   ) {
-    return this.teleworkService.create(userId, createTeleworkDto);
+    return this.teleworkService.create(userId, userRole, createTeleworkDto);
   }
 
   @Get()

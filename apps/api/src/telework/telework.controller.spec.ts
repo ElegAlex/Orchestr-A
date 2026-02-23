@@ -64,11 +64,16 @@ describe('TeleworkController', () => {
     it('should create a telework entry successfully', async () => {
       mockTeleworkService.create.mockResolvedValue(mockTelework);
 
-      const result = await controller.create('user-id-1', createTeleworkDto);
+      const result = await controller.create(
+        'user-id-1',
+        'CONTRIBUTEUR',
+        createTeleworkDto,
+      );
 
       expect(result).toEqual(mockTelework);
       expect(mockTeleworkService.create).toHaveBeenCalledWith(
         'user-id-1',
+        'CONTRIBUTEUR',
         createTeleworkDto,
       );
       expect(mockTeleworkService.create).toHaveBeenCalledTimes(1);
@@ -80,7 +85,7 @@ describe('TeleworkController', () => {
       );
 
       await expect(
-        controller.create('user-id-1', createTeleworkDto),
+        controller.create('user-id-1', 'CONTRIBUTEUR', createTeleworkDto),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -90,7 +95,7 @@ describe('TeleworkController', () => {
       );
 
       await expect(
-        controller.create('user-id-1', {
+        controller.create('user-id-1', 'CONTRIBUTEUR', {
           ...createTeleworkDto,
           date: 'invalid',
         }),

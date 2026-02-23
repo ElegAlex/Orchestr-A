@@ -41,7 +41,15 @@
     "CHEF_DE_PROJET": "Chef de projet",
     "REFERENT_TECHNIQUE": "Référent technique",
     "CONTRIBUTEUR": "Contributeur",
-    "OBSERVATEUR": "Observateur"
+    "OBSERVATEUR": "Observateur",
+    "TECHNICIEN_SUPPORT": "Technicien Support",
+    "GESTIONNAIRE_PARC": "Gestionnaire de Parc",
+    "ADMINISTRATEUR_IML": "Administrateur IML",
+    "DEVELOPPEUR_CONCEPTEUR": "Développeur Concepteur",
+    "CORRESPONDANT_FONCTIONNEL_APPLICATION": "Correspondant Fonctionnel Application",
+    "CHARGE_DE_MISSION": "Chargé de Mission",
+    "GESTIONNAIRE_IML": "Gestionnaire IML",
+    "CONSULTANT_TECHNOLOGIE_SI": "Consultant Technologie SI"
   },
   "status": {
     "active": "Actif",

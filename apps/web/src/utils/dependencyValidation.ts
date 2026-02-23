@@ -98,6 +98,8 @@ export function getStatusColorClass(status: TaskStatus): string {
   switch (status) {
     case TaskStatus.DONE:
       return "bg-green-100 text-green-800";
+    case TaskStatus.STARTED:
+      return "bg-sky-100 text-sky-800";
     case TaskStatus.IN_PROGRESS:
       return "bg-blue-100 text-blue-800";
     case TaskStatus.IN_REVIEW:
@@ -117,6 +119,8 @@ export function getStatusLabel(status: TaskStatus): string {
   switch (status) {
     case TaskStatus.TODO:
       return "A faire";
+    case TaskStatus.STARTED:
+      return "Débuté";
     case TaskStatus.IN_PROGRESS:
       return "En cours";
     case TaskStatus.IN_REVIEW:

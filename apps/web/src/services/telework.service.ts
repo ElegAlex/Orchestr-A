@@ -23,10 +23,13 @@ export const teleworkService = {
   async getByDateRange(
     startDate: string,
     endDate: string,
+    userId?: string,
   ): Promise<TeleworkSchedule[]> {
+    const params = new URLSearchParams({ startDate, endDate });
+    if (userId) params.set('userId', userId);
     const response = await api.get<
       { data: TeleworkSchedule[] } | TeleworkSchedule[]
-    >(`/telework?startDate=${startDate}&endDate=${endDate}`);
+    >(`/telework?${params.toString()}`);
     // API returns {data: [], meta: {}} - extract the array
     if (response.data && "data" in response.data) {
       return response.data.data;
