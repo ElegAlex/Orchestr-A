@@ -36,6 +36,7 @@ export class TimeTrackingController {
   constructor(private readonly timeTrackingService: TimeTrackingService) {}
 
   @Post()
+  @Permissions('time_tracking:create')
   @ApiOperation({ summary: 'Créer une entrée de temps' })
   @ApiResponse({
     status: 201,
@@ -191,6 +192,7 @@ export class TimeTrackingController {
   }
 
   @Patch(':id')
+  @Permissions('time_tracking:update')
   @ApiOperation({ summary: 'Mettre à jour une entrée de temps' })
   @ApiResponse({
     status: 200,
@@ -208,6 +210,7 @@ export class TimeTrackingController {
   }
 
   @Delete(':id')
+  @Permissions('time_tracking:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer une entrée de temps' })
   @ApiResponse({

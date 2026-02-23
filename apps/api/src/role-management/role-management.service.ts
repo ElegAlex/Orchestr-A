@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
   OnModuleInit,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
@@ -15,6 +16,7 @@ import { ConfigService } from '@nestjs/config';
 export class RoleManagementService implements OnModuleInit {
   private redis: Redis;
   private readonly CACHE_TTL = 300; // 5 minutes
+  private readonly logger = new Logger(RoleManagementService.name);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -32,9 +34,22 @@ export class RoleManagementService implements OnModuleInit {
   }
 
   /**
-   * Seed les permissions et rôles système (idempotent)
+   * Seed les permissions et rôles système (idempotent).
+   * Ne modifie pas les permissions des rôles existants.
    */
   async seedPermissionsAndRoles() {
+    return this._syncPermissionsAndRoles(false);
+  }
+
+  /**
+   * Réinitialiser les permissions des rôles système à leurs valeurs par défaut.
+   * Écrase toutes les modifications faites via l'UI admin.
+   */
+  async resetRolesToDefaults() {
+    return this._syncPermissionsAndRoles(true);
+  }
+
+  private async _syncPermissionsAndRoles(force: boolean) {
     // Définir toutes les permissions par module
     const permissionsData = [
       // Projects
@@ -371,7 +386,8 @@ export class RoleManagementService implements OnModuleInit {
       {
         code: 'GESTIONNAIRE_PARC',
         name: 'Gestionnaire de Parc',
-        description: 'Gestion du parc informatique - même permissions que Contributeur',
+        description:
+          'Gestion du parc informatique - même permissions que Contributeur',
         isSystem: true,
         permissions: [
           'tasks:create_orphan',
@@ -411,7 +427,8 @@ export class RoleManagementService implements OnModuleInit {
       {
         code: 'DEVELOPPEUR_CONCEPTEUR',
         name: 'Développeur Concepteur',
-        description: 'Développement et conception - même permissions que Chef de Projet',
+        description:
+          'Développement et conception - même permissions que Chef de Projet',
         isSystem: true,
         permissions: [
           'projects:create',
@@ -454,7 +471,8 @@ export class RoleManagementService implements OnModuleInit {
       {
         code: 'CORRESPONDANT_FONCTIONNEL_APPLICATION',
         name: 'Correspondant Fonctionnel Application',
-        description: 'Référent fonctionnel applicatif - même permissions que Chef de Projet',
+        description:
+          'Référent fonctionnel applicatif - même permissions que Chef de Projet',
         isSystem: true,
         permissions: [
           'projects:create',
@@ -497,7 +515,8 @@ export class RoleManagementService implements OnModuleInit {
       {
         code: 'CHARGE_DE_MISSION',
         name: 'Chargé de Mission',
-        description: 'Pilotage de missions - même permissions que Chef de Projet',
+        description:
+          'Pilotage de missions - même permissions que Chef de Projet',
         isSystem: true,
         permissions: [
           'projects:create',
@@ -560,7 +579,8 @@ export class RoleManagementService implements OnModuleInit {
       {
         code: 'CONSULTANT_TECHNOLOGIE_SI',
         name: 'Consultant Technologie SI',
-        description: 'Conseil en technologies SI - même permissions que Chef de Projet',
+        description:
+          'Conseil en technologies SI - même permissions que Chef de Projet',
         isSystem: true,
         permissions: [
           'projects:create',
@@ -606,22 +626,41 @@ export class RoleManagementService implements OnModuleInit {
     for (const roleData of rolesConfig) {
       const { permissions, ...roleInfo } = roleData;
 
+      // Vérifier si le rôle existe déjà en BDD
+      const existingRole = await this.prisma.roleConfig.findUnique({
+        where: { code: roleData.code },
+      });
+
       const role = await this.prisma.roleConfig.upsert({
         where: { code: roleData.code },
         update: {},
         create: roleInfo,
       });
 
-      // Supprimer les anciennes permissions pour ce rôle
-      await this.prisma.rolePermission.deleteMany({
-        where: { roleConfigId: role.id },
-      });
+      // En mode seed (non-force), ne pas toucher aux permissions des rôles existants
+      if (!force && existingRole) {
+        this.logger.log(
+          `[Seed] ${roleData.code}: rôle existant, permissions conservées`,
+        );
+        continue;
+      }
 
-      // Créer les nouvelles permissions
+      // Supprimer les anciennes permissions si force (reset-to-defaults)
+      if (existingRole) {
+        await this.prisma.rolePermission.deleteMany({
+          where: { roleConfigId: role.id },
+        });
+      }
+
+      // Créer les permissions par défaut
+      const notFoundList: string[] = [];
       const permissionAssignments = permissions
         .map((permCode) => {
           const permId = permissionsMap.get(permCode);
-          if (!permId) return null;
+          if (!permId) {
+            notFoundList.push(permCode);
+            return null;
+          }
           return {
             roleConfigId: role.id,
             permissionId: permId,
@@ -629,18 +668,28 @@ export class RoleManagementService implements OnModuleInit {
         })
         .filter((p) => p !== null);
 
+      let created = 0;
       if (permissionAssignments.length > 0) {
-        await this.prisma.rolePermission.createMany({
+        const result = await this.prisma.rolePermission.createMany({
           data: permissionAssignments,
           skipDuplicates: true,
         });
+        created = result.count;
       }
+
+      this.logger.log(
+        `[Seed] ${roleData.code}: ${created} permissions assigned, ${notFoundList.length} not found${notFoundList.length > 0 ? `: [${notFoundList.join(', ')}]` : ''}`,
+      );
 
       // Invalider le cache pour ce rôle
       await this.invalidateRoleCache(roleData.code);
     }
 
-    return { message: 'Permissions et rôles créés avec succès' };
+    return {
+      message: force
+        ? 'Permissions et rôles réinitialisés avec succès'
+        : 'Permissions et rôles créés avec succès',
+    };
   }
 
   /**
@@ -817,7 +866,11 @@ export class RoleManagementService implements OnModuleInit {
       // Check Redis first
       const cached = await this.redis.get(cacheKey);
       if (cached) {
-        return JSON.parse(cached);
+        const cachedPermissions = JSON.parse(cached);
+        this.logger.debug(
+          `[RBAC] ${roleCode}: ${cachedPermissions.length} permissions (source: cache)`,
+        );
+        return cachedPermissions;
       }
     } catch (error) {
       console.warn('Redis cache read error:', error);
@@ -840,6 +893,10 @@ export class RoleManagementService implements OnModuleInit {
     }
 
     const permissionCodes = role.permissions.map((rp) => rp.permission.code);
+
+    this.logger.debug(
+      `[RBAC] ${roleCode}: ${permissionCodes.length} permissions (source: db)`,
+    );
 
     // Cache dans Redis (TTL 5 min)
     try {

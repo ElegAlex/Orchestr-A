@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsController } from './comments.controller';
 import { CommentsService } from './comments.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { PERMISSIONS_KEY } from '../auth/decorators/permissions.decorator';
 
 describe('CommentsController', () => {
   let controller: CommentsController;
@@ -252,6 +253,32 @@ describe('CommentsController', () => {
       await expect(
         controller.remove('nonexistent', 'user-id-1', 'CONTRIBUTEUR'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('permissions metadata', () => {
+    it('should require comments:create on create', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        CommentsController.prototype.create,
+      );
+      expect(metadata).toEqual(['comments:create']);
+    });
+
+    it('should require comments:update on update', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        CommentsController.prototype.update,
+      );
+      expect(metadata).toEqual(['comments:update']);
+    });
+
+    it('should require comments:delete on remove', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        CommentsController.prototype.remove,
+      );
+      expect(metadata).toEqual(['comments:delete']);
     });
   });
 });

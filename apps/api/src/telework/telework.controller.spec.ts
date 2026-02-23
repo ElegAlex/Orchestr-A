@@ -7,6 +7,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { PERMISSIONS_KEY } from '../auth/decorators/permissions.decorator';
 
 describe('TeleworkController', () => {
   let controller: TeleworkController;
@@ -407,6 +408,32 @@ describe('TeleworkController', () => {
       await expect(
         controller.remove('nonexistent', 'user-id-1'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('permissions metadata', () => {
+    it('should require telework:create on create', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        TeleworkController.prototype.create,
+      );
+      expect(metadata).toEqual(['telework:create']);
+    });
+
+    it('should require telework:update on update', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        TeleworkController.prototype.update,
+      );
+      expect(metadata).toEqual(['telework:update']);
+    });
+
+    it('should require telework:delete on remove', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        TeleworkController.prototype.remove,
+      );
+      expect(metadata).toEqual(['telework:delete']);
     });
   });
 });

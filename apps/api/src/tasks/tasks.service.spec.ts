@@ -1449,7 +1449,10 @@ describe('TasksService', () => {
         progress: 0,
       });
 
-      await service.create({ title: 'T', projectId: 'p1', status: TaskStatus.TODO }, mockUser);
+      await service.create(
+        { title: 'T', projectId: 'p1', status: TaskStatus.TODO },
+        mockUser,
+      );
 
       expect(mockPrismaService.task.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1467,7 +1470,10 @@ describe('TasksService', () => {
         progress: 50,
       });
 
-      await service.create({ title: 'T', projectId: 'p1', status: TaskStatus.IN_PROGRESS }, mockUser);
+      await service.create(
+        { title: 'T', projectId: 'p1', status: TaskStatus.IN_PROGRESS },
+        mockUser,
+      );
 
       expect(mockPrismaService.task.create).toHaveBeenCalledWith(
         expect.objectContaining({

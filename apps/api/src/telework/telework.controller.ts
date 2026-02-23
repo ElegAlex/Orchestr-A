@@ -36,6 +36,7 @@ export class TeleworkController {
   constructor(private readonly teleworkService: TeleworkService) {}
 
   @Post()
+  @Permissions('telework:create')
   @ApiOperation({ summary: 'Déclarer une journée de télétravail' })
   @ApiResponse({
     status: 201,
@@ -194,6 +195,7 @@ export class TeleworkController {
   }
 
   @Patch(':id')
+  @Permissions('telework:update')
   @ApiOperation({ summary: 'Mettre à jour un télétravail' })
   @ApiResponse({
     status: 200,
@@ -216,6 +218,7 @@ export class TeleworkController {
   }
 
   @Delete(':id')
+  @Permissions('telework:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un télétravail' })
   @ApiResponse({

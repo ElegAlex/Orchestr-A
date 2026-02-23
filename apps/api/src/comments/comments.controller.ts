@@ -25,6 +25,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('comments')
@@ -35,6 +36,7 @@ export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Post()
+  @Permissions('comments:create')
   @ApiOperation({ summary: 'Créer un commentaire' })
   @ApiResponse({ status: 201, description: 'Commentaire créé' })
   create(
@@ -64,6 +66,7 @@ export class CommentsController {
   }
 
   @Patch(':id')
+  @Permissions('comments:update')
   @ApiOperation({ summary: 'Modifier son commentaire' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -74,6 +77,7 @@ export class CommentsController {
   }
 
   @Delete(':id')
+  @Permissions('comments:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un commentaire (auteur ou admin)' })
   remove(

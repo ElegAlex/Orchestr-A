@@ -15,6 +15,7 @@ describe('RoleManagementController', () => {
     findAllPermissions: vi.fn(),
     replaceRolePermissions: vi.fn(),
     seedPermissionsAndRoles: vi.fn(),
+    resetRolesToDefaults: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -210,6 +211,23 @@ describe('RoleManagementController', () => {
       expect(
         mockRoleManagementService.seedPermissionsAndRoles,
       ).toHaveBeenCalled();
+    });
+  });
+
+  describe('resetRolesToDefaults', () => {
+    it('should reset roles to defaults', async () => {
+      const mockResponse = {
+        message: 'Permissions et rôles réinitialisés avec succès',
+      };
+
+      mockRoleManagementService.resetRolesToDefaults.mockResolvedValue(
+        mockResponse,
+      );
+
+      const result = await controller.resetRolesToDefaults();
+
+      expect(result).toEqual(mockResponse);
+      expect(mockRoleManagementService.resetRolesToDefaults).toHaveBeenCalled();
     });
   });
 });

@@ -25,6 +25,7 @@ import { AssignPermissionDto } from './dto/assign-permission.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 import { Role } from 'database';
 
 @ApiTags('role-management')
@@ -163,5 +164,19 @@ export class RoleManagementController {
   })
   seedPermissionsAndRoles() {
     return this.roleManagementService.seedPermissionsAndRoles();
+  }
+
+  @Post('reset-to-defaults')
+  @Permissions('users:manage_roles')
+  @ApiOperation({
+    summary:
+      'Réinitialiser les permissions des rôles système à leurs valeurs par défaut',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Permissions réinitialisées avec succès',
+  })
+  resetRolesToDefaults() {
+    return this.roleManagementService.resetRolesToDefaults();
   }
 }

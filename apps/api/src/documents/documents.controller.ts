@@ -36,6 +36,7 @@ export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
   @Post()
+  @Permissions('documents:create')
   @ApiOperation({ summary: 'Uploader un document' })
   @ApiResponse({ status: 201, description: 'Document créé' })
   create(
@@ -65,6 +66,7 @@ export class DocumentsController {
   }
 
   @Patch(':id')
+  @Permissions('documents:update')
   @ApiOperation({ summary: 'Modifier un document' })
   update(
     @Param('id', ParseUUIDPipe) id: string,

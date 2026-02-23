@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
 import { NotFoundException } from '@nestjs/common';
+import { PERMISSIONS_KEY } from '../auth/decorators/permissions.decorator';
 
 describe('DocumentsController', () => {
   let controller: DocumentsController;
@@ -197,6 +198,32 @@ describe('DocumentsController', () => {
       await expect(controller.remove('nonexistent')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('permissions metadata', () => {
+    it('should require documents:create on create', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        DocumentsController.prototype.create,
+      );
+      expect(metadata).toEqual(['documents:create']);
+    });
+
+    it('should require documents:update on update', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        DocumentsController.prototype.update,
+      );
+      expect(metadata).toEqual(['documents:update']);
+    });
+
+    it('should require documents:delete on remove', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        DocumentsController.prototype.remove,
+      );
+      expect(metadata).toEqual(['documents:delete']);
     });
   });
 });

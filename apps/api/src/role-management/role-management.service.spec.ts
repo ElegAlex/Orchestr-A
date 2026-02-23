@@ -52,8 +52,20 @@ describe('RoleManagementService', () => {
   };
 
   beforeEach(async () => {
-    // Mock count pour ne pas déclencher le seed automatique
-    mockPrismaService.roleConfig.count.mockResolvedValue(1);
+    // Mocks pour le seed automatique (onModuleInit → seedPermissionsAndRoles)
+    mockPrismaService.permission.upsert.mockResolvedValue({
+      id: 'perm-id',
+      code: 'test',
+    });
+    // Simuler des rôles existants → le seed skip la création des permissions
+    mockPrismaService.roleConfig.findUnique.mockResolvedValue({
+      id: 'role-id',
+      code: 'EXISTING',
+    });
+    mockPrismaService.roleConfig.upsert.mockResolvedValue({
+      id: 'role-id',
+      code: 'EXISTING',
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -71,6 +83,9 @@ describe('RoleManagementService', () => {
 
     service = module.get<RoleManagementService>(RoleManagementService);
     await service.onModuleInit();
+
+    // Clear mocks after seed for clean individual test setup
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -381,20 +396,45 @@ describe('RoleManagementService', () => {
   });
 
   describe('seedPermissionsAndRoles', () => {
-    it('should seed permissions and roles', async () => {
+    it('should not modify permissions of an existing role', async () => {
       mockPrismaService.permission.upsert.mockResolvedValue({
         id: 'perm-1',
         code: 'projects:create',
+      });
+      // Simulate existing role
+      mockPrismaService.roleConfig.findUnique.mockResolvedValue({
+        id: 'role-1',
+        code: 'ADMIN',
       });
       mockPrismaService.roleConfig.upsert.mockResolvedValue({
         id: 'role-1',
         code: 'ADMIN',
       });
-      mockPrismaService.rolePermission.deleteMany.mockResolvedValue({
-        count: 0,
+
+      await service.seedPermissionsAndRoles();
+
+      // Should NOT delete or create permissions for existing roles
+      expect(
+        mockPrismaService.rolePermission.deleteMany,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockPrismaService.rolePermission.createMany,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should create permissions for a new role', async () => {
+      mockPrismaService.permission.upsert.mockResolvedValue({
+        id: 'perm-1',
+        code: 'projects:create',
+      });
+      // Simulate new role (findUnique returns null)
+      mockPrismaService.roleConfig.findUnique.mockResolvedValue(null);
+      mockPrismaService.roleConfig.upsert.mockResolvedValue({
+        id: 'role-1',
+        code: 'NEW_ROLE',
       });
       mockPrismaService.rolePermission.createMany.mockResolvedValue({
-        count: 1,
+        count: 5,
       });
 
       const result = await service.seedPermissionsAndRoles();
@@ -402,8 +442,83 @@ describe('RoleManagementService', () => {
       expect(result).toEqual({
         message: 'Permissions et rôles créés avec succès',
       });
+      expect(mockPrismaService.rolePermission.createMany).toHaveBeenCalled();
+      // Should NOT call deleteMany since the role is new (no existing permissions)
+      expect(
+        mockPrismaService.rolePermission.deleteMany,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should always upsert Permission entries', async () => {
+      mockPrismaService.permission.upsert.mockResolvedValue({
+        id: 'perm-1',
+        code: 'test',
+      });
+      mockPrismaService.roleConfig.findUnique.mockResolvedValue({
+        id: 'role-1',
+      });
+      mockPrismaService.roleConfig.upsert.mockResolvedValue({
+        id: 'role-1',
+      });
+
+      await service.seedPermissionsAndRoles();
+
+      // Permissions are always upserted, even if roles exist
       expect(mockPrismaService.permission.upsert).toHaveBeenCalled();
-      expect(mockPrismaService.roleConfig.upsert).toHaveBeenCalled();
+    });
+  });
+
+  describe('resetRolesToDefaults', () => {
+    it('should force-reset permissions for existing roles', async () => {
+      mockPrismaService.permission.upsert.mockResolvedValue({
+        id: 'perm-1',
+        code: 'projects:create',
+      });
+      // Simulate existing role
+      mockPrismaService.roleConfig.findUnique.mockResolvedValue({
+        id: 'role-1',
+        code: 'ADMIN',
+      });
+      mockPrismaService.roleConfig.upsert.mockResolvedValue({
+        id: 'role-1',
+        code: 'ADMIN',
+      });
+      mockPrismaService.rolePermission.deleteMany.mockResolvedValue({
+        count: 10,
+      });
+      mockPrismaService.rolePermission.createMany.mockResolvedValue({
+        count: 5,
+      });
+
+      const result = await service.resetRolesToDefaults();
+
+      expect(result).toEqual({
+        message: 'Permissions et rôles réinitialisés avec succès',
+      });
+      // Force mode: should delete and recreate permissions
+      expect(mockPrismaService.rolePermission.deleteMany).toHaveBeenCalled();
+      expect(mockPrismaService.rolePermission.createMany).toHaveBeenCalled();
+    });
+  });
+
+  describe('CHEF_DE_PROJET permissions', () => {
+    it('getPermissionsForRole should return projects:create', async () => {
+      const mockRole = {
+        code: 'CHEF_DE_PROJET',
+        permissions: [
+          { permission: { code: 'projects:create' } },
+          { permission: { code: 'projects:read' } },
+          { permission: { code: 'tasks:create' } },
+          { permission: { code: 'tasks:read' } },
+        ],
+      };
+
+      mockPrismaService.roleConfig.findUnique.mockResolvedValue(mockRole);
+
+      const result = await service.getPermissionsForRole('CHEF_DE_PROJET');
+
+      expect(result).toContain('projects:create');
+      expect(result).toHaveLength(4);
     });
   });
 });

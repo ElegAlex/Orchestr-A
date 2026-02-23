@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TimeTrackingController } from './time-tracking.controller';
 import { TimeTrackingService } from './time-tracking.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { PERMISSIONS_KEY } from '../auth/decorators/permissions.decorator';
 
 describe('TimeTrackingController', () => {
   let controller: TimeTrackingController;
@@ -412,6 +413,32 @@ describe('TimeTrackingController', () => {
       await expect(controller.remove('nonexistent')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('permissions metadata', () => {
+    it('should require time_tracking:create on create', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        TimeTrackingController.prototype.create,
+      );
+      expect(metadata).toEqual(['time_tracking:create']);
+    });
+
+    it('should require time_tracking:update on update', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        TimeTrackingController.prototype.update,
+      );
+      expect(metadata).toEqual(['time_tracking:update']);
+    });
+
+    it('should require time_tracking:delete on remove', () => {
+      const metadata = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        TimeTrackingController.prototype.remove,
+      );
+      expect(metadata).toEqual(['time_tracking:delete']);
     });
   });
 });
