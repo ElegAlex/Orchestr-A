@@ -68,8 +68,20 @@
       "estimatedHoursLabel": "Estimation (hours)",
       "estimatedHoursPlaceholder": "E.g.: 8",
       "externalInterventionLabel": "External intervention",
+      "milestoneLabel": "Milestone",
+      "noMilestone": "No milestone",
+      "noProject": "No project (independent task)",
+      "saving": "Saving...",
+      "selectProjectFirst": "Select a project first",
+      "servicesLabel": "Services",
+      "servicesPlaceholder": "Invite entire services",
+      "titleRequired": "Title is required",
       "cancel": "Cancel",
       "submit": "Create task"
+    },
+    "edit": {
+      "title": "Edit task",
+      "submit": "Update task"
     }
   },
 
@@ -116,6 +128,7 @@
       "schedule": "Schedule"
     },
     "dependencies": {
+      "noDependencies": "No dependencies",
       "label": "Dependencies",
       "selectPlaceholder": "Select tasks this task depends on",
       "noTaskFound": "No task found",
@@ -160,6 +173,10 @@
     "statusUpdateSuccess": "Status updated",
     "statusUpdateError": "Error updating status",
     "dependenciesUpdateSuccess": "Dependencies updated",
-    "dependenciesUpdateError": "Error updating dependencies"
+    "dependenciesUpdateError": "Error updating dependencies",
+    "importSuccess": "{count} task(s) imported successfully",
+    "importSkipped": "{count} task(s) skipped",
+    "importErrors": "{count} error(s) during import",
+    "saveError": "Error saving"
   }
 }

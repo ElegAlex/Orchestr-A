@@ -93,7 +93,8 @@
     "validationError": "Validation error",
     "forbidden": "Access forbidden",
     "loadError": "Error loading data",
-    "saveError": "Error saving"
+    "saveError": "Error saving",
+    "generic": "An error occurred"
   },
   "table": {
     "empty": "No data",
@@ -148,7 +149,8 @@
     "invalidDate": "Invalid date",
     "noData": "No data",
     "completed": "Completed",
-    "noUserFound": "No user found"
+    "noUserFound": "No user found",
+    "noDescription": "No description"
   },
   "loading": "Loading...",
   "cancel": "Cancel",

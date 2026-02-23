@@ -68,8 +68,20 @@
       "estimatedHoursLabel": "Estimation (heures)",
       "estimatedHoursPlaceholder": "Ex: 8",
       "externalInterventionLabel": "Intervention extérieure",
+      "milestoneLabel": "Jalon",
+      "noMilestone": "Aucun jalon",
+      "noProject": "Aucun projet (tâche indépendante)",
+      "saving": "Enregistrement...",
+      "selectProjectFirst": "Sélectionnez d'abord un projet",
+      "servicesLabel": "Services",
+      "servicesPlaceholder": "Inviter des services entiers",
+      "titleRequired": "Le titre est obligatoire",
       "cancel": "Annuler",
       "submit": "Créer la tâche"
+    },
+    "edit": {
+      "title": "Modifier la tâche",
+      "submit": "Modifier la tâche"
     }
   },
 
@@ -116,6 +128,7 @@
       "schedule": "Horaires"
     },
     "dependencies": {
+      "noDependencies": "Aucune dependance",
       "label": "Dependances",
       "selectPlaceholder": "Selectionner les taches dont depend cette tache",
       "noTaskFound": "Aucune tache trouvee",
@@ -160,6 +173,10 @@
     "statusUpdateSuccess": "Statut mis à jour",
     "statusUpdateError": "Erreur lors de la mise à jour du statut",
     "dependenciesUpdateSuccess": "Dependances mises a jour",
-    "dependenciesUpdateError": "Erreur lors de la mise a jour des dependances"
+    "dependenciesUpdateError": "Erreur lors de la mise a jour des dependances",
+    "importSuccess": "{count} tâche(s) importée(s) avec succès",
+    "importSkipped": "{count} tâche(s) ignorée(s)",
+    "importErrors": "{count} erreur(s) lors de l'import",
+    "saveError": "Erreur lors de l'enregistrement"
   }
 }

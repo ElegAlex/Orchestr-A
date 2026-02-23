@@ -93,7 +93,8 @@
     "validationError": "Erreur de validation",
     "forbidden": "Accès interdit",
     "loadError": "Erreur lors du chargement des données",
-    "saveError": "Erreur lors de l'enregistrement"
+    "saveError": "Erreur lors de l'enregistrement",
+    "generic": "Une erreur est survenue"
   },
   "table": {
     "empty": "Aucune donnée",
@@ -148,7 +149,8 @@
     "invalidDate": "Date invalide",
     "noData": "Aucune donnée",
     "completed": "Complétées",
-    "noUserFound": "Aucun utilisateur trouvé"
+    "noUserFound": "Aucun utilisateur trouvé",
+    "noDescription": "Aucune description"
   },
   "loading": "Chargement...",
   "cancel": "Annuler",

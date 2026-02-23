@@ -99,7 +99,14 @@
       "descriptionPlaceholder": "Leave type description...",
       "annualLimit": "Annual Limit",
       "annualLimitPlaceholder": "Unlimited",
-      "requiredCountHelper": "Number of people required to master this skill to ensure coverage"
+      "requiredCountHelper": "Number of people required to master this skill to ensure coverage",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "typeCreated": "Leave type created successfully",
+      "typeUpdated": "Leave type updated successfully",
+      "typeDeleted": "Type deactivated",
+      "typeReactivated": "Type reactivated",
+      "typeSystemCannotDelete": "System types cannot be deleted"
     },
     "validation": {
       "assignedValidator": "Assigned Validator",
@@ -182,6 +189,7 @@
     "subtitle": "Manage user skills",
     "loading": "Loading...",
     "newSkill": "New Skill",
+    "skillGapCount": "Skill gap - {count} missing resource(s)",
     "categories": {
       "TECHNICAL": "Technical",
       "METHODOLOGY": "Methodology",

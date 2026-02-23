@@ -167,7 +167,7 @@ export function TaskDependencySelector({
 
         {selectedTasks.length === 0 && disabled && (
           <span className="text-gray-500 text-sm">
-            {t("../../sections.noDependencies")}
+            {t("noDependencies")}
           </span>
         )}
       </div>

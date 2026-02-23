@@ -99,7 +99,14 @@
       "descriptionPlaceholder": "Description du type de congé...",
       "annualLimit": "Limite annuelle",
       "annualLimitPlaceholder": "Illimité",
-      "requiredCountHelper": "Nombre de personnes devant maitriser cette competence pour assurer la couverture"
+      "requiredCountHelper": "Nombre de personnes devant maitriser cette competence pour assurer la couverture",
+      "deactivate": "Désactiver",
+      "reactivate": "Réactiver",
+      "typeCreated": "Type de congé créé avec succès",
+      "typeUpdated": "Type de congé modifié avec succès",
+      "typeDeleted": "Type désactivé",
+      "typeReactivated": "Type réactivé",
+      "typeSystemCannotDelete": "Les types système ne peuvent pas être supprimés"
     },
     "validation": {
       "assignedValidator": "Validateur assigné",
@@ -182,6 +189,7 @@
     "subtitle": "Gérez les compétences des utilisateurs",
     "loading": "Chargement...",
     "newSkill": "Nouvelle compétence",
+    "skillGapCount": "Skill gap - {count} ressource(s) manquante(s)",
     "categories": {
       "TECHNICAL": "Technique",
       "METHODOLOGY": "Méthodologie",
