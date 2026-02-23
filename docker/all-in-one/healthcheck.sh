@@ -18,7 +18,7 @@ check_service web || exit 1
 check_service nginx || exit 1
 
 # Check that API responds to health endpoint
-if ! curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
+if ! curl -sf http://localhost:80/api/health > /dev/null 2>&1; then
     echo "API health check failed"
     exit 1
 fi

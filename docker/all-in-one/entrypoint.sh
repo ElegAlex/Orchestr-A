@@ -197,10 +197,10 @@ echo ""
 echo "════════════════════════════════════════════════════════════"
 echo "  ✓ Orchestr'A — Démarrage des services..."
 echo ""
-echo "  Interface web : http://localhost:3000"
-echo "  API :           http://localhost:3000/api"
+echo "  Interface web : http://localhost:80"
+echo "  API :           http://localhost:80/api"
 if [ "${SWAGGER_ENABLED:-false}" = "true" ]; then
-echo "  Documentation : http://localhost:3000/api/docs"
+echo "  Documentation : http://localhost:80/api/docs"
 fi
 echo ""
 if [ "$IS_UPGRADE" = true ]; then

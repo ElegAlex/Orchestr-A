@@ -1,6 +1,6 @@
 # ============================================================
 # Orchestr-A All-in-One Image
-# Usage: docker run -d -p 3000:3000 -v orchestr-a-data:/data ghcr.io/elegalex/orchestr-a:latest
+# Usage: docker run -d -p 80:80 -v orchestr-a-data:/data ghcr.io/elegalex/orchestr-a:latest
 # ============================================================
 
 # ----- Stage 1: Build API -----
@@ -148,12 +148,12 @@ ENV NODE_ENV=production \
     REDIS_PORT=6379 \
     JWT_SECRET=change-me-in-production-minimum-32-characters \
     JWT_EXPIRES_IN=7d \
-    CORS_ORIGIN=http://localhost:3000 \
-    ALLOWED_ORIGINS=http://localhost:3000 \
+    CORS_ORIGIN=http://localhost:80 \
+    ALLOWED_ORIGINS=http://localhost:80 \
     SWAGGER_ENABLED=false
 
 # Exposed port (nginx reverse proxy)
-EXPOSE 3000
+EXPOSE 80
 
 # Volume for persistence
 VOLUME ["/data"]
