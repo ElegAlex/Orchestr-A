@@ -22,11 +22,15 @@ export class RoleManagementService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
-    const redisUrl = this.configService.get<string>(
-      'REDIS_URL',
-      'redis://localhost:6379',
-    );
-    this.redis = new Redis(redisUrl);
+    const redisUrl = this.configService.get<string>('REDIS_URL');
+    if (redisUrl) {
+      this.redis = new Redis(redisUrl);
+    } else {
+      const host = this.configService.get<string>('REDIS_HOST', 'localhost');
+      const port = this.configService.get<number>('REDIS_PORT', 6379);
+      const password = this.configService.get<string>('REDIS_PASSWORD');
+      this.redis = new Redis({ host, port, password: password || undefined });
+    }
   }
 
   async onModuleInit() {
