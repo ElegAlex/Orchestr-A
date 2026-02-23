@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
-import { Role } from "@/types";
+import { DEFAULT_USER_ROLE } from "@/types";
 import toast from "react-hot-toast";
 
 export default function RegisterPage() {
@@ -22,7 +22,7 @@ export default function RegisterPage() {
     confirmPassword: "",
     firstName: "",
     lastName: "",
-    role: Role.CONTRIBUTEUR,
+    role: DEFAULT_USER_ROLE,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

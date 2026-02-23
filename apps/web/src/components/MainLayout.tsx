@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { useAuthStore } from "@/stores/auth.store";
-import { Role } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Logo, LogoIcon } from "@/components/Logo";
 import { UserAvatar } from "@/components/UserAvatar";
 
@@ -21,6 +21,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const locale = useLocale();
   const t = useTranslations("common");
   const { user, logout } = useAuthStore();
+  const { hasAnyPermission, hasPermission } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const navigation: NavItem[] = [
@@ -53,12 +54,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     },
   ];
 
-  const isManager =
-    user?.role === Role.ADMIN ||
-    user?.role === Role.RESPONSABLE ||
-    user?.role === Role.MANAGER;
+  const isManager = hasAnyPermission(["projects:read", "projects:create"]);
 
-  const isAdmin = user?.role === Role.ADMIN;
+  const isAdmin = hasPermission("users:manage_roles");
 
   return (
     <div className="min-h-screen bg-[var(--background)]">

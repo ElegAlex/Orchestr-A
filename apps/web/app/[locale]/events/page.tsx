@@ -12,7 +12,8 @@ import {
 import { projectsService } from "@/services/projects.service";
 import { usersService } from "@/services/users.service";
 import { servicesService } from "@/services/services.service";
-import { Project, Role, User, Service } from "@/types";
+import { Project, User, Service } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import toast from "react-hot-toast";
@@ -22,6 +23,7 @@ export default function EventsPage() {
   const t = useTranslations("events");
   const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<Event[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -54,7 +56,7 @@ export default function EventsPage() {
 
       // Fetch projects
       let projectsData: Project[] = [];
-      if (user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE) {
+      if (hasPermission("users:read")) {
         const response = await projectsService.getAll();
         projectsData = Array.isArray(response.data) ? response.data : [];
       } else if (user?.id) {
@@ -84,11 +86,7 @@ export default function EventsPage() {
       setEvents(eventsData);
 
       // Fetch users for assignment
-      if (
-        user?.role === Role.ADMIN ||
-        user?.role === Role.RESPONSABLE ||
-        user?.role === Role.MANAGER
-      ) {
+      if (hasPermission("events:update")) {
         try {
           const usersData = await usersService.getAll();
           setUsers(Array.isArray(usersData) ? usersData : []);
@@ -243,24 +241,11 @@ export default function EventsPage() {
   };
 
   const canCreateEvent = () => {
-    return (
-      user?.role === Role.ADMIN ||
-      user?.role === Role.RESPONSABLE ||
-      user?.role === Role.MANAGER ||
-      user?.role === Role.CHEF_DE_PROJET ||
-      user?.role === Role.REFERENT_TECHNIQUE ||
-      user?.role === Role.CONTRIBUTEUR
-    );
+    return hasPermission("events:create");
   };
 
   const canDeleteEvent = () => {
-    return (
-      user?.role === Role.ADMIN ||
-      user?.role === Role.RESPONSABLE ||
-      user?.role === Role.MANAGER ||
-      user?.role === Role.CHEF_DE_PROJET ||
-      user?.role === Role.REFERENT_TECHNIQUE
-    );
+    return hasPermission("events:delete");
   };
 
   const formatDate = (date: string | Date) => {

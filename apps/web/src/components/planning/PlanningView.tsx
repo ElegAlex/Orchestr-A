@@ -8,6 +8,7 @@ import { TaskCreateModal } from "./TaskCreateModal";
 import { EventCreateModal } from "./EventCreateModal";
 import { usePlanningData } from "@/hooks/usePlanningData";
 import { useAuthStore } from "@/stores/auth.store";
+import { usePermissions } from "@/hooks/usePermissions";
 import { usePlanningViewStore } from "@/stores/planningView.store";
 import { useTranslations, useLocale } from "next-intl";
 
@@ -51,6 +52,7 @@ export const PlanningView = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { user: currentUser } = useAuthStore();
+  const { hasPermission } = usePermissions();
 
   // Utiliser filterUserId si fourni, sinon utiliser le filtre de l'interface
   const effectiveFilterUserId =
@@ -99,8 +101,7 @@ export const PlanningView = ({
 
       // Si l'utilisateur est manager, inclure aussi le groupe "management"
       const isManager =
-        currentUser?.role === "MANAGER" ||
-        currentUser?.role === "RESPONSABLE" ||
+        hasPermission("telework:read_team") ||
         (currentUser?.managedServices &&
           currentUser.managedServices.length > 0);
 

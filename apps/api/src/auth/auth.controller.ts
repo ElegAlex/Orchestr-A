@@ -96,4 +96,20 @@ export class AuthController {
   getCurrentUser(@CurrentUser() user: User): User {
     return user;
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/permissions')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Permissions de l\'utilisateur connecté' })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des permissions',
+  })
+  @ApiResponse({ status: 401, description: 'Non autorisé' })
+  async getMyPermissions(
+    @CurrentUser() user: User,
+  ): Promise<{ permissions: string[] }> {
+    const permissions = await this.authService.getPermissionsForUser(user.role);
+    return { permissions };
+  }
 }

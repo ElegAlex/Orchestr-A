@@ -79,10 +79,14 @@ const mockCurrentUser = {
   role: "ADMIN",
 };
 
+const mockAuthState = {
+  user: mockCurrentUser,
+  permissions: [] as string[],
+  permissionsLoaded: true,
+};
 jest.mock("@/stores/auth.store", () => ({
-  useAuthStore: (
-    selector: (state: { user: typeof mockCurrentUser }) => unknown,
-  ) => selector({ user: mockCurrentUser }),
+  useAuthStore: (selector?: (state: typeof mockAuthState) => unknown) =>
+    selector ? selector(mockAuthState) : mockAuthState,
 }));
 
 // Mock des données
@@ -476,11 +480,16 @@ describe("UsersPage - Permissions", () => {
     // Modifier le mock pour un utilisateur non-admin
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const authStore = require("@/stores/auth.store");
+    const nonAdminState = {
+      user: { ...mockCurrentUser, role: "CONTRIBUTEUR" },
+      permissions: [],
+      permissionsLoaded: true,
+    };
     jest
       .spyOn(authStore, "useAuthStore")
       .mockImplementation(
-        (selector: (state: { user: typeof mockCurrentUser }) => unknown) =>
-          selector({ user: { ...mockCurrentUser, role: "CONTRIBUTEUR" } }),
+        (selector?: (state: typeof nonAdminState) => unknown) =>
+          selector ? selector(nonAdminState) : nonAdminState,
       );
 
     render(<UsersPage />);

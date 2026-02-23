@@ -13,10 +13,10 @@ import {
   ProjectStatus,
   Priority,
   CreateProjectDto,
-  Role,
   User,
   Department,
 } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 
 export default function ProjectsPage() {
@@ -25,6 +25,7 @@ export default function ProjectsPage() {
   const t = useTranslations("projects");
   const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
@@ -61,8 +62,8 @@ export default function ProjectsPage() {
       setLoading(true);
       let projectsData: Project[] = [];
 
-      // Admin et Responsable voient tous les projets
-      if (user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE) {
+      // Users with broad read access see all projects
+      if (hasPermission("users:read")) {
         const response = await projectsService.getAll();
         projectsData = response.data;
       } else if (user?.id) {
@@ -171,9 +172,7 @@ export default function ProjectsPage() {
         ? usersResponse
         : usersResponse.data;
 
-      const managersList = usersData.filter((u: User) =>
-        [Role.ADMIN, Role.RESPONSABLE, Role.MANAGER].includes(u.role),
-      );
+      const managersList = usersData;
       setManagers(managersList);
       setDepartments(departments);
     } catch (error) {
@@ -239,12 +238,7 @@ export default function ProjectsPage() {
   };
 
   const canCreateProject = () => {
-    return (
-      user?.role === Role.ADMIN ||
-      user?.role === Role.RESPONSABLE ||
-      user?.role === Role.MANAGER ||
-      user?.role === Role.REFERENT_TECHNIQUE
-    );
+    return hasPermission("projects:create");
   };
 
   if (loading) {

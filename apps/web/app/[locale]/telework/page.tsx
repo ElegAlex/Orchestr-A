@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
 import { teleworkService } from "@/services/telework.service";
-import { roleManagementService } from "@/services/role-management.service";
 import { usersService } from "@/services/users.service";
+import { usePermissions } from "@/hooks/usePermissions";
 import { TeleworkSchedule, User } from "@/types";
 import toast from "react-hot-toast";
 import { format, isSameDay } from "date-fns";
@@ -15,35 +15,27 @@ export default function TeleworkPage() {
   const t = useTranslations("hr.telework");
   const tc = useTranslations("common");
   const user = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [teleworkDays, setTeleworkDays] = useState<TeleworkSchedule[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [canManageOthers, setCanManageOthers] = useState(false);
+  const canManageOthers = hasPermission("telework:manage_others");
   const [selectedUserId, setSelectedUserId] = useState<string>(
     user?.id || "",
   );
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
-  // Vérifier la permission telework:manage_others et charger les utilisateurs si autorisé
+  // Charger les utilisateurs si autorisé à gérer les autres
   useEffect(() => {
     if (!user) return;
     setSelectedUserId(user.id);
 
-    roleManagementService.getAllRoles().then((roles) => {
-      const userRole = roles.find((r) => r.code === user.role);
-      const hasPermission =
-        userRole?.permissions.some(
-          (rp) => rp.permission.code === "telework:manage_others",
-        ) ?? false;
-      setCanManageOthers(hasPermission);
-
-      if (hasPermission) {
-        usersService.getAll().then((data) => {
-          setAllUsers(Array.isArray(data) ? data : []);
-        });
-      }
-    });
-  }, [user]);
+    if (canManageOthers) {
+      usersService.getAll().then((data) => {
+        setAllUsers(Array.isArray(data) ? data : []);
+      });
+    }
+  }, [user, canManageOthers]);
 
   // Charger les données de télétravail
   const fetchTeleworkData = useCallback(async () => {

@@ -8,7 +8,6 @@ import {
   Project,
   User,
   Service,
-  Role,
 } from "@/types";
 import { tasksService } from "@/services/tasks.service";
 import { projectsService } from "@/services/projects.service";
@@ -17,6 +16,7 @@ import { servicesService } from "@/services/services.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import { useAuthStore } from "@/stores/auth.store";
+import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 
@@ -34,6 +34,7 @@ export const TaskCreateModal = ({
   const t = useTranslations("planning.taskCreate");
   const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
@@ -72,7 +73,7 @@ export const TaskCreateModal = ({
     try {
       // Fetch projects
       let projectsData: Project[] = [];
-      if (user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE) {
+      if (hasPermission("users:read")) {
         const response = await projectsService.getAll();
         projectsData = Array.isArray(response.data) ? response.data : [];
       } else if (user?.id) {
@@ -86,11 +87,7 @@ export const TaskCreateModal = ({
       setProjects(projectsData);
 
       // Fetch users for assignment
-      if (
-        user?.role === Role.ADMIN ||
-        user?.role === Role.RESPONSABLE ||
-        user?.role === Role.MANAGER
-      ) {
+      if (hasPermission("tasks:update")) {
         try {
           const usersData = await usersService.getAll();
           setUsers(Array.isArray(usersData) ? usersData : []);

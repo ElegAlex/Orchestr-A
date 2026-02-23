@@ -5,7 +5,7 @@ import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSettingsStore } from "@/stores/settings.store";
 import { settingsService, AppSetting } from "@/services/settings.service";
-import { Role } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { HolidaysManager } from "@/components/holidays/HolidaysManager";
@@ -55,6 +55,7 @@ export default function SettingsPage() {
   const t = useTranslations("settings");
   const locale = useLocale();
   const user = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const router = useRouter();
   const { fetchSettings } = useSettingsStore();
   const [loading, setLoading] = useState(true);
@@ -64,7 +65,7 @@ export default function SettingsPage() {
   const [, setSettingsList] = useState<AppSetting[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const isAdmin = user?.role === Role.ADMIN;
+  const isAdmin = hasPermission("settings:update");
 
   useEffect(() => {
     if (!isAdmin) {

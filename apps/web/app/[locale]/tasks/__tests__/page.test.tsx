@@ -77,9 +77,14 @@ const mockUser = {
   role: "ADMIN",
 };
 
+const mockAuthState = {
+  user: mockUser,
+  permissions: [] as string[],
+  permissionsLoaded: true,
+};
 jest.mock("@/stores/auth.store", () => ({
-  useAuthStore: (selector: (state: { user: typeof mockUser }) => unknown) =>
-    selector({ user: mockUser }),
+  useAuthStore: (selector?: (state: typeof mockAuthState) => unknown) =>
+    selector ? selector(mockAuthState) : mockAuthState,
 }));
 
 // Mock des services

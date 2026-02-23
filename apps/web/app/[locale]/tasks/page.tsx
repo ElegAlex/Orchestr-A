@@ -13,10 +13,10 @@ import {
   Priority,
   CreateTaskDto,
   Project,
-  Role,
   User,
   Service,
 } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
 import { usersService } from "@/services/users.service";
 import { servicesService } from "@/services/services.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
@@ -31,6 +31,7 @@ export default function TasksPage() {
   const t = useTranslations("tasks");
   const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -73,7 +74,7 @@ export default function TasksPage() {
 
       // Fetch projects
       let projectsData: Project[] = [];
-      if (user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE) {
+      if (hasPermission("users:read")) {
         const response = await projectsService.getAll();
         projectsData = Array.isArray(response.data) ? response.data : [];
       } else if (user?.id) {
@@ -93,8 +94,8 @@ export default function TasksPage() {
       let tasksData: Task[] = [];
       if (user?.id) {
         try {
-          if (user.role === Role.ADMIN || user.role === Role.RESPONSABLE) {
-            // Admin/Responsable see ALL tasks
+          if (hasPermission("users:read")) {
+            // Users with broad access see ALL tasks
             const response = await tasksService.getAll(1, 1000);
             tasksData = Array.isArray(response.data) ? response.data : [];
           } else {
@@ -110,12 +111,8 @@ export default function TasksPage() {
       }
       setTasks(tasksData);
 
-      // Fetch orphan tasks (only for admin/responsable/manager)
-      if (
-        user?.role === Role.ADMIN ||
-        user?.role === Role.RESPONSABLE ||
-        user?.role === Role.MANAGER
-      ) {
+      // Fetch orphan tasks
+      if (hasPermission("tasks:create")) {
         try {
           const orphans = await tasksService.getOrphans();
           setOrphanTasks(Array.isArray(orphans) ? orphans : []);
@@ -128,11 +125,7 @@ export default function TasksPage() {
       }
 
       // Fetch users for assignment
-      if (
-        user?.role === Role.ADMIN ||
-        user?.role === Role.RESPONSABLE ||
-        user?.role === Role.MANAGER
-      ) {
+      if (hasPermission("tasks:update")) {
         try {
           const usersData = await usersService.getAll();
           setUsers(Array.isArray(usersData) ? usersData : []);
@@ -339,14 +332,7 @@ export default function TasksPage() {
   };
 
   const canCreateTask = () => {
-    return (
-      user?.role === Role.ADMIN ||
-      user?.role === Role.RESPONSABLE ||
-      user?.role === Role.MANAGER ||
-      user?.role === Role.CHEF_DE_PROJET ||
-      user?.role === Role.REFERENT_TECHNIQUE ||
-      user?.role === Role.CONTRIBUTEUR
-    );
+    return hasPermission("tasks:create") || hasPermission("tasks:create_orphan") || hasPermission("tasks:create_in_project");
   };
 
   // Drag and Drop handlers

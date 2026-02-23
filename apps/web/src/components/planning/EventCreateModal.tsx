@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Project, Role, User, Service } from "@/types";
+import { Project, User, Service } from "@/types";
 import { eventsService, CreateEventDto } from "@/services/events.service";
 import { projectsService } from "@/services/projects.service";
 import { usersService } from "@/services/users.service";
@@ -9,6 +9,7 @@ import { servicesService } from "@/services/services.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import { useAuthStore } from "@/stores/auth.store";
+import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 
@@ -26,6 +27,7 @@ export const EventCreateModal = ({
   const t = useTranslations("events.create");
   const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -59,7 +61,7 @@ export const EventCreateModal = ({
   const fetchInitialData = async () => {
     try {
       let projectsData: Project[] = [];
-      if (user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE) {
+      if (hasPermission("users:read")) {
         const response = await projectsService.getAll();
         projectsData = Array.isArray(response.data) ? response.data : [];
       } else if (user?.id) {
@@ -72,11 +74,7 @@ export const EventCreateModal = ({
       }
       setProjects(projectsData);
 
-      if (
-        user?.role === Role.ADMIN ||
-        user?.role === Role.RESPONSABLE ||
-        user?.role === Role.MANAGER
-      ) {
+      if (hasPermission("events:update")) {
         try {
           const usersData = await usersService.getAll();
           setUsers(Array.isArray(usersData) ? usersData : []);

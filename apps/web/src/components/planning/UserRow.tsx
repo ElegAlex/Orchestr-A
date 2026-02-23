@@ -1,4 +1,4 @@
-import { User, Task, Role } from "@/types";
+import { User, Task } from "@/types";
 import { Event } from "@/services/events.service";
 import { ServiceGroup, DayCell as DayCellData } from "@/hooks/usePlanningData";
 import { DayCell } from "./DayCell";
@@ -54,9 +54,7 @@ export const UserRow = ({
               {user.firstName} {user.lastName}
             </div>
             <div className="text-xs text-gray-500">
-              {user.role === Role.REFERENT_TECHNIQUE
-                ? tPlanning("roles.REFERENT_TECHNIQUE_SHORT")
-                : tCommon(`roles.${user.role}`)}
+              {tCommon(`roles.${user.role}`)}
             </div>
           </div>
         </div>

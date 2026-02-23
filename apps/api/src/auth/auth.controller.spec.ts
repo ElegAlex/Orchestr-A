@@ -25,6 +25,7 @@ describe('AuthController', () => {
     login: vi.fn(),
     register: vi.fn(),
     getProfile: vi.fn(),
+    getPermissionsForUser: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -228,6 +229,41 @@ describe('AuthController', () => {
 
       expect(result).toEqual(fullUser);
       expect(result.role).toBe('ADMIN');
+    });
+  });
+
+  describe('getMyPermissions', () => {
+    it('should return permissions for authenticated user', async () => {
+      const permissions = ['projects:create', 'projects:read', 'tasks:create'];
+      mockAuthService.getPermissionsForUser.mockResolvedValue(permissions);
+
+      const result = await controller.getMyPermissions(mockUser as unknown as User);
+
+      expect(result).toEqual({ permissions });
+      expect(mockAuthService.getPermissionsForUser).toHaveBeenCalledWith('CONTRIBUTEUR');
+    });
+
+    it('should return all permissions for ADMIN role', async () => {
+      const adminUser = { ...mockUser, role: 'ADMIN' };
+      const allPermissions = [
+        'projects:create', 'projects:read', 'projects:update', 'projects:delete',
+        'tasks:create', 'tasks:read', 'tasks:update', 'tasks:delete',
+        'users:create', 'users:read', 'users:update', 'users:delete',
+      ];
+      mockAuthService.getPermissionsForUser.mockResolvedValue(allPermissions);
+
+      const result = await controller.getMyPermissions(adminUser as unknown as User);
+
+      expect(result).toEqual({ permissions: allPermissions });
+      expect(mockAuthService.getPermissionsForUser).toHaveBeenCalledWith('ADMIN');
+    });
+
+    it('should return empty array for role with no permissions', async () => {
+      mockAuthService.getPermissionsForUser.mockResolvedValue([]);
+
+      const result = await controller.getMyPermissions(mockUser as unknown as User);
+
+      expect(result).toEqual({ permissions: [] });
     });
   });
 });

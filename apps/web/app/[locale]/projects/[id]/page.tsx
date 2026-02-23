@@ -28,9 +28,9 @@ import {
   Milestone,
   User,
   Service,
-  Role,
   UpdateProjectDto,
 } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
 import { parseCSV } from "@/lib/csv-parser";
@@ -123,6 +123,7 @@ export default function ProjectDetailPage() {
 
   // Get current user from auth store
   const { user: currentUser } = useAuthStore();
+  const { hasPermission } = usePermissions();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -860,12 +861,9 @@ export default function ProjectDetailPage() {
   };
 
   // Permission helpers
-  const canEditProject =
-    currentUser &&
-    [Role.ADMIN, Role.RESPONSABLE, Role.MANAGER].includes(currentUser.role);
+  const canEditProject = hasPermission("projects:update");
 
-  const canDeleteProject =
-    currentUser && [Role.ADMIN, Role.RESPONSABLE].includes(currentUser.role);
+  const canDeleteProject = hasPermission("projects:delete");
 
   // Project update handler
   const handleUpdateProject = async (data: UpdateProjectDto) => {

@@ -28,6 +28,7 @@ import {
 import { getTaskProgress } from "@/lib/task-progress";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/auth.store";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface TaskMilestone {
   name: string;
@@ -51,6 +52,7 @@ export default function TaskDetailPage() {
   const tCommon = useTranslations("common");
   const taskId = params.id as string;
   const { user } = useAuthStore();
+  const { hasPermission } = usePermissions();
 
   const [loading, setLoading] = useState(true);
   const [task, setTask] = useState<TaskWithRelations | null>(null);
@@ -351,8 +353,7 @@ export default function TaskDetailPage() {
 
   const canEdit = () => {
     if (!user) return false;
-    const allowedRoles = ["ADMIN", "RESPONSABLE", "MANAGER", "CONTRIBUTEUR"];
-    return allowedRoles.includes(user.role);
+    return hasPermission("tasks:update");
   };
 
   const getStatusBadgeColor = (status: TaskStatus) => {

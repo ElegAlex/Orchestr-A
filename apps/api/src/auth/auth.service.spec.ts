@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
+import { RoleManagementService } from '../role-management/role-management.service';
 
 vi.mock('bcrypt');
 
@@ -50,6 +51,10 @@ describe('AuthService', () => {
     sign: vi.fn(),
   };
 
+  const mockRoleManagementService = {
+    getPermissionsForRole: vi.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -61,6 +66,10 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: mockJwtService,
+        },
+        {
+          provide: RoleManagementService,
+          useValue: mockRoleManagementService,
         },
       ],
     }).compile();

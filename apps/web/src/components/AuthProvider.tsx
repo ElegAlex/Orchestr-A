@@ -3,15 +3,30 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth.store";
+import { permissionsService } from "@/services/permissions.service";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const { isAuthenticated, isLoading, checkAuth, setPermissions } =
+    useAuthStore();
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  // Load permissions when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      permissionsService
+        .getMyPermissions()
+        .then((perms) => setPermissions(perms))
+        .catch((err) => {
+          console.error("Failed to load permissions:", err);
+          setPermissions([]);
+        });
+    }
+  }, [isAuthenticated, setPermissions]);
 
   useEffect(() => {
     if (!isLoading) {

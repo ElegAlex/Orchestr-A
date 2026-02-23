@@ -9,11 +9,11 @@ import { usersService } from "@/services/users.service";
 import {
   Department,
   Service,
-  Role,
   CreateDepartmentDto,
   CreateServiceDto,
   User,
 } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 
@@ -47,8 +47,10 @@ export default function DepartmentsPage() {
     managerId: "",
   });
 
-  // Check if user is admin or responsable
-  const isAdmin = user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE;
+  const { hasPermission } = usePermissions();
+
+  // Check permissions
+  const isAdmin = hasPermission("departments:create");
 
   const fetchData = async () => {
     try {
@@ -556,14 +558,7 @@ export default function DepartmentsPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">{t("departmentModal.noManager")}</option>
-                  {users
-                    .filter(
-                      (u) =>
-                        u.role === Role.ADMIN ||
-                        u.role === Role.RESPONSABLE ||
-                        u.role === Role.MANAGER,
-                    )
-                    .map((u) => (
+                  {users.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.firstName} {u.lastName} ({u.role})
                       </option>
@@ -756,14 +751,7 @@ export default function DepartmentsPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="">{t("serviceModal.noManager")}</option>
-                  {users
-                    .filter(
-                      (u) =>
-                        u.role === Role.ADMIN ||
-                        u.role === Role.RESPONSABLE ||
-                        u.role === Role.MANAGER,
-                    )
-                    .map((u) => (
+                  {users.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.firstName} {u.lastName} ({u.role})
                       </option>

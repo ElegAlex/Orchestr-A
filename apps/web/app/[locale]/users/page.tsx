@@ -13,7 +13,9 @@ import {
 import { ImportPreviewModal } from "@/components/ImportPreviewModal";
 import { departmentsService } from "@/services/departments.service";
 import { servicesService } from "@/services/services.service";
-import { User, Role, Department, Service } from "@/types";
+import { User, Role, Department, Service, RoleConfigWithPermissions, DEFAULT_USER_ROLE } from "@/types";
+import { roleManagementService } from "@/services/role-management.service";
+import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { parseCSV as parseCSVRaw } from "@/lib/csv-parser";
@@ -22,7 +24,9 @@ export default function UsersPage() {
   const t = useTranslations("admin.users");
   const tCommon = useTranslations("common");
   const currentUser = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
+  const [availableRoles, setAvailableRoles] = useState<RoleConfigWithPermissions[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -56,25 +60,25 @@ export default function UsersPage() {
     password: "",
     firstName: "",
     lastName: "",
-    role: Role.CONTRIBUTEUR,
+    role: DEFAULT_USER_ROLE,
     departmentId: "",
     serviceIds: [] as string[],
   });
 
   // Check permissions
-  const canManageUsers =
-    currentUser?.role === Role.ADMIN || currentUser?.role === Role.RESPONSABLE;
-  const canEditUsers =
-    currentUser?.role === Role.ADMIN ||
-    currentUser?.role === Role.RESPONSABLE ||
-    currentUser?.role === Role.MANAGER;
+  const canManageUsers = hasPermission("users:create");
+  const canEditUsers = hasPermission("users:update");
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await usersService.getAll();
+      const [response, roles] = await Promise.all([
+        usersService.getAll(),
+        roleManagementService.getAllRoles().catch(() => []),
+      ]);
       const usersList = Array.isArray(response) ? response : response.data;
       setUsers(usersList);
+      setAvailableRoles(roles);
     } catch (err) {
       toast.error(t("messages.loadError"));
       console.error(err);
@@ -137,7 +141,7 @@ export default function UsersPage() {
         password: "",
         firstName: "",
         lastName: "",
-        role: Role.CONTRIBUTEUR,
+        role: DEFAULT_USER_ROLE,
         departmentId: "",
         serviceIds: [],
       });
@@ -208,7 +212,7 @@ export default function UsersPage() {
         password: "",
         firstName: "",
         lastName: "",
-        role: Role.CONTRIBUTEUR,
+        role: DEFAULT_USER_ROLE,
         departmentId: "",
         serviceIds: [],
       });
@@ -292,40 +296,23 @@ export default function UsersPage() {
     }));
   };
 
+  const ROLE_BADGE_COLORS: Record<string, string> = {
+    ADMIN: "bg-red-100 text-red-800",
+    RESPONSABLE: "bg-purple-100 text-purple-800",
+    MANAGER: "bg-blue-100 text-blue-800",
+    REFERENT_TECHNIQUE: "bg-green-100 text-green-800",
+    CONTRIBUTEUR: "bg-gray-100 text-gray-800",
+  };
+
   const getRoleBadgeColor = (role: Role) => {
-    switch (role) {
-      case Role.ADMIN:
-        return "bg-red-100 text-red-800";
-      case Role.RESPONSABLE:
-        return "bg-purple-100 text-purple-800";
-      case Role.MANAGER:
-        return "bg-blue-100 text-blue-800";
-      case Role.REFERENT_TECHNIQUE:
-        return "bg-green-100 text-green-800";
-      case Role.CONTRIBUTEUR:
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-yellow-100 text-yellow-800";
-    }
+    return ROLE_BADGE_COLORS[role] || "bg-yellow-100 text-yellow-800";
   };
 
   const getRoleLabel = (role: Role) => {
-    switch (role) {
-      case Role.ADMIN:
-        return "Admin";
-      case Role.RESPONSABLE:
-        return "Responsable";
-      case Role.MANAGER:
-        return "Manager";
-      case Role.REFERENT_TECHNIQUE:
-        return "Référent Technique";
-      case Role.CONTRIBUTEUR:
-        return "Contributeur";
-      case Role.OBSERVATEUR:
-        return "Observateur";
-      default:
-        return role;
-    }
+    // Use role config name if available, otherwise use translations
+    const roleConfig = availableRoles.find((r) => r.code === role);
+    if (roleConfig) return roleConfig.name;
+    return tCommon(`roles.${role}`, { defaultValue: role });
   };
 
   const parseCSV = (text: string): ImportUserData[] => {
@@ -345,7 +332,7 @@ export default function UsersPage() {
         password: normalizedRow.password || "",
         firstName: normalizedRow.firstname || "",
         lastName: normalizedRow.lastname || "",
-        role: normalizedRow.role || "CONTRIBUTEUR",
+        role: normalizedRow.role || DEFAULT_USER_ROLE,
         departmentName: normalizedRow.departmentname || undefined,
         serviceNames: normalizedRow.servicenames || undefined,
       };
@@ -603,7 +590,7 @@ export default function UsersPage() {
                           {t("actions.deactivate")}
                         </button>
                       )}
-                      {currentUser?.role === Role.ADMIN && (
+                      {hasPermission("users:delete") && (
                         <button
                           onClick={() => openDeleteModal(user)}
                           className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -721,51 +708,11 @@ export default function UsersPage() {
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value={Role.CONTRIBUTEUR}>
-                    {tCommon("roles.CONTRIBUTEUR")}
-                  </option>
-                  <option value={Role.OBSERVATEUR}>
-                    {tCommon("roles.OBSERVATEUR")}
-                  </option>
-                  <option value={Role.REFERENT_TECHNIQUE}>
-                    {tCommon("roles.REFERENT_TECHNIQUE")}
-                  </option>
-                  <option value={Role.CHEF_DE_PROJET}>
-                    {tCommon("roles.CHEF_DE_PROJET")}
-                  </option>
-                  <option value={Role.MANAGER}>
-                    {tCommon("roles.MANAGER")}
-                  </option>
-                  <option value={Role.RESPONSABLE}>
-                    {tCommon("roles.RESPONSABLE")}
-                  </option>
-                  <option value={Role.ADMIN}>{tCommon("roles.ADMIN")}</option>
-                  <option value={Role.TECHNICIEN_SUPPORT}>
-                    {tCommon("roles.TECHNICIEN_SUPPORT")}
-                  </option>
-                  <option value={Role.GESTIONNAIRE_PARC}>
-                    {tCommon("roles.GESTIONNAIRE_PARC")}
-                  </option>
-                  <option value={Role.ADMINISTRATEUR_IML}>
-                    {tCommon("roles.ADMINISTRATEUR_IML")}
-                  </option>
-                  <option value={Role.DEVELOPPEUR_CONCEPTEUR}>
-                    {tCommon("roles.DEVELOPPEUR_CONCEPTEUR")}
-                  </option>
-                  <option value={Role.CORRESPONDANT_FONCTIONNEL_APPLICATION}>
-                    {tCommon(
-                      "roles.CORRESPONDANT_FONCTIONNEL_APPLICATION",
-                    )}
-                  </option>
-                  <option value={Role.CHARGE_DE_MISSION}>
-                    {tCommon("roles.CHARGE_DE_MISSION")}
-                  </option>
-                  <option value={Role.GESTIONNAIRE_IML}>
-                    {tCommon("roles.GESTIONNAIRE_IML")}
-                  </option>
-                  <option value={Role.CONSULTANT_TECHNOLOGIE_SI}>
-                    {tCommon("roles.CONSULTANT_TECHNOLOGIE_SI")}
-                  </option>
+                  {availableRoles.map((role) => (
+                    <option key={role.code} value={role.code}>
+                      {role.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -1152,51 +1099,11 @@ export default function UsersPage() {
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value={Role.CONTRIBUTEUR}>
-                    {tCommon("roles.CONTRIBUTEUR")}
-                  </option>
-                  <option value={Role.OBSERVATEUR}>
-                    {tCommon("roles.OBSERVATEUR")}
-                  </option>
-                  <option value={Role.REFERENT_TECHNIQUE}>
-                    {tCommon("roles.REFERENT_TECHNIQUE")}
-                  </option>
-                  <option value={Role.CHEF_DE_PROJET}>
-                    {tCommon("roles.CHEF_DE_PROJET")}
-                  </option>
-                  <option value={Role.MANAGER}>
-                    {tCommon("roles.MANAGER")}
-                  </option>
-                  <option value={Role.RESPONSABLE}>
-                    {tCommon("roles.RESPONSABLE")}
-                  </option>
-                  <option value={Role.ADMIN}>{tCommon("roles.ADMIN")}</option>
-                  <option value={Role.TECHNICIEN_SUPPORT}>
-                    {tCommon("roles.TECHNICIEN_SUPPORT")}
-                  </option>
-                  <option value={Role.GESTIONNAIRE_PARC}>
-                    {tCommon("roles.GESTIONNAIRE_PARC")}
-                  </option>
-                  <option value={Role.ADMINISTRATEUR_IML}>
-                    {tCommon("roles.ADMINISTRATEUR_IML")}
-                  </option>
-                  <option value={Role.DEVELOPPEUR_CONCEPTEUR}>
-                    {tCommon("roles.DEVELOPPEUR_CONCEPTEUR")}
-                  </option>
-                  <option value={Role.CORRESPONDANT_FONCTIONNEL_APPLICATION}>
-                    {tCommon(
-                      "roles.CORRESPONDANT_FONCTIONNEL_APPLICATION",
-                    )}
-                  </option>
-                  <option value={Role.CHARGE_DE_MISSION}>
-                    {tCommon("roles.CHARGE_DE_MISSION")}
-                  </option>
-                  <option value={Role.GESTIONNAIRE_IML}>
-                    {tCommon("roles.GESTIONNAIRE_IML")}
-                  </option>
-                  <option value={Role.CONSULTANT_TECHNOLOGIE_SI}>
-                    {tCommon("roles.CONSULTANT_TECHNOLOGIE_SI")}
-                  </option>
+                  {availableRoles.map((role) => (
+                    <option key={role.code} value={role.code}>
+                      {role.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

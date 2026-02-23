@@ -5,7 +5,6 @@ import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
 import { usersService } from "@/services/users.service";
 import { useThemeStore, Theme } from "@/stores/theme.store";
-import { Role } from "@/types";
 import { UserAvatar } from "@/components/UserAvatar";
 import toast from "react-hot-toast";
 import { useTranslations, useLocale } from "next-intl";
@@ -89,24 +88,17 @@ export default function ProfilePage() {
     }
   };
 
-  const getRoleBadgeColor = (role: Role) => {
-    switch (role) {
-      case Role.ADMIN:
-        return "bg-red-100 text-red-800";
-      case Role.RESPONSABLE:
-        return "bg-purple-100 text-purple-800";
-      case Role.MANAGER:
-        return "bg-blue-100 text-blue-800";
-      case Role.REFERENT_TECHNIQUE:
-        return "bg-green-100 text-green-800";
-      case Role.CONTRIBUTEUR:
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-yellow-100 text-yellow-800";
-    }
+  const ROLE_BADGE_COLORS: Record<string, string> = {
+    ADMIN: "bg-red-100 text-red-800",
+    RESPONSABLE: "bg-purple-100 text-purple-800",
+    MANAGER: "bg-blue-100 text-blue-800",
+    REFERENT_TECHNIQUE: "bg-green-100 text-green-800",
+    CONTRIBUTEUR: "bg-gray-100 text-gray-800",
   };
+  const getRoleBadgeColor = (role: string) =>
+    ROLE_BADGE_COLORS[role] || "bg-yellow-100 text-yellow-800";
 
-  const getRoleLabel = (role: Role) => {
+  const getRoleLabel = (role: string) => {
     return tCommon(`roles.${role}`);
   };
 

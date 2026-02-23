@@ -6,8 +6,12 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  permissions: string[];
+  permissionsLoaded: boolean;
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
+  setPermissions: (perms: string[]) => void;
+  clearPermissions: () => void;
   logout: () => void;
   checkAuth: () => void;
 }
@@ -16,6 +20,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  permissions: [],
+  permissionsLoaded: false,
 
   setUser: (user) => {
     if (user) {
@@ -32,11 +38,25 @@ export const useAuthStore = create<AuthState>((set) => ({
       isLoading: loading,
     }),
 
+  setPermissions: (perms) =>
+    set({
+      permissions: perms,
+      permissionsLoaded: true,
+    }),
+
+  clearPermissions: () =>
+    set({
+      permissions: [],
+      permissionsLoaded: false,
+    }),
+
   logout: () => {
     authService.logout();
     set({
       user: null,
       isAuthenticated: false,
+      permissions: [],
+      permissionsLoaded: false,
     });
   },
 

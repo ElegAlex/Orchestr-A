@@ -10,10 +10,10 @@ import {
   Skill,
   SkillCategory,
   SkillLevel,
-  Role,
   User,
   UserSkill,
 } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
 import { SkillsMatrix } from "@/components/SkillsMatrix";
 import { ImportPreviewModal } from "@/components/ImportPreviewModal";
 import { parseCSV } from "@/lib/csv-parser";
@@ -23,6 +23,7 @@ export default function SkillsPage() {
   const t = useTranslations("hr.skills");
   const tc = useTranslations("common");
   const { user: currentUser } = useAuthStore();
+  const { hasPermission } = usePermissions();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [userSkills, setUserSkills] = useState<UserSkill[]>([]);
@@ -59,8 +60,7 @@ export default function SkillsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [pendingSkillsImport, setPendingSkillsImport] = useState<any[]>([]);
 
-  const canManageSkills =
-    currentUser?.role === Role.ADMIN || currentUser?.role === Role.RESPONSABLE;
+  const canManageSkills = hasPermission("skills:manage_matrix");
 
   const fetchSkills = useCallback(async () => {
     try {

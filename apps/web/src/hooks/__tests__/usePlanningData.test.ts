@@ -99,6 +99,7 @@ describe("usePlanningData", () => {
       updatedAt: "2025-01-01",
       departmentId: "dept-1",
       userServices: [],
+      managedServices: [{ id: "service-1", name: "Development" }],
     },
     {
       id: "user-3",

@@ -23,7 +23,6 @@ import {
   Leave,
   TeleworkSchedule,
   Service,
-  Role,
   Holiday,
 } from "@/types";
 import { getServiceStyle } from "@/lib/planning-utils";
@@ -221,10 +220,8 @@ export const usePlanningData = ({
     fetchData();
   }, [fetchData]);
 
-  // Identifier les managers (encadrement)
+  // Identifier les managers (encadrement) — par structure organisationnelle
   const isManager = (u: User): boolean => {
-    // Par rôle
-    if (u.role === Role.MANAGER || u.role === Role.RESPONSABLE) return true;
     // Est manager d'au moins un service
     if (u.managedServices && u.managedServices.length > 0) return true;
     // Est manager du département

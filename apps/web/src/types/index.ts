@@ -20,6 +20,9 @@ export enum Role {
   CONSULTANT_TECHNOLOGIE_SI = "CONSULTANT_TECHNOLOGIE_SI",
 }
 
+/** Default role for new users (used in forms/imports) */
+export const DEFAULT_USER_ROLE = Role.CONTRIBUTEUR;
+
 export enum ProjectStatus {
   DRAFT = "DRAFT",
   ACTIVE = "ACTIVE",

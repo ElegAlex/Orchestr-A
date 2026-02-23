@@ -16,7 +16,8 @@ import {
 import { LeaveTypesManager } from "@/components/LeaveTypesManager";
 import { ImportPreviewModal } from "@/components/ImportPreviewModal";
 import { parseCSV } from "@/lib/csv-parser";
-import { Leave, LeaveType, LeaveStatus, HalfDay, User, Role } from "@/types";
+import { Leave, LeaveType, LeaveStatus, HalfDay, User } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 
 type TabType =
@@ -30,6 +31,7 @@ export default function LeavesPage() {
   const t = useTranslations("hr.leaves");
   const tc = useTranslations("common");
   const user = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("my-leaves");
   const [leaves, setLeaves] = useState<Leave[]>([]);
@@ -71,9 +73,8 @@ export default function LeavesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [pendingLeavesImport, setPendingLeavesImport] = useState<any[]>([]);
 
-  const isAdmin = user?.role === Role.ADMIN || user?.role === Role.RESPONSABLE;
-  const isManager = user?.role === Role.MANAGER;
-  const canValidate = isAdmin || isManager;
+  const isAdmin = hasPermission("leaves:read");
+  const canValidate = hasPermission("leaves:approve") || isAdmin;
 
   const fetchUsers = async () => {
     try {
