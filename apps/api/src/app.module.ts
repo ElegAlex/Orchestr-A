@@ -24,6 +24,7 @@ import { SettingsModule } from './settings/settings.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { EventsModule } from './events/events.module';
 import { RoleManagementModule } from './role-management/role-management.module';
+import { PlanningExportModule } from './planning-export/planning-export.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { RoleManagementModule } from './role-management/role-management.module';
     HolidaysModule,
     EventsModule,
     RoleManagementModule,
+    PlanningExportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

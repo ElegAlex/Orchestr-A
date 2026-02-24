@@ -161,6 +161,17 @@ export class EventsController {
     return this.eventsService.remove(id);
   }
 
+  @Delete(':id/recurrence')
+  @Permissions('events:delete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Arrêter la récurrence d'un événement" })
+  @ApiResponse({ status: 200, description: 'Récurrence arrêtée' })
+  @ApiResponse({ status: 400, description: "Pas un événement parent récurrent" })
+  @ApiResponse({ status: 404, description: 'Événement introuvable' })
+  stopRecurrence(@Param('id', ParseUUIDPipe) id: string) {
+    return this.eventsService.stopRecurrence(id);
+  }
+
   @Post(':id/participants')
   @Permissions('events:update')
   @ApiOperation({ summary: 'Ajouter un participant à un événement' })

@@ -5,7 +5,6 @@ import { RoleManagementService } from '../role-management/role-management.servic
 import {
   NotFoundException,
   ConflictException,
-  BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
@@ -347,7 +346,7 @@ describe('TeleworkService', () => {
   });
 
   describe('update', () => {
-    it('should update a telework request successfully', async () => {
+    it('should update own telework request successfully', async () => {
       const updateDto = { isTelework: false };
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(
         mockTelework,
@@ -357,17 +356,58 @@ describe('TeleworkService', () => {
         isTelework: false,
       });
 
-      const result = await service.update('telework-1', 'user-1', updateDto);
+      const result = await service.update('telework-1', 'user-1', 'CONTRIBUTEUR', updateDto);
 
       expect(result.isTelework).toBe(false);
+      expect(mockRoleManagementService.getPermissionsForRole).not.toHaveBeenCalled();
     });
 
     it('should throw error when telework not found', async () => {
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('invalid', 'user-1', {})).rejects.toThrow(
+      await expect(service.update('invalid', 'user-1', 'CONTRIBUTEUR', {})).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it("should throw ForbiddenException when updating other's telework without permission", async () => {
+      const updateDto = { isTelework: false };
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue({
+        ...mockTelework,
+        userId: 'other-user',
+      });
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:read',
+      ]);
+
+      await expect(
+        service.update('telework-1', 'user-1', 'CONTRIBUTEUR', updateDto),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockRoleManagementService.getPermissionsForRole).toHaveBeenCalledWith('CONTRIBUTEUR');
+    });
+
+    it("should update other's telework when having telework:manage_others permission", async () => {
+      const updateDto = { isTelework: false };
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue({
+        ...mockTelework,
+        userId: 'other-user',
+      });
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:read',
+        'telework:manage_others',
+      ]);
+      mockPrismaService.teleworkSchedule.update.mockResolvedValue({
+        ...mockTelework,
+        userId: 'other-user',
+        isTelework: false,
+      });
+
+      const result = await service.update('telework-1', 'admin-1', 'ADMIN', updateDto);
+
+      expect(result.isTelework).toBe(false);
+      expect(mockRoleManagementService.getPermissionsForRole).toHaveBeenCalledWith('ADMIN');
     });
 
     it('should update date when provided', async () => {
@@ -383,7 +423,7 @@ describe('TeleworkService', () => {
         date: new Date('2025-11-25'),
       });
 
-      const result = await service.update('telework-1', 'user-1', updateDto);
+      const result = await service.update('telework-1', 'user-1', 'CONTRIBUTEUR', updateDto);
 
       expect(result).toBeDefined();
     });
@@ -398,7 +438,7 @@ describe('TeleworkService', () => {
         .mockResolvedValueOnce({ id: 'other-telework' });
 
       await expect(
-        service.update('telework-1', 'user-1', updateDto),
+        service.update('telework-1', 'user-1', 'CONTRIBUTEUR', updateDto),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -412,44 +452,68 @@ describe('TeleworkService', () => {
         isException: true,
       });
 
-      const result = await service.update('telework-1', 'user-1', updateDto);
+      const result = await service.update('telework-1', 'user-1', 'CONTRIBUTEUR', updateDto);
 
       expect(result.isException).toBe(true);
     });
   });
 
   describe('remove', () => {
-    it('should delete a telework request', async () => {
+    it('should delete own telework request', async () => {
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(
         mockTelework,
       );
       mockPrismaService.teleworkSchedule.delete.mockResolvedValue(mockTelework);
 
-      const result = await service.remove('telework-1', 'user-1');
+      const result = await service.remove('telework-1', 'user-1', 'CONTRIBUTEUR');
 
       expect(result.message).toBe('Télétravail supprimé avec succès');
       expect(mockPrismaService.teleworkSchedule.delete).toHaveBeenCalledWith({
         where: { id: 'telework-1' },
       });
+      expect(mockRoleManagementService.getPermissionsForRole).not.toHaveBeenCalled();
     });
 
     it('should throw error when telework not found', async () => {
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('invalid', 'user-1')).rejects.toThrow(
+      await expect(service.remove('invalid', 'user-1', 'CONTRIBUTEUR')).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('should throw error when user tries to delete another user telework', async () => {
+    it("should throw ForbiddenException when deleting other's telework without permission", async () => {
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue({
         ...mockTelework,
         userId: 'other-user',
       });
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:read',
+      ]);
 
-      await expect(service.remove('telework-1', 'user-1')).rejects.toThrow(
-        BadRequestException,
+      await expect(service.remove('telework-1', 'user-1', 'CONTRIBUTEUR')).rejects.toThrow(
+        ForbiddenException,
       );
+      expect(mockRoleManagementService.getPermissionsForRole).toHaveBeenCalledWith('CONTRIBUTEUR');
+    });
+
+    it("should delete other's telework when having telework:manage_others permission", async () => {
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue({
+        ...mockTelework,
+        userId: 'other-user',
+      });
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:read',
+        'telework:manage_others',
+      ]);
+      mockPrismaService.teleworkSchedule.delete.mockResolvedValue(mockTelework);
+
+      const result = await service.remove('telework-1', 'admin-1', 'ADMIN');
+
+      expect(result.message).toBe('Télétravail supprimé avec succès');
+      expect(mockRoleManagementService.getPermissionsForRole).toHaveBeenCalledWith('ADMIN');
     });
   });
 

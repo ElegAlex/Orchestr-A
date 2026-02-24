@@ -212,9 +212,10 @@ export class TeleworkController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
     @Body() updateTeleworkDto: UpdateTeleworkDto,
   ) {
-    return this.teleworkService.update(id, userId, updateTeleworkDto);
+    return this.teleworkService.update(id, userId, userRole, updateTeleworkDto);
   }
 
   @Delete(':id')
@@ -232,7 +233,8 @@ export class TeleworkController {
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
   ) {
-    return this.teleworkService.remove(id, userId);
+    return this.teleworkService.remove(id, userId, userRole);
   }
 }

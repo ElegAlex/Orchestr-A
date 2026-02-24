@@ -659,10 +659,19 @@ model Event {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Recurrence fields
+  isRecurring            Boolean   @default(false)
+  recurrenceWeekInterval Int?
+  recurrenceDay          Int?      // 0=Monday, 1=Tuesday, ..., 6=Sunday
+  recurrenceEndDate      DateTime?
+  parentEventId          String?
+
   // Relations
   project      Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
   createdBy    User                @relation("EventCreator", fields: [createdById], references: [id], onDelete: Cascade)
   participants EventParticipant[]
+  parentEvent  Event?              @relation("EventRecurrence", fields: [parentEventId], references: [id], onDelete: Cascade)
+  childEvents  Event[]             @relation("EventRecurrence")
 
   @@map("events")
 }

@@ -298,7 +298,8 @@ export class TeleworkService {
    */
   async update(
     id: string,
-    userId: string,
+    currentUserId: string,
+    currentUserRole: string,
     updateTeleworkDto: UpdateTeleworkDto,
   ) {
     const existingTelework = await this.prisma.teleworkSchedule.findUnique({
@@ -307,6 +308,17 @@ export class TeleworkService {
 
     if (!existingTelework) {
       throw new NotFoundException('Télétravail introuvable');
+    }
+
+    // Check permission if modifying someone else's telework
+    if (existingTelework.userId !== currentUserId) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('telework:manage_others')) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission de modifier le télétravail d'autrui",
+        );
+      }
     }
 
     const { date, isTelework, isException } = updateTeleworkDto;
@@ -321,7 +333,7 @@ export class TeleworkService {
       const conflict = await this.prisma.teleworkSchedule.findUnique({
         where: {
           userId_date: {
-            userId,
+            userId: existingTelework.userId,
             date: newDate,
           },
         },
@@ -366,7 +378,7 @@ export class TeleworkService {
   /**
    * Supprimer un télétravail
    */
-  async remove(id: string, userId: string) {
+  async remove(id: string, currentUserId: string, currentUserRole: string) {
     const telework = await this.prisma.teleworkSchedule.findUnique({
       where: { id },
     });
@@ -375,10 +387,15 @@ export class TeleworkService {
       throw new NotFoundException('Télétravail introuvable');
     }
 
-    if (telework.userId !== userId) {
-      throw new BadRequestException(
-        'Vous ne pouvez supprimer que vos propres télétravails',
-      );
+    // Check permission if deleting someone else's telework
+    if (telework.userId !== currentUserId) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('telework:manage_others')) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission de supprimer le télétravail d'autrui",
+        );
+      }
     }
 
     await this.prisma.teleworkSchedule.delete({

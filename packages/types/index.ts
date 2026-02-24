@@ -45,6 +45,11 @@ export interface Event {
   createdById: string;
   createdAt: Date | string;
   updatedAt: Date | string;
+  isRecurring?: boolean;
+  recurrenceWeekInterval?: number | null;
+  recurrenceDay?: number | null;
+  recurrenceEndDate?: Date | string | null;
+  parentEventId?: string | null;
 }
 
 export interface EventParticipant {
@@ -66,6 +71,10 @@ export interface CreateEventDto {
   projectId?: string;
   participantIds?: string[];
   serviceIds?: string[];
+  isRecurring?: boolean;
+  recurrenceWeekInterval?: number;
+  recurrenceDay?: number;
+  recurrenceEndDate?: Date | string;
 }
 
 export interface UpdateEventDto {
@@ -78,6 +87,10 @@ export interface UpdateEventDto {
   projectId?: string;
   participantIds?: string[];
   serviceIds?: string[];
+  isRecurring?: boolean;
+  recurrenceWeekInterval?: number;
+  recurrenceDay?: number;
+  recurrenceEndDate?: Date | string;
 }
 
 // ===========================

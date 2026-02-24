@@ -9,6 +9,8 @@ import { UserAvatar } from "@/components/UserAvatar";
 import toast from "react-hot-toast";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter, usePathname } from "next/navigation";
+import { IcsExportSection } from "@/components/planning-export/IcsExportSection";
+import { IcsImportSection } from "@/components/planning-export/IcsImportSection";
 
 const AVATAR_PRESETS = [
   "avatar_01",
@@ -23,7 +25,7 @@ const AVATAR_PRESETS = [
   "avatar_10",
 ] as const;
 
-type TabType = "personal" | "security" | "preferences";
+type TabType = "personal" | "security" | "preferences" | "import-export";
 
 export default function ProfilePage() {
   const t = useTranslations("profile");
@@ -224,6 +226,16 @@ export default function ProfilePage() {
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
             >
               {t("tabs.preferences")}
+            </button>
+            <button
+              onClick={() => setActiveTab("import-export")}
+              className={`${
+                activeTab === "import-export"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
+            >
+              Import / Export
             </button>
           </nav>
         </div>
@@ -491,6 +503,22 @@ export default function ProfilePage() {
                 <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                   {t("preferences.save")}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "import-export" && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Import / Export ICS
+              </h2>
+            </div>
+            <div className="p-6 space-y-8">
+              <IcsExportSection />
+              <div className="border-t border-gray-200 pt-6">
+                <IcsImportSection />
               </div>
             </div>
           </div>

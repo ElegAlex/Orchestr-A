@@ -99,7 +99,26 @@
     "participants": "Participants",
     "confirmDelete": "Supprimer cet événement ?",
     "deleteSuccess": "Événement supprimé",
-    "deleteError": "Erreur lors de la suppression"
+    "deleteError": "Erreur lors de la suppression",
+    "recurrence": "Récurrence",
+    "partOfSeries": "Fait partie d'une série récurrente",
+    "everyXWeeks": "Toutes les {count} semaine(s)",
+    "onDay": "Le {day}",
+    "until": "Jusqu'au {date}",
+    "stopRecurrence": "Arrêter la récurrence",
+    "stoppingRecurrence": "Arrêt en cours...",
+    "confirmStopRecurrence": "Arrêter la récurrence et supprimer les occurrences futures ?",
+    "stopRecurrenceSuccess": "Récurrence arrêtée",
+    "stopRecurrenceError": "Erreur lors de l'arrêt de la récurrence",
+    "days": {
+      "mon": "Lundi",
+      "tue": "Mardi",
+      "wed": "Mercredi",
+      "thu": "Jeudi",
+      "fri": "Vendredi",
+      "sat": "Samedi",
+      "sun": "Dimanche"
+    }
   },
   "taskCreate": {
     "title": "Créer une tâche",

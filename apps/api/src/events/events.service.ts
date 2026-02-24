@@ -21,6 +21,10 @@ export class EventsService {
       participantIds: rawParticipantIds,
       serviceIds,
       date,
+      isRecurring,
+      recurrenceWeekInterval,
+      recurrenceDay,
+      recurrenceEndDate,
       ...eventData
     } = createEventDto;
 
@@ -68,6 +72,12 @@ export class EventsService {
         date: new Date(date),
         projectId: projectId || null,
         createdById,
+        isRecurring: isRecurring || false,
+        recurrenceWeekInterval: recurrenceWeekInterval ?? null,
+        recurrenceDay: recurrenceDay ?? null,
+        recurrenceEndDate: recurrenceEndDate
+          ? new Date(recurrenceEndDate)
+          : null,
         // Créer les participations
         ...(participantIds &&
           participantIds.length > 0 && {
@@ -106,6 +116,59 @@ export class EventsService {
         },
       },
     });
+
+    // Générer les occurrences si l'événement est récurrent
+    if (isRecurring) {
+      const weekInterval = recurrenceWeekInterval || 1;
+      const eventDate = new Date(date);
+      const targetJsDay =
+        recurrenceDay !== undefined
+          ? (recurrenceDay + 1) % 7 // 0=Lun→1, 6=Dim→0
+          : eventDate.getDay();
+
+      const endDate = recurrenceEndDate
+        ? new Date(recurrenceEndDate)
+        : new Date(eventDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+      const occurrences: Prisma.EventCreateManyInput[] = [];
+      let currentDate = new Date(eventDate);
+      currentDate.setDate(currentDate.getDate() + weekInterval * 7);
+
+      while (currentDate <= endDate) {
+        occurrences.push({
+          title: eventData.title || event.title,
+          description: eventData.description ?? null,
+          date: new Date(currentDate),
+          startTime: eventData.startTime ?? null,
+          endTime: eventData.endTime ?? null,
+          isAllDay: eventData.isAllDay ?? true,
+          isExternalIntervention: eventData.isExternalIntervention ?? false,
+          projectId: projectId || null,
+          createdById,
+          parentEventId: event.id,
+        });
+        currentDate = new Date(currentDate);
+        currentDate.setDate(currentDate.getDate() + weekInterval * 7);
+      }
+
+      if (occurrences.length > 0) {
+        await this.prisma.event.createMany({ data: occurrences });
+        if (participantIds && participantIds.length > 0) {
+          const childEvents = await this.prisma.event.findMany({
+            where: { parentEventId: event.id },
+            select: { id: true },
+          });
+          const participantData = childEvents.flatMap((child) =>
+            participantIds!.map((userId) => ({ eventId: child.id, userId })),
+          );
+          if (participantData.length > 0) {
+            await this.prisma.eventParticipant.createMany({
+              data: participantData,
+            });
+          }
+        }
+      }
+    }
 
     return event;
   }
@@ -343,6 +406,22 @@ export class EventsService {
       });
     });
 
+    // Si recurrenceEndDate est mise à jour sur un événement parent récurrent,
+    // supprimer les enfants dont la date dépasse la nouvelle date de fin
+    if (
+      updateEventDto.recurrenceEndDate &&
+      existingEvent.isRecurring &&
+      !existingEvent.parentEventId
+    ) {
+      const newEndDate = new Date(updateEventDto.recurrenceEndDate);
+      await this.prisma.event.deleteMany({
+        where: {
+          parentEventId: id,
+          date: { gt: newEndDate },
+        },
+      });
+    }
+
     return event;
   }
 
@@ -532,6 +611,36 @@ export class EventsService {
     });
 
     return { message: 'Participant ajouté avec succès' };
+  }
+
+  /**
+   * Arrêter la récurrence d'un événement parent
+   */
+  async stopRecurrence(id: string) {
+    const event = await this.prisma.event.findUnique({ where: { id } });
+    if (!event) throw new NotFoundException('Événement introuvable');
+    if (!event.isRecurring || event.parentEventId) {
+      throw new BadRequestException(
+        "Cet événement n'est pas un événement parent récurrent",
+      );
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    await this.prisma.event.deleteMany({
+      where: {
+        parentEventId: id,
+        date: { gte: today },
+      },
+    });
+
+    await this.prisma.event.update({
+      where: { id },
+      data: { isRecurring: false },
+    });
+
+    return { message: 'Récurrence arrêtée avec succès' };
   }
 
   /**

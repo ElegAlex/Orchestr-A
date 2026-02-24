@@ -10,6 +10,9 @@ import {
   MaxLength,
   MinLength,
   Matches,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
 
 export class CreateEventDto {
@@ -115,4 +118,35 @@ export class CreateEventDto {
   @IsUUID('4', { each: true })
   @IsOptional()
   serviceIds?: string[];
+
+  @ApiProperty({ description: 'Événement récurrent', required: false })
+  @IsBoolean()
+  @IsOptional()
+  isRecurring?: boolean;
+
+  @ApiProperty({
+    description:
+      'Intervalle en semaines (1=chaque semaine, 4=toutes les 4 semaines)',
+    required: false,
+  })
+  @IsInt()
+  @Min(1)
+  @Max(52)
+  @IsOptional()
+  recurrenceWeekInterval?: number;
+
+  @ApiProperty({
+    description: 'Jour de la semaine (0=Lundi, 6=Dimanche)',
+    required: false,
+  })
+  @IsInt()
+  @Min(0)
+  @Max(6)
+  @IsOptional()
+  recurrenceDay?: number;
+
+  @ApiProperty({ description: 'Date de fin de récurrence', required: false })
+  @IsDateString()
+  @IsOptional()
+  recurrenceEndDate?: string;
 }

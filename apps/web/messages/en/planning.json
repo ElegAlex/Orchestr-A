@@ -99,7 +99,26 @@
     "participants": "Participants",
     "confirmDelete": "Delete this event?",
     "deleteSuccess": "Event deleted",
-    "deleteError": "Error deleting event"
+    "deleteError": "Error deleting event",
+    "recurrence": "Recurrence",
+    "partOfSeries": "Part of a recurring series",
+    "everyXWeeks": "Every {count} week(s)",
+    "onDay": "On {day}",
+    "until": "Until {date}",
+    "stopRecurrence": "Stop recurrence",
+    "stoppingRecurrence": "Stopping...",
+    "confirmStopRecurrence": "Stop recurrence and delete future occurrences?",
+    "stopRecurrenceSuccess": "Recurrence stopped",
+    "stopRecurrenceError": "Error stopping recurrence",
+    "days": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    }
   },
   "taskCreate": {
     "title": "Create a task",

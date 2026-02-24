@@ -24,12 +24,28 @@ export const EventModal = ({
   const router = useRouter();
   const locale = useLocale();
   const [deleting, setDeleting] = useState(false);
+  const [stoppingRecurrence, setStoppingRecurrence] = useState(false);
 
   if (!isOpen || !event) return null;
 
   const handleEdit = () => {
     onClose();
     router.push(`/${locale}/events`);
+  };
+
+  const handleStopRecurrence = async () => {
+    if (!confirm(t("confirmStopRecurrence"))) return;
+    try {
+      setStoppingRecurrence(true);
+      await eventsService.deleteRecurrence(event!.id);
+      toast.success(t("stopRecurrenceSuccess"));
+      onClose();
+      if (onRefresh) onRefresh();
+    } catch {
+      toast.error(t("stopRecurrenceError"));
+    } finally {
+      setStoppingRecurrence(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -143,6 +159,61 @@ export const EventModal = ({
                   </span>
                 ))}
               </div>
+            </div>
+          )}
+
+          {event.parentEventId && (
+            <div>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
+                🔁 {t("partOfSeries")}
+              </span>
+            </div>
+          )}
+
+          {event.isRecurring && !event.parentEventId && (
+            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <h3 className="font-semibold text-purple-900 mb-2">
+                🔁 {t("recurrence")}
+              </h3>
+              <div className="text-sm text-purple-800 space-y-1">
+                {event.recurrenceWeekInterval && (
+                  <p>
+                    {t("everyXWeeks", {
+                      count: event.recurrenceWeekInterval,
+                    })}
+                  </p>
+                )}
+                {event.recurrenceDay !== null &&
+                  event.recurrenceDay !== undefined && (
+                    <p>
+                      {t("onDay", {
+                        day: [
+                          t("days.mon"),
+                          t("days.tue"),
+                          t("days.wed"),
+                          t("days.thu"),
+                          t("days.fri"),
+                          t("days.sat"),
+                          t("days.sun"),
+                        ][event.recurrenceDay],
+                      })}
+                    </p>
+                  )}
+                {event.recurrenceEndDate && (
+                  <p>
+                    {t("until", { date: formatDate(event.recurrenceEndDate) })}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handleStopRecurrence}
+                disabled={stoppingRecurrence}
+                className="mt-2 px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition disabled:opacity-50"
+              >
+                {stoppingRecurrence
+                  ? t("stoppingRecurrence")
+                  : t("stopRecurrence")}
+              </button>
             </div>
           )}
         </div>

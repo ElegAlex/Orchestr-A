@@ -39,7 +39,21 @@
     "creating": "Creating...",
     "createButton": "Create event",
     "success": "Event created successfully",
-    "error": "Error creating event"
+    "error": "Error creating event",
+    "recurring": "Recurring event",
+    "recurrenceInterval": "Every X weeks",
+    "recurrenceDay": "Day of the week",
+    "recurrenceDayAuto": "Auto (same day as event date)",
+    "recurrenceEndDate": "End date (optional)",
+    "days": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    }
   },
   "edit": {
     "title": "Edit event",

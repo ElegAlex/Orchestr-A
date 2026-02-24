@@ -38,6 +38,12 @@ export interface Event {
       role?: string;
     };
   }>;
+  isRecurring?: boolean;
+  recurrenceWeekInterval?: number | null;
+  recurrenceDay?: number | null;
+  recurrenceEndDate?: Date | string | null;
+  parentEventId?: string | null;
+  childEvents?: Event[];
 }
 
 export interface CreateEventDto {
@@ -51,6 +57,10 @@ export interface CreateEventDto {
   projectId?: string;
   participantIds?: string[];
   serviceIds?: string[];
+  isRecurring?: boolean;
+  recurrenceWeekInterval?: number;
+  recurrenceDay?: number;
+  recurrenceEndDate?: string;
 }
 
 export interface UpdateEventDto {
@@ -64,6 +74,10 @@ export interface UpdateEventDto {
   projectId?: string;
   participantIds?: string[];
   serviceIds?: string[];
+  isRecurring?: boolean;
+  recurrenceWeekInterval?: number;
+  recurrenceDay?: number;
+  recurrenceEndDate?: string;
 }
 
 export const eventsService = {
@@ -120,5 +134,9 @@ export const eventsService = {
 
   async removeParticipant(eventId: string, userId: string): Promise<void> {
     await api.delete(`/events/${eventId}/participants/${userId}`);
+  },
+
+  async deleteRecurrence(id: string): Promise<void> {
+    await api.delete(`/events/${id}/recurrence`);
   },
 };

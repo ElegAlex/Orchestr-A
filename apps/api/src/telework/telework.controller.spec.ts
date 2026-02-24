@@ -353,6 +353,7 @@ describe('TeleworkController', () => {
       const result = await controller.update(
         'telework-id-1',
         'user-id-1',
+        'CONTRIBUTEUR',
         updateTeleworkDto,
       );
 
@@ -360,6 +361,7 @@ describe('TeleworkController', () => {
       expect(mockTeleworkService.update).toHaveBeenCalledWith(
         'telework-id-1',
         'user-id-1',
+        'CONTRIBUTEUR',
         updateTeleworkDto,
       );
     });
@@ -370,7 +372,7 @@ describe('TeleworkController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', 'user-id-1', updateTeleworkDto),
+        controller.update('nonexistent', 'user-id-1', 'CONTRIBUTEUR', updateTeleworkDto),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -380,7 +382,7 @@ describe('TeleworkController', () => {
       );
 
       await expect(
-        controller.update('telework-id-1', 'user-id-1', { date: '2025-01-20' }),
+        controller.update('telework-id-1', 'user-id-1', 'CONTRIBUTEUR', { date: '2025-01-20' }),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -391,12 +393,13 @@ describe('TeleworkController', () => {
         message: 'Télétravail supprimé',
       });
 
-      const result = await controller.remove('telework-id-1', 'user-id-1');
+      const result = await controller.remove('telework-id-1', 'user-id-1', 'CONTRIBUTEUR');
 
       expect(result.message).toBe('Télétravail supprimé');
       expect(mockTeleworkService.remove).toHaveBeenCalledWith(
         'telework-id-1',
         'user-id-1',
+        'CONTRIBUTEUR',
       );
     });
 
@@ -406,7 +409,7 @@ describe('TeleworkController', () => {
       );
 
       await expect(
-        controller.remove('nonexistent', 'user-id-1'),
+        controller.remove('nonexistent', 'user-id-1', 'CONTRIBUTEUR'),
       ).rejects.toThrow(NotFoundException);
     });
   });
