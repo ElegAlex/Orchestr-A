@@ -48,6 +48,10 @@ export default function EventsPage() {
     projectId: "",
     participantIds: [],
     serviceIds: [],
+    isRecurring: false,
+    recurrenceWeekInterval: 1,
+    recurrenceDay: undefined,
+    recurrenceEndDate: "",
   });
 
   const fetchData = useCallback(async () => {
@@ -137,6 +141,18 @@ export default function EventsPage() {
             : undefined,
         serviceIds:
           formData.serviceIds.length > 0 ? formData.serviceIds : undefined,
+        isRecurring: formData.isRecurring || undefined,
+        recurrenceWeekInterval: formData.isRecurring
+          ? formData.recurrenceWeekInterval
+          : undefined,
+        recurrenceDay:
+          formData.isRecurring && formData.recurrenceDay !== undefined
+            ? formData.recurrenceDay
+            : undefined,
+        recurrenceEndDate:
+          formData.isRecurring && formData.recurrenceEndDate
+            ? formData.recurrenceEndDate
+            : undefined,
       };
       await eventsService.create(eventData);
       toast.success(t("create.success"));
@@ -165,6 +181,14 @@ export default function EventsPage() {
       projectId: event.projectId || "",
       participantIds: event.participants?.map((p) => p.userId) || [],
       serviceIds: [],
+      isRecurring: event.isRecurring || false,
+      recurrenceWeekInterval: event.recurrenceWeekInterval ?? 1,
+      recurrenceDay: event.recurrenceDay ?? undefined,
+      recurrenceEndDate: event.recurrenceEndDate
+        ? typeof event.recurrenceEndDate === "string"
+          ? event.recurrenceEndDate.split("T")[0]
+          : new Date(event.recurrenceEndDate).toISOString().split("T")[0]
+        : "",
     });
     setShowCreateModal(true);
   };
@@ -188,6 +212,10 @@ export default function EventsPage() {
             : undefined,
         serviceIds:
           formData.serviceIds.length > 0 ? formData.serviceIds : undefined,
+        recurrenceEndDate:
+          formData.isRecurring && formData.recurrenceEndDate
+            ? formData.recurrenceEndDate
+            : undefined,
       };
       await eventsService.update(editingEvent.id, eventData);
       toast.success(t("edit.success"));
@@ -225,6 +253,10 @@ export default function EventsPage() {
       projectId: "",
       participantIds: [],
       serviceIds: [],
+      isRecurring: false,
+      recurrenceWeekInterval: 1,
+      recurrenceDay: undefined,
+      recurrenceEndDate: "",
     });
   };
 
@@ -676,6 +708,99 @@ export default function EventsPage() {
                   memberCounts={memberCounts}
                 />
               )}
+
+              {/* Recurrence */}
+              <div className="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                <div className="flex items-center space-x-2 mb-3">
+                  <input
+                    type="checkbox"
+                    id="eventIsRecurring"
+                    checked={formData.isRecurring || false}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isRecurring: e.target.checked })
+                    }
+                    disabled={!!editingEvent}
+                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  <label
+                    htmlFor="eventIsRecurring"
+                    className="text-sm font-medium text-purple-900"
+                  >
+                    {t("create.recurring")}
+                  </label>
+                </div>
+
+                {formData.isRecurring && (
+                  <div className="space-y-3">
+                    {!editingEvent && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {t("create.recurrenceInterval")}
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={52}
+                            value={formData.recurrenceWeekInterval ?? 1}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                recurrenceWeekInterval:
+                                  parseInt(e.target.value) || 1,
+                              })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {t("create.recurrenceDay")}
+                          </label>
+                          <select
+                            value={formData.recurrenceDay ?? ""}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                recurrenceDay:
+                                  e.target.value !== ""
+                                    ? parseInt(e.target.value)
+                                    : undefined,
+                              })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          >
+                            <option value="">{t("create.recurrenceDayAuto")}</option>
+                            <option value="0">{t("create.days.mon")}</option>
+                            <option value="1">{t("create.days.tue")}</option>
+                            <option value="2">{t("create.days.wed")}</option>
+                            <option value="3">{t("create.days.thu")}</option>
+                            <option value="4">{t("create.days.fri")}</option>
+                            <option value="5">{t("create.days.sat")}</option>
+                            <option value="6">{t("create.days.sun")}</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t("create.recurrenceEndDate")}
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.recurrenceEndDate || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            recurrenceEndDate: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
                 <button
