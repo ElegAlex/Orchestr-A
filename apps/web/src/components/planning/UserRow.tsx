@@ -11,6 +11,8 @@ interface UserRowProps {
   group: ServiceGroup;
   displayDays: Date[];
   viewMode: "week" | "month";
+  currentUserId: string;
+  canManageOthersTelework: boolean;
   getDayCell: (userId: string, date: Date) => DayCellData;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
@@ -25,6 +27,8 @@ export const UserRow = ({
   group,
   displayDays,
   viewMode,
+  currentUserId,
+  canManageOthersTelework,
   getDayCell,
   onTeleworkToggle,
   onDragStart,
@@ -68,6 +72,7 @@ export const UserRow = ({
             userId={user.id}
             viewMode={viewMode}
             dayIndex={dayIndex}
+            canToggleTelework={user.id === currentUserId || canManageOthersTelework}
             onTeleworkToggle={onTeleworkToggle}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}

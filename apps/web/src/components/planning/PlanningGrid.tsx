@@ -19,6 +19,8 @@ import { format, isToday, getDay } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import toast from "react-hot-toast";
 import { useTranslations, useLocale } from "next-intl";
+import { useAuthStore } from "@/stores/auth.store";
+import { usePermissions } from "@/hooks/usePermissions";
 
 type ViewFilter = "all" | "availability" | "activity";
 
@@ -29,6 +31,8 @@ interface CollapsibleServiceSectionProps {
   displayDays: Date[];
   viewMode: "week" | "month";
   showGroupHeaders: boolean;
+  currentUserId: string;
+  canManageOthersTelework: boolean;
   getDayCell: (userId: string, date: Date) => DayCell;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
@@ -44,6 +48,8 @@ const CollapsibleServiceSection = ({
   displayDays,
   viewMode,
   showGroupHeaders,
+  currentUserId,
+  canManageOthersTelework,
   getDayCell,
   onTeleworkToggle,
   onDragStart,
@@ -74,6 +80,8 @@ const CollapsibleServiceSection = ({
             group={group}
             displayDays={displayDays}
             viewMode={viewMode}
+            currentUserId={currentUserId}
+            canManageOthersTelework={canManageOthersTelework}
             getDayCell={getDayCell}
             onTeleworkToggle={onTeleworkToggle}
             onDragStart={onDragStart}
@@ -124,6 +132,11 @@ export const PlanningGrid = ({
     filterServiceIds,
     viewFilter,
   });
+
+  const currentUser = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
+  const currentUserId = currentUser?.id || "";
+  const canManageOthersTelework = hasPermission("telework:manage_others");
 
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragSourceUserId, setDragSourceUserId] = useState<string | null>(null);
@@ -359,6 +372,8 @@ export const PlanningGrid = ({
                         displayDays={displayDays}
                         viewMode={viewMode}
                         showGroupHeaders={showGroupHeaders}
+                        currentUserId={currentUserId}
+                        canManageOthersTelework={canManageOthersTelework}
                         getDayCell={getDayCell}
                         onTeleworkToggle={handleTeleworkToggle}
                         onDragStart={handleDragStart}

@@ -10,6 +10,7 @@ interface DayCellProps {
   userId: string;
   viewMode: "week" | "month";
   dayIndex: number;
+  canToggleTelework: boolean;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
   onDragEnd: () => void;
@@ -23,6 +24,7 @@ export const DayCell = ({
   userId,
   viewMode,
   dayIndex,
+  canToggleTelework,
   onTeleworkToggle,
   onDragStart,
   onDragEnd,
@@ -128,7 +130,7 @@ export const DayCell = ({
         className={`relative z-10 space-y-1 ${viewMode === "month" ? "min-h-[40px]" : "min-h-[60px]"}`}
       >
         {/* Telework toggle - visible uniquement si pas de congé */}
-        {!hasLeave && (
+        {!hasLeave && canToggleTelework && (
           <div className="flex items-center justify-center">
             <button
               onClick={() => onTeleworkToggle(userId, cell.date)}
@@ -141,6 +143,17 @@ export const DayCell = ({
             >
               {cell.isTelework ? "🏠" : "🏢"}
             </button>
+          </div>
+        )}
+        {/* Telework indicator (read-only) for users without toggle permission */}
+        {!hasLeave && !canToggleTelework && cell.isTelework && (
+          <div className="flex items-center justify-center">
+            <span
+              className={`${viewMode === "month" ? "text-[10px]" : "text-lg"}`}
+              title={t("telework.label")}
+            >
+              🏠
+            </span>
           </div>
         )}
 
