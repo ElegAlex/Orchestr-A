@@ -26,7 +26,7 @@ export const teleworkService = {
     userId?: string,
   ): Promise<TeleworkSchedule[]> {
     const params = new URLSearchParams({ startDate, endDate });
-    if (userId) params.set('userId', userId);
+    if (userId) params.set("userId", userId);
     const response = await api.get<
       { data: TeleworkSchedule[] } | TeleworkSchedule[]
     >(`/telework?${params.toString()}`);

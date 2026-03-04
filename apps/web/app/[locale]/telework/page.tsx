@@ -20,9 +20,7 @@ export default function TeleworkPage() {
   const [teleworkDays, setTeleworkDays] = useState<TeleworkSchedule[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const canManageOthers = hasPermission("telework:manage_others");
-  const [selectedUserId, setSelectedUserId] = useState<string>(
-    user?.id || "",
-  );
+  const [selectedUserId, setSelectedUserId] = useState<string>(user?.id || "");
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   // Charger les utilisateurs si autorisé à gérer les autres

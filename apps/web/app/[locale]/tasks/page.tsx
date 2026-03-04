@@ -332,7 +332,11 @@ export default function TasksPage() {
   };
 
   const canCreateTask = () => {
-    return hasPermission("tasks:create") || hasPermission("tasks:create_orphan") || hasPermission("tasks:create_in_project");
+    return (
+      hasPermission("tasks:create") ||
+      hasPermission("tasks:create_orphan") ||
+      hasPermission("tasks:create_in_project")
+    );
   };
 
   // Drag and Drop handlers

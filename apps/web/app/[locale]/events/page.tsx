@@ -717,7 +717,10 @@ export default function EventsPage() {
                     id="eventIsRecurring"
                     checked={formData.isRecurring || false}
                     onChange={(e) =>
-                      setFormData({ ...formData, isRecurring: e.target.checked })
+                      setFormData({
+                        ...formData,
+                        isRecurring: e.target.checked,
+                      })
                     }
                     disabled={!!editingEvent}
                     className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
@@ -770,7 +773,9 @@ export default function EventsPage() {
                             }
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           >
-                            <option value="">{t("create.recurrenceDayAuto")}</option>
+                            <option value="">
+                              {t("create.recurrenceDayAuto")}
+                            </option>
                             <option value="0">{t("create.days.mon")}</option>
                             <option value="1">{t("create.days.tue")}</option>
                             <option value="2">{t("create.days.wed")}</option>

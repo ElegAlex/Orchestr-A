@@ -71,7 +71,9 @@ export const UserRow = ({
             userId={user.id}
             viewMode={viewMode}
             dayIndex={dayIndex}
-            canToggleTelework={user.id === currentUserId || canManageOthersTelework}
+            canToggleTelework={
+              user.id === currentUserId || canManageOthersTelework
+            }
             onTeleworkToggle={onTeleworkToggle}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}

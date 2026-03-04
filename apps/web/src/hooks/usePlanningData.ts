@@ -17,14 +17,7 @@ import { teleworkService } from "@/services/telework.service";
 import { servicesService } from "@/services/services.service";
 import { holidaysService } from "@/services/holidays.service";
 import { eventsService, Event } from "@/services/events.service";
-import {
-  Task,
-  User,
-  Leave,
-  TeleworkSchedule,
-  Service,
-  Holiday,
-} from "@/types";
+import { Task, User, Leave, TeleworkSchedule, Service, Holiday } from "@/types";
 import { getServiceStyle } from "@/lib/planning-utils";
 import { useSettingsStore } from "@/stores/settings.store";
 import toast from "react-hot-toast";

@@ -12,7 +12,10 @@ export function IcsExportSection() {
   const handleExport = async () => {
     try {
       setLoading(true);
-      await planningExportService.exportIcs(start || undefined, end || undefined);
+      await planningExportService.exportIcs(
+        start || undefined,
+        end || undefined,
+      );
       toast.success("Planning exporté avec succès");
     } catch {
       toast.error("Erreur lors de l'export");

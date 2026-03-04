@@ -6,13 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import { skillsService } from "@/services/skills.service";
 import { usersService } from "@/services/users.service";
 import { useAuthStore } from "@/stores/auth.store";
-import {
-  Skill,
-  SkillCategory,
-  SkillLevel,
-  User,
-  UserSkill,
-} from "@/types";
+import { Skill, SkillCategory, SkillLevel, User, UserSkill } from "@/types";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SkillsMatrix } from "@/components/SkillsMatrix";
 import { ImportPreviewModal } from "@/components/ImportPreviewModal";

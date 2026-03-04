@@ -13,7 +13,14 @@ import {
 import { ImportPreviewModal } from "@/components/ImportPreviewModal";
 import { departmentsService } from "@/services/departments.service";
 import { servicesService } from "@/services/services.service";
-import { User, Role, Department, Service, RoleConfigWithPermissions, DEFAULT_USER_ROLE } from "@/types";
+import {
+  User,
+  Role,
+  Department,
+  Service,
+  RoleConfigWithPermissions,
+  DEFAULT_USER_ROLE,
+} from "@/types";
 import { roleManagementService } from "@/services/role-management.service";
 import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
@@ -26,7 +33,9 @@ export default function UsersPage() {
   const currentUser = useAuthStore((state) => state.user);
   const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
-  const [availableRoles, setAvailableRoles] = useState<RoleConfigWithPermissions[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<
+    RoleConfigWithPermissions[]
+  >([]);
   const [users, setUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [services, setServices] = useState<Service[]>([]);
