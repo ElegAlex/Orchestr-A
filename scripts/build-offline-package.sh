@@ -1,18 +1,19 @@
 #!/bin/bash
 set -euo pipefail
 VERSION="${1:-latest}"
+IMAGE_TAG="latest"
 PACKAGE_NAME="orchestr-a-offline-${VERSION}"
 WORK_DIR="/tmp/${PACKAGE_NAME}"
 
 echo "=== Building offline package: ${PACKAGE_NAME} ==="
 
-# 1. Pull de l'image all-in-one depuis GHCR
+# 1. Pull de l'image all-in-one depuis GHCR (toujours le tag latest)
 echo "[1/4] Pull de l'image..."
-docker pull ghcr.io/elegalex/orchestr-a:${VERSION}
+docker pull ghcr.io/elegalex/orchestr-a:${IMAGE_TAG}
 
 # 2. Retag en local
 echo "[2/4] Retag en local..."
-docker tag ghcr.io/elegalex/orchestr-a:${VERSION} orchestr-a:local
+docker tag ghcr.io/elegalex/orchestr-a:${IMAGE_TAG} orchestr-a:local
 
 # 3. Export de l'image
 echo "[3/4] Export de l'image..."
