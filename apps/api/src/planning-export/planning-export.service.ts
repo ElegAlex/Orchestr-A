@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import ical, { ICalCalendar } from 'ical-generator';
 import * as nodeIcal from 'node-ical';
-import { type VEvent } from 'node-ical';
 
 export interface IcsPreviewEvent {
   title: string;
@@ -130,7 +129,7 @@ export class PlanningExportService {
       const component = parsed[key];
       if (!component || component.type !== 'VEVENT') continue;
 
-      const vevent = component as VEvent;
+      const vevent = component as nodeIcal.VEvent;
       const start = vevent.start;
       const end = vevent.end;
 
@@ -173,7 +172,7 @@ export class PlanningExportService {
       const component = parsed[key];
       if (!component || component.type !== 'VEVENT') continue;
 
-      const vevent = component as VEvent;
+      const vevent = component as nodeIcal.VEvent;
       const start = vevent.start;
       if (!start) {
         skipped++;
