@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { MainLayout } from "@/components/MainLayout";
-import { useAuthStore } from "@/stores/auth.store";
 import { useSettingsStore } from "@/stores/settings.store";
 import { settingsService, AppSetting } from "@/services/settings.service";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -54,7 +53,6 @@ const DATE_FORMAT_OPTIONS = [
 export default function SettingsPage() {
   const t = useTranslations("settings");
   const locale = useLocale();
-  const user = useAuthStore((state) => state.user);
   const { hasPermission } = usePermissions();
   const router = useRouter();
   const { fetchSettings } = useSettingsStore();

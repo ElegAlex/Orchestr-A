@@ -38,7 +38,6 @@ export const UserRow = ({
   onEventClick,
 }: UserRowProps) => {
   const tCommon = useTranslations("common");
-  const tPlanning = useTranslations("planning");
   const colors = getGroupColors(group.color, group.isManagement);
 
   return (

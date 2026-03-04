@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { MainLayout } from "@/components/MainLayout";
-import { useAuthStore } from "@/stores/auth.store";
 import { departmentsService } from "@/services/departments.service";
 import { servicesService } from "@/services/services.service";
 import { usersService } from "@/services/users.service";
@@ -19,7 +18,6 @@ import { useTranslations } from "next-intl";
 
 export default function DepartmentsPage() {
   const t = useTranslations("admin.departments");
-  const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [services, setServices] = useState<Service[]>([]);

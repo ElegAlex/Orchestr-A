@@ -17,7 +17,6 @@ import { ImportPreviewModal } from "@/components/ImportPreviewModal";
 import { ProjectEditModal } from "@/components/ProjectEditModal";
 import { usersService } from "@/services/users.service";
 import { servicesService } from "@/services/services.service";
-import { useAuthStore } from "@/stores/auth.store";
 import {
   Project,
   ProjectStats,
@@ -121,8 +120,6 @@ export default function ProjectDetailPage() {
     [],
   );
 
-  // Get current user from auth store
-  const { user: currentUser } = useAuthStore();
   const { hasPermission } = usePermissions();
 
   useEffect(() => {
