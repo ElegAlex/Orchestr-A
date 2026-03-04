@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import ical, { ICalCalendar } from 'ical-generator';
 import * as nodeIcal from 'node-ical';
-import type { VEvent } from 'node-ical';
+import { type VEvent } from 'node-ical';
 
 export interface IcsPreviewEvent {
   title: string;

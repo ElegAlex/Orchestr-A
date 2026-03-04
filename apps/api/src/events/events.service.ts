@@ -121,10 +121,6 @@ export class EventsService {
     if (isRecurring) {
       const weekInterval = recurrenceWeekInterval || 1;
       const eventDate = new Date(date);
-      const targetJsDay =
-        recurrenceDay !== undefined
-          ? (recurrenceDay + 1) % 7 // 0=Lun→1, 6=Dim→0
-          : eventDate.getDay();
 
       const endDate = recurrenceEndDate
         ? new Date(recurrenceEndDate)
