@@ -13,23 +13,20 @@ services:
     image: orchestr-a:local
     restart: unless-stopped
     ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
+      - "${HTTP_PORT:-80}:3000"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - redis_data:/data
+      - orchestr-a-data:/data
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required (min 32 characters)}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:80/api/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:3000/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 90s
 
 volumes:
-  postgres_data:
-  redis_data:
+  orchestr-a-data:

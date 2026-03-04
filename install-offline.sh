@@ -89,7 +89,6 @@ JWT_EXPIRES_IN=7d
 
 # === Ports (optionnel) ===
 HTTP_PORT=80
-HTTPS_PORT=443
 EOF
 
 echo -e "${GREEN}[OK] Configuration generee (.env)${NC}"
@@ -106,7 +105,7 @@ echo ""
 MAX_ATTEMPTS=45
 ATTEMPT=0
 while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    if wget --no-verbose --tries=1 --spider http://localhost:80/api/health 2>/dev/null; then
+    if wget --no-verbose --tries=1 --spider http://localhost/api/health 2>/dev/null; then
         break
     fi
     ATTEMPT=$((ATTEMPT + 1))
