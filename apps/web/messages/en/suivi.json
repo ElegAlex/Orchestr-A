@@ -1,0 +1,141 @@
+{
+  "title": "Employee Tracking",
+  "selectEmployee": "Select an employee",
+  "searchPlaceholder": "Search by name...",
+  "backToUsers": "Back to users",
+  "loading": "Loading...",
+  "noData": "No data available",
+  "period": "Period",
+  "periodOptions": {
+    "week": "This week",
+    "month": "This month",
+    "quarter": "This quarter",
+    "year": "This year",
+    "all": "All"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "tasks": "Tasks",
+    "leaves": "Leaves",
+    "telework": "Telework",
+    "time": "Time",
+    "skills": "Skills"
+  },
+  "overview": {
+    "info": "Information",
+    "role": "Role",
+    "department": "Department",
+    "services": "Services",
+    "email": "Email",
+    "memberSince": "Member since",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "stats": "Statistics",
+    "activeTasks": "Active tasks",
+    "completedTasks": "Completed tasks",
+    "leaveBalance": "Leave balance",
+    "teleworkDays": "Telework days",
+    "hoursLogged": "Hours logged",
+    "activeProjects": "Active projects",
+    "recentActivity": "Recent activity",
+    "noRecentActivity": "No recent activity"
+  },
+  "tasks": {
+    "title": "Assigned tasks",
+    "status": "Status",
+    "priority": "Priority",
+    "project": "Project",
+    "progress": "Progress",
+    "dueDate": "Due date",
+    "noProject": "No project",
+    "noTasks": "No tasks assigned",
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "completed": "Completed",
+      "blocked": "Blocked"
+    }
+  },
+  "leaves": {
+    "title": "Leave history",
+    "type": "Type",
+    "dates": "Dates",
+    "days": "Days",
+    "status": "Status",
+    "balance": "Leave balance",
+    "total": "Total",
+    "used": "Used",
+    "available": "Available",
+    "pending": "Pending",
+    "noLeaves": "No leave records",
+    "types": {
+      "CP": "Paid leave",
+      "RTT": "RTT",
+      "SICK_LEAVE": "Sick leave",
+      "UNPAID": "Unpaid",
+      "OTHER": "Other"
+    },
+    "statuses": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    }
+  },
+  "telework": {
+    "title": "Telework tracking",
+    "thisMonth": "This month",
+    "thisYear": "This year",
+    "totalDays": "Total days",
+    "monthlyAvg": "Monthly average",
+    "calendar": "Calendar",
+    "noTelework": "No telework days recorded"
+  },
+  "time": {
+    "title": "Time tracking",
+    "totalHours": "Total hours",
+    "byProject": "By project",
+    "byActivity": "By activity",
+    "project": "Project",
+    "hours": "Hours",
+    "activity": "Activity",
+    "date": "Date",
+    "description": "Description",
+    "noEntries": "No time entries",
+    "activities": {
+      "DEVELOPMENT": "Development",
+      "MEETING": "Meeting",
+      "SUPPORT": "Support",
+      "TRAINING": "Training",
+      "OTHER": "Other"
+    }
+  },
+  "skills": {
+    "title": "Skills",
+    "skill": "Skill",
+    "category": "Category",
+    "level": "Level",
+    "noSkills": "No skills recorded",
+    "categories": {
+      "TECHNICAL": "Technical",
+      "METHODOLOGY": "Methodology",
+      "SOFT_SKILL": "Soft skill",
+      "BUSINESS": "Business"
+    },
+    "levels": {
+      "BEGINNER": "Beginner",
+      "INTERMEDIATE": "Intermediate",
+      "EXPERT": "Expert",
+      "MASTER": "Master"
+    }
+  },
+  "accessRestricted": {
+    "title": "Restricted access",
+    "message": "You do not have the necessary permissions to access employee tracking."
+  },
+  "messages": {
+    "loadError": "Error loading data",
+    "userNotFound": "User not found"
+  }
+}

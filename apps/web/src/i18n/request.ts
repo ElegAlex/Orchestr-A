@@ -20,6 +20,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     admin: (await import(`../../messages/${locale}/admin.json`)).default,
     settings: (await import(`../../messages/${locale}/settings.json`)).default,
     profile: (await import(`../../messages/${locale}/profile.json`)).default,
+    suivi: (await import(`../../messages/${locale}/suivi.json`)).default,
   };
 
   return {

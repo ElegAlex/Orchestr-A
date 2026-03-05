@@ -24,12 +24,16 @@ import {
 import { roleManagementService } from "@/services/role-management.service";
 import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import { useRouter } from "next/navigation";
 import { parseCSV as parseCSVRaw } from "@/lib/csv-parser";
 
 export default function UsersPage() {
   const t = useTranslations("admin.users");
   const tCommon = useTranslations("common");
+  const tSuivi = useTranslations("suivi");
+  const locale = useLocale();
+  const router = useRouter();
   const currentUser = useAuthStore((state) => state.user);
   const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
@@ -577,6 +581,14 @@ export default function UsersPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-3">
+                      <button
+                        onClick={() =>
+                          router.push(`/${locale}/users/${user.id}/suivi`)
+                        }
+                        className="text-purple-600 hover:text-purple-900"
+                      >
+                        {tSuivi("title")}
+                      </button>
                       {canEditUsers && (
                         <button
                           onClick={() => openEditModal(user)}

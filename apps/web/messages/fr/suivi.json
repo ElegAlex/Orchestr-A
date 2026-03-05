@@ -1,0 +1,141 @@
+{
+  "title": "Suivi individuel",
+  "selectEmployee": "Sélectionner un collaborateur",
+  "searchPlaceholder": "Rechercher par nom...",
+  "backToUsers": "Retour aux utilisateurs",
+  "loading": "Chargement...",
+  "noData": "Aucune donnée disponible",
+  "period": "Période",
+  "periodOptions": {
+    "week": "Cette semaine",
+    "month": "Ce mois",
+    "quarter": "Ce trimestre",
+    "year": "Cette année",
+    "all": "Tout"
+  },
+  "tabs": {
+    "overview": "Vue d'ensemble",
+    "tasks": "Tâches",
+    "leaves": "Congés",
+    "telework": "Télétravail",
+    "time": "Temps",
+    "skills": "Compétences"
+  },
+  "overview": {
+    "info": "Informations",
+    "role": "Rôle",
+    "department": "Département",
+    "services": "Services",
+    "email": "Email",
+    "memberSince": "Membre depuis",
+    "status": "Statut",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "stats": "Statistiques",
+    "activeTasks": "Tâches actives",
+    "completedTasks": "Tâches terminées",
+    "leaveBalance": "Solde congés",
+    "teleworkDays": "Jours télétravail",
+    "hoursLogged": "Heures saisies",
+    "activeProjects": "Projets actifs",
+    "recentActivity": "Activité récente",
+    "noRecentActivity": "Aucune activité récente"
+  },
+  "tasks": {
+    "title": "Tâches assignées",
+    "status": "Statut",
+    "priority": "Priorité",
+    "project": "Projet",
+    "progress": "Progression",
+    "dueDate": "Échéance",
+    "noProject": "Hors projet",
+    "noTasks": "Aucune tâche assignée",
+    "filters": {
+      "all": "Toutes",
+      "active": "Actives",
+      "completed": "Terminées",
+      "blocked": "Bloquées"
+    }
+  },
+  "leaves": {
+    "title": "Historique des congés",
+    "type": "Type",
+    "dates": "Dates",
+    "days": "Jours",
+    "status": "Statut",
+    "balance": "Solde des congés",
+    "total": "Total",
+    "used": "Utilisés",
+    "available": "Disponible",
+    "pending": "En attente",
+    "noLeaves": "Aucun congé enregistré",
+    "types": {
+      "CP": "Congés payés",
+      "RTT": "RTT",
+      "SICK_LEAVE": "Maladie",
+      "UNPAID": "Sans solde",
+      "OTHER": "Autre"
+    },
+    "statuses": {
+      "PENDING": "En attente",
+      "APPROVED": "Approuvé",
+      "REJECTED": "Refusé",
+      "CANCELLED": "Annulé"
+    }
+  },
+  "telework": {
+    "title": "Suivi télétravail",
+    "thisMonth": "Ce mois",
+    "thisYear": "Cette année",
+    "totalDays": "Total jours",
+    "monthlyAvg": "Moyenne mensuelle",
+    "calendar": "Calendrier",
+    "noTelework": "Aucun jour de télétravail enregistré"
+  },
+  "time": {
+    "title": "Suivi du temps",
+    "totalHours": "Total heures",
+    "byProject": "Par projet",
+    "byActivity": "Par activité",
+    "project": "Projet",
+    "hours": "Heures",
+    "activity": "Activité",
+    "date": "Date",
+    "description": "Description",
+    "noEntries": "Aucune saisie de temps",
+    "activities": {
+      "DEVELOPMENT": "Développement",
+      "MEETING": "Réunion",
+      "SUPPORT": "Support",
+      "TRAINING": "Formation",
+      "OTHER": "Autre"
+    }
+  },
+  "skills": {
+    "title": "Compétences",
+    "skill": "Compétence",
+    "category": "Catégorie",
+    "level": "Niveau",
+    "noSkills": "Aucune compétence enregistrée",
+    "categories": {
+      "TECHNICAL": "Technique",
+      "METHODOLOGY": "Méthodologie",
+      "SOFT_SKILL": "Savoir-être",
+      "BUSINESS": "Métier"
+    },
+    "levels": {
+      "BEGINNER": "Débutant",
+      "INTERMEDIATE": "Intermédiaire",
+      "EXPERT": "Expert",
+      "MASTER": "Maître"
+    }
+  },
+  "accessRestricted": {
+    "title": "Accès restreint",
+    "message": "Vous n'avez pas les permissions nécessaires pour accéder au suivi individuel."
+  },
+  "messages": {
+    "loadError": "Erreur lors du chargement des données",
+    "userNotFound": "Utilisateur non trouvé"
+  }
+}
