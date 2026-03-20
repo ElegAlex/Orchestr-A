@@ -11,7 +11,20 @@
 
 **4 vulnérabilités CRITIQUES, 5 HAUTES, 10 MOYENNES, 3 BASSES** identifiées sur 40+ tests exécutés.
 
-La vulnérabilité la plus grave permet à **n'importe qui sur Internet de créer un compte ADMIN** via l'endpoint public d'inscription. Combinée à l'absence systémique de contrôles d'autorisation sur les lectures et certaines mutations, un attaquant peut accéder à et modifier l'ensemble des données de l'application sans aucune restriction.
+> **STATUT : REMÉDIATION COMPLÈTE (20 mars 2026)**
+>
+> Les 4 phases de remédiation ont été livrées en 4 commits successifs.
+> **19 des 22 vulnérabilités ont été corrigées**, incluant toutes les CRITIQUES et HAUTES.
+> 3 vulnérabilités BASSES restent en backlog (dangerouslySetInnerHTML, race condition todos, Prisma filter 500).
+>
+> | Phase | Commit | Vulnérabilités corrigées |
+> |-------|--------|------------------------|
+> | Phase 1 | `2824577` | VULN-001, VULN-003, VULN-005 |
+> | Phase 2 | `92e0042` | VULN-002, VULN-004 |
+> | Phase 3 | `3b73d12` | VULN-006, VULN-007, VULN-008, VULN-011 |
+> | Phase 4 | `04629ca` | VULN-009, VULN-012, VULN-016, VULN-017 (déjà OK), VULN-018, VULN-019 |
+
+~~La vulnérabilité la plus grave permet à **n'importe qui sur Internet de créer un compte ADMIN** via l'endpoint public d'inscription.~~ **CORRIGÉ** — Le champ `role` est supprimé du RegisterDto et rejeté par `forbidNonWhitelisted`.
 
 ### Bilan par catégorie OWASP
 
