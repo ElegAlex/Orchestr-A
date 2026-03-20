@@ -174,7 +174,7 @@ describe('TeleworkService', () => {
       );
       mockPrismaService.teleworkSchedule.count.mockResolvedValue(1);
 
-      const result = await service.findAll(1, 10);
+      const result = await service.findAll('user-1', 'ADMIN', 1, 10);
 
       expect(result.data).toHaveLength(1);
       expect(result.meta.total).toBe(1);
@@ -186,7 +186,7 @@ describe('TeleworkService', () => {
       ]);
       mockPrismaService.teleworkSchedule.count.mockResolvedValue(1);
 
-      const result = await service.findAll(1, 10, 'user-1');
+      const result = await service.findAll('user-1', 'ADMIN', 1, 10, 'user-1');
 
       expect(result.data).toHaveLength(1);
       expect(mockPrismaService.teleworkSchedule.findMany).toHaveBeenCalledWith(
@@ -200,7 +200,7 @@ describe('TeleworkService', () => {
       mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
       mockPrismaService.teleworkSchedule.count.mockResolvedValue(0);
 
-      await service.findAll(1, 10, undefined, '2025-01-01', '2025-01-31');
+      await service.findAll('user-1', 'ADMIN', 1, 10, undefined, '2025-01-01', '2025-01-31');
 
       expect(mockPrismaService.teleworkSchedule.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -218,7 +218,7 @@ describe('TeleworkService', () => {
       mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
       mockPrismaService.teleworkSchedule.count.mockResolvedValue(0);
 
-      await service.findAll(1, 10, undefined, '2025-01-01');
+      await service.findAll('user-1', 'ADMIN', 1, 10, undefined, '2025-01-01');
 
       expect(mockPrismaService.teleworkSchedule.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -235,7 +235,7 @@ describe('TeleworkService', () => {
       mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
       mockPrismaService.teleworkSchedule.count.mockResolvedValue(0);
 
-      await service.findAll(1, 10, undefined, undefined, '2025-01-31');
+      await service.findAll('user-1', 'ADMIN', 1, 10, undefined, undefined, '2025-01-31');
 
       expect(mockPrismaService.teleworkSchedule.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -255,7 +255,7 @@ describe('TeleworkService', () => {
         mockTelework,
       );
 
-      const result = await service.findOne('telework-1');
+      const result = await service.findOne('telework-1', 'user-1', 'ADMIN');
 
       expect(result).toBeDefined();
       expect(result.id).toBe('telework-1');
@@ -264,7 +264,7 @@ describe('TeleworkService', () => {
     it('should throw error when telework not found', async () => {
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow(
+      await expect(service.findOne('nonexistent', 'user-1', 'ADMIN')).rejects.toThrow(
         NotFoundException,
       );
     });

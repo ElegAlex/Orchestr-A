@@ -12,6 +12,12 @@ import { LeaveStatus, LeaveType, Role, Prisma } from 'database';
 
 @Injectable()
 export class LeavesService {
+  private readonly MANAGEMENT_ROLES: string[] = [Role.ADMIN, Role.RESPONSABLE, Role.MANAGER];
+
+  private isManagementRole(role: string): boolean {
+    return this.MANAGEMENT_ROLES.includes(role);
+  }
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -248,7 +254,13 @@ export class LeavesService {
     type?: LeaveType,
     startDate?: string,
     endDate?: string,
+    currentUserId?: string,
+    currentUserRole?: string,
   ) {
+    // Ownership check: non-management roles can only see their own leaves
+    if (currentUserRole && !this.isManagementRole(currentUserRole)) {
+      userId = currentUserId;
+    }
     const skip = (page - 1) * limit;
 
     const where: Prisma.LeaveWhereInput = {};
@@ -497,7 +509,7 @@ export class LeavesService {
   /**
    * Récupérer une demande de congé par ID
    */
-  async findOne(id: string) {
+  async findOne(id: string, currentUserId?: string, currentUserRole?: string) {
     const leave = await this.prisma.leave.findUnique({
       where: { id },
       include: {
@@ -549,19 +561,29 @@ export class LeavesService {
       throw new NotFoundException('Demande de congé introuvable');
     }
 
+    // Ownership check: non-management roles can only view their own leaves
+    if (currentUserRole && !this.isManagementRole(currentUserRole) && leave.userId !== currentUserId) {
+      throw new ForbiddenException('Accès non autorisé à cette demande de congé');
+    }
+
     return leave;
   }
 
   /**
    * Mettre à jour une demande de congé
    */
-  async update(id: string, updateLeaveDto: UpdateLeaveDto) {
+  async update(id: string, updateLeaveDto: UpdateLeaveDto, currentUserId?: string, currentUserRole?: string) {
     const existingLeave = await this.prisma.leave.findUnique({
       where: { id },
     });
 
     if (!existingLeave) {
       throw new NotFoundException('Demande de congé introuvable');
+    }
+
+    // Ownership check: non-management roles can only update their own leaves
+    if (currentUserRole && !this.isManagementRole(currentUserRole) && existingLeave.userId !== currentUserId) {
+      throw new ForbiddenException('Vous ne pouvez modifier que vos propres demandes de congé');
     }
 
     // Seules les demandes en attente peuvent être modifiées
@@ -666,13 +688,18 @@ export class LeavesService {
   /**
    * Supprimer une demande de congé
    */
-  async remove(id: string) {
+  async remove(id: string, currentUserId?: string, currentUserRole?: string) {
     const leave = await this.prisma.leave.findUnique({
       where: { id },
     });
 
     if (!leave) {
       throw new NotFoundException('Demande de congé introuvable');
+    }
+
+    // Ownership check: non-management roles can only delete their own leaves
+    if (currentUserRole && !this.isManagementRole(currentUserRole) && leave.userId !== currentUserId) {
+      throw new ForbiddenException('Vous ne pouvez supprimer que vos propres demandes de congé');
     }
 
     // Seules les demandes en attente ou refusées peuvent être supprimées

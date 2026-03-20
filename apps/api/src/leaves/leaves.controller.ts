@@ -90,6 +90,8 @@ export class LeavesController {
     description: 'Liste des demandes de congé',
   })
   findAll(
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('userId') userId?: string,
@@ -106,6 +108,8 @@ export class LeavesController {
       type,
       startDate,
       endDate,
+      currentUserId,
+      currentUserRole,
     );
   }
 
@@ -224,8 +228,12 @@ export class LeavesController {
     status: 404,
     description: 'Demande de congé introuvable',
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.leavesService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    return this.leavesService.findOne(id, currentUserId, currentUserRole);
   }
 
   @Patch(':id')
@@ -247,8 +255,10 @@ export class LeavesController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateLeaveDto: UpdateLeaveDto,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
   ) {
-    return this.leavesService.update(id, updateLeaveDto);
+    return this.leavesService.update(id, updateLeaveDto, currentUserId, currentUserRole);
   }
 
   @Delete(':id')
@@ -269,8 +279,12 @@ export class LeavesController {
     status: 404,
     description: 'Demande de congé introuvable',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.leavesService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    return this.leavesService.remove(id, currentUserId, currentUserRole);
   }
 
   @Post(':id/approve')

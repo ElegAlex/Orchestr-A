@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -69,12 +70,14 @@ export class EventsController {
     description: 'Liste des événements',
   })
   findAll(
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('userId') userId?: string,
     @Query('projectId') projectId?: string,
   ) {
-    return this.eventsService.findAll(startDate, endDate, userId, projectId);
+    return this.eventsService.findAll(currentUserId, currentUserRole, startDate, endDate, userId, projectId);
   }
 
   @Get('range')
@@ -103,7 +106,17 @@ export class EventsController {
     status: 404,
     description: 'Utilisateur introuvable',
   })
-  getEventsByUser(@Param('userId', ParseUUIDPipe) userId: string) {
+  getEventsByUser(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    const MANAGEMENT_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'];
+    if (!MANAGEMENT_ROLES.includes(currentUserRole) && userId !== currentUserId) {
+      throw new ForbiddenException(
+        "Vous n'avez pas la permission de consulter les événements d'autrui",
+      );
+    }
     return this.eventsService.getEventsByUser(userId);
   }
 
@@ -119,8 +132,12 @@ export class EventsController {
     status: 404,
     description: 'Événement introuvable',
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.eventsService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    return this.eventsService.findOne(id, currentUserId, currentUserRole);
   }
 
   @Patch(':id')

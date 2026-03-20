@@ -12,10 +12,16 @@ import { Prisma } from 'database';
 
 @Injectable()
 export class TeleworkService {
+  private readonly MANAGEMENT_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'];
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly roleManagementService: RoleManagementService,
   ) {}
+
+  private isManagementRole(role: string): boolean {
+    return this.MANAGEMENT_ROLES.includes(role);
+  }
 
   /**
    * Créer une journée de télétravail
@@ -98,6 +104,8 @@ export class TeleworkService {
    * Récupérer tous les télétravails avec filtres
    */
   async findAll(
+    currentUserId: string,
+    currentUserRole: string,
     page = 1,
     limit = 50,
     userId?: string,
@@ -108,7 +116,10 @@ export class TeleworkService {
 
     const where: Prisma.TeleworkScheduleWhereInput = {};
 
-    if (userId) {
+    // IDOR protection: non-management roles can only see their own data
+    if (!this.isManagementRole(currentUserRole)) {
+      where.userId = currentUserId;
+    } else if (userId) {
       where.userId = userId;
     }
 
@@ -169,7 +180,7 @@ export class TeleworkService {
   /**
    * Récupérer un télétravail par ID
    */
-  async findOne(id: string) {
+  async findOne(id: string, currentUserId?: string, currentUserRole?: string) {
     const telework = await this.prisma.teleworkSchedule.findUnique({
       where: { id },
       include: {
@@ -187,6 +198,18 @@ export class TeleworkService {
 
     if (!telework) {
       throw new NotFoundException('Télétravail introuvable');
+    }
+
+    // IDOR protection: non-management roles can only see their own telework
+    if (
+      currentUserId &&
+      currentUserRole &&
+      !this.isManagementRole(currentUserRole) &&
+      telework.userId !== currentUserId
+    ) {
+      throw new ForbiddenException(
+        "Vous n'avez pas la permission de consulter le télétravail d'autrui",
+      );
     }
 
     return telework;

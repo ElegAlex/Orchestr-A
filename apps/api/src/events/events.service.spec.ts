@@ -135,7 +135,7 @@ describe('EventsService', () => {
       const events = [mockEvent];
       mockPrismaService.event.findMany.mockResolvedValue(events);
 
-      const result = await service.findAll();
+      const result = await service.findAll('user-1', 'ADMIN');
 
       expect(result).toEqual(events);
       expect(prisma.event.findMany).toHaveBeenCalled();
@@ -145,7 +145,7 @@ describe('EventsService', () => {
       const events = [mockEvent];
       mockPrismaService.event.findMany.mockResolvedValue(events);
 
-      const result = await service.findAll('2025-11-01', '2025-11-30');
+      const result = await service.findAll('user-1', 'ADMIN', '2025-11-01', '2025-11-30');
 
       expect(result).toEqual(events);
       expect(prisma.event.findMany).toHaveBeenCalledWith(
@@ -164,7 +164,7 @@ describe('EventsService', () => {
       const events = [mockEvent];
       mockPrismaService.event.findMany.mockResolvedValue(events);
 
-      const result = await service.findAll(undefined, undefined, 'user-1');
+      const result = await service.findAll('user-1', 'ADMIN', undefined, undefined, 'user-1');
 
       expect(result).toEqual(events);
       expect(prisma.event.findMany).toHaveBeenCalledWith(
@@ -185,7 +185,7 @@ describe('EventsService', () => {
     it('should return an event by id', async () => {
       mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
 
-      const result = await service.findOne('1');
+      const result = await service.findOne('1', 'user-1', 'ADMIN');
 
       expect(result).toEqual(mockEvent);
       expect(prisma.event.findUnique).toHaveBeenCalledWith({
@@ -197,7 +197,7 @@ describe('EventsService', () => {
     it('should throw NotFoundException if event not found', async () => {
       mockPrismaService.event.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('invalid-id')).rejects.toThrow(
+      await expect(service.findOne('invalid-id', 'user-1', 'ADMIN')).rejects.toThrow(
         NotFoundException,
       );
     });

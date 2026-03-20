@@ -94,10 +94,10 @@ describe('EventsController', () => {
       const events = [mockEvent];
       mockEventsService.findAll.mockResolvedValue(events);
 
-      const result = await controller.findAll();
+      const result = await controller.findAll('user-1', 'ADMIN');
 
       expect(result).toEqual(events);
-      expect(service.findAll).toHaveBeenCalled();
+      expect(service.findAll).toHaveBeenCalledWith('user-1', 'ADMIN', undefined, undefined, undefined, undefined);
     });
 
     it('should return events with filters', async () => {
@@ -105,6 +105,8 @@ describe('EventsController', () => {
       mockEventsService.findAll.mockResolvedValue(events);
 
       const result = await controller.findAll(
+        'user-1',
+        'ADMIN',
         '2025-11-01',
         '2025-11-30',
         'user-1',
@@ -113,6 +115,8 @@ describe('EventsController', () => {
 
       expect(result).toEqual(events);
       expect(service.findAll).toHaveBeenCalledWith(
+        'user-1',
+        'ADMIN',
         '2025-11-01',
         '2025-11-30',
         'user-1',
@@ -125,10 +129,10 @@ describe('EventsController', () => {
     it('should return an event by id', async () => {
       mockEventsService.findOne.mockResolvedValue(mockEvent);
 
-      const result = await controller.findOne('1');
+      const result = await controller.findOne('1', 'user-1', 'ADMIN');
 
       expect(result).toEqual(mockEvent);
-      expect(service.findOne).toHaveBeenCalledWith('1');
+      expect(service.findOne).toHaveBeenCalledWith('1', 'user-1', 'ADMIN');
     });
   });
 
@@ -166,7 +170,7 @@ describe('EventsController', () => {
       const events = [mockEvent];
       mockEventsService.getEventsByUser.mockResolvedValue(events);
 
-      const result = await controller.getEventsByUser('user-1');
+      const result = await controller.getEventsByUser('user-1', 'user-1', 'ADMIN');
 
       expect(result).toEqual(events);
       expect(service.getEventsByUser).toHaveBeenCalledWith('user-1');

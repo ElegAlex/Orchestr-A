@@ -118,10 +118,12 @@ describe('TeleworkController', () => {
 
       mockTeleworkService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10);
+      const result = await controller.findAll('user-id-1', 'ADMIN', 1, 10);
 
       expect(result).toEqual(paginatedResult);
       expect(mockTeleworkService.findAll).toHaveBeenCalledWith(
+        'user-id-1',
+        'ADMIN',
         1,
         10,
         undefined,
@@ -138,9 +140,11 @@ describe('TeleworkController', () => {
 
       mockTeleworkService.findAll.mockResolvedValue(userTelework);
 
-      await controller.findAll(1, 10, 'user-id-1');
+      await controller.findAll('user-id-1', 'ADMIN', 1, 10, 'user-id-1');
 
       expect(mockTeleworkService.findAll).toHaveBeenCalledWith(
+        'user-id-1',
+        'ADMIN',
         1,
         10,
         'user-id-1',
@@ -155,9 +159,11 @@ describe('TeleworkController', () => {
         meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
       });
 
-      await controller.findAll(1, 10, undefined, '2025-01-01', '2025-01-31');
+      await controller.findAll('user-id-1', 'ADMIN', 1, 10, undefined, '2025-01-01', '2025-01-31');
 
       expect(mockTeleworkService.findAll).toHaveBeenCalledWith(
+        'user-id-1',
+        'ADMIN',
         1,
         10,
         undefined,
@@ -171,10 +177,10 @@ describe('TeleworkController', () => {
     it('should return a telework entry by id', async () => {
       mockTeleworkService.findOne.mockResolvedValue(mockTelework);
 
-      const result = await controller.findOne('telework-id-1');
+      const result = await controller.findOne('telework-id-1', 'user-id-1', 'ADMIN');
 
       expect(result).toEqual(mockTelework);
-      expect(mockTeleworkService.findOne).toHaveBeenCalledWith('telework-id-1');
+      expect(mockTeleworkService.findOne).toHaveBeenCalledWith('telework-id-1', 'user-id-1', 'ADMIN');
     });
 
     it('should throw NotFoundException when telework not found', async () => {
@@ -182,7 +188,7 @@ describe('TeleworkController', () => {
         new NotFoundException('Télétravail introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+      await expect(controller.findOne('nonexistent', 'user-id-1', 'ADMIN')).rejects.toThrow(
         NotFoundException,
       );
     });

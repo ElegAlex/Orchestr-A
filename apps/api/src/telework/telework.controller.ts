@@ -72,6 +72,8 @@ export class TeleworkController {
     description: 'Liste des télétravails',
   })
   findAll(
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('userId') userId?: string,
@@ -79,6 +81,8 @@ export class TeleworkController {
     @Query('endDate') endDate?: string,
   ) {
     return this.teleworkService.findAll(
+      currentUserId,
+      currentUserRole,
       page,
       limit,
       userId,
@@ -190,8 +194,12 @@ export class TeleworkController {
     status: 404,
     description: 'Télétravail introuvable',
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.teleworkService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    return this.teleworkService.findOne(id, currentUserId, currentUserRole);
   }
 
   @Patch(':id')

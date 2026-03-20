@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -10,7 +11,13 @@ import { Prisma } from 'database';
 
 @Injectable()
 export class EventsService {
+  private readonly MANAGEMENT_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'];
+
   constructor(private readonly prisma: PrismaService) {}
+
+  private isManagementRole(role: string): boolean {
+    return this.MANAGEMENT_ROLES.includes(role);
+  }
 
   /**
    * Créer un nouvel événement
@@ -173,6 +180,8 @@ export class EventsService {
    * Récupérer tous les événements avec filtres optionnels
    */
   async findAll(
+    currentUserId: string,
+    currentUserRole: string,
     startDate?: string,
     endDate?: string,
     userId?: string,
@@ -192,8 +201,13 @@ export class EventsService {
       where.date = { lte: new Date(endDate) };
     }
 
-    // Filtrage par utilisateur (participant)
-    if (userId) {
+    // IDOR protection: non-management roles can only see events they participate in or created
+    if (!this.isManagementRole(currentUserRole)) {
+      where.OR = [
+        { participants: { some: { userId: currentUserId } } },
+        { createdById: currentUserId },
+      ];
+    } else if (userId) {
       where.participants = {
         some: {
           userId,
@@ -246,7 +260,7 @@ export class EventsService {
   /**
    * Récupérer un événement par ID
    */
-  async findOne(id: string) {
+  async findOne(id: string, currentUserId?: string, currentUserRole?: string) {
     const event = await this.prisma.event.findUnique({
       where: { id },
       include: {
@@ -286,6 +300,23 @@ export class EventsService {
 
     if (!event) {
       throw new NotFoundException('Événement introuvable');
+    }
+
+    // IDOR protection: non-management roles can only see events they created or participate in
+    if (
+      currentUserId &&
+      currentUserRole &&
+      !this.isManagementRole(currentUserRole)
+    ) {
+      const isCreator = event.createdById === currentUserId;
+      const isParticipant = event.participants.some(
+        (p) => p.user.id === currentUserId,
+      );
+      if (!isCreator && !isParticipant) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission de consulter cet événement",
+        );
+      }
     }
 
     return event;
