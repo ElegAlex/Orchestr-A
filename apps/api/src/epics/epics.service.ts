@@ -20,14 +20,15 @@ export class EpicsService {
   }
 
   async findAll(page = 1, limit = 10, projectId?: string) {
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
     const where = projectId ? { projectId } : {};
 
     const [data, total] = await Promise.all([
       this.prisma.epic.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         include: {
           project: { select: { id: true, name: true } },
           _count: { select: { tasks: true } },
@@ -39,7 +40,7 @@ export class EpicsService {
 
     return {
       data,
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      meta: { total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) },
     };
   }
 

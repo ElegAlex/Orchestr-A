@@ -3,6 +3,7 @@ import {
   IsString,
   IsEmail,
   MinLength,
+  Matches,
   IsEnum,
   IsOptional,
   IsArray,
@@ -28,11 +29,16 @@ export class ImportUserDto {
   login: string;
 
   @ApiProperty({
-    description: 'Mot de passe (minimum 6 caractères)',
-    example: 'password123',
+    description:
+      'Mot de passe (minimum 8 caractères, avec majuscule, chiffre et caractère spécial)',
+    example: 'P@ssword1',
   })
   @IsString()
-  @MinLength(6)
+  @MinLength(8)
+  @Matches(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?])/, {
+    message:
+      'Le mot de passe doit contenir au moins une majuscule, un chiffre et un caractère spécial',
+  })
   password: string;
 
   @ApiProperty({

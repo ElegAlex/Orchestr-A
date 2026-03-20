@@ -261,7 +261,8 @@ export class LeavesService {
     if (currentUserRole && !this.isManagementRole(currentUserRole)) {
       userId = currentUserId;
     }
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
 
     const where: Prisma.LeaveWhereInput = {};
     if (userId) where.userId = userId;
@@ -284,7 +285,7 @@ export class LeavesService {
       this.prisma.leave.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         include: {
           user: {
             select: {
@@ -333,8 +334,8 @@ export class LeavesService {
       meta: {
         total,
         page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }

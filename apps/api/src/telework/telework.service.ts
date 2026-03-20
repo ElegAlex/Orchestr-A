@@ -112,7 +112,8 @@ export class TeleworkService {
     startDate?: string,
     endDate?: string,
   ) {
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
 
     const where: Prisma.TeleworkScheduleWhereInput = {};
 
@@ -133,7 +134,7 @@ export class TeleworkService {
       this.prisma.teleworkSchedule.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         orderBy: { date: 'desc' },
         include: {
           user: {
@@ -171,8 +172,8 @@ export class TeleworkService {
       meta: {
         total,
         page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }

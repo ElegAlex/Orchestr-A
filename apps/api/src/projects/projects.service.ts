@@ -96,7 +96,8 @@ export class ProjectsService {
    * Récupérer tous les projets avec pagination
    */
   async findAll(page = 1, limit = 10, status?: ProjectStatus) {
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
 
     const where = status ? { status } : {};
 
@@ -104,7 +105,7 @@ export class ProjectsService {
       this.prisma.project.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         include: {
           createdBy: {
             select: {
@@ -164,8 +165,8 @@ export class ProjectsService {
       meta: {
         total,
         page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }

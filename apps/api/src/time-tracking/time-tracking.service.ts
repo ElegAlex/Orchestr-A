@@ -110,7 +110,8 @@ export class TimeTrackingService {
     startDate?: string,
     endDate?: string,
   ) {
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
 
     const where: Prisma.TimeEntryWhereInput = {};
     if (userId) where.userId = userId;
@@ -132,7 +133,7 @@ export class TimeTrackingService {
       this.prisma.timeEntry.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         include: {
           user: {
             select: {
@@ -166,8 +167,8 @@ export class TimeTrackingService {
       meta: {
         total,
         page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }

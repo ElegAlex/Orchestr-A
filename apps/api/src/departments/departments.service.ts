@@ -59,12 +59,13 @@ export class DepartmentsService {
    * Récupérer tous les départements avec pagination
    */
   async findAll(page = 1, limit = 10) {
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
 
     const [departments, total] = await Promise.all([
       this.prisma.department.findMany({
         skip,
-        take: limit,
+        take: safeLimit,
         include: {
           manager: {
             select: {
@@ -94,8 +95,8 @@ export class DepartmentsService {
       meta: {
         total,
         page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }

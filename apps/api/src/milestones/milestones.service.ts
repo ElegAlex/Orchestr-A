@@ -39,7 +39,8 @@ export class MilestonesService {
     projectId?: string,
     status?: MilestoneStatus,
   ) {
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
     const where: Prisma.MilestoneWhereInput = {};
     if (projectId) where.projectId = projectId;
     if (status) where.status = status;
@@ -48,7 +49,7 @@ export class MilestonesService {
       this.prisma.milestone.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         include: {
           project: { select: { id: true, name: true } },
           _count: { select: { tasks: true } },
@@ -60,7 +61,7 @@ export class MilestonesService {
 
     return {
       data,
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      meta: { total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) },
     };
   }
 

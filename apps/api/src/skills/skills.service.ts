@@ -60,7 +60,8 @@ export class SkillsService {
    * Récupérer toutes les compétences avec pagination et filtres
    */
   async findAll(page = 1, limit = 10, category?: SkillCategory) {
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
 
     const where = category ? { category } : {};
 
@@ -68,7 +69,7 @@ export class SkillsService {
       this.prisma.skill.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         include: {
           _count: {
             select: {
@@ -88,8 +89,8 @@ export class SkillsService {
       meta: {
         total,
         page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }

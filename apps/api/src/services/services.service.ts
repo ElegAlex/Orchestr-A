@@ -81,7 +81,8 @@ export class ServicesService {
    * Récupérer tous les services avec pagination
    */
   async findAll(page = 1, limit = 10, departmentId?: string) {
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
 
     const where = departmentId ? { departmentId } : {};
 
@@ -89,7 +90,7 @@ export class ServicesService {
       this.prisma.service.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         include: {
           department: {
             select: {
@@ -124,8 +125,8 @@ export class ServicesService {
       meta: {
         total,
         page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }

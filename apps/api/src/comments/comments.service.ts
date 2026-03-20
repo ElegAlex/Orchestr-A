@@ -37,14 +37,15 @@ export class CommentsService {
   }
 
   async findAll(page = 1, limit = 10, taskId?: string) {
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
     const where = taskId ? { taskId } : {};
 
     const [data, total] = await Promise.all([
       this.prisma.comment.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         include: {
           author: {
             select: {
@@ -63,7 +64,7 @@ export class CommentsService {
 
     return {
       data,
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      meta: { total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) },
     };
   }
 

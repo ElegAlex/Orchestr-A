@@ -248,7 +248,8 @@ export class TasksService {
     startDate?: string,
     endDate?: string,
   ) {
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
 
     const where: Prisma.TaskWhereInput = {};
     if (status) where.status = status;
@@ -284,7 +285,7 @@ export class TasksService {
       this.prisma.task.findMany({
         where,
         // Pas de pagination si filtre par date (pour le planning)
-        ...(hasDateFilter ? {} : { skip, take: limit }),
+        ...(hasDateFilter ? {} : { skip, take: safeLimit }),
         include: {
           project: {
             select: {
@@ -333,8 +334,8 @@ export class TasksService {
       meta: {
         total,
         page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }

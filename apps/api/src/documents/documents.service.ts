@@ -21,7 +21,8 @@ export class DocumentsService {
   }
 
   async findAll(page = 1, limit = 10, projectId?: string) {
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
     const where: Prisma.DocumentWhereInput = {};
     if (projectId) where.projectId = projectId;
 
@@ -29,7 +30,7 @@ export class DocumentsService {
       this.prisma.document.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         include: {
           project: { select: { id: true, name: true } },
         },
@@ -40,7 +41,7 @@ export class DocumentsService {
 
     return {
       data,
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      meta: { total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) },
     };
   }
 

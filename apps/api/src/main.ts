@@ -5,7 +5,7 @@ import {
 } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import helmet from 'helmet';
+import helmet from '@fastify/helmet';
 import { AppModule } from './app.module';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
@@ -28,14 +28,14 @@ async function bootstrap() {
     prefix: '/api/uploads/',
   });
 
-  // Security
+  // Security headers (@fastify/helmet)
   await app.register(helmet as Parameters<typeof app.register>[0], {
     contentSecurityPolicy: {
       directives: {
-        defaultSrc: [`'self'`],
-        styleSrc: [`'self'`, `'unsafe-inline'`],
-        imgSrc: [`'self'`, 'data:', 'https:'],
-        scriptSrc: [`'self'`],
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        scriptSrc: ["'self'"],
       },
     },
   });

@@ -136,8 +136,9 @@ export class UsersService {
     return user;
   }
 
-  async findAll(page: number = 1, limit: number = 200, role?: Role) {
-    const skip = (page - 1) * limit;
+  async findAll(page: number = 1, limit: number = 20, role?: Role) {
+    const safeLimit = Math.min(limit || 20, 100);
+    const skip = (page - 1) * safeLimit;
 
     const where = role ? { role } : {};
 
@@ -145,7 +146,7 @@ export class UsersService {
       this.prisma.user.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         select: {
           id: true,
           email: true,
@@ -194,8 +195,8 @@ export class UsersService {
       meta: {
         total,
         page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
     };
   }
@@ -947,10 +948,10 @@ export class UsersService {
         continue;
       }
 
-      if (!userData.password || userData.password.length < 6) {
+      if (!userData.password || userData.password.length < 8) {
         previewItem.status = 'error';
         previewItem.messages.push(
-          'Le mot de passe doit contenir au moins 6 caractères',
+          'Le mot de passe doit contenir au moins 8 caractères, avec une majuscule, un chiffre et un caractère spécial',
         );
         result.errors.push(previewItem);
         result.summary.errors++;
@@ -1271,6 +1272,16 @@ export class UsersService {
 
     // Read and save the buffer
     const buffer = await file.toBuffer();
+
+    // Validate actual file content (magic bytes) — VULN-008
+    const { fileTypeFromBuffer } = await import('file-type');
+    const fileTypeResult = await fileTypeFromBuffer(buffer);
+    if (!fileTypeResult || !allowedMimeTypes.includes(fileTypeResult.mime)) {
+      throw new BadRequestException(
+        'Le contenu du fichier ne correspond pas à une image valide',
+      );
+    }
+
     await fs.writeFile(join(uploadsDir, filename), buffer);
 
     return this.prisma.user.update({
