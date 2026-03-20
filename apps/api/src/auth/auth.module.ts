@@ -9,6 +9,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
+import { ThrottlerBehindProxyGuard } from './guards/throttler-behind-proxy.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { RoleManagementModule } from '../role-management/role-management.module';
 
@@ -34,6 +35,10 @@ import { RoleManagementModule } from '../role-management/role-management.module'
     AuthService,
     JwtStrategy,
     LocalStrategy,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerBehindProxyGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

@@ -143,15 +143,10 @@ describe('AuthService', () => {
       password: 'SecurePass123!',
       firstName: 'New',
       lastName: 'User',
-      departmentId: 'dept-1',
     };
 
     it('should create a new user with hashed password', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
-      mockPrismaService.department.findUnique.mockResolvedValue({
-        id: 'dept-1',
-        name: 'IT',
-      });
       vi.mocked(bcrypt.hash).mockResolvedValue(
         '$2b$12$hashedpassword' as never,
       );
@@ -163,7 +158,7 @@ describe('AuthService', () => {
         firstName: registerDto.firstName,
         lastName: registerDto.lastName,
         role: 'CONTRIBUTEUR',
-        departmentId: registerDto.departmentId,
+        departmentId: null,
         createdAt: new Date(),
       };
       mockPrismaService.user.create.mockResolvedValue(createdUser);
@@ -187,12 +182,31 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw BadRequestException if department not found', async () => {
+    it('should always assign CONTRIBUTEUR role regardless of input', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
-      mockPrismaService.department.findUnique.mockResolvedValue(null);
+      vi.mocked(bcrypt.hash).mockResolvedValue(
+        '$2b$12$hashedpassword' as never,
+      );
+      const createdUser = {
+        id: 'new-user-id',
+        email: registerDto.email,
+        login: registerDto.login,
+        firstName: registerDto.firstName,
+        lastName: registerDto.lastName,
+        role: 'CONTRIBUTEUR',
+        departmentId: null,
+        createdAt: new Date(),
+      };
+      mockPrismaService.user.create.mockResolvedValue(createdUser);
+      mockJwtService.sign.mockReturnValue('new-user-token');
 
-      await expect(service.register(registerDto)).rejects.toThrow(
-        BadRequestException,
+      const result = await service.register(registerDto);
+
+      expect(result.user.role).toBe('CONTRIBUTEUR');
+      expect(mockPrismaService.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ role: 'CONTRIBUTEUR' }),
+        }),
       );
     });
   });

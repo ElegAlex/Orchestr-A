@@ -118,28 +118,6 @@ export class AuthService {
       }
     }
 
-    // Vérifier que le département existe si fourni
-    if (registerDto.departmentId) {
-      const department = await this.prisma.department.findUnique({
-        where: { id: registerDto.departmentId },
-      });
-
-      if (!department) {
-        throw new BadRequestException('Département introuvable');
-      }
-    }
-
-    // Vérifier que les services existent si fournis
-    if (registerDto.serviceIds && registerDto.serviceIds.length > 0) {
-      const services = await this.prisma.service.findMany({
-        where: { id: { in: registerDto.serviceIds } },
-      });
-
-      if (services.length !== registerDto.serviceIds.length) {
-        throw new BadRequestException('Un ou plusieurs services introuvables');
-      }
-    }
-
     // Hasher le mot de passe
     const passwordHash = await bcrypt.hash(registerDto.password, 12);
 
@@ -151,8 +129,7 @@ export class AuthService {
         passwordHash,
         firstName: registerDto.firstName,
         lastName: registerDto.lastName,
-        role: registerDto.role || Role.CONTRIBUTEUR,
-        departmentId: registerDto.departmentId,
+        role: Role.CONTRIBUTEUR,
         isActive: true,
       },
       select: {
@@ -166,16 +143,6 @@ export class AuthService {
         createdAt: true,
       },
     });
-
-    // Créer les associations de services
-    if (registerDto.serviceIds && registerDto.serviceIds.length > 0) {
-      await this.prisma.userService.createMany({
-        data: registerDto.serviceIds.map((serviceId) => ({
-          userId: user.id,
-          serviceId,
-        })),
-      });
-    }
 
     // Générer un token JWT
     const payload = {

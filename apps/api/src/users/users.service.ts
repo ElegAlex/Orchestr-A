@@ -326,8 +326,9 @@ export class UsersService {
     }
 
     // Préparer les données de mise à jour
-    const { serviceIds: _, password, ...restDto } = updateUserDto;
+    const { serviceIds: _, password, role: _role, ...restDto } = updateUserDto;
     void _; // Intentionally unused - handled separately below
+    void _role; // Security: role changes must go through dedicated role management endpoints
     const updateData: Record<string, unknown> = { ...restDto };
 
     // Hasher le mot de passe si fourni

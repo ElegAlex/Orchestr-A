@@ -1,14 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsString,
-  IsEmail,
-  MinLength,
-  IsEnum,
-  IsOptional,
-  IsArray,
-  IsUUID,
-} from 'class-validator';
-import { Role } from 'database';
+import { IsString, IsEmail, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({
@@ -49,32 +40,4 @@ export class RegisterDto {
   @IsString()
   @MinLength(2)
   lastName: string;
-
-  @ApiProperty({
-    description: "Rôle de l'utilisateur",
-    enum: Role,
-    example: Role.CONTRIBUTEUR,
-    required: false,
-  })
-  @IsOptional()
-  @IsEnum(Role)
-  role?: Role;
-
-  @ApiProperty({
-    description: 'ID du département',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  departmentId?: string;
-
-  @ApiProperty({
-    description: 'IDs des services',
-    required: false,
-    type: [String],
-  })
-  @IsOptional()
-  @IsArray()
-  @IsUUID('4', { each: true })
-  serviceIds?: string[];
 }
