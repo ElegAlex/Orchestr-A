@@ -26,6 +26,7 @@ import { HolidaysModule } from './holidays/holidays.module';
 import { EventsModule } from './events/events.module';
 import { RoleManagementModule } from './role-management/role-management.module';
 import { PlanningExportModule } from './planning-export/planning-export.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { PlanningExportModule } from './planning-export/planning-export.module';
         limit: 100,
       },
     ]),
+    AuditModule,
     PrismaModule,
     AuthModule,
     UsersModule,

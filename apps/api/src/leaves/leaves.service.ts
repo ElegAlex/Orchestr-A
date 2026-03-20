@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { LeaveStatus, LeaveType, Role, Prisma } from 'database';
+import { AuditService, AuditAction } from '../audit/audit.service';
 
 @Injectable()
 export class LeavesService {
@@ -18,7 +19,10 @@ export class LeavesService {
     return this.MANAGEMENT_ROLES.includes(role);
   }
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   /**
    * Créer une nouvelle demande de congé
@@ -842,6 +846,14 @@ export class LeavesService {
       },
     });
 
+    this.auditService.log({
+      action: AuditAction.LEAVE_APPROVED,
+      userId: validatorId,
+      targetId: id,
+      details: `Leave ${id} approved for user ${leave.userId}`,
+      success: true,
+    });
+
     return updatedLeave;
   }
 
@@ -896,6 +908,14 @@ export class LeavesService {
           },
         },
       },
+    });
+
+    this.auditService.log({
+      action: AuditAction.LEAVE_REJECTED,
+      userId: validatorId,
+      targetId: id,
+      details: `Leave ${id} rejected for user ${leave.userId}`,
+      success: true,
     });
 
     return updatedLeave;

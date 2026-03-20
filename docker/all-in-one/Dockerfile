@@ -84,6 +84,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user for running application processes
+RUN groupadd --system orchestr-a && useradd --system --gid orchestr-a --create-home orchestr-a
+
 # Install pnpm globally
 RUN npm install -g pnpm@9.15.9
 
@@ -139,6 +142,9 @@ RUN chmod +x /entrypoint.sh /healthcheck.sh
 # Remove default nginx site and create symlink
 RUN rm -f /etc/nginx/sites-enabled/default \
     && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+
+# Set ownership for application files so non-root user can run node processes
+RUN chown -R orchestr-a:orchestr-a /app /var/log/orchestr-a
 
 # Default environment variables
 ENV NODE_ENV=production \

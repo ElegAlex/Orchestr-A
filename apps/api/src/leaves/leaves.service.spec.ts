@@ -9,6 +9,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { LeaveStatus, LeaveType, Role } from '../__mocks__/database';
+import { AuditService } from '../audit/audit.service';
 
 describe('LeavesService', () => {
   let service: LeavesService;
@@ -96,6 +97,10 @@ describe('LeavesService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: AuditService,
+          useValue: { log: vi.fn() },
         },
       ],
     }).compile();

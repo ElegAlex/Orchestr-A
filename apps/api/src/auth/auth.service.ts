@@ -11,6 +11,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { Role } from 'database';
 import { RoleManagementService } from '../role-management/role-management.service';
+import { AuditService, AuditAction } from '../audit/audit.service';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +19,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly roleManagementService: RoleManagementService,
+    private readonly auditService: AuditService,
   ) {}
 
   async validateUser(login: string, password: string) {
@@ -48,6 +50,11 @@ export class AuthService {
     const user = await this.validateUser(loginDto.login, loginDto.password);
 
     if (!user) {
+      this.auditService.log({
+        action: AuditAction.LOGIN_FAILURE,
+        details: `Failed login attempt for login: ${loginDto.login}`,
+        success: false,
+      });
       throw new UnauthorizedException('Login ou mot de passe incorrect');
     }
 
@@ -94,6 +101,13 @@ export class AuthService {
       login: user.login,
       role: user.role,
     };
+
+    this.auditService.log({
+      action: AuditAction.LOGIN_SUCCESS,
+      userId: user.id,
+      details: `User ${user.login} logged in successfully`,
+      success: true,
+    });
 
     return {
       access_token: this.jwtService.sign(payload),
@@ -142,6 +156,13 @@ export class AuthService {
         departmentId: true,
         createdAt: true,
       },
+    });
+
+    this.auditService.log({
+      action: AuditAction.REGISTER,
+      userId: user.id,
+      details: `New user registered: ${user.login}`,
+      success: true,
     });
 
     // Générer un token JWT

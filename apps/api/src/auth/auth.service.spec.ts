@@ -10,6 +10,7 @@ import {
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
 import { RoleManagementService } from '../role-management/role-management.service';
+import { AuditService } from '../audit/audit.service';
 
 vi.mock('bcrypt');
 
@@ -55,6 +56,10 @@ describe('AuthService', () => {
     getPermissionsForRole: vi.fn(),
   };
 
+  const mockAuditService = {
+    log: vi.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -70,6 +75,10 @@ describe('AuthService', () => {
         {
           provide: RoleManagementService,
           useValue: mockRoleManagementService,
+        },
+        {
+          provide: AuditService,
+          useValue: mockAuditService,
         },
       ],
     }).compile();

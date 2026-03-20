@@ -31,6 +31,8 @@ services:
     labels:
       - "com.orchestr-a.service=database"
       - "com.orchestr-a.tier=data"
+    security_opt:
+      - no-new-privileges:true
     deploy:
       resources:
         limits:
@@ -66,6 +68,8 @@ services:
     labels:
       - "com.orchestr-a.service=cache"
       - "com.orchestr-a.tier=data"
+    security_opt:
+      - no-new-privileges:true
     deploy:
       resources:
         limits:
@@ -135,6 +139,10 @@ services:
     labels:
       - "com.orchestr-a.service=api"
       - "com.orchestr-a.tier=backend"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
@@ -184,6 +192,10 @@ services:
     labels:
       - "com.orchestr-a.service=web"
       - "com.orchestr-a.tier=frontend"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
@@ -226,6 +238,8 @@ services:
     labels:
       - "com.orchestr-a.service=proxy"
       - "com.orchestr-a.tier=edge"
+    security_opt:
+      - no-new-privileges:true
     deploy:
       resources:
         limits:

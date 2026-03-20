@@ -119,6 +119,17 @@ if [ "$IS_UPGRADE" = true ]; then
     fi
 fi
 
+# ─── Correction des droits sur le schema public (protection post-restore) ────
+# Sur PG 15+, si un pg_restore a été fait avec -U postgres, le schema public
+# appartient à postgres et l'utilisateur orchestr_a n'a plus USAGE/CREATE.
+# Ce bloc est idempotent et sans effet si les droits sont déjà corrects.
+
+log_step "Vérification des droits sur le schema public..."
+gosu postgres psql -d orchestr_a -c "ALTER SCHEMA public OWNER TO orchestr_a;" 2>/dev/null || true
+gosu postgres psql -d orchestr_a -c "GRANT ALL ON SCHEMA public TO orchestr_a;" 2>/dev/null || true
+gosu postgres psql -d orchestr_a -c "GRANT USAGE ON SCHEMA public TO PUBLIC;" 2>/dev/null || true
+log_ok "Droits sur le schema public vérifiés"
+
 # ─── Migrations Prisma ───────────────────────────────────────────
 
 log_step "Application des migrations Prisma..."
@@ -190,6 +201,9 @@ rm -rf /app/uploads
 ln -sf /data/uploads /app/uploads
 log_ok "Uploads liés à /data/uploads (persisté)"
 chmod 755 /data/redis
+
+# Ensure non-root user owns application and log directories
+chown -R orchestr-a:orchestr-a /app /var/log/orchestr-a /data/uploads
 
 # ─── Démarrage ───────────────────────────────────────────────────
 
