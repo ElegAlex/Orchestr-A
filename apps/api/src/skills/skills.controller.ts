@@ -60,6 +60,7 @@ export class SkillsController {
   }
 
   @Get()
+  @Permissions('skills:read')
   @ApiOperation({
     summary: 'Récupérer toutes les compétences (avec pagination)',
   })
@@ -155,6 +156,7 @@ export class SkillsController {
   }
 
   @Get(':id')
+  @Permissions('skills:read')
   @ApiOperation({
     summary: 'Récupérer une compétence par ID avec ses utilisateurs',
   })

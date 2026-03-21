@@ -24,6 +24,7 @@ import {
 import { LeavesService } from './leaves.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
+import { UpsertLeaveBalanceDto } from './dto/upsert-leave-balance.dto';
 import {
   ImportLeavesDto,
   ImportLeavesResultDto,
@@ -53,14 +54,75 @@ export class LeavesController {
     description: 'Données invalides ou solde insuffisant',
   })
   @ApiResponse({
+    status: 403,
+    description:
+      'Permission insuffisante pour déclarer pour un autre collaborateur',
+  })
+  @ApiResponse({
     status: 409,
     description: 'Chevauchement avec une demande existante',
   })
   create(
     @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
     @Body() createLeaveDto: CreateLeaveDto,
   ) {
-    return this.leavesService.create(userId, createLeaveDto);
+    return this.leavesService.create(userId, createLeaveDto, userRole);
+  }
+
+  // ===========================
+  // ENDPOINTS DE GESTION DES SOLDES
+  // ===========================
+
+  @Get('balances')
+  @Permissions('leaves:manage')
+  @ApiOperation({
+    summary: 'Lister les soldes de congés (filtrable par year, userId)',
+  })
+  @ApiQuery({ name: 'year', required: false, type: Number })
+  @ApiQuery({ name: 'userId', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Liste des soldes' })
+  getBalances(
+    @Query('year', new ParseIntPipe({ optional: true })) year?: number,
+    @Query('userId') userId?: string,
+  ) {
+    return this.leavesService.getBalances(year, userId);
+  }
+
+  @Get('balances/defaults')
+  @Permissions('leaves:manage')
+  @ApiOperation({
+    summary: 'Lister les soldes globaux par défaut (userId=null)',
+  })
+  @ApiQuery({ name: 'year', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Soldes globaux par défaut' })
+  getDefaultBalances(
+    @Query('year', new ParseIntPipe({ optional: true })) year?: number,
+  ) {
+    return this.leavesService.getDefaultBalances(year);
+  }
+
+  @Post('balances')
+  @Permissions('leaves:manage')
+  @ApiOperation({ summary: 'Créer ou modifier un solde (upsert)' })
+  @ApiResponse({ status: 201, description: 'Solde créé ou mis à jour' })
+  @ApiResponse({ status: 400, description: 'Données invalides' })
+  @ApiResponse({
+    status: 404,
+    description: 'Type de congé ou utilisateur introuvable',
+  })
+  upsertBalance(@Body() dto: UpsertLeaveBalanceDto) {
+    return this.leavesService.upsertBalance(dto);
+  }
+
+  @Delete('balances/:id')
+  @Permissions('leaves:manage')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Supprimer un override de solde individuel' })
+  @ApiResponse({ status: 200, description: 'Solde supprimé' })
+  @ApiResponse({ status: 404, description: 'Solde introuvable' })
+  deleteBalance(@Param('id', ParseUUIDPipe) id: string) {
+    return this.leavesService.deleteBalance(id);
   }
 
   @Get()

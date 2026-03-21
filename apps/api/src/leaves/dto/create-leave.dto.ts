@@ -79,4 +79,13 @@ export class CreateLeaveDto {
   @IsString()
   @IsOptional()
   reason?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "ID de l'utilisateur cible (pour déclarer un congé au nom d'un collaborateur, nécessite leaves:declare_for_others)",
+    example: 'uuid-user-456',
+  })
+  @IsString()
+  @IsOptional()
+  targetUserId?: string;
 }

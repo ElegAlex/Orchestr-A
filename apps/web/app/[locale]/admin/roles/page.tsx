@@ -8,9 +8,150 @@ import {
   roleManagementService,
   PermissionsGroupedByModule,
 } from "@/services/role-management.service";
-import type { RoleConfigWithPermissions } from "@/types";
+import type { RoleConfigWithPermissions, Permission } from "@/types";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+
+// Labels lisibles par feature (module)
+const FEATURE_LABELS: Record<string, string> = {
+  projects: "Projets",
+  tasks: "Tâches",
+  events: "Événements",
+  epics: "Épics",
+  milestones: "Jalons",
+  leaves: "Congés",
+  telework: "Télétravail",
+  skills: "Compétences",
+  time_tracking: "Suivi du temps",
+  users: "Utilisateurs",
+  departments: "Départements",
+  services: "Services",
+  documents: "Documents",
+  comments: "Commentaires",
+  settings: "Paramètres",
+  analytics: "Analytique",
+  reports: "Rapports",
+  holidays: "Jours fériés",
+};
+
+// Ordre d'affichage des features
+const FEATURE_ORDER = [
+  "projects",
+  "tasks",
+  "epics",
+  "milestones",
+  "events",
+  "reports",
+  "analytics",
+  "users",
+  "departments",
+  "services",
+  "skills",
+  "leaves",
+  "telework",
+  "time_tracking",
+  "documents",
+  "comments",
+  "holidays",
+  "settings",
+];
+
+// Labels lisibles par action
+const ACTION_LABELS: Record<string, string> = {
+  read: "Lire",
+  view: "Voir",
+  create: "Créer",
+  update: "Modifier",
+  edit: "Éditer",
+  delete: "Supprimer",
+  approve: "Approuver",
+  manage: "Gérer",
+  import: "Importer",
+  export: "Exporter",
+  manage_members: "Gérer membres",
+  manage_roles: "Gérer rôles",
+  manage_matrix: "Gérer matrice",
+  manage_delegations: "Gérer délégations",
+  manage_others: "Gérer autres",
+  create_in_project: "Créer dans projet",
+  create_orphan: "Créer orpheline",
+  read_reports: "Voir rapports",
+  read_team: "Voir équipe",
+  declare_for_others: "Déclarer pour autrui",
+};
+
+function getActionLabel(action: string): string {
+  return ACTION_LABELS[action] ?? action;
+}
+
+function getFeatureLabel(module: string): string {
+  return FEATURE_LABELS[module] ?? module;
+}
+
+interface PermissionGroupProps {
+  module: string;
+  permissions: Permission[];
+  selectedPermissions: Set<string>;
+  onToggle: (id: string) => void;
+  onToggleAll: (module: string) => void;
+}
+
+function PermissionGroup({
+  module,
+  permissions,
+  selectedPermissions,
+  onToggle,
+  onToggleAll,
+}: PermissionGroupProps) {
+  const allSelected = permissions.every((p) => selectedPermissions.has(p.id));
+  const someSelected = permissions.some((p) => selectedPermissions.has(p.id));
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-semibold text-gray-800">
+          {getFeatureLabel(module)}
+        </h4>
+        <button
+          type="button"
+          onClick={() => onToggleAll(module)}
+          className={`text-xs px-2 py-1 rounded font-medium transition ${
+            allSelected
+              ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+              : someSelected
+                ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          {allSelected ? "Tout désactiver" : "Tout activer"}
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {permissions.map((perm) => {
+          const isActive = selectedPermissions.has(perm.id);
+          return (
+            <label
+              key={perm.id}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs cursor-pointer border transition select-none ${
+                isActive
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={() => onToggle(perm.id)}
+                className="sr-only"
+              />
+              {getActionLabel(perm.action)}
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function RolesPage() {
   const t = useTranslations("admin.roles");
@@ -36,7 +177,7 @@ export default function RolesPage() {
     description: "",
   });
 
-  // Selected permissions pour la matrice
+  // Selected permissions
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(
     new Set(),
   );
@@ -86,7 +227,6 @@ export default function RolesPage() {
       setShowCreateModal(false);
       setFormData({ code: "", name: "", description: "" });
       fetchRoles();
-      // Ouvrir la modal d'édition pour configurer les permissions
       openEditModal(newRole);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
@@ -104,7 +244,6 @@ export default function RolesPage() {
       description: role.description || "",
     });
 
-    // Initialiser les permissions sélectionnées
     const permIds = new Set<string>(
       role.permissions.map((rp) => rp.permission.id),
     );
@@ -117,7 +256,6 @@ export default function RolesPage() {
     if (!editingRole) return;
 
     try {
-      // Ne pas envoyer le code si le rôle est système
       const updateData = editingRole.isSystem
         ? {
             name: formData.name,
@@ -150,7 +288,6 @@ export default function RolesPage() {
       );
       toast.success(t("messages.saveSuccess"));
       fetchRoles();
-      // Refresh editing role
       const updatedRole = await roleManagementService.getRole(editingRole.id);
       setEditingRole(updatedRole);
     } catch (err) {
@@ -217,7 +354,6 @@ export default function RolesPage() {
 
     setSelectedPermissions((prev) => {
       const newSet = new Set(prev);
-      // Si tous sont déjà sélectionnés, on les désélectionne tous
       const allSelected = modulePermIds.every((id) => newSet.has(id));
 
       if (allSelected) {
@@ -230,14 +366,13 @@ export default function RolesPage() {
     });
   };
 
-  // Get unique actions from all permissions
-  const getUniqueActions = (): string[] => {
-    const actionsSet = new Set<string>();
-    Object.values(permissions).forEach((perms) => {
-      perms.forEach((p) => actionsSet.add(p.action));
-    });
-    return Array.from(actionsSet).sort();
-  };
+  // Order modules: known first (in order), then unknowns alphabetically
+  const sortedModules = [
+    ...FEATURE_ORDER.filter((m) => permissions[m]),
+    ...Object.keys(permissions)
+      .filter((m) => !FEATURE_ORDER.includes(m))
+      .sort(),
+  ];
 
   if (!isAdmin) {
     return (
@@ -484,7 +619,7 @@ export default function RolesPage() {
       {/* Edit Modal */}
       {showEditModal && editingRole && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-5xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">
                 {editingRole.name}
@@ -569,12 +704,18 @@ export default function RolesPage() {
               </div>
             </form>
 
-            {/* Permissions Matrix */}
+            {/* Permissions grouped by feature */}
             <div className="border-t pt-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {t("permissionMatrix")}
-                </h3>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {t("permissionMatrix")}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Chaque permission est indépendante. Activez uniquement celles
+                    dont ce rôle a besoin.
+                  </p>
+                </div>
                 <button
                   onClick={handleSavePermissions}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
@@ -583,83 +724,42 @@ export default function RolesPage() {
                 </button>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
-                        Module
-                      </th>
-                      {getUniqueActions().map((action) => (
-                        <th
-                          key={action}
-                          className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          {t(`actions.${action}`, { defaultValue: action })}
-                        </th>
-                      ))}
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t("selectAll")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {Object.keys(permissions)
-                      .sort()
-                      .map((module) => {
-                        const modulePerms = permissions[module];
-                        const uniqueActions = getUniqueActions();
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {sortedModules.map((module) => (
+                  <PermissionGroup
+                    key={module}
+                    module={module}
+                    permissions={permissions[module] ?? []}
+                    selectedPermissions={selectedPermissions}
+                    onToggle={togglePermission}
+                    onToggleAll={toggleAllPermissionsForModule}
+                  />
+                ))}
+              </div>
 
-                        return (
-                          <tr key={module} className="group hover:bg-gray-50">
-                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white group-hover:bg-gray-50 z-10">
-                              {t(`modules.${module}`, {
-                                defaultValue: module,
-                              })}
-                            </td>
-                            {uniqueActions.map((action) => {
-                              const perm = modulePerms.find(
-                                (p) => p.action === action,
-                              );
-                              return (
-                                <td
-                                  key={action}
-                                  className="px-4 py-3 text-center"
-                                >
-                                  {perm ? (
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedPermissions.has(perm.id)}
-                                      onChange={() => togglePermission(perm.id)}
-                                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                                    />
-                                  ) : (
-                                    <span className="text-gray-300">-</span>
-                                  )}
-                                </td>
-                              );
-                            })}
-                            <td className="px-4 py-3 text-center">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  toggleAllPermissionsForModule(module)
-                                }
-                                className="text-xs text-blue-600 hover:text-blue-900 font-medium"
-                              >
-                                ⊕
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-600">
+                  <span className="font-medium">{selectedPermissions.size}</span>{" "}
+                  permission(s) sélectionnée(s) sur{" "}
+                  <span className="font-medium">
+                    {Object.values(permissions).reduce(
+                      (acc, perms) => acc + perms.length,
+                      0,
+                    )}
+                  </span>{" "}
+                  disponible(s)
+                </p>
               </div>
             </div>
 
             {/* Close button */}
-            <div className="flex justify-end mt-6 pt-4 border-t">
+            <div className="flex justify-between mt-6 pt-4 border-t">
+              <button
+                onClick={handleSavePermissions}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+              >
+                {t("savePermissions")}
+              </button>
               <button
                 type="button"
                 onClick={() => {

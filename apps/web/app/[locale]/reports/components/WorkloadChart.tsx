@@ -12,38 +12,39 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useState, useEffect } from "react";
+import {
+  analyticsService,
+  WorkloadUser,
+  DateRangeParam,
+} from "@/services/analytics.service";
 
-interface WorkloadData {
-  name: string;
-  planned: number;
-  capacity: number;
-  utilization: number;
+interface WorkloadChartProps {
+  dateRange?: DateRangeParam;
+  projectId?: string;
 }
 
-export function WorkloadChart() {
-  const [data, setData] = useState<WorkloadData[]>([]);
+export function WorkloadChart({
+  dateRange = "month",
+  projectId,
+}: WorkloadChartProps) {
+  const [data, setData] = useState<WorkloadUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadWorkloadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateRange, projectId]);
 
   const loadWorkloadData = async () => {
     try {
       setLoading(true);
-      // En production, récupérer depuis l'API
-      // Pour l'instant, données simulées
-      const mockData: WorkloadData[] = [
-        { name: "Alice M.", planned: 35, capacity: 40, utilization: 87.5 },
-        { name: "Bob D.", planned: 42, capacity: 40, utilization: 105 },
-        { name: "Charlie L.", planned: 38, capacity: 40, utilization: 95 },
-        { name: "Diana R.", planned: 30, capacity: 40, utilization: 75 },
-        { name: "Eric T.", planned: 40, capacity: 40, utilization: 100 },
-        { name: "Fiona K.", planned: 25, capacity: 40, utilization: 62.5 },
-      ];
-      setData(mockData);
-    } catch (error) {
-      console.error("Error loading workload data:", error);
+      setError(null);
+      const result = await analyticsService.getWorkload(dateRange, projectId);
+      setData(result);
+    } catch (err) {
+      console.error("Error loading workload data:", err);
+      setError("Impossible de charger les données de charge.");
     } finally {
       setLoading(false);
     }
@@ -59,20 +60,44 @@ export function WorkloadChart() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold mb-4">Charge de Travail Équipe</h3>
+        <div className="border-l-4 border-red-500 bg-red-50 p-4">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold mb-4">Charge de Travail Équipe</h3>
+        <p className="text-sm text-gray-500 text-center py-8">
+          Aucune saisie de temps enregistrée pour cette période.
+        </p>
+      </div>
+    );
+  }
+
   const overloadedCount = data.filter((d) => d.utilization > 100).length;
   const underutilizedCount = data.filter((d) => d.utilization < 80).length;
   const avgUtilization =
     data.reduce((sum, d) => sum + d.utilization, 0) / data.length;
 
+  // Use first user's capacity as reference line (all share same period capacity)
+  const capacityRef = data[0]?.capacity ?? 40;
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold mb-4">Charge de Travail Équipe</h3>
 
-      {/* Alertes */}
       {overloadedCount > 0 && (
         <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-3">
           <p className="text-sm text-red-700">
-            ⚠️ <strong>{overloadedCount}</strong> personne(s) en surcharge
+            <strong>{overloadedCount}</strong> personne(s) en surcharge
             (&gt;100%)
           </p>
         </div>
@@ -88,24 +113,20 @@ export function WorkloadChart() {
           <Tooltip />
           <Legend />
           <ReferenceLine
-            y={40}
+            y={capacityRef}
             stroke="#ff9800"
             strokeDasharray="3 3"
             label="Capacité"
           />
-          <Bar dataKey="planned" fill="#667eea" name="Heures planifiées">
-            {data.map((entry, index) => (
-              <Bar
-                key={`bar-${index}`}
-                dataKey="planned"
-                fill={entry.utilization > 100 ? "#f44336" : "#667eea"}
-              />
-            ))}
-          </Bar>
+          <Bar
+            dataKey="planned"
+            name="Heures saisies"
+            fill="#667eea"
+          />
         </BarChart>
       </ResponsiveContainer>
 
-      {/* Résumé */}
+      {/* Summary */}
       <div className="mt-4 grid grid-cols-3 gap-4">
         <div className="bg-blue-50 p-3 rounded text-center">
           <div className="text-2xl font-bold text-blue-700">
@@ -127,7 +148,7 @@ export function WorkloadChart() {
         </div>
       </div>
 
-      {/* Détails par personne */}
+      {/* Detail table */}
       <div className="mt-4">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50">
@@ -139,8 +160,8 @@ export function WorkloadChart() {
             </tr>
           </thead>
           <tbody>
-            {data.map((person, index) => (
-              <tr key={index} className="border-t">
+            {data.map((person) => (
+              <tr key={person.userId} className="border-t">
                 <td className="px-3 py-2">{person.name}</td>
                 <td className="px-3 py-2 text-right">{person.planned}h</td>
                 <td className="px-3 py-2 text-right">{person.capacity}h</td>

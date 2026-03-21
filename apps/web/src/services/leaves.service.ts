@@ -1,6 +1,59 @@
 import { api } from "@/lib/api";
 import { Leave, CreateLeaveDto, LeaveType, LeaveStatus } from "@/types";
 
+export interface LeaveBalance {
+  userId: string;
+  year: number;
+  total: number;
+  used: number;
+  available: number;
+  pending: number;
+  byType: LeaveBalanceByType[];
+}
+
+export interface LeaveBalanceByType {
+  leaveTypeId: string;
+  leaveTypeCode: string;
+  leaveTypeName: string;
+  leaveTypeColor: string;
+  leaveTypeIcon: string;
+  year: number;
+  total: number;
+  used: number;
+  pending: number;
+  available: number;
+}
+
+export interface LeaveBalanceRecord {
+  id: string;
+  userId: string | null;
+  leaveTypeId: string;
+  year: number;
+  totalDays: number;
+  createdAt: string;
+  updatedAt: string;
+  leaveType: {
+    id: string;
+    code: string;
+    name: string;
+    color: string;
+    icon: string;
+  };
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+}
+
+export interface UpsertLeaveBalanceDto {
+  userId?: string;
+  leaveTypeId: string;
+  year: number;
+  totalDays: number;
+}
+
 export interface LeaveValidationDelegate {
   id: string;
   delegatorId: string;
@@ -30,14 +83,6 @@ interface LeavesResponse {
     page: number;
     limit: number;
   };
-}
-
-interface LeaveBalance {
-  paid: number;
-  unpaid: number;
-  sick: number;
-  remaining: number;
-  used: number;
 }
 
 export const leavesService = {
@@ -95,7 +140,9 @@ export const leavesService = {
     return response.data;
   },
 
-  async create(data: CreateLeaveDto): Promise<Leave> {
+  async create(
+    data: CreateLeaveDto & { targetUserId?: string },
+  ): Promise<Leave> {
     const response = await api.post<Leave>("/leaves", data);
     return response.data;
   },
@@ -122,6 +169,36 @@ export const leavesService = {
   async getMyBalance(): Promise<LeaveBalance> {
     const response = await api.get<LeaveBalance>("/leaves/me/balance");
     return response.data;
+  },
+
+  // ===========================
+  // GESTION DES SOLDES
+  // ===========================
+
+  async getBalances(year?: number, userId?: string): Promise<LeaveBalanceRecord[]> {
+    let url = "/leaves/balances";
+    const params: string[] = [];
+    if (year) params.push(`year=${year}`);
+    if (userId !== undefined) params.push(`userId=${userId}`);
+    if (params.length) url += `?${params.join("&")}`;
+    const response = await api.get<LeaveBalanceRecord[]>(url);
+    return response.data;
+  },
+
+  async getDefaultBalances(year?: number): Promise<LeaveBalanceRecord[]> {
+    let url = "/leaves/balances/defaults";
+    if (year) url += `?year=${year}`;
+    const response = await api.get<LeaveBalanceRecord[]>(url);
+    return response.data;
+  },
+
+  async upsertBalance(data: UpsertLeaveBalanceDto): Promise<LeaveBalanceRecord> {
+    const response = await api.post<LeaveBalanceRecord>("/leaves/balances", data);
+    return response.data;
+  },
+
+  async deleteBalance(id: string): Promise<void> {
+    await api.delete(`/leaves/balances/${id}`);
   },
 
   async approve(id: string, comment?: string): Promise<Leave> {

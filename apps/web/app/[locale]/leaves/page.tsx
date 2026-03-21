@@ -7,6 +7,8 @@ import { useAuthStore } from "@/stores/auth.store";
 import {
   leavesService,
   LeaveValidationDelegate,
+  LeaveBalanceRecord,
+  UpsertLeaveBalanceDto,
 } from "@/services/leaves.service";
 import { usersService } from "@/services/users.service";
 import {
@@ -25,7 +27,8 @@ type TabType =
   | "pending-validation"
   | "all-leaves"
   | "delegations"
-  | "leave-types";
+  | "leave-types"
+  | "balances";
 
 export default function LeavesPage() {
   const t = useTranslations("hr.leaves");
@@ -64,6 +67,22 @@ export default function LeavesPage() {
     endDate: "",
   });
 
+  // "Pour qui?" — declare for others
+  const [createForUserId, setCreateForUserId] = useState<string>("");
+
+  // Balances management state
+  const [balances, setBalances] = useState<LeaveBalanceRecord[]>([]);
+  const [balanceYear, setBalanceYear] = useState<number>(
+    new Date().getFullYear(),
+  );
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [balanceForm, setBalanceForm] = useState<UpsertLeaveBalanceDto>({
+    userId: undefined,
+    leaveTypeId: "",
+    year: new Date().getFullYear(),
+    totalDays: 0,
+  });
+
   // Import state
   const [showImportModal, setShowImportModal] = useState(false);
   const [showLeavesPreview, setShowLeavesPreview] = useState(false);
@@ -75,6 +94,9 @@ export default function LeavesPage() {
 
   const isAdmin = hasPermission("leaves:read");
   const canValidate = hasPermission("leaves:approve") || isAdmin;
+  const canManageBalances = hasPermission("leaves:manage");
+  const canDeclareForOthers =
+    hasPermission("leaves:declare_for_others") || canManageBalances;
 
   const fetchUsers = async () => {
     try {
@@ -152,6 +174,17 @@ export default function LeavesPage() {
     }
   };
 
+  const fetchBalances = async () => {
+    if (!canManageBalances) return;
+    try {
+      const data = await leavesService.getDefaultBalances(balanceYear);
+      setBalances(data);
+    } catch (err) {
+      console.error("Error fetching balances:", err);
+      setBalances([]);
+    }
+  };
+
   const fetchAll = async () => {
     setLoading(true);
     await Promise.all([
@@ -161,6 +194,7 @@ export default function LeavesPage() {
       fetchAllLeaves(),
       fetchDelegations(),
       fetchLeaveTypes(),
+      fetchBalances(),
     ]);
     setLoading(false);
   };
@@ -177,14 +211,58 @@ export default function LeavesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUserId]);
 
+  useEffect(() => {
+    fetchBalances();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [balanceYear]);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await leavesService.create(formData);
+      await leavesService.create({
+        ...formData,
+        ...(createForUserId ? { targetUserId: createForUserId } : {}),
+      });
       toast.success(t("messages.created"));
       setShowCreateModal(false);
+      setCreateForUserId("");
       resetForm();
       fetchAll();
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message || tc("errors.validationError"),
+      );
+    }
+  };
+
+  const handleUpsertBalance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await leavesService.upsertBalance(balanceForm);
+      toast.success("Solde mis à jour");
+      setShowBalanceModal(false);
+      setBalanceForm({
+        userId: undefined,
+        leaveTypeId: leaveTypes[0]?.id || "",
+        year: balanceYear,
+        totalDays: 0,
+      });
+      fetchBalances();
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message || tc("errors.validationError"),
+      );
+    }
+  };
+
+  const handleDeleteBalance = async (id: string) => {
+    if (!confirm("Supprimer ce solde ?")) return;
+    try {
+      await leavesService.deleteBalance(id);
+      toast.success("Solde supprimé");
+      fetchBalances();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
@@ -733,6 +811,18 @@ export default function LeavesPage() {
                 {t("leaveTypes")}
               </button>
             )}
+            {canManageBalances && (
+              <button
+                onClick={() => setActiveTab("balances")}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "balances"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                Soldes
+              </button>
+            )}
           </nav>
         </div>
 
@@ -913,6 +1003,133 @@ export default function LeavesPage() {
               <LeaveTypesManager onTypeChange={fetchAll} />
             </div>
           )}
+
+          {/* Balances Tab */}
+          {activeTab === "balances" && canManageBalances && (
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Gestion des soldes de congés
+                  </h3>
+                  <select
+                    value={balanceYear}
+                    onChange={(e) => setBalanceYear(Number(e.target.value))}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  >
+                    {[
+                      new Date().getFullYear() - 1,
+                      new Date().getFullYear(),
+                      new Date().getFullYear() + 1,
+                    ].map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={() => {
+                    setBalanceForm({
+                      userId: undefined,
+                      leaveTypeId: leaveTypes[0]?.id || "",
+                      year: balanceYear,
+                      totalDays: 0,
+                    });
+                    setShowBalanceModal(true);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                >
+                  + Ajouter un solde
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-500">
+                Les soldes globaux (sans utilisateur cible) s&apos;appliquent à
+                tous les agents par défaut. Un override individuel prend le
+                dessus.
+              </p>
+
+              {balances.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  Aucun solde configuré pour {balanceYear}. Cliquez sur
+                  &quot;Ajouter un solde&quot; pour commencer.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left px-4 py-3 font-medium text-gray-600">
+                          Type de congé
+                        </th>
+                        <th className="text-left px-4 py-3 font-medium text-gray-600">
+                          Utilisateur
+                        </th>
+                        <th className="text-right px-4 py-3 font-medium text-gray-600">
+                          Jours alloués
+                        </th>
+                        <th className="text-right px-4 py-3 font-medium text-gray-600">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {balances.map((b) => (
+                        <tr
+                          key={b.id}
+                          className="border-b border-gray-100 hover:bg-gray-50"
+                        >
+                          <td className="px-4 py-3">
+                            <span
+                              className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                              style={{
+                                backgroundColor: b.leaveType.color + "20",
+                                color: b.leaveType.color,
+                              }}
+                            >
+                              <span>{b.leaveType.icon}</span>
+                              <span>{b.leaveType.name}</span>
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">
+                            {b.user
+                              ? `${b.user.firstName} ${b.user.lastName}`
+                              : "Défaut global"}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                            {b.totalDays} j
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => {
+                                setBalanceForm({
+                                  userId: b.userId ?? undefined,
+                                  leaveTypeId: b.leaveTypeId,
+                                  year: b.year,
+                                  totalDays: b.totalDays,
+                                });
+                                setShowBalanceModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 text-xs mr-3"
+                            >
+                              Modifier
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBalance(b.id)}
+                              className="text-red-600 hover:text-red-800 text-xs"
+                            >
+                              Supprimer
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -924,6 +1141,33 @@ export default function LeavesPage() {
               {t("modals.createTitle")}
             </h2>
             <form onSubmit={handleCreate} className="space-y-4">
+              {/* Pour qui? — visible uniquement avec leaves:declare_for_others */}
+              {canDeclareForOthers && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Pour qui ?
+                  </label>
+                  <select
+                    value={createForUserId}
+                    onChange={(e) => setCreateForUserId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Pour moi</option>
+                    {users
+                      .filter((u) => u.id !== user?.id)
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.firstName} {u.lastName} ({u.login})
+                        </option>
+                      ))}
+                  </select>
+                  {createForUserId && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      Ce congé sera approuvé automatiquement.
+                    </p>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t("fields.leaveType")} *
@@ -1346,6 +1590,111 @@ export default function LeavesPage() {
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                 >
                   {t("delegations.create")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Balance Upsert Modal */}
+      {showBalanceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              {balanceForm.leaveTypeId ? "Modifier le solde" : "Nouveau solde"}
+            </h2>
+            <form onSubmit={handleUpsertBalance} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Type de congé *
+                </label>
+                <select
+                  required
+                  value={balanceForm.leaveTypeId}
+                  onChange={(e) =>
+                    setBalanceForm({ ...balanceForm, leaveTypeId: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Sélectionner...</option>
+                  {leaveTypes.map((lt) => (
+                    <option key={lt.id} value={lt.id}>
+                      {lt.icon} {lt.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Utilisateur (laisser vide = défaut global)
+                </label>
+                <select
+                  value={balanceForm.userId || ""}
+                  onChange={(e) =>
+                    setBalanceForm({
+                      ...balanceForm,
+                      userId: e.target.value || undefined,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Défaut global (tous les agents)</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.firstName} {u.lastName} ({u.login})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Année *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min={2000}
+                  max={2100}
+                  value={balanceForm.year}
+                  onChange={(e) =>
+                    setBalanceForm({ ...balanceForm, year: Number(e.target.value) })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre de jours alloués *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  step={0.5}
+                  value={balanceForm.totalDays}
+                  onChange={(e) =>
+                    setBalanceForm({
+                      ...balanceForm,
+                      totalDays: Number(e.target.value),
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowBalanceModal(false)}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  {tc("actions.cancel")}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  {tc("actions.save")}
                 </button>
               </div>
             </form>

@@ -11,21 +11,17 @@ describe('PermissionsGuard', () => {
   let reflector: Reflector;
   let roleManagementService: RoleManagementService;
 
-  const mockUser: User = {
+  const mockUser = {
     id: 'user-1',
     email: 'test@example.com',
     firstName: 'Test',
     lastName: 'User',
     role: 'CONTRIBUTEUR' as Role,
-    password: 'hashed',
     createdAt: new Date(),
     updatedAt: new Date(),
     departmentId: null,
-    serviceId: null,
     isActive: true,
-    preferredTheme: null,
-    preferredLocale: null,
-  };
+  } as unknown as User;
 
   const mockRoleManagementService = {
     getPermissionsForRole: vi.fn(),
@@ -263,6 +259,118 @@ describe('PermissionsGuard', () => {
       expect(roleManagementService.getPermissionsForRole).toHaveBeenCalledWith(
         'OBSERVATEUR',
       );
+    });
+
+    it('GRANULARITÉ — un rôle avec seulement projects:view ne doit pas accéder à users:view', async () => {
+      // Vérifie que les permissions sont strictement isolées par feature.
+      // Si on accorde projects:view à un rôle, ça ne doit PAS donner accès
+      // aux routes users, departments, skills, reports, etc.
+      const customRoleUser = {
+        ...mockUser,
+        role: 'CUSTOM_PROJECTS_ONLY' as Role,
+      };
+
+      // Route users nécessite users:view
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['users:view']);
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'projects:view',
+        'projects:read',
+        'projects:create',
+      ]);
+      const context = createMockExecutionContext(customRoleUser);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(false);
+      expect(roleManagementService.getPermissionsForRole).toHaveBeenCalledWith(
+        'CUSTOM_PROJECTS_ONLY',
+      );
+    });
+
+    it('GRANULARITÉ — un rôle avec seulement projects:view ne doit pas accéder à departments:view', async () => {
+      const customRoleUser = {
+        ...mockUser,
+        role: 'CUSTOM_PROJECTS_ONLY' as Role,
+      };
+
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([
+        'departments:read',
+      ]);
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'projects:view',
+        'projects:read',
+      ]);
+      const context = createMockExecutionContext(customRoleUser);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(false);
+    });
+
+    it('GRANULARITÉ — un rôle avec seulement projects:view ne doit pas accéder à reports:view', async () => {
+      const customRoleUser = {
+        ...mockUser,
+        role: 'CUSTOM_PROJECTS_ONLY' as Role,
+      };
+
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([
+        'reports:view',
+      ]);
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'projects:view',
+        'projects:read',
+      ]);
+      const context = createMockExecutionContext(customRoleUser);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(false);
+    });
+
+    it('GRANULARITÉ — un rôle avec seulement projects:view ne doit pas accéder à skills:read', async () => {
+      const customRoleUser = {
+        ...mockUser,
+        role: 'CUSTOM_PROJECTS_ONLY' as Role,
+      };
+
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['skills:read']);
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'projects:view',
+        'projects:read',
+      ]);
+      const context = createMockExecutionContext(customRoleUser);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(false);
+    });
+
+    it('GRANULARITÉ — un rôle avec projects:view ET users:read doit accéder à users:read mais pas users:delete', async () => {
+      const customRoleUser = {
+        ...mockUser,
+        role: 'CUSTOM_PROJECTS_USERS_READ' as Role,
+      };
+      const rolePermissions = ['projects:view', 'projects:read', 'users:read'];
+
+      // Doit accéder à users:read
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['users:read']);
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue(
+        rolePermissions,
+      );
+      const contextRead = createMockExecutionContext(customRoleUser);
+      const resultRead = await guard.canActivate(contextRead);
+      expect(resultRead).toBe(true);
+
+      // Ne doit pas accéder à users:delete
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([
+        'users:delete',
+      ]);
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue(
+        rolePermissions,
+      );
+      const contextDelete = createMockExecutionContext(customRoleUser);
+      const resultDelete = await guard.canActivate(contextDelete);
+      expect(resultDelete).toBe(false);
     });
   });
 });

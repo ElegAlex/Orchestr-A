@@ -67,6 +67,7 @@ export class ProjectsController {
   }
 
   @Get()
+  @Permissions('projects:read')
   @ApiOperation({ summary: 'Récupérer tous les projets (avec pagination)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -86,6 +87,7 @@ export class ProjectsController {
   }
 
   @Get('user/:userId')
+  @Permissions('projects:read')
   @ApiOperation({ summary: "Récupérer les projets d'un utilisateur" })
   @ApiResponse({
     status: 200,
@@ -100,6 +102,7 @@ export class ProjectsController {
   }
 
   @Get(':id')
+  @Permissions('projects:read')
   @ApiOperation({ summary: 'Récupérer un projet par ID avec tous les détails' })
   @ApiResponse({
     status: 200,
@@ -114,6 +117,7 @@ export class ProjectsController {
   }
 
   @Get(':id/stats')
+  @Permissions('projects:read')
   @ApiOperation({ summary: "Récupérer les statistiques d'un projet" })
   @ApiResponse({
     status: 200,

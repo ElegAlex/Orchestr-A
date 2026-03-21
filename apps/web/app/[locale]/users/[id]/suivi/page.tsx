@@ -29,11 +29,20 @@ type TaskFilter = "all" | "active" | "completed" | "blocked";
 type PeriodFilter = "week" | "month" | "quarter" | "year" | "all";
 
 interface LeaveBalance {
-  paid: number;
-  unpaid: number;
-  sick: number;
-  remaining: number;
+  userId: string;
+  year: number;
+  total: number;
   used: number;
+  available: number;
+  pending: number;
+  byType?: Array<{
+    leaveTypeId: string;
+    leaveTypeCode: string;
+    leaveTypeName: string;
+    total: number;
+    used: number;
+    available: number;
+  }>;
 }
 
 interface TimeStats {
@@ -218,7 +227,7 @@ export default function SuiviPage() {
           );
         }
         if (balanceData.status === "fulfilled") {
-          setLeaveBalance(balanceData.value as LeaveBalance);
+          setLeaveBalance(balanceData.value as unknown as LeaveBalance);
         }
         if (teleworkData.status === "fulfilled") {
           const val = teleworkData.value;
@@ -306,7 +315,7 @@ export default function SuiviPage() {
       activeProjects,
       twDays,
       totalHours,
-      leaveBalance: leaveBalance?.remaining ?? 0,
+      leaveBalance: leaveBalance?.available ?? 0,
     };
   }, [tasks, projects, teleworkDays, timeStats, leaveBalance]);
 
@@ -853,7 +862,7 @@ export default function SuiviPage() {
                     {[
                       {
                         label: t("leaves.types.CP"),
-                        value: `${leaveBalance.paid}j`,
+                        value: `${leaveBalance.byType?.find((b) => b.leaveTypeCode === "CP")?.total ?? leaveBalance.total}j`,
                         bg: "bg-blue-50",
                         color: "text-blue-600",
                       },
@@ -865,13 +874,13 @@ export default function SuiviPage() {
                       },
                       {
                         label: t("leaves.available"),
-                        value: `${leaveBalance.remaining}j`,
+                        value: `${leaveBalance.available}j`,
                         bg: "bg-green-50",
                         color: "text-green-600",
                       },
                       {
                         label: t("leaves.types.SICK_LEAVE"),
-                        value: `${leaveBalance.sick}j`,
+                        value: `${leaveBalance.byType?.find((b) => b.leaveTypeCode === "SICK_LEAVE")?.total ?? 0}j`,
                         bg: "bg-yellow-50",
                         color: "text-yellow-600",
                       },

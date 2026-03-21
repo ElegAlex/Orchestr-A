@@ -184,6 +184,97 @@ export class RoleManagementService implements OnModuleInit {
       { code: 'holidays:read', module: 'holidays', action: 'read' },
       { code: 'holidays:update', module: 'holidays', action: 'update' },
       { code: 'holidays:delete', module: 'holidays', action: 'delete' },
+      // Reports (granularité distincte de analytics)
+      { code: 'reports:view', module: 'reports', action: 'view' },
+      { code: 'reports:export', module: 'reports', action: 'export' },
+      // Leaves — permissions granulaires supplémentaires
+      {
+        code: 'leaves:manage',
+        module: 'leaves',
+        action: 'manage',
+        description: 'Valider ou rejeter des demandes de congés',
+      },
+      {
+        code: 'leaves:declare_for_others',
+        module: 'leaves',
+        action: 'declare_for_others',
+        description: "Déclarer des congés au nom d'un autre agent",
+      },
+      // Leaves & Telework — aliases view pour cohérence granulaire
+      {
+        code: 'leaves:view',
+        module: 'leaves',
+        action: 'view',
+        description:
+          'Voir les congés (alias de leaves:read pour granularité RBAC)',
+      },
+      {
+        code: 'telework:view',
+        module: 'telework',
+        action: 'view',
+        description:
+          'Voir le télétravail (alias de telework:read pour granularité RBAC)',
+      },
+      // Projects — aliases view/edit pour cohérence granulaire
+      {
+        code: 'projects:view',
+        module: 'projects',
+        action: 'view',
+        description:
+          'Voir les projets (alias de projects:read pour granularité RBAC)',
+      },
+      {
+        code: 'projects:edit',
+        module: 'projects',
+        action: 'edit',
+        description:
+          'Modifier les projets (alias de projects:update pour granularité RBAC)',
+      },
+      // Users — aliases view/edit pour cohérence granulaire
+      {
+        code: 'users:view',
+        module: 'users',
+        action: 'view',
+        description:
+          'Voir les utilisateurs (alias de users:read pour granularité RBAC)',
+      },
+      {
+        code: 'users:edit',
+        module: 'users',
+        action: 'edit',
+        description:
+          'Modifier les utilisateurs (alias de users:update pour granularité RBAC)',
+      },
+      // Departments — aliases view/edit pour cohérence granulaire
+      {
+        code: 'departments:view',
+        module: 'departments',
+        action: 'view',
+        description:
+          'Voir les services (alias de departments:read pour granularité RBAC)',
+      },
+      {
+        code: 'departments:edit',
+        module: 'departments',
+        action: 'edit',
+        description:
+          'Modifier les services (alias de departments:update pour granularité RBAC)',
+      },
+      // Skills — aliases view/edit pour cohérence granulaire
+      {
+        code: 'skills:view',
+        module: 'skills',
+        action: 'view',
+        description:
+          'Voir les compétences (alias de skills:read pour granularité RBAC)',
+      },
+      {
+        code: 'skills:edit',
+        module: 'skills',
+        action: 'edit',
+        description:
+          'Modifier les compétences (alias de skills:update pour granularité RBAC)',
+      },
     ];
 
     // Créer toutes les permissions (upsert)

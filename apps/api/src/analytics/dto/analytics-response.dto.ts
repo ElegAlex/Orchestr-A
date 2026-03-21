@@ -98,3 +98,42 @@ export class AnalyticsResponseDto {
   @ApiProperty({ type: [ProjectDetailDto] })
   projectDetails: ProjectDetailDto[];
 }
+
+export class WorkloadUserDto {
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  userId: string;
+
+  @ApiProperty()
+  planned: number;
+
+  @ApiProperty()
+  capacity: number;
+
+  @ApiProperty()
+  utilization: number;
+}
+
+export class VelocityPeriodDto {
+  @ApiProperty()
+  period: string;
+
+  @ApiProperty()
+  completed: number;
+
+  @ApiProperty()
+  planned: number;
+}
+
+export class BurndownPointDto {
+  @ApiProperty()
+  day: string;
+
+  @ApiProperty()
+  ideal: number;
+
+  @ApiProperty()
+  actual: number;
+}
