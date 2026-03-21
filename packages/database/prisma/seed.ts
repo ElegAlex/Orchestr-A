@@ -1451,6 +1451,295 @@ async function main() {
     `✅ RBAC: ${rolesCreated} rôles créés avec permissions par défaut, ${rolesSkipped} rôles existants mis à jour (nouvelles permissions uniquement)`,
   );
 
+  // ============================================================
+  // E2E TEST USERS — créés uniquement si E2E_SEED=true ou NODE_ENV=test
+  // ============================================================
+  if (process.env.E2E_SEED === "true" || process.env.NODE_ENV === "test") {
+    console.log("🧪 E2E seed: creating test users...");
+
+    // Département + service de test
+    let testDepartment = await prisma.department.findFirst({
+      where: { name: "Test Department" },
+    });
+    if (!testDepartment) {
+      testDepartment = await prisma.department.create({
+        data: {
+          name: "Test Department",
+          description: "Département dédié aux tests E2E",
+        },
+      });
+    }
+
+    let testService = await prisma.service.findFirst({
+      where: { name: "Test Service" },
+    });
+    if (!testService) {
+      testService = await prisma.service.create({
+        data: {
+          name: "Test Service",
+          description: "Service dédié aux tests E2E",
+          departmentId: testDepartment.id,
+        },
+      });
+    }
+
+    // Hash bcrypt pour "Test1234!"
+    // $2b$12$p8.aVWgMEMoZgDGqOFxDgeMC2pxFJR8MGvZEijZexY9AcO9fxRs6.
+    const testPasswordHash =
+      "$2b$12$p8.aVWgMEMoZgDGqOFxDgeMC2pxFJR8MGvZEijZexY9AcO9fxRs6.";
+
+    // 6 utilisateurs de test (un par rôle)
+    const adminTest = await prisma.user.upsert({
+      where: { email: "admin-test@orchestr-a.test" },
+      update: {},
+      create: {
+        email: "admin-test@orchestr-a.test",
+        login: "admin-test",
+        passwordHash: testPasswordHash,
+        firstName: "Admin",
+        lastName: "Test",
+        role: "ADMIN",
+        departmentId: testDepartment.id,
+        isActive: true,
+      },
+    });
+
+    const responsableTest = await prisma.user.upsert({
+      where: { email: "responsable-test@orchestr-a.test" },
+      update: {},
+      create: {
+        email: "responsable-test@orchestr-a.test",
+        login: "responsable-test",
+        passwordHash: testPasswordHash,
+        firstName: "Responsable",
+        lastName: "Test",
+        role: "RESPONSABLE",
+        departmentId: testDepartment.id,
+        isActive: true,
+      },
+    });
+
+    const managerTest = await prisma.user.upsert({
+      where: { email: "manager-test@orchestr-a.test" },
+      update: {},
+      create: {
+        email: "manager-test@orchestr-a.test",
+        login: "manager-test",
+        passwordHash: testPasswordHash,
+        firstName: "Manager",
+        lastName: "Test",
+        role: "MANAGER",
+        departmentId: testDepartment.id,
+        isActive: true,
+      },
+    });
+
+    const referentTest = await prisma.user.upsert({
+      where: { email: "referent-test@orchestr-a.test" },
+      update: {},
+      create: {
+        email: "referent-test@orchestr-a.test",
+        login: "referent-test",
+        passwordHash: testPasswordHash,
+        firstName: "Referent",
+        lastName: "Test",
+        role: "REFERENT_TECHNIQUE",
+        departmentId: testDepartment.id,
+        isActive: true,
+      },
+    });
+
+    const contributeurTest = await prisma.user.upsert({
+      where: { email: "contributeur-test@orchestr-a.test" },
+      update: {},
+      create: {
+        email: "contributeur-test@orchestr-a.test",
+        login: "contributeur-test",
+        passwordHash: testPasswordHash,
+        firstName: "Contributeur",
+        lastName: "Test",
+        role: "CONTRIBUTEUR",
+        departmentId: testDepartment.id,
+        isActive: true,
+      },
+    });
+
+    const observateurTest = await prisma.user.upsert({
+      where: { email: "observateur-test@orchestr-a.test" },
+      update: {},
+      create: {
+        email: "observateur-test@orchestr-a.test",
+        login: "observateur-test",
+        passwordHash: testPasswordHash,
+        firstName: "Observateur",
+        lastName: "Test",
+        role: "OBSERVATEUR",
+        departmentId: testDepartment.id,
+        isActive: true,
+      },
+    });
+
+    const testUsers = [
+      adminTest,
+      responsableTest,
+      managerTest,
+      referentTest,
+      contributeurTest,
+      observateurTest,
+    ];
+
+    // RESPONSABLE = manager du département, MANAGER = manager du service
+    await prisma.department.update({
+      where: { id: testDepartment.id },
+      data: { managerId: responsableTest.id },
+    });
+    await prisma.service.update({
+      where: { id: testService.id },
+      data: { managerId: managerTest.id },
+    });
+
+    // Rattacher tous au service de test
+    await Promise.all(
+      testUsers.map((u) =>
+        prisma.userService.upsert({
+          where: {
+            userId_serviceId: { userId: u.id, serviceId: testService!.id },
+          },
+          update: {},
+          create: { userId: u.id, serviceId: testService!.id },
+        }),
+      ),
+    );
+
+    console.log("✅ E2E test users ready (6 roles)");
+
+    // Projet E2E
+    let e2eProject = await prisma.project.findFirst({
+      where: { name: "Projet E2E" },
+    });
+    if (!e2eProject) {
+      e2eProject = await prisma.project.create({
+        data: {
+          name: "Projet E2E",
+          description: "Projet dédié aux tests E2E",
+          status: "ACTIVE",
+          priority: "NORMAL",
+          startDate: new Date("2026-01-01"),
+          createdById: adminTest.id,
+        },
+      });
+    }
+
+    // Ajouter tous les utilisateurs test comme membres du projet E2E
+    await Promise.all(
+      testUsers.map((u) =>
+        prisma.projectMember.upsert({
+          where: {
+            projectId_userId: { projectId: e2eProject!.id, userId: u.id },
+          },
+          update: {},
+          create: {
+            projectId: e2eProject!.id,
+            userId: u.id,
+            role: "Membre",
+          },
+        }),
+      ),
+    );
+
+    // 3 tâches de test
+    const e2eTasks = [
+      {
+        title: "Tâche E2E 1 - TODO",
+        status: "TODO" as const,
+        assigneeId: contributeurTest.id,
+      },
+      {
+        title: "Tâche E2E 2 - IN_PROGRESS",
+        status: "IN_PROGRESS" as const,
+        assigneeId: managerTest.id,
+      },
+      {
+        title: "Tâche E2E 3 - DONE",
+        status: "DONE" as const,
+        assigneeId: referentTest.id,
+      },
+    ];
+    for (const taskData of e2eTasks) {
+      const existing = await prisma.task.findFirst({
+        where: { title: taskData.title, projectId: e2eProject.id },
+      });
+      if (!existing) {
+        await prisma.task.create({
+          data: {
+            title: taskData.title,
+            status: taskData.status,
+            priority: "NORMAL",
+            projectId: e2eProject.id,
+            assigneeId: taskData.assigneeId,
+          },
+        });
+      }
+    }
+
+    console.log("✅ E2E project + 3 tasks ready");
+
+    // LeaveTypeConfig CP (nécessaire pour créer un congé)
+    const cpLeaveType = await prisma.leaveTypeConfig.upsert({
+      where: { code: "CP_E2E" },
+      update: {},
+      create: {
+        code: "CP_E2E",
+        name: "Congés payés (E2E)",
+        isPaid: true,
+        requiresApproval: true,
+        isActive: true,
+        isSystem: false,
+      },
+    });
+
+    // 1 congé PENDING pour contributeurTest
+    const leaveStart = new Date("2026-04-01");
+    const leaveEnd = new Date("2026-04-03");
+    const existingLeave = await prisma.leave.findFirst({
+      where: { userId: contributeurTest.id, leaveTypeId: cpLeaveType.id },
+    });
+    if (!existingLeave) {
+      await prisma.leave.create({
+        data: {
+          userId: contributeurTest.id,
+          leaveTypeId: cpLeaveType.id,
+          startDate: leaveStart,
+          endDate: leaveEnd,
+          days: 3,
+          status: "PENDING",
+          validatorId: managerTest.id,
+        },
+      });
+    }
+
+    console.log("✅ E2E leave (PENDING) ready");
+
+    // 1 télétravail pour contributeurTest
+    const teleworkDate = new Date("2026-04-07");
+    await prisma.teleworkSchedule.upsert({
+      where: {
+        userId_date: { userId: contributeurTest.id, date: teleworkDate },
+      },
+      update: {},
+      create: {
+        userId: contributeurTest.id,
+        date: teleworkDate,
+        isTelework: true,
+      },
+    });
+
+    console.log("✅ E2E telework entry ready");
+    console.log(
+      "🧪 E2E seed complete — 6 users, 1 project, 3 tasks, 1 leave, 1 telework",
+    );
+  }
+
   console.log("🎉 Seeding complete!");
 }
 

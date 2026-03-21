@@ -76,3 +76,15 @@ Si des fichiers source existent → travailler avec le code existant. Ne JAMAIS 
 - Schéma complet : `packages/database/prisma/schema.prisma`
 - Docker prod : `docker-compose.prod.yml`
 - CI/CD : `.github/workflows/`
+
+## E2E Testing
+- Toute feature/bugfix DOIT inclure des tests E2E Playwright
+- Les tests utilisent la permission matrix dans e2e/fixtures/permission-matrix.ts
+- Chaque test vérifie les 6 rôles : ADMIN, RESPONSABLE, MANAGER, REFERENT_TECHNIQUE, CONTRIBUTEUR, OBSERVATEUR
+- Auth par API (jamais login UI dans les tests) via les storage states dans playwright/.auth/
+- Fixture asRole() pour les workflows multi-rôles
+- Tests négatifs obligatoires : vérifier que les rôles non-autorisés reçoivent 403 ou redirect
+- Taguer les tests critiques avec @smoke
+- Lancer tous les tests : pnpm run test:e2e
+- Par rôle : npx playwright test --project=admin
+- Multi-rôle : npx playwright test --project=multi-role

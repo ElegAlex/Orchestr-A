@@ -5,7 +5,6 @@ const baseURL = process.env.CI
   : "http://localhost:4001";
 
 export default defineConfig({
-  testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -20,8 +19,83 @@ export default defineConfig({
   },
 
   projects: [
+    // ─── Setup : authentification des 6 rôles ───────────────────────────────
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+
+    // ─── Anciens tests dans e2e/ (racine, hors sous-dossiers) ───────────────
     {
       name: "chromium",
+      testDir: "./e2e",
+      testMatch: /^[^/\\]+\.spec\.[jt]s$/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+
+    // ─── Tests structurés par rôle dans e2e/tests/ ──────────────────────────
+    {
+      name: "admin",
+      testDir: "./e2e/tests",
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/admin.json",
+      },
+    },
+    {
+      name: "responsable",
+      testDir: "./e2e/tests",
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/responsable.json",
+      },
+    },
+    {
+      name: "manager",
+      testDir: "./e2e/tests",
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/manager.json",
+      },
+    },
+    {
+      name: "referent",
+      testDir: "./e2e/tests",
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/referent.json",
+      },
+    },
+    {
+      name: "contributeur",
+      testDir: "./e2e/tests",
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/contributeur.json",
+      },
+    },
+    {
+      name: "observateur",
+      testDir: "./e2e/tests",
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/observateur.json",
+      },
+    },
+
+    // ─── Tests multi-rôle (fixture asRole) ──────────────────────────────────
+    {
+      name: "multi-role",
+      testDir: "./e2e/tests/multi-role",
+      dependencies: ["setup"],
+      // Pas de storageState global : chaque test gère ses propres rôles via asRole
       use: { ...devices["Desktop Chrome"] },
     },
   ],
