@@ -1,5 +1,6 @@
 import { Task } from "@/types";
 import { Event } from "@/services/events.service";
+import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
 import { DayCell as DayCellData } from "@/hooks/usePlanningData";
 import { getPriorityColor, getStatusIcon } from "@/lib/planning-utils";
 import { isToday, getDay } from "date-fns";
@@ -11,12 +12,18 @@ interface DayCellProps {
   viewMode: "week" | "month";
   dayIndex: number;
   canToggleTelework: boolean;
+  canAssignPredefinedTask: boolean;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
   onDragEnd: () => void;
   onDrop: (userId: string, date: Date) => void;
   onTaskClick: (task: Task) => void;
   onEventClick: (event: Event) => void;
+  onPredefinedTaskClick: (
+    assignment: PredefinedTaskAssignment,
+    date: Date,
+  ) => void;
+  onAddPredefinedTask: (userId: string, date: Date) => void;
 }
 
 export const DayCell = ({
@@ -25,12 +32,15 @@ export const DayCell = ({
   viewMode,
   dayIndex,
   canToggleTelework,
+  canAssignPredefinedTask,
   onTeleworkToggle,
   onDragStart,
   onDragEnd,
   onDrop,
   onTaskClick,
   onEventClick,
+  onPredefinedTaskClick,
+  onAddPredefinedTask,
 }: DayCellProps) => {
   const t = useTranslations("planning");
   const hasLeave = cell.leaves.length > 0;
@@ -236,6 +246,56 @@ export const DayCell = ({
               </div>
             );
           })}
+
+        {/* Predefined Task Assignments - visible uniquement si pas de congé */}
+        {!hasLeave &&
+          cell.predefinedTaskAssignments.map((assignment) => {
+            const pt = assignment.predefinedTask;
+            if (!pt) return null;
+            return (
+              <div
+                key={assignment.id}
+                onClick={() => onPredefinedTaskClick(assignment, cell.date)}
+                className={`rounded border-2 cursor-pointer hover:shadow-md transition ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
+                style={{
+                  borderColor: pt.color,
+                  backgroundColor: `${pt.color}20`,
+                  color: pt.color,
+                }}
+              >
+                {viewMode === "month" ? (
+                  <div className="text-center" title={pt.name}>
+                    <span>{pt.icon}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-start space-x-1">
+                    <span className="text-sm flex-shrink-0">{pt.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium line-clamp-1">{pt.name}</p>
+                      <p className="text-[10px] opacity-80">
+                        {assignment.duration === "FULL_DAY"
+                          ? "Journée"
+                          : "Demi-journée"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+        {/* Bouton ajout tâche prédéfinie */}
+        {!hasLeave && canAssignPredefinedTask && (
+          <div className="flex items-center justify-center">
+            <button
+              onClick={() => onAddPredefinedTask(userId, cell.date)}
+              className={`${viewMode === "month" ? "text-[8px] w-4 h-4" : "text-xs px-1.5 py-0.5"} text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition border border-transparent hover:border-blue-300`}
+              title="Assigner une tâche prédéfinie"
+            >
+              {viewMode === "month" ? "+" : "+ Tâche"}
+            </button>
+          </div>
+        )}
 
         {/* Events - visible uniquement si pas de congé */}
         {!hasLeave &&

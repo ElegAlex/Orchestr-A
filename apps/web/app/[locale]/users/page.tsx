@@ -60,6 +60,12 @@ export default function UsersPage() {
     ImportUserData[]
   >([]);
 
+  // Reset password states
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetLink, setResetLink] = useState<string | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
   // Delete user states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -81,6 +87,7 @@ export default function UsersPage() {
   // Check permissions
   const canManageUsers = hasPermission("users:create");
   const canEditUsers = hasPermission("users:update");
+  const canResetPassword = hasPermission("users:reset_password");
 
   const fetchUsers = async () => {
     try {
@@ -298,6 +305,49 @@ export default function UsersPage() {
     setShowDeleteModal(false);
     setUserToDelete(null);
     setUserDependencies(null);
+  };
+
+  // Générer un lien de réinitialisation de mot de passe
+  const handleResetPassword = async (userId: string) => {
+    setResetLoading(true);
+    setResetLink(null);
+    setCopiedLink(false);
+    setShowResetModal(true);
+    try {
+      const response = await import("@/lib/api").then(({ api }) =>
+        api.post<{ token: string; resetUrl: string }>(
+          "/auth/reset-password-token",
+          { userId },
+        ),
+      );
+      setResetLink(response.data.resetUrl);
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message ||
+          "Erreur lors de la génération du lien",
+      );
+      setShowResetModal(false);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleCopyResetLink = async () => {
+    if (!resetLink) return;
+    try {
+      await navigator.clipboard.writeText(resetLink);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      toast.error("Impossible de copier dans le presse-papiers");
+    }
+  };
+
+  const closeResetModal = () => {
+    setShowResetModal(false);
+    setResetLink(null);
+    setCopiedLink(false);
   };
 
   const toggleService = (serviceId: string) => {
@@ -595,6 +645,15 @@ export default function UsersPage() {
                           className="text-blue-600 hover:text-blue-900"
                         >
                           {t("actions.edit")}
+                        </button>
+                      )}
+                      {canResetPassword && (
+                        <button
+                          onClick={() => handleResetPassword(user.id)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="Réinitialiser le mot de passe"
+                        >
+                          Réinit. MDP
                         </button>
                       )}
                       {canManageUsers && (
@@ -1393,6 +1452,65 @@ export default function UsersPage() {
                 ) : (
                   t("deleteModal.confirm")
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Reset Password Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Réinitialiser le mot de passe
+            </h2>
+
+            {resetLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600">
+                  Génération du lien en cours...
+                </span>
+              </div>
+            ) : resetLink ? (
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-blue-800 text-sm font-medium mb-1">
+                    Lien de réinitialisation généré
+                  </p>
+                  <p className="text-blue-700 text-sm">
+                    Communiquez ce lien au collaborateur. Il expire dans 24h.
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">
+                    Lien de réinitialisation :
+                  </p>
+                  <p className="text-sm text-gray-800 break-all font-mono">
+                    {resetLink}
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleCopyResetLink}
+                  className={`w-full py-2 px-4 rounded-lg transition font-medium ${
+                    copiedLink
+                      ? "bg-green-600 text-white"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {copiedLink ? "Lien copié !" : "Copier le lien"}
+                </button>
+              </div>
+            ) : null}
+
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={closeResetModal}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                Fermer
               </button>
             </div>
           </div>

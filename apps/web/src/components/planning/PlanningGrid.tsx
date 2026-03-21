@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Task } from "@/types";
 import { Event } from "@/services/events.service";
+import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
 import {
   usePlanningData,
   ServiceGroup,
@@ -12,6 +13,7 @@ import { GroupHeader } from "./GroupHeader";
 import { UserRow } from "./UserRow";
 import { TaskModal } from "./TaskModal";
 import { EventModal } from "./EventModal";
+import { AssignmentModal } from "@/components/predefined-tasks/AssignmentModal";
 import { teleworkService } from "@/services/telework.service";
 import { tasksService } from "@/services/tasks.service";
 import { usePlanningViewStore } from "@/stores/planningView.store";
@@ -33,6 +35,7 @@ interface CollapsibleServiceSectionProps {
   showGroupHeaders: boolean;
   currentUserId: string;
   canManageOthersTelework: boolean;
+  canAssignPredefinedTask: boolean;
   getDayCell: (userId: string, date: Date) => DayCell;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
@@ -40,6 +43,11 @@ interface CollapsibleServiceSectionProps {
   onDrop: (userId: string, date: Date) => void;
   onTaskClick: (task: Task) => void;
   onEventClick: (event: Event) => void;
+  onPredefinedTaskClick: (
+    assignment: PredefinedTaskAssignment,
+    date: Date,
+  ) => void;
+  onAddPredefinedTask: (userId: string, date: Date) => void;
 }
 
 const CollapsibleServiceSection = ({
@@ -50,6 +58,7 @@ const CollapsibleServiceSection = ({
   showGroupHeaders,
   currentUserId,
   canManageOthersTelework,
+  canAssignPredefinedTask,
   getDayCell,
   onTeleworkToggle,
   onDragStart,
@@ -57,6 +66,8 @@ const CollapsibleServiceSection = ({
   onDrop,
   onTaskClick,
   onEventClick,
+  onPredefinedTaskClick,
+  onAddPredefinedTask,
 }: CollapsibleServiceSectionProps) => {
   const { collapsedServices } = usePlanningViewStore();
   const isCollapsed = collapsedServices[group.id] ?? false;
@@ -82,6 +93,7 @@ const CollapsibleServiceSection = ({
             viewMode={viewMode}
             currentUserId={currentUserId}
             canManageOthersTelework={canManageOthersTelework}
+            canAssignPredefinedTask={canAssignPredefinedTask}
             getDayCell={getDayCell}
             onTeleworkToggle={onTeleworkToggle}
             onDragStart={onDragStart}
@@ -89,6 +101,8 @@ const CollapsibleServiceSection = ({
             onDrop={onDrop}
             onTaskClick={onTaskClick}
             onEventClick={onEventClick}
+            onPredefinedTaskClick={onPredefinedTaskClick}
+            onAddPredefinedTask={onAddPredefinedTask}
           />
         ))}
     </React.Fragment>
@@ -137,6 +151,7 @@ export const PlanningGrid = ({
   const { hasPermission } = usePermissions();
   const currentUserId = currentUser?.id || "";
   const canManageOthersTelework = hasPermission("telework:manage_others");
+  const canAssignPredefinedTask = hasPermission("predefined_tasks:assign");
 
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragSourceUserId, setDragSourceUserId] = useState<string | null>(null);
@@ -144,6 +159,15 @@ export const PlanningGrid = ({
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+
+  // Predefined task assignment modal state
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [assignmentModalDates, setAssignmentModalDates] = useState<Date[]>([]);
+  const [assignmentModalUserIds, setAssignmentModalUserIds] = useState<
+    string[]
+  >([]);
+  const [existingAssignment, setExistingAssignment] =
+    useState<PredefinedTaskAssignment | null>(null);
 
   // Refetch quand refreshTrigger change (skip le montage initial)
   const isFirstRender = useRef(true);
@@ -277,6 +301,23 @@ export const PlanningGrid = ({
     setSelectedEvent(null);
   };
 
+  const handlePredefinedTaskClick = (
+    assignment: PredefinedTaskAssignment,
+    date: Date,
+  ) => {
+    setExistingAssignment(assignment);
+    setAssignmentModalDates([date]);
+    setAssignmentModalUserIds([assignment.userId]);
+    setShowAssignmentModal(true);
+  };
+
+  const handleAddPredefinedTask = (userId: string, date: Date) => {
+    setExistingAssignment(null);
+    setAssignmentModalDates([date]);
+    setAssignmentModalUserIds([userId]);
+    setShowAssignmentModal(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -374,6 +415,7 @@ export const PlanningGrid = ({
                         showGroupHeaders={showGroupHeaders}
                         currentUserId={currentUserId}
                         canManageOthersTelework={canManageOthersTelework}
+                        canAssignPredefinedTask={canAssignPredefinedTask}
                         getDayCell={getDayCell}
                         onTeleworkToggle={handleTeleworkToggle}
                         onDragStart={handleDragStart}
@@ -381,6 +423,8 @@ export const PlanningGrid = ({
                         onDrop={handleDrop}
                         onTaskClick={handleTaskClick}
                         onEventClick={handleEventClick}
+                        onPredefinedTaskClick={handlePredefinedTaskClick}
+                        onAddPredefinedTask={handleAddPredefinedTask}
                       />
                     );
                   })}
@@ -406,6 +450,22 @@ export const PlanningGrid = ({
         onClose={handleCloseEventModal}
         onRefresh={silentRefetch}
       />
+
+      {/* Predefined Task Assignment Modal */}
+      {showAssignmentModal && (
+        <AssignmentModal
+          dates={assignmentModalDates}
+          userIds={assignmentModalUserIds}
+          existingAssignment={existingAssignment}
+          onClose={() => {
+            setShowAssignmentModal(false);
+            setExistingAssignment(null);
+          }}
+          onSuccess={() => {
+            silentRefetch();
+          }}
+        />
+      )}
     </>
   );
 };

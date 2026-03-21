@@ -45,6 +45,8 @@ model User {
   delegationsReceived LeaveValidationDelegate[] @relation("DelegateUser")
   leaveBalances     LeaveBalance[]
   telework          TeleworkSchedule[]
+  teleworkRecurringRules TeleworkRecurringRule[] @relation("TeleworkRecurringRuleUser")
+  createdTeleworkRules   TeleworkRecurringRule[] @relation("TeleworkRecurringRuleCreator")
   skills            UserSkill[]
   timeEntries       TimeEntry[]
   comments          Comment[]
@@ -52,6 +54,13 @@ model User {
   createdHolidays   Holiday[]         @relation("HolidayCreator")
   createdEvents     Event[]           @relation("EventCreator")
   eventParticipations EventParticipant[]
+  createdPredefinedTasks     PredefinedTask[]              @relation("PredefinedTaskCreator")
+  predefinedTaskAssignments  PredefinedTaskAssignment[]    @relation("PredefinedTaskAssignmentUser")
+  assignedPredefinedTasks    PredefinedTaskAssignment[]    @relation("PredefinedTaskAssignmentAssigner")
+  predefinedTaskRecurringRules PredefinedTaskRecurringRule[] @relation("PredefinedTaskRecurringRuleUser")
+  createdPredefinedTaskRules   PredefinedTaskRecurringRule[] @relation("PredefinedTaskRecurringRuleCreator")
+  passwordResetTokens        PasswordResetToken[]          @relation("PasswordResetTokenUser")
+  createdPasswordResetTokens PasswordResetToken[]          @relation("PasswordResetTokenCreator")
 
   @@map("users")
 }
@@ -709,6 +718,117 @@ model EventParticipant {
 
   @@id([eventId, userId])
   @@map("event_participants")
+}
+
+// ===========================
+// HR - TELEWORK RECURRING RULES
+// ===========================
+
+model TeleworkRecurringRule {
+  id          String    @id @default(uuid())
+  userId      String
+  dayOfWeek   Int       // 0=Monday, 1=Tuesday, ..., 6=Sunday
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean   @default(true)
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  user        User      @relation("TeleworkRecurringRuleUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation("TeleworkRecurringRuleCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayOfWeek, startDate])
+  @@map("telework_recurring_rules")
+}
+
+// ===========================
+// PREDEFINED TASKS
+// ===========================
+
+model PredefinedTask {
+  id              String    @id @default(uuid())
+  name            String
+  description     String?
+  color           String?
+  icon            String?
+  defaultDuration String    // "HALF_DAY" | "FULL_DAY"
+  isActive        Boolean   @default(true)
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  createdBy       User                          @relation("PredefinedTaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  assignments     PredefinedTaskAssignment[]
+  recurringRules  PredefinedTaskRecurringRule[]
+
+  @@map("predefined_tasks")
+}
+
+model PredefinedTaskAssignment {
+  id                String    @id @default(uuid())
+  predefinedTaskId  String
+  userId            String
+  date              DateTime
+  period            String    // "MORNING" | "AFTERNOON" | "FULL_DAY"
+  assignedById      String
+  isRecurring       Boolean   @default(false)
+  recurringRuleId   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  predefinedTask    PredefinedTask              @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
+  user              User                        @relation("PredefinedTaskAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  assignedBy        User                        @relation("PredefinedTaskAssignmentAssigner", fields: [assignedById], references: [id], onDelete: Cascade)
+  recurringRule     PredefinedTaskRecurringRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
+
+  @@unique([predefinedTaskId, userId, date, period])
+  @@map("predefined_task_assignments")
+}
+
+model PredefinedTaskRecurringRule {
+  id               String    @id @default(uuid())
+  predefinedTaskId String
+  userId           String
+  dayOfWeek        Int       // 0=Monday, 1=Tuesday, ..., 6=Sunday
+  period           String    // "MORNING" | "AFTERNOON" | "FULL_DAY"
+  startDate        DateTime
+  endDate          DateTime?
+  isActive         Boolean   @default(true)
+  createdById      String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  predefinedTask   PredefinedTask             @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
+  user             User                       @relation("PredefinedTaskRecurringRuleUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy        User                       @relation("PredefinedTaskRecurringRuleCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  assignments      PredefinedTaskAssignment[]
+
+  @@map("predefined_task_recurring_rules")
+}
+
+// ===========================
+// PASSWORD RESET TOKENS
+// ===========================
+
+model PasswordResetToken {
+  id          String    @id @default(uuid())
+  userId      String
+  token       String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdById String    // Admin qui a généré le token
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  user        User      @relation("PasswordResetTokenUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation("PasswordResetTokenCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 // ===========================

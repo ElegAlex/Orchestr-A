@@ -114,6 +114,12 @@ export class RoleManagementService implements OnModuleInit {
         module: 'telework',
         action: 'manage_others',
       },
+      {
+        code: 'telework:manage_recurring',
+        module: 'telework',
+        action: 'manage_recurring',
+        description: 'Gérer les règles de télétravail récurrentes pour autrui',
+      },
       // Skills
       { code: 'skills:create', module: 'skills', action: 'create' },
       { code: 'skills:read', module: 'skills', action: 'read' },

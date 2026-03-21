@@ -1,5 +1,6 @@
 import { User, Task } from "@/types";
 import { Event } from "@/services/events.service";
+import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
 import { ServiceGroup, DayCell as DayCellData } from "@/hooks/usePlanningData";
 import { DayCell } from "./DayCell";
 import { getGroupColors } from "@/lib/planning-utils";
@@ -13,6 +14,7 @@ interface UserRowProps {
   viewMode: "week" | "month";
   currentUserId: string;
   canManageOthersTelework: boolean;
+  canAssignPredefinedTask: boolean;
   getDayCell: (userId: string, date: Date) => DayCellData;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
@@ -20,6 +22,11 @@ interface UserRowProps {
   onDrop: (userId: string, date: Date) => void;
   onTaskClick: (task: Task) => void;
   onEventClick: (event: Event) => void;
+  onPredefinedTaskClick: (
+    assignment: PredefinedTaskAssignment,
+    date: Date,
+  ) => void;
+  onAddPredefinedTask: (userId: string, date: Date) => void;
 }
 
 export const UserRow = ({
@@ -29,6 +36,7 @@ export const UserRow = ({
   viewMode,
   currentUserId,
   canManageOthersTelework,
+  canAssignPredefinedTask,
   getDayCell,
   onTeleworkToggle,
   onDragStart,
@@ -36,6 +44,8 @@ export const UserRow = ({
   onDrop,
   onTaskClick,
   onEventClick,
+  onPredefinedTaskClick,
+  onAddPredefinedTask,
 }: UserRowProps) => {
   const tCommon = useTranslations("common");
   const colors = getGroupColors(group.color, group.isManagement);
@@ -74,12 +84,15 @@ export const UserRow = ({
             canToggleTelework={
               user.id === currentUserId || canManageOthersTelework
             }
+            canAssignPredefinedTask={canAssignPredefinedTask}
             onTeleworkToggle={onTeleworkToggle}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             onDrop={onDrop}
             onTaskClick={onTaskClick}
             onEventClick={onEventClick}
+            onPredefinedTaskClick={onPredefinedTaskClick}
+            onAddPredefinedTask={onAddPredefinedTask}
           />
         );
       })}

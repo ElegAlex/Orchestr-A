@@ -8,6 +8,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RoleManagementService } from '../role-management/role-management.service';
 import { CreateTeleworkDto } from './dto/create-telework.dto';
 import { UpdateTeleworkDto } from './dto/update-telework.dto';
+import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
+import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
+import { GenerateSchedulesDto } from './dto/generate-schedules.dto';
 import { Prisma } from 'database';
 
 @Injectable()
@@ -425,6 +428,324 @@ export class TeleworkService {
     });
 
     return { message: 'Télétravail supprimé avec succès' };
+  }
+
+  // ─────────────────────────────────────────────
+  // RECURRING RULES
+  // ─────────────────────────────────────────────
+
+  /**
+   * Lister les règles récurrentes (avec filtre userId)
+   */
+  async findAllRecurringRules(
+    currentUserId: string,
+    currentUserRole: string,
+    userId?: string,
+  ) {
+    const permissions =
+      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+    const canManageOthers = permissions.includes('telework:manage_others');
+
+    let targetUserId: string;
+    if (userId && userId !== currentUserId) {
+      if (!canManageOthers) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission de consulter les règles récurrentes d'autrui",
+        );
+      }
+      targetUserId = userId;
+    } else {
+      // Non-management: only own rules; management without userId: all
+      if (!canManageOthers) {
+        targetUserId = currentUserId;
+      } else {
+        targetUserId = userId || '';
+      }
+    }
+
+    const where: Prisma.TeleworkRecurringRuleWhereInput = {};
+    if (targetUserId) {
+      where.userId = targetUserId;
+    }
+
+    const rules = await this.prisma.teleworkRecurringRule.findMany({
+      where,
+      orderBy: [{ userId: 'asc' }, { dayOfWeek: 'asc' }, { startDate: 'asc' }],
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    return rules;
+  }
+
+  /**
+   * Créer une règle récurrente
+   */
+  async createRecurringRule(
+    currentUserId: string,
+    currentUserRole: string,
+    dto: CreateRecurringRuleDto,
+  ) {
+    const {
+      userId: targetUserId,
+      dayOfWeek,
+      startDate,
+      endDate,
+      isActive,
+    } = dto;
+
+    const resolvedUserId = targetUserId || currentUserId;
+
+    if (resolvedUserId !== currentUserId) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('telework:manage_others')) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission de créer des règles récurrentes pour autrui",
+        );
+      }
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: resolvedUserId },
+    });
+    if (!user) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    const start = new Date(startDate);
+
+    // Check unique constraint (userId, dayOfWeek, startDate)
+    const existing = await this.prisma.teleworkRecurringRule.findUnique({
+      where: {
+        userId_dayOfWeek_startDate: {
+          userId: resolvedUserId,
+          dayOfWeek,
+          startDate: start,
+        },
+      },
+    });
+    if (existing) {
+      throw new ConflictException(
+        'Une règle récurrente existe déjà pour ce jour et cette date de début',
+      );
+    }
+
+    const rule = await this.prisma.teleworkRecurringRule.create({
+      data: {
+        userId: resolvedUserId,
+        dayOfWeek,
+        startDate: start,
+        endDate: endDate ? new Date(endDate) : undefined,
+        isActive: isActive !== undefined ? isActive : true,
+        createdById: currentUserId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    return rule;
+  }
+
+  /**
+   * Modifier une règle récurrente
+   */
+  async updateRecurringRule(
+    id: string,
+    currentUserId: string,
+    currentUserRole: string,
+    dto: UpdateRecurringRuleDto,
+  ) {
+    const rule = await this.prisma.teleworkRecurringRule.findUnique({
+      where: { id },
+    });
+    if (!rule) {
+      throw new NotFoundException('Règle récurrente introuvable');
+    }
+
+    if (rule.userId !== currentUserId) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('telework:manage_others')) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission de modifier les règles récurrentes d'autrui",
+        );
+      }
+    }
+
+    const updateData: Prisma.TeleworkRecurringRuleUpdateInput = {};
+    if (dto.dayOfWeek !== undefined) updateData.dayOfWeek = dto.dayOfWeek;
+    if (dto.startDate !== undefined)
+      updateData.startDate = new Date(dto.startDate);
+    if (dto.endDate !== undefined) updateData.endDate = new Date(dto.endDate);
+    if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
+
+    const updated = await this.prisma.teleworkRecurringRule.update({
+      where: { id },
+      data: updateData,
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Supprimer une règle récurrente
+   */
+  async removeRecurringRule(
+    id: string,
+    currentUserId: string,
+    currentUserRole: string,
+  ) {
+    const rule = await this.prisma.teleworkRecurringRule.findUnique({
+      where: { id },
+    });
+    if (!rule) {
+      throw new NotFoundException('Règle récurrente introuvable');
+    }
+
+    if (rule.userId !== currentUserId) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('telework:manage_others')) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission de supprimer les règles récurrentes d'autrui",
+        );
+      }
+    }
+
+    await this.prisma.teleworkRecurringRule.delete({ where: { id } });
+
+    return { message: 'Règle récurrente supprimée avec succès' };
+  }
+
+  /**
+   * Matérialiser les TeleworkSchedules depuis les règles actives pour une plage de dates.
+   * Ne crée que les entrées manquantes (skip si déjà existant).
+   */
+  async generateSchedulesFromRules(
+    currentUserId: string,
+    currentUserRole: string,
+    dto: GenerateSchedulesDto,
+  ) {
+    const permissions =
+      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+    const canManageOthers = permissions.includes('telework:manage_others');
+
+    const start = new Date(dto.startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(dto.endDate);
+    end.setHours(23, 59, 59, 999);
+
+    // Charger les règles actives couvrant la plage
+    const where: Prisma.TeleworkRecurringRuleWhereInput = {
+      isActive: true,
+      startDate: { lte: end },
+      OR: [{ endDate: null }, { endDate: { gte: start } }],
+    };
+
+    // Les non-managers ne peuvent générer que pour eux-mêmes
+    if (!canManageOthers) {
+      where.userId = currentUserId;
+    }
+
+    const rules = await this.prisma.teleworkRecurringRule.findMany({ where });
+
+    let created = 0;
+    let skipped = 0;
+
+    for (const rule of rules) {
+      // Parcourir chaque jour de la plage
+      const cursor = new Date(start);
+      while (cursor <= end) {
+        // day 0=Lundi ... 6=Dimanche dans notre modèle
+        // JS: getDay() → 0=Dimanche, 1=Lundi, ..., 6=Samedi
+        // Conversion: Lundi=1 → model 0, ..., Dimanche=0 → model 6
+        const jsDay = cursor.getDay();
+        const modelDay = jsDay === 0 ? 6 : jsDay - 1;
+
+        if (modelDay === rule.dayOfWeek) {
+          // Vérifier que le jour est dans la plage de la règle
+          const ruleStart = new Date(rule.startDate);
+          ruleStart.setHours(0, 0, 0, 0);
+          const ruleEnd = rule.endDate ? new Date(rule.endDate) : null;
+          if (ruleEnd) ruleEnd.setHours(23, 59, 59, 999);
+
+          if (cursor >= ruleStart && (!ruleEnd || cursor <= ruleEnd)) {
+            const dateOnly = new Date(cursor);
+            dateOnly.setHours(0, 0, 0, 0);
+
+            // Skip si déjà existant
+            const existing = await this.prisma.teleworkSchedule.findUnique({
+              where: {
+                userId_date: {
+                  userId: rule.userId,
+                  date: dateOnly,
+                },
+              },
+            });
+
+            if (!existing) {
+              await this.prisma.teleworkSchedule.create({
+                data: {
+                  userId: rule.userId,
+                  date: dateOnly,
+                  isTelework: true,
+                  isException: false,
+                },
+              });
+              created++;
+            } else {
+              skipped++;
+            }
+          }
+        }
+
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+
+    return {
+      message: `Génération terminée : ${created} créé(s), ${skipped} ignoré(s) (déjà existant)`,
+      created,
+      skipped,
+      rulesProcessed: rules.length,
+    };
   }
 
   /**

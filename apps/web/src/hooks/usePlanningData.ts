@@ -17,6 +17,10 @@ import { teleworkService } from "@/services/telework.service";
 import { servicesService } from "@/services/services.service";
 import { holidaysService } from "@/services/holidays.service";
 import { eventsService, Event } from "@/services/events.service";
+import {
+  predefinedTasksService,
+  PredefinedTaskAssignment,
+} from "@/services/predefined-tasks.service";
 import { Task, User, Leave, TeleworkSchedule, Service, Holiday } from "@/types";
 import { getServiceStyle } from "@/lib/planning-utils";
 import { useSettingsStore } from "@/stores/settings.store";
@@ -31,6 +35,7 @@ export interface DayCell {
   tasks: Task[];
   leaves: Leave[];
   events: Event[];
+  predefinedTaskAssignments: PredefinedTaskAssignment[];
   isTelework: boolean;
   isExternalIntervention: boolean;
   teleworkSchedule: TeleworkSchedule | null;
@@ -92,6 +97,9 @@ export const usePlanningData = ({
     TeleworkSchedule[]
   >([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [predefinedAssignments, setPredefinedAssignments] = useState<
+    PredefinedTaskAssignment[]
+  >([]);
 
   // Lire les jours visibles depuis les paramètres (ISO: 1=Lun, 7=Dim)
   const visibleDays = useSettingsStore(
@@ -152,6 +160,7 @@ export const usePlanningData = ({
           teleworkData,
           servicesData,
           holidaysData,
+          predefinedAssignmentsData,
         ] = await Promise.all([
           usersService.getAll(),
           tasksService.getByDateRange(
@@ -166,6 +175,12 @@ export const usePlanningData = ({
           teleworkService.getByDateRange(teleworkStartDate, teleworkEndDate),
           servicesService.getAll(),
           holidaysService.getByRange(teleworkStartDate, teleworkEndDate),
+          predefinedTasksService
+            .getAssignments({
+              startDate: teleworkStartDate,
+              endDate: teleworkEndDate,
+            })
+            .catch(() => ({ data: [] as PredefinedTaskAssignment[] })),
         ]);
 
         const usersList = Array.isArray(usersData)
@@ -190,6 +205,22 @@ export const usePlanningData = ({
         setTeleworkSchedules(Array.isArray(teleworkData) ? teleworkData : []);
         setServices(Array.isArray(servicesData) ? servicesData : []);
         setHolidays(Array.isArray(holidaysData) ? holidaysData : []);
+        const assignmentsList = Array.isArray(predefinedAssignmentsData)
+          ? predefinedAssignmentsData
+          : Array.isArray(
+                (
+                  predefinedAssignmentsData as {
+                    data?: PredefinedTaskAssignment[];
+                  }
+                ).data,
+              )
+            ? (
+                predefinedAssignmentsData as {
+                  data: PredefinedTaskAssignment[];
+                }
+              ).data
+            : [];
+        setPredefinedAssignments(assignmentsList);
       } catch (err) {
         if (!silent) {
           setUsers([]);
@@ -199,6 +230,7 @@ export const usePlanningData = ({
           setTeleworkSchedules([]);
           setServices([]);
           setHolidays([]);
+          setPredefinedAssignments([]);
           toast.error("Erreur lors du chargement des données");
         }
         console.error(err);
@@ -327,6 +359,10 @@ export const usePlanningData = ({
   // Obtenir les données d'une cellule (avec filtrage selon viewFilter)
   const getDayCell = useCallback(
     (userId: string, date: Date): DayCell => {
+      const dateStr = format(date, "yyyy-MM-dd");
+      const dayPredefinedAssignments = predefinedAssignments.filter(
+        (a) => a.userId === userId && a.date.slice(0, 10) === dateStr,
+      );
       const dayTasks = tasks.filter((t) => {
         // Vérifier si la date est dans la plage de la tâche (startDate <= date <= endDate)
         // Si pas de startDate, on utilise endDate comme seul jour
@@ -380,7 +416,6 @@ export const usePlanningData = ({
       );
 
       // Vérifier si c'est un jour férié
-      const dateStr = format(date, "yyyy-MM-dd");
       const holiday = holidays.find((h) => {
         const holidayDateStr =
           typeof h.date === "string"
@@ -425,6 +460,8 @@ export const usePlanningData = ({
         tasks: filteredTasks,
         events: filteredEvents,
         leaves: filteredLeaves,
+        predefinedTaskAssignments:
+          viewFilter === "availability" ? [] : dayPredefinedAssignments,
         isTelework: filteredIsTelework,
         isExternalIntervention: filteredIsExternalIntervention,
         teleworkSchedule: teleworkSchedule || null,
@@ -432,7 +469,15 @@ export const usePlanningData = ({
         holidayName: holiday?.name,
       };
     },
-    [tasks, events, leaves, teleworkSchedules, holidays, viewFilter],
+    [
+      tasks,
+      events,
+      leaves,
+      teleworkSchedules,
+      holidays,
+      predefinedAssignments,
+      viewFilter,
+    ],
   );
 
   // Compter les tâches par groupe

@@ -1,5 +1,12 @@
 import { api } from "@/lib/api";
-import { TeleworkSchedule, CreateTeleworkDto } from "@/types";
+import {
+  TeleworkSchedule,
+  CreateTeleworkDto,
+  TeleworkRecurringRule,
+  CreateRecurringRuleDto,
+  UpdateRecurringRuleDto,
+  GenerateSchedulesDto,
+} from "@/types";
 
 export const teleworkService = {
   async getAll(): Promise<TeleworkSchedule[]> {
@@ -52,5 +59,56 @@ export const teleworkService = {
 
   async delete(id: string): Promise<void> {
     await api.delete(`/telework/${id}`);
+  },
+
+  // ─────────────────────────────────────────────
+  // RECURRING RULES
+  // ─────────────────────────────────────────────
+
+  async getRecurringRules(userId?: string): Promise<TeleworkRecurringRule[]> {
+    const params = new URLSearchParams();
+    if (userId) params.set("userId", userId);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const response = await api.get<TeleworkRecurringRule[]>(
+      `/telework/recurring-rules${query}`,
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  },
+
+  async createRecurringRule(
+    data: CreateRecurringRuleDto,
+  ): Promise<TeleworkRecurringRule> {
+    const response = await api.post<TeleworkRecurringRule>(
+      "/telework/recurring-rules",
+      data,
+    );
+    return response.data;
+  },
+
+  async updateRecurringRule(
+    id: string,
+    data: UpdateRecurringRuleDto,
+  ): Promise<TeleworkRecurringRule> {
+    const response = await api.patch<TeleworkRecurringRule>(
+      `/telework/recurring-rules/${id}`,
+      data,
+    );
+    return response.data;
+  },
+
+  async deleteRecurringRule(id: string): Promise<void> {
+    await api.delete(`/telework/recurring-rules/${id}`);
+  },
+
+  async generateSchedules(
+    data: GenerateSchedulesDto,
+  ): Promise<{ message: string; created: number; skipped: number; rulesProcessed: number }> {
+    const response = await api.post<{
+      message: string;
+      created: number;
+      skipped: number;
+      rulesProcessed: number;
+    }>("/telework/recurring-rules/generate", data);
+    return response.data;
   },
 };

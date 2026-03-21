@@ -23,6 +23,9 @@ import {
 import { TeleworkService } from './telework.service';
 import { CreateTeleworkDto } from './dto/create-telework.dto';
 import { UpdateTeleworkDto } from './dto/update-telework.dto';
+import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
+import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
+import { GenerateSchedulesDto } from './dto/generate-schedules.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
@@ -244,5 +247,96 @@ export class TeleworkController {
     @CurrentUser('role') userRole: string,
   ) {
     return this.teleworkService.remove(id, userId, userRole);
+  }
+
+  // ─────────────────────────────────────────────
+  // RECURRING RULES
+  // ─────────────────────────────────────────────
+
+  @Get('recurring-rules')
+  @ApiOperation({
+    summary:
+      'Lister les règles de télétravail récurrent (filtrable par userId)',
+  })
+  @ApiQuery({ name: 'userId', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Liste des règles récurrentes' })
+  findAllRecurringRules(
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+    @Query('userId') userId?: string,
+  ) {
+    return this.teleworkService.findAllRecurringRules(
+      currentUserId,
+      currentUserRole,
+      userId,
+    );
+  }
+
+  @Post('recurring-rules')
+  @Permissions('telework:create')
+  @ApiOperation({ summary: 'Créer une règle de télétravail récurrent' })
+  @ApiResponse({ status: 201, description: 'Règle créée avec succès' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Une règle récurrente existe déjà pour ce jour et cette date de début',
+  })
+  createRecurringRule(
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
+    @Body() dto: CreateRecurringRuleDto,
+  ) {
+    return this.teleworkService.createRecurringRule(userId, userRole, dto);
+  }
+
+  @Patch('recurring-rules/:id')
+  @Permissions('telework:update')
+  @ApiOperation({ summary: 'Modifier une règle de télétravail récurrent' })
+  @ApiResponse({ status: 200, description: 'Règle mise à jour' })
+  @ApiResponse({ status: 404, description: 'Règle introuvable' })
+  updateRecurringRule(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
+    @Body() dto: UpdateRecurringRuleDto,
+  ) {
+    return this.teleworkService.updateRecurringRule(id, userId, userRole, dto);
+  }
+
+  @Delete('recurring-rules/:id')
+  @Permissions('telework:delete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Supprimer une règle de télétravail récurrent' })
+  @ApiResponse({ status: 200, description: 'Règle supprimée' })
+  @ApiResponse({ status: 404, description: 'Règle introuvable' })
+  removeRecurringRule(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
+  ) {
+    return this.teleworkService.removeRecurringRule(id, userId, userRole);
+  }
+
+  @Post('recurring-rules/generate')
+  @Permissions('telework:create')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Matérialiser les TeleworkSchedules depuis les règles actives pour une plage de dates',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Génération effectuée (créés + ignorés)',
+  })
+  generateSchedules(
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
+    @Body() dto: GenerateSchedulesDto,
+  ) {
+    return this.teleworkService.generateSchedulesFromRules(
+      userId,
+      userRole,
+      dto,
+    );
   }
 }

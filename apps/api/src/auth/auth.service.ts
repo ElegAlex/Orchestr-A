@@ -2,10 +2,12 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { Role } from 'database';
@@ -225,5 +227,88 @@ export class AuthService {
       return allPermissions.map((p) => p.code);
     }
     return this.roleManagementService.getPermissionsForRole(role);
+  }
+
+  async generateResetToken(
+    userId: string,
+    createdById: string,
+  ): Promise<{ token: string; resetUrl: string }> {
+    // Vérifier que l'utilisateur cible existe
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!targetUser) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    // Invalider les tokens précédents pour ce user
+    await this.prisma.passwordResetToken.updateMany({
+      where: { userId, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    // Générer un nouveau token
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // +24h
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId,
+        token,
+        expiresAt,
+        createdById,
+      },
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4001';
+    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+    this.auditService.log({
+      action: AuditAction.PASSWORD_CHANGED,
+      userId: createdById,
+      details: `Password reset token generated for user ${targetUser.login}`,
+      success: true,
+    });
+
+    return { token, resetUrl };
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { token },
+    });
+
+    if (!resetToken) {
+      throw new UnauthorizedException('Token de réinitialisation invalide');
+    }
+
+    if (resetToken.usedAt !== null) {
+      throw new UnauthorizedException(
+        'Ce token de réinitialisation a déjà été utilisé',
+      );
+    }
+
+    if (resetToken.expiresAt < new Date()) {
+      throw new UnauthorizedException('Ce token de réinitialisation a expiré');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    await this.prisma.user.update({
+      where: { id: resetToken.userId },
+      data: { passwordHash },
+    });
+
+    await this.prisma.passwordResetToken.update({
+      where: { token },
+      data: { usedAt: new Date() },
+    });
+
+    this.auditService.log({
+      action: AuditAction.PASSWORD_CHANGED,
+      userId: resetToken.userId,
+      details: 'Password reset via token',
+      success: true,
+    });
   }
 }

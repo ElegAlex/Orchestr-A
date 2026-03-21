@@ -4,6 +4,8 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import { User } from '@prisma/client';
+import { PermissionsGuard } from './guards/permissions.guard';
+import { RoleManagementService } from '../role-management/role-management.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -26,6 +28,12 @@ describe('AuthController', () => {
     register: vi.fn(),
     getProfile: vi.fn(),
     getPermissionsForUser: vi.fn(),
+    generateResetToken: vi.fn(),
+    resetPassword: vi.fn(),
+  };
+
+  const mockRoleManagementService = {
+    getPermissionsForRole: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -36,6 +44,11 @@ describe('AuthController', () => {
           provide: AuthService,
           useValue: mockAuthService,
         },
+        {
+          provide: RoleManagementService,
+          useValue: mockRoleManagementService,
+        },
+        PermissionsGuard,
       ],
     }).compile();
 
@@ -283,6 +296,59 @@ describe('AuthController', () => {
       );
 
       expect(result).toEqual({ permissions: [] });
+    });
+  });
+
+  describe('generateResetToken', () => {
+    it('should return token and resetUrl for valid userId', async () => {
+      const expected = {
+        token: 'uuid-token',
+        resetUrl: 'http://localhost:4001/reset-password?token=uuid-token',
+      };
+      mockAuthService.generateResetToken.mockResolvedValue(expected);
+
+      const result = await controller.generateResetToken(
+        { userId: 'user-id-1' },
+        mockUser as unknown as User,
+      );
+
+      expect(result).toEqual(expected);
+      expect(mockAuthService.generateResetToken).toHaveBeenCalledWith(
+        'user-id-1',
+        mockUser.id,
+      );
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('should return success message when token is valid', async () => {
+      mockAuthService.resetPassword.mockResolvedValue(undefined);
+
+      const result = await controller.resetPassword({
+        token: 'valid-token',
+        newPassword: 'NewPass123!',
+      });
+
+      expect(result).toEqual({
+        message: 'Mot de passe mis à jour avec succès',
+      });
+      expect(mockAuthService.resetPassword).toHaveBeenCalledWith(
+        'valid-token',
+        'NewPass123!',
+      );
+    });
+
+    it('should propagate UnauthorizedException for invalid token', async () => {
+      mockAuthService.resetPassword.mockRejectedValue(
+        new UnauthorizedException('Token invalide'),
+      );
+
+      await expect(
+        controller.resetPassword({
+          token: 'bad-token',
+          newPassword: 'Abc12345!',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 });

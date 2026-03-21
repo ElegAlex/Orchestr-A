@@ -551,6 +551,40 @@ export interface CreateTeleworkDto {
   userId?: string;
 }
 
+export interface TeleworkRecurringRule {
+  id: string;
+  userId: string;
+  dayOfWeek: number; // 0=Monday ... 6=Sunday
+  startDate: string;
+  endDate?: string | null;
+  isActive: boolean;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: Pick<User, "id" | "firstName" | "lastName" | "email" | "role">;
+  createdBy?: Pick<User, "id" | "firstName" | "lastName">;
+}
+
+export interface CreateRecurringRuleDto {
+  userId?: string;
+  dayOfWeek: number;
+  startDate: string;
+  endDate?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateRecurringRuleDto {
+  dayOfWeek?: number;
+  startDate?: string;
+  endDate?: string;
+  isActive?: boolean;
+}
+
+export interface GenerateSchedulesDto {
+  startDate: string;
+  endDate: string;
+}
+
 // ===========================
 // HR - SKILLS
 // ===========================

@@ -17,8 +17,12 @@ import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordTokenDto } from './dto/reset-password-token.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Public } from './decorators/public.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { PermissionsGuard } from './guards/permissions.guard';
+import { Permissions } from './decorators/permissions.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { User } from '@prisma/client';
 
@@ -120,5 +124,55 @@ export class AuthController {
   ): Promise<{ permissions: string[] }> {
     const permissions = await this.authService.getPermissionsForUser(user.role);
     return { permissions };
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('users:reset_password')
+  @Post('reset-password-token')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Générer un token de réinitialisation de mot de passe (admin)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Token généré',
+    schema: {
+      example: {
+        token: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        resetUrl: 'http://localhost:4001/reset-password?token=...',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Non autorisé' })
+  @ApiResponse({ status: 403, description: 'Permission insuffisante' })
+  @ApiResponse({ status: 404, description: 'Utilisateur introuvable' })
+  async generateResetToken(
+    @Body() dto: ResetPasswordTokenDto,
+    @CurrentUser() currentUser: User,
+  ) {
+    return this.authService.generateResetToken(dto.userId, currentUser.id);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @Throttle({
+    short: { ttl: 60000, limit: 5 },
+    medium: { ttl: 900000, limit: 15 },
+  })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Réinitialiser le mot de passe via token (public)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Mot de passe mis à jour avec succès',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token invalide, expiré ou déjà utilisé',
+  })
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
+    await this.authService.resetPassword(dto.token, dto.newPassword);
+    return { message: 'Mot de passe mis à jour avec succès' };
   }
 }

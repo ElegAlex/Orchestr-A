@@ -181,7 +181,46 @@
     },
     "messages": {
       "recorded": "Telework recorded",
-      "deleted": "Day deleted"
+      "deleted": "Day deleted",
+      "ruleCreated": "Recurring rule created",
+      "ruleUpdated": "Recurring rule updated",
+      "ruleDeleted": "Recurring rule deleted",
+      "generated": "Schedules generated: {created} created, {skipped} skipped"
+    },
+    "recurringRules": {
+      "title": "Fixed telework days",
+      "configureButton": "Configure fixed days",
+      "addRule": "Add a rule",
+      "noRules": "No fixed days configured",
+      "preview": "Preview",
+      "previewText": "Every {days} from {startDate}",
+      "previewTextWithEnd": "Every {days} from {startDate} to {endDate}",
+      "dayOfWeek": "Day of week",
+      "startDate": "Start date",
+      "endDate": "End date (optional)",
+      "isActive": "Rule active",
+      "generate": "Generate schedules",
+      "generateRange": "Generation range",
+      "close": "Close",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirm": "Confirm",
+      "confirmDelete": "Delete this recurring rule?",
+      "badgeRecurring": "Recurring",
+      "legend": {
+        "recurring": "Recurring telework"
+      },
+      "days": {
+        "0": "Monday",
+        "1": "Tuesday",
+        "2": "Wednesday",
+        "3": "Thursday",
+        "4": "Friday",
+        "5": "Saturday",
+        "6": "Sunday"
+      }
     }
   },
   "skills": {

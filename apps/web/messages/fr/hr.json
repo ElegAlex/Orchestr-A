@@ -181,7 +181,46 @@
     },
     "messages": {
       "recorded": "Télétravail enregistré",
-      "deleted": "Jour supprimé"
+      "deleted": "Jour supprimé",
+      "ruleCreated": "Règle récurrente créée",
+      "ruleUpdated": "Règle récurrente mise à jour",
+      "ruleDeleted": "Règle récurrente supprimée",
+      "generated": "Plannings générés : {created} créé(s), {skipped} ignoré(s)"
+    },
+    "recurringRules": {
+      "title": "Jours fixes de télétravail",
+      "configureButton": "Configurer jours fixes",
+      "addRule": "Ajouter une règle",
+      "noRules": "Aucun jour fixe configuré",
+      "preview": "Aperçu",
+      "previewText": "Tous les {days} à partir du {startDate}",
+      "previewTextWithEnd": "Tous les {days} du {startDate} au {endDate}",
+      "dayOfWeek": "Jour de la semaine",
+      "startDate": "Date de début",
+      "endDate": "Date de fin (optionnel)",
+      "isActive": "Règle active",
+      "generate": "Générer les plannings",
+      "generateRange": "Plage de génération",
+      "close": "Fermer",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "confirm": "Confirmer",
+      "confirmDelete": "Supprimer cette règle récurrente ?",
+      "badgeRecurring": "Récurrent",
+      "legend": {
+        "recurring": "Télétravail récurrent"
+      },
+      "days": {
+        "0": "lundi",
+        "1": "mardi",
+        "2": "mercredi",
+        "3": "jeudi",
+        "4": "vendredi",
+        "5": "samedi",
+        "6": "dimanche"
+      }
     }
   },
   "skills": {

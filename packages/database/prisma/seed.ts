@@ -1119,6 +1119,16 @@ async function main() {
     { code: "holidays:read", module: "holidays", action: "read", description: "Voir les jours fériés" },
     { code: "holidays:update", module: "holidays", action: "update", description: "Modifier un jour férié" },
     { code: "holidays:delete", module: "holidays", action: "delete", description: "Supprimer un jour férié" },
+    // Predefined Tasks
+    { code: "predefined_tasks:view", module: "predefined_tasks", action: "view", description: "Voir les tâches prédéfinies" },
+    { code: "predefined_tasks:create", module: "predefined_tasks", action: "create", description: "Créer une tâche prédéfinie" },
+    { code: "predefined_tasks:edit", module: "predefined_tasks", action: "edit", description: "Modifier une tâche prédéfinie" },
+    { code: "predefined_tasks:delete", module: "predefined_tasks", action: "delete", description: "Supprimer une tâche prédéfinie" },
+    { code: "predefined_tasks:assign", module: "predefined_tasks", action: "assign", description: "Assigner une tâche prédéfinie à un agent" },
+    // Telework recurring
+    { code: "telework:manage_recurring", module: "telework", action: "manage_recurring", description: "Gérer les règles de télétravail récurrentes" },
+    // Users password reset
+    { code: "users:reset_password", module: "users", action: "reset_password", description: "Réinitialiser le mot de passe d'un utilisateur" },
   ];
 
   // Upsert toutes les permissions
@@ -1175,10 +1185,13 @@ async function main() {
         "leaves:read", "leaves:view", "leaves:approve", "leaves:manage", "leaves:manage_delegations",
         "leaves:declare_for_others",
         "telework:read", "telework:view", "telework:manage_others", "telework:read_team",
+        "telework:manage_recurring",
         "reports:view", "reports:export",
         "users:read", "users:view",
         "departments:read", "departments:view",
         "skills:read", "skills:view",
+        "predefined_tasks:view", "predefined_tasks:create", "predefined_tasks:edit",
+        "predefined_tasks:delete", "predefined_tasks:assign",
       ],
     },
     {

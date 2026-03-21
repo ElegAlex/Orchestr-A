@@ -21,6 +21,13 @@ describe('TeleworkService', () => {
       delete: vi.fn(),
       count: vi.fn(),
     },
+    teleworkRecurringRule: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
     user: {
       findUnique: vi.fn(),
     },
@@ -668,6 +675,349 @@ describe('TeleworkService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             user: { departmentId: 'dept-1' },
+          }) as object,
+        }),
+      );
+    });
+  });
+
+  // ─────────────────────────────────────────────
+  // RECURRING RULES
+  // ─────────────────────────────────────────────
+
+  const mockRule = {
+    id: 'rule-1',
+    userId: 'user-1',
+    dayOfWeek: 1, // Mardi
+    startDate: new Date('2026-04-01'),
+    endDate: null,
+    isActive: true,
+    createdById: 'user-1',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    user: {
+      id: 'user-1',
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      role: 'CONTRIBUTEUR',
+    },
+    createdBy: { id: 'user-1', firstName: 'John', lastName: 'Doe' },
+  };
+
+  describe('createRecurringRule', () => {
+    it('should create a recurring rule for self', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:read',
+      ]);
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.teleworkRecurringRule.create.mockResolvedValue(
+        mockRule,
+      );
+
+      const result = await service.createRecurringRule(
+        'user-1',
+        'CONTRIBUTEUR',
+        {
+          dayOfWeek: 1,
+          startDate: '2026-04-01',
+        },
+      );
+
+      expect(result).toBeDefined();
+      expect(result.dayOfWeek).toBe(1);
+      expect(mockPrismaService.teleworkRecurringRule.create).toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException when creating for others without telework:manage_others', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:read',
+      ]);
+
+      await expect(
+        service.createRecurringRule('user-1', 'CONTRIBUTEUR', {
+          userId: 'user-2',
+          dayOfWeek: 1,
+          startDate: '2026-04-01',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow creating for others with telework:manage_others', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:manage_others',
+      ]);
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-2' });
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.teleworkRecurringRule.create.mockResolvedValue({
+        ...mockRule,
+        userId: 'user-2',
+      });
+
+      const result = await service.createRecurringRule('admin-1', 'ADMIN', {
+        userId: 'user-2',
+        dayOfWeek: 1,
+        startDate: '2026-04-01',
+      });
+
+      expect(result.userId).toBe('user-2');
+    });
+
+    it('should throw ConflictException when rule already exists', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+      ]);
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue(
+        mockRule,
+      );
+
+      await expect(
+        service.createRecurringRule('user-1', 'CONTRIBUTEUR', {
+          dayOfWeek: 1,
+          startDate: '2026-04-01',
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+      ]);
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.createRecurringRule('user-1', 'CONTRIBUTEUR', {
+          dayOfWeek: 1,
+          startDate: '2026-04-01',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateRecurringRule', () => {
+    it('should update own recurring rule', async () => {
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue(
+        mockRule,
+      );
+      mockPrismaService.teleworkRecurringRule.update.mockResolvedValue({
+        ...mockRule,
+        endDate: new Date('2026-12-31'),
+      });
+
+      const result = await service.updateRecurringRule(
+        'rule-1',
+        'user-1',
+        'CONTRIBUTEUR',
+        { endDate: '2026-12-31' },
+      );
+
+      expect(result.endDate).toBeDefined();
+      expect(
+        mockRoleManagementService.getPermissionsForRole,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("should throw ForbiddenException when updating other's rule without permission", async () => {
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue({
+        ...mockRule,
+        userId: 'other-user',
+      });
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:update',
+      ]);
+
+      await expect(
+        service.updateRecurringRule('rule-1', 'user-1', 'CONTRIBUTEUR', {
+          endDate: '2026-12-31',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw NotFoundException when rule not found', async () => {
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue(
+        null,
+      );
+
+      await expect(
+        service.updateRecurringRule('invalid', 'user-1', 'CONTRIBUTEUR', {}),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('removeRecurringRule', () => {
+    it('should delete own recurring rule', async () => {
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue(
+        mockRule,
+      );
+      mockPrismaService.teleworkRecurringRule.delete.mockResolvedValue(
+        mockRule,
+      );
+
+      const result = await service.removeRecurringRule(
+        'rule-1',
+        'user-1',
+        'CONTRIBUTEUR',
+      );
+
+      expect(result.message).toBe('Règle récurrente supprimée avec succès');
+      expect(
+        mockRoleManagementService.getPermissionsForRole,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when rule not found', async () => {
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue(
+        null,
+      );
+
+      await expect(
+        service.removeRecurringRule('invalid', 'user-1', 'CONTRIBUTEUR'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw ForbiddenException when deleting other's rule without permission", async () => {
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue({
+        ...mockRule,
+        userId: 'other-user',
+      });
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:delete',
+      ]);
+
+      await expect(
+        service.removeRecurringRule('rule-1', 'user-1', 'CONTRIBUTEUR'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('generateSchedulesFromRules', () => {
+    it('should generate telework schedules from active recurring rules', async () => {
+      // Tuesday (dayOfWeek=1 in our model) rules for user-1
+      // Week of 2026-04-06 (Mon) - 2026-04-07 is Tuesday
+      const tuesdayRule = {
+        ...mockRule,
+        dayOfWeek: 1, // Tuesday in model (0=Mon)
+        startDate: new Date('2026-04-01'),
+        endDate: null,
+      };
+
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:manage_others',
+      ]);
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([
+        tuesdayRule,
+      ]);
+      // No existing schedule for any Tuesday
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
+      mockPrismaService.teleworkSchedule.create.mockResolvedValue({});
+
+      const result = await service.generateSchedulesFromRules(
+        'admin-1',
+        'ADMIN',
+        {
+          startDate: '2026-04-06', // Monday
+          endDate: '2026-04-12', // Sunday (1 Tuesday: 2026-04-07)
+        },
+      );
+
+      expect(result.created).toBe(1);
+      expect(result.skipped).toBe(0);
+      expect(result.rulesProcessed).toBe(1);
+      expect(mockPrismaService.teleworkSchedule.create).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
+    it('should skip days that already have a telework schedule', async () => {
+      const tuesdayRule = {
+        ...mockRule,
+        dayOfWeek: 1,
+        startDate: new Date('2026-04-01'),
+        endDate: null,
+      };
+
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:manage_others',
+      ]);
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([
+        tuesdayRule,
+      ]);
+      // Existing schedule for Tuesday
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue({
+        id: 'existing',
+        userId: 'user-1',
+        date: new Date('2026-04-07'),
+        isTelework: true,
+        isException: false,
+      });
+
+      const result = await service.generateSchedulesFromRules(
+        'admin-1',
+        'ADMIN',
+        {
+          startDate: '2026-04-06',
+          endDate: '2026-04-12',
+        },
+      );
+
+      expect(result.created).toBe(0);
+      expect(result.skipped).toBe(1);
+      expect(mockPrismaService.teleworkSchedule.create).not.toHaveBeenCalled();
+    });
+
+    it('should not process rules that end before the start of the range', async () => {
+      // expiredRule would have dayOfWeek: 1, endDate: 2026-03-31 (before our range)
+      // The DB filter already excludes it, so we simulate empty result
+
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:manage_others',
+      ]);
+      // The DB filter should already exclude it, but simulate empty result
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([]);
+
+      const result = await service.generateSchedulesFromRules(
+        'admin-1',
+        'ADMIN',
+        {
+          startDate: '2026-04-06',
+          endDate: '2026-04-12',
+        },
+      );
+
+      expect(result.created).toBe(0);
+      expect(result.rulesProcessed).toBe(0);
+    });
+
+    it('should restrict non-managers to their own rules only', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:read',
+      ]);
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([]);
+
+      await service.generateSchedulesFromRules('user-1', 'CONTRIBUTEUR', {
+        startDate: '2026-04-06',
+        endDate: '2026-04-12',
+      });
+
+      expect(
+        mockPrismaService.teleworkRecurringRule.findMany,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user-1',
           }) as object,
         }),
       );

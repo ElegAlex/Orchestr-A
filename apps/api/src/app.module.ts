@@ -27,6 +27,7 @@ import { EventsModule } from './events/events.module';
 import { RoleManagementModule } from './role-management/role-management.module';
 import { PlanningExportModule } from './planning-export/planning-export.module';
 import { AuditModule } from './audit/audit.module';
+import { PredefinedTasksModule } from './predefined-tasks/predefined-tasks.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { AuditModule } from './audit/audit.module';
     EventsModule,
     RoleManagementModule,
     PlanningExportModule,
+    PredefinedTasksModule,
   ],
   controllers: [AppController],
   providers: [AppService],

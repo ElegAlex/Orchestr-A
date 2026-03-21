@@ -32,6 +32,7 @@ describe('AuthService', () => {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
     },
     department: {
       findUnique: vi.fn(),
@@ -41,6 +42,15 @@ describe('AuthService', () => {
     },
     userService: {
       createMany: vi.fn(),
+    },
+    passwordResetToken: {
+      updateMany: vi.fn(),
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+    },
+    permission: {
+      findMany: vi.fn(),
     },
   };
 
@@ -254,6 +264,124 @@ describe('AuthService', () => {
           data: expect.objectContaining({ role: 'ADMIN' }),
         }),
       );
+    });
+  });
+
+  describe('generateResetToken', () => {
+    it('should generate a reset token and invalidate previous ones', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.passwordResetToken.updateMany.mockResolvedValue({
+        count: 1,
+      });
+      mockPrismaService.passwordResetToken.create.mockResolvedValue({
+        id: 'token-id',
+        token: 'generated-uuid',
+      });
+
+      const result = await service.generateResetToken('user-id-1', 'admin-id');
+
+      expect(result).toHaveProperty('token');
+      expect(result).toHaveProperty('resetUrl');
+      expect(result.resetUrl).toContain(result.token);
+      expect(
+        mockPrismaService.passwordResetToken.updateMany,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user-id-1', usedAt: null },
+          data: expect.objectContaining({ usedAt: expect.any(Date) }),
+        }),
+      );
+      expect(mockPrismaService.passwordResetToken.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'user-id-1',
+            createdById: 'admin-id',
+          }),
+        }),
+      );
+    });
+
+    it('should throw NotFoundException if user does not exist', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.generateResetToken('nonexistent-id', 'admin-id'),
+      ).rejects.toThrow('Utilisateur introuvable');
+    });
+  });
+
+  describe('resetPassword', () => {
+    const validToken = {
+      id: 'token-id',
+      token: 'valid-token-uuid',
+      userId: 'user-id-1',
+      expiresAt: new Date(Date.now() + 3600 * 1000), // +1h
+      usedAt: null,
+      createdById: 'admin-id',
+      createdAt: new Date(),
+    };
+
+    it('should update password and mark token as used for a valid token', async () => {
+      mockPrismaService.passwordResetToken.findUnique.mockResolvedValue(
+        validToken,
+      );
+      vi.mocked(bcrypt.hash).mockResolvedValue(
+        '$2b$12$newhashedpassword' as never,
+      );
+      mockPrismaService.user.update.mockResolvedValue({});
+      mockPrismaService.passwordResetToken.update.mockResolvedValue({});
+
+      await service.resetPassword('valid-token-uuid', 'NewPassword1!');
+
+      expect(bcrypt.hash).toHaveBeenCalledWith('NewPassword1!', 12);
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: validToken.userId },
+          data: { passwordHash: '$2b$12$newhashedpassword' },
+        }),
+      );
+      expect(mockPrismaService.passwordResetToken.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { token: 'valid-token-uuid' },
+          data: expect.objectContaining({ usedAt: expect.any(Date) }),
+        }),
+      );
+    });
+
+    it('should throw UnauthorizedException for an unknown token', async () => {
+      mockPrismaService.passwordResetToken.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.resetPassword('unknown-token', 'NewPassword1!'),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw UnauthorizedException for an expired token', async () => {
+      const expiredToken = {
+        ...validToken,
+        expiresAt: new Date(Date.now() - 3600 * 1000), // -1h (expired)
+      };
+      mockPrismaService.passwordResetToken.findUnique.mockResolvedValue(
+        expiredToken,
+      );
+
+      await expect(
+        service.resetPassword('expired-token', 'NewPassword1!'),
+      ).rejects.toThrow('Ce token de réinitialisation a expiré');
+    });
+
+    it('should throw UnauthorizedException for an already used token', async () => {
+      const usedToken = {
+        ...validToken,
+        usedAt: new Date(Date.now() - 600 * 1000), // used 10min ago
+      };
+      mockPrismaService.passwordResetToken.findUnique.mockResolvedValue(
+        usedToken,
+      );
+
+      await expect(
+        service.resetPassword('used-token', 'NewPassword1!'),
+      ).rejects.toThrow('Ce token de réinitialisation a déjà été utilisé');
     });
   });
 
