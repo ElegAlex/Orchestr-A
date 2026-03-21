@@ -10,6 +10,12 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { ProjectStatus, TaskStatus } from 'database';
 
+/**
+ * Rôles qui voient tous les projets sans filtre de membership.
+ * CONTRIBUTEUR et OBSERVATEUR sont filtrés par membership.
+ */
+const FULL_VISIBILITY_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'] as const;
+
 @Injectable()
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -93,13 +99,33 @@ export class ProjectsService {
   }
 
   /**
-   * Récupérer tous les projets avec pagination
+   * Récupérer tous les projets avec pagination.
+   * - ADMIN, RESPONSABLE, MANAGER : voient TOUS les projets.
+   * - REFERENT_TECHNIQUE, CONTRIBUTEUR, OBSERVATEUR (et inconnu) : filtrés par membership.
    */
-  async findAll(page = 1, limit = 10, status?: ProjectStatus) {
+  async findAll(
+    page = 1,
+    limit = 10,
+    status?: ProjectStatus,
+    userId?: string,
+    userRole?: string,
+  ) {
     const safeLimit = Math.min(limit || 20, 100);
     const skip = (page - 1) * safeLimit;
 
-    const where = status ? { status } : {};
+    // Filtre de base sur le statut
+    const baseFilter = status ? { status } : {};
+
+    // Les rôles à visibilité totale voient tous les projets.
+    // Les autres rôles sont filtrés par membership si un userId est fourni.
+    const hasFullVisibility =
+      userRole &&
+      (FULL_VISIBILITY_ROLES as readonly string[]).includes(userRole);
+
+    const membershipFilter =
+      !hasFullVisibility && userId ? { members: { some: { userId } } } : {};
+
+    const where = { ...baseFilter, ...membershipFilter };
 
     const [projects, total] = await Promise.all([
       this.prisma.project.findMany({

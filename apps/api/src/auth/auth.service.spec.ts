@@ -2,11 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import {
-  UnauthorizedException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
 import { RoleManagementService } from '../role-management/role-management.service';
@@ -215,6 +211,47 @@ describe('AuthService', () => {
       expect(mockPrismaService.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ role: 'CONTRIBUTEUR' }),
+        }),
+      );
+    });
+
+    it('should ignore role=ADMIN in body and create user as CONTRIBUTEUR (role injection prevention)', async () => {
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
+      vi.mocked(bcrypt.hash).mockResolvedValue(
+        '$2b$12$hashedpassword' as never,
+      );
+      const createdUser = {
+        id: 'new-user-id',
+        email: registerDto.email,
+        login: registerDto.login,
+        firstName: registerDto.firstName,
+        lastName: registerDto.lastName,
+        role: 'CONTRIBUTEUR',
+        departmentId: null,
+        createdAt: new Date(),
+      };
+      mockPrismaService.user.create.mockResolvedValue(createdUser);
+      mockJwtService.sign.mockReturnValue('new-user-token');
+
+      // Simulate a malicious client sending role=ADMIN as extra JSON field
+      const maliciousDto = {
+        ...registerDto,
+        role: 'ADMIN',
+      } as typeof registerDto & { role: string };
+
+      const result = await service.register(maliciousDto);
+
+      // The returned user must be CONTRIBUTEUR, never ADMIN
+      expect(result.user.role).toBe('CONTRIBUTEUR');
+      // Prisma create must have been called with role: 'CONTRIBUTEUR', NOT 'ADMIN'
+      expect(mockPrismaService.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ role: 'CONTRIBUTEUR' }),
+        }),
+      );
+      expect(mockPrismaService.user.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ role: 'ADMIN' }),
         }),
       );
     });

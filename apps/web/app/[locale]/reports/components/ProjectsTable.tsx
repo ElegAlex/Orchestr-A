@@ -1,6 +1,7 @@
 import { ProjectDetail } from "../types";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import Link from "next/link";
 
 interface ProjectsTableProps {
   projects: ProjectDetail[];
@@ -51,9 +52,12 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
             {projects.map((project) => (
               <tr key={project.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="font-semibold text-gray-900">
+                  <Link
+                    href={`/projects/${project.id}`}
+                    className="font-semibold text-gray-900 hover:underline cursor-pointer"
+                  >
                     {project.name}
-                  </div>
+                  </Link>
                   <div className="text-sm text-gray-900">{project.code}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

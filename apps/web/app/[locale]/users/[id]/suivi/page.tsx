@@ -11,7 +11,6 @@ import { teleworkService } from "@/services/telework.service";
 import { timeTrackingService } from "@/services/time-tracking.service";
 import { skillsService } from "@/services/skills.service";
 import { projectsService } from "@/services/projects.service";
-import { usePermissions } from "@/hooks/usePermissions";
 import { useAuthStore } from "@/stores/auth.store";
 import {
   User,
@@ -50,7 +49,6 @@ export default function SuiviPage() {
   const locale = useLocale();
   const t = useTranslations("suivi");
   const tCommon = useTranslations("common");
-  const { hasPermission } = usePermissions();
   const currentUser = useAuthStore((state) => state.user);
   const userId = params.id as string;
 

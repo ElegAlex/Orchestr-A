@@ -29,7 +29,10 @@ export class AuthController {
 
   @Public()
   @Post('login')
-  @Throttle({ short: { ttl: 60000, limit: 5 }, medium: { ttl: 900000, limit: 15 } })
+  @Throttle({
+    short: { ttl: 60000, limit: 5 },
+    medium: { ttl: 900000, limit: 15 },
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Connexion utilisateur' })
   @ApiResponse({
@@ -56,7 +59,10 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  @Throttle({ short: { ttl: 60000, limit: 3 }, medium: { ttl: 900000, limit: 10 } })
+  @Throttle({
+    short: { ttl: 60000, limit: 3 },
+    medium: { ttl: 900000, limit: 10 },
+  })
   @ApiOperation({ summary: "Inscription d'un nouvel utilisateur" })
   @ApiResponse({
     status: 201,
@@ -103,7 +109,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('me/permissions')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Permissions de l\'utilisateur connecté' })
+  @ApiOperation({ summary: "Permissions de l'utilisateur connecté" })
   @ApiResponse({
     status: 200,
     description: 'Liste des permissions',

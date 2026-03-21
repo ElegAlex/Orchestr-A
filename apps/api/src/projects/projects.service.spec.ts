@@ -237,6 +237,175 @@ describe('ProjectsService', () => {
         }),
       );
     });
+
+    // ------------------------------------------
+    // Visibilité par rôle RBAC
+    // ------------------------------------------
+    describe('role-based visibility', () => {
+      const projectA = { ...mockProject, id: 'project-a', tasks: [] };
+      const projectB = {
+        ...mockProject,
+        id: 'project-b',
+        name: 'Secret Project',
+        tasks: [],
+      };
+
+      it('should return ALL projects for ADMIN regardless of membership', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([
+          projectA,
+          projectB,
+        ]);
+        mockPrismaService.project.count.mockResolvedValue(2);
+
+        const result = await service.findAll(
+          1,
+          10,
+          undefined,
+          'admin-id',
+          'ADMIN',
+        );
+
+        expect(result.data).toHaveLength(2);
+        // Aucun filtre de membership appliqué — where ne doit pas contenir members
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {},
+          }),
+        );
+        expect(mockPrismaService.project.count).toHaveBeenCalledWith({
+          where: {},
+        });
+      });
+
+      it('should return ALL projects for RESPONSABLE regardless of membership', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([
+          projectA,
+          projectB,
+        ]);
+        mockPrismaService.project.count.mockResolvedValue(2);
+
+        await service.findAll(1, 10, undefined, 'resp-id', 'RESPONSABLE');
+
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {},
+          }),
+        );
+      });
+
+      it('should return ALL projects for MANAGER regardless of membership', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([
+          projectA,
+          projectB,
+        ]);
+        mockPrismaService.project.count.mockResolvedValue(2);
+
+        await service.findAll(1, 10, undefined, 'manager-id', 'MANAGER');
+
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {},
+          }),
+        );
+      });
+
+      it('should filter projects by membership for CONTRIBUTEUR', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([projectA]);
+        mockPrismaService.project.count.mockResolvedValue(1);
+
+        await service.findAll(1, 10, undefined, 'contrib-id', 'CONTRIBUTEUR');
+
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              members: { some: { userId: 'contrib-id' } },
+            },
+          }),
+        );
+      });
+
+      it('should filter projects by membership for OBSERVATEUR', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([projectA]);
+        mockPrismaService.project.count.mockResolvedValue(1);
+
+        await service.findAll(1, 10, undefined, 'obs-id', 'OBSERVATEUR');
+
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              members: { some: { userId: 'obs-id' } },
+            },
+          }),
+        );
+      });
+
+      it('should filter projects by membership for REFERENT_TECHNIQUE', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([projectA]);
+        mockPrismaService.project.count.mockResolvedValue(1);
+
+        await service.findAll(1, 10, undefined, 'ref-id', 'REFERENT_TECHNIQUE');
+
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              members: { some: { userId: 'ref-id' } },
+            },
+          }),
+        );
+      });
+
+      it('should combine status filter with full visibility for ADMIN', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([projectA]);
+        mockPrismaService.project.count.mockResolvedValue(1);
+
+        await service.findAll(1, 10, ProjectStatus.ACTIVE, 'admin-id', 'ADMIN');
+
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { status: ProjectStatus.ACTIVE },
+          }),
+        );
+      });
+
+      it('should combine status filter with membership filter for CONTRIBUTEUR', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([projectA]);
+        mockPrismaService.project.count.mockResolvedValue(1);
+
+        await service.findAll(
+          1,
+          10,
+          ProjectStatus.ACTIVE,
+          'contrib-id',
+          'CONTRIBUTEUR',
+        );
+
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              status: ProjectStatus.ACTIVE,
+              members: { some: { userId: 'contrib-id' } },
+            },
+          }),
+        );
+      });
+
+      it('should not apply membership filter when no userId is provided', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([
+          projectA,
+          projectB,
+        ]);
+        mockPrismaService.project.count.mockResolvedValue(2);
+
+        // Appel sans userId ni rôle (rétrocompatibilité)
+        await service.findAll(1, 10);
+
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {},
+          }),
+        );
+      });
+    });
   });
 
   // ============================================

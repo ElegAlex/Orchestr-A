@@ -77,7 +77,14 @@ export class EventsController {
     @Query('userId') userId?: string,
     @Query('projectId') projectId?: string,
   ) {
-    return this.eventsService.findAll(currentUserId, currentUserRole, startDate, endDate, userId, projectId);
+    return this.eventsService.findAll(
+      currentUserId,
+      currentUserRole,
+      startDate,
+      endDate,
+      userId,
+      projectId,
+    );
   }
 
   @Get('range')
@@ -112,7 +119,10 @@ export class EventsController {
     @CurrentUser('role') currentUserRole: string,
   ) {
     const MANAGEMENT_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'];
-    if (!MANAGEMENT_ROLES.includes(currentUserRole) && userId !== currentUserId) {
+    if (
+      !MANAGEMENT_ROLES.includes(currentUserRole) &&
+      userId !== currentUserId
+    ) {
       throw new ForbiddenException(
         "Vous n'avez pas la permission de consulter les événements d'autrui",
       );
@@ -183,7 +193,10 @@ export class EventsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Arrêter la récurrence d'un événement" })
   @ApiResponse({ status: 200, description: 'Récurrence arrêtée' })
-  @ApiResponse({ status: 400, description: "Pas un événement parent récurrent" })
+  @ApiResponse({
+    status: 400,
+    description: 'Pas un événement parent récurrent',
+  })
   @ApiResponse({ status: 404, description: 'Événement introuvable' })
   stopRecurrence(@Param('id', ParseUUIDPipe) id: string) {
     return this.eventsService.stopRecurrence(id);

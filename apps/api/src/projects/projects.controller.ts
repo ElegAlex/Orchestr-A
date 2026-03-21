@@ -79,8 +79,10 @@ export class ProjectsController {
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('status') status?: ProjectStatus,
+    @CurrentUser('id') userId?: string,
+    @CurrentUser('role') userRole?: string,
   ) {
-    return this.projectsService.findAll(page, limit, status);
+    return this.projectsService.findAll(page, limit, status, userId, userRole);
   }
 
   @Get('user/:userId')

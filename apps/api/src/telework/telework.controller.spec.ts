@@ -159,7 +159,15 @@ describe('TeleworkController', () => {
         meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
       });
 
-      await controller.findAll('user-id-1', 'ADMIN', 1, 10, undefined, '2025-01-01', '2025-01-31');
+      await controller.findAll(
+        'user-id-1',
+        'ADMIN',
+        1,
+        10,
+        undefined,
+        '2025-01-01',
+        '2025-01-31',
+      );
 
       expect(mockTeleworkService.findAll).toHaveBeenCalledWith(
         'user-id-1',
@@ -177,10 +185,18 @@ describe('TeleworkController', () => {
     it('should return a telework entry by id', async () => {
       mockTeleworkService.findOne.mockResolvedValue(mockTelework);
 
-      const result = await controller.findOne('telework-id-1', 'user-id-1', 'ADMIN');
+      const result = await controller.findOne(
+        'telework-id-1',
+        'user-id-1',
+        'ADMIN',
+      );
 
       expect(result).toEqual(mockTelework);
-      expect(mockTeleworkService.findOne).toHaveBeenCalledWith('telework-id-1', 'user-id-1', 'ADMIN');
+      expect(mockTeleworkService.findOne).toHaveBeenCalledWith(
+        'telework-id-1',
+        'user-id-1',
+        'ADMIN',
+      );
     });
 
     it('should throw NotFoundException when telework not found', async () => {
@@ -188,9 +204,9 @@ describe('TeleworkController', () => {
         new NotFoundException('Télétravail introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent', 'user-id-1', 'ADMIN')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.findOne('nonexistent', 'user-id-1', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -378,7 +394,12 @@ describe('TeleworkController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', 'user-id-1', 'CONTRIBUTEUR', updateTeleworkDto),
+        controller.update(
+          'nonexistent',
+          'user-id-1',
+          'CONTRIBUTEUR',
+          updateTeleworkDto,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -388,7 +409,9 @@ describe('TeleworkController', () => {
       );
 
       await expect(
-        controller.update('telework-id-1', 'user-id-1', 'CONTRIBUTEUR', { date: '2025-01-20' }),
+        controller.update('telework-id-1', 'user-id-1', 'CONTRIBUTEUR', {
+          date: '2025-01-20',
+        }),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -399,7 +422,11 @@ describe('TeleworkController', () => {
         message: 'Télétravail supprimé',
       });
 
-      const result = await controller.remove('telework-id-1', 'user-id-1', 'CONTRIBUTEUR');
+      const result = await controller.remove(
+        'telework-id-1',
+        'user-id-1',
+        'CONTRIBUTEUR',
+      );
 
       expect(result.message).toBe('Télétravail supprimé');
       expect(mockTeleworkService.remove).toHaveBeenCalledWith(

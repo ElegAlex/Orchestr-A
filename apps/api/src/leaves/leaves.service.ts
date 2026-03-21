@@ -13,7 +13,11 @@ import { AuditService, AuditAction } from '../audit/audit.service';
 
 @Injectable()
 export class LeavesService {
-  private readonly MANAGEMENT_ROLES: string[] = [Role.ADMIN, Role.RESPONSABLE, Role.MANAGER];
+  private readonly MANAGEMENT_ROLES: string[] = [
+    Role.ADMIN,
+    Role.RESPONSABLE,
+    Role.MANAGER,
+  ];
 
   private isManagementRole(role: string): boolean {
     return this.MANAGEMENT_ROLES.includes(role);
@@ -377,6 +381,7 @@ export class LeavesService {
               },
             },
           },
+          leaveType: true,
           validator: {
             select: {
               id: true,
@@ -447,6 +452,7 @@ export class LeavesService {
               },
             },
           },
+          leaveType: true,
           validator: {
             select: {
               id: true,
@@ -488,6 +494,7 @@ export class LeavesService {
             email: true,
           },
         },
+        leaveType: true,
         validator: {
           select: {
             id: true,
@@ -543,6 +550,7 @@ export class LeavesService {
             },
           },
         },
+        leaveType: true,
         validator: {
           select: {
             id: true,
@@ -567,8 +575,14 @@ export class LeavesService {
     }
 
     // Ownership check: non-management roles can only view their own leaves
-    if (currentUserRole && !this.isManagementRole(currentUserRole) && leave.userId !== currentUserId) {
-      throw new ForbiddenException('Accès non autorisé à cette demande de congé');
+    if (
+      currentUserRole &&
+      !this.isManagementRole(currentUserRole) &&
+      leave.userId !== currentUserId
+    ) {
+      throw new ForbiddenException(
+        'Accès non autorisé à cette demande de congé',
+      );
     }
 
     return leave;
@@ -577,7 +591,12 @@ export class LeavesService {
   /**
    * Mettre à jour une demande de congé
    */
-  async update(id: string, updateLeaveDto: UpdateLeaveDto, currentUserId?: string, currentUserRole?: string) {
+  async update(
+    id: string,
+    updateLeaveDto: UpdateLeaveDto,
+    currentUserId?: string,
+    currentUserRole?: string,
+  ) {
     const existingLeave = await this.prisma.leave.findUnique({
       where: { id },
     });
@@ -587,8 +606,14 @@ export class LeavesService {
     }
 
     // Ownership check: non-management roles can only update their own leaves
-    if (currentUserRole && !this.isManagementRole(currentUserRole) && existingLeave.userId !== currentUserId) {
-      throw new ForbiddenException('Vous ne pouvez modifier que vos propres demandes de congé');
+    if (
+      currentUserRole &&
+      !this.isManagementRole(currentUserRole) &&
+      existingLeave.userId !== currentUserId
+    ) {
+      throw new ForbiddenException(
+        'Vous ne pouvez modifier que vos propres demandes de congé',
+      );
     }
 
     // Seules les demandes en attente peuvent être modifiées
@@ -677,6 +702,7 @@ export class LeavesService {
             email: true,
           },
         },
+        leaveType: true,
         validator: {
           select: {
             id: true,
@@ -703,8 +729,14 @@ export class LeavesService {
     }
 
     // Ownership check: non-management roles can only delete their own leaves
-    if (currentUserRole && !this.isManagementRole(currentUserRole) && leave.userId !== currentUserId) {
-      throw new ForbiddenException('Vous ne pouvez supprimer que vos propres demandes de congé');
+    if (
+      currentUserRole &&
+      !this.isManagementRole(currentUserRole) &&
+      leave.userId !== currentUserId
+    ) {
+      throw new ForbiddenException(
+        'Vous ne pouvez supprimer que vos propres demandes de congé',
+      );
     }
 
     // Seules les demandes en attente ou refusées peuvent être supprimées
@@ -836,6 +868,7 @@ export class LeavesService {
             email: true,
           },
         },
+        leaveType: true,
         validatedBy: {
           select: {
             id: true,
@@ -900,6 +933,7 @@ export class LeavesService {
             email: true,
           },
         },
+        leaveType: true,
         validatedBy: {
           select: {
             id: true,
@@ -951,6 +985,7 @@ export class LeavesService {
             email: true,
           },
         },
+        leaveType: true,
       },
     });
 

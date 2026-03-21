@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
@@ -97,7 +96,14 @@ describe('EventsController', () => {
       const result = await controller.findAll('user-1', 'ADMIN');
 
       expect(result).toEqual(events);
-      expect(service.findAll).toHaveBeenCalledWith('user-1', 'ADMIN', undefined, undefined, undefined, undefined);
+      expect(service.findAll).toHaveBeenCalledWith(
+        'user-1',
+        'ADMIN',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      );
     });
 
     it('should return events with filters', async () => {
@@ -170,7 +176,11 @@ describe('EventsController', () => {
       const events = [mockEvent];
       mockEventsService.getEventsByUser.mockResolvedValue(events);
 
-      const result = await controller.getEventsByUser('user-1', 'user-1', 'ADMIN');
+      const result = await controller.getEventsByUser(
+        'user-1',
+        'user-1',
+        'ADMIN',
+      );
 
       expect(result).toEqual(events);
       expect(service.getEventsByUser).toHaveBeenCalledWith('user-1');

@@ -35,7 +35,7 @@ export class ImportUserDto {
   })
   @IsString()
   @MinLength(8)
-  @Matches(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?])/, {
+  @Matches(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{}|;:,.<>?])/, {
     message:
       'Le mot de passe doit contenir au moins une majuscule, un chiffre et un caractère spécial',
   })

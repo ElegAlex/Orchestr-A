@@ -38,10 +38,7 @@ export class PlanningExportService {
     const events = await this.prisma.event.findMany({
       where: {
         ...(start || end ? { date: dateFilter } : {}),
-        OR: [
-          { createdById: userId },
-          { participants: { some: { userId } } },
-        ],
+        OR: [{ createdById: userId }, { participants: { some: { userId } } }],
       },
     });
 
@@ -54,12 +51,12 @@ export class PlanningExportService {
         startDt = eventDate;
         endDt = eventDate;
       } else {
-        const [sh, sm] = (event.startTime as string).split(':').map(Number);
+        const [sh, sm] = event.startTime.split(':').map(Number);
         startDt = new Date(eventDate);
         startDt.setHours(sh, sm, 0, 0);
 
         if (event.endTime) {
-          const [eh, em] = (event.endTime as string).split(':').map(Number);
+          const [eh, em] = event.endTime.split(':').map(Number);
           endDt = new Date(eventDate);
           endDt.setHours(eh, em, 0, 0);
         } else {
@@ -129,7 +126,7 @@ export class PlanningExportService {
       const component = parsed[key];
       if (!component || component.type !== 'VEVENT') continue;
 
-      const vevent = component as nodeIcal.VEvent;
+      const vevent = component;
       const start = vevent.start;
       const end = vevent.end;
 
@@ -172,7 +169,7 @@ export class PlanningExportService {
       const component = parsed[key];
       if (!component || component.type !== 'VEVENT') continue;
 
-      const vevent = component as nodeIcal.VEvent;
+      const vevent = component;
       const start = vevent.start;
       if (!start) {
         skipped++;

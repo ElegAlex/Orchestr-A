@@ -162,7 +162,7 @@ export class EventsService {
             select: { id: true },
           });
           const participantData = childEvents.flatMap((child) =>
-            participantIds!.map((userId) => ({ eventId: child.id, userId })),
+            participantIds.map((userId) => ({ eventId: child.id, userId })),
           );
           if (participantData.length > 0) {
             await this.prisma.eventParticipant.createMany({

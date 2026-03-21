@@ -258,7 +258,12 @@ export class LeavesController {
     @CurrentUser('id') currentUserId: string,
     @CurrentUser('role') currentUserRole: string,
   ) {
-    return this.leavesService.update(id, updateLeaveDto, currentUserId, currentUserRole);
+    return this.leavesService.update(
+      id,
+      updateLeaveDto,
+      currentUserId,
+      currentUserRole,
+    );
   }
 
   @Delete(':id')

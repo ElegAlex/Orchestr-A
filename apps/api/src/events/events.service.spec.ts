@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventsService } from './events.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -145,7 +144,12 @@ describe('EventsService', () => {
       const events = [mockEvent];
       mockPrismaService.event.findMany.mockResolvedValue(events);
 
-      const result = await service.findAll('user-1', 'ADMIN', '2025-11-01', '2025-11-30');
+      const result = await service.findAll(
+        'user-1',
+        'ADMIN',
+        '2025-11-01',
+        '2025-11-30',
+      );
 
       expect(result).toEqual(events);
       expect(prisma.event.findMany).toHaveBeenCalledWith(
@@ -164,7 +168,13 @@ describe('EventsService', () => {
       const events = [mockEvent];
       mockPrismaService.event.findMany.mockResolvedValue(events);
 
-      const result = await service.findAll('user-1', 'ADMIN', undefined, undefined, 'user-1');
+      const result = await service.findAll(
+        'user-1',
+        'ADMIN',
+        undefined,
+        undefined,
+        'user-1',
+      );
 
       expect(result).toEqual(events);
       expect(prisma.event.findMany).toHaveBeenCalledWith(
@@ -197,9 +207,9 @@ describe('EventsService', () => {
     it('should throw NotFoundException if event not found', async () => {
       mockPrismaService.event.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('invalid-id', 'user-1', 'ADMIN')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findOne('invalid-id', 'user-1', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

@@ -144,6 +144,8 @@ describe('ProjectsController', () => {
         1,
         10,
         undefined,
+        undefined,
+        undefined,
       );
     });
 
@@ -159,7 +161,13 @@ describe('ProjectsController', () => {
       const result = await controller.findAll(1, 10, ProjectStatus.ACTIVE);
 
       expect(result.data[0].status).toBe('ACTIVE');
-      expect(mockProjectsService.findAll).toHaveBeenCalledWith(1, 10, 'ACTIVE');
+      expect(mockProjectsService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        'ACTIVE',
+        undefined,
+        undefined,
+      );
     });
 
     it('should handle empty results', async () => {

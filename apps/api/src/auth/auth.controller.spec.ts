@@ -237,31 +237,50 @@ describe('AuthController', () => {
       const permissions = ['projects:create', 'projects:read', 'tasks:create'];
       mockAuthService.getPermissionsForUser.mockResolvedValue(permissions);
 
-      const result = await controller.getMyPermissions(mockUser as unknown as User);
+      const result = await controller.getMyPermissions(
+        mockUser as unknown as User,
+      );
 
       expect(result).toEqual({ permissions });
-      expect(mockAuthService.getPermissionsForUser).toHaveBeenCalledWith('CONTRIBUTEUR');
+      expect(mockAuthService.getPermissionsForUser).toHaveBeenCalledWith(
+        'CONTRIBUTEUR',
+      );
     });
 
     it('should return all permissions for ADMIN role', async () => {
       const adminUser = { ...mockUser, role: 'ADMIN' };
       const allPermissions = [
-        'projects:create', 'projects:read', 'projects:update', 'projects:delete',
-        'tasks:create', 'tasks:read', 'tasks:update', 'tasks:delete',
-        'users:create', 'users:read', 'users:update', 'users:delete',
+        'projects:create',
+        'projects:read',
+        'projects:update',
+        'projects:delete',
+        'tasks:create',
+        'tasks:read',
+        'tasks:update',
+        'tasks:delete',
+        'users:create',
+        'users:read',
+        'users:update',
+        'users:delete',
       ];
       mockAuthService.getPermissionsForUser.mockResolvedValue(allPermissions);
 
-      const result = await controller.getMyPermissions(adminUser as unknown as User);
+      const result = await controller.getMyPermissions(
+        adminUser as unknown as User,
+      );
 
       expect(result).toEqual({ permissions: allPermissions });
-      expect(mockAuthService.getPermissionsForUser).toHaveBeenCalledWith('ADMIN');
+      expect(mockAuthService.getPermissionsForUser).toHaveBeenCalledWith(
+        'ADMIN',
+      );
     });
 
     it('should return empty array for role with no permissions', async () => {
       mockAuthService.getPermissionsForUser.mockResolvedValue([]);
 
-      const result = await controller.getMyPermissions(mockUser as unknown as User);
+      const result = await controller.getMyPermissions(
+        mockUser as unknown as User,
+      );
 
       expect(result).toEqual({ permissions: [] });
     });

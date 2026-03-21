@@ -51,7 +51,9 @@ describe('PlanningExportService', () => {
   });
 
   it('previewImport returns empty array for ICS with no VEVENTs', async () => {
-    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'END:VCALENDAR'].join('\r\n');
+    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'END:VCALENDAR'].join(
+      '\r\n',
+    );
     const result = await service.previewImport(ics);
     expect(result).toHaveLength(0);
   });

@@ -34,7 +34,7 @@ async function bootstrap() {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "blob:"],
+        imgSrc: ["'self'", 'data:', 'blob:'],
         scriptSrc: ["'self'"],
       },
     },
@@ -42,8 +42,11 @@ async function bootstrap() {
 
   // CORS
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') ||
-      (process.env.NODE_ENV === 'production' ? false : ['http://localhost:4001', 'http://localhost:3000']),
+    origin:
+      process.env.ALLOWED_ORIGINS?.split(',') ||
+      (process.env.NODE_ENV === 'production'
+        ? false
+        : ['http://localhost:4001', 'http://localhost:3000']),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

@@ -155,7 +155,14 @@ describe('LeavesController', () => {
 
       mockLeavesService.findAll.mockResolvedValue(pendingLeaves);
 
-      const result = await controller.findAll('admin-user-id', 'ADMIN', 1, 10, undefined, 'PENDING');
+      const result = await controller.findAll(
+        'admin-user-id',
+        'ADMIN',
+        1,
+        10,
+        undefined,
+        'PENDING',
+      );
 
       expect((result.data as (typeof mockLeave)[])[0].status).toBe('PENDING');
       expect(mockLeavesService.findAll).toHaveBeenCalledWith(
@@ -230,10 +237,18 @@ describe('LeavesController', () => {
     it('should return a leave request by id', async () => {
       mockLeavesService.findOne.mockResolvedValue(mockLeave);
 
-      const result = await controller.findOne('leave-id-1', 'admin-user-id', 'ADMIN');
+      const result = await controller.findOne(
+        'leave-id-1',
+        'admin-user-id',
+        'ADMIN',
+      );
 
       expect(result).toEqual(mockLeave);
-      expect(mockLeavesService.findOne).toHaveBeenCalledWith('leave-id-1', 'admin-user-id', 'ADMIN');
+      expect(mockLeavesService.findOne).toHaveBeenCalledWith(
+        'leave-id-1',
+        'admin-user-id',
+        'ADMIN',
+      );
     });
 
     it('should throw NotFoundException when leave not found', async () => {
@@ -241,9 +256,9 @@ describe('LeavesController', () => {
         new NotFoundException('Demande de congé introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent', 'admin-user-id', 'ADMIN')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.findOne('nonexistent', 'admin-user-id', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -323,7 +338,12 @@ describe('LeavesController', () => {
       const updatedLeave = { ...mockLeave, comment: 'Updated comment' };
       mockLeavesService.update.mockResolvedValue(updatedLeave);
 
-      const result = await controller.update('leave-id-1', updateLeaveDto, 'admin-user-id', 'ADMIN');
+      const result = await controller.update(
+        'leave-id-1',
+        updateLeaveDto,
+        'admin-user-id',
+        'ADMIN',
+      );
 
       expect(result.comment).toBe('Updated comment');
       expect(mockLeavesService.update).toHaveBeenCalledWith(
@@ -342,7 +362,12 @@ describe('LeavesController', () => {
       );
 
       await expect(
-        controller.update('leave-id-1', updateLeaveDto, 'admin-user-id', 'ADMIN'),
+        controller.update(
+          'leave-id-1',
+          updateLeaveDto,
+          'admin-user-id',
+          'ADMIN',
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -352,7 +377,12 @@ describe('LeavesController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', updateLeaveDto, 'admin-user-id', 'ADMIN'),
+        controller.update(
+          'nonexistent',
+          updateLeaveDto,
+          'admin-user-id',
+          'ADMIN',
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -363,10 +393,18 @@ describe('LeavesController', () => {
         message: 'Demande supprimée',
       });
 
-      const result = await controller.remove('leave-id-1', 'admin-user-id', 'ADMIN');
+      const result = await controller.remove(
+        'leave-id-1',
+        'admin-user-id',
+        'ADMIN',
+      );
 
       expect(result.message).toBe('Demande supprimée');
-      expect(mockLeavesService.remove).toHaveBeenCalledWith('leave-id-1', 'admin-user-id', 'ADMIN');
+      expect(mockLeavesService.remove).toHaveBeenCalledWith(
+        'leave-id-1',
+        'admin-user-id',
+        'ADMIN',
+      );
     });
 
     it('should throw BadRequestException when leave cannot be deleted', async () => {
@@ -374,9 +412,9 @@ describe('LeavesController', () => {
         new BadRequestException('Impossible de supprimer cette demande'),
       );
 
-      await expect(controller.remove('leave-id-1', 'admin-user-id', 'ADMIN')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        controller.remove('leave-id-1', 'admin-user-id', 'ADMIN'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -309,25 +309,15 @@ export function ImportPreviewModal({
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
           <div className="text-sm text-gray-600">
             {canImport ? (
-              <span
-                dangerouslySetInnerHTML={{
-                  __html:
-                    t("footer.willImport", { count: importCount }) +
-                    (summary.duplicates > 0
-                      ? " " +
-                        t("footer.duplicatesIgnored", {
-                          count: summary.duplicates,
-                        })
-                      : "") +
-                    (summary.errors > 0
-                      ? ' <span class="text-red-600">' +
-                        t("footer.errorsNotImported", {
-                          count: summary.errors,
-                        }) +
-                        "</span>"
-                      : ""),
-                }}
-              />
+              <span>
+                {t("footer.willImport", { count: importCount })}
+                {summary.duplicates > 0 && (
+                  <>{" "}{t("footer.duplicatesIgnored", { count: summary.duplicates })}</>
+                )}
+                {summary.errors > 0 && (
+                  <>{" "}<span className="text-red-600">{t("footer.errorsNotImported", { count: summary.errors })}</span></>
+                )}
+              </span>
             ) : (
               <span className="text-red-600">{t("footer.noValidItems")}</span>
             )}

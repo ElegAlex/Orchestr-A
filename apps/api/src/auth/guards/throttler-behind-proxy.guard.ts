@@ -6,7 +6,7 @@ export class ThrottlerBehindProxyGuard extends ThrottlerGuard {
   protected getTracker(req: Record<string, any>): Promise<string> {
     // Fastify: use x-forwarded-for if behind proxy, otherwise use IP
     return Promise.resolve(
-      req.ips?.length ? req.ips[0] : req.ip ?? 'unknown',
+      req.ips?.length ? req.ips[0] : (req.ip ?? 'unknown'),
     );
   }
 

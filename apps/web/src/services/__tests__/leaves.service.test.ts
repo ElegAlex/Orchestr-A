@@ -162,7 +162,7 @@ describe("leavesService", () => {
       );
 
       expect(api.get).toHaveBeenCalledWith(
-        "/leaves?startDate=2025-01-01&endDate=2025-12-31",
+        "/leaves?startDate=2025-01-01&endDate=2025-12-31&limit=1000",
       );
       expect(result).toEqual(mockLeaves);
     });

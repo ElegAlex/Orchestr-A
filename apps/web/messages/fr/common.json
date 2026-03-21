@@ -198,7 +198,7 @@
       "noItems": "Aucun element dans cette categorie"
     },
     "footer": {
-      "willImport": "<strong>{count}</strong> element(s) seront importes",
+      "willImport": "{count} element(s) seront importes",
       "duplicatesIgnored": "({count} doublon(s) ignores)",
       "errorsNotImported": "({count} erreur(s) non importees)",
       "noValidItems": "Aucun element valide a importer",

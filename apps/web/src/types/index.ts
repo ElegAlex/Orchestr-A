@@ -466,9 +466,27 @@ export interface CreateTimeEntryDto {
 // HR - LEAVES
 // ===========================
 
+export interface LeaveTypeConfig {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  color: string;
+  icon: string;
+  isPaid: boolean;
+  requiresApproval: boolean;
+  maxDaysPerYear?: number | null;
+  isActive: boolean;
+  isSystem: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Leave {
   id: string;
   userId: string;
+  leaveTypeId?: string;
   type: LeaveType;
   startDate: string;
   endDate: string;
@@ -488,6 +506,7 @@ export interface Leave {
 
   // Relations
   user?: User;
+  leaveType?: LeaveTypeConfig;
   validator?: {
     id: string;
     firstName: string;

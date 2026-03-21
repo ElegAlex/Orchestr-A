@@ -201,16 +201,15 @@ export class TeleworkService {
       throw new NotFoundException('Télétravail introuvable');
     }
 
-    // IDOR protection: non-management roles can only see their own telework
-    if (
-      currentUserId &&
-      currentUserRole &&
-      !this.isManagementRole(currentUserRole) &&
-      telework.userId !== currentUserId
-    ) {
-      throw new ForbiddenException(
-        "Vous n'avez pas la permission de consulter le télétravail d'autrui",
-      );
+    // IDOR protection: check telework:manage_others permission to view others' telework
+    if (currentUserId && currentUserRole && telework.userId !== currentUserId) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('telework:manage_others')) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission de consulter le télétravail d'autrui",
+        );
+      }
     }
 
     return telework;

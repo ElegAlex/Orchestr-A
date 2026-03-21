@@ -66,6 +66,9 @@ describe('LeavesService', () => {
     id: 'leave-type-1',
     name: 'Congés payés',
     code: 'CP',
+    color: '#10B981',
+    icon: '🌴',
+    isPaid: true,
     isActive: true,
     requiresApproval: true,
     maxDaysPerYear: null,
@@ -381,7 +384,17 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findMany.mockResolvedValue(mockLeaves);
       mockPrismaService.leave.count.mockResolvedValue(1);
 
-      const result = await service.findAll(1, 10, undefined, undefined, undefined, undefined, undefined, 'admin-user-id', 'ADMIN');
+      const result = await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'admin-user-id',
+        'ADMIN',
+      );
 
       expect(result).toHaveProperty('data');
       expect(result).toHaveProperty('meta');
@@ -393,7 +406,17 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
       mockPrismaService.leave.count.mockResolvedValue(1);
 
-      await service.findAll(1, 10, 'user-1', undefined, undefined, undefined, undefined, 'admin-user-id', 'ADMIN');
+      await service.findAll(
+        1,
+        10,
+        'user-1',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'admin-user-id',
+        'ADMIN',
+      );
 
       expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -406,7 +429,17 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findMany.mockResolvedValue([]);
       mockPrismaService.leave.count.mockResolvedValue(0);
 
-      await service.findAll(1, 10, undefined, LeaveStatus.PENDING, undefined, undefined, undefined, 'admin-user-id', 'ADMIN');
+      await service.findAll(
+        1,
+        10,
+        undefined,
+        LeaveStatus.PENDING,
+        undefined,
+        undefined,
+        undefined,
+        'admin-user-id',
+        'ADMIN',
+      );
 
       expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -421,7 +454,17 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findMany.mockResolvedValue([]);
       mockPrismaService.leave.count.mockResolvedValue(0);
 
-      await service.findAll(1, 10, undefined, undefined, LeaveType.CP, undefined, undefined, 'admin-user-id', 'ADMIN');
+      await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        LeaveType.CP,
+        undefined,
+        undefined,
+        'admin-user-id',
+        'ADMIN',
+      );
 
       expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -486,6 +529,35 @@ describe('LeavesService', () => {
       );
 
       expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should return leaveType with name, color and icon in each leave', async () => {
+      const leaveWithType = {
+        ...mockLeave,
+        leaveType: mockLeaveTypeConfig,
+      };
+      mockPrismaService.leave.findMany.mockResolvedValue([leaveWithType]);
+      mockPrismaService.leave.count.mockResolvedValue(1);
+
+      const result = await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'admin-user-id',
+        'ADMIN',
+      );
+
+      expect(result).toHaveProperty('data');
+      const leaves = (result as { data: (typeof leaveWithType)[] }).data;
+      expect(leaves).toHaveLength(1);
+      expect(leaves[0].leaveType).toBeDefined();
+      expect(leaves[0].leaveType.name).toBe('Congés payés');
+      expect(leaves[0].leaveType.color).toBe('#10B981');
+      expect(leaves[0].leaveType.icon).toBe('🌴');
     });
   });
 
@@ -648,9 +720,9 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when leave not found', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('nonexistent', 'admin-user-id', 'ADMIN')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findOne('nonexistent', 'admin-user-id', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -672,7 +744,12 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap
       mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
 
-      const result = await service.update('leave-1', updateDto, 'admin-user-id', 'ADMIN');
+      const result = await service.update(
+        'leave-1',
+        updateDto,
+        'admin-user-id',
+        'ADMIN',
+      );
 
       expect(result.comment).toBe('Updated reason');
     });
@@ -680,18 +757,18 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when leave not found', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('nonexistent', updateDto, 'admin-user-id', 'ADMIN')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update('nonexistent', updateDto, 'admin-user-id', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when leave is not pending', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
 
-      await expect(service.update('leave-1', updateDto, 'admin-user-id', 'ADMIN')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.update('leave-1', updateDto, 'admin-user-id', 'ADMIN'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when end date is before start date', async () => {
@@ -700,9 +777,9 @@ describe('LeavesService', () => {
 
       const invalidDto = { startDate: '2025-06-10', endDate: '2025-06-05' };
 
-      await expect(service.update('leave-1', invalidDto, 'admin-user-id', 'ADMIN')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.update('leave-1', invalidDto, 'admin-user-id', 'ADMIN'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ConflictException when update causes overlap', async () => {
@@ -714,9 +791,9 @@ describe('LeavesService', () => {
 
       const dateDto = { startDate: '2025-06-10', endDate: '2025-06-15' };
 
-      await expect(service.update('leave-1', dateDto, 'admin-user-id', 'ADMIN')).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.update('leave-1', dateDto, 'admin-user-id', 'ADMIN'),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw BadRequestException when CP balance is insufficient for additional days', async () => {
@@ -734,9 +811,9 @@ describe('LeavesService', () => {
 
       const dateDto = { startDate: '2025-06-02', endDate: '2025-06-20' }; // More days requested
 
-      await expect(service.update('leave-1', dateDto, 'admin-user-id', 'ADMIN')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.update('leave-1', dateDto, 'admin-user-id', 'ADMIN'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should update dates successfully', async () => {
@@ -751,10 +828,15 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap
       mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
 
-      const result = await service.update('leave-1', {
-        startDate: '2025-06-09',
-        endDate: '2025-06-13',
-      }, 'admin-user-id', 'ADMIN');
+      const result = await service.update(
+        'leave-1',
+        {
+          startDate: '2025-06-09',
+          endDate: '2025-06-13',
+        },
+        'admin-user-id',
+        'ADMIN',
+      );
 
       expect(result).toBeDefined();
     });
@@ -787,18 +869,18 @@ describe('LeavesService', () => {
     it('should throw NotFoundException when leave not found', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('nonexistent', 'admin-user-id', 'ADMIN')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.remove('nonexistent', 'admin-user-id', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when leave is approved', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
 
-      await expect(service.remove('leave-1', 'admin-user-id', 'ADMIN')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.remove('leave-1', 'admin-user-id', 'ADMIN'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

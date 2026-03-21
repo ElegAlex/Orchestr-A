@@ -87,8 +87,10 @@ export const leavesService = {
   },
 
   async getByDateRange(startDate: string, endDate: string): Promise<Leave[]> {
+    // Passer limit=1000 pour éviter la troncature par la pagination par défaut (10).
+    // L'API retourne un tableau brut (non paginé) quand startDate ou endDate est fourni.
     const response = await api.get<Leave[]>(
-      `/leaves?startDate=${startDate}&endDate=${endDate}`,
+      `/leaves?startDate=${startDate}&endDate=${endDate}&limit=1000`,
     );
     return response.data;
   },

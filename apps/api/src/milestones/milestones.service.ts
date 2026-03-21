@@ -61,7 +61,12 @@ export class MilestonesService {
 
     return {
       data,
-      meta: { total, page, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) },
+      meta: {
+        total,
+        page,
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
+      },
     };
   }
 

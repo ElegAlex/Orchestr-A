@@ -42,6 +42,12 @@ export const DayCell = ({
   const leave = cell.leaves[0];
   const isPending = leave?.status === "PENDING";
 
+  // Résoudre l'icône et la couleur depuis le leaveType config (custom ou défaut)
+  const leaveIcon = leave?.leaveType?.icon ?? "🌴";
+  const leaveColor = leave?.leaveType?.color ?? "#10B981";
+  const leaveName =
+    leave?.leaveType?.name ?? t(`leaveTypes.${leave?.type ?? "OTHER"}`);
+
   // Déterminer le background
   let bgClass = "";
   if (cell.isHoliday) {
@@ -79,30 +85,41 @@ export const DayCell = ({
       {/* Leave Overlay - couvre toute la cellule */}
       {hasLeave && (
         <div
-          className={`absolute inset-0 flex flex-col items-center justify-center z-10 ${
-            isPending
-              ? "bg-green-100/70 border-2 border-dashed border-green-300"
-              : "bg-green-200/90 border-2 border-green-400"
-          }`}
-          title={`${t(`leaveTypes.${leave.type}`)}${isPending ? ` (${t("dayCell.pendingValidation")})` : ` (${t("dayCell.validated")})`}`}
+          className="absolute inset-0 flex flex-col items-center justify-center z-10 border-2"
+          style={{
+            backgroundColor: isPending
+              ? `${leaveColor}26`
+              : `${leaveColor}4D`,
+            borderColor: leaveColor,
+            borderStyle: isPending ? "dashed" : "solid",
+          }}
+          title={`${leaveName}${isPending ? ` (${t("dayCell.pendingValidation")})` : ` (${t("dayCell.validated")})`}`}
         >
           <span className={`${viewMode === "month" ? "text-lg" : "text-2xl"}`}>
-            🌴
+            {leaveIcon}
           </span>
           {viewMode === "week" && (
             <>
-              <span className="font-medium text-green-800 text-xs">
-                {t(`leaveTypes.${leave.type}`)}
+              <span
+                className="font-medium text-xs"
+                style={{ color: leaveColor }}
+              >
+                {leaveName}
               </span>
               {isPending && (
-                <span className="text-[10px] text-green-600 italic">
+                <span
+                  className="text-[10px] italic"
+                  style={{ color: leaveColor }}
+                >
                   {t("dayCell.pending")}
                 </span>
               )}
             </>
           )}
           {viewMode === "month" && isPending && (
-            <span className="text-[8px] text-green-600">?</span>
+            <span className="text-[8px]" style={{ color: leaveColor }}>
+              ?
+            </span>
           )}
         </div>
       )}

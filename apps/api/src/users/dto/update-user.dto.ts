@@ -15,7 +15,7 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @MinLength(8, {
     message: 'Le mot de passe doit contenir au moins 8 caractères',
   })
-  @Matches(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?])/, {
+  @Matches(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{}|;:,.<>?])/, {
     message:
       'Le mot de passe doit contenir au moins une majuscule, un chiffre et un caractère spécial',
   })
