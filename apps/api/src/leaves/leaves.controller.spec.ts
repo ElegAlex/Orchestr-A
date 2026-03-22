@@ -86,12 +86,17 @@ describe('LeavesController', () => {
     it('should create a leave request successfully', async () => {
       mockLeavesService.create.mockResolvedValue(mockLeave);
 
-      const result = await controller.create('user-id-1', createLeaveDto);
+      const result = await controller.create(
+        'user-id-1',
+        'CONTRIBUTEUR',
+        createLeaveDto,
+      );
 
       expect(result).toEqual(mockLeave);
       expect(mockLeavesService.create).toHaveBeenCalledWith(
         'user-id-1',
         createLeaveDto,
+        'CONTRIBUTEUR',
       );
       expect(mockLeavesService.create).toHaveBeenCalledTimes(1);
     });

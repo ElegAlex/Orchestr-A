@@ -30,6 +30,19 @@ describe('LeavesService', () => {
     },
     leaveTypeConfig: {
       findUnique: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    leaveBalance: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      findFirst: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
+      create: vi.fn(),
+      upsert: vi.fn(),
+      delete: vi.fn(),
+    },
+    roleConfig: {
+      findMany: vi.fn().mockResolvedValue([]),
+      findFirst: vi.fn().mockResolvedValue(null),
     },
     leaveValidationDelegate: {
       findFirst: vi.fn(),
@@ -136,7 +149,15 @@ describe('LeavesService', () => {
       mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
         mockLeaveTypeConfig,
       );
-      mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap
+      // getLeaveBalance: leaveTypeConfig.findMany returns CP type
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        mockLeaveTypeConfig,
+      ]);
+      // resolveAllocatedDays: individual balance = 25 days
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap + no approved/pending leaves
       mockPrismaService.leave.create.mockResolvedValue(mockLeave);
       mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
         null,
@@ -213,9 +234,15 @@ describe('LeavesService', () => {
       mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
         cpLeaveType,
       );
+      // getLeaveBalance: returns CP type; balance = 1 day total, 0 used, 1 available → insufficient for 5 days
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([cpLeaveType]);
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 1,
+      });
       mockPrismaService.leave.findMany
         .mockResolvedValueOnce([]) // No overlap
-        .mockResolvedValueOnce([{ days: 24 }]); // 24 days already used, only 1 available
+        .mockResolvedValueOnce([]) // Approved leaves (0 used)
+        .mockResolvedValueOnce([]); // Pending leaves
 
       await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(
         BadRequestException,
@@ -232,6 +259,8 @@ describe('LeavesService', () => {
       mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
         limitedLeaveType,
       );
+      // Reset any leftover queue from previous tests, then set up fresh mocks
+      mockPrismaService.leave.findMany.mockReset();
       mockPrismaService.leave.findMany
         .mockResolvedValueOnce([]) // No overlap
         .mockResolvedValueOnce([{ days: 8 }]); // 8 days already used, requesting 5, limit is 10
@@ -244,6 +273,7 @@ describe('LeavesService', () => {
     it('should create leave without approval when not required', async () => {
       const noApprovalLeaveType = {
         ...mockLeaveTypeConfig,
+        code: 'CP',
         requiresApproval: false,
       };
       const autoApprovedLeave = {
@@ -256,7 +286,14 @@ describe('LeavesService', () => {
       mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
         noApprovalLeaveType,
       );
-      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      // getLeaveBalance: 25 days allocated, none used
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        noApprovalLeaveType,
+      ]);
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap, no approved/pending leaves
       mockPrismaService.leave.create.mockResolvedValue(autoApprovedLeave);
 
       const result = await service.create('user-1', createLeaveDto);
@@ -281,7 +318,14 @@ describe('LeavesService', () => {
       mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
         mockLeaveTypeConfig,
       );
-      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      // getLeaveBalance: 25 days allocated, none used
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        mockLeaveTypeConfig,
+      ]);
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap, no approved/pending leaves
       mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
         activeDelegate,
       );
@@ -312,7 +356,14 @@ describe('LeavesService', () => {
       mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
         mockLeaveTypeConfig,
       );
-      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      // getLeaveBalance: 25 days allocated, none used
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        mockLeaveTypeConfig,
+      ]);
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap, no approved/pending leaves
       mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
         null,
       );
@@ -339,7 +390,14 @@ describe('LeavesService', () => {
       mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
         mockLeaveTypeConfig,
       );
-      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      // getLeaveBalance: 25 days allocated, none used
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        mockLeaveTypeConfig,
+      ]);
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap, no approved/pending leaves
       mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
         null,
       );
@@ -803,11 +861,18 @@ describe('LeavesService', () => {
         type: LeaveType.CP,
         days: 3,
       };
+      const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
       mockPrismaService.leave.findUnique.mockResolvedValue(cpLeave);
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      // getLeaveBalance: 4 days allocated, 0 used → available=4; newDays~13, additionalDays=13-3=10 > 4 → insufficient
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([cpLeaveType]);
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 4,
+      });
       mockPrismaService.leave.findMany
         .mockResolvedValueOnce([]) // No overlap
-        .mockResolvedValueOnce([{ days: 24 }]); // Balance check - 24 used, 1 available
+        .mockResolvedValueOnce([]) // Approved leaves (0 used)
+        .mockResolvedValueOnce([]); // Pending leaves
 
       const dateDto = { startDate: '2025-06-02', endDate: '2025-06-20' }; // More days requested
 
@@ -823,9 +888,19 @@ describe('LeavesService', () => {
         startDate: new Date('2025-06-09'),
         endDate: new Date('2025-06-13'),
       };
+      const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
 
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
-      mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap
+      // getLeaveBalance (type=CP): 25 days allocated, none used → available=25 >= additionalDays=0
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([cpLeaveType]);
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany
+        .mockResolvedValueOnce([]) // No overlap
+        .mockResolvedValueOnce([]) // Approved leaves
+        .mockResolvedValueOnce([]); // Pending leaves
       mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
 
       const result = await service.update(
@@ -1417,11 +1492,18 @@ describe('LeavesService', () => {
   // ============================================
   describe('getLeaveBalance', () => {
     it('should return leave balance for user', async () => {
+      const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.leave.findMany.mockResolvedValue([
-        { days: 10 },
-        { days: 5 },
-      ]);
+      // leaveTypeConfig.findMany returns [CP type]
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([cpLeaveType]);
+      // resolveAllocatedDays: individual balance = 25 days
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      // Approved leaves: 10 + 5 = 15 days used
+      mockPrismaService.leave.findMany
+        .mockResolvedValueOnce([{ days: 10 }, { days: 5 }]) // Approved leaves
+        .mockResolvedValueOnce([]); // Pending leaves
 
       const result = await service.getLeaveBalance('user-1');
 
@@ -1440,9 +1522,16 @@ describe('LeavesService', () => {
     });
 
     it('should return 0 available when all days used', async () => {
+      const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      // leaveTypeConfig.findMany returns [CP type]
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([cpLeaveType]);
+      // resolveAllocatedDays: individual balance = 25 days
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
       mockPrismaService.leave.findMany
-        .mockResolvedValueOnce([{ days: 30 }]) // Approved leaves
+        .mockResolvedValueOnce([{ days: 30 }]) // Approved: 30 days used (exceeds total)
         .mockResolvedValueOnce([]); // Pending leaves
 
       const result = await service.getLeaveBalance('user-1');
@@ -1451,10 +1540,17 @@ describe('LeavesService', () => {
     });
 
     it('should include pending days', async () => {
+      const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      // leaveTypeConfig.findMany returns [CP type]
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([cpLeaveType]);
+      // resolveAllocatedDays: individual balance = 25 days
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
       mockPrismaService.leave.findMany
-        .mockResolvedValueOnce([{ days: 10 }]) // Approved leaves
-        .mockResolvedValueOnce([{ days: 3 }, { days: 2 }]); // Pending leaves
+        .mockResolvedValueOnce([{ days: 10 }]) // Approved leaves: 10 used
+        .mockResolvedValueOnce([{ days: 3 }, { days: 2 }]); // Pending leaves: 5 pending
 
       const result = await service.getLeaveBalance('user-1');
 

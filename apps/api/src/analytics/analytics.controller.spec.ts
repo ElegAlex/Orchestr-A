@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Reflector } from '@nestjs/core';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 import { DateRangeEnum } from './dto/analytics-query.dto';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RoleManagementService } from '../role-management/role-management.service';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('AnalyticsController', () => {
@@ -15,6 +18,10 @@ describe('AnalyticsController', () => {
     getBurndown: vi.fn(),
   };
 
+  const mockRoleManagementService = {
+    getPermissionsForRole: vi.fn().mockResolvedValue([]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AnalyticsController],
@@ -23,6 +30,12 @@ describe('AnalyticsController', () => {
           provide: AnalyticsService,
           useValue: mockAnalyticsService,
         },
+        {
+          provide: RoleManagementService,
+          useValue: mockRoleManagementService,
+        },
+        PermissionsGuard,
+        Reflector,
       ],
     }).compile();
 

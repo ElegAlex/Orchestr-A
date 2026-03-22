@@ -9,6 +9,7 @@
 **Tech Stack:** NestJS 11 + Fastify 5, Prisma 6, PostgreSQL, Redis, Next.js 16, Docker, Nginx
 
 **Prérequis:**
+
 ```bash
 # Démarrer l'environnement
 pnpm run docker:dev
@@ -56,6 +57,7 @@ ADMIN_ID=$(curl -s http://localhost:3001/api/auth/me \
 ### Task 1.1 : Élévation de rôle via PATCH /users/:id
 
 **Files:**
+
 - Test: `apps/api/src/users/__tests__/privilege-escalation.spec.ts`
 - Vulnérable: `apps/api/src/users/dto/update-user.dto.ts`
 - Vulnérable: `apps/api/src/users/users.service.ts:272-390`
@@ -110,18 +112,19 @@ Note : Le `ValidationPipe` global avec `forbidNonWhitelisted: true` devrait prot
 
 Remplir la matrice :
 
-| Payload | Rôle testeur | Résultat | Verdict |
-|---------|-------------|----------|---------|
-| `{"role":"ADMIN"}` | CONTRIBUTEUR | ? | ? |
-| `{"role":"ADMIN"}` | MANAGER | ? | ? |
-| `{"isActive":false}` | MANAGER | ? | ? |
-| `{"role":"ADMIN","isActive":false}` | ADMIN | ? | ? |
+| Payload                             | Rôle testeur | Résultat | Verdict |
+| ----------------------------------- | ------------ | -------- | ------- |
+| `{"role":"ADMIN"}`                  | CONTRIBUTEUR | ?        | ?       |
+| `{"role":"ADMIN"}`                  | MANAGER      | ?        | ?       |
+| `{"isActive":false}`                | MANAGER      | ?        | ?       |
+| `{"role":"ADMIN","isActive":false}` | ADMIN        | ?        | ?       |
 
 ---
 
 ### Task 1.2 : CRITIQUE — Création de compte ADMIN via inscription publique
 
 **Files:**
+
 - Test: `apps/api/src/auth/__tests__/register-abuse.spec.ts`
 - Vulnérable: `apps/api/src/auth/auth.controller.ts:55-68`
 - Vulnérable: `apps/api/src/auth/dto/register.dto.ts:57-61` (accepte `role?: Role` avec `@IsOptional()`)
@@ -196,6 +199,7 @@ Résultat si VULNÉRABLE : Compte créé avec rôle ADMIN
 ### Task 2.1 : IDOR sur les congés (Leaves)
 
 **Files:**
+
 - Vulnérable: `apps/api/src/leaves/leaves.controller.ts:92-107`
 - Vulnérable: `apps/api/src/leaves/leaves.service.ts`
 
@@ -216,6 +220,7 @@ Résultat si VULNÉRABLE : Liste des congés de l'admin retournée — **CRITIQU
 ### Task 2.2 : IDOR sur le télétravail
 
 **Files:**
+
 - Vulnérable: `apps/api/src/telework/telework.controller.ts:74-87`
 
 - [ ] **Step 1 : Accéder au télétravail d'un autre utilisateur**
@@ -231,6 +236,7 @@ Résultat si VULNÉRABLE : Planning télétravail d'un autre utilisateur visible
 ### Task 2.3 : IDOR sur les événements
 
 **Files:**
+
 - Vulnérable: `apps/api/src/events/events.controller.ts:71-77`
 
 - [ ] **Step 1 : Accéder aux événements d'un autre utilisateur**
@@ -246,6 +252,7 @@ Résultat si VULNÉRABLE : Agenda d'un autre utilisateur visible
 ### Task 2.4 : IDOR sur les projets et tâches
 
 **Files:**
+
 - Vulnérable: `apps/api/src/projects/projects.controller.ts:110-111`
 - Vulnérable: `apps/api/src/tasks/tasks.controller.ts`
 
@@ -287,6 +294,7 @@ Résultat si VULNÉRABLE : Commentaires visibles
 ### Task 3.1 : Brute force sur le login
 
 **Files:**
+
 - Vulnérable: `apps/api/src/auth/auth.controller.ts` (endpoint login)
 - Config manquante: Pas de `@nestjs/throttler` configuré
 
@@ -325,6 +333,7 @@ Résultat si VULNÉRABLE : Messages différents permettant de deviner les logins
 ### Task 3.2 : Force du mot de passe
 
 **Files:**
+
 - Vulnérable: `apps/api/src/auth/dto/register.dto.ts`
 
 - [ ] **Step 1 : Tester l'inscription avec mot de passe faible**
@@ -347,6 +356,7 @@ Résultat si VULNÉRABLE : Acceptation de mots de passe faibles
 ### Task 3.3 : Manipulation de JWT
 
 **Files:**
+
 - Référence: `apps/api/src/auth/strategies/jwt.strategy.ts`
 
 - [ ] **Step 1 : Tester un token avec rôle modifié**
@@ -398,6 +408,7 @@ Résultat attendu SÉCURISÉ : `401 Unauthorized` (vérifié — l'audit confirm
 ### Task 4.1 : Injection SQL via Prisma
 
 **Files:**
+
 - Référence: Tous les services utilisant PrismaService
 
 - [ ] **Step 1 : Tester les injections classiques dans les filtres**
@@ -434,6 +445,7 @@ Résultat attendu SÉCURISÉ : Rejeté par validation DTO (class-validator enum)
 ### Task 4.3 : XSS stocké via champs texte
 
 **Files:**
+
 - Référence: Endpoints de création de tâches, projets, commentaires
 
 - [ ] **Step 1 : Injecter du XSS dans les champs texte**
@@ -468,6 +480,7 @@ Note : L'audit a trouvé un `dangerouslySetInnerHTML` dans `ImportPreviewModal.t
 ### Task 5.1 : Fuite de données dans les réponses API
 
 **Files:**
+
 - Référence: Tous les controllers retournant des entités User
 
 - [ ] **Step 1 : Vérifier les champs retournés par /api/users**
@@ -508,6 +521,7 @@ Résultat si VULNÉRABLE : Stack traces NestJS, noms de tables Prisma, chemins s
 ### Task 5.2 : Swagger exposé en production
 
 **Files:**
+
 - Référence: `apps/api/src/main.ts` (config Swagger)
 
 - [ ] **Step 1 : Vérifier la condition d'activation Swagger**
@@ -527,6 +541,7 @@ Résultat si VULNÉRABLE : Swagger accessible sans condition → expose tous les
 ### Task 6.1 : Path Traversal dans deleteAvatar
 
 **Files:**
+
 - Vulnérable: `apps/api/src/users/users.service.ts:1304-1305`
 
 **Vecteur d'attaque :** `avatarUrl` est utilisé pour construire un chemin de suppression sans validation.
@@ -539,6 +554,7 @@ grep -A 10 "deleteAvatar\|unlink" apps/api/src/users/users.service.ts
 ```
 
 Vérifier que :
+
 - `relativePath` est validé (commence par `uploads/avatars/`)
 - `path.normalize()` est utilisé
 - Le résultat ne peut pas échapper au répertoire uploads
@@ -560,6 +576,7 @@ Résultat attendu SÉCURISÉ : Champ rejeté ou valeur sanitisée
 ### Task 6.2 : Upload de fichiers malveillants
 
 **Files:**
+
 - Référence: `apps/api/src/users/users.service.ts:1239-1283`
 
 - [ ] **Step 1 : Tester l'upload avec un MIME type falsifié**
@@ -601,6 +618,7 @@ curl -sI http://localhost:3001/api/health | grep -iE "x-frame|x-content|strict-t
 ```
 
 Checklist de headers attendus :
+
 - [ ] `X-Frame-Options: SAMEORIGIN` ou `DENY`
 - [ ] `X-Content-Type-Options: nosniff`
 - [ ] `Strict-Transport-Security` (en prod HTTPS)
@@ -612,6 +630,7 @@ Checklist de headers attendus :
 ### Task 7.2 : CORS permissif
 
 **Files:**
+
 - Référence: `apps/api/src/main.ts:45`
 
 - [ ] **Step 1 : Tester CORS avec une origine non autorisée**
@@ -656,6 +675,7 @@ Résultat attendu SÉCURISÉ : `404` pour tous sauf `/api/docs` (si Swagger acti
 ### Task 8.1 : Pagination non bornée
 
 **Files:**
+
 - Vulnérable: `apps/api/src/users/users.service.ts:385` (default limit=200)
 
 - [ ] **Step 1 : Tester les limites de pagination**
@@ -704,6 +724,7 @@ Si des regex custom existent, tester avec des entrées pathologiques (ex: `aaaaa
 ### Task 9.1 : Configuration Docker production
 
 **Files:**
+
 - Référence: `docker-compose.prod.yml`
 - Référence: `apps/api/Dockerfile`, `apps/web/Dockerfile`
 
@@ -721,6 +742,7 @@ grep -n "mem_limit\|cpus\|deploy" docker-compose.prod.yml
 ```
 
 Checklist :
+
 - [ ] Conteneurs exécutés en non-root
 - [ ] `cap_drop: ALL` appliqué
 - [ ] `read_only: true` si possible
@@ -749,6 +771,7 @@ cat apps/api/.dockerignore 2>/dev/null || cat .dockerignore 2>/dev/null
 ### Task 9.3 : Sécurité Nginx
 
 **Files:**
+
 - Référence: `nginx/nginx.conf`
 
 - [ ] **Step 1 : Vérifier la configuration Nginx**
@@ -758,6 +781,7 @@ grep -n "server_tokens\|add_header\|ssl_protocols\|ssl_ciphers\|limit_req" nginx
 ```
 
 Checklist :
+
 - [ ] `server_tokens off;` (masquer la version)
 - [ ] TLS 1.2+ uniquement
 - [ ] Headers de sécurité
@@ -799,6 +823,7 @@ jq '.scripts.postinstall // empty' apps/api/package.json apps/web/package.json
 ### Task 11.1 : Stockage de tokens
 
 **Files:**
+
 - Référence: `apps/web/src/lib/api.ts` ou équivalent
 
 - [ ] **Step 1 : Identifier où le JWT est stocké**
@@ -813,6 +838,7 @@ Résultat si VULNÉRABLE : `localStorage` (accessible par XSS) — **Connu et ac
 ### Task 11.2 : XSS via dangerouslySetInnerHTML
 
 **Files:**
+
 - Vulnérable: `apps/web/src/components/ImportPreviewModal.tsx:313-329`
 
 - [ ] **Step 1 : Recenser toutes les utilisations de dangerouslySetInnerHTML**
@@ -822,6 +848,7 @@ grep -rn "dangerouslySetInnerHTML\|innerHTML" apps/web/ --include="*.tsx" --incl
 ```
 
 Chaque occurrence doit être vérifiée :
+
 - La source de données est-elle contrôlée (i18n statique) ou user-input ?
 - Y a-t-il un sanitizer (DOMPurify) ?
 
@@ -867,6 +894,7 @@ Résultat si VULNÉRABLE : État incohérent
 ### Task 12.2 : Dépassement de limite Personal Todos
 
 **Files:**
+
 - Référence: Hard-coded limit de 20 items
 
 - [ ] **Step 1 : Tester le dépassement de la limite**
@@ -898,6 +926,7 @@ Résultat si VULNÉRABLE : Plus de 20 créés via race condition
 ### Task 13.1 : Modification/Suppression de congés d'un autre utilisateur
 
 **Files:**
+
 - Vulnérable: `apps/api/src/leaves/leaves.controller.ts` (update, remove)
 
 - [ ] **Step 1 : Modifier le congé d'un autre utilisateur**
@@ -957,6 +986,7 @@ curl -s -X DELETE "http://localhost:3001/api/telework/$TELEWORK_ID" \
 ### Task 14.1 : SSRF — Fetch d'URLs contrôlées par l'utilisateur
 
 **Files:**
+
 - Référence: `apps/api/src/documents/` (stockage d'URLs), `apps/api/src/users/` (avatarUrl)
 
 - [ ] **Step 1 : Identifier les endpoints qui acceptent des URLs**
@@ -1030,22 +1060,22 @@ grep -rn "audit\|AuditLog\|SecurityLog\|logger.*security" apps/api/src/ --includ
 
 ## Synthèse : Matrice de Risque
 
-| # | Vulnérabilité | Sévérité | OWASP | Probabilité exploitation | Domaine |
-|---|--------------|----------|-------|--------------------------|---------|
-| **0** | **Création compte ADMIN via register public** | **CRITIQUE** | **A01** | **Certaine** | **1.2** |
-| 1 | Élévation de rôle via UpdateUserDto (MANAGER+) | **CRITIQUE** | A01 | Haute | 1.1 |
-| 2 | IDOR Congés/Télétravail/Events (lecture) | **CRITIQUE** | A01 | Haute | 2.1-2.3 |
-| 3 | Absence de rate limiting | **CRITIQUE** | A07 | Haute | 3.1 |
-| 4 | IDOR Projets/Tâches/Commentaires (lecture) | **HAUTE** | A01 | Moyenne | 2.4 |
-| 5 | Escalade horizontale mutations (PATCH/DELETE) | **HAUTE** | A01 | Haute | 13.1-13.2 |
-| 6 | Pagination non bornée (DoS) | **HAUTE** | A09 | Moyenne | 8.1 |
-| 7 | Absence de logging de sécurité | **HAUTE** | A09 | N/A (détection) | 14.2 |
-| 8 | Mot de passe minimum 6 chars | **MOYENNE** | A07 | Haute | 3.2 |
-| 9 | Path traversal deleteAvatar | **MOYENNE** | A01 | Basse | 6.1 |
-| 10 | dangerouslySetInnerHTML XSS | **MOYENNE** | A03 | Basse | 11.2 |
-| 11 | CORS fallback HTTP | **MOYENNE** | A05 | Basse | 7.2 |
-| 12 | JWT dans localStorage | **BASSE** | A07 | Basse | 11.1 |
-| 13 | MIME type non vérifié (magic bytes) | **BASSE** | A08 | Basse | 6.2 |
+| #     | Vulnérabilité                                  | Sévérité     | OWASP   | Probabilité exploitation | Domaine   |
+| ----- | ---------------------------------------------- | ------------ | ------- | ------------------------ | --------- |
+| **0** | **Création compte ADMIN via register public**  | **CRITIQUE** | **A01** | **Certaine**             | **1.2**   |
+| 1     | Élévation de rôle via UpdateUserDto (MANAGER+) | **CRITIQUE** | A01     | Haute                    | 1.1       |
+| 2     | IDOR Congés/Télétravail/Events (lecture)       | **CRITIQUE** | A01     | Haute                    | 2.1-2.3   |
+| 3     | Absence de rate limiting                       | **CRITIQUE** | A07     | Haute                    | 3.1       |
+| 4     | IDOR Projets/Tâches/Commentaires (lecture)     | **HAUTE**    | A01     | Moyenne                  | 2.4       |
+| 5     | Escalade horizontale mutations (PATCH/DELETE)  | **HAUTE**    | A01     | Haute                    | 13.1-13.2 |
+| 6     | Pagination non bornée (DoS)                    | **HAUTE**    | A09     | Moyenne                  | 8.1       |
+| 7     | Absence de logging de sécurité                 | **HAUTE**    | A09     | N/A (détection)          | 14.2      |
+| 8     | Mot de passe minimum 6 chars                   | **MOYENNE**  | A07     | Haute                    | 3.2       |
+| 9     | Path traversal deleteAvatar                    | **MOYENNE**  | A01     | Basse                    | 6.1       |
+| 10    | dangerouslySetInnerHTML XSS                    | **MOYENNE**  | A03     | Basse                    | 11.2      |
+| 11    | CORS fallback HTTP                             | **MOYENNE**  | A05     | Basse                    | 7.2       |
+| 12    | JWT dans localStorage                          | **BASSE**    | A07     | Basse                    | 11.1      |
+| 13    | MIME type non vérifié (magic bytes)            | **BASSE**    | A08     | Basse                    | 6.2       |
 
 ---
 
@@ -1054,14 +1084,17 @@ grep -rn "audit\|AuditLog\|SecurityLog\|logger.*security" apps/api/src/ --includ
 Basé sur l'analyse de `/security/Skills de sécurité...md` et adapté au contexte ORCHESTR'A :
 
 ### Pour ce plan de test (exécution immédiate, sans installation)
+
 - **curl + jq** : Suffisant pour 80% des tests ci-dessus
 - **`/security-review`** : Commande native Claude Code pour revue statique
 
 ### Pour aller plus loin (installation requise)
+
 1. **getsentry/skills@security-review** : Revue méthodologique du code (meilleur rapport signal/bruit)
 2. **Serveur MCP Snyk** : `npx -y snyk@latest mcp configure --tool=claude-cli` — SAST + SCA + containers
 3. **agamm/claude-code-owasp** : Checklist OWASP Top 10:2025 automatisée
 4. **TransilienceAI communitytools** : `/pentest` en staging pour tests offensifs automatisés
 
 ### Pour le CI/CD
+
 - **GitHub Action `anthropics/claude-code-security-review`** : Revue de sécurité automatique sur chaque PR

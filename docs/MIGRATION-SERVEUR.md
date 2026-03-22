@@ -2,12 +2,12 @@
 
 Guide complet pour migrer une instance Orchestr'A vers un nouveau serveur en preservant toutes les donnees (base PostgreSQL, uploads, configuration).
 
-| Information       | Valeur                                                      |
-| ----------------- | ----------------------------------------------------------- |
-| **Architecture**  | Image all-in-one `ghcr.io/elegalex/orchestr-a:latest`      |
-| **Volume unique** | `orchestr-a-data:/data` (PostgreSQL, Redis, uploads)        |
-| **Methode**       | pg_dump/pg_restore + copie des uploads + package offline    |
-| **Date**          | 2026-03-05                                                  |
+| Information       | Valeur                                                   |
+| ----------------- | -------------------------------------------------------- |
+| **Architecture**  | Image all-in-one `ghcr.io/elegalex/orchestr-a:latest`    |
+| **Volume unique** | `orchestr-a-data:/data` (PostgreSQL, Redis, uploads)     |
+| **Methode**       | pg_dump/pg_restore + copie des uploads + package offline |
+| **Date**          | 2026-03-05                                               |
 
 ---
 
@@ -93,10 +93,10 @@ docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
 
 Reperer le nom du conteneur Orchestr'A. Exemples courants :
 
-| Nom possible                    | Contexte                              |
-| ------------------------------- | ------------------------------------- |
-| `orchestr-a-orchestr-a-1`      | Installe via docker compose           |
-| `orchestr-a`                   | Installe via docker run               |
+| Nom possible              | Contexte                    |
+| ------------------------- | --------------------------- |
+| `orchestr-a-orchestr-a-1` | Installe via docker compose |
+| `orchestr-a`              | Installe via docker run     |
 
 Dans la suite du document, remplacer `CONTAINER` par le nom reel de votre conteneur.
 
@@ -198,12 +198,12 @@ docker inspect $CONTAINER --format '{{range .Config.Env}}{{println .}}{{end}}' >
 
 Les variables critiques a conserver sont :
 
-| Variable            | Importance | Raison                                                    |
-| ------------------- | ---------- | --------------------------------------------------------- |
+| Variable            | Importance | Raison                                                        |
+| ------------------- | ---------- | ------------------------------------------------------------- |
 | `JWT_SECRET`        | Critique   | Si change, tous les utilisateurs connectes seront deconnectes |
-| `POSTGRES_PASSWORD` | Important  | Utilise en interne par le conteneur                       |
-| `REDIS_PASSWORD`    | Important  | Utilise en interne par le conteneur                       |
-| `HTTP_PORT`         | Mineur     | Port d'ecoute (defaut: 80)                                |
+| `POSTGRES_PASSWORD` | Important  | Utilise en interne par le conteneur                           |
+| `REDIS_PASSWORD`    | Important  | Utilise en interne par le conteneur                           |
+| `HTTP_PORT`         | Mineur     | Port d'ecoute (defaut: 80)                                    |
 
 > **Le `JWT_SECRET` est la variable la plus importante.** Si vous la conservez, les sessions utilisateur resteront valides apres la migration. Si vous la perdez, les utilisateurs devront simplement se reconnecter.
 
@@ -215,11 +215,11 @@ ls -lh orchestr-a-backup.dump uploads-backup.tar.gz env-backup-full.txt 2>/dev/n
 
 Vous devez avoir au minimum :
 
-| Fichier                    | Obligatoire | Contenu                          |
-| -------------------------- | ----------- | -------------------------------- |
-| `orchestr-a-backup.dump`  | Oui         | Base de donnees complete         |
-| `uploads-backup.tar.gz`   | Si existant | Fichiers uploades                |
-| `env-backup-full.txt`     | Recommande  | Variables d'environnement        |
+| Fichier                  | Obligatoire | Contenu                   |
+| ------------------------ | ----------- | ------------------------- |
+| `orchestr-a-backup.dump` | Oui         | Base de donnees complete  |
+| `uploads-backup.tar.gz`  | Si existant | Fichiers uploades         |
+| `env-backup-full.txt`    | Recommande  | Variables d'environnement |
 
 ---
 
@@ -283,6 +283,7 @@ sudo bash install.sh
 ```
 
 Le script :
+
 1. Verifie Docker et Docker Compose v2
 2. Charge l'image Docker depuis l'archive (~1.8 Go)
 3. Genere des secrets securises dans un fichier `.env`
@@ -353,13 +354,13 @@ docker exec $CONTAINER pg_restore \
 
 **Comprendre les options :**
 
-| Option            | Effet                                                         |
-| ----------------- | ------------------------------------------------------------- |
-| `--clean`         | Supprime les objets existants avant de les recreer            |
-| `--if-exists`     | Evite les erreurs si un objet n'existe pas encore             |
-| `--no-owner`      | Ignore les proprietaires d'origine (utilise postgres)         |
-| `--no-privileges` | Ignore les privileges d'origine                               |
-| `--verbose`       | Affiche la progression                                        |
+| Option            | Effet                                                 |
+| ----------------- | ----------------------------------------------------- |
+| `--clean`         | Supprime les objets existants avant de les recreer    |
+| `--if-exists`     | Evite les erreurs si un objet n'existe pas encore     |
+| `--no-owner`      | Ignore les proprietaires d'origine (utilise postgres) |
+| `--no-privileges` | Ignore les privileges d'origine                       |
+| `--verbose`       | Affiche la progression                                |
 
 > **Warnings attendus** : Des messages comme `role "xxx" does not exist` sont normaux et sans consequence. Seuls les messages `ERROR` indiquent un probleme reel.
 
@@ -486,13 +487,13 @@ echo "=== Fin de la verification ==="
 
 ### Tests manuels recommandes
 
-| Test                               | Comment verifier                                   |
-| ---------------------------------- | -------------------------------------------------- |
-| Connexion avec un compte existant  | Se connecter via le navigateur                     |
-| Navigation dans les projets        | Ouvrir un projet existant, verifier les taches     |
-| Consultation du planning           | Page planning, verifier les affectations           |
-| Upload d'un fichier (si applicable)| Tester l'upload d'un document                      |
-| Acces depuis l'exterieur           | Acceder via l'IP publique ou le nom de domaine     |
+| Test                                | Comment verifier                               |
+| ----------------------------------- | ---------------------------------------------- |
+| Connexion avec un compte existant   | Se connecter via le navigateur                 |
+| Navigation dans les projets         | Ouvrir un projet existant, verifier les taches |
+| Consultation du planning            | Page planning, verifier les affectations       |
+| Upload d'un fichier (si applicable) | Tester l'upload d'un document                  |
+| Acces depuis l'exterieur            | Acceder via l'IP publique ou le nom de domaine |
 
 ---
 
@@ -611,6 +612,8 @@ docker exec $CONTAINER psql -U postgres -d orchestr_a -c "
   DROP SCHEMA public CASCADE;
   CREATE SCHEMA public;
   GRANT ALL ON SCHEMA public TO postgres;
+  GRANT ALL ON SCHEMA public TO orchestr_a;
+  GRANT USAGE ON SCHEMA public TO PUBLIC;
 "
 
 # Puis relancer le pg_restore SANS --clean
@@ -621,7 +624,21 @@ docker exec $CONTAINER pg_restore \
   --no-privileges \
   --verbose \
   /tmp/orchestr-a-backup.dump
+
+# IMPORTANT : Apres le restore, transferer la propriete des objets a orchestr_a
+# (Prisma se connecte en tant que orchestr_a, pas postgres)
+docker exec $CONTAINER psql -U postgres -d orchestr_a -c "
+  REASSIGN OWNED BY postgres TO orchestr_a;
+  ALTER SCHEMA pg_catalog OWNER TO postgres;
+  ALTER SCHEMA information_schema OWNER TO postgres;
+  GRANT ALL ON SCHEMA public TO orchestr_a;
+  GRANT USAGE ON SCHEMA public TO PUBLIC;
+"
 ```
+
+> **IMPORTANT** : Sur PostgreSQL 15+, le schema `public` ne donne plus automatiquement
+> les droits USAGE/CREATE aux utilisateurs non-proprietaires. Le `GRANT` a `orchestr_a`
+> est obligatoire sinon Prisma echouera avec `relation "xxx" does not exist`.
 
 ### L'API demarre mais les donnees sont vides
 
@@ -699,13 +716,13 @@ docker system df -v | grep orchestr-a
 └──────────────────────────────────────────────────────────┘
 ```
 
-| Composant  | Port interne | Role                               |
-| ---------- | ------------ | ---------------------------------- |
-| nginx      | 80           | Reverse proxy, point d'entree      |
-| api        | 4000         | Backend NestJS                     |
-| web        | 3001         | Frontend Next.js                   |
-| postgresql | 5432         | Base de donnees                    |
-| redis      | 6379         | Cache et sessions                  |
+| Composant  | Port interne | Role                          |
+| ---------- | ------------ | ----------------------------- |
+| nginx      | 80           | Reverse proxy, point d'entree |
+| api        | 4000         | Backend NestJS                |
+| web        | 3001         | Frontend Next.js              |
+| postgresql | 5432         | Base de donnees               |
+| redis      | 6379         | Cache et sessions             |
 
 ---
 
@@ -725,7 +742,7 @@ docker system df -v | grep orchestr-a
 - [ ] Integrite du dump verifiee (nombre de tables)
 - [ ] Uploads sauvegardes (si applicable)
 - [ ] Variables d'environnement sauvegardees (`JWT_SECRET`)
-- [ ] Taille des fichiers de sauvegarde notee : ________
+- [ ] Taille des fichiers de sauvegarde notee : **\_\_\_\_**
 
 ### Transfert
 
@@ -747,8 +764,8 @@ docker system df -v | grep orchestr-a
 - [ ] Health check API : OK
 - [ ] Frontend accessible : OK
 - [ ] Connexion admin : OK
-- [ ] Nombre d'utilisateurs coherent : ________
-- [ ] Nombre de projets coherent : ________
+- [ ] Nombre d'utilisateurs coherent : **\_\_\_\_**
+- [ ] Nombre de projets coherent : **\_\_\_\_**
 - [ ] Navigation fonctionnelle dans l'application
 - [ ] Acces depuis l'exterieur : OK
 
