@@ -24,6 +24,7 @@ import {
 import { Task, User, Leave, TeleworkSchedule, Service, Holiday } from "@/types";
 import { getServiceStyle } from "@/lib/planning-utils";
 import { useSettingsStore } from "@/stores/settings.store";
+import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 
 const DEFAULT_VISIBLE_DAYS: number[] = [1, 2, 3, 4, 5];
@@ -87,6 +88,7 @@ export const usePlanningData = ({
   filterServiceIds,
   viewFilter = "all",
 }: UsePlanningDataOptions): UsePlanningDataReturn => {
+  const { hasPermission, permissionsLoaded } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -143,6 +145,8 @@ export const usePlanningData = ({
   const fetchData = useCallback(
     async (silent = false) => {
       if (displayDays.length === 0) return;
+      // Attendre que les permissions soient chargées avant de fetch
+      if (!permissionsLoaded) return;
       try {
         if (!silent) setLoading(true);
         const startDate = startOfDay(displayDays[0]);
@@ -162,7 +166,10 @@ export const usePlanningData = ({
           holidaysData,
           predefinedAssignmentsData,
         ] = await Promise.all([
-          usersService.getAll(),
+          // Conditionner usersService.getAll() à la permission users:read
+          hasPermission("users:read")
+            ? usersService.getAll().catch(() => [])
+            : Promise.resolve([]),
           tasksService.getByDateRange(
             startDate.toISOString(),
             endDate.toISOString(),
@@ -175,12 +182,15 @@ export const usePlanningData = ({
           teleworkService.getByDateRange(teleworkStartDate, teleworkEndDate),
           servicesService.getAll(),
           holidaysService.getByRange(teleworkStartDate, teleworkEndDate),
-          predefinedTasksService
-            .getAssignments({
-              startDate: teleworkStartDate,
-              endDate: teleworkEndDate,
-            })
-            .catch(() => ({ data: [] as PredefinedTaskAssignment[] })),
+          // Conditionner predefinedTasksService.getAssignments() à la permission predefined_tasks:view
+          hasPermission("predefined_tasks:view")
+            ? predefinedTasksService
+                .getAssignments({
+                  startDate: teleworkStartDate,
+                  endDate: teleworkEndDate,
+                })
+                .catch(() => ({ data: [] as PredefinedTaskAssignment[] }))
+            : Promise.resolve([] as PredefinedTaskAssignment[]),
         ]);
 
         const usersList = Array.isArray(usersData)
@@ -238,7 +248,7 @@ export const usePlanningData = ({
         if (!silent) setLoading(false);
       }
     },
-    [displayDays],
+    [displayDays, permissionsLoaded, hasPermission],
   );
 
   useEffect(() => {

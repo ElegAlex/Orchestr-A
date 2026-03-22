@@ -17,6 +17,7 @@ import {
   WorkloadUser,
   DateRangeParam,
 } from "@/services/analytics.service";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface WorkloadChartProps {
   dateRange?: DateRangeParam;
@@ -27,16 +28,23 @@ export function WorkloadChart({
   dateRange = "month",
   projectId,
 }: WorkloadChartProps) {
+  const { hasPermission, permissionsLoaded } = usePermissions();
   const [data, setData] = useState<WorkloadUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!permissionsLoaded) return;
     loadWorkloadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateRange, projectId]);
+  }, [dateRange, projectId, permissionsLoaded]);
 
   const loadWorkloadData = async () => {
+    if (!hasPermission("reports:view")) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);

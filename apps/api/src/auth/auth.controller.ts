@@ -3,7 +3,6 @@ import {
   Post,
   Body,
   Get,
-  UseGuards,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -20,8 +19,6 @@ import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordTokenDto } from './dto/reset-password-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Public } from './decorators/public.decorator';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { PermissionsGuard } from './guards/permissions.guard';
 import { Permissions } from './decorators/permissions.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { User } from '@prisma/client';
@@ -80,7 +77,6 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('profile')
   @ApiBearerAuth()
   @ApiOperation({ summary: "Récupérer le profil de l'utilisateur connecté" })
@@ -96,7 +92,6 @@ export class AuthController {
     return this.authService.getProfile(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({
@@ -110,7 +105,6 @@ export class AuthController {
     return user;
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('me/permissions')
   @ApiBearerAuth()
   @ApiOperation({ summary: "Permissions de l'utilisateur connecté" })
@@ -126,7 +120,6 @@ export class AuthController {
     return { permissions };
   }
 
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('users:reset_password')
   @Post('reset-password-token')
   @ApiBearerAuth()

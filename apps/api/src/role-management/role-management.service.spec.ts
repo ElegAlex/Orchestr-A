@@ -61,11 +61,14 @@ describe('RoleManagementService', () => {
     mockPrismaService.roleConfig.findUnique.mockResolvedValue({
       id: 'role-id',
       code: 'EXISTING',
+      permissions: [],
     });
     mockPrismaService.roleConfig.upsert.mockResolvedValue({
       id: 'role-id',
       code: 'EXISTING',
     });
+    mockPrismaService.rolePermission.createMany.mockResolvedValue({ count: 0 });
+    mockPrismaService.rolePermission.deleteMany.mockResolvedValue({ count: 0 });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -396,15 +399,17 @@ describe('RoleManagementService', () => {
   });
 
   describe('seedPermissionsAndRoles', () => {
-    it('should not modify permissions of an existing role', async () => {
+    it('should not delete permissions of an existing role (seed mode)', async () => {
       mockPrismaService.permission.upsert.mockResolvedValue({
         id: 'perm-1',
         code: 'projects:create',
       });
-      // Simulate existing role
+      // Simulate existing role with all permissions already assigned
+      // (permissions include all existing permissionIds so nothing to add)
       mockPrismaService.roleConfig.findUnique.mockResolvedValue({
         id: 'role-1',
         code: 'ADMIN',
+        permissions: [{ permissionId: 'perm-1' }],
       });
       mockPrismaService.roleConfig.upsert.mockResolvedValue({
         id: 'role-1',
@@ -413,12 +418,9 @@ describe('RoleManagementService', () => {
 
       await service.seedPermissionsAndRoles();
 
-      // Should NOT delete or create permissions for existing roles
+      // In seed mode (non-force), should NEVER delete permissions of existing roles
       expect(
         mockPrismaService.rolePermission.deleteMany,
-      ).not.toHaveBeenCalled();
-      expect(
-        mockPrismaService.rolePermission.createMany,
       ).not.toHaveBeenCalled();
     });
 
@@ -456,6 +458,7 @@ describe('RoleManagementService', () => {
       });
       mockPrismaService.roleConfig.findUnique.mockResolvedValue({
         id: 'role-1',
+        permissions: [],
       });
       mockPrismaService.roleConfig.upsert.mockResolvedValue({
         id: 'role-1',

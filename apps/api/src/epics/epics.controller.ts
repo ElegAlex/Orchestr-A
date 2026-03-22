@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -23,13 +22,10 @@ import {
 import { EpicsService } from './epics.service';
 import { CreateEpicDto } from './dto/create-epic.dto';
 import { UpdateEpicDto } from './dto/update-epic.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('epics')
 @Controller('epics')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class EpicsController {
   constructor(private readonly epicsService: EpicsService) {}

@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -23,13 +22,10 @@ import {
 import { ServicesService } from './services.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('services')
 @Controller('services')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}

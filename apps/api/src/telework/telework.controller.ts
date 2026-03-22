@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -26,14 +25,11 @@ import { UpdateTeleworkDto } from './dto/update-telework.dto';
 import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
 import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
 import { GenerateSchedulesDto } from './dto/generate-schedules.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('telework')
 @Controller('telework')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class TeleworkController {
   constructor(private readonly teleworkService: TeleworkService) {}

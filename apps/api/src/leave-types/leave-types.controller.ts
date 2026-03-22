@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
   Query,
   ParseUUIDPipe,
   HttpCode,
@@ -22,14 +21,11 @@ import {
 import { LeaveTypesService } from './leave-types.service';
 import { CreateLeaveTypeDto } from './dto/create-leave-type.dto';
 import { UpdateLeaveTypeDto } from './dto/update-leave-type.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('Leave Types')
 @ApiBearerAuth()
 @Controller('leave-types')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class LeaveTypesController {
   constructor(private readonly leaveTypesService: LeaveTypesService) {}
 

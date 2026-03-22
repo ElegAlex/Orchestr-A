@@ -193,6 +193,44 @@ export class RoleManagementService implements OnModuleInit {
       // Reports (granularité distincte de analytics)
       { code: 'reports:view', module: 'reports', action: 'view' },
       { code: 'reports:export', module: 'reports', action: 'export' },
+      // Predefined Tasks
+      {
+        code: 'predefined_tasks:view',
+        module: 'predefined_tasks',
+        action: 'view',
+        description: 'Voir les tâches prédéfinies',
+      },
+      {
+        code: 'predefined_tasks:create',
+        module: 'predefined_tasks',
+        action: 'create',
+        description: 'Créer une tâche prédéfinie',
+      },
+      {
+        code: 'predefined_tasks:edit',
+        module: 'predefined_tasks',
+        action: 'edit',
+        description: 'Modifier une tâche prédéfinie',
+      },
+      {
+        code: 'predefined_tasks:delete',
+        module: 'predefined_tasks',
+        action: 'delete',
+        description: 'Supprimer une tâche prédéfinie',
+      },
+      {
+        code: 'predefined_tasks:assign',
+        module: 'predefined_tasks',
+        action: 'assign',
+        description: 'Assigner une tâche prédéfinie à un agent',
+      },
+      // Users — reset password
+      {
+        code: 'users:reset_password',
+        module: 'users',
+        action: 'reset_password',
+        description: "Réinitialiser le mot de passe d'un utilisateur",
+      },
       // Leaves — permissions granulaires supplémentaires
       {
         code: 'leaves:manage',
@@ -318,7 +356,7 @@ export class RoleManagementService implements OnModuleInit {
       {
         code: 'MANAGER',
         name: 'Manager',
-        description: 'Gestion de projets et tâches',
+        description: 'Gestion de projets, tâches, congés équipe',
         isSystem: true,
         permissions: [
           'projects:create',
@@ -326,6 +364,8 @@ export class RoleManagementService implements OnModuleInit {
           'projects:update',
           'projects:delete',
           'projects:manage_members',
+          'projects:view',
+          'projects:edit',
           'tasks:create',
           'tasks:read',
           'tasks:update',
@@ -347,6 +387,7 @@ export class RoleManagementService implements OnModuleInit {
           'time_tracking:read',
           'time_tracking:update',
           'time_tracking:delete',
+          'time_tracking:read_reports',
           'documents:create',
           'documents:read',
           'documents:update',
@@ -356,14 +397,35 @@ export class RoleManagementService implements OnModuleInit {
           'comments:update',
           'comments:delete',
           'leaves:read',
+          'leaves:view',
           'leaves:approve',
+          'leaves:manage',
+          'leaves:manage_delegations',
+          'leaves:declare_for_others',
+          'telework:read',
+          'telework:view',
           'telework:manage_others',
+          'telework:read_team',
+          'telework:manage_recurring',
+          'reports:view',
+          'reports:export',
+          'users:read',
+          'users:view',
+          'departments:read',
+          'departments:view',
+          'skills:read',
+          'skills:view',
+          'predefined_tasks:view',
+          'predefined_tasks:create',
+          'predefined_tasks:edit',
+          'predefined_tasks:delete',
+          'predefined_tasks:assign',
         ],
       },
       {
         code: 'CHEF_DE_PROJET',
         name: 'Chef de Projet',
-        description: 'Gestion de projets et tâches (idem MANAGER)',
+        description: 'Gestion de projets et tâches',
         isSystem: true,
         permissions: [
           'projects:create',
@@ -371,6 +433,8 @@ export class RoleManagementService implements OnModuleInit {
           'projects:update',
           'projects:delete',
           'projects:manage_members',
+          'projects:view',
+          'projects:edit',
           'tasks:create',
           'tasks:read',
           'tasks:update',
@@ -401,6 +465,7 @@ export class RoleManagementService implements OnModuleInit {
           'comments:update',
           'comments:delete',
           'telework:manage_others',
+          'reports:view',
         ],
       },
       {
@@ -433,10 +498,14 @@ export class RoleManagementService implements OnModuleInit {
           'skills:update',
           'skills:delete',
           'skills:manage_matrix',
+          'skills:view',
+          'skills:edit',
           'telework:create',
           'telework:read',
           'telework:update',
           'telework:delete',
+          'telework:view',
+          'predefined_tasks:view',
         ],
       },
       {
@@ -455,10 +524,13 @@ export class RoleManagementService implements OnModuleInit {
           'time_tracking:read',
           'leaves:create',
           'leaves:read',
+          'leaves:view',
           'telework:create',
           'telework:read',
           'telework:update',
           'telework:delete',
+          'telework:view',
+          'predefined_tasks:view',
         ],
       },
       {
@@ -467,13 +539,13 @@ export class RoleManagementService implements OnModuleInit {
         description: 'Accès en lecture seule',
         isSystem: true,
         permissions: permissionsData
-          .filter((p) => p.action === 'read')
+          .filter((p) => p.action === 'read' || p.action === 'view')
           .map((p) => p.code),
       },
       {
         code: 'TECHNICIEN_SUPPORT',
         name: 'Technicien Support',
-        description: 'Support technique - même permissions que Contributeur',
+        description: 'Support technique',
         isSystem: true,
         permissions: [
           'tasks:create_orphan',
@@ -486,17 +558,18 @@ export class RoleManagementService implements OnModuleInit {
           'time_tracking:read',
           'leaves:create',
           'leaves:read',
+          'leaves:view',
           'telework:create',
           'telework:read',
           'telework:update',
           'telework:delete',
+          'telework:view',
         ],
       },
       {
         code: 'GESTIONNAIRE_PARC',
         name: 'Gestionnaire de Parc',
-        description:
-          'Gestion du parc informatique - même permissions que Contributeur',
+        description: 'Gestion du parc informatique',
         isSystem: true,
         permissions: [
           'tasks:create_orphan',
@@ -509,16 +582,18 @@ export class RoleManagementService implements OnModuleInit {
           'time_tracking:read',
           'leaves:create',
           'leaves:read',
+          'leaves:view',
           'telework:create',
           'telework:read',
           'telework:update',
           'telework:delete',
+          'telework:view',
         ],
       },
       {
         code: 'ADMINISTRATEUR_IML',
         name: 'Administrateur IML',
-        description: 'Administration IML - même permissions que Contributeur',
+        description: 'Administration IML',
         isSystem: true,
         permissions: [
           'tasks:create_orphan',
@@ -531,17 +606,18 @@ export class RoleManagementService implements OnModuleInit {
           'time_tracking:read',
           'leaves:create',
           'leaves:read',
+          'leaves:view',
           'telework:create',
           'telework:read',
           'telework:update',
           'telework:delete',
+          'telework:view',
         ],
       },
       {
         code: 'DEVELOPPEUR_CONCEPTEUR',
         name: 'Développeur Concepteur',
-        description:
-          'Développement et conception - même permissions que Chef de Projet',
+        description: 'Développement et conception',
         isSystem: true,
         permissions: [
           'projects:create',
@@ -549,6 +625,8 @@ export class RoleManagementService implements OnModuleInit {
           'projects:update',
           'projects:delete',
           'projects:manage_members',
+          'projects:view',
+          'projects:edit',
           'tasks:create',
           'tasks:read',
           'tasks:update',
@@ -582,14 +660,14 @@ export class RoleManagementService implements OnModuleInit {
           'telework:read',
           'telework:update',
           'telework:delete',
+          'telework:view',
           'telework:manage_others',
         ],
       },
       {
         code: 'CORRESPONDANT_FONCTIONNEL_APPLICATION',
         name: 'Correspondant Fonctionnel Application',
-        description:
-          'Référent fonctionnel applicatif - même permissions que Chef de Projet',
+        description: 'Référent fonctionnel applicatif',
         isSystem: true,
         permissions: [
           'projects:create',
@@ -597,6 +675,8 @@ export class RoleManagementService implements OnModuleInit {
           'projects:update',
           'projects:delete',
           'projects:manage_members',
+          'projects:view',
+          'projects:edit',
           'tasks:create',
           'tasks:read',
           'tasks:update',
@@ -630,14 +710,14 @@ export class RoleManagementService implements OnModuleInit {
           'telework:read',
           'telework:update',
           'telework:delete',
+          'telework:view',
           'telework:manage_others',
         ],
       },
       {
         code: 'CHARGE_DE_MISSION',
         name: 'Chargé de Mission',
-        description:
-          'Pilotage de missions - même permissions que Chef de Projet',
+        description: 'Pilotage de missions',
         isSystem: true,
         permissions: [
           'projects:create',
@@ -645,6 +725,8 @@ export class RoleManagementService implements OnModuleInit {
           'projects:update',
           'projects:delete',
           'projects:manage_members',
+          'projects:view',
+          'projects:edit',
           'tasks:create',
           'tasks:read',
           'tasks:update',
@@ -678,13 +760,14 @@ export class RoleManagementService implements OnModuleInit {
           'telework:read',
           'telework:update',
           'telework:delete',
+          'telework:view',
           'telework:manage_others',
         ],
       },
       {
         code: 'GESTIONNAIRE_IML',
         name: 'Gestionnaire IML',
-        description: 'Gestion IML - même permissions que Contributeur',
+        description: 'Gestion IML',
         isSystem: true,
         permissions: [
           'tasks:create_orphan',
@@ -697,17 +780,18 @@ export class RoleManagementService implements OnModuleInit {
           'time_tracking:read',
           'leaves:create',
           'leaves:read',
+          'leaves:view',
           'telework:create',
           'telework:read',
           'telework:update',
           'telework:delete',
+          'telework:view',
         ],
       },
       {
         code: 'CONSULTANT_TECHNOLOGIE_SI',
         name: 'Consultant Technologie SI',
-        description:
-          'Conseil en technologies SI - même permissions que Chef de Projet',
+        description: 'Conseil en technologies SI',
         isSystem: true,
         permissions: [
           'projects:create',
@@ -715,6 +799,8 @@ export class RoleManagementService implements OnModuleInit {
           'projects:update',
           'projects:delete',
           'projects:manage_members',
+          'projects:view',
+          'projects:edit',
           'tasks:create',
           'tasks:read',
           'tasks:update',
@@ -748,6 +834,7 @@ export class RoleManagementService implements OnModuleInit {
           'telework:read',
           'telework:update',
           'telework:delete',
+          'telework:view',
           'telework:manage_others',
         ],
       },
@@ -757,9 +844,10 @@ export class RoleManagementService implements OnModuleInit {
     for (const roleData of rolesConfig) {
       const { permissions, ...roleInfo } = roleData;
 
-      // Vérifier si le rôle existe déjà en BDD
+      // Vérifier si le rôle existe déjà en BDD (avec ses permissions actuelles)
       const existingRole = await this.prisma.roleConfig.findUnique({
         where: { code: roleData.code },
+        include: { permissions: true },
       });
 
       const role = await this.prisma.roleConfig.upsert({
@@ -768,49 +856,99 @@ export class RoleManagementService implements OnModuleInit {
         create: roleInfo,
       });
 
-      // En mode seed (non-force), ne pas toucher aux permissions des rôles existants
-      if (!force && existingRole) {
-        this.logger.log(
-          `[Seed] ${roleData.code}: rôle existant, permissions conservées`,
-        );
-        continue;
-      }
-
-      // Supprimer les anciennes permissions si force (reset-to-defaults)
-      if (existingRole) {
+      if (force && existingRole) {
+        // Mode reset : supprimer toutes les permissions et recréer depuis la config
         await this.prisma.rolePermission.deleteMany({
           where: { roleConfigId: role.id },
         });
+
+        const notFoundList: string[] = [];
+        const permissionAssignments = permissions
+          .map((permCode) => {
+            const permId = permissionsMap.get(permCode);
+            if (!permId) {
+              notFoundList.push(permCode);
+              return null;
+            }
+            return { roleConfigId: role.id, permissionId: permId };
+          })
+          .filter((p) => p !== null);
+
+        let created = 0;
+        if (permissionAssignments.length > 0) {
+          const result = await this.prisma.rolePermission.createMany({
+            data: permissionAssignments,
+            skipDuplicates: true,
+          });
+          created = result.count;
+        }
+
+        this.logger.log(
+          `[Seed] ${roleData.code}: reset — ${created} permissions assigned, ${notFoundList.length} not found${notFoundList.length > 0 ? `: [${notFoundList.join(', ')}]` : ''}`,
+        );
+      } else if (existingRole) {
+        // Mode seed (non-force) sur rôle existant : ajouter uniquement les permissions
+        // manquantes sans supprimer les permissions custom ajoutées par l'admin
+        const existingPermIds = new Set(
+          existingRole.permissions.map((rp) => rp.permissionId),
+        );
+        const notFoundList: string[] = [];
+        const toAdd = permissions
+          .map((permCode) => {
+            const permId = permissionsMap.get(permCode);
+            if (!permId) {
+              notFoundList.push(permCode);
+              return null;
+            }
+            if (existingPermIds.has(permId)) return null;
+            return { roleConfigId: role.id, permissionId: permId };
+          })
+          .filter(
+            (p): p is { roleConfigId: string; permissionId: string } =>
+              p !== null,
+          );
+
+        let added = 0;
+        if (toAdd.length > 0) {
+          const result = await this.prisma.rolePermission.createMany({
+            data: toAdd,
+            skipDuplicates: true,
+          });
+          added = result.count;
+          await this.invalidateRoleCache(roleData.code);
+        }
+
+        this.logger.log(
+          `[Seed] ${roleData.code}: rôle existant — ${added} nouvelles permissions ajoutées${notFoundList.length > 0 ? `, ${notFoundList.length} not found: [${notFoundList.join(', ')}]` : ''}`,
+        );
+        continue;
+      } else {
+        // Nouveau rôle : créer toutes les permissions par défaut
+        const notFoundList: string[] = [];
+        const permissionAssignments = permissions
+          .map((permCode) => {
+            const permId = permissionsMap.get(permCode);
+            if (!permId) {
+              notFoundList.push(permCode);
+              return null;
+            }
+            return { roleConfigId: role.id, permissionId: permId };
+          })
+          .filter((p) => p !== null);
+
+        let created = 0;
+        if (permissionAssignments.length > 0) {
+          const result = await this.prisma.rolePermission.createMany({
+            data: permissionAssignments,
+            skipDuplicates: true,
+          });
+          created = result.count;
+        }
+
+        this.logger.log(
+          `[Seed] ${roleData.code}: nouveau rôle — ${created} permissions assigned, ${notFoundList.length} not found${notFoundList.length > 0 ? `: [${notFoundList.join(', ')}]` : ''}`,
+        );
       }
-
-      // Créer les permissions par défaut
-      const notFoundList: string[] = [];
-      const permissionAssignments = permissions
-        .map((permCode) => {
-          const permId = permissionsMap.get(permCode);
-          if (!permId) {
-            notFoundList.push(permCode);
-            return null;
-          }
-          return {
-            roleConfigId: role.id,
-            permissionId: permId,
-          };
-        })
-        .filter((p) => p !== null);
-
-      let created = 0;
-      if (permissionAssignments.length > 0) {
-        const result = await this.prisma.rolePermission.createMany({
-          data: permissionAssignments,
-          skipDuplicates: true,
-        });
-        created = result.count;
-      }
-
-      this.logger.log(
-        `[Seed] ${roleData.code}: ${created} permissions assigned, ${notFoundList.length} not found${notFoundList.length > 0 ? `: [${notFoundList.join(', ')}]` : ''}`,
-      );
 
       // Invalider le cache pour ce rôle
       await this.invalidateRoleCache(roleData.code);

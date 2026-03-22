@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -21,8 +20,6 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { HolidaysService } from './holidays.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
@@ -33,7 +30,6 @@ import type { User } from '@prisma/client';
 @ApiTags('Holidays')
 @ApiBearerAuth()
 @Controller('holidays')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class HolidaysController {
   constructor(private readonly holidaysService: HolidaysService) {}
 

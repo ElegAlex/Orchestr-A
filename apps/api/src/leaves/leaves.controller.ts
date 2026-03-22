@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -30,15 +29,12 @@ import {
   ImportLeavesResultDto,
   LeavesValidationPreviewDto,
 } from './dto/import-leaves.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { LeaveStatus, LeaveType } from 'database';
 
 @ApiTags('leaves')
 @Controller('leaves')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class LeavesController {
   constructor(private readonly leavesService: LeavesService) {}

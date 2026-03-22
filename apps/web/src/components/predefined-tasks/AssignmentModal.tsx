@@ -11,6 +11,7 @@ import {
   BulkAssignmentDto,
   CreateAssignmentDto,
 } from "@/services/predefined-tasks.service";
+import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 
 const DURATION_LABELS: Record<TaskDuration, string> = {
@@ -36,6 +37,7 @@ export function AssignmentModal({
   onClose,
   onSuccess,
 }: AssignmentModalProps) {
+  const { hasPermission } = usePermissions();
   const [tasks, setTasks] = useState<PredefinedTask[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string>("");
   const [duration, setDuration] = useState<TaskDuration>("FULL_DAY");
@@ -57,6 +59,10 @@ export function AssignmentModal({
   }, [existingAssignment]);
 
   const loadTasks = async () => {
+    if (!hasPermission("predefined_tasks:view")) {
+      setTasks([]);
+      return;
+    }
     try {
       const response = await predefinedTasksService.getAll();
       const list = Array.isArray(response)

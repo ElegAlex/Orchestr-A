@@ -17,6 +17,7 @@ import {
   VelocityPeriod,
   DateRangeParam,
 } from "@/services/analytics.service";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface VelocityChartProps {
   dateRange?: DateRangeParam;
@@ -27,16 +28,23 @@ export function VelocityChart({
   dateRange = "month",
   projectId,
 }: VelocityChartProps) {
+  const { hasPermission, permissionsLoaded } = usePermissions();
   const [data, setData] = useState<VelocityPeriod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!permissionsLoaded) return;
     loadVelocityData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateRange, projectId]);
+  }, [dateRange, projectId, permissionsLoaded]);
 
   const loadVelocityData = async () => {
+    if (!hasPermission("reports:view")) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);

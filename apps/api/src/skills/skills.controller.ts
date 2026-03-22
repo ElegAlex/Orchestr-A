@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -29,15 +28,12 @@ import {
   ImportSkillsResultDto,
   SkillsValidationPreviewDto,
 } from './dto/import-skills.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SkillCategory, SkillLevel } from 'database';
 
 @ApiTags('skills')
 @Controller('skills')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class SkillsController {
   constructor(private readonly skillsService: SkillsService) {}

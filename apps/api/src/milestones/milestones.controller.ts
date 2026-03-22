@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -30,14 +29,11 @@ import {
   ImportMilestonesResultDto,
   MilestonesValidationPreviewDto,
 } from './dto/import-milestones.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { MilestoneStatus } from 'database';
 
 @ApiTags('milestones')
 @Controller('milestones')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class MilestonesController {
   constructor(private readonly milestonesService: MilestonesService) {}

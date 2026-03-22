@@ -6,7 +6,6 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SettingsService } from './settings.service';
@@ -14,13 +13,10 @@ import {
   UpdateSettingDto,
   BulkUpdateSettingsDto,
 } from './dto/update-setting.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('Settings')
 @Controller('settings')
-@UseGuards(JwtAuthGuard)
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
@@ -46,7 +42,6 @@ export class SettingsController {
   }
 
   @Put(':key')
-  @UseGuards(RolesGuard)
   @Permissions('settings:update')
   @ApiOperation({ summary: 'Mettre à jour un paramètre (Admin uniquement)' })
   @ApiBearerAuth()
@@ -70,7 +65,6 @@ export class SettingsController {
   }
 
   @Post('bulk')
-  @UseGuards(RolesGuard)
   @Permissions('settings:update')
   @ApiOperation({
     summary: 'Mettre à jour plusieurs paramètres (Admin uniquement)',
@@ -81,7 +75,6 @@ export class SettingsController {
   }
 
   @Post(':key/reset')
-  @UseGuards(RolesGuard)
   @Permissions('settings:update')
   @ApiOperation({
     summary:
@@ -93,7 +86,6 @@ export class SettingsController {
   }
 
   @Post('reset-all')
-  @UseGuards(RolesGuard)
   @Permissions('settings:update')
   @ApiOperation({
     summary: 'Réinitialiser tous les paramètres (Admin uniquement)',
@@ -104,7 +96,6 @@ export class SettingsController {
   }
 
   @Delete(':key')
-  @UseGuards(RolesGuard)
   @Permissions('settings:update')
   @ApiOperation({
     summary: 'Supprimer un paramètre personnalisé (Admin uniquement)',

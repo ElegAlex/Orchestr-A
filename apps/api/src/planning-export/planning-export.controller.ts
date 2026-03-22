@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Query,
-  UseGuards,
-  Res,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Res } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -17,13 +9,10 @@ import {
 } from '@nestjs/swagger';
 import type { FastifyReply } from 'fastify';
 import { PlanningExportService } from './planning-export.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('planning-export')
 @Controller('planning-export')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class PlanningExportController {
   constructor(private readonly planningExportService: PlanningExportService) {}

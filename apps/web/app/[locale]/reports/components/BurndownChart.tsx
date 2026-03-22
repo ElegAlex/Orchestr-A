@@ -16,6 +16,7 @@ import {
   BurndownPoint,
   DateRangeParam,
 } from "@/services/analytics.service";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface BurndownChartProps {
   projectId?: string;
@@ -26,16 +27,23 @@ export function BurndownChart({
   projectId,
   dateRange = "month",
 }: BurndownChartProps) {
+  const { hasPermission, permissionsLoaded } = usePermissions();
   const [data, setData] = useState<BurndownPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!permissionsLoaded) return;
     loadBurndownData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, dateRange]);
+  }, [projectId, dateRange, permissionsLoaded]);
 
   const loadBurndownData = async () => {
+    if (!hasPermission("reports:view")) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);

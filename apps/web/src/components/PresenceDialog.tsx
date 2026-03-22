@@ -8,6 +8,7 @@ import {
   UserPresenceItem,
   PresenceData,
 } from "@/services/users.service";
+import { usePermissions } from "@/hooks/usePermissions";
 
 function UserPresenceCard({ user }: { user: UserPresenceItem }) {
   const initials = `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
@@ -79,6 +80,7 @@ function PresenceLoadingSkeleton() {
 
 export function PresenceDialog() {
   const t = useTranslations("common.presence");
+  const { hasPermission } = usePermissions();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<PresenceData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -94,6 +96,10 @@ export function PresenceDialog() {
   }, [open]);
 
   const fetchPresence = async () => {
+    if (!hasPermission("users:read")) {
+      setData(null);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);

@@ -11,6 +11,7 @@ import {
 } from "@/services/predefined-tasks.service";
 import { usersService } from "@/services/users.service";
 import { User } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 
 const DAY_OF_WEEK_LABELS: Record<DayOfWeek, string> = {
@@ -49,6 +50,7 @@ export function RecurringRulesModal({
   onClose,
   onRulesChanged,
 }: RecurringRulesModalProps) {
+  const { hasPermission } = usePermissions();
   const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -65,6 +67,10 @@ export function RecurringRulesModal({
   }, []);
 
   const fetchUsers = async () => {
+    if (!hasPermission("users:read")) {
+      setUsers([]);
+      return;
+    }
     try {
       const data = await usersService.getAll();
       const usersList = Array.isArray(data)

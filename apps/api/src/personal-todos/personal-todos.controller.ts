@@ -6,9 +6,7 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PersonalTodosService } from './personal-todos.service';
 import { CreatePersonalTodoDto } from './dto/create-personal-todo.dto';
@@ -16,7 +14,6 @@ import { UpdatePersonalTodoDto } from './dto/update-personal-todo.dto';
 import type { User } from '@prisma/client';
 
 @Controller('personal-todos')
-@UseGuards(JwtAuthGuard)
 export class PersonalTodosController {
   constructor(private readonly personalTodosService: PersonalTodosService) {}
 

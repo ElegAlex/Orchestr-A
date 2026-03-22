@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -23,13 +22,10 @@ import {
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('departments')
 @Controller('departments')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}

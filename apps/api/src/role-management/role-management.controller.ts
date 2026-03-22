@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
@@ -22,15 +21,12 @@ import { RoleManagementService } from './role-management.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { AssignPermissionDto } from './dto/assign-permission.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { Role } from 'database';
 
 @ApiTags('role-management')
 @Controller('role-management')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class RoleManagementController {
   constructor(private readonly roleManagementService: RoleManagementService) {}

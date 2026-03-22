@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -23,14 +22,11 @@ import {
 import { TimeTrackingService } from './time-tracking.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('time-tracking')
 @Controller('time-tracking')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class TimeTrackingController {
   constructor(private readonly timeTrackingService: TimeTrackingService) {}
