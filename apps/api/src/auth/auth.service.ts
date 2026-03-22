@@ -24,9 +24,16 @@ export class AuthService {
   ) {}
 
   async validateUser(login: string, password: string) {
-    const user = await this.prisma.user.findUnique({
+    // Accepter login ou email
+    let user = await this.prisma.user.findUnique({
       where: { login },
     });
+
+    if (!user && login.includes('@')) {
+      user = await this.prisma.user.findUnique({
+        where: { email: login },
+      });
+    }
 
     if (!user) {
       return null;
