@@ -1613,7 +1613,10 @@ export default function LeavesPage() {
                   required
                   value={balanceForm.leaveTypeId}
                   onChange={(e) =>
-                    setBalanceForm({ ...balanceForm, leaveTypeId: e.target.value })
+                    setBalanceForm({
+                      ...balanceForm,
+                      leaveTypeId: e.target.value,
+                    })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
@@ -1658,7 +1661,10 @@ export default function LeavesPage() {
                   max={2100}
                   value={balanceForm.year}
                   onChange={(e) =>
-                    setBalanceForm({ ...balanceForm, year: Number(e.target.value) })
+                    setBalanceForm({
+                      ...balanceForm,
+                      year: Number(e.target.value),
+                    })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />

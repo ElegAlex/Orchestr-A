@@ -84,7 +84,9 @@ test.describe("Leave Lifecycle", () => {
 
       // Remplir le motif (champ optionnel) avec le label unique pour retrouver le congé
       const reasonField = dialog
-        .locator('textarea, input[name="reason"], input[placeholder*="motif" i], textarea[placeholder*="commentaire" i]')
+        .locator(
+          'textarea, input[name="reason"], input[placeholder*="motif" i], textarea[placeholder*="commentaire" i]',
+        )
         .first();
       if (await reasonField.isVisible()) {
         await reasonField.fill(`Congé test E2E ${uniqueLabel}`);
@@ -139,7 +141,9 @@ test.describe("Leave Lifecycle", () => {
 
         // Confirmer s'il y a un dialog de confirmation
         const confirmDialog = managerPage.locator('[role="dialog"]');
-        if (await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (
+          await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)
+        ) {
           const confirmBtn = confirmDialog
             .getByRole("button", { name: /confirmer|oui|approuver/i })
             .first();

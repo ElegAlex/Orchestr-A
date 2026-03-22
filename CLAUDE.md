@@ -78,6 +78,7 @@ Si des fichiers source existent → travailler avec le code existant. Ne JAMAIS 
 - CI/CD : `.github/workflows/`
 
 ## E2E Testing
+
 - Toute feature/bugfix DOIT inclure des tests E2E Playwright
 - Les tests utilisent la permission matrix dans e2e/fixtures/permission-matrix.ts
 - Chaque test vérifie les 6 rôles : ADMIN, RESPONSABLE, MANAGER, REFERENT_TECHNIQUE, CONTRIBUTEUR, OBSERVATEUR

@@ -10,11 +10,12 @@ import {
 } from './dto/analytics-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('analytics')
 @Controller('analytics')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}

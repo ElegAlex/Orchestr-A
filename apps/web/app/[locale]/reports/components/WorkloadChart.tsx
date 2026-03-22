@@ -118,11 +118,7 @@ export function WorkloadChart({
             strokeDasharray="3 3"
             label="Capacité"
           />
-          <Bar
-            dataKey="planned"
-            name="Heures saisies"
-            fill="#667eea"
-          />
+          <Bar dataKey="planned" name="Heures saisies" fill="#667eea" />
         </BarChart>
       </ResponsiveContainer>
 

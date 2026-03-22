@@ -148,7 +148,9 @@ function ResetPasswordForm() {
               disabled={loading || !token}
               className="w-full bg-[var(--primary)] text-[var(--primary-foreground)] py-2 px-4 rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
-              {loading ? "Validation en cours..." : "Valider le nouveau mot de passe"}
+              {loading
+                ? "Validation en cours..."
+                : "Valider le nouveau mot de passe"}
             </button>
 
             <div className="text-center">

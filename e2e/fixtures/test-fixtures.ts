@@ -4,7 +4,13 @@ import {
   type Page,
   type BrowserContext,
 } from "@playwright/test";
-import { ROLES, ROLE_LOGINS, ROLE_PASSWORD, ROLE_STORAGE_PATHS, type Role } from "./roles";
+import {
+  ROLES,
+  ROLE_LOGINS,
+  ROLE_PASSWORD,
+  ROLE_STORAGE_PATHS,
+  type Role,
+} from "./roles";
 
 export type { Role };
 

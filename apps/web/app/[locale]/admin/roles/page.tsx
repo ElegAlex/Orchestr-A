@@ -712,8 +712,8 @@ export default function RolesPage() {
                     {t("permissionMatrix")}
                   </h3>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    Chaque permission est indépendante. Activez uniquement celles
-                    dont ce rôle a besoin.
+                    Chaque permission est indépendante. Activez uniquement
+                    celles dont ce rôle a besoin.
                   </p>
                 </div>
                 <button
@@ -739,7 +739,9 @@ export default function RolesPage() {
 
               <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-600">
-                  <span className="font-medium">{selectedPermissions.size}</span>{" "}
+                  <span className="font-medium">
+                    {selectedPermissions.size}
+                  </span>{" "}
                   permission(s) sélectionnée(s) sur{" "}
                   <span className="font-medium">
                     {Object.values(permissions).reduce(

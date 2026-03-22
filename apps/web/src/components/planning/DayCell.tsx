@@ -97,9 +97,7 @@ export const DayCell = ({
         <div
           className="absolute inset-0 flex flex-col items-center justify-center z-10 border-2"
           style={{
-            backgroundColor: isPending
-              ? `${leaveColor}26`
-              : `${leaveColor}4D`,
+            backgroundColor: isPending ? `${leaveColor}26` : `${leaveColor}4D`,
             borderColor: leaveColor,
             borderStyle: isPending ? "dashed" : "solid",
           }}

@@ -67,7 +67,9 @@ export function RecurringRulesModal({
   const fetchUsers = async () => {
     try {
       const data = await usersService.getAll();
-      const usersList = Array.isArray(data) ? data : (data as { data: User[] }).data ?? [];
+      const usersList = Array.isArray(data)
+        ? data
+        : ((data as { data: User[] }).data ?? []);
       setUsers(usersList.filter((u) => u.isActive));
     } catch {
       setUsers([]);

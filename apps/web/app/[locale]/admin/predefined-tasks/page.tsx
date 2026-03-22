@@ -85,7 +85,9 @@ export default function PredefinedTasksAdminPage() {
   const [saving, setSaving] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [rulesTask, setRulesTask] = useState<PredefinedTask | null>(null);
-  const [rulesForTask, setRulesForTask] = useState<PredefinedTaskRecurringRule[]>([]);
+  const [rulesForTask, setRulesForTask] = useState<
+    PredefinedTaskRecurringRule[]
+  >([]);
 
   useEffect(() => {
     if (canView) {
@@ -183,9 +185,7 @@ export default function PredefinedTasksAdminPage() {
       await predefinedTasksService.update(task.id, {
         isActive: !task.isActive,
       });
-      toast.success(
-        task.isActive ? "Tâche désactivée" : "Tâche réactivée",
-      );
+      toast.success(task.isActive ? "Tâche désactivée" : "Tâche réactivée");
       fetchTasks();
     } catch (err) {
       console.error(err);
@@ -267,8 +267,7 @@ export default function PredefinedTasksAdminPage() {
               Tâches prédéfinies
             </h1>
             <p className="text-gray-600 mt-1">
-              Gérez les types de tâches récurrentes assignables dans le
-              planning
+              Gérez les types de tâches récurrentes assignables dans le planning
             </p>
           </div>
           {canCreate && (

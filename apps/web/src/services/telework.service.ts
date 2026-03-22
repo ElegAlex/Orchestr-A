@@ -100,9 +100,12 @@ export const teleworkService = {
     await api.delete(`/telework/recurring-rules/${id}`);
   },
 
-  async generateSchedules(
-    data: GenerateSchedulesDto,
-  ): Promise<{ message: string; created: number; skipped: number; rulesProcessed: number }> {
+  async generateSchedules(data: GenerateSchedulesDto): Promise<{
+    message: string;
+    created: number;
+    skipped: number;
+    rulesProcessed: number;
+  }> {
     const response = await api.post<{
       message: string;
       created: number;

@@ -312,10 +312,20 @@ export function ImportPreviewModal({
               <span>
                 {t("footer.willImport", { count: importCount })}
                 {summary.duplicates > 0 && (
-                  <>{" "}{t("footer.duplicatesIgnored", { count: summary.duplicates })}</>
+                  <>
+                    {" "}
+                    {t("footer.duplicatesIgnored", {
+                      count: summary.duplicates,
+                    })}
+                  </>
                 )}
                 {summary.errors > 0 && (
-                  <>{" "}<span className="text-red-600">{t("footer.errorsNotImported", { count: summary.errors })}</span></>
+                  <>
+                    {" "}
+                    <span className="text-red-600">
+                      {t("footer.errorsNotImported", { count: summary.errors })}
+                    </span>
+                  </>
                 )}
               </span>
             ) : (

@@ -127,9 +127,7 @@ export function VelocityChart({
           <div className="text-sm text-blue-600">Dernière semaine</div>
         </div>
         <div className="bg-purple-50 p-3 rounded">
-          <div className="text-2xl font-bold text-purple-700">
-            {vsAverage}%
-          </div>
+          <div className="text-2xl font-bold text-purple-700">{vsAverage}%</div>
           <div className="text-sm text-purple-600">vs. moyenne</div>
         </div>
       </div>

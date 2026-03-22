@@ -48,8 +48,7 @@ test.describe("Predefined Task Assignment — Admin Access Control", () => {
 
         const settingsUrl = adminPage.url();
         const settingsAccessible =
-          !settingsUrl.includes("/login") &&
-          !settingsUrl.includes("/403");
+          !settingsUrl.includes("/login") && !settingsUrl.includes("/403");
 
         // L'admin doit au moins avoir accès à /settings
         expect(settingsAccessible).toBeTruthy();
@@ -112,56 +111,54 @@ test.describe("Predefined Task Assignment — Admin Access Control", () => {
     },
   );
 
-  test(
-    "OBSERVATEUR ne peut pas accéder à la page /admin/roles",
-    async ({ asRole }) => {
-      const observateurPage = await asRole("observateur");
-      await observateurPage.goto("/admin/roles");
-      await observateurPage.waitForLoadState("domcontentloaded");
+  test("OBSERVATEUR ne peut pas accéder à la page /admin/roles", async ({
+    asRole,
+  }) => {
+    const observateurPage = await asRole("observateur");
+    await observateurPage.goto("/admin/roles");
+    await observateurPage.waitForLoadState("domcontentloaded");
 
-      const url = observateurPage.url();
+    const url = observateurPage.url();
 
-      const isRedirected =
-        url.includes("/login") ||
-        url.includes("/403") ||
-        url.includes("/unauthorized") ||
-        url.includes("/dashboard");
+    const isRedirected =
+      url.includes("/login") ||
+      url.includes("/403") ||
+      url.includes("/unauthorized") ||
+      url.includes("/dashboard");
 
-      const hasRestrictedMessage = await observateurPage
-        .locator("text=/accès restreint|non autorisé|interdit|forbidden/i")
-        .isVisible({ timeout: 8000 })
-        .catch(() => false);
+    const hasRestrictedMessage = await observateurPage
+      .locator("text=/accès restreint|non autorisé|interdit|forbidden/i")
+      .isVisible({ timeout: 8000 })
+      .catch(() => false);
 
-      expect(isRedirected || hasRestrictedMessage).toBeTruthy();
-    },
-  );
+    expect(isRedirected || hasRestrictedMessage).toBeTruthy();
+  });
 
-  test(
-    "CONTRIBUTEUR ne peut pas accéder à la page /settings",
-    async ({ asRole }) => {
-      const contributeurPage = await asRole("contributeur");
-      await contributeurPage.goto("/settings");
-      await contributeurPage.waitForLoadState("domcontentloaded");
+  test("CONTRIBUTEUR ne peut pas accéder à la page /settings", async ({
+    asRole,
+  }) => {
+    const contributeurPage = await asRole("contributeur");
+    await contributeurPage.goto("/settings");
+    await contributeurPage.waitForLoadState("domcontentloaded");
 
-      const url = contributeurPage.url();
+    const url = contributeurPage.url();
 
-      // /settings peut être réservé à l'admin ou accessible en lecture seule
-      // Le test vérifie qu'il n'y a pas d'accès complet (boutons de modification)
-      const hasAdminSettingsActions = await contributeurPage
-        .getByRole("button", {
-          name: /sauvegarder les paramètres|enregistrer la configuration/i,
-        })
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
+    // /settings peut être réservé à l'admin ou accessible en lecture seule
+    // Le test vérifie qu'il n'y a pas d'accès complet (boutons de modification)
+    const hasAdminSettingsActions = await contributeurPage
+      .getByRole("button", {
+        name: /sauvegarder les paramètres|enregistrer la configuration/i,
+      })
+      .isVisible({ timeout: 3000 })
+      .catch(() => false);
 
-      // Si redirigé → accès refusé OK
-      // Si page accessible → il ne doit pas y avoir d'actions admin sensibles
-      const isRedirected =
-        url.includes("/login") ||
-        url.includes("/403") ||
-        url.includes("/dashboard");
+    // Si redirigé → accès refusé OK
+    // Si page accessible → il ne doit pas y avoir d'actions admin sensibles
+    const isRedirected =
+      url.includes("/login") ||
+      url.includes("/403") ||
+      url.includes("/dashboard");
 
-      expect(isRedirected || !hasAdminSettingsActions).toBeTruthy();
-    },
-  );
+    expect(isRedirected || !hasAdminSettingsActions).toBeTruthy();
+  });
 });

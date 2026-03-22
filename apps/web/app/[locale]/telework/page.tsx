@@ -107,7 +107,9 @@ function RecurringRuleModal({
 
   const handleSave = async () => {
     if (selectedDays.length === 0 || !startDate) {
-      toast.error("Veuillez sélectionner au moins un jour et une date de début");
+      toast.error(
+        "Veuillez sélectionner au moins un jour et une date de début",
+      );
       return;
     }
     setSaving(true);
@@ -132,9 +134,7 @@ function RecurringRuleModal({
           }
           await teleworkService.createRecurringRule(dto);
         }
-        toast.success(
-          `${selectedDays.length} règle(s) récurrente(s) créée(s)`,
-        );
+        toast.success(`${selectedDays.length} règle(s) récurrente(s) créée(s)`);
       }
       onSaved();
       onClose();
@@ -500,7 +500,9 @@ export default function TeleworkPage() {
       if (!rule.isActive) return false;
       if (rule.dayOfWeek !== modelDay) return false;
       const ruleStart = new Date(rule.startDate).getTime();
-      const ruleEnd = rule.endDate ? new Date(rule.endDate).getTime() : Infinity;
+      const ruleEnd = rule.endDate
+        ? new Date(rule.endDate).getTime()
+        : Infinity;
       return dateMs >= ruleStart && dateMs <= ruleEnd;
     });
   };
@@ -709,7 +711,8 @@ export default function TeleworkPage() {
           ) : (
             <ul className="divide-y divide-gray-100">
               {recurringRules.map((rule) => {
-                const dayLabel = DAY_NAMES_FR[rule.dayOfWeek] ?? `Jour ${rule.dayOfWeek}`;
+                const dayLabel =
+                  DAY_NAMES_FR[rule.dayOfWeek] ?? `Jour ${rule.dayOfWeek}`;
                 const start = new Date(rule.startDate).toLocaleDateString(
                   "fr-FR",
                   { day: "numeric", month: "long", year: "numeric" },
@@ -734,11 +737,11 @@ export default function TeleworkPage() {
                         }`}
                       />
                       <span className="text-sm text-gray-800">
-                        <span className="font-medium capitalize">{dayLabel}</span>
+                        <span className="font-medium capitalize">
+                          {dayLabel}
+                        </span>
                         {" · "}
-                        {end
-                          ? `du ${start} au ${end}`
-                          : `à partir du ${start}`}
+                        {end ? `du ${start} au ${end}` : `à partir du ${start}`}
                       </span>
                       {!rule.isActive && (
                         <span className="text-xs text-gray-400">(inactif)</span>

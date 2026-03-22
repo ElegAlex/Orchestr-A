@@ -35,7 +35,9 @@ for (const role of ROLES) {
     // Login endpoint has strict throttle: 5 req/60s, 15 req/15min
     // If 429, wait full minute for reset
     for (let retry = 0; retry < 3 && response.status() === 429; retry++) {
-      console.log(`⏳ Rate limited for ${role}, waiting 60s (retry ${retry + 1}/3)...`);
+      console.log(
+        `⏳ Rate limited for ${role}, waiting 60s (retry ${retry + 1}/3)...`,
+      );
       await new Promise((r) => setTimeout(r, 60_000));
       response = await request.post(`${base}/api/auth/login`, {
         data: { login, password: ROLE_PASSWORD },

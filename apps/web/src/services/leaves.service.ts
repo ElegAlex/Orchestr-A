@@ -175,7 +175,10 @@ export const leavesService = {
   // GESTION DES SOLDES
   // ===========================
 
-  async getBalances(year?: number, userId?: string): Promise<LeaveBalanceRecord[]> {
+  async getBalances(
+    year?: number,
+    userId?: string,
+  ): Promise<LeaveBalanceRecord[]> {
     let url = "/leaves/balances";
     const params: string[] = [];
     if (year) params.push(`year=${year}`);
@@ -192,8 +195,13 @@ export const leavesService = {
     return response.data;
   },
 
-  async upsertBalance(data: UpsertLeaveBalanceDto): Promise<LeaveBalanceRecord> {
-    const response = await api.post<LeaveBalanceRecord>("/leaves/balances", data);
+  async upsertBalance(
+    data: UpsertLeaveBalanceDto,
+  ): Promise<LeaveBalanceRecord> {
+    const response = await api.post<LeaveBalanceRecord>(
+      "/leaves/balances",
+      data,
+    );
     return response.data;
   },
 

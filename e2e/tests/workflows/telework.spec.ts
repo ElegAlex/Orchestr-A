@@ -60,9 +60,7 @@ test("user peut cliquer sur un jour pour déclarer du télétravail", async ({
 
   // Trouver un jour ouvrable cliquable (non weekend, non grisé)
   // Les jours ouvrables ont la classe cursor-pointer et bg-white
-  const clickableDays = page.locator(
-    ".aspect-square.cursor-pointer.bg-white",
-  );
+  const clickableDays = page.locator(".aspect-square.cursor-pointer.bg-white");
 
   const dayCount = await clickableDays.count();
   if (dayCount === 0) {

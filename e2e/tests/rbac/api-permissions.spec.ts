@@ -137,8 +137,7 @@ for (const resource of resources) {
 
 test.describe("RBAC — Santé API", () => {
   test("L'API doit répondre sur /api/auth/login", async ({ request }) => {
-    const baseURL =
-      test.info().project.use.baseURL ?? "http://localhost:4001";
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4001";
 
     const response = await request.post(`${baseURL}/api/auth/login`, {
       data: { login: "nobody", password: "wrong" },
@@ -151,8 +150,7 @@ test.describe("RBAC — Santé API", () => {
   test("Un appel sans token doit retourner 401 sur /api/projects", async ({
     request,
   }) => {
-    const baseURL =
-      test.info().project.use.baseURL ?? "http://localhost:4001";
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4001";
 
     const response = await request.get(`${baseURL}/api/projects`);
 

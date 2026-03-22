@@ -44,7 +44,8 @@ export function AssignmentModal({
   const [deleting, setDeleting] = useState(false);
 
   const isBulk = dates.length > 1 || userIds.length > 1;
-  const isViewMode = !!existingAssignment && dates.length === 1 && userIds.length === 1;
+  const isViewMode =
+    !!existingAssignment && dates.length === 1 && userIds.length === 1;
 
   useEffect(() => {
     loadTasks();

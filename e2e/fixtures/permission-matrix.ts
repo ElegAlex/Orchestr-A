@@ -52,7 +52,14 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "projects",
     method: "GET",
     apiEndpoint: "/api/projects",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
     deniedRoles: [],
     description: "Lister les projets — accessible à tous les rôles",
   },
@@ -102,7 +109,8 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     apiEndpoint: "/api/users",
     allowedRoles: ["admin", "responsable", "manager", "observateur"],
     deniedRoles: ["referent", "contributeur"],
-    description: "Lister les utilisateurs — Admin, Responsable, Manager, Observateur",
+    description:
+      "Lister les utilisateurs — Admin, Responsable, Manager, Observateur",
   },
   {
     action: "users:create",
@@ -144,7 +152,8 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     apiEndpoint: "/api/departments",
     allowedRoles: ["admin", "responsable", "manager", "observateur"],
     deniedRoles: ["referent", "contributeur"],
-    description: "Lister les départements — Admin, Responsable, Manager, Observateur",
+    description:
+      "Lister les départements — Admin, Responsable, Manager, Observateur",
   },
   {
     action: "departments:create",
@@ -168,9 +177,16 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "skills",
     method: "GET",
     apiEndpoint: "/api/skills",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "observateur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "observateur",
+    ],
     deniedRoles: ["contributeur"],
-    description: "Lister les compétences — Admin, Responsable, Manager, Référent, Observateur",
+    description:
+      "Lister les compétences — Admin, Responsable, Manager, Référent, Observateur",
   },
   {
     action: "skills:create",
@@ -183,7 +199,8 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
       name: "Compétence Test RBAC",
       category: "TECHNICAL",
     },
-    description: "Créer une compétence — Admin, Responsable, Référent Technique",
+    description:
+      "Créer une compétence — Admin, Responsable, Référent Technique",
   },
 
   // ═══════════════════════════════════════════════════════════
@@ -194,16 +211,30 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "leaves",
     method: "GET",
     apiEndpoint: "/api/leaves",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
     deniedRoles: [],
-    description: "Lister les congés — tous les rôles (filtrage par ownership côté service)",
+    description:
+      "Lister les congés — tous les rôles (filtrage par ownership côté service)",
   },
   {
     action: "leaves:create",
     resource: "leaves",
     method: "POST",
     apiEndpoint: "/api/leaves",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+    ],
     deniedRoles: ["observateur"],
     testBody: {
       leaveTypeId: "lt-cp-001",
@@ -244,7 +275,14 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "telework",
     method: "GET",
     apiEndpoint: "/api/telework",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
     deniedRoles: [],
     description:
       "Lister les télétravails — tous les rôles (filtrage par ownership côté service)",
@@ -254,7 +292,13 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "telework",
     method: "POST",
     apiEndpoint: "/api/telework",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+    ],
     deniedRoles: ["observateur"],
     testBody: {
       date: "2027-09-15T00:00:00Z",

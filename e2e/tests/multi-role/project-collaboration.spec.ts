@@ -30,7 +30,9 @@ test.describe("Project Collaboration", () => {
 
       // Le projet "Projet E2E" doit apparaître dans la liste
       const projectItem = adminPage
-        .locator(`text="${PROJECT_NAME}", [data-testid="project-card"]:has-text("${PROJECT_NAME}"), .project-item:has-text("${PROJECT_NAME}")`)
+        .locator(
+          `text="${PROJECT_NAME}", [data-testid="project-card"]:has-text("${PROJECT_NAME}"), .project-item:has-text("${PROJECT_NAME}")`,
+        )
         .first();
 
       const isVisible = await projectItem
@@ -48,7 +50,9 @@ test.describe("Project Collaboration", () => {
           .first()
           .isVisible({ timeout: 5000 })
           .catch(() => false);
-        expect(hasContent || adminPage.url().includes("/projects")).toBeTruthy();
+        expect(
+          hasContent || adminPage.url().includes("/projects"),
+        ).toBeTruthy();
       } else {
         await expect(projectItem).toBeVisible();
       }
@@ -149,9 +153,7 @@ test.describe("Project Collaboration", () => {
 
       // Tenter de naviguer vers un projet pour vérifier l'absence d'actions
       const projectCard = observateurPage
-        .locator(
-          '[data-testid="project-card"], .project-card, .project-item',
-        )
+        .locator('[data-testid="project-card"], .project-card, .project-item')
         .first();
 
       if (await projectCard.isVisible({ timeout: 5000 })) {
@@ -179,54 +181,53 @@ test.describe("Project Collaboration", () => {
     },
   );
 
-  test(
-    "ADMIN et CONTRIBUTEUR voient tous les deux le projet E2E simultanément",
-    async ({ asRole }) => {
-      // Test de collaboration : deux rôles voient le même projet
-      const [adminPage, contributeurPage] = await Promise.all([
-        asRole("admin"),
-        asRole("contributeur"),
-      ]);
+  test("ADMIN et CONTRIBUTEUR voient tous les deux le projet E2E simultanément", async ({
+    asRole,
+  }) => {
+    // Test de collaboration : deux rôles voient le même projet
+    const [adminPage, contributeurPage] = await Promise.all([
+      asRole("admin"),
+      asRole("contributeur"),
+    ]);
 
-      await Promise.all([
-        adminPage.goto("/projects"),
-        contributeurPage.goto("/projects"),
-      ]);
+    await Promise.all([
+      adminPage.goto("/projects"),
+      contributeurPage.goto("/projects"),
+    ]);
 
-      await Promise.all([
-        adminPage.waitForLoadState("domcontentloaded"),
-        contributeurPage.waitForLoadState("domcontentloaded"),
-      ]);
+    await Promise.all([
+      adminPage.waitForLoadState("domcontentloaded"),
+      contributeurPage.waitForLoadState("domcontentloaded"),
+    ]);
 
-      // Les deux rôles doivent être sur la page projets (pas redirigés)
-      expect(adminPage.url()).not.toContain("/login");
-      expect(contributeurPage.url()).not.toContain("/login");
+    // Les deux rôles doivent être sur la page projets (pas redirigés)
+    expect(adminPage.url()).not.toContain("/login");
+    expect(contributeurPage.url()).not.toContain("/login");
 
-      // Vérifier que l'admin a accès à des actions supplémentaires
-      // par rapport au contributeur (bouton de création de projet)
-      await adminPage.waitForLoadState("networkidle").catch(() => {});
-      await contributeurPage.waitForLoadState("networkidle").catch(() => {});
+    // Vérifier que l'admin a accès à des actions supplémentaires
+    // par rapport au contributeur (bouton de création de projet)
+    await adminPage.waitForLoadState("networkidle").catch(() => {});
+    await contributeurPage.waitForLoadState("networkidle").catch(() => {});
 
-      const adminCreateBtn = adminPage
-        .getByRole("button", { name: /nouveau projet|créer|ajouter/i })
+    const adminCreateBtn = adminPage
+      .getByRole("button", { name: /nouveau projet|créer|ajouter/i })
+      .first();
+    const adminHasCreate = await adminCreateBtn
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
+
+    // L'admin doit avoir un bouton de création (ou accès admin à la page)
+    // Ce n'est pas bloquant si l'UI ne l'affiche pas sur cette version
+    if (adminHasCreate) {
+      const contributeurCreateBtn = contributeurPage
+        .getByRole("button", { name: /nouveau projet|créer un projet/i })
         .first();
-      const adminHasCreate = await adminCreateBtn
-        .isVisible({ timeout: 5000 })
+      const contributeurHasCreate = await contributeurCreateBtn
+        .isVisible({ timeout: 3000 })
         .catch(() => false);
 
-      // L'admin doit avoir un bouton de création (ou accès admin à la page)
-      // Ce n'est pas bloquant si l'UI ne l'affiche pas sur cette version
-      if (adminHasCreate) {
-        const contributeurCreateBtn = contributeurPage
-          .getByRole("button", { name: /nouveau projet|créer un projet/i })
-          .first();
-        const contributeurHasCreate = await contributeurCreateBtn
-          .isVisible({ timeout: 3000 })
-          .catch(() => false);
-
-        // Le contributeur ne devrait pas avoir le bouton de création de projet
-        expect(contributeurHasCreate).toBeFalsy();
-      }
-    },
-  );
+      // Le contributeur ne devrait pas avoir le bouton de création de projet
+      expect(contributeurHasCreate).toBeFalsy();
+    }
+  });
 });

@@ -71,29 +71,26 @@ test.describe("RBAC — Protection contre l'escalade de privilèges", () => {
       },
     );
 
-    test(
-      "REFERENT est bloqué sur /admin/roles",
-      async ({ asRole }) => {
-        const referentPage = await asRole("referent");
-        await referentPage.goto("/admin/roles");
-        await referentPage.waitForLoadState("domcontentloaded");
+    test("REFERENT est bloqué sur /admin/roles", async ({ asRole }) => {
+      const referentPage = await asRole("referent");
+      await referentPage.goto("/admin/roles");
+      await referentPage.waitForLoadState("domcontentloaded");
 
-        const url = referentPage.url();
+      const url = referentPage.url();
 
-        const isRedirected =
-          url.includes("/login") ||
-          url.includes("/403") ||
-          url.includes("/unauthorized") ||
-          url.includes("/dashboard");
+      const isRedirected =
+        url.includes("/login") ||
+        url.includes("/403") ||
+        url.includes("/unauthorized") ||
+        url.includes("/dashboard");
 
-        const hasRestrictedMessage = await referentPage
-          .locator("text=/accès restreint|réservé aux administrateurs/i")
-          .isVisible({ timeout: 8000 })
-          .catch(() => false);
+      const hasRestrictedMessage = await referentPage
+        .locator("text=/accès restreint|réservé aux administrateurs/i")
+        .isVisible({ timeout: 8000 })
+        .catch(() => false);
 
-        expect(isRedirected || hasRestrictedMessage).toBeTruthy();
-      },
-    );
+      expect(isRedirected || hasRestrictedMessage).toBeTruthy();
+    });
   });
 
   // ─── Tests API directs ─────────────────────────────────────────────────────
@@ -169,66 +166,61 @@ test.describe("RBAC — Protection contre l'escalade de privilèges", () => {
       },
     );
 
-    test(
-      "OBSERVATEUR : DELETE /api/projects/:id retourne 403",
-      async ({ asRole }) => {
-        const observateurPage = await asRole("observateur");
+    test("OBSERVATEUR : DELETE /api/projects/:id retourne 403", async ({
+      asRole,
+    }) => {
+      const observateurPage = await asRole("observateur");
 
-        const response = await observateurPage.request.delete(
-          `/api/projects/${FAKE_PROJECT_ID}`,
-          {
-            failOnStatusCode: false,
-          },
-        );
+      const response = await observateurPage.request.delete(
+        `/api/projects/${FAKE_PROJECT_ID}`,
+        {
+          failOnStatusCode: false,
+        },
+      );
 
-        expect([401, 403, 404]).toContain(response.status());
-        expect(response.status()).not.toBe(200);
-        expect(response.status()).not.toBe(204);
-      },
-    );
+      expect([401, 403, 404]).toContain(response.status());
+      expect(response.status()).not.toBe(200);
+      expect(response.status()).not.toBe(204);
+    });
 
-    test(
-      "CONTRIBUTEUR : PATCH /api/users/:id/role retourne 403 (escalade de rôle)",
-      async ({ asRole }) => {
-        const contributeurPage = await asRole("contributeur");
+    test("CONTRIBUTEUR : PATCH /api/users/:id/role retourne 403 (escalade de rôle)", async ({
+      asRole,
+    }) => {
+      const contributeurPage = await asRole("contributeur");
 
-        // Tenter de modifier son propre rôle ou celui d'un autre utilisateur
-        const response = await contributeurPage.request.patch(
-          `/api/users/${FAKE_PROJECT_ID}`,
-          {
-            data: { role: "ADMIN" },
-            headers: { "Content-Type": "application/json" },
-            failOnStatusCode: false,
-          },
-        );
-
-        // Modification de rôle utilisateur interdite → 403, 401, ou 404
-        expect([401, 403, 404]).toContain(response.status());
-        expect(response.status()).not.toBe(200);
-      },
-    );
-
-    test(
-      "OBSERVATEUR : POST /api/leaves retourne 403",
-      async ({ asRole }) => {
-        const observateurPage = await asRole("observateur");
-
-        const response = await observateurPage.request.post("/api/leaves", {
-          data: {
-            leaveTypeId: "00000000-0000-0000-0000-000000000002",
-            startDate: "2027-04-01",
-            endDate: "2027-04-03",
-          },
+      // Tenter de modifier son propre rôle ou celui d'un autre utilisateur
+      const response = await contributeurPage.request.patch(
+        `/api/users/${FAKE_PROJECT_ID}`,
+        {
+          data: { role: "ADMIN" },
           headers: { "Content-Type": "application/json" },
           failOnStatusCode: false,
-        });
+        },
+      );
 
-        // L'observateur ne peut pas créer de congés → 403 ou 401
-        // (ou 400/422 si la validation métier est exécutée avant le check de rôle)
-        expect([400, 401, 403, 422]).toContain(response.status());
-        expect(response.status()).not.toBe(201);
-      },
-    );
+      // Modification de rôle utilisateur interdite → 403, 401, ou 404
+      expect([401, 403, 404]).toContain(response.status());
+      expect(response.status()).not.toBe(200);
+    });
+
+    test("OBSERVATEUR : POST /api/leaves retourne 403", async ({ asRole }) => {
+      const observateurPage = await asRole("observateur");
+
+      const response = await observateurPage.request.post("/api/leaves", {
+        data: {
+          leaveTypeId: "00000000-0000-0000-0000-000000000002",
+          startDate: "2027-04-01",
+          endDate: "2027-04-03",
+        },
+        headers: { "Content-Type": "application/json" },
+        failOnStatusCode: false,
+      });
+
+      // L'observateur ne peut pas créer de congés → 403 ou 401
+      // (ou 400/422 si la validation métier est exécutée avant le check de rôle)
+      expect([400, 401, 403, 422]).toContain(response.status());
+      expect(response.status()).not.toBe(201);
+    });
   });
 
   // ─── Test de cohérence : vérifier que l'ADMIN peut accéder ────────────────

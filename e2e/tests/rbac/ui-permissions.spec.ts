@@ -122,7 +122,9 @@ test.describe("UI — Administration", () => {
     await page.waitForLoadState("networkidle");
 
     // Soit redirection, soit page vide/message d'erreur
-    const isRedirected = page.url().match(/\/unauthorized|\/403|\/login|\/fr\/?$/);
+    const isRedirected = page
+      .url()
+      .match(/\/unauthorized|\/403|\/login|\/fr\/?$/);
     const hasErrorMessage = await page
       .locator("text=Accès refusé, text=Forbidden, text=Non autorisé")
       .isVisible()
@@ -154,7 +156,9 @@ test.describe("UI — Rapports", () => {
     await page.goto(`${BASE}/fr/reports`);
     await page.waitForLoadState("networkidle");
 
-    const isRedirected = page.url().match(/\/unauthorized|\/403|\/login|\/fr\/?$/);
+    const isRedirected = page
+      .url()
+      .match(/\/unauthorized|\/403|\/login|\/fr\/?$/);
     const hasErrorMessage = await page
       .locator("text=Accès refusé, text=Forbidden, text=Non autorisé")
       .isVisible()
