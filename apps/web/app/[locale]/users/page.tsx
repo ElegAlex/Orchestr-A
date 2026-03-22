@@ -754,6 +754,8 @@ export default function UsersPage() {
                 <input
                   type="text"
                   required
+                  autoComplete="off"
+                  name="new-user-login"
                   value={formData.login}
                   onChange={(e) =>
                     setFormData({ ...formData, login: e.target.value })
@@ -769,11 +771,15 @@ export default function UsersPage() {
                 <input
                   type="password"
                   required
+                  autoComplete="new-password"
+                  name="new-user-password"
+                  minLength={8}
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Min. 8 car., 1 majuscule, 1 chiffre, 1 spécial"
                 />
               </div>
 
