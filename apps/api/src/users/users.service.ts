@@ -80,6 +80,18 @@ export class UsersService {
     // Hasher le mot de passe
     const passwordHash = await bcrypt.hash(createUserDto.password, 12);
 
+    // Vérification immédiate que le hash correspond au mot de passe
+    const hashValid = await bcrypt.compare(
+      createUserDto.password,
+      passwordHash,
+    );
+    if (!hashValid) {
+      console.error(
+        `[CRITICAL] bcrypt hash verification failed for user ${createUserDto.login}`,
+      );
+      throw new Error('Password hash verification failed');
+    }
+
     // Créer l'utilisateur
     const user = await this.prisma.user.create({
       data: {

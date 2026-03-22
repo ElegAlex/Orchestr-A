@@ -44,6 +44,7 @@ export default function UsersPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -136,6 +137,12 @@ export default function UsersPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.password || formData.password.length < 8) {
+      toast.error(
+        "Le mot de passe doit contenir au moins 8 caractères, une majuscule, un chiffre et un caractère spécial",
+      );
+      return;
+    }
     try {
       const createData: {
         email: string;
@@ -155,6 +162,7 @@ export default function UsersPage() {
       await usersService.create(createData);
       toast.success(t("messages.createSuccess"));
       setShowCreateModal(false);
+      setShowPassword(false);
       setFormData({
         email: "",
         login: "",
@@ -768,19 +776,38 @@ export default function UsersPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t("createModal.password")}
                 </label>
-                <input
-                  type="password"
-                  required
-                  autoComplete="new-password"
-                  name="new-user-password"
-                  minLength={8}
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Min. 8 car., 1 majuscule, 1 chiffre, 1 spécial"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    autoComplete="off"
+                    name="new-user-password"
+                    id="create-user-password"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    minLength={8}
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Min. 8 car., 1 majuscule, 1 chiffre, 1 spécial"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? "🙈" : "👁️"}
+                  </button>
+                </div>
+                {formData.password &&
+                  formData.password.length > 0 &&
+                  formData.password.length < 8 && (
+                    <p className="text-xs text-red-500 mt-1">
+                      Minimum 8 caractères
+                    </p>
+                  )}
               </div>
 
               <div>
