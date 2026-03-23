@@ -166,10 +166,8 @@ export const usePlanningData = ({
           holidaysData,
           predefinedAssignmentsData,
         ] = await Promise.all([
-          // Conditionner usersService.getAll() à la permission users:read
-          hasPermission("users:read")
-            ? usersService.getAll().catch(() => [])
-            : Promise.resolve([]),
+          // Le planning a toujours besoin des users pour afficher la grille
+          usersService.getAll().catch(() => []),
           tasksService
             .getByDateRange(startDate.toISOString(), endDate.toISOString())
             .catch(() => []),

@@ -52,7 +52,7 @@ export class DepartmentsController {
   }
 
   @Get()
-  @Permissions('departments:read')
+
   @ApiOperation({
     summary: 'Récupérer tous les départements (avec pagination)',
   })
@@ -70,7 +70,7 @@ export class DepartmentsController {
   }
 
   @Get(':id')
-  @Permissions('departments:read')
+
   @ApiOperation({
     summary: 'Récupérer un département par ID avec tous les détails',
   })
@@ -87,7 +87,7 @@ export class DepartmentsController {
   }
 
   @Get(':id/stats')
-  @Permissions('departments:read')
+
   @ApiOperation({ summary: "Récupérer les statistiques d'un département" })
   @ApiResponse({
     status: 200,
