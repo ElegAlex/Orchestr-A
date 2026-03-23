@@ -170,18 +170,22 @@ export const usePlanningData = ({
           hasPermission("users:read")
             ? usersService.getAll().catch(() => [])
             : Promise.resolve([]),
-          tasksService.getByDateRange(
-            startDate.toISOString(),
-            endDate.toISOString(),
-          ),
-          leavesService.getByDateRange(
-            startDate.toISOString(),
-            endDate.toISOString(),
-          ),
-          eventsService.getByRange(teleworkStartDate, teleworkEndDate),
-          teleworkService.getByDateRange(teleworkStartDate, teleworkEndDate),
-          servicesService.getAll(),
-          holidaysService.getByRange(teleworkStartDate, teleworkEndDate),
+          tasksService
+            .getByDateRange(startDate.toISOString(), endDate.toISOString())
+            .catch(() => []),
+          leavesService
+            .getByDateRange(startDate.toISOString(), endDate.toISOString())
+            .catch(() => []),
+          eventsService
+            .getByRange(teleworkStartDate, teleworkEndDate)
+            .catch(() => []),
+          teleworkService
+            .getByDateRange(teleworkStartDate, teleworkEndDate)
+            .catch(() => []),
+          servicesService.getAll().catch(() => []),
+          holidaysService
+            .getByRange(teleworkStartDate, teleworkEndDate)
+            .catch(() => []),
           // Conditionner predefinedTasksService.getAssignments() à la permission predefined_tasks:view
           hasPermission("predefined_tasks:view")
             ? predefinedTasksService
@@ -248,7 +252,8 @@ export const usePlanningData = ({
         if (!silent) setLoading(false);
       }
     },
-    [displayDays, permissionsLoaded, hasPermission],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [displayDays, permissionsLoaded],
   );
 
   useEffect(() => {
