@@ -24,9 +24,14 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const { hasAnyPermission, hasPermission } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const navigation: NavItem[] = [
+  const navigation: (NavItem & { permission?: string })[] = [
     { key: "dashboard", href: `/${locale}/dashboard`, icon: "🎯" },
-    { key: "projects", href: `/${locale}/projects`, icon: "📁" },
+    {
+      key: "projects",
+      href: `/${locale}/projects`,
+      icon: "📁",
+      permission: "projects:read",
+    },
     { key: "tasks", href: `/${locale}/tasks`, icon: "✓" },
     { key: "events", href: `/${locale}/events`, icon: "📣" },
     { key: "planning", href: `/${locale}/planning`, icon: "🗓️" },
@@ -35,11 +40,31 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     { key: "telework", href: `/${locale}/telework`, icon: "🏠" },
   ];
 
-  const adminNavigation: NavItem[] = [
-    { key: "reports", href: `/${locale}/reports`, icon: "📊" },
-    { key: "users", href: `/${locale}/users`, icon: "👥" },
-    { key: "departments", href: `/${locale}/departments`, icon: "🏢" },
-    { key: "skills", href: `/${locale}/skills`, icon: "⭐" },
+  const adminNavigation: (NavItem & { permission?: string })[] = [
+    {
+      key: "reports",
+      href: `/${locale}/reports`,
+      icon: "📊",
+      permission: "reports:view",
+    },
+    {
+      key: "users",
+      href: `/${locale}/users`,
+      icon: "👥",
+      permission: "users:read",
+    },
+    {
+      key: "departments",
+      href: `/${locale}/departments`,
+      icon: "🏢",
+      permission: "departments:read",
+    },
+    {
+      key: "skills",
+      href: `/${locale}/skills`,
+      icon: "⭐",
+      permission: "skills:read",
+    },
     {
       key: "roleManagement",
       href: `/${locale}/admin/roles`,
@@ -90,7 +115,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
         {/* Navigation */}
         <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-          {navigation.map((item) => {
+          {navigation
+            .filter(
+              (item) => !item.permission || hasPermission(item.permission),
+            )
+            .map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
@@ -108,7 +137,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             );
           })}
 
-          {isManager && (
+          {adminNavigation.some((item) => {
+            if (item.adminOnly) return isAdmin;
+            if (item.permission) return hasPermission(item.permission);
+            return true;
+          }) && (
             <>
               <div className="pt-4 pb-2">
                 {sidebarOpen && (
@@ -118,7 +151,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 )}
               </div>
               {adminNavigation
-                .filter((item) => !item.adminOnly || isAdmin)
+                .filter((item) => {
+                  if (item.adminOnly) return isAdmin;
+                  if (item.permission) return hasPermission(item.permission);
+                  return true;
+                })
                 .map((item) => {
                   const isActive = pathname === item.href;
                   return (
