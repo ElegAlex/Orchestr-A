@@ -1323,7 +1323,7 @@ export class LeavesService {
           total: totalDays,
           used: usedDays,
           pending: pendingDays,
-          available: Math.max(0, totalDays - usedDays),
+          available: Math.max(0, totalDays - usedDays - pendingDays),
         };
       }),
     );

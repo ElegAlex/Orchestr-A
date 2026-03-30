@@ -62,8 +62,8 @@ export default function ProjectsPage() {
       setLoading(true);
       let projectsData: Project[] = [];
 
-      // Users with broad read access see all projects
-      if (hasPermission("users:read")) {
+      // Users with project read access see all projects (ADMIN, RESPONSABLE, MANAGER, etc.)
+      if (hasPermission("projects:read")) {
         const response = await projectsService.getAll();
         projectsData = response.data;
       } else if (user?.id) {

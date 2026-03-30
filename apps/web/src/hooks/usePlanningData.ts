@@ -110,16 +110,20 @@ export const usePlanningData = ({
       DEFAULT_VISIBLE_DAYS,
   );
 
-  // Calculer les jours à afficher
-  const displayDays = useMemo(() => {
+  // Calculer les jours à afficher et la plage de requête complète
+  const { displayDays, queryStartDate, queryEndDate } = useMemo(() => {
     // Convertir ISO (1=Lun..7=Dim) en JS getDay() (0=Dim..6=Sam)
     const jsVisibleDays = visibleDays.map((d) => (d === 7 ? 0 : d));
 
     if (viewMode === "week") {
       const start = startOfWeek(currentDate, { locale: fr, weekStartsOn: 1 });
-      return Array.from({ length: 7 }, (_, i) => addDays(start, i)).filter(
-        (d) => jsVisibleDays.includes(d.getDay()),
-      );
+      const allDays = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+      const filtered = allDays.filter((d) => jsVisibleDays.includes(d.getDay()));
+      return {
+        displayDays: filtered,
+        queryStartDate: startOfDay(allDays[0]),
+        queryEndDate: endOfDay(allDays[allDays.length - 1]),
+      };
     } else {
       const start = startOfWeek(
         new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
@@ -131,13 +135,21 @@ export const usePlanningData = ({
         0,
       ).getDate();
       const totalDays = Math.ceil((daysInMonth + start.getDay()) / 7) * 7;
-      return Array.from({ length: totalDays }, (_, i) =>
+      const allGridDays = Array.from({ length: totalDays }, (_, i) =>
         addDays(start, i),
-      ).filter(
+      );
+      const filtered = allGridDays.filter(
         (d) =>
           d.getMonth() === currentDate.getMonth() &&
           jsVisibleDays.includes(d.getDay()),
       );
+      return {
+        displayDays: filtered,
+        // Query covers the full calendar grid (Mon of first week → Sun of last week)
+        // so cross-boundary leaves (e.g. Dec 29 – Jan 2) are not missed
+        queryStartDate: startOfDay(allGridDays[0]),
+        queryEndDate: endOfDay(allGridDays[allGridDays.length - 1]),
+      };
     }
   }, [currentDate, viewMode, visibleDays]);
 
@@ -149,8 +161,9 @@ export const usePlanningData = ({
       if (!permissionsLoaded) return;
       try {
         if (!silent) setLoading(true);
-        const startDate = startOfDay(displayDays[0]);
-        const endDate = endOfDay(displayDays[displayDays.length - 1]);
+        // Use the full calendar grid range so cross-boundary leaves are included
+        const startDate = queryStartDate;
+        const endDate = queryEndDate;
 
         // Format YYYY-MM-DD pour telework (évite les problèmes de timezone)
         const teleworkStartDate = format(startDate, "yyyy-MM-dd");
@@ -251,7 +264,7 @@ export const usePlanningData = ({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [displayDays, permissionsLoaded],
+    [displayDays, queryStartDate, queryEndDate, permissionsLoaded],
   );
 
   useEffect(() => {

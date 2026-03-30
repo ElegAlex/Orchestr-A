@@ -2451,6 +2451,8 @@ async function main() {
       create: {
         code: "CP_E2E",
         name: "Congés payés (E2E)",
+        icon: "🏖️",
+        color: "#3B82F6",
         isPaid: true,
         requiresApproval: true,
         isActive: true,
