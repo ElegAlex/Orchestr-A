@@ -56,7 +56,7 @@ export class SkillsController {
   }
 
   @Get()
-
+  @Permissions('skills:read')
   @ApiOperation({
     summary: 'Récupérer toutes les compétences (avec pagination)',
   })
@@ -94,7 +94,7 @@ export class SkillsController {
   }
 
   @Get('search/:skillId')
-
+  @Permissions('skills:read')
   @ApiOperation({
     summary:
       'Rechercher des utilisateurs par compétence (Admin/Responsable/Manager)',
@@ -116,6 +116,7 @@ export class SkillsController {
   }
 
   @Get('import-template')
+  @Permissions('skills:read')
   @ApiOperation({
     summary: "Télécharger le template CSV pour l'import de compétences",
   })
@@ -152,7 +153,7 @@ export class SkillsController {
   }
 
   @Get(':id')
-
+  @Permissions('skills:read')
   @ApiOperation({
     summary: 'Récupérer une compétence par ID avec ses utilisateurs',
   })
@@ -293,6 +294,7 @@ export class SkillsController {
   }
 
   @Get('user/:userId')
+  @Permissions('skills:read')
   @ApiOperation({ summary: "Récupérer les compétences d'un utilisateur" })
   @ApiResponse({
     status: 200,
