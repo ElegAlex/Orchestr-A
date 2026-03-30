@@ -58,6 +58,7 @@ export class TeleworkController {
   }
 
   @Get()
+  @Permissions('telework:read')
   @ApiOperation({
     summary: 'Récupérer tous les télétravails (avec pagination et filtres)',
   })
@@ -184,6 +185,7 @@ export class TeleworkController {
   }
 
   @Get(':id')
+  @Permissions('telework:read')
   @ApiOperation({ summary: 'Récupérer un télétravail par ID' })
   @ApiResponse({
     status: 200,
@@ -250,6 +252,7 @@ export class TeleworkController {
   // ─────────────────────────────────────────────
 
   @Get('recurring-rules')
+  @Permissions('telework:read')
   @ApiOperation({
     summary:
       'Lister les règles de télétravail récurrent (filtrable par userId)',
