@@ -209,6 +209,17 @@ export const leavesService = {
     await api.delete(`/leaves/balances/${id}`);
   },
 
+  async getSubordinates(): Promise<Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    login: string;
+    email: string;
+  }>> {
+    const response = await api.get('/leaves/subordinates');
+    return response.data;
+  },
+
   async approve(id: string, comment?: string): Promise<Leave> {
     const response = await api.post<Leave>(`/leaves/${id}/approve`, {
       comment,

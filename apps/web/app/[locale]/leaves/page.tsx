@@ -69,6 +69,12 @@ export default function LeavesPage() {
 
   // "Pour qui?" — declare for others
   const [createForUserId, setCreateForUserId] = useState<string>("");
+  const [subordinates, setSubordinates] = useState<Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    login: string;
+  }>>([]);
 
   // Balances management state
   const [balances, setBalances] = useState<LeaveBalanceRecord[]>([]);
@@ -110,6 +116,16 @@ export default function LeavesPage() {
       }
     } catch (error) {
       console.error("Error fetching users:", error);
+    }
+  };
+
+  const fetchSubordinates = async () => {
+    if (!canDeclareForOthers) return;
+    try {
+      const data = await leavesService.getSubordinates();
+      setSubordinates(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching subordinates:", error);
     }
   };
 
@@ -189,6 +205,7 @@ export default function LeavesPage() {
     setLoading(true);
     await Promise.all([
       fetchUsers(),
+      fetchSubordinates(),
       fetchMyLeaves(),
       fetchPendingLeaves(),
       fetchAllLeaves(),
@@ -1153,13 +1170,11 @@ export default function LeavesPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Pour moi</option>
-                    {users
-                      .filter((u) => u.id !== user?.id)
-                      .map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.firstName} {u.lastName} ({u.login})
-                        </option>
-                      ))}
+                    {subordinates.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.firstName} {u.lastName} ({u.login})
+                      </option>
+                    ))}
                   </select>
                   {createForUserId && (
                     <p className="text-xs text-blue-600 mt-1">

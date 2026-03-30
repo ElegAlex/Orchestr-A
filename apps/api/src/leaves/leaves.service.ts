@@ -578,6 +578,77 @@ export class LeavesService {
   }
 
   /**
+   * Récupérer les collaborateurs sous la responsabilité d'un manager/responsable
+   * Utilise la même logique de périmètre que getPendingForValidator
+   */
+  async getSubordinates(managerId: string, managerRole: string) {
+    // ADMIN sees all active users
+    if (managerRole === Role.ADMIN) {
+      return this.prisma.user.findMany({
+        where: { isActive: true, id: { not: managerId } },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          login: true,
+          email: true,
+        },
+        orderBy: { lastName: 'asc' },
+      });
+    }
+
+    // RESPONSABLE / MANAGER → users in same services + managed services
+    if (managerRole === Role.RESPONSABLE || managerRole === Role.MANAGER) {
+      const userServices = await this.prisma.userService.findMany({
+        where: { userId: managerId },
+        select: { serviceId: true },
+      });
+
+      const managedServices = await this.prisma.service.findMany({
+        where: { managerId },
+        select: { id: true },
+      });
+
+      const serviceIds = [
+        ...userServices.map((us) => us.serviceId),
+        ...managedServices.map((s) => s.id),
+      ];
+
+      if (serviceIds.length === 0) {
+        return [];
+      }
+
+      const usersInServices = await this.prisma.userService.findMany({
+        where: {
+          serviceId: { in: serviceIds },
+          userId: { not: managerId },
+        },
+        select: { userId: true },
+        distinct: ['userId'],
+      });
+
+      const userIds = usersInServices.map((us) => us.userId);
+
+      return this.prisma.user.findMany({
+        where: {
+          id: { in: userIds },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          login: true,
+          email: true,
+        },
+        orderBy: { lastName: 'asc' },
+      });
+    }
+
+    return [];
+  }
+
+  /**
    * Récupérer les demandes de congé d'un utilisateur
    */
   async getUserLeaves(userId: string) {

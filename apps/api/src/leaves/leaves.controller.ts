@@ -276,6 +276,21 @@ export class LeavesController {
     return this.leavesService.getLeaveBalance(userId);
   }
 
+  @Get('subordinates')
+  @ApiOperation({
+    summary: 'Récupérer les collaborateurs sous la responsabilité du manager (pour déclaration de congés)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des collaborateurs',
+  })
+  getSubordinates(
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
+  ) {
+    return this.leavesService.getSubordinates(userId, userRole);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Récupérer une demande de congé par ID' })
   @ApiResponse({
