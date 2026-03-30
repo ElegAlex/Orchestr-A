@@ -796,6 +796,7 @@ model PredefinedTaskRecurringRule {
   userId           String
   dayOfWeek        Int       // 0=Monday, 1=Tuesday, ..., 6=Sunday
   period           String    // "MORNING" | "AFTERNOON" | "FULL_DAY"
+  weekInterval     Int       @default(1)  // 1=weekly, 2=biweekly, 3=every 3 weeks...
   startDate        DateTime
   endDate          DateTime?
   isActive         Boolean   @default(true)
