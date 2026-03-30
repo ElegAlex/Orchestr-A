@@ -122,6 +122,7 @@ export class LeavesController {
   }
 
   @Get()
+  @Permissions('leaves:read')
   @ApiOperation({
     summary:
       'Récupérer toutes les demandes de congé (avec pagination et filtres)',
@@ -192,6 +193,7 @@ export class LeavesController {
   }
 
   @Get('pending-validation')
+  @Permissions('leaves:approve')
   @ApiOperation({
     summary: 'Récupérer les demandes en attente de ma validation',
   })
@@ -204,6 +206,7 @@ export class LeavesController {
   }
 
   @Get('import-template')
+  @Permissions('leaves:read')
   @ApiOperation({ summary: 'Télécharger le modèle CSV pour import de congés' })
   @ApiResponse({
     status: 200,
@@ -277,6 +280,7 @@ export class LeavesController {
   }
 
   @Get('subordinates')
+  @Permissions('leaves:read')
   @ApiOperation({
     summary: 'Récupérer les collaborateurs sous la responsabilité du manager (pour déclaration de congés)',
   })
@@ -292,6 +296,7 @@ export class LeavesController {
   }
 
   @Get(':id')
+  @Permissions('leaves:read')
   @ApiOperation({ summary: 'Récupérer une demande de congé par ID' })
   @ApiResponse({
     status: 200,
