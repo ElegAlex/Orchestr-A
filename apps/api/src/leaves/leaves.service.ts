@@ -470,7 +470,7 @@ export class LeavesService {
     if (user.role === Role.ADMIN) {
       return this.prisma.leave.findMany({
         where: {
-          status: LeaveStatus.PENDING,
+          status: { in: [LeaveStatus.PENDING, LeaveStatus.CANCELLATION_REQUESTED] },
         },
         include: {
           user: {
@@ -540,7 +540,7 @@ export class LeavesService {
       // 4. Query pending leaves for those users
       return this.prisma.leave.findMany({
         where: {
-          status: LeaveStatus.PENDING,
+          status: { in: [LeaveStatus.PENDING, LeaveStatus.CANCELLATION_REQUESTED] },
           userId: { in: userIds },
         },
         include: {
@@ -1144,9 +1144,12 @@ export class LeavesService {
       throw new NotFoundException('Demande de congé introuvable');
     }
 
-    if (leave.status !== LeaveStatus.APPROVED) {
+    if (
+      leave.status !== LeaveStatus.APPROVED &&
+      leave.status !== LeaveStatus.CANCELLATION_REQUESTED
+    ) {
       throw new BadRequestException(
-        'Seules les demandes approuvées peuvent être annulées',
+        "Seules les demandes approuvées ou en attente d'annulation peuvent être annulées",
       );
     }
 
@@ -1167,6 +1170,80 @@ export class LeavesService {
     });
 
     return updatedLeave;
+  }
+
+  /**
+   * Demander l'annulation d'un congé approuvé (par le demandeur lui-même)
+   * Le congé passe en CANCELLATION_REQUESTED et attend validation du manager/admin
+   */
+  async requestCancel(id: string, requestingUserId: string) {
+    const leave = await this.prisma.leave.findUnique({
+      where: { id },
+    });
+
+    if (!leave) {
+      throw new NotFoundException('Demande de congé introuvable');
+    }
+
+    if (leave.userId !== requestingUserId) {
+      throw new ForbiddenException(
+        "Vous ne pouvez demander l'annulation que de vos propres congés",
+      );
+    }
+
+    if (leave.status !== LeaveStatus.APPROVED) {
+      throw new BadRequestException(
+        "Seules les demandes approuvées peuvent faire l'objet d'une demande d'annulation",
+      );
+    }
+
+    const updatedLeave = await this.prisma.leave.update({
+      where: { id },
+      data: { status: LeaveStatus.CANCELLATION_REQUESTED },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        leaveType: true,
+      },
+    });
+
+    return updatedLeave;
+  }
+
+  /**
+   * Refuser la demande d'annulation — le congé redevient APPROVED
+   */
+  async rejectCancellation(id: string) {
+    const leave = await this.prisma.leave.findUnique({
+      where: { id },
+    });
+
+    if (!leave) {
+      throw new NotFoundException('Demande de congé introuvable');
+    }
+
+    if (leave.status !== LeaveStatus.CANCELLATION_REQUESTED) {
+      throw new BadRequestException(
+        "Ce congé n'est pas en attente d'annulation",
+      );
+    }
+
+    return this.prisma.leave.update({
+      where: { id },
+      data: { status: LeaveStatus.APPROVED },
+      include: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        leaveType: true,
+      },
+    });
   }
 
   // ===========================
@@ -1392,7 +1469,7 @@ export class LeavesService {
           where: {
             userId,
             leaveTypeId: lt.id,
-            status: LeaveStatus.APPROVED,
+            status: { in: [LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED] },
             startDate: { gte: yearStart, lte: yearEnd },
           },
         });

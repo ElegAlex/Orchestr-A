@@ -445,6 +445,35 @@ export class LeavesController {
     return this.leavesService.reject(id, validatorId, reason);
   }
 
+  @Post(':id/request-cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      "Demander l'annulation d'un congé approuvé (par le demandeur)",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Demande d'annulation enregistrée",
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Seules les demandes approuvées peuvent être annulées',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Vous ne pouvez annuler que vos propres congés',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Demande de congé introuvable',
+  })
+  requestCancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.leavesService.requestCancel(id, userId);
+  }
+
   @Post(':id/cancel')
   @Permissions('leaves:delete')
   @HttpCode(HttpStatus.OK)
@@ -466,6 +495,18 @@ export class LeavesController {
   })
   cancel(@Param('id', ParseUUIDPipe) id: string) {
     return this.leavesService.cancel(id);
+  }
+
+  @Post(':id/reject-cancellation')
+  @Permissions('leaves:approve')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Refuser la demande d'annulation — le congé reste approuvé",
+  })
+  @ApiResponse({ status: 200, description: "Demande d'annulation refusée" })
+  @ApiResponse({ status: 400, description: "Ce congé n'est pas en attente d'annulation" })
+  rejectCancellation(@Param('id', ParseUUIDPipe) id: string) {
+    return this.leavesService.rejectCancellation(id);
   }
 
   // ===========================
