@@ -51,6 +51,7 @@ export interface PredefinedTaskRecurringRule {
   userId: string;
   dayOfWeek: DayOfWeek;
   duration: TaskDuration;
+  weekInterval: number;
   startDate: string;
   endDate?: string | null;
   isActive: boolean;
@@ -108,6 +109,7 @@ export interface CreateRecurringRuleDto {
   userId: string;
   dayOfWeek: DayOfWeek;
   duration: TaskDuration;
+  weekInterval?: number;
   startDate: string;
   endDate?: string;
 }
@@ -123,6 +125,21 @@ export interface GenerateAssignmentsDto {
   startDate: string;
   endDate: string;
   ruleId?: string;
+}
+
+export interface BulkCreateRecurringRulesDto {
+  predefinedTaskId: string;
+  userIds: string[];
+  daysOfWeek: DayOfWeek[];
+  duration: TaskDuration;
+  weekInterval?: number;
+  startDate: string;
+  endDate?: string;
+}
+
+export interface BulkCreateRecurringRulesResponse {
+  created: number;
+  rules: PredefinedTaskRecurringRule[];
 }
 
 interface PredefinedTasksResponse {
@@ -256,6 +273,16 @@ export const predefinedTasksService = {
   ): Promise<PredefinedTaskRecurringRule> {
     const response = await api.post<PredefinedTaskRecurringRule>(
       "/predefined-tasks/recurring-rules",
+      data,
+    );
+    return response.data;
+  },
+
+  async bulkCreateRecurringRules(
+    data: BulkCreateRecurringRulesDto,
+  ): Promise<BulkCreateRecurringRulesResponse> {
+    const response = await api.post<BulkCreateRecurringRulesResponse>(
+      "/predefined-tasks/recurring-rules/bulk",
       data,
     );
     return response.data;
