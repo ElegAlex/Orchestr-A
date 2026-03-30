@@ -465,7 +465,12 @@ export class RoleManagementService implements OnModuleInit {
           'comments:update',
           'comments:delete',
           'telework:manage_others',
+          'telework:read',
+          'telework:view',
           'reports:view',
+          'leaves:create',
+          'leaves:read',
+          'leaves:view',
         ],
       },
       {
@@ -506,6 +511,9 @@ export class RoleManagementService implements OnModuleInit {
           'telework:delete',
           'telework:view',
           'predefined_tasks:view',
+          'leaves:create',
+          'leaves:read',
+          'leaves:view',
         ],
       },
       {
@@ -662,6 +670,9 @@ export class RoleManagementService implements OnModuleInit {
           'telework:delete',
           'telework:view',
           'telework:manage_others',
+          'leaves:create',
+          'leaves:read',
+          'leaves:view',
         ],
       },
       {
@@ -712,6 +723,9 @@ export class RoleManagementService implements OnModuleInit {
           'telework:delete',
           'telework:view',
           'telework:manage_others',
+          'leaves:create',
+          'leaves:read',
+          'leaves:view',
         ],
       },
       {
@@ -762,6 +776,9 @@ export class RoleManagementService implements OnModuleInit {
           'telework:delete',
           'telework:view',
           'telework:manage_others',
+          'leaves:create',
+          'leaves:read',
+          'leaves:view',
         ],
       },
       {
@@ -836,6 +853,9 @@ export class RoleManagementService implements OnModuleInit {
           'telework:delete',
           'telework:view',
           'telework:manage_others',
+          'leaves:create',
+          'leaves:read',
+          'leaves:view',
         ],
       },
     ];
