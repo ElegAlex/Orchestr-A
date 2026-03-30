@@ -107,6 +107,7 @@ export class UsersController {
   }
 
   @Get()
+  @Permissions('users:read')
   @ApiOperation({
     summary: 'Récupérer tous les utilisateurs (avec pagination)',
   })
@@ -139,7 +140,7 @@ export class UsersController {
   }
 
   @Get('presence')
-
+  @Permissions('users:read')
   @ApiOperation({
     summary: 'Récupérer les statuts de présence des utilisateurs pour une date',
   })
@@ -158,7 +159,7 @@ export class UsersController {
   }
 
   @Get('department/:departmentId')
-
+  @Permissions('users:read')
   @ApiOperation({ summary: "Récupérer les utilisateurs d'un département" })
   @ApiResponse({
     status: 200,
@@ -171,7 +172,7 @@ export class UsersController {
   }
 
   @Get('service/:serviceId')
-
+  @Permissions('users:read')
   @ApiOperation({ summary: "Récupérer les utilisateurs d'un service" })
   @ApiResponse({
     status: 200,
@@ -182,7 +183,7 @@ export class UsersController {
   }
 
   @Get('role/:role')
-
+  @Permissions('users:read')
   @ApiOperation({ summary: 'Récupérer les utilisateurs par rôle' })
   @ApiResponse({
     status: 200,
@@ -193,7 +194,7 @@ export class UsersController {
   }
 
   @Get(':id')
-
+  @Permissions('users:read')
   @ApiOperation({ summary: 'Récupérer un utilisateur par ID' })
   @ApiResponse({
     status: 200,
