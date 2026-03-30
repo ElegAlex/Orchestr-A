@@ -36,8 +36,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     { key: "events", href: `/${locale}/events`, icon: "📣", permission: "events:read" },
     { key: "planning", href: `/${locale}/planning`, icon: "🗓️" },
     { key: "timeTracking", href: `/${locale}/time-tracking`, icon: "⏱️", permission: "time_tracking:read" },
-    { key: "leaves", href: `/${locale}/leaves`, icon: "🏖️", permission: "leaves:create" },
-    { key: "telework", href: `/${locale}/telework`, icon: "🏠", permission: "telework:create" },
+    { key: "leaves", href: `/${locale}/leaves`, icon: "🏖️", permission: "leaves:read" },
+    { key: "telework", href: `/${locale}/telework`, icon: "🏠", permission: "telework:read" },
   ];
 
   const adminNavigation: (NavItem & { permission?: string })[] = [
