@@ -68,6 +68,7 @@ export class TasksController {
   }
 
   @Get()
+  @Permissions('tasks:read')
   @ApiOperation({
     summary: 'Récupérer toutes les tâches (avec pagination et filtres)',
   })
@@ -113,6 +114,7 @@ export class TasksController {
   }
 
   @Get('assignee/:userId')
+  @Permissions('tasks:read')
   @ApiOperation({
     summary: 'Récupérer toutes les tâches assignées à un utilisateur',
   })
@@ -125,6 +127,7 @@ export class TasksController {
   }
 
   @Get('project/:projectId')
+  @Permissions('tasks:read')
   @ApiOperation({ summary: "Récupérer toutes les tâches d'un projet" })
   @ApiResponse({
     status: 200,
@@ -139,6 +142,7 @@ export class TasksController {
   }
 
   @Get('project/:projectId/export')
+  @Permissions('tasks:read')
   @ApiOperation({ summary: "Exporter les tâches d'un projet en CSV" })
   @ApiResponse({ status: 200, description: 'Fichier CSV des tâches' })
   @ApiResponse({ status: 404, description: 'Projet introuvable' })
@@ -155,6 +159,7 @@ export class TasksController {
   }
 
   @Get('orphans')
+  @Permissions('tasks:read')
   @ApiOperation({ summary: 'Récupérer les tâches orphelines (sans projet)' })
   @ApiResponse({
     status: 200,
@@ -165,6 +170,7 @@ export class TasksController {
   }
 
   @Get(':id')
+  @Permissions('tasks:read')
   @ApiOperation({ summary: 'Récupérer une tâche par ID avec tous les détails' })
   @ApiResponse({
     status: 200,
@@ -348,6 +354,7 @@ export class TasksController {
   }
 
   @Get('project/:projectId/import-template')
+  @Permissions('tasks:read')
   @ApiOperation({
     summary: "Télécharger le template CSV pour l'import de tâches",
   })
