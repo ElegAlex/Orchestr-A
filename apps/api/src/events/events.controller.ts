@@ -54,6 +54,7 @@ export class EventsController {
   }
 
   @Get()
+  @Permissions('events:read')
   @ApiOperation({
     summary: 'Récupérer tous les événements (avec filtres optionnels)',
   })
@@ -84,6 +85,7 @@ export class EventsController {
   }
 
   @Get('range')
+  @Permissions('events:read')
   @ApiOperation({ summary: 'Récupérer les événements dans une plage de dates' })
   @ApiQuery({ name: 'start', required: true, type: String })
   @ApiQuery({ name: 'end', required: true, type: String })
@@ -100,6 +102,7 @@ export class EventsController {
   }
 
   @Get('user/:userId')
+  @Permissions('events:read')
   @ApiOperation({ summary: "Récupérer tous les événements d'un utilisateur" })
   @ApiResponse({
     status: 200,
@@ -127,6 +130,7 @@ export class EventsController {
   }
 
   @Get(':id')
+  @Permissions('events:read')
   @ApiOperation({
     summary: 'Récupérer un événement par ID avec tous les détails',
   })
