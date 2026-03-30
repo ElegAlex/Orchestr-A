@@ -100,6 +100,48 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
   },
 
   // ═══════════════════════════════════════════════════════════
+  // TASKS
+  // ═══════════════════════════════════════════════════════════
+  {
+    action: "tasks:read",
+    resource: "tasks",
+    method: "GET",
+    apiEndpoint: "/api/tasks",
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
+    deniedRoles: [],
+    description:
+      "Lister les tâches — tous les rôles (tasks:read dans tous les seeds)",
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // EVENTS
+  // ═══════════════════════════════════════════════════════════
+  {
+    action: "events:read",
+    resource: "events",
+    method: "GET",
+    apiEndpoint: "/api/events",
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
+    deniedRoles: [],
+    description:
+      "Lister les événements — tous les rôles (events:read dans tous les seeds)",
+  },
+
+  // ═══════════════════════════════════════════════════════════
   // USERS
   // ═══════════════════════════════════════════════════════════
   {
