@@ -21,7 +21,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const locale = useLocale();
   const t = useTranslations("common");
   const { user, logout } = useAuthStore();
-  const { hasAnyPermission, hasPermission } = usePermissions();
+  const { hasPermission } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const navigation: (NavItem & { permission?: string })[] = [
@@ -32,12 +32,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       icon: "📁",
       permission: "projects:read",
     },
-    { key: "tasks", href: `/${locale}/tasks`, icon: "✓" },
-    { key: "events", href: `/${locale}/events`, icon: "📣" },
+    { key: "tasks", href: `/${locale}/tasks`, icon: "✓", permission: "tasks:read" },
+    { key: "events", href: `/${locale}/events`, icon: "📣", permission: "events:read" },
     { key: "planning", href: `/${locale}/planning`, icon: "🗓️" },
-    { key: "timeTracking", href: `/${locale}/time-tracking`, icon: "⏱️" },
-    { key: "leaves", href: `/${locale}/leaves`, icon: "🏖️" },
-    { key: "telework", href: `/${locale}/telework`, icon: "🏠" },
+    { key: "timeTracking", href: `/${locale}/time-tracking`, icon: "⏱️", permission: "time_tracking:read" },
+    { key: "leaves", href: `/${locale}/leaves`, icon: "🏖️", permission: "leaves:create" },
+    { key: "telework", href: `/${locale}/telework`, icon: "🏠", permission: "telework:create" },
   ];
 
   const adminNavigation: (NavItem & { permission?: string })[] = [
@@ -78,8 +78,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       adminOnly: true,
     },
   ];
-
-  const isManager = hasAnyPermission(["projects:read", "projects:create"]);
 
   const isAdmin = hasPermission("users:manage_roles");
 
