@@ -320,6 +320,48 @@ export default function LeavesPage() {
     }
   };
 
+  const handleRequestCancel = async (leaveId: string) => {
+    if (!confirm("Demander l'annulation de ce congé approuvé ?")) return;
+    try {
+      await leavesService.requestCancel(leaveId);
+      toast.success("Demande d'annulation envoyée");
+      fetchAll();
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message || tc("errors.validationError"),
+      );
+    }
+  };
+
+  const handleCancelLeave = async (leaveId: string) => {
+    if (!confirm("Annuler ce congé ?")) return;
+    try {
+      await leavesService.cancel(leaveId);
+      toast.success("Congé annulé");
+      fetchAll();
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message || tc("errors.validationError"),
+      );
+    }
+  };
+
+  const handleRejectCancellation = async (leaveId: string) => {
+    if (!confirm("Refuser l'annulation ? Le congé restera approuvé.")) return;
+    try {
+      await leavesService.rejectCancellation(leaveId);
+      toast.success("Demande d'annulation refusée");
+      fetchAll();
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message || tc("errors.validationError"),
+      );
+    }
+  };
+
   const handleApprove = async (leaveId: string) => {
     try {
       await leavesService.approve(leaveId);
@@ -561,6 +603,8 @@ export default function LeavesPage() {
         return "bg-yellow-100 text-yellow-800";
       case LeaveStatus.REJECTED:
         return "bg-red-100 text-red-800";
+      case LeaveStatus.CANCELLATION_REQUESTED:
+        return "bg-orange-100 text-orange-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -603,6 +647,11 @@ export default function LeavesPage() {
               >
                 {getLeaveStatusLabel(leave.status)}
               </span>
+              {leave.status === LeaveStatus.CANCELLATION_REQUESTED && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                  Annulation demandée
+                </span>
+              )}
             </div>
 
             {showUser && leave.user && (
@@ -655,6 +704,11 @@ export default function LeavesPage() {
                 {t("validation.assignedValidator")} :{" "}
                 {leave.validator.firstName} {leave.validator.lastName}
               </p>
+            )}
+            {leave.status === LeaveStatus.CANCELLATION_REQUESTED && (
+              <span className="text-xs text-orange-600 font-medium ml-2">
+                (demande d&apos;annulation)
+              </span>
             )}
             {leave.validatedBy && leave.status !== LeaveStatus.PENDING && (
               <p className="text-xs text-gray-500 mt-2">
@@ -710,6 +764,41 @@ export default function LeavesPage() {
                   🗑️
                 </button>
               )}
+            {!showValidationActions &&
+              leave.status === LeaveStatus.APPROVED &&
+              leave.userId === user?.id && (
+                <button
+                  onClick={() => handleRequestCancel(leave.id)}
+                  className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition"
+                  title="Demander l'annulation"
+                >
+                  ↩️
+                </button>
+              )}
+            {showValidationActions && leave.status === LeaveStatus.CANCELLATION_REQUESTED && (
+              <>
+                <button
+                  onClick={() => handleCancelLeave(leave.id)}
+                  className="px-3 py-1.5 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition"
+                >
+                  Approuver l&apos;annulation
+                </button>
+                <button
+                  onClick={() => handleRejectCancellation(leave.id)}
+                  className="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition"
+                >
+                  Refuser l&apos;annulation
+                </button>
+              </>
+            )}
+            {showValidationActions && leave.status === LeaveStatus.APPROVED && (
+              <button
+                onClick={() => handleCancelLeave(leave.id)}
+                className="px-3 py-1.5 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition"
+              >
+                Annuler
+              </button>
+            )}
           </div>
         </div>
       </div>

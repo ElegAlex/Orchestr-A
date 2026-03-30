@@ -237,6 +237,16 @@ export const leavesService = {
     return response.data;
   },
 
+  async requestCancel(id: string): Promise<Leave> {
+    const response = await api.post<Leave>(`/leaves/${id}/request-cancel`);
+    return response.data;
+  },
+
+  async rejectCancellation(id: string): Promise<Leave> {
+    const response = await api.post<Leave>(`/leaves/${id}/reject-cancellation`);
+    return response.data;
+  },
+
   // Gestion des délégations
   async createDelegation(
     delegateId: string,
