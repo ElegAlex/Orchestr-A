@@ -81,6 +81,7 @@ export enum LeaveStatus {
   PENDING = "PENDING",
   APPROVED = "APPROVED",
   REJECTED = "REJECTED",
+  CANCELLATION_REQUESTED = "CANCELLATION_REQUESTED",
 }
 
 export enum HalfDay {
