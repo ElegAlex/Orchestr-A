@@ -93,15 +93,12 @@ export class LeavesService {
         );
       }
 
-      // If not ADMIN, verify the target user is in the same department
+      // If not ADMIN, verify the target user is in one of the requesting user's services
       if (requestingUserRole !== Role.ADMIN) {
-        const requestingUser = await this.prisma.user.findUnique({
-          where: { id: requestingUserId },
-          select: { departmentId: true },
-        });
+        // Verify target user exists and is active
         const targetUser = await this.prisma.user.findUnique({
           where: { id: targetUserId },
-          select: { departmentId: true, isActive: true },
+          select: { id: true, isActive: true },
         });
 
         if (!targetUser || !targetUser.isActive) {
@@ -110,12 +107,39 @@ export class LeavesService {
           );
         }
 
-        if (
-          !requestingUser?.departmentId ||
-          requestingUser.departmentId !== targetUser.departmentId
-        ) {
+        // Find services where requesting user is member or manager
+        const userServices = await this.prisma.userService.findMany({
+          where: { userId: requestingUserId },
+          select: { serviceId: true },
+        });
+
+        const managedServices = await this.prisma.service.findMany({
+          where: { managerId: requestingUserId },
+          select: { id: true },
+        });
+
+        const serviceIds = [
+          ...userServices.map((us) => us.serviceId),
+          ...managedServices.map((s) => s.id),
+        ];
+
+        if (serviceIds.length === 0) {
           throw new ForbiddenException(
-            'Vous ne pouvez déclarer des congés que pour des collaborateurs de votre département',
+            'Vous ne pouvez déclarer des congés que pour des collaborateurs de vos services',
+          );
+        }
+
+        // Check if target user belongs to any of those services
+        const targetInServices = await this.prisma.userService.findFirst({
+          where: {
+            userId: targetUserId,
+            serviceId: { in: serviceIds },
+          },
+        });
+
+        if (!targetInServices) {
+          throw new ForbiddenException(
+            'Vous ne pouvez déclarer des congés que pour des collaborateurs de vos services',
           );
         }
       }
