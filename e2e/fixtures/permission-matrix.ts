@@ -397,6 +397,24 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     },
     description: "Créer une tâche prédéfinie — Admin, Responsable, Manager",
   },
+  {
+    action: "predefined_tasks:assign",
+    resource: "predefined-tasks",
+    method: "POST",
+    apiEndpoint: "/api/predefined-tasks/recurring-rules/bulk",
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+    testBody: {
+      predefinedTaskId: "{{predefinedTaskId}}",
+      userIds: ["{{userId}}"],
+      daysOfWeek: [0],
+      period: "FULL_DAY",
+      weekInterval: 1,
+      startDate: "2026-04-01T00:00:00Z",
+    },
+    description:
+      "Créer des règles récurrentes en masse — Admin, Responsable, Manager",
+  },
 ];
 
 /**
