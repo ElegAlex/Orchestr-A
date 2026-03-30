@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
-import Link from "next/link";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
 import { Logo } from "@/components/Logo";
@@ -106,15 +105,13 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-4 text-center">
-          <p className="text-sm text-[var(--muted-foreground)]">
-            Mot de passe oublié ?{" "}
-            <Link
-              href={`/${locale}/forgot-password`}
-              className="text-[var(--primary)] hover:underline font-medium"
-            >
-              Contactez votre administrateur
-            </Link>
-          </p>
+          <button
+            type="button"
+            onClick={() => toast(t("login.forgotPasswordMessage"), { icon: "ℹ️" })}
+            className="text-sm text-[var(--primary)] hover:underline font-medium"
+          >
+            {t("login.forgotPassword")}
+          </button>
         </div>
       </div>
     </div>
