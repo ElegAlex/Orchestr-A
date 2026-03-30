@@ -550,6 +550,52 @@ describe('PredefinedTasksService', () => {
     });
   });
 
+  describe('createRecurringRule with weekInterval', () => {
+    it('devrait créer une règle récurrente avec weekInterval', async () => {
+      const ruleWithInterval = { ...mockRecurringRule, weekInterval: 2 };
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(ruleWithInterval);
+
+      const dto = {
+        predefinedTaskId: 'task-1',
+        userId: 'user-1',
+        dayOfWeek: 0,
+        period: 'FULL_DAY',
+        startDate: '2026-01-06T00:00:00Z',
+        weekInterval: 2,
+      };
+
+      const result = await service.createRecurringRule('admin-1', dto);
+
+      expect(mockPrismaService.predefinedTaskRecurringRule.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            weekInterval: 2,
+          }),
+        }),
+      );
+      expect(result.weekInterval).toBe(2);
+    });
+
+    it('devrait utiliser weekInterval=1 par défaut', async () => {
+      const ruleDefault = { ...mockRecurringRule, weekInterval: 1 };
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(ruleDefault);
+
+      const dto = {
+        predefinedTaskId: 'task-1',
+        userId: 'user-1',
+        dayOfWeek: 0,
+        period: 'FULL_DAY',
+        startDate: '2026-01-06T00:00:00Z',
+      };
+
+      const result = await service.createRecurringRule('admin-1', dto);
+
+      expect(result.weekInterval).toBe(1);
+    });
+  });
+
   describe('updateRecurringRule', () => {
     it('devrait mettre à jour une règle existante', async () => {
       mockPrismaService.predefinedTaskRecurringRule.findUnique.mockResolvedValue(

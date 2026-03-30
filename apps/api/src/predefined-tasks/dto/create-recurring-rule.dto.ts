@@ -64,6 +64,19 @@ export class CreateRecurringRuleDto {
   @IsDateString()
   @IsOptional()
   endDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Intervalle en semaines (1=hebdo, 2=bihebdo, etc.)',
+    example: 1,
+    minimum: 1,
+    maximum: 52,
+    default: 1,
+  })
+  @IsInt()
+  @Min(1)
+  @Max(52)
+  @IsOptional()
+  weekInterval?: number;
 }
 
 export class UpdateRecurringRuleDto {
@@ -106,6 +119,17 @@ export class UpdateRecurringRuleDto {
   })
   @IsOptional()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Intervalle en semaines (1=hebdo, 2=bihebdo, etc.)',
+    minimum: 1,
+    maximum: 52,
+  })
+  @IsInt()
+  @Min(1)
+  @Max(52)
+  @IsOptional()
+  weekInterval?: number;
 }
 
 export class GenerateFromRulesDto {

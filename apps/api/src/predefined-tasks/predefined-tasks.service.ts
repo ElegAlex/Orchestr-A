@@ -303,6 +303,7 @@ export class PredefinedTasksService {
         userId: dto.userId,
         dayOfWeek: dto.dayOfWeek,
         period: dto.period,
+        weekInterval: dto.weekInterval ?? 1,
         startDate: new Date(dto.startDate),
         ...(dto.endDate && { endDate: new Date(dto.endDate) }),
         createdById,
