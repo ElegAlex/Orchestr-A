@@ -210,7 +210,10 @@ export class PredefinedTasksController {
 
   @Post('recurring-rules/bulk')
   @Permissions('predefined_tasks:assign')
-  @ApiOperation({ summary: 'Créer des règles récurrentes en masse (multi-utilisateurs x multi-jours)' })
+  @ApiOperation({
+    summary:
+      'Créer des règles récurrentes en masse (multi-utilisateurs x multi-jours)',
+  })
   @ApiResponse({ status: 201, description: 'Règles récurrentes créées' })
   @ApiResponse({ status: 404, description: 'Tâche prédéfinie introuvable' })
   bulkCreateRecurringRules(

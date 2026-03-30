@@ -470,7 +470,9 @@ export class LeavesService {
     if (user.role === Role.ADMIN) {
       return this.prisma.leave.findMany({
         where: {
-          status: { in: [LeaveStatus.PENDING, LeaveStatus.CANCELLATION_REQUESTED] },
+          status: {
+            in: [LeaveStatus.PENDING, LeaveStatus.CANCELLATION_REQUESTED],
+          },
         },
         include: {
           user: {
@@ -540,7 +542,9 @@ export class LeavesService {
       // 4. Query pending leaves for those users
       return this.prisma.leave.findMany({
         where: {
-          status: { in: [LeaveStatus.PENDING, LeaveStatus.CANCELLATION_REQUESTED] },
+          status: {
+            in: [LeaveStatus.PENDING, LeaveStatus.CANCELLATION_REQUESTED],
+          },
           userId: { in: userIds },
         },
         include: {
@@ -1469,7 +1473,9 @@ export class LeavesService {
           where: {
             userId,
             leaveTypeId: lt.id,
-            status: { in: [LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED] },
+            status: {
+              in: [LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED],
+            },
             startDate: { gte: yearStart, lte: yearEnd },
           },
         });

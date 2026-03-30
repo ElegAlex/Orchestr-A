@@ -282,7 +282,8 @@ export class LeavesController {
   @Get('subordinates')
   @Permissions('leaves:read')
   @ApiOperation({
-    summary: 'Récupérer les collaborateurs sous la responsabilité du manager (pour déclaration de congés)',
+    summary:
+      'Récupérer les collaborateurs sous la responsabilité du manager (pour déclaration de congés)',
   })
   @ApiResponse({
     status: 200,
@@ -453,8 +454,7 @@ export class LeavesController {
   @Post(':id/request-cancel')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary:
-      "Demander l'annulation d'un congé approuvé (par le demandeur)",
+    summary: "Demander l'annulation d'un congé approuvé (par le demandeur)",
   })
   @ApiResponse({
     status: 200,
@@ -509,7 +509,10 @@ export class LeavesController {
     summary: "Refuser la demande d'annulation — le congé reste approuvé",
   })
   @ApiResponse({ status: 200, description: "Demande d'annulation refusée" })
-  @ApiResponse({ status: 400, description: "Ce congé n'est pas en attente d'annulation" })
+  @ApiResponse({
+    status: 400,
+    description: "Ce congé n'est pas en attente d'annulation",
+  })
   rejectCancellation(@Param('id', ParseUUIDPipe) id: string) {
     return this.leavesService.rejectCancellation(id);
   }

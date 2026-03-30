@@ -505,8 +505,12 @@ describe('PredefinedTasksService', () => {
         startDate: new Date('2026-01-05'),
         endDate: null,
       };
-      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([biweeklyRule]);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(mockAssignment);
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
+        biweeklyRule,
+      ]);
+      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
+        mockAssignment,
+      );
 
       const result = await service.generateFromRules('admin-1', {
         startDate: '2026-01-05T00:00:00Z',
@@ -516,7 +520,9 @@ describe('PredefinedTasksService', () => {
       // 4 Mondays: Jan 5, 12, 19, 26
       // weekInterval=2, anchor=Jan 5: week 0 (YES), week 1 (NO), week 2 (YES), week 3 (NO)
       expect(result.created).toBe(2);
-      expect(mockPrismaService.predefinedTaskAssignment.create).toHaveBeenCalledTimes(2);
+      expect(
+        mockPrismaService.predefinedTaskAssignment.create,
+      ).toHaveBeenCalledTimes(2);
     });
 
     it('devrait generer chaque semaine quand weekInterval=1', async () => {
@@ -528,8 +534,12 @@ describe('PredefinedTasksService', () => {
         startDate: new Date('2026-01-05'),
         endDate: null,
       };
-      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([weeklyRule]);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(mockAssignment);
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
+        weeklyRule,
+      ]);
+      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
+        mockAssignment,
+      );
 
       const result = await service.generateFromRules('admin-1', {
         startDate: '2026-01-05T00:00:00Z',
@@ -547,8 +557,12 @@ describe('PredefinedTasksService', () => {
         startDate: new Date('2026-01-05'),
         endDate: null,
       };
-      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([rule]);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(mockAssignment);
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
+        rule,
+      ]);
+      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
+        mockAssignment,
+      );
 
       const result = await service.generateFromRules('admin-1', {
         startDate: '2026-01-19T00:00:00Z',
@@ -621,7 +635,9 @@ describe('PredefinedTasksService', () => {
     it('devrait créer une règle récurrente avec weekInterval', async () => {
       const ruleWithInterval = { ...mockRecurringRule, weekInterval: 2 };
       mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
-      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(ruleWithInterval);
+      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(
+        ruleWithInterval,
+      );
 
       const dto = {
         predefinedTaskId: 'task-1',
@@ -634,7 +650,9 @@ describe('PredefinedTasksService', () => {
 
       const result = await service.createRecurringRule('admin-1', dto);
 
-      expect(mockPrismaService.predefinedTaskRecurringRule.create).toHaveBeenCalledWith(
+      expect(
+        mockPrismaService.predefinedTaskRecurringRule.create,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             weekInterval: 2,
@@ -647,7 +665,9 @@ describe('PredefinedTasksService', () => {
     it('devrait utiliser weekInterval=1 par défaut', async () => {
       const ruleDefault = { ...mockRecurringRule, weekInterval: 1 };
       mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
-      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(ruleDefault);
+      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(
+        ruleDefault,
+      );
 
       const dto = {
         predefinedTaskId: 'task-1',
@@ -666,10 +686,14 @@ describe('PredefinedTasksService', () => {
   describe('bulkCreateRecurringRules', () => {
     it('devrait creer N users x M jours regles atomiques', async () => {
       mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
-      (mockPrismaService as any).$transaction = vi.fn(async (callback: (tx: any) => Promise<any>) => {
-        return callback(mockPrismaService);
-      });
-      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(mockRecurringRule);
+      (mockPrismaService as any).$transaction = vi.fn(
+        async (callback: (tx: any) => Promise<any>) => {
+          return callback(mockPrismaService);
+        },
+      );
+      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(
+        mockRecurringRule,
+      );
 
       const dto = {
         predefinedTaskId: 'task-1',
@@ -683,7 +707,9 @@ describe('PredefinedTasksService', () => {
       const result = await service.bulkCreateRecurringRules('admin-1', dto);
 
       expect(result.created).toBe(4);
-      expect(mockPrismaService.predefinedTaskRecurringRule.create).toHaveBeenCalledTimes(4);
+      expect(
+        mockPrismaService.predefinedTaskRecurringRule.create,
+      ).toHaveBeenCalledTimes(4);
     });
 
     it('devrait lever NotFoundException si la tache est inactive', async () => {
@@ -700,15 +726,21 @@ describe('PredefinedTasksService', () => {
         startDate: '2026-01-06T00:00:00Z',
       };
 
-      await expect(service.bulkCreateRecurringRules('admin-1', dto)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.bulkCreateRecurringRules('admin-1', dto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('devrait utiliser weekInterval=1 par defaut', async () => {
       mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
-      (mockPrismaService as any).$transaction = vi.fn(async (callback: (tx: any) => Promise<any>) => {
-        return callback(mockPrismaService);
-      });
-      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(mockRecurringRule);
+      (mockPrismaService as any).$transaction = vi.fn(
+        async (callback: (tx: any) => Promise<any>) => {
+          return callback(mockPrismaService);
+        },
+      );
+      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(
+        mockRecurringRule,
+      );
 
       const dto = {
         predefinedTaskId: 'task-1',
@@ -720,7 +752,9 @@ describe('PredefinedTasksService', () => {
 
       await service.bulkCreateRecurringRules('admin-1', dto);
 
-      expect(mockPrismaService.predefinedTaskRecurringRule.create).toHaveBeenCalledWith(
+      expect(
+        mockPrismaService.predefinedTaskRecurringRule.create,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             weekInterval: 1,
