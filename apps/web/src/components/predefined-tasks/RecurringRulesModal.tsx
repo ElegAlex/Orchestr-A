@@ -5,7 +5,6 @@ import {
   predefinedTasksService,
   PredefinedTask,
   PredefinedTaskRecurringRule,
-  CreateRecurringRuleDto,
   DayOfWeek,
   TaskDuration,
 } from "@/services/predefined-tasks.service";
@@ -29,6 +28,23 @@ const DURATION_LABELS: Record<TaskDuration, string> = {
   FULL_DAY: "Journée entière",
 };
 
+const WEEK_INTERVAL_LABELS: Record<number, string> = {
+  1: "Chaque semaine",
+  2: "Toutes les 2 semaines",
+  3: "Toutes les 3 semaines",
+  4: "Toutes les 4 semaines",
+};
+
+const DAY_OF_WEEK_OPTIONS: { value: DayOfWeek; short: string }[] = [
+  { value: "MONDAY", short: "Lun" },
+  { value: "TUESDAY", short: "Mar" },
+  { value: "WEDNESDAY", short: "Mer" },
+  { value: "THURSDAY", short: "Jeu" },
+  { value: "FRIDAY", short: "Ven" },
+  { value: "SATURDAY", short: "Sam" },
+  { value: "SUNDAY", short: "Dim" },
+];
+
 interface RecurringRulesModalProps {
   task: PredefinedTask;
   rules: PredefinedTaskRecurringRule[];
@@ -37,9 +53,10 @@ interface RecurringRulesModalProps {
 }
 
 interface RuleFormData {
-  userId: string;
-  dayOfWeek: DayOfWeek;
+  userIds: string[];
+  daysOfWeek: DayOfWeek[];
   duration: TaskDuration;
+  weekInterval: number;
   startDate: string;
   endDate: string;
 }
@@ -55,9 +72,10 @@ export function RecurringRulesModal({
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<RuleFormData>({
-    userId: "",
-    dayOfWeek: "MONDAY",
+    userIds: [],
+    daysOfWeek: [],
     duration: task.defaultDuration,
+    weekInterval: 1,
     startDate: new Date().toISOString().slice(0, 10),
     endDate: "",
   });
@@ -84,23 +102,39 @@ export function RecurringRulesModal({
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.userId) {
-      toast.error("Sélectionnez un collaborateur");
+    if (formData.userIds.length === 0) {
+      toast.error("Sélectionnez au moins un collaborateur");
+      return;
+    }
+    if (formData.daysOfWeek.length === 0) {
+      toast.error("Sélectionnez au moins un jour");
       return;
     }
     setSaving(true);
     try {
-      const dto: CreateRecurringRuleDto = {
+      const result = await predefinedTasksService.bulkCreateRecurringRules({
         predefinedTaskId: task.id,
-        userId: formData.userId,
-        dayOfWeek: formData.dayOfWeek,
+        userIds: formData.userIds,
+        daysOfWeek: formData.daysOfWeek,
         duration: formData.duration,
+        weekInterval: formData.weekInterval,
         startDate: formData.startDate,
         endDate: formData.endDate || undefined,
-      };
-      await predefinedTasksService.createRecurringRule(dto);
-      toast.success("Règle récurrente créée");
+      });
+      const nUsers = formData.userIds.length;
+      const nDays = formData.daysOfWeek.length;
+      toast.success(
+        `${result.created} règle${result.created > 1 ? "s" : ""} créée${result.created > 1 ? "s" : ""} (${nUsers} collaborateur${nUsers > 1 ? "s" : ""} × ${nDays} jour${nDays > 1 ? "s" : ""})`,
+      );
       setShowForm(false);
+      setFormData({
+        userIds: [],
+        daysOfWeek: [],
+        duration: task.defaultDuration,
+        weekInterval: 1,
+        startDate: new Date().toISOString().slice(0, 10),
+        endDate: "",
+      });
       await onRulesChanged();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
@@ -136,7 +170,7 @@ export function RecurringRulesModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -200,10 +234,15 @@ export function RecurringRulesModal({
                         {userName}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {DAY_OF_WEEK_LABELS[rule.dayOfWeek]} •{" "}
+                        {rule.weekInterval && rule.weekInterval > 1
+                          ? `Un ${DAY_OF_WEEK_LABELS[rule.dayOfWeek].toLowerCase()} sur ${rule.weekInterval}`
+                          : `Chaque ${DAY_OF_WEEK_LABELS[rule.dayOfWeek].toLowerCase()}`}
+                        {" \u2022 "}
                         {DURATION_LABELS[rule.duration]}
-                        {rule.startDate && ` • À partir du ${rule.startDate}`}
-                        {rule.endDate && ` • Jusqu'au ${rule.endDate}`}
+                        {rule.startDate &&
+                          ` \u2022 À partir du ${new Date(rule.startDate).toLocaleDateString("fr-FR")}`}
+                        {rule.endDate &&
+                          ` \u2022 Jusqu'au ${new Date(rule.endDate).toLocaleDateString("fr-FR")}`}
                       </p>
                     </div>
                     {!rule.isActive && (
@@ -243,55 +282,104 @@ export function RecurringRulesModal({
             className="border border-gray-200 rounded-lg p-4 space-y-4"
           >
             <h3 className="font-semibold text-gray-900 text-sm">
-              Nouvelle règle
+              Nouvelles règles récurrentes
             </h3>
 
+            {/* Multi-user select */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Collaborateurs *
+              </label>
+              <div className="border border-gray-300 rounded-lg p-2 max-h-40 overflow-y-auto space-y-1">
+                {users.map((u) => (
+                  <label
+                    key={u.id}
+                    className="flex items-center space-x-2 px-2 py-1 rounded hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.userIds.includes(u.id)}
+                      onChange={(e) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          userIds: e.target.checked
+                            ? [...prev.userIds, u.id]
+                            : prev.userIds.filter((id) => id !== u.id),
+                        }));
+                      }}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-900">
+                      {u.firstName} {u.lastName}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {formData.userIds.length > 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {formData.userIds.length} sélectionné{formData.userIds.length > 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
+
+            {/* Multi-day toggle pills */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Jours de la semaine *
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {DAY_OF_WEEK_OPTIONS.map(({ value, short }) => {
+                  const selected = formData.daysOfWeek.includes(value);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          daysOfWeek: selected
+                            ? prev.daysOfWeek.filter((d) => d !== value)
+                            : [...prev.daysOfWeek, value],
+                        }))
+                      }
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                        selected
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {short}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
+              {/* Week interval */}
+              <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Collaborateur *
+                  Fréquence *
                 </label>
                 <select
-                  required
-                  value={formData.userId}
+                  value={formData.weekInterval}
                   onChange={(e) =>
-                    setFormData({ ...formData, userId: e.target.value })
+                    setFormData({
+                      ...formData,
+                      weekInterval: parseInt(e.target.value, 10),
+                    })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Choisir...</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.firstName} {u.lastName}
+                  {Object.entries(WEEK_INTERVAL_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>
+                      {label}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Jour de la semaine *
-                </label>
-                <select
-                  value={formData.dayOfWeek}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      dayOfWeek: e.target.value as DayOfWeek,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
-                >
-                  {(Object.keys(DAY_OF_WEEK_LABELS) as DayOfWeek[]).map(
-                    (day) => (
-                      <option key={day} value={day}>
-                        {DAY_OF_WEEK_LABELS[day]}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </div>
-
+              {/* Duration */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   Durée *
@@ -311,6 +399,7 @@ export function RecurringRulesModal({
                 </select>
               </div>
 
+              {/* Start date */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   Date de début *
@@ -326,6 +415,7 @@ export function RecurringRulesModal({
                 />
               </div>
 
+              {/* End date */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   Date de fin (optionnel)
@@ -341,6 +431,18 @@ export function RecurringRulesModal({
               </div>
             </div>
 
+            {/* Summary */}
+            {formData.userIds.length > 0 && formData.daysOfWeek.length > 0 && (
+              <div className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
+                {formData.userIds.length} collaborateur{formData.userIds.length > 1 ? "s" : ""}
+                {" × "}
+                {formData.daysOfWeek.length} jour{formData.daysOfWeek.length > 1 ? "s" : ""}
+                {" = "}
+                <strong>{formData.userIds.length * formData.daysOfWeek.length} règles</strong>
+                {formData.weekInterval > 1 && ` (toutes les ${formData.weekInterval} semaines)`}
+              </div>
+            )}
+
             <div className="flex justify-end space-x-3">
               <button
                 type="button"
@@ -351,10 +453,10 @@ export function RecurringRulesModal({
               </button>
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || formData.userIds.length === 0 || formData.daysOfWeek.length === 0}
                 className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
               >
-                {saving ? "Création..." : "Créer la règle"}
+                {saving ? "Création..." : "Créer les règles"}
               </button>
             </div>
           </form>
@@ -363,7 +465,7 @@ export function RecurringRulesModal({
             onClick={() => setShowForm(true)}
             className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 transition"
           >
-            + Ajouter une règle récurrente
+            + Ajouter des règles récurrentes
           </button>
         )}
 
