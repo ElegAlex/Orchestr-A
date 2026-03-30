@@ -154,3 +154,6 @@ playwright-report/
 # PRIVATE PROMPTS
 # ===========================
 Prompt/
+
+# Playwright auth storage states
+playwright/.auth/
