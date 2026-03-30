@@ -13,6 +13,7 @@ import {
   UpdateRecurringRuleDto,
   GenerateFromRulesDto,
 } from './dto/create-recurring-rule.dto';
+import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
 
 @Injectable()
 export class PredefinedTasksService {
@@ -321,6 +322,57 @@ export class PredefinedTasksService {
         },
       },
     });
+  }
+
+  async bulkCreateRecurringRules(
+    createdById: string,
+    dto: CreateBulkRecurringRulesDto,
+  ) {
+    const task = await this.prisma.predefinedTask.findUnique({
+      where: { id: dto.predefinedTaskId },
+    });
+    if (!task || !task.isActive) {
+      throw new NotFoundException(
+        `Tâche prédéfinie ${dto.predefinedTaskId} introuvable ou inactive`,
+      );
+    }
+
+    const weekInterval = dto.weekInterval ?? 1;
+    const rules = await this.prisma.$transaction(async (tx) => {
+      const created: any[] = [];
+      for (const userId of dto.userIds) {
+        for (const dayOfWeek of dto.daysOfWeek) {
+          const rule = await tx.predefinedTaskRecurringRule.create({
+            data: {
+              predefinedTaskId: dto.predefinedTaskId,
+              userId,
+              dayOfWeek,
+              period: dto.period,
+              weekInterval,
+              startDate: new Date(dto.startDate),
+              ...(dto.endDate && { endDate: new Date(dto.endDate) }),
+              createdById,
+              isActive: true,
+            },
+            include: {
+              predefinedTask: {
+                select: { id: true, name: true, color: true, icon: true },
+              },
+              user: {
+                select: { id: true, firstName: true, lastName: true },
+              },
+              createdBy: {
+                select: { id: true, firstName: true, lastName: true },
+              },
+            },
+          });
+          created.push(rule);
+        }
+      }
+      return created;
+    });
+
+    return { created: rules.length, rules };
   }
 
   async updateRecurringRule(id: string, dto: UpdateRecurringRuleDto) {

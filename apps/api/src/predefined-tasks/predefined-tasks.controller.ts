@@ -28,6 +28,7 @@ import {
   UpdateRecurringRuleDto,
   GenerateFromRulesDto,
 } from './dto/create-recurring-rule.dto';
+import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
@@ -205,6 +206,18 @@ export class PredefinedTasksController {
       userId,
       createRecurringRuleDto,
     );
+  }
+
+  @Post('recurring-rules/bulk')
+  @Permissions('predefined_tasks:assign')
+  @ApiOperation({ summary: 'Créer des règles récurrentes en masse (multi-utilisateurs x multi-jours)' })
+  @ApiResponse({ status: 201, description: 'Règles récurrentes créées' })
+  @ApiResponse({ status: 404, description: 'Tâche prédéfinie introuvable' })
+  bulkCreateRecurringRules(
+    @CurrentUser('id') userId: string,
+    @Body() dto: CreateBulkRecurringRulesDto,
+  ) {
+    return this.predefinedTasksService.bulkCreateRecurringRules(userId, dto);
   }
 
   @Patch('recurring-rules/:id')

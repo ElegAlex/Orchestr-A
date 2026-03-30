@@ -663,6 +663,73 @@ describe('PredefinedTasksService', () => {
     });
   });
 
+  describe('bulkCreateRecurringRules', () => {
+    it('devrait creer N users x M jours regles atomiques', async () => {
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+      (mockPrismaService as any).$transaction = vi.fn(async (callback: (tx: any) => Promise<any>) => {
+        return callback(mockPrismaService);
+      });
+      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(mockRecurringRule);
+
+      const dto = {
+        predefinedTaskId: 'task-1',
+        userIds: ['user-1', 'user-2'],
+        daysOfWeek: [0, 2],
+        period: 'FULL_DAY',
+        weekInterval: 2,
+        startDate: '2026-01-06T00:00:00Z',
+      };
+
+      const result = await service.bulkCreateRecurringRules('admin-1', dto);
+
+      expect(result.created).toBe(4);
+      expect(mockPrismaService.predefinedTaskRecurringRule.create).toHaveBeenCalledTimes(4);
+    });
+
+    it('devrait lever NotFoundException si la tache est inactive', async () => {
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue({
+        ...mockTask,
+        isActive: false,
+      });
+
+      const dto = {
+        predefinedTaskId: 'task-1',
+        userIds: ['user-1'],
+        daysOfWeek: [0],
+        period: 'FULL_DAY',
+        startDate: '2026-01-06T00:00:00Z',
+      };
+
+      await expect(service.bulkCreateRecurringRules('admin-1', dto)).rejects.toThrow(NotFoundException);
+    });
+
+    it('devrait utiliser weekInterval=1 par defaut', async () => {
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+      (mockPrismaService as any).$transaction = vi.fn(async (callback: (tx: any) => Promise<any>) => {
+        return callback(mockPrismaService);
+      });
+      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(mockRecurringRule);
+
+      const dto = {
+        predefinedTaskId: 'task-1',
+        userIds: ['user-1'],
+        daysOfWeek: [0],
+        period: 'FULL_DAY',
+        startDate: '2026-01-06T00:00:00Z',
+      };
+
+      await service.bulkCreateRecurringRules('admin-1', dto);
+
+      expect(mockPrismaService.predefinedTaskRecurringRule.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            weekInterval: 1,
+          }),
+        }),
+      );
+    });
+  });
+
   describe('updateRecurringRule', () => {
     it('devrait mettre à jour une règle existante', async () => {
       mockPrismaService.predefinedTaskRecurringRule.findUnique.mockResolvedValue(
