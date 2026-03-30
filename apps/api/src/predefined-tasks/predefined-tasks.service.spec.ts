@@ -495,6 +495,73 @@ describe('PredefinedTasksService', () => {
     });
   });
 
+  describe('generateFromRules with weekInterval', () => {
+    it('devrait respecter weekInterval=2 (bihebdo) et ne generer que les semaines paires', async () => {
+      const biweeklyRule = {
+        ...mockRecurringRule,
+        id: 'rule-biweekly',
+        dayOfWeek: 0,
+        weekInterval: 2,
+        startDate: new Date('2026-01-05'),
+        endDate: null,
+      };
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([biweeklyRule]);
+      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(mockAssignment);
+
+      const result = await service.generateFromRules('admin-1', {
+        startDate: '2026-01-05T00:00:00Z',
+        endDate: '2026-01-31T00:00:00Z',
+      });
+
+      // 4 Mondays: Jan 5, 12, 19, 26
+      // weekInterval=2, anchor=Jan 5: week 0 (YES), week 1 (NO), week 2 (YES), week 3 (NO)
+      expect(result.created).toBe(2);
+      expect(mockPrismaService.predefinedTaskAssignment.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('devrait generer chaque semaine quand weekInterval=1', async () => {
+      const weeklyRule = {
+        ...mockRecurringRule,
+        id: 'rule-weekly',
+        dayOfWeek: 0,
+        weekInterval: 1,
+        startDate: new Date('2026-01-05'),
+        endDate: null,
+      };
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([weeklyRule]);
+      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(mockAssignment);
+
+      const result = await service.generateFromRules('admin-1', {
+        startDate: '2026-01-05T00:00:00Z',
+        endDate: '2026-01-31T00:00:00Z',
+      });
+
+      expect(result.created).toBe(4);
+    });
+
+    it('devrait calculer weekInterval relativement au startDate de la regle', async () => {
+      const rule = {
+        ...mockRecurringRule,
+        dayOfWeek: 0,
+        weekInterval: 2,
+        startDate: new Date('2026-01-05'),
+        endDate: null,
+      };
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([rule]);
+      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(mockAssignment);
+
+      const result = await service.generateFromRules('admin-1', {
+        startDate: '2026-01-19T00:00:00Z',
+        endDate: '2026-02-15T00:00:00Z',
+      });
+
+      // Mondays: Jan 19, 26, Feb 2, 9
+      // Weeks since anchor (Jan 5): 2, 3, 4, 5
+      // 2%2=0 YES, 3%2=1 NO, 4%2=0 YES, 5%2=1 NO
+      expect(result.created).toBe(2);
+    });
+  });
+
   // ===========================
   // Règles Récurrentes — autres tests
   // ===========================

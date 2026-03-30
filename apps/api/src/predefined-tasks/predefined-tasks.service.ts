@@ -369,7 +369,6 @@ export class PredefinedTasksService {
     const rangeStart = new Date(dto.startDate);
     const rangeEnd = new Date(dto.endDate);
 
-    // Find all active recurring rules that overlap with the date range
     const rules = await this.prisma.predefinedTaskRecurringRule.findMany({
       where: {
         isActive: true,
@@ -381,51 +380,58 @@ export class PredefinedTasksService {
     const results = { created: 0, skipped: 0 };
 
     for (const rule of rules) {
-      // Iterate over each day in the range
+      // Compute anchor: first day matching rule.dayOfWeek on or after rule.startDate
+      const anchor = new Date(rule.startDate);
+      const anchorJsDay = anchor.getDay();
+      const anchorOurDay = anchorJsDay === 0 ? 6 : anchorJsDay - 1;
+      const daysUntilTarget = (rule.dayOfWeek - anchorOurDay + 7) % 7;
+      anchor.setDate(anchor.getDate() + daysUntilTarget);
+
+      const weekInterval = rule.weekInterval ?? 1;
+
       const current = new Date(rangeStart);
       while (current <= rangeEnd) {
-        // Check if this day matches the rule's dayOfWeek (0=Monday, ..., 6=Sunday)
-        // JS getDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
-        // Our convention: 0=Monday, ..., 6=Sunday
-        const jsDayOfWeek = current.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-        const ourDayOfWeek = jsDayOfWeek === 0 ? 6 : jsDayOfWeek - 1; // convert
+        const jsDayOfWeek = current.getDay();
+        const ourDayOfWeek = jsDayOfWeek === 0 ? 6 : jsDayOfWeek - 1;
 
         if (ourDayOfWeek === rule.dayOfWeek) {
-          // Check date is within rule's active window
           const ruleStart = new Date(rule.startDate);
           const ruleEnd = rule.endDate ? new Date(rule.endDate) : null;
 
           if (current >= ruleStart && (!ruleEnd || current <= ruleEnd)) {
-            try {
-              await this.prisma.predefinedTaskAssignment.create({
-                data: {
-                  predefinedTaskId: rule.predefinedTaskId,
-                  userId: rule.userId,
-                  date: new Date(current),
-                  period: rule.period,
-                  assignedById,
-                  isRecurring: true,
-                  recurringRuleId: rule.id,
-                },
-              });
-              results.created++;
-            } catch (error: unknown) {
-              if (
-                typeof error === 'object' &&
-                error !== null &&
-                'code' in error &&
-                (error as { code: string }).code === 'P2002'
-              ) {
-                // Already exists — skip
-                results.skipped++;
-              } else {
-                throw error;
+            const diffMs = current.getTime() - anchor.getTime();
+            const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+
+            if (diffWeeks % weekInterval === 0) {
+              try {
+                await this.prisma.predefinedTaskAssignment.create({
+                  data: {
+                    predefinedTaskId: rule.predefinedTaskId,
+                    userId: rule.userId,
+                    date: new Date(current),
+                    period: rule.period,
+                    assignedById,
+                    isRecurring: true,
+                    recurringRuleId: rule.id,
+                  },
+                });
+                results.created++;
+              } catch (error: unknown) {
+                if (
+                  typeof error === 'object' &&
+                  error !== null &&
+                  'code' in error &&
+                  (error as { code: string }).code === 'P2002'
+                ) {
+                  results.skipped++;
+                } else {
+                  throw error;
+                }
               }
             }
           }
         }
 
-        // Advance by one day
         current.setDate(current.getDate() + 1);
       }
     }
