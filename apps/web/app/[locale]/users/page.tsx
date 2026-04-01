@@ -94,7 +94,7 @@ export default function UsersPage() {
     try {
       setLoading(true);
       const [response, roles] = await Promise.all([
-        usersService.getAll(),
+        usersService.getAll(1, 200),
         roleManagementService.getAllRoles().catch(() => []),
       ]);
       const usersList = Array.isArray(response) ? response : response.data;
