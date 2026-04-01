@@ -155,32 +155,23 @@ export function TaskLineCard({
           </div>
         )}
 
-        {/* Status change buttons */}
+        {/* Status dropdown */}
         {onStatusChange && (
-          <div className="flex items-center gap-0.5 shrink-0">
-            {canMoveLeft && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStatusChange(task.id, statusColumns[currentIndex - 1]);
-                }}
-                className="text-xs px-1.5 py-0.5 text-gray-500 hover:bg-gray-100 rounded transition"
-              >
-                ←
-              </button>
-            )}
-            {canMoveRight && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStatusChange(task.id, statusColumns[currentIndex + 1]);
-                }}
-                className="text-xs px-1.5 py-0.5 text-gray-500 hover:bg-gray-100 rounded transition"
-              >
-                →
-              </button>
-            )}
-          </div>
+          <select
+            value={task.status}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              e.stopPropagation();
+              onStatusChange(task.id, e.target.value as TaskStatus);
+            }}
+            className="text-xs border border-gray-200 rounded px-1.5 py-0.5 text-gray-700 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shrink-0"
+          >
+            {statusColumns.map((s) => (
+              <option key={s} value={s}>
+                {t(`status.${s}`, { defaultValue: s })}
+              </option>
+            ))}
+          </select>
         )}
 
         {/* Delete button */}
