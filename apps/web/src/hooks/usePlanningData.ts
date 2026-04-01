@@ -219,8 +219,8 @@ export const usePlanningData = ({
             ? usersList.filter(
                 (u) =>
                   u.isActive &&
-                  (u.departmentId ||
-                    (u.userServices && u.userServices.length > 0)),
+                  u.userServices &&
+                  u.userServices.length > 0,
               )
             : [],
         );
