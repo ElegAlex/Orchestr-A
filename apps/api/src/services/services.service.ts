@@ -286,11 +286,19 @@ export class ServicesService {
       throw new NotFoundException('Service introuvable');
     }
 
-    // Vérifier qu'il n'y a pas d'utilisateurs liés
+    // Détacher les utilisateurs liés avant suppression
     if (service._count.userServices > 0) {
-      throw new BadRequestException(
-        "Impossible de supprimer un service qui contient des utilisateurs. Veuillez d'abord les réaffecter.",
-      );
+      await this.prisma.userService.deleteMany({
+        where: { serviceId: id },
+      });
+    }
+
+    // Retirer le manager du service
+    if (service.managerId) {
+      await this.prisma.service.update({
+        where: { id },
+        data: { managerId: null },
+      });
     }
 
     await this.prisma.service.delete({
