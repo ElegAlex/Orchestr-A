@@ -154,8 +154,8 @@ export const DayCell = ({
       <div
         className={`relative z-10 space-y-1 ${viewMode === "month" ? "min-h-[40px]" : "min-h-[60px]"}`}
       >
-        {/* Telework toggle - visible uniquement si pas de congé */}
-        {!hasLeave && canToggleTelework && (
+        {/* Telework toggle - visible uniquement si pas de congé ni jour férié */}
+        {!hasLeave && !cell.isHoliday && canToggleTelework && (
           <div className="flex items-center justify-center">
             <button
               onClick={() => onTeleworkToggle(userId, cell.date)}
@@ -171,7 +171,7 @@ export const DayCell = ({
           </div>
         )}
         {/* Telework indicator (read-only) for users without toggle permission */}
-        {!hasLeave && !canToggleTelework && cell.isTelework && (
+        {!hasLeave && !cell.isHoliday && !canToggleTelework && cell.isTelework && (
           <div className="flex items-center justify-center">
             <span
               className={`${viewMode === "month" ? "text-[10px]" : "text-lg"}`}
@@ -182,8 +182,8 @@ export const DayCell = ({
           </div>
         )}
 
-        {/* Tasks - visible uniquement si pas de congé */}
-        {!hasLeave &&
+        {/* Tasks - visible uniquement si pas de congé ni jour férié */}
+        {!hasLeave && !cell.isHoliday &&
           cell.tasks.map((task) => {
             // Style spécial pour intervention extérieure
             const isExternal = task.isExternalIntervention;
@@ -250,8 +250,8 @@ export const DayCell = ({
             );
           })}
 
-        {/* Predefined Task Assignments - visible uniquement si pas de congé */}
-        {!hasLeave &&
+        {/* Predefined Task Assignments - visible uniquement si pas de congé ni jour férié */}
+        {!hasLeave && !cell.isHoliday &&
           cell.predefinedTaskAssignments.map((assignment) => {
             const pt = assignment.predefinedTask;
             if (!pt) return null;
@@ -288,7 +288,7 @@ export const DayCell = ({
           })}
 
         {/* Bouton ajout tâche prédéfinie */}
-        {!hasLeave && canAssignPredefinedTask && (
+        {!hasLeave && !cell.isHoliday && canAssignPredefinedTask && (
           <div className="flex items-center justify-center">
             <button
               onClick={() => onAddPredefinedTask(userId, cell.date)}
@@ -300,8 +300,8 @@ export const DayCell = ({
           </div>
         )}
 
-        {/* Events - visible uniquement si pas de congé */}
-        {!hasLeave &&
+        {/* Events - visible uniquement si pas de congé ni jour férié */}
+        {!hasLeave && !cell.isHoliday &&
           cell.events.map((event) => {
             const isExtEvent = event.isExternalIntervention;
             const eventBorderClass = isExtEvent
