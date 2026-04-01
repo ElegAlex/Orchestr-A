@@ -223,6 +223,11 @@ export const DayCell = ({
                         {task.title}
                       </span>
                     </div>
+                    {task.project && (
+                      <div className="text-[10px] text-gray-500 truncate">
+                        📁 {task.project.name}
+                      </div>
+                    )}
                     {isExternal && (
                       <div className="text-[10px] font-bold text-red-800 mt-1">
                         🔴 {t("dayCell.externalIntervention")}
