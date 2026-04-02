@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import {
   Task,
+  Subtask,
   PaginatedResponse,
   TaskStatus,
   Priority,
@@ -183,6 +184,31 @@ export const tasksService = {
    */
   async detachFromProject(taskId: string): Promise<Task> {
     const response = await api.post<Task>(`/tasks/${taskId}/detach-project`);
+    return response.data;
+  },
+
+  // Subtasks
+  async getSubtasks(taskId: string): Promise<Subtask[]> {
+    const response = await api.get<Subtask[]>(`/tasks/${taskId}/subtasks`);
+    return response.data;
+  },
+
+  async createSubtask(taskId: string, data: { title: string; description?: string }): Promise<Subtask> {
+    const response = await api.post<Subtask>(`/tasks/${taskId}/subtasks`, data);
+    return response.data;
+  },
+
+  async updateSubtask(taskId: string, subtaskId: string, data: Partial<{ title: string; description: string; isCompleted: boolean; position: number }>): Promise<Subtask> {
+    const response = await api.patch<Subtask>(`/tasks/${taskId}/subtasks/${subtaskId}`, data);
+    return response.data;
+  },
+
+  async deleteSubtask(taskId: string, subtaskId: string): Promise<void> {
+    await api.delete(`/tasks/${taskId}/subtasks/${subtaskId}`);
+  },
+
+  async reorderSubtasks(taskId: string, subtaskIds: string[]): Promise<Subtask[]> {
+    const response = await api.post<Subtask[]>(`/tasks/${taskId}/subtasks/reorder`, { subtaskIds });
     return response.data;
   },
 };

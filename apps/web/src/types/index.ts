@@ -385,6 +385,7 @@ export interface Task {
   timeEntries?: TimeEntry[];
   comments?: Comment[];
   raci?: TaskRACI[];
+  subtasks?: Subtask[];
   dependencies?: TaskDependency[];
 }
 
@@ -394,6 +395,17 @@ export interface TaskRACI {
   userId: string;
   role: RACIRole;
   createdAt: string;
+}
+
+export interface Subtask {
+  id: string;
+  title: string;
+  description?: string;
+  isCompleted: boolean;
+  position: number;
+  taskId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateTaskDto {
