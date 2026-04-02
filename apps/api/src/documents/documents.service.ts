@@ -20,8 +20,8 @@ export class DocumentsService {
     });
   }
 
-  async findAll(page = 1, limit = 100, projectId?: string) {
-    const safeLimit = Math.min(limit || 20, 100);
+  async findAll(page = 1, limit = 1000, projectId?: string) {
+    const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
     const where: Prisma.DocumentWhereInput = {};
     if (projectId) where.projectId = projectId;

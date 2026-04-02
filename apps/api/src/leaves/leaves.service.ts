@@ -362,7 +362,7 @@ export class LeavesService {
    */
   async findAll(
     page = 1,
-    limit = 100,
+    limit = 1000,
     userId?: string,
     status?: LeaveStatus,
     type?: LeaveType,
@@ -375,7 +375,7 @@ export class LeavesService {
     if (currentUserRole && !this.isManagementRole(currentUserRole)) {
       userId = currentUserId;
     }
-    const safeLimit = Math.min(limit || 20, 100);
+    const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
 
     const where: Prisma.LeaveWhereInput = {};

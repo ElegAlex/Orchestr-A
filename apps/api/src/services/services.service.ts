@@ -80,8 +80,8 @@ export class ServicesService {
   /**
    * Récupérer tous les services avec pagination
    */
-  async findAll(page = 1, limit = 100, departmentId?: string) {
-    const safeLimit = Math.min(limit || 20, 100);
+  async findAll(page = 1, limit = 1000, departmentId?: string) {
+    const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
 
     const where = departmentId ? { departmentId } : {};

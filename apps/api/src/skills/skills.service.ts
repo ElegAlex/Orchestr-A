@@ -59,8 +59,8 @@ export class SkillsService {
   /**
    * Récupérer toutes les compétences avec pagination et filtres
    */
-  async findAll(page = 1, limit = 100, category?: SkillCategory) {
-    const safeLimit = Math.min(limit || 20, 100);
+  async findAll(page = 1, limit = 1000, category?: SkillCategory) {
+    const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
 
     const where = category ? { category } : {};

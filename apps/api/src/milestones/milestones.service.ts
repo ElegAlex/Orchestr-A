@@ -35,11 +35,11 @@ export class MilestonesService {
 
   async findAll(
     page = 1,
-    limit = 100,
+    limit = 1000,
     projectId?: string,
     status?: MilestoneStatus,
   ) {
-    const safeLimit = Math.min(limit || 20, 100);
+    const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
     const where: Prisma.MilestoneWhereInput = {};
     if (projectId) where.projectId = projectId;

@@ -105,12 +105,12 @@ export class ProjectsService {
    */
   async findAll(
     page = 1,
-    limit = 100,
+    limit = 1000,
     status?: ProjectStatus,
     userId?: string,
     userRole?: string,
   ) {
-    const safeLimit = Math.min(limit || 20, 100);
+    const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
 
     // Filtre de base sur le statut
