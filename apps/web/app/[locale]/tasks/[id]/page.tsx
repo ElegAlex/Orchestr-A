@@ -16,6 +16,7 @@ import {
   User,
   Project,
   TaskDependency,
+  Subtask,
 } from "@/types";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { TaskDependencySelector } from "@/components/TaskDependencySelector";
@@ -65,6 +66,8 @@ export default function TaskDetailPage() {
     [],
   );
   const [savingDependencies, setSavingDependencies] = useState(false);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -120,6 +123,13 @@ export default function TaskDetailPage() {
             (d: TaskDependency) => d.dependsOnTaskId,
           ) || [];
         setSelectedDependencyIds(depIds);
+
+        // Load subtasks
+        if (taskData.subtasks) {
+          setSubtasks(taskData.subtasks);
+        } else {
+          tasksService.getSubtasks(taskData.id).then(setSubtasks).catch(() => setSubtasks([]));
+        }
 
         // Fetch all users
         try {
@@ -296,6 +306,40 @@ export default function TaskDetailPage() {
         axiosError.response?.data?.message || t("messages.deleteError"),
       );
       console.error(err);
+    }
+  };
+
+  // ========== SUBTASKS ==========
+  const handleAddSubtask = async () => {
+    if (!newSubtaskTitle.trim() || !task?.id) return;
+    try {
+      const created = await tasksService.createSubtask(task.id, { title: newSubtaskTitle.trim() });
+      setSubtasks((prev) => [...prev, created]);
+      setNewSubtaskTitle("");
+    } catch {
+      toast.error("Erreur lors de l'ajout de la sous-tâche");
+    }
+  };
+
+  const handleToggleSubtask = async (subtask: Subtask) => {
+    if (!task?.id) return;
+    try {
+      const updated = await tasksService.updateSubtask(task.id, subtask.id, {
+        isCompleted: !subtask.isCompleted,
+      });
+      setSubtasks((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    } catch {
+      toast.error("Erreur lors de la modification de la sous-tâche");
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId: string) => {
+    if (!task?.id) return;
+    try {
+      await tasksService.deleteSubtask(task.id, subtaskId);
+      setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
+    } catch {
+      toast.error("Erreur lors de la suppression de la sous-tâche");
     }
   };
 
@@ -519,6 +563,68 @@ export default function TaskDetailPage() {
                   {task.description || t("detail.sections.noDescription")}
                 </p>
               )}
+            </div>
+
+            {/* Subtasks Checklist */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Sous-tâches ({subtasks.filter((s) => s.isCompleted).length}/{subtasks.length})
+              </h2>
+              <div className="space-y-1 mb-3">
+                {subtasks.length === 0 && (
+                  <p className="text-sm text-gray-400">Aucune sous-tâche</p>
+                )}
+                {subtasks.map((subtask) => (
+                  <div
+                    key={subtask.id}
+                    className="flex items-center gap-2 group px-2 py-1.5 rounded hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={subtask.isCompleted}
+                      onChange={() => handleToggleSubtask(subtask)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span
+                      className={`flex-1 text-sm ${subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900"}`}
+                    >
+                      {subtask.title}
+                    </span>
+                    {subtask.description && (
+                      <span className="text-xs text-gray-400 truncate max-w-[200px]">
+                        {subtask.description}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSubtask(subtask.id)}
+                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddSubtask())}
+                  placeholder="Ajouter une sous-tâche..."
+                  className="flex-1 text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddSubtask}
+                  disabled={!newSubtaskTitle.trim()}
+                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  +
+                </button>
+              </div>
             </div>
 
             {/* Edit Form Fields */}
