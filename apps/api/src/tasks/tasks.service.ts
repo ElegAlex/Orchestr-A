@@ -1125,7 +1125,7 @@ export class TasksService {
         }
 
         // Créer la tâche
-        await this.prisma.task.create({
+        const createdTask = await this.prisma.task.create({
           data: {
             title: taskData.title,
             description: taskData.description || null,
@@ -1139,6 +1139,24 @@ export class TasksService {
             endDate: taskData.endDate ? new Date(taskData.endDate) : null,
           },
         });
+
+        // Créer les sous-tâches si présentes (séparées par |)
+        if (taskData.subtasks) {
+          const subtaskTitles = taskData.subtasks
+            .split('|')
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
+
+          for (let j = 0; j < subtaskTitles.length; j++) {
+            await this.prisma.subtask.create({
+              data: {
+                title: subtaskTitles[j],
+                taskId: createdTask.id,
+                position: j,
+              },
+            });
+          }
+        }
 
         result.created++;
       } catch (err) {
@@ -1359,6 +1377,7 @@ export class TasksService {
       'estimatedHours',
       'startDate',
       'endDate',
+      'subtasks',
     ];
     // Template vide - pas de données d'exemple avec faux emails
     const exampleComment = [
@@ -1371,6 +1390,7 @@ export class TasksService {
       '# 8',
       '# 2025-01-15',
       '# 2025-01-20',
+      '# Sous-tâche 1|Sous-tâche 2|Sous-tâche 3',
     ];
     return headers.join(';') + '\n' + exampleComment.join(';');
   }
@@ -1477,6 +1497,7 @@ export class TasksService {
       include: {
         assignee: { select: { email: true } },
         milestone: { select: { name: true } },
+        subtasks: { orderBy: { position: 'asc' } },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -1491,6 +1512,7 @@ export class TasksService {
       'estimatedHours',
       'startDate',
       'endDate',
+      'subtasks',
     ];
     const rows = tasks.map((task) => [
       task.title,
@@ -1502,6 +1524,7 @@ export class TasksService {
       task.estimatedHours?.toString() || '',
       task.startDate ? task.startDate.toISOString().split('T')[0] : '',
       task.endDate ? task.endDate.toISOString().split('T')[0] : '',
+      task.subtasks?.map((s) => s.title).join('|') || '',
     ]);
 
     const escapeField = (field: string) => {
