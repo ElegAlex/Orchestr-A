@@ -20,6 +20,8 @@ import {
 import { TaskStatus, Priority, RACIRole, Role } from 'database';
 import { Prisma } from 'database';
 import { getTaskProgress } from './task-progress.helper';
+import { CreateSubtaskDto } from './dto/create-subtask.dto';
+import { UpdateSubtaskDto } from './dto/update-subtask.dto';
 
 @Injectable()
 export class TasksService {
@@ -455,6 +457,9 @@ export class TasksService {
           orderBy: {
             createdAt: 'desc',
           },
+        },
+        subtasks: {
+          orderBy: { position: 'asc' },
         },
       },
     });
@@ -961,6 +966,9 @@ export class TasksService {
               },
             },
           },
+        },
+        subtasks: {
+          orderBy: { position: 'asc' },
         },
         _count: {
           select: {
@@ -1540,6 +1548,84 @@ export class TasksService {
           },
         },
       },
+    });
+  }
+
+  // ========== SUBTASKS ==========
+
+  async createSubtask(taskId: string, dto: CreateSubtaskDto) {
+    const task = await this.prisma.task.findUnique({ where: { id: taskId } });
+    if (!task) throw new NotFoundException('Tâche introuvable');
+
+    if (dto.position === undefined) {
+      const count = await this.prisma.subtask.count({ where: { taskId } });
+      dto.position = count;
+    }
+
+    const subtask = await this.prisma.subtask.create({
+      data: { ...dto, taskId },
+    });
+
+    await this.recalcTaskProgress(taskId);
+    return subtask;
+  }
+
+  async getSubtasks(taskId: string) {
+    return this.prisma.subtask.findMany({
+      where: { taskId },
+      orderBy: { position: 'asc' },
+    });
+  }
+
+  async updateSubtask(taskId: string, subtaskId: string, dto: UpdateSubtaskDto) {
+    const subtask = await this.prisma.subtask.findFirst({
+      where: { id: subtaskId, taskId },
+    });
+    if (!subtask) throw new NotFoundException('Sous-tâche introuvable');
+
+    const updated = await this.prisma.subtask.update({
+      where: { id: subtaskId },
+      data: dto,
+    });
+
+    await this.recalcTaskProgress(taskId);
+    return updated;
+  }
+
+  async deleteSubtask(taskId: string, subtaskId: string) {
+    const subtask = await this.prisma.subtask.findFirst({
+      where: { id: subtaskId, taskId },
+    });
+    if (!subtask) throw new NotFoundException('Sous-tâche introuvable');
+
+    await this.prisma.subtask.delete({ where: { id: subtaskId } });
+    await this.recalcTaskProgress(taskId);
+    return { message: 'Sous-tâche supprimée' };
+  }
+
+  async reorderSubtasks(taskId: string, subtaskIds: string[]) {
+    const task = await this.prisma.task.findUnique({ where: { id: taskId } });
+    if (!task) throw new NotFoundException('Tâche introuvable');
+
+    await Promise.all(
+      subtaskIds.map((id, index) =>
+        this.prisma.subtask.update({ where: { id }, data: { position: index } }),
+      ),
+    );
+
+    return this.getSubtasks(taskId);
+  }
+
+  private async recalcTaskProgress(taskId: string) {
+    const subtasks = await this.prisma.subtask.findMany({ where: { taskId } });
+    if (subtasks.length === 0) return;
+
+    const completed = subtasks.filter((s) => s.isCompleted).length;
+    const progress = Math.round((completed / subtasks.length) * 100);
+
+    await this.prisma.task.update({
+      where: { id: taskId },
+      data: { progress },
     });
   }
 }
