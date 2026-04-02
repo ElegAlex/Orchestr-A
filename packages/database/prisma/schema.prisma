@@ -274,6 +274,7 @@ model Task {
   timeEntries     TimeEntry[]
   comments        Comment[]
   raci            TaskRACI[]
+  subtasks        Subtask[]
 
   @@index([projectId])
   @@index([assigneeId])
@@ -347,6 +348,22 @@ enum RACIRole {
   ACCOUNTABLE  // Approbateur
   CONSULTED    // Consulté
   INFORMED     // Informé
+}
+
+model Subtask {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  isCompleted Boolean  @default(false)
+  position    Int      @default(0)
+  taskId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("subtasks")
 }
 
 // ===========================
