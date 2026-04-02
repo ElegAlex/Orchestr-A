@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { MainLayout } from "@/components/MainLayout";
 import { MetricCard } from "./components/MetricCard";
 import { ProjectProgressChart } from "./components/ProjectProgressChart";
-import { TaskStatusChart } from "./components/TaskStatusChart";
+import { TaskStatusCards } from "./components/TaskStatusCards";
 import { ProjectsTable } from "./components/ProjectsTable";
 import PortfolioGantt from "./components/PortfolioGantt";
 import { BurndownChart } from "./components/BurndownChart";
@@ -302,11 +302,11 @@ export default function ReportsPage() {
               ))}
             </div>
 
-            {/* Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ProjectProgressChart data={data.projectProgressData} />
-              <TaskStatusChart data={data.taskStatusData} />
-            </div>
+            {/* Task status cards — compact row */}
+            <TaskStatusCards data={data.taskStatusData} />
+
+            {/* Project progress — full width, horizontal bars */}
+            <ProjectProgressChart data={data.projectProgressData} />
 
             {/* Projects Table */}
             <ProjectsTable projects={data.projectDetails} />
