@@ -71,10 +71,10 @@ export function TaskLineCard({
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      className={`bg-white border border-gray-200 rounded-lg px-4 py-2.5 hover:shadow-md transition cursor-pointer ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
+      className={`bg-white border border-gray-200 rounded-lg px-4 py-2.5 hover:shadow-md transition cursor-pointer overflow-hidden ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
     >
       {/* Row 1 */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <span
           className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${getPriorityBadgeColor(task.priority)}`}
         >
