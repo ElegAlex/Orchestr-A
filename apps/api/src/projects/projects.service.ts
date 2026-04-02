@@ -442,6 +442,31 @@ export class ProjectsService {
   }
 
   /**
+   * Modifier le rôle ou l'allocation d'un membre du projet
+   */
+  async updateMember(projectId: string, userId: string, dto: { role?: string; allocation?: number; startDate?: string; endDate?: string }) {
+    const member = await this.prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+    });
+
+    if (!member) {
+      throw new NotFoundException('Membre introuvable dans ce projet');
+    }
+
+    const data: Record<string, unknown> = {};
+    if (dto.role !== undefined) data.role = dto.role;
+    if (dto.allocation !== undefined) data.allocation = dto.allocation;
+    if (dto.startDate !== undefined) data.startDate = new Date(dto.startDate);
+    if (dto.endDate !== undefined) data.endDate = new Date(dto.endDate);
+
+    return this.prisma.projectMember.update({
+      where: { projectId_userId: { projectId, userId } },
+      data,
+      include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    });
+  }
+
+  /**
    * Retirer un membre du projet
    */
   async removeMember(projectId: string, userId: string) {

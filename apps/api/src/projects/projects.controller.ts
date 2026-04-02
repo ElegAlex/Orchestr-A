@@ -23,6 +23,7 @@ import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
+import { UpdateMemberDto } from './dto/update-member.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ProjectStatus } from 'database';
@@ -211,6 +212,21 @@ export class ProjectsController {
     @Body() addMemberDto: AddMemberDto,
   ) {
     return this.projectsService.addMember(id, addMemberDto);
+  }
+
+  @Patch(':projectId/members/:userId')
+  @Permissions('projects:manage_members')
+  @ApiOperation({
+    summary: 'Modifier le rôle ou l\'allocation d\'un membre du projet',
+  })
+  @ApiResponse({ status: 200, description: 'Membre mis à jour' })
+  @ApiResponse({ status: 404, description: 'Membre introuvable dans ce projet' })
+  updateMember(
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() dto: UpdateMemberDto,
+  ) {
+    return this.projectsService.updateMember(projectId, userId, dto);
   }
 
   @Delete(':projectId/members/:userId')

@@ -1553,20 +1553,47 @@ export default function ProjectDetailPage() {
                             <h3 className="font-semibold text-gray-900">
                               {member.user?.firstName} {member.user?.lastName}
                             </h3>
-                            <p className="text-sm text-gray-600">
-                              {member.role}
-                            </p>
+                            <input
+                              type="text"
+                              defaultValue={member.role || ""}
+                              placeholder="Rôle..."
+                              onBlur={async (e) => {
+                                const newRole = e.target.value.trim();
+                                if (newRole !== (member.role || "")) {
+                                  try {
+                                    await projectsService.updateMember(project.id, member.userId, { role: newRole });
+                                    const updated = await projectsService.getById(project.id);
+                                    setProject(updated);
+                                  } catch { /* silent */ }
+                                }
+                              }}
+                              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                              className="text-sm text-gray-600 bg-transparent border-none outline-none focus:bg-white focus:border focus:border-blue-300 focus:rounded focus:px-1 w-full"
+                            />
                           </div>
                         </div>
                         <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            {member.allocation && (
-                              <p className="text-sm text-gray-600">
-                                {t("detail.team.allocation", {
-                                  value: member.allocation,
-                                })}
-                              </p>
-                            )}
+                          <div className="text-right flex items-center gap-1">
+                            <input
+                              type="number"
+                              defaultValue={member.allocation || ""}
+                              min={0}
+                              max={100}
+                              placeholder="—"
+                              onBlur={async (e) => {
+                                const val = parseInt(e.target.value);
+                                if (!isNaN(val) && val !== member.allocation) {
+                                  try {
+                                    await projectsService.updateMember(project.id, member.userId, { allocation: val });
+                                    const updated = await projectsService.getById(project.id);
+                                    setProject(updated);
+                                  } catch { /* silent */ }
+                                }
+                              }}
+                              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                              className="text-sm text-gray-600 bg-transparent border-none outline-none focus:bg-white focus:border focus:border-blue-300 focus:rounded focus:px-1 w-12 text-right"
+                            />
+                            <span className="text-sm text-gray-400">%</span>
                           </div>
                           <button
                             onClick={async () => {

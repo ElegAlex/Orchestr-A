@@ -77,6 +77,10 @@ export const projectsService = {
     await api.post(`/projects/${projectId}/members`, data);
   },
 
+  async updateMember(projectId: string, userId: string, data: { role?: string; allocation?: number }): Promise<void> {
+    await api.patch(`/projects/${projectId}/members/${userId}`, data);
+  },
+
   async removeMember(projectId: string, userId: string): Promise<void> {
     await api.delete(`/projects/${projectId}/members/${userId}`);
   },
