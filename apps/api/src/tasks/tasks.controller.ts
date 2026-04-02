@@ -31,6 +31,8 @@ import {
   ImportTasksResultDto,
   TasksValidationPreviewDto,
 } from './dto/import-tasks.dto';
+import { CreateSubtaskDto } from './dto/create-subtask.dto';
+import { UpdateSubtaskDto } from './dto/update-subtask.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role, TaskStatus, RACIRole } from 'database';
@@ -399,5 +401,56 @@ export class TasksController {
   })
   detachFromProject(@Param('id', ParseUUIDPipe) id: string) {
     return this.tasksService.detachFromProject(id);
+  }
+
+  // ========== SUBTASKS ==========
+
+  @Post(':taskId/subtasks')
+  @Permissions('tasks:update')
+  @ApiOperation({ summary: 'Ajouter une sous-tâche (checklist item)' })
+  @ApiResponse({ status: 201, description: 'Sous-tâche créée' })
+  createSubtask(
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Body() dto: CreateSubtaskDto,
+  ) {
+    return this.tasksService.createSubtask(taskId, dto);
+  }
+
+  @Get(':taskId/subtasks')
+  @Permissions('tasks:read')
+  @ApiOperation({ summary: 'Lister les sous-tâches' })
+  getSubtasks(@Param('taskId', ParseUUIDPipe) taskId: string) {
+    return this.tasksService.getSubtasks(taskId);
+  }
+
+  @Patch(':taskId/subtasks/:subtaskId')
+  @Permissions('tasks:update')
+  @ApiOperation({ summary: 'Modifier une sous-tâche (cocher/décocher, renommer)' })
+  updateSubtask(
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Param('subtaskId', ParseUUIDPipe) subtaskId: string,
+    @Body() dto: UpdateSubtaskDto,
+  ) {
+    return this.tasksService.updateSubtask(taskId, subtaskId, dto);
+  }
+
+  @Delete(':taskId/subtasks/:subtaskId')
+  @Permissions('tasks:update')
+  @ApiOperation({ summary: 'Supprimer une sous-tâche' })
+  deleteSubtask(
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Param('subtaskId', ParseUUIDPipe) subtaskId: string,
+  ) {
+    return this.tasksService.deleteSubtask(taskId, subtaskId);
+  }
+
+  @Post(':taskId/subtasks/reorder')
+  @Permissions('tasks:update')
+  @ApiOperation({ summary: 'Réordonner les sous-tâches' })
+  reorderSubtasks(
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Body() body: { subtaskIds: string[] },
+  ) {
+    return this.tasksService.reorderSubtasks(taskId, body.subtaskIds);
   }
 }
