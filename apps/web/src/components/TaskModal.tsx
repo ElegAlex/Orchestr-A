@@ -318,11 +318,20 @@ export function TaskModal({
                       onChange={() => handleToggleSubtask(subtask)}
                       className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                    <span
-                      className={`flex-1 text-sm ${subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900 dark:text-gray-100"}`}
-                    >
-                      {subtask.title}
-                    </span>
+                    <input
+                      type="text"
+                      defaultValue={subtask.title}
+                      onBlur={(e) => {
+                        const newTitle = e.target.value.trim();
+                        if (newTitle && newTitle !== subtask.title && task?.id) {
+                          tasksService.updateSubtask(task.id, subtask.id, { title: newTitle })
+                            .then((updated) => setSubtasks((prev) => prev.map((s) => (s.id === updated.id ? updated : s))))
+                            .catch(() => { e.target.value = subtask.title; });
+                        }
+                      }}
+                      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                      className={`flex-1 text-sm bg-transparent border-none outline-none focus:bg-white focus:border focus:border-blue-300 focus:rounded focus:px-1 dark:focus:bg-gray-600 ${subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900 dark:text-gray-100"}`}
+                    />
                     {subtask.description && (
                       <span className="text-xs text-gray-400 truncate max-w-[200px]">
                         {subtask.description}
