@@ -83,6 +83,11 @@ export function TaskLineCard({
         <h4 className="text-sm font-semibold text-gray-900 truncate flex-1 min-w-0">
           {task.title}
         </h4>
+        {task.subtasks && task.subtasks.length > 0 && (
+          <span className="text-xs text-gray-500 shrink-0" title="Sous-tâches">
+            ☑ {task.subtasks.filter((s) => s.isCompleted).length}/{task.subtasks.length}
+          </span>
+        )}
 
         {/* Assignees */}
         {task.assignees && task.assignees.length > 0 && (
