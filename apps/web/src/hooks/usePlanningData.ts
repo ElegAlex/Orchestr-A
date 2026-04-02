@@ -31,6 +31,13 @@ const DEFAULT_VISIBLE_DAYS: number[] = [1, 2, 3, 4, 5];
 
 export type ViewFilter = "all" | "availability" | "activity";
 
+export interface DisplayFilters {
+  availability: boolean;
+  projectTasks: boolean;
+  orphanTasks: boolean;
+  events: boolean;
+}
+
 export interface DayCell {
   date: Date;
   tasks: Task[];
@@ -60,6 +67,7 @@ interface UsePlanningDataOptions {
   filterUserId?: string; // Filtrer pour un seul utilisateur
   filterServiceIds?: string[]; // Filtrer pour un ou plusieurs services
   viewFilter?: ViewFilter; // Filtre d'affichage (default: 'all')
+  displayFilters?: DisplayFilters; // Filtres granulaires d'affichage
 }
 
 interface UsePlanningDataReturn {
@@ -87,6 +95,7 @@ export const usePlanningData = ({
   filterUserId,
   filterServiceIds,
   viewFilter = "all",
+  displayFilters,
 }: UsePlanningDataOptions): UsePlanningDataReturn => {
   const { hasPermission, permissionsLoaded } = usePermissions();
   const [loading, setLoading] = useState(true);
@@ -462,15 +471,32 @@ export const usePlanningData = ({
       let filteredIsTelework = teleworkSchedule?.isTelework || false;
       let filteredIsExternalIntervention = hasExternalIntervention;
 
-      if (viewFilter === "availability") {
-        // Mode "Disponibilités" : afficher uniquement les congés, télétravail et interventions ext.
-        filteredTasks = []; // Masquer toutes les tâches
-        filteredEvents = []; // Masquer les événements
+      if (displayFilters) {
+        // Mode granulaire : filtrer par catégorie
+        if (!displayFilters.availability) {
+          filteredLeaves = [];
+          filteredIsTelework = false;
+          filteredIsExternalIntervention = false;
+        }
+        if (!displayFilters.projectTasks && !displayFilters.orphanTasks) {
+          filteredTasks = [];
+        } else if (!displayFilters.projectTasks) {
+          filteredTasks = filteredTasks.filter((t) => !t.projectId);
+        } else if (!displayFilters.orphanTasks) {
+          filteredTasks = filteredTasks.filter((t) => !!t.projectId);
+        }
+        if (!displayFilters.events) {
+          filteredEvents = [];
+        }
+      } else if (viewFilter === "availability") {
+        // Mode legacy "Disponibilités"
+        filteredTasks = [];
+        filteredEvents = [];
       } else if (viewFilter === "activity") {
-        // Mode "Activités" : afficher uniquement les tâches et événements
-        filteredLeaves = []; // Masquer les congés
-        filteredIsTelework = false; // Masquer le télétravail
-        filteredIsExternalIntervention = false; // Masquer les interventions ext.
+        // Mode legacy "Activités"
+        filteredLeaves = [];
+        filteredIsTelework = false;
+        filteredIsExternalIntervention = false;
       }
 
       // Tri chronologique par heure de début
@@ -487,7 +513,7 @@ export const usePlanningData = ({
         events: filteredEvents,
         leaves: filteredLeaves,
         predefinedTaskAssignments:
-          viewFilter === "availability" ? [] : dayPredefinedAssignments,
+          (displayFilters && !displayFilters.orphanTasks && !displayFilters.projectTasks) || viewFilter === "availability" ? [] : dayPredefinedAssignments,
         isTelework: filteredIsTelework,
         isExternalIntervention: filteredIsExternalIntervention,
         teleworkSchedule: teleworkSchedule || null,
@@ -503,6 +529,7 @@ export const usePlanningData = ({
       holidays,
       predefinedAssignments,
       viewFilter,
+      displayFilters,
     ],
   );
 

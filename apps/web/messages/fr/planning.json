@@ -24,8 +24,12 @@
     "allResources": "Toutes les ressources",
     "display": "Affichage :",
     "displayAll": "Tout",
+    "displayNone": "Aucun",
     "displayAvailability": "Disponibilités",
-    "displayActivity": "Activités"
+    "displayActivity": "Activités",
+    "displayProjectTasks": "Tâches projets",
+    "displayOrphanTasks": "Tâches hors projets",
+    "displayEvents": "Événements"
   },
   "actions": {
     "collapse": "Replier",

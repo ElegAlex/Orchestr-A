@@ -6,13 +6,20 @@ import { fr, enUS } from "date-fns/locale";
 import { PlanningGrid } from "./PlanningGrid";
 import { TaskCreateModal } from "./TaskCreateModal";
 import { EventCreateModal } from "./EventCreateModal";
-import { usePlanningData } from "@/hooks/usePlanningData";
+import { usePlanningData, DisplayFilters } from "@/hooks/usePlanningData";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import { usePlanningViewStore } from "@/stores/planningView.store";
 import { useTranslations, useLocale } from "next-intl";
 
 type ViewFilter = "all" | "availability" | "activity";
+
+const DEFAULT_DISPLAY_FILTERS: DisplayFilters = {
+  availability: true,
+  projectTasks: true,
+  orphanTasks: true,
+  events: true,
+};
 
 interface PlanningViewProps {
   filterUserId?: string; // Filtrer pour un utilisateur spécifique (pour dashboard)
@@ -42,6 +49,8 @@ export const PlanningView = ({
   const [selectedUser, setSelectedUser] = useState<string>("ALL");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
+  const [displayFilters, setDisplayFilters] = useState<DisplayFilters>(DEFAULT_DISPLAY_FILTERS);
+  const [showDisplayDropdown, setShowDisplayDropdown] = useState(false);
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [hasInitializedServices, setHasInitializedServices] = useState(false);
   const [showTaskCreateModal, setShowTaskCreateModal] = useState(false);
@@ -50,6 +59,7 @@ export const PlanningView = ({
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const createMenuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const displayDropdownRef = useRef<HTMLDivElement>(null);
 
   const { user: currentUser } = useAuthStore();
   const { hasPermission } = usePermissions();
@@ -67,6 +77,7 @@ export const PlanningView = ({
     filterUserId: effectiveFilterUserId,
     filterServiceIds: effectiveFilterServiceIds,
     viewFilter,
+    displayFilters,
   });
 
   // Store pour les services collapsibles
@@ -143,6 +154,20 @@ export const PlanningView = ({
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setShowServiceDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fermer le dropdown affichage quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        displayDropdownRef.current &&
+        !displayDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowDisplayDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -418,21 +443,81 @@ export const PlanningView = ({
               </select>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div
+              className="flex items-center space-x-2 relative"
+              ref={displayDropdownRef}
+            >
               <label className="text-sm font-medium text-gray-700">
                 {t("filters.display")}
               </label>
-              <select
-                value={viewFilter}
-                onChange={(e) => setViewFilter(e.target.value as ViewFilter)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              <button
+                onClick={() => setShowDisplayDropdown(!showDisplayDropdown)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[200px] text-left flex items-center justify-between"
               >
-                <option value="all">{t("filters.displayAll")}</option>
-                <option value="availability">
-                  {t("filters.displayAvailability")}
-                </option>
-                <option value="activity">{t("filters.displayActivity")}</option>
-              </select>
+                <span className="truncate">
+                  {Object.values(displayFilters).every(Boolean)
+                    ? t("filters.displayAll")
+                    : Object.values(displayFilters).every((v) => !v)
+                      ? t("filters.displayNone")
+                      : `${Object.values(displayFilters).filter(Boolean).length}/4`}
+                </span>
+                <span className="ml-2">
+                  {showDisplayDropdown ? "\u25B2" : "\u25BC"}
+                </span>
+              </button>
+              {showDisplayDropdown && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[250px]">
+                  <div className="p-2 border-b border-gray-200 flex gap-2">
+                    <button
+                      onClick={() => setDisplayFilters({ availability: true, projectTasks: true, orphanTasks: true, events: true })}
+                      className={`px-3 py-1 text-xs rounded ${
+                        Object.values(displayFilters).every(Boolean)
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {t("filters.all")}
+                    </button>
+                    <button
+                      onClick={() => setDisplayFilters({ availability: false, projectTasks: false, orphanTasks: false, events: false })}
+                      className={`px-3 py-1 text-xs rounded ${
+                        Object.values(displayFilters).every((v) => !v)
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {t("filters.none")}
+                    </button>
+                  </div>
+                  <div>
+                    {([
+                      { key: "availability" as const, label: t("filters.displayAvailability"), icon: "🌴" },
+                      { key: "projectTasks" as const, label: t("filters.displayProjectTasks"), icon: "🔵" },
+                      { key: "orphanTasks" as const, label: t("filters.displayOrphanTasks"), icon: "⚫" },
+                      { key: "events" as const, label: t("filters.displayEvents"), icon: "📅" },
+                    ]).map((item) => (
+                      <label
+                        key={item.key}
+                        className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={displayFilters[item.key]}
+                          onChange={() =>
+                            setDisplayFilters((prev) => ({
+                              ...prev,
+                              [item.key]: !prev[item.key],
+                            }))
+                          }
+                          className="mr-3 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="mr-2">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center space-x-3 ml-auto">
@@ -512,6 +597,7 @@ export const PlanningView = ({
         filterUserId={effectiveFilterUserId}
         filterServiceIds={effectiveFilterServiceIds}
         viewFilter={viewFilter}
+        displayFilters={displayFilters}
         showGroupHeaders={showGroupHeaders}
         refreshTrigger={refreshTrigger}
       />

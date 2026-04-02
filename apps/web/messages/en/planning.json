@@ -24,8 +24,12 @@
     "allResources": "All resources",
     "display": "Display:",
     "displayAll": "All",
+    "displayNone": "None",
     "displayAvailability": "Availability",
-    "displayActivity": "Activity"
+    "displayActivity": "Activity",
+    "displayProjectTasks": "Project tasks",
+    "displayOrphanTasks": "Standalone tasks",
+    "displayEvents": "Events"
   },
   "actions": {
     "collapse": "Collapse",

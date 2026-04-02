@@ -8,6 +8,7 @@ import {
   usePlanningData,
   ServiceGroup,
   DayCell,
+  DisplayFilters,
 } from "@/hooks/usePlanningData";
 import { GroupHeader } from "./GroupHeader";
 import { UserRow } from "./UserRow";
@@ -115,6 +116,7 @@ interface PlanningGridProps {
   filterUserId?: string; // Pour filtrer sur un utilisateur (dashboard)
   filterServiceIds?: string[]; // Pour filtrer sur un ou plusieurs services
   viewFilter?: ViewFilter; // Filtre d'affichage (default: 'all')
+  displayFilters?: DisplayFilters; // Filtres granulaires
   showGroupHeaders?: boolean; // Afficher les headers de groupes (default: true)
   refreshTrigger?: number; // Incrémenter pour forcer un refresh
 }
@@ -125,6 +127,7 @@ export const PlanningGrid = ({
   filterUserId,
   filterServiceIds,
   viewFilter = "all",
+  displayFilters,
   showGroupHeaders = true,
   refreshTrigger = 0,
 }: PlanningGridProps) => {
@@ -145,6 +148,7 @@ export const PlanningGrid = ({
     filterUserId,
     filterServiceIds,
     viewFilter,
+    displayFilters,
   });
 
   const currentUser = useAuthStore((state) => state.user);
