@@ -44,6 +44,7 @@ export const DayCell = ({
 }: DayCellProps) => {
   const t = useTranslations("planning");
   const hasLeave = cell.leaves.length > 0;
+  const hasAllDayEvent = cell.events.some((e) => e.isAllDay);
   const isMonday = getDay(cell.date) === 1;
   const isFirstDay = dayIndex === 0;
   const showWeekSeparator = viewMode === "month" && isMonday && !isFirstDay;
@@ -154,8 +155,8 @@ export const DayCell = ({
       <div
         className={`relative z-10 space-y-1 ${viewMode === "month" ? "min-h-[40px]" : "min-h-[60px]"}`}
       >
-        {/* Telework toggle - visible uniquement si pas de congé ni jour férié */}
-        {!hasLeave && !cell.isHoliday && canToggleTelework && (
+        {/* Telework toggle - visible uniquement si pas de congé, jour férié, ni événement toute la journée */}
+        {!hasLeave && !cell.isHoliday && !hasAllDayEvent && canToggleTelework && (
           <div className="flex items-center justify-center">
             <button
               onClick={() => onTeleworkToggle(userId, cell.date)}
@@ -171,7 +172,7 @@ export const DayCell = ({
           </div>
         )}
         {/* Telework indicator (read-only) for users without toggle permission */}
-        {!hasLeave && !cell.isHoliday && !canToggleTelework && cell.isTelework && (
+        {!hasLeave && !cell.isHoliday && !hasAllDayEvent && !canToggleTelework && cell.isTelework && (
           <div className="flex items-center justify-center">
             <span
               className={`${viewMode === "month" ? "text-[10px]" : "text-lg"}`}
@@ -182,8 +183,8 @@ export const DayCell = ({
           </div>
         )}
 
-        {/* Tasks - visible uniquement si pas de congé ni jour férié */}
-        {!hasLeave && !cell.isHoliday &&
+        {/* Tasks - masquées si congé, jour férié, ou événement toute la journée */}
+        {!hasLeave && !cell.isHoliday && !hasAllDayEvent &&
           cell.tasks.map((task) => {
             // Style spécial pour intervention extérieure
             const isExternal = task.isExternalIntervention;
@@ -250,8 +251,8 @@ export const DayCell = ({
             );
           })}
 
-        {/* Predefined Task Assignments - visible uniquement si pas de congé ni jour férié */}
-        {!hasLeave && !cell.isHoliday &&
+        {/* Predefined Task Assignments - masquées si congé, jour férié, ou événement toute la journée */}
+        {!hasLeave && !cell.isHoliday && !hasAllDayEvent &&
           cell.predefinedTaskAssignments.map((assignment) => {
             const pt = assignment.predefinedTask;
             if (!pt) return null;
