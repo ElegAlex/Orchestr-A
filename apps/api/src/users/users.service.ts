@@ -149,7 +149,7 @@ export class UsersService {
   }
 
   async findAll(page: number = 1, limit: number = 20, role?: Role) {
-    const safeLimit = Math.min(limit || 20, 100);
+    const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
 
     const where = role ? { role } : {};

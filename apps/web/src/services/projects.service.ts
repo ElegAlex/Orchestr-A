@@ -16,7 +16,7 @@ export const projectsService = {
     status?: ProjectStatus,
   ): Promise<PaginatedResponse<Project>> {
     const params = new URLSearchParams();
-    params.append("limit", (limit ?? 200).toString());
+    params.append("limit", (limit ?? 1000).toString());
     if (page !== undefined) params.append("page", page.toString());
     if (status) params.append("status", status);
 
