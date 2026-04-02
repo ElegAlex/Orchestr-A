@@ -67,10 +67,11 @@ export default function ProfilePage() {
       const updated = await usersService.uploadAvatar(file);
       setUser({ ...user!, ...updated });
       toast.success("Avatar mis à jour");
-    } catch {
-      toast.error(
-        "Erreur lors de l'upload. Format accepté : jpg, png, webp (max 2MB)",
-      );
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      const msg = axiosErr?.response?.data?.message || "Erreur inconnue";
+      toast.error(`Erreur upload: ${msg}`);
     } finally {
       setAvatarLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
