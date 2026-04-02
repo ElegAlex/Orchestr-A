@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Task, TaskStatus } from "@/types";
+import { useState, useEffect, useCallback } from "react";
+import { Task, TaskStatus, Subtask } from "@/types";
 import { tasksService } from "@/services/tasks.service";
 import { getPriorityColor } from "@/lib/planning-utils";
 import { useRouter } from "next/navigation";
@@ -26,6 +26,35 @@ export const TaskModal = ({
   const router = useRouter();
   const locale = useLocale();
   const [deleting, setDeleting] = useState(false);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+
+  const loadSubtasks = useCallback(async () => {
+    if (!task?.id) return;
+    try {
+      const data = await tasksService.getSubtasks(task.id);
+      setSubtasks(data);
+    } catch {
+      setSubtasks([]);
+    }
+  }, [task?.id]);
+
+  useEffect(() => {
+    if (isOpen && task?.id) {
+      loadSubtasks();
+    }
+  }, [isOpen, task?.id, loadSubtasks]);
+
+  const handleToggleSubtask = async (subtask: Subtask) => {
+    if (!task?.id) return;
+    try {
+      const updated = await tasksService.updateSubtask(task.id, subtask.id, {
+        isCompleted: !subtask.isCompleted,
+      });
+      setSubtasks((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    } catch {
+      // silently fail
+    }
+  };
 
   if (!isOpen || !task) return null;
 
@@ -133,6 +162,34 @@ export const TaskModal = ({
             )}
           </div>
         </div>
+        {subtasks.length > 0 && (
+          <div className="mt-4">
+            <h3 className="font-semibold text-gray-900 mb-2">
+              Sous-tâches ({subtasks.filter((s) => s.isCompleted).length}/{subtasks.length})
+            </h3>
+            <div className="space-y-1">
+              {subtasks.map((subtask) => (
+                <label
+                  key={subtask.id}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={subtask.isCompleted}
+                    onChange={() => handleToggleSubtask(subtask)}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span
+                    className={`text-sm ${subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900"}`}
+                  >
+                    {subtask.title}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between mt-6 pt-4 border-t border-gray-200">
           <button
             onClick={handleDelete}
