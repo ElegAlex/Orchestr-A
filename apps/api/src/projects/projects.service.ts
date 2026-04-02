@@ -105,7 +105,7 @@ export class ProjectsService {
    */
   async findAll(
     page = 1,
-    limit = 10,
+    limit = 100,
     status?: ProjectStatus,
     userId?: string,
     userRole?: string,

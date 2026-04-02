@@ -362,7 +362,7 @@ export class LeavesService {
    */
   async findAll(
     page = 1,
-    limit = 10,
+    limit = 100,
     userId?: string,
     status?: LeaveStatus,
     type?: LeaveType,

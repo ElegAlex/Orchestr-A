@@ -35,7 +35,7 @@ export class MilestonesService {
 
   async findAll(
     page = 1,
-    limit = 10,
+    limit = 100,
     projectId?: string,
     status?: MilestoneStatus,
   ) {
