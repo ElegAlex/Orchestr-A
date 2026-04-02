@@ -600,9 +600,10 @@ export class TasksService {
           }),
           ...(startDate && { startDate: new Date(startDate) }),
           ...(endDate && { endDate: new Date(endDate) }),
-          ...(taskData.status && {
-            progress: getTaskProgress(taskData.status),
-          }),
+          ...(taskData.status &&
+            (await tx.subtask.count({ where: { taskId: id } })) === 0 && {
+              progress: getTaskProgress(taskData.status),
+            }),
         },
         include: {
           project: {
