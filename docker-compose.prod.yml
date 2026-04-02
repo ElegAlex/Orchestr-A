@@ -125,6 +125,7 @@ services:
       - orchestr-a-network
     volumes:
       - api_logs_prod:/app/logs
+      - api_uploads_prod:/app/uploads
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:4000/api/health || exit 1"]
       interval: 30s
@@ -278,6 +279,9 @@ volumes:
     driver: local
   nginx_logs_prod:
     name: orchestr-a-nginx-logs-prod
+    driver: local
+  api_uploads_prod:
+    name: orchestr-a-api-uploads-prod
     driver: local
   certbot_certs:
     name: orchestr-a-certbot-certs
