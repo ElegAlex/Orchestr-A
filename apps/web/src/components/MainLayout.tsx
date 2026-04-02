@@ -85,7 +85,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[var(--background)]">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-[var(--card)] border-r border-[var(--border)] transition-all duration-300 ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[var(--card)] border-r border-[var(--border)] transition-all duration-300 ${
           sidebarOpen ? "w-64" : "w-20"
         }`}
       >
