@@ -9,7 +9,9 @@ import {
   User,
   Project,
   Service,
+  Subtask,
 } from "@/types";
+import { tasksService } from "@/services/tasks.service";
 import { UserMultiSelect } from "./UserMultiSelect";
 import { ServiceMultiSelect } from "./ServiceMultiSelect";
 import toast from "react-hot-toast";
@@ -73,6 +75,8 @@ export function TaskModal({
     endTime: "",
   });
 
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -109,6 +113,14 @@ export function TaskModal({
         startTime: task.startTime || "",
         endTime: task.endTime || "",
       });
+
+      if (task?.subtasks) {
+        setSubtasks(task.subtasks);
+      } else if (task?.id) {
+        tasksService.getSubtasks(task.id).then(setSubtasks).catch(() => setSubtasks([]));
+      } else {
+        setSubtasks([]);
+      }
     } else {
       setFormData({
         title: "",
@@ -125,6 +137,8 @@ export function TaskModal({
         startTime: "",
         endTime: "",
       });
+      setSubtasks([]);
+      setNewSubtaskTitle("");
     }
   }, [task, projectId]);
 
@@ -176,6 +190,39 @@ export function TaskModal({
       console.error("Error saving task:", err);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAddSubtask = async () => {
+    if (!newSubtaskTitle.trim() || !task?.id) return;
+    try {
+      const created = await tasksService.createSubtask(task.id, { title: newSubtaskTitle.trim() });
+      setSubtasks((prev) => [...prev, created]);
+      setNewSubtaskTitle("");
+    } catch {
+      // silently fail
+    }
+  };
+
+  const handleToggleSubtask = async (subtask: Subtask) => {
+    if (!task?.id) return;
+    try {
+      const updated = await tasksService.updateSubtask(task.id, subtask.id, {
+        isCompleted: !subtask.isCompleted,
+      });
+      setSubtasks((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    } catch {
+      // silently fail
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId: string) => {
+    if (!task?.id) return;
+    try {
+      await tasksService.deleteSubtask(task.id, subtaskId);
+      setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
+    } catch {
+      // silently fail
     }
   };
 
@@ -252,6 +299,67 @@ export function TaskModal({
               placeholder={t("modal.create.descriptionPlaceholder")}
             />
           </div>
+
+          {/* Subtasks Checklist */}
+          {task?.id && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Sous-tâches ({subtasks.filter((s) => s.isCompleted).length}/{subtasks.length})
+              </label>
+              <div className="space-y-1 mb-2">
+                {subtasks.map((subtask) => (
+                  <div
+                    key={subtask.id}
+                    className="flex items-center gap-2 group px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={subtask.isCompleted}
+                      onChange={() => handleToggleSubtask(subtask)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span
+                      className={`flex-1 text-sm ${subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900 dark:text-gray-100"}`}
+                    >
+                      {subtask.title}
+                    </span>
+                    {subtask.description && (
+                      <span className="text-xs text-gray-400 truncate max-w-[200px]">
+                        {subtask.description}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSubtask(subtask.id)}
+                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddSubtask())}
+                  placeholder="Ajouter une sous-tâche..."
+                  className="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddSubtask}
+                  disabled={!newSubtaskTitle.trim()}
+                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Selecteur de projet (affiche uniquement si pas de projectId fixe) */}
           {showProjectSelector && (
