@@ -31,6 +31,9 @@ export class ProjectProgressDataDto {
 
   @ApiProperty()
   tasks: number;
+
+  @ApiProperty({ required: false })
+  endDate?: string;
 }
 
 export class TaskStatusDataDto {

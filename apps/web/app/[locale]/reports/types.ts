@@ -11,6 +11,7 @@ export interface ProjectProgressData {
   progress: number;
   status: string;
   tasks: number;
+  endDate?: string;
 }
 
 export interface TaskStatusData {

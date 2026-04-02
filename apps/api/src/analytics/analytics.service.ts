@@ -223,13 +223,11 @@ export class AnalyticsService {
     tasks: Task[],
   ): ProjectProgressDataDto[] {
     return projects.map((project) => ({
-      name:
-        project.name.length > 15
-          ? `${project.name.substring(0, 15)}...`
-          : project.name,
+      name: project.name,
       progress: project.progress || 0,
       status: project.status,
       tasks: tasks.filter((t) => t.projectId === project.id).length,
+      endDate: project.endDate ? project.endDate.toISOString() : undefined,
     }));
   }
 
