@@ -67,6 +67,9 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --chown=nestjs:nodejs apps/api/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
+# Créer le dossier uploads avec les bonnes permissions
+RUN mkdir -p /app/uploads/avatars && chown -R nestjs:nodejs /app/uploads
+
 # Switch vers l'utilisateur non-root
 USER nestjs
 
