@@ -34,7 +34,7 @@ interface CollapsibleServiceSectionProps {
   displayDays: Date[];
   viewMode: "week" | "month";
   showGroupHeaders: boolean;
-  stickyOffset?: number;
+  gridTemplateColumns: string;
   currentUserId: string;
   canManageOthersTelework: boolean;
   canAssignPredefinedTask: boolean;
@@ -58,7 +58,7 @@ const CollapsibleServiceSection = ({
   displayDays,
   viewMode,
   showGroupHeaders,
-  stickyOffset = 48,
+  gridTemplateColumns,
   currentUserId,
   canManageOthersTelework,
   canAssignPredefinedTask,
@@ -76,14 +76,12 @@ const CollapsibleServiceSection = ({
   const isCollapsed = collapsedServices[group.id] ?? false;
 
   return (
-    <React.Fragment>
-      {/* Group Header */}
+    <div>
+      {/* Group Header — sticky inside this section div = push-out behavior */}
       {showGroupHeaders && (
         <GroupHeader
           group={group}
           taskCount={taskCount}
-          colSpan={displayDays.length + 1}
-          stickyOffset={stickyOffset}
         />
       )}
       {/* User Rows - masquées si le groupe est replié */}
@@ -95,6 +93,7 @@ const CollapsibleServiceSection = ({
             group={group}
             displayDays={displayDays}
             viewMode={viewMode}
+            gridTemplateColumns={gridTemplateColumns}
             currentUserId={currentUserId}
             canManageOthersTelework={canManageOthersTelework}
             canAssignPredefinedTask={canAssignPredefinedTask}
@@ -109,7 +108,7 @@ const CollapsibleServiceSection = ({
             onAddPredefinedTask={onAddPredefinedTask}
           />
         ))}
-    </React.Fragment>
+    </div>
   );
 };
 
@@ -153,6 +152,9 @@ export const PlanningGrid = ({
     viewFilter,
     displayFilters,
   });
+
+  // Shared grid template for all rows
+  const gridCols = `220px repeat(${displayDays.length}, 1fr)`;
 
   const currentUser = useAuthStore((state) => state.user);
   const { hasPermission } = usePermissions();
@@ -340,109 +342,101 @@ export const PlanningGrid = ({
     <>
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-200px)]">
-          <table className="w-full table-fixed">
-            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-30">
-              <tr>
-                <th className="sticky left-0 bg-gray-50 z-40 px-3 py-3 text-left text-xs font-semibold text-gray-900 w-[220px]">
-                  {t("table.resource")}
-                </th>
-                {displayDays.map((day, index) => {
-                  const isMonday = getDay(day) === 1;
-                  const isFirstDay = index === 0;
-                  const showWeekSeparator =
-                    viewMode === "month" && isMonday && !isFirstDay;
-                  const holiday = getHolidayForDate(day);
+          <div className="w-full" style={{ minWidth: `${220 + displayDays.length * 100}px` }}>
+            {/* Days header — sticky at top */}
+            <div
+              className="bg-gray-50 border-b border-gray-200 sticky top-0 z-30"
+              style={{ display: "grid", gridTemplateColumns: gridCols }}
+            >
+              <div className="sticky left-0 bg-gray-50 z-40 px-3 py-3 text-left text-xs font-semibold text-gray-900">
+                {t("table.resource")}
+              </div>
+              {displayDays.map((day, index) => {
+                const isMonday = getDay(day) === 1;
+                const isFirstDay = index === 0;
+                const showWeekSeparator =
+                  viewMode === "month" && isMonday && !isFirstDay;
+                const holiday = getHolidayForDate(day);
 
-                  return (
-                    <th
-                      key={day.toISOString()}
-                      className={`text-center font-semibold ${
-                        viewMode === "month"
-                          ? "px-1 py-1"
-                          : "px-2 py-3"
-                      } ${holiday ? "bg-red-50 text-red-900" : isToday(day) ? "bg-blue-50 text-blue-900" : "text-gray-900"} ${
-                        showWeekSeparator
-                          ? "border-l-2 border-l-indigo-400"
-                          : ""
-                      }`}
-                      title={holiday ? holiday.name : undefined}
-                    >
-                      <div
-                        className={
-                          viewMode === "month"
-                            ? "text-[9px] leading-tight"
-                            : "text-sm"
-                        }
-                      >
-                        {format(day, viewMode === "month" ? "EEEEE" : "EEEE", {
-                          locale: dateLocale,
-                        })}
-                      </div>
-                      <div
-                        className={
-                          viewMode === "month"
-                            ? "text-xs font-bold"
-                            : "text-lg font-bold"
-                        }
-                      >
-                        {format(day, "dd")}
-                      </div>
-                      {holiday && viewMode === "week" && (
-                        <div className="text-[10px] text-red-600 font-normal truncate max-w-[150px]">
-                          {holiday.name}
-                        </div>
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredGroups.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={displayDays.length + 1}
-                    className="px-4 py-8 text-center text-gray-500"
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className={`text-center font-semibold ${
+                      viewMode === "month"
+                        ? "px-1 py-1"
+                        : "px-2 py-3"
+                    } ${holiday ? "bg-red-50 text-red-900" : isToday(day) ? "bg-blue-50 text-blue-900" : "text-gray-900"} ${
+                      showWeekSeparator
+                        ? "border-l-2 border-l-indigo-400"
+                        : ""
+                    }`}
+                    title={holiday ? holiday.name : undefined}
                   >
-                    {t("noResources")}
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  {filteredGroups.map((group, groupIndex) => {
-                    const taskCount = getGroupTaskCount(group.users);
-                    // Each visible group header before this one adds 48px to the sticky offset
-                    // Base offset = 48px (table header height)
-                    const stickyOffset = showGroupHeaders ? 48 + groupIndex * 48 : 48;
+                    <div
+                      className={
+                        viewMode === "month"
+                          ? "text-[9px] leading-tight"
+                          : "text-sm"
+                      }
+                    >
+                      {format(day, viewMode === "month" ? "EEEEE" : "EEEE", {
+                        locale: dateLocale,
+                      })}
+                    </div>
+                    <div
+                      className={
+                        viewMode === "month"
+                          ? "text-xs font-bold"
+                          : "text-lg font-bold"
+                      }
+                    >
+                      {format(day, "dd")}
+                    </div>
+                    {holiday && viewMode === "week" && (
+                      <div className="text-[10px] text-red-600 font-normal truncate">
+                        {holiday.name}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
 
-                    return (
-                      <CollapsibleServiceSection
-                        key={group.id}
-                        group={group}
-                        taskCount={taskCount}
-                        displayDays={displayDays}
-                        viewMode={viewMode}
-                        showGroupHeaders={showGroupHeaders}
-                        stickyOffset={stickyOffset}
-                        currentUserId={currentUserId}
-                        canManageOthersTelework={canManageOthersTelework}
-                        canAssignPredefinedTask={canAssignPredefinedTask}
-                        getDayCell={getDayCell}
-                        onTeleworkToggle={handleTeleworkToggle}
-                        onDragStart={handleDragStart}
-                        onDragEnd={handleDragEnd}
-                        onDrop={handleDrop}
-                        onTaskClick={handleTaskClick}
-                        onEventClick={handleEventClick}
-                        onPredefinedTaskClick={handlePredefinedTaskClick}
-                        onAddPredefinedTask={handleAddPredefinedTask}
-                      />
-                    );
-                  })}
-                </>
-              )}
-            </tbody>
-          </table>
+            {/* Service sections */}
+            {filteredGroups.length === 0 ? (
+              <div className="px-4 py-8 text-center text-gray-500">
+                {t("noResources")}
+              </div>
+            ) : (
+              filteredGroups.map((group) => {
+                const taskCount = getGroupTaskCount(group.users);
+
+                return (
+                  <CollapsibleServiceSection
+                    key={group.id}
+                    group={group}
+                    taskCount={taskCount}
+                    displayDays={displayDays}
+                    viewMode={viewMode}
+                    showGroupHeaders={showGroupHeaders}
+                    gridTemplateColumns={gridCols}
+                    currentUserId={currentUserId}
+                    canManageOthersTelework={canManageOthersTelework}
+                    canAssignPredefinedTask={canAssignPredefinedTask}
+                    getDayCell={getDayCell}
+                    onTeleworkToggle={handleTeleworkToggle}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDrop={handleDrop}
+                    onTaskClick={handleTaskClick}
+                    onEventClick={handleEventClick}
+                    onPredefinedTaskClick={handlePredefinedTaskClick}
+                    onAddPredefinedTask={handleAddPredefinedTask}
+                  />
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
 

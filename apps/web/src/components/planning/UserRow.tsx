@@ -12,6 +12,7 @@ interface UserRowProps {
   group: ServiceGroup;
   displayDays: Date[];
   viewMode: "week" | "month";
+  gridTemplateColumns: string;
   currentUserId: string;
   canManageOthersTelework: boolean;
   canAssignPredefinedTask: boolean;
@@ -34,6 +35,7 @@ export const UserRow = ({
   group,
   displayDays,
   viewMode,
+  gridTemplateColumns,
   currentUserId,
   canManageOthersTelework,
   canAssignPredefinedTask,
@@ -51,8 +53,11 @@ export const UserRow = ({
   const colors = getGroupColors(group.color, group.isManagement);
 
   return (
-    <tr className={`hover:bg-gray-50 ${colors.border}`}>
-      <td className="sticky left-0 bg-white z-10 px-3 py-3 border-r border-gray-200">
+    <div
+      className={`hover:bg-gray-50 ${colors.border} border-b border-gray-200`}
+      style={{ display: "grid", gridTemplateColumns }}
+    >
+      <div className="sticky left-0 bg-white z-10 px-3 py-3 border-r border-gray-200">
         <div className="flex items-center space-x-2 pl-1 min-w-0">
           <div className="relative shrink-0">
             <UserAvatar user={user} size="sm" />
@@ -71,7 +76,7 @@ export const UserRow = ({
             </div>
           </div>
         </div>
-      </td>
+      </div>
       {displayDays.map((day, dayIndex) => {
         const cell = getDayCell(user.id, day);
         return (
@@ -96,6 +101,6 @@ export const UserRow = ({
           />
         );
       })}
-    </tr>
+    </div>
   );
 };

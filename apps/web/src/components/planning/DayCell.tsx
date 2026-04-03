@@ -69,10 +69,8 @@ export const DayCell = ({
   }
 
   return (
-    <td
-      key={cell.date.toISOString()}
-      className={`align-top relative overflow-hidden ${viewMode === "month" ? "px-0.5 py-1" : "px-1 py-2"} ${bgClass} ${showWeekSeparator ? "border-l-2 border-l-indigo-400" : ""}`}
-      style={{ verticalAlign: "top" }}
+    <div
+      className={`relative overflow-hidden ${viewMode === "month" ? "px-0.5 py-1" : "px-1 py-2"} ${bgClass} ${showWeekSeparator ? "border-l-2 border-l-indigo-400" : ""}`}
       onDragOver={(e) => e.preventDefault()}
       onDrop={() => onDrop(userId, cell.date)}
       title={cell.isHoliday ? cell.holidayName : undefined}
@@ -363,6 +361,6 @@ export const DayCell = ({
             );
           })}
       </div>
-    </td>
+    </div>
   );
 };
