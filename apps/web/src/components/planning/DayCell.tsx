@@ -2,7 +2,7 @@ import { Task } from "@/types";
 import { Event } from "@/services/events.service";
 import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
 import { DayCell as DayCellData } from "@/hooks/usePlanningData";
-import { getPriorityColor, getStatusIcon } from "@/lib/planning-utils";
+import { getPriorityColor, getStatusIcon, getStatusDotColor } from "@/lib/planning-utils";
 import { isToday, getDay } from "date-fns";
 import { useTranslations } from "next-intl";
 
@@ -43,6 +43,7 @@ export const DayCell = ({
   onAddPredefinedTask,
 }: DayCellProps) => {
   const t = useTranslations("planning");
+  const tCommon = useTranslations("common");
   const hasLeave = cell.leaves.length > 0;
   const hasAllDayEvent = cell.events.some((e) => e.isAllDay);
   const isMonday = getDay(cell.date) === 1;
@@ -224,11 +225,19 @@ export const DayCell = ({
                         {task.title}
                       </span>
                     </div>
-                    {task.project && (
-                      <div className="text-[10px] text-gray-500 truncate">
-                        📁 {task.project.name}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1 mt-0.5">
+                      {!isOrphan && (
+                        <span className="inline-flex items-center gap-0.5 text-[9px] text-gray-500">
+                          <span className={`inline-block w-1.5 h-1.5 rounded-full ${getStatusDotColor(task.status)}`} />
+                          {tCommon(`taskStatus.${task.status}`)}
+                        </span>
+                      )}
+                      {task.project && (
+                        <span className="text-[9px] text-gray-400 truncate">
+                          — {task.project.name}
+                        </span>
+                      )}
+                    </div>
                     {isExternal && (
                       <div className="text-[10px] font-bold text-red-800 mt-1">
                         🔴 {t("dayCell.externalIntervention")}
