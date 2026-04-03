@@ -156,7 +156,7 @@ export const DayCell = ({
       >
         {/* Telework toggle - visible uniquement si pas de congé, jour férié, ni événement toute la journée */}
         {!hasLeave && !cell.isHoliday && !hasAllDayEvent && canToggleTelework && (
-          <div className="flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center">
             <button
               onClick={() => onTeleworkToggle(userId, cell.date)}
               className={`${viewMode === "month" ? "text-[10px]" : "text-lg"} transition ${
@@ -168,17 +168,23 @@ export const DayCell = ({
             >
               {cell.isTelework ? "🏠" : "🏢"}
             </button>
+            {cell.isTelework && viewMode === "week" && (
+              <span className="text-[9px] text-gray-500 leading-tight">{t("telework.label")}</span>
+            )}
           </div>
         )}
         {/* Telework indicator (read-only) for users without toggle permission */}
         {!hasLeave && !cell.isHoliday && !hasAllDayEvent && !canToggleTelework && cell.isTelework && (
-          <div className="flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center">
             <span
               className={`${viewMode === "month" ? "text-[10px]" : "text-lg"}`}
               title={t("telework.label")}
             >
               🏠
             </span>
+            {viewMode === "week" && (
+              <span className="text-[9px] text-gray-500 leading-tight">{t("telework.label")}</span>
+            )}
           </div>
         )}
 
