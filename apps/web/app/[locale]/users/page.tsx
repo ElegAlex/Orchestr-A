@@ -204,6 +204,7 @@ export default function UsersPage() {
     try {
       const updateData: {
         email: string;
+        login: string;
         firstName: string;
         lastName: string;
         role: Role;
@@ -212,6 +213,7 @@ export default function UsersPage() {
         password?: string;
       } = {
         email: formData.email,
+        login: formData.login,
         firstName: formData.firstName,
         lastName: formData.lastName,
         role: formData.role,
@@ -1176,10 +1178,14 @@ export default function UsersPage() {
                 </label>
                 <input
                   type="text"
-                  disabled
+                  required
+                  autoComplete="off"
+                  name="edit-user-login"
                   value={formData.login}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-gray-100 cursor-not-allowed"
-                  title={t("editModal.loginReadOnly")}
+                  onChange={(e) =>
+                    setFormData({ ...formData, login: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
