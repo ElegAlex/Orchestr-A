@@ -337,10 +337,10 @@ export const PlanningGrid = ({
     <>
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-200px)]">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-30">
               <tr>
-                <th className="sticky left-0 bg-gray-50 z-40 px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[200px]">
+                <th className="sticky left-0 bg-gray-50 z-40 px-4 py-3 text-left text-sm font-semibold text-gray-900 w-[180px]">
                   {t("table.resource")}
                 </th>
                 {displayDays.map((day, index) => {
@@ -355,8 +355,8 @@ export const PlanningGrid = ({
                       key={day.toISOString()}
                       className={`text-center font-semibold ${
                         viewMode === "month"
-                          ? "px-1 py-1 min-w-[40px] max-w-[50px]"
-                          : "px-4 py-3 min-w-[180px]"
+                          ? "px-1 py-1"
+                          : "px-2 py-3"
                       } ${holiday ? "bg-red-50 text-red-900" : isToday(day) ? "bg-blue-50 text-blue-900" : "text-gray-900"} ${
                         showWeekSeparator
                           ? "border-l-2 border-l-indigo-400"
