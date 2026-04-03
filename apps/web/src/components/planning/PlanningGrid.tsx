@@ -34,6 +34,7 @@ interface CollapsibleServiceSectionProps {
   displayDays: Date[];
   viewMode: "week" | "month";
   showGroupHeaders: boolean;
+  stickyOffset?: number;
   currentUserId: string;
   canManageOthersTelework: boolean;
   canAssignPredefinedTask: boolean;
@@ -57,6 +58,7 @@ const CollapsibleServiceSection = ({
   displayDays,
   viewMode,
   showGroupHeaders,
+  stickyOffset = 48,
   currentUserId,
   canManageOthersTelework,
   canAssignPredefinedTask,
@@ -81,6 +83,7 @@ const CollapsibleServiceSection = ({
           group={group}
           taskCount={taskCount}
           colSpan={displayDays.length + 1}
+          stickyOffset={stickyOffset}
         />
       )}
       {/* User Rows - masquées si le groupe est replié */}
@@ -340,7 +343,7 @@ export const PlanningGrid = ({
           <table className="w-full table-fixed">
             <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-30">
               <tr>
-                <th className="sticky left-0 bg-gray-50 z-40 px-4 py-3 text-left text-sm font-semibold text-gray-900 w-[180px]">
+                <th className="sticky left-0 bg-gray-50 z-40 px-3 py-3 text-left text-xs font-semibold text-gray-900 w-[220px]">
                   {t("table.resource")}
                 </th>
                 {displayDays.map((day, index) => {
@@ -406,8 +409,11 @@ export const PlanningGrid = ({
                 </tr>
               ) : (
                 <>
-                  {filteredGroups.map((group) => {
+                  {filteredGroups.map((group, groupIndex) => {
                     const taskCount = getGroupTaskCount(group.users);
+                    // Each visible group header before this one adds 48px to the sticky offset
+                    // Base offset = 48px (table header height)
+                    const stickyOffset = showGroupHeaders ? 48 + groupIndex * 48 : 48;
 
                     return (
                       <CollapsibleServiceSection
@@ -417,6 +423,7 @@ export const PlanningGrid = ({
                         displayDays={displayDays}
                         viewMode={viewMode}
                         showGroupHeaders={showGroupHeaders}
+                        stickyOffset={stickyOffset}
                         currentUserId={currentUserId}
                         canManageOthersTelework={canManageOthersTelework}
                         canAssignPredefinedTask={canAssignPredefinedTask}

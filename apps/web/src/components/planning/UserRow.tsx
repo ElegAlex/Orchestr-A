@@ -52,9 +52,9 @@ export const UserRow = ({
 
   return (
     <tr className={`hover:bg-gray-50 ${colors.border}`}>
-      <td className="sticky left-0 bg-white z-10 px-4 py-4 border-r border-gray-200">
-        <div className="flex items-center space-x-3 pl-2">
-          <div className="relative">
+      <td className="sticky left-0 bg-white z-10 px-3 py-3 border-r border-gray-200">
+        <div className="flex items-center space-x-2 pl-1 min-w-0">
+          <div className="relative shrink-0">
             <UserAvatar user={user} size="sm" />
             {group.isManagement && (
               <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center">
@@ -62,11 +62,11 @@ export const UserRow = ({
               </div>
             )}
           </div>
-          <div>
-            <div className="font-medium text-gray-900">
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-gray-900 truncate">
               {user.firstName} {user.lastName}
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-[10px] text-gray-500 truncate">
               {tCommon(`roles.${user.role}`)}
             </div>
           </div>

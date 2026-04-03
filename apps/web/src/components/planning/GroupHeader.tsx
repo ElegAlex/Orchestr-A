@@ -7,12 +7,14 @@ interface GroupHeaderProps {
   group: ServiceGroup;
   taskCount: number;
   colSpan: number;
+  stickyOffset?: number;
 }
 
 export const GroupHeader = ({
   group,
   taskCount,
   colSpan,
+  stickyOffset = 48,
 }: GroupHeaderProps) => {
   const t = useTranslations("planning");
   const colors = getGroupColors(group.color, group.isManagement);
@@ -42,7 +44,7 @@ export const GroupHeader = ({
     : `${colors.badge} text-white text-xs font-bold px-2 py-1 rounded-full`;
 
   return (
-    <tr className="sticky top-[48px] z-20">
+    <tr className="sticky z-20" style={{ top: `${stickyOffset}px` }}>
       <td colSpan={colSpan} className={headerClass} style={headerStyle}>
         <div className="flex items-center justify-between">
           <div className="flex items-center">
