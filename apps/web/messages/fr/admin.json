@@ -218,7 +218,47 @@
       "loadFailed": "Impossible de charger les données analytiques.",
       "exportError": "Erreur lors de l'export. Vérifiez la console pour plus de détails."
     },
-    "loading": "Chargement..."
+    "loading": "Chargement...",
+    "ganttPortfolio": {
+      "title": "Gantt Portfolio - Vue d'ensemble des Projets",
+      "projectsColumn": "Projets",
+      "noProjects": "Aucun projet actif à afficher",
+      "todayLabel": "Aujourd'hui",
+      "loading": "Chargement...",
+      "expandAll": "Tout déplier",
+      "collapseAll": "Tout replier",
+      "rag": {
+        "onTrack": "On track",
+        "atRisk": "À risque",
+        "late": "En retard",
+        "upcoming": "À venir",
+        "completed": "Terminé"
+      },
+      "tooltip": {
+        "progress": "Progression",
+        "start": "Début",
+        "end": "Fin",
+        "manager": "Chef de projet",
+        "service": "Service",
+        "health": "Santé"
+      },
+      "sort": {
+        "label": "Trier par",
+        "nameAsc": "Nom A→Z",
+        "nameDesc": "Nom Z→A",
+        "progressAsc": "Progression ↑",
+        "progressDesc": "Progression ↓",
+        "endDateAsc": "Fin la plus proche",
+        "endDateDesc": "Fin la plus lointaine",
+        "priorityHigh": "Priorité (critique d'abord)",
+        "priorityLow": "Priorité (basse d'abord)",
+        "healthWorst": "Santé (pire d'abord)",
+        "healthBest": "Santé (meilleure d'abord)",
+        "service": "Par service",
+        "manager": "Par chef de projet",
+        "unassigned": "Non assigné"
+      }
+    }
   },
   "roles": {
     "title": "Gestion des rôles",

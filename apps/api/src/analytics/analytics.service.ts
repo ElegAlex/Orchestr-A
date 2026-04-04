@@ -18,8 +18,10 @@ import { Prisma, Task, User, ProjectStatus } from '@prisma/client';
 interface ProjectMember {
   role: string;
   user: {
+    id: string;
     firstName: string;
     lastName: string;
+    department?: { id: string; name: string } | null;
   };
 }
 
@@ -27,6 +29,7 @@ interface ProjectWithDetails {
   id: string;
   name: string;
   status: ProjectStatus;
+  priority: string;
   startDate: Date | null;
   endDate: Date | null;
   createdAt: Date;
@@ -99,7 +102,13 @@ export class AnalyticsService {
         },
         members: {
           include: {
-            user: true,
+            user: {
+              include: {
+                department: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
           },
         },
       },
@@ -307,6 +316,13 @@ export class AnalyticsService {
         startDate: project.startDate || project.createdAt,
         dueDate: project.endDate ?? undefined,
         isOverdue: !!isOverdue,
+        priority: project.priority,
+        managerId: project.members.find(
+          (m) => m.role === 'Chef de projet' || m.role === 'MANAGER',
+        )?.user.id ?? undefined,
+        managerDepartment: project.members.find(
+          (m) => m.role === 'Chef de projet' || m.role === 'MANAGER',
+        )?.user.department?.name ?? undefined,
       };
     });
   }

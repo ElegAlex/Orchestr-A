@@ -516,6 +516,286 @@ async function main() {
 
   console.log("✅ 4 milestones created");
 
+  // ============================================================
+  // Projets supplémentaires pour le Gantt Portfolio
+  // ============================================================
+
+  const extraProjects = await Promise.all([
+    prisma.project.upsert({
+      where: { id: "00000000-0000-0000-0000-000000000010" },
+      update: {},
+      create: {
+        id: "00000000-0000-0000-0000-000000000010",
+        name: "Refonte Portail Citoyen",
+        description: "Modernisation du portail web des services aux citoyens",
+        status: "ACTIVE",
+        priority: "CRITICAL",
+        startDate: new Date("2026-01-06"),
+        endDate: new Date("2026-07-31"),
+        budgetHours: 3200,
+        createdById: admin.id,
+      },
+    }),
+    prisma.project.upsert({
+      where: { id: "00000000-0000-0000-0000-000000000011" },
+      update: {},
+      create: {
+        id: "00000000-0000-0000-0000-000000000011",
+        name: "Déploiement RGPD - Mise en conformité",
+        description: "Audit et mise en conformité RGPD de tous les traitements",
+        status: "ACTIVE",
+        priority: "HIGH",
+        startDate: new Date("2026-02-01"),
+        endDate: new Date("2026-06-30"),
+        budgetHours: 800,
+        createdById: admin.id,
+      },
+    }),
+    prisma.project.upsert({
+      where: { id: "00000000-0000-0000-0000-000000000012" },
+      update: {},
+      create: {
+        id: "00000000-0000-0000-0000-000000000012",
+        name: "Fibre optique - Interconnexion sites",
+        description: "Déploiement fibre optique entre les 12 sites de la collectivité",
+        status: "ACTIVE",
+        priority: "NORMAL",
+        startDate: new Date("2025-11-01"),
+        endDate: new Date("2026-05-15"),
+        budgetHours: 1600,
+        createdById: admin.id,
+      },
+    }),
+    prisma.project.upsert({
+      where: { id: "00000000-0000-0000-0000-000000000013" },
+      update: {},
+      create: {
+        id: "00000000-0000-0000-0000-000000000013",
+        name: "GED - Dématérialisation courrier",
+        description: "Mise en place de la GED pour la dématérialisation du courrier entrant/sortant",
+        status: "DRAFT",
+        priority: "NORMAL",
+        startDate: new Date("2026-05-01"),
+        endDate: new Date("2026-12-31"),
+        budgetHours: 1200,
+        createdById: admin.id,
+      },
+    }),
+    prisma.project.upsert({
+      where: { id: "00000000-0000-0000-0000-000000000014" },
+      update: {},
+      create: {
+        id: "00000000-0000-0000-0000-000000000014",
+        name: "Supervision réseau - Nagios → Zabbix",
+        description: "Migration de l'outil de supervision réseau",
+        status: "SUSPENDED",
+        priority: "LOW",
+        startDate: new Date("2026-01-15"),
+        endDate: new Date("2026-03-31"),
+        budgetHours: 400,
+        createdById: admin.id,
+      },
+    }),
+  ]);
+
+  // Membres pour les projets supplémentaires
+  for (const ep of extraProjects) {
+    await prisma.projectMember.upsert({
+      where: { projectId_userId: { projectId: ep.id, userId: admin.id } },
+      update: {},
+      create: { projectId: ep.id, userId: admin.id, role: "Chef de projet", allocation: 30 },
+    });
+  }
+
+  console.log(`✅ ${extraProjects.length} extra projects created`);
+
+  // Jalons pour "Projet de test"
+  await Promise.all([
+    prisma.milestone.create({
+      data: {
+        name: "Cahier des charges validé",
+        projectId: project.id,
+        dueDate: new Date("2026-04-10"),
+        status: "PENDING",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "Livraison MVP",
+        projectId: project.id,
+        dueDate: new Date("2026-05-15"),
+        status: "PENDING",
+      },
+    }),
+  ]);
+
+  // Jalons pour "Refonte Portail Citoyen"
+  await Promise.all([
+    prisma.milestone.create({
+      data: {
+        name: "Maquettes UX validées",
+        projectId: extraProjects[0].id,
+        dueDate: new Date("2026-02-14"),
+        status: "COMPLETED",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "API backend v1 livrée",
+        projectId: extraProjects[0].id,
+        dueDate: new Date("2026-03-28"),
+        status: "IN_PROGRESS",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "Recette usagers pilotes",
+        projectId: extraProjects[0].id,
+        dueDate: new Date("2026-05-30"),
+        status: "PENDING",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "Mise en production",
+        projectId: extraProjects[0].id,
+        dueDate: new Date("2026-07-15"),
+        status: "PENDING",
+      },
+    }),
+  ]);
+
+  // Jalons pour "RGPD"
+  await Promise.all([
+    prisma.milestone.create({
+      data: {
+        name: "Cartographie des traitements",
+        projectId: extraProjects[1].id,
+        dueDate: new Date("2026-03-01"),
+        status: "COMPLETED",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "PIA réalisés",
+        projectId: extraProjects[1].id,
+        dueDate: new Date("2026-04-15"),
+        status: "IN_PROGRESS",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "Registre des traitements publié",
+        projectId: extraProjects[1].id,
+        dueDate: new Date("2026-06-15"),
+        status: "PENDING",
+      },
+    }),
+  ]);
+
+  // Jalons pour "Fibre optique"
+  await Promise.all([
+    prisma.milestone.create({
+      data: {
+        name: "Étude de faisabilité terminée",
+        projectId: extraProjects[2].id,
+        dueDate: new Date("2025-12-15"),
+        status: "COMPLETED",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "Travaux de génie civil achevés",
+        projectId: extraProjects[2].id,
+        dueDate: new Date("2026-03-01"),
+        status: "COMPLETED",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "6 premiers sites raccordés",
+        projectId: extraProjects[2].id,
+        dueDate: new Date("2026-03-31"),
+        status: "DELAYED",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "12 sites raccordés - Réception finale",
+        projectId: extraProjects[2].id,
+        dueDate: new Date("2026-05-15"),
+        status: "PENDING",
+      },
+    }),
+  ]);
+
+  // Jalons pour "GED"
+  await Promise.all([
+    prisma.milestone.create({
+      data: {
+        name: "Choix de la solution",
+        projectId: extraProjects[3].id,
+        dueDate: new Date("2026-06-15"),
+        status: "PENDING",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "Déploiement pilote",
+        projectId: extraProjects[3].id,
+        dueDate: new Date("2026-09-30"),
+        status: "PENDING",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "Généralisation tous services",
+        projectId: extraProjects[3].id,
+        dueDate: new Date("2026-12-15"),
+        status: "PENDING",
+      },
+    }),
+  ]);
+
+  // Jalons pour "Supervision réseau"
+  await Promise.all([
+    prisma.milestone.create({
+      data: {
+        name: "Zabbix installé et configuré",
+        projectId: extraProjects[4].id,
+        dueDate: new Date("2026-02-15"),
+        status: "DELAYED",
+      },
+    }),
+    prisma.milestone.create({
+      data: {
+        name: "Migration des sondes terminée",
+        projectId: extraProjects[4].id,
+        dueDate: new Date("2026-03-15"),
+        status: "PENDING",
+      },
+    }),
+  ]);
+
+  // Tâches rapides pour donner de la progression aux projets
+  const taskStatuses: Array<"DONE" | "IN_PROGRESS" | "TODO"> = ["DONE", "DONE", "DONE", "IN_PROGRESS", "TODO"];
+  for (const ep of extraProjects) {
+    await Promise.all(
+      taskStatuses.map((status, i) =>
+        prisma.task.create({
+          data: {
+            title: `Tâche ${i + 1} - ${ep.name.substring(0, 20)}`,
+            projectId: ep.id,
+            status,
+            priority: "NORMAL",
+          },
+        })
+      )
+    );
+  }
+
+  console.log("✅ Extra milestones & tasks seeded");
+
   // 3 Epics
   const epics = await Promise.all([
     prisma.epic.create({

@@ -86,6 +86,15 @@ export class ProjectDetailDto {
 
   @ApiProperty()
   isOverdue: boolean;
+
+  @ApiProperty({ required: false })
+  priority?: string;
+
+  @ApiProperty({ required: false })
+  managerId?: string;
+
+  @ApiProperty({ required: false })
+  managerDepartment?: string;
 }
 
 export class AnalyticsResponseDto {

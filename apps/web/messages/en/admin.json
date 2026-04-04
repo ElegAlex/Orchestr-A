@@ -218,7 +218,47 @@
       "loadFailed": "Unable to load analytics data.",
       "exportError": "Error during export. Check the console for details."
     },
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "ganttPortfolio": {
+      "title": "Portfolio Gantt - Projects Overview",
+      "projectsColumn": "Projects",
+      "noProjects": "No active projects to display",
+      "todayLabel": "Today",
+      "loading": "Loading...",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "rag": {
+        "onTrack": "On track",
+        "atRisk": "At risk",
+        "late": "Late",
+        "upcoming": "Upcoming",
+        "completed": "Completed"
+      },
+      "tooltip": {
+        "progress": "Progress",
+        "start": "Start",
+        "end": "End",
+        "manager": "Project Manager",
+        "service": "Department",
+        "health": "Health"
+      },
+      "sort": {
+        "label": "Sort by",
+        "nameAsc": "Name A→Z",
+        "nameDesc": "Name Z→A",
+        "progressAsc": "Progress ↑",
+        "progressDesc": "Progress ↓",
+        "endDateAsc": "Nearest deadline",
+        "endDateDesc": "Farthest deadline",
+        "priorityHigh": "Priority (critical first)",
+        "priorityLow": "Priority (low first)",
+        "healthWorst": "Health (worst first)",
+        "healthBest": "Health (best first)",
+        "service": "By department",
+        "manager": "By project manager",
+        "unassigned": "Unassigned"
+      }
+    }
   },
   "roles": {
     "title": "Role Management",
