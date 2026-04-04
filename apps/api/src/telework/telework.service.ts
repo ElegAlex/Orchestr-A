@@ -133,6 +133,11 @@ export class TeleworkService {
       if (endDate) where.date.lte = new Date(endDate);
     }
 
+    // Auto-expand recurring rules into individual schedules for the requested range
+    if (startDate && endDate) {
+      await this.expandRecurringRulesForRange(startDate, endDate, userId);
+    }
+
     const [teleworks, total] = await Promise.all([
       this.prisma.teleworkSchedule.findMany({
         where,
@@ -179,6 +184,79 @@ export class TeleworkService {
         totalPages: Math.ceil(total / safeLimit),
       },
     };
+  }
+
+  /**
+   * Expand recurring rules into individual telework_schedule entries for a date range.
+   * Called automatically by findAll when startDate/endDate are provided.
+   * Creates missing entries only (skips existing).
+   */
+  private async expandRecurringRulesForRange(
+    startDate: string,
+    endDate: string,
+    filterUserId?: string,
+  ) {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const ruleWhere: Prisma.TeleworkRecurringRuleWhereInput = {
+      isActive: true,
+      startDate: { lte: end },
+      OR: [{ endDate: null }, { endDate: { gte: start } }],
+    };
+
+    if (filterUserId) {
+      ruleWhere.userId = filterUserId;
+    }
+
+    const rules = await this.prisma.teleworkRecurringRule.findMany({
+      where: ruleWhere,
+    });
+
+    for (const rule of rules) {
+      const cursor = new Date(start);
+      while (cursor <= end) {
+        const jsDay = cursor.getDay();
+        const modelDay = jsDay === 0 ? 6 : jsDay - 1;
+
+        if (modelDay === rule.dayOfWeek) {
+          const ruleStart = new Date(rule.startDate);
+          ruleStart.setHours(0, 0, 0, 0);
+          const ruleEnd = rule.endDate ? new Date(rule.endDate) : null;
+          if (ruleEnd) ruleEnd.setHours(23, 59, 59, 999);
+
+          if (cursor >= ruleStart && (!ruleEnd || cursor <= ruleEnd)) {
+            const dateOnly = new Date(cursor);
+            dateOnly.setHours(0, 0, 0, 0);
+
+            const existing =
+              await this.prisma.teleworkSchedule.findUnique({
+                where: {
+                  userId_date: {
+                    userId: rule.userId,
+                    date: dateOnly,
+                  },
+                },
+              });
+
+            if (!existing) {
+              await this.prisma.teleworkSchedule.create({
+                data: {
+                  userId: rule.userId,
+                  date: dateOnly,
+                  isTelework: true,
+                  isException: false,
+                },
+              });
+            }
+          }
+        }
+
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
   }
 
   /**
