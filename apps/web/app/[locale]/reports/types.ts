@@ -30,6 +30,8 @@ export interface ProjectDetail {
   totalTasks: number;
   completedTasks: number;
   projectManager?: string;
+  manager?: { id: string; firstName: string; lastName: string } | null;
+  icon?: string | null;
   loggedHours: number;
   budgetHours: number;
   startDate: string;

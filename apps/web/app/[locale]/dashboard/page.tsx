@@ -14,6 +14,7 @@ import {
   PersonalTodo,
 } from "@/services/personal-todos.service";
 import { Project, Task, TaskStatus, ProjectStatus, Priority } from "@/types";
+import { ProjectIcon } from "@/components/ProjectIcon";
 import { PresenceDialog } from "@/components/PresenceDialog";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
@@ -565,9 +566,10 @@ export default function DashboardPage() {
                             <Link
                               href={`/${locale}/projects/${task.project.id}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition"
                             >
-                              📁 {task.project.name}
+                              <ProjectIcon icon={task.project.icon} size={14} />
+                              {task.project.name}
                             </Link>
                           ) : (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
@@ -739,6 +741,7 @@ export default function DashboardPage() {
                       >
                         {tCommon(`priority.${project.priority}`)}
                       </span>
+                      <ProjectIcon icon={project.icon} size={20} />
                       <h3 className="text-base font-semibold text-gray-900 truncate min-w-0 flex-1">
                         {project.name}
                       </h3>

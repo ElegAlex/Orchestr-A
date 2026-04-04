@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Project, ProjectStatus, Priority, UpdateProjectDto } from "@/types";
+import { Project, ProjectStatus, Priority, UpdateProjectDto, User } from "@/types";
 import { useTranslations } from "next-intl";
+import { EmojiPicker } from "@/components/EmojiPicker";
+import { usersService } from "@/services/users.service";
 
 interface ProjectEditModalProps {
   isOpen: boolean;
@@ -22,20 +24,25 @@ export function ProjectEditModal({
   const [formData, setFormData] = useState<UpdateProjectDto>({
     name: "",
     description: "",
+    icon: null,
     status: ProjectStatus.DRAFT,
     priority: Priority.NORMAL,
     startDate: "",
     endDate: "",
+    managerId: "",
+    sponsorId: "",
     budgetHours: undefined,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     if (project && isOpen) {
       setFormData({
         name: project.name,
         description: project.description || "",
+        icon: project.icon || null,
         status: project.status,
         priority: project.priority,
         startDate: project.startDate
@@ -44,9 +51,17 @@ export function ProjectEditModal({
         endDate: project.endDate
           ? new Date(project.endDate).toISOString().split("T")[0]
           : "",
+        managerId: project.managerId || "",
+        sponsorId: project.sponsorId || "",
         budgetHours: project.budgetHours || undefined,
       });
       setError(null);
+
+      // Fetch users for manager/sponsor dropdowns
+      usersService.getAll().then((response) => {
+        const usersData = Array.isArray(response) ? response : response.data;
+        setUsers(usersData);
+      }).catch(() => setUsers([]));
     }
   }, [project, isOpen]);
 
@@ -56,7 +71,13 @@ export function ProjectEditModal({
     setSaving(true);
 
     try {
-      await onSave(formData);
+      const payload = {
+        ...formData,
+        icon: formData.icon || null,
+        managerId: formData.managerId || null,
+        sponsorId: formData.sponsorId || null,
+      };
+      await onSave(payload);
       onClose();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
@@ -90,16 +111,24 @@ export function ProjectEditModal({
             <label className="block text-sm font-medium text-gray-900 mb-1">
               {t("projectEditModal.nameLabel")}
             </label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-              placeholder={t("projectEditModal.namePlaceholder")}
-            />
+            <div className="flex items-center gap-2">
+              <EmojiPicker
+                value={formData.icon}
+                onChange={(emoji) =>
+                  setFormData({ ...formData, icon: emoji })
+                }
+              />
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                placeholder={t("projectEditModal.namePlaceholder")}
+              />
+            </div>
           </div>
 
           <div>
@@ -212,6 +241,52 @@ export function ProjectEditModal({
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                {t("projectEditModal.managerLabel")}
+              </label>
+              <select
+                value={formData.managerId || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, managerId: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              >
+                <option value="">
+                  {t("projectEditModal.managerPlaceholder")}
+                </option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.firstName} {u.lastName} ({u.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                {t("projectEditModal.sponsorLabel")}
+              </label>
+              <select
+                value={formData.sponsorId || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, sponsorId: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              >
+                <option value="">
+                  {t("projectEditModal.sponsorPlaceholder")}
+                </option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.firstName} {u.lastName} ({u.role})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

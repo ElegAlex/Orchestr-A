@@ -36,6 +36,7 @@ import { parseCSV } from "@/lib/csv-parser";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import { getTaskProgress } from "@/lib/task-progress";
 import api from "@/lib/api";
+import { ProjectIcon } from "@/components/ProjectIcon";
 
 const GanttChart = dynamic(() => import("@/components/GanttChart"), {
   ssr: false,
@@ -917,7 +918,8 @@ export default function ProjectDetailPage() {
 
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-gray-900 inline-flex items-center gap-2">
+                <ProjectIcon icon={project.icon} size={24} />
                 {project.name}
               </h1>
               <p className="text-gray-600 mt-2">{project.description}</p>
@@ -1550,9 +1552,21 @@ export default function ProjectDetailPage() {
                             {member.user?.lastName[0]}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900">
-                              {member.user?.firstName} {member.user?.lastName}
-                            </h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-gray-900">
+                                {member.user?.firstName} {member.user?.lastName}
+                              </h3>
+                              {member.userId === project.managerId && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                  Chef de projet
+                                </span>
+                              )}
+                              {member.userId === project.sponsorId && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                                  Sponsor
+                                </span>
+                              )}
+                            </div>
                             <input
                               type="text"
                               defaultValue={member.role || ""}

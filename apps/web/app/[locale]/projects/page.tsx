@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
+import { EmojiPicker } from "@/components/EmojiPicker";
 import { useAuthStore } from "@/stores/auth.store";
 import { projectsService } from "@/services/projects.service";
 import { usersService } from "@/services/users.service";
@@ -17,6 +18,7 @@ import {
   Department,
 } from "@/types";
 import { usePermissions } from "@/hooks/usePermissions";
+import { ProjectIcon } from "@/components/ProjectIcon";
 import toast from "react-hot-toast";
 
 export default function ProjectsPage() {
@@ -40,18 +42,22 @@ export default function ProjectsPage() {
 
   const [formData, setFormData] = useState<
     CreateProjectDto & {
+      icon?: string | null;
       managerId?: string;
+      sponsorId?: string;
       departmentId?: string;
       estimatedHours?: number;
     }
   >({
     name: "",
     description: "",
+    icon: null,
     status: ProjectStatus.DRAFT,
     priority: Priority.NORMAL,
     startDate: "",
     endDate: "",
     managerId: user?.id || "",
+    sponsorId: "",
     departmentId: user?.departmentId || "",
     budgetHours: undefined,
     estimatedHours: undefined,
@@ -128,18 +134,24 @@ export default function ProjectsPage() {
       const projectData: {
         name: string;
         description?: string;
+        icon?: string | null;
         status?: ProjectStatus;
         priority?: Priority;
         startDate: string;
         endDate: string;
+        managerId?: string;
+        sponsorId?: string | null;
         budgetHours?: number;
       } = {
         name: formData.name,
         description: formData.description,
+        icon: formData.icon || null,
         status: formData.status,
         priority: formData.priority,
         startDate: formData.startDate,
         endDate: formData.endDate,
+        managerId: formData.managerId || undefined,
+        sponsorId: formData.sponsorId || null,
       };
 
       // Ajouter budgetHours s'il existe
@@ -186,11 +198,13 @@ export default function ProjectsPage() {
     setFormData({
       name: "",
       description: "",
+      icon: null,
       status: ProjectStatus.DRAFT,
       priority: Priority.NORMAL,
       startDate: "",
       endDate: "",
       managerId: user?.id || "",
+      sponsorId: "",
       departmentId: user?.departmentId || "",
       budgetHours: undefined,
       estimatedHours: undefined,
@@ -374,6 +388,7 @@ export default function ProjectsPage() {
                   >
                     {getPriorityLabel(project.priority)}
                   </span>
+                  <ProjectIcon icon={project.icon} size={20} />
                   <h3 className="text-base font-semibold text-gray-900 truncate min-w-0 flex-1">
                     {project.name}
                   </h3>
@@ -435,16 +450,24 @@ export default function ProjectsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t("modal.create.nameLabel")}
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t("modal.create.namePlaceholder")}
-                />
+                <div className="flex items-center gap-2">
+                  <EmojiPicker
+                    value={formData.icon}
+                    onChange={(emoji) =>
+                      setFormData({ ...formData, icon: emoji })
+                    }
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder={t("modal.create.namePlaceholder")}
+                  />
+                </div>
               </div>
 
               <div>
@@ -584,6 +607,30 @@ export default function ProjectsPage() {
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t("modal.create.sponsorLabel")}
+                  </label>
+                  <select
+                    value={formData.sponsorId || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sponsorId: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">
+                      {t("modal.create.sponsorPlaceholder")}
+                    </option>
+                    {managers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.firstName} {u.lastName} ({u.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t("modal.create.departmentLabel")}

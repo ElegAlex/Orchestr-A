@@ -19,11 +19,13 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import { api } from "@/lib/api";
 import type { Milestone } from "@/types";
+import { ProjectIcon } from "@/components/ProjectIcon";
 
 interface Project {
   id: string;
   name: string;
   code?: string;
+  icon?: string | null;
   status: string;
   progress: number;
   startDate: string;
@@ -669,6 +671,7 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
                     >
                       {expandedProjects.has(project.id) ? '\u25BC' : '\u25B6'}
                     </button>
+                    <ProjectIcon icon={project.icon} size={16} />
                     <span className="font-semibold text-sm truncate">{project.name}</span>
                   </div>
                   <div className="flex gap-2 mt-1 items-center">

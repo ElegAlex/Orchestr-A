@@ -32,7 +32,14 @@ interface ProjectWithDetails {
   createdAt: Date;
   budgetHours: number | null;
   progress: number;
+  icon: string | null;
   projectManager: string | null;
+  manager: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    department?: { id: string; name: string } | null;
+  } | null;
   _count: { tasks: number };
   members: ProjectMember[];
 }
@@ -97,6 +104,14 @@ export class AnalyticsService {
         _count: {
           select: { tasks: true },
         },
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            department: { select: { id: true, name: true } },
+          },
+        },
         members: {
           include: {
             user: {
@@ -115,14 +130,11 @@ export class AnalyticsService {
     return Promise.all(
       projects.map(async (project) => {
         const progress = await this.calculateProjectProgress(project.id);
-        const projectManager = project.members.find(
-          (m) => m.role === 'Chef de projet' || m.role === 'MANAGER',
-        );
         return {
           ...project,
           progress,
-          projectManager: projectManager
-            ? `${projectManager.user.firstName} ${projectManager.user.lastName}`
+          projectManager: project.manager
+            ? `${project.manager.firstName} ${project.manager.lastName}`
             : null,
         };
       }),
@@ -308,18 +320,20 @@ export class AnalyticsService {
         totalTasks: projectTasks.length,
         completedTasks: completedTasks.length,
         projectManager: project.projectManager ?? undefined,
+        manager: project.manager ? {
+          id: project.manager.id,
+          firstName: project.manager.firstName,
+          lastName: project.manager.lastName,
+        } : null,
+        icon: project.icon ?? null,
         loggedHours: totalLoggedHours,
         budgetHours: project.budgetHours || 0,
         startDate: project.startDate || project.createdAt,
         dueDate: project.endDate ?? undefined,
         isOverdue: !!isOverdue,
         priority: project.priority,
-        managerId: project.members.find(
-          (m) => m.role === 'Chef de projet' || m.role === 'MANAGER',
-        )?.user.id ?? undefined,
-        managerDepartment: project.members.find(
-          (m) => m.role === 'Chef de projet' || m.role === 'MANAGER',
-        )?.user.department?.name ?? undefined,
+        managerId: project.manager?.id ?? undefined,
+        managerDepartment: project.manager?.department?.name ?? undefined,
       };
     });
   }

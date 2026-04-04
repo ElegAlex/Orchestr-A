@@ -44,6 +44,8 @@ export class ProjectsService {
           ...(endDate && { endDate: new Date(endDate) }),
           status: createProjectDto.status || ProjectStatus.DRAFT,
           createdById: creatorId,
+          managerId: projectData.managerId || creatorId,
+          ...(projectData.sponsorId && { sponsorId: projectData.sponsorId }),
         },
       });
 
@@ -61,6 +63,12 @@ export class ProjectsService {
       return tx.project.findUnique({
         where: { id: newProject.id },
         include: {
+          manager: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          sponsor: {
+            select: { id: true, firstName: true, lastName: true },
+          },
           members: {
             include: {
               user: {
@@ -141,6 +149,12 @@ export class ProjectsService {
               login: true,
             },
           },
+          manager: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          sponsor: {
+            select: { id: true, firstName: true, lastName: true },
+          },
           members: {
             take: 5,
             include: {
@@ -211,6 +225,12 @@ export class ProjectsService {
             lastName: true,
             login: true,
           },
+        },
+        manager: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        sponsor: {
+          select: { id: true, firstName: true, lastName: true },
         },
         members: {
           include: {
@@ -319,6 +339,12 @@ export class ProjectsService {
         ...(visibleStatuses !== undefined && { visibleStatuses }),
       },
       include: {
+        manager: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        sponsor: {
+          select: { id: true, firstName: true, lastName: true },
+        },
         members: {
           include: {
             user: {
@@ -516,6 +542,12 @@ export class ProjectsService {
         },
       },
       include: {
+        manager: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        sponsor: {
+          select: { id: true, firstName: true, lastName: true },
+        },
         members: {
           take: 5,
           include: {

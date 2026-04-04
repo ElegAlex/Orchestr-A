@@ -228,16 +228,29 @@ export interface Project {
   endDate?: string;
   budgetHours?: number;
   progress?: number;
+  icon?: string | null;
   hiddenStatuses?: TaskStatus[];
   visibleStatuses?: string[];
   createdAt: string;
   updatedAt: string;
   createdById?: string;
+  managerId?: string | null;
+  sponsorId?: string | null;
   createdBy?: {
     id: string;
     firstName: string;
     lastName: string;
     login: string;
+  } | null;
+  manager?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  sponsor?: {
+    id: string;
+    firstName: string;
+    lastName: string;
   } | null;
   members?: ProjectMember[];
   epics?: Epic[];
@@ -280,16 +293,21 @@ export interface CreateProjectDto {
   startDate: string;
   endDate: string;
   budgetHours?: number;
+  icon?: string | null;
+  managerId?: string;
+  sponsorId?: string | null;
 }
 
 export interface UpdateProjectDto {
   name?: string;
   description?: string;
+  icon?: string | null;
   status?: ProjectStatus;
   priority?: Priority;
   startDate?: string;
   endDate?: string;
-  managerId?: string;
+  managerId?: string | null;
+  sponsorId?: string | null;
   departmentId?: string;
   budget?: number;
   estimatedHours?: number;

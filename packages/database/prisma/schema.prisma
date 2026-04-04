@@ -61,6 +61,8 @@ model User {
   createdPredefinedTaskRules   PredefinedTaskRecurringRule[] @relation("PredefinedTaskRecurringRuleCreator")
   passwordResetTokens        PasswordResetToken[]          @relation("PasswordResetTokenUser")
   createdPasswordResetTokens PasswordResetToken[]          @relation("PasswordResetTokenCreator")
+  managedProjects            Project[]                     @relation("ProjectManager")
+  sponsoredProjects          Project[]                     @relation("ProjectSponsor")
 
   @@map("users")
 }
@@ -148,14 +150,19 @@ model Project {
   startDate     DateTime?
   endDate       DateTime?
   budgetHours     Int?
+  icon            String?
   hiddenStatuses  TaskStatus[]  @default([])
   visibleStatuses String[]      @default([])
   createdById   String?
+  managerId     String?
+  sponsorId     String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   // Relations
   createdBy     User?           @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  manager       User?           @relation("ProjectManager", fields: [managerId], references: [id], onDelete: SetNull)
+  sponsor       User?           @relation("ProjectSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
   members       ProjectMember[]
   epics         Epic[]
   milestones    Milestone[]

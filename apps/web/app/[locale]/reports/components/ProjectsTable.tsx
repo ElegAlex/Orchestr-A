@@ -2,6 +2,7 @@ import { ProjectDetail } from "../types";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
+import { ProjectIcon } from "@/components/ProjectIcon";
 
 interface ProjectsTableProps {
   projects: ProjectDetail[];
@@ -54,8 +55,9 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <Link
                     href={`/projects/${project.id}`}
-                    className="font-semibold text-gray-900 hover:underline cursor-pointer"
+                    className="font-semibold text-gray-900 hover:underline cursor-pointer inline-flex items-center gap-1.5"
                   >
+                    <ProjectIcon icon={project.icon} size={16} />
                     {project.name}
                   </Link>
                 </td>
@@ -86,7 +88,7 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                   {project.completedTasks}/{project.totalTasks}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {project.projectManager || "-"}
+                  {project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "-"}
                 </td>
                 <td
                   className={`px-6 py-4 whitespace-nowrap text-right text-sm ${

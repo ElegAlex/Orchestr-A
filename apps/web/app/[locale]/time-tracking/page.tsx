@@ -14,6 +14,7 @@ import {
   Project,
   Task,
 } from "@/types";
+import { ProjectIcon } from "@/components/ProjectIcon";
 import toast from "react-hot-toast";
 
 export default function TimeTrackingPage() {
@@ -337,7 +338,7 @@ export default function TimeTrackingPage() {
 
                       {entry.project && (
                         <div className="flex items-center space-x-2 text-sm text-gray-600 mb-1">
-                          <span>📁</span>
+                          <ProjectIcon icon={entry.project.icon} size={16} />
                           <span>{entry.project.name}</span>
                         </div>
                       )}

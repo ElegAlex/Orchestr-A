@@ -72,4 +72,31 @@ export class CreateProjectDto {
   })
   @IsOptional()
   budgetHours?: number;
+
+  @ApiProperty({
+    description: 'Icône du projet (emoji)',
+    example: '🚀',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  icon?: string;
+
+  @ApiProperty({
+    description: 'ID du chef de projet',
+    example: 'uuid-du-manager',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  managerId?: string;
+
+  @ApiProperty({
+    description: 'ID du sponsor',
+    example: 'uuid-du-sponsor',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  sponsorId?: string;
 }

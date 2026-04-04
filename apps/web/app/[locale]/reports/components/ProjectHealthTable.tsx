@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { ProjectIcon } from "@/components/ProjectIcon";
 
 interface ProjectHealthTableProps {
   dateRange: string;
@@ -15,10 +16,12 @@ interface ProjectHealthTableProps {
 interface Project {
   id: string;
   name: string;
+  icon?: string | null;
   progress: number;
   startDate: string | null;
   endDate: string | null;
   status: string;
+  manager?: { id: string; firstName: string; lastName: string } | null;
   members?: Array<{
     userId: string;
     role: string;
@@ -73,6 +76,7 @@ const RAG_DOT_CLASSES: Record<RagColor, string> = {
 interface ProjectRow {
   id: string;
   name: string;
+  icon?: string | null;
   progress: number;
   remaining: number;
   overdue: number;
@@ -212,19 +216,14 @@ export function ProjectHealthTable({
         const nextMs = projectMilestones[0] ?? null;
 
         // Find project manager
-        const managerMember = project.members?.find(
-          (m) =>
-            m.role === "Chef de projet" ||
-            m.role === "MANAGER" ||
-            m.role === "PROJECT_MANAGER"
-        );
-        const manager = managerMember?.user
-          ? `${managerMember.user.firstName} ${managerMember.user.lastName}`
+        const manager = project.manager
+          ? `${project.manager.firstName} ${project.manager.lastName}`
           : "-";
 
         return {
           id: project.id,
           name: project.name,
+          icon: project.icon,
           progress: project.progress ?? 0,
           remaining,
           overdue,
@@ -399,8 +398,9 @@ export function ProjectHealthTable({
                 <td className="px-4 py-3 whitespace-nowrap">
                   <Link
                     href={`/projects/${row.id}`}
-                    className="font-semibold text-gray-900 hover:text-blue-600 hover:underline"
+                    className="font-semibold text-gray-900 hover:text-blue-600 hover:underline inline-flex items-center gap-1.5"
                   >
+                    <ProjectIcon icon={row.icon} size={16} />
                     {row.name}
                   </Link>
                 </td>

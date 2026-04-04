@@ -431,6 +431,9 @@ async function main() {
         endDate: new Date("2026-04-30"),
         budgetHours: 2400,
         createdById: admin.id,
+        managerId: admin.id,
+        sponsorId: helpdeskEmployees[0]?.id,
+        icon: "\u{1F680}",
       },
     });
   }
@@ -534,6 +537,8 @@ async function main() {
         endDate: new Date("2026-07-31"),
         budgetHours: 3200,
         createdById: admin.id,
+        managerId: admin.id,
+        icon: "\u{1F310}",
       },
     }),
     prisma.project.upsert({
@@ -549,6 +554,8 @@ async function main() {
         endDate: new Date("2026-06-30"),
         budgetHours: 800,
         createdById: admin.id,
+        managerId: admin.id,
+        icon: "\u{1F512}",
       },
     }),
     prisma.project.upsert({
@@ -564,6 +571,8 @@ async function main() {
         endDate: new Date("2026-05-15"),
         budgetHours: 1600,
         createdById: admin.id,
+        managerId: admin.id,
+        icon: "\u{1F4E1}",
       },
     }),
     prisma.project.upsert({
@@ -579,6 +588,8 @@ async function main() {
         endDate: new Date("2026-12-31"),
         budgetHours: 1200,
         createdById: admin.id,
+        managerId: admin.id,
+        icon: "\u{1F4C4}",
       },
     }),
     prisma.project.upsert({
@@ -586,7 +597,7 @@ async function main() {
       update: {},
       create: {
         id: "00000000-0000-0000-0000-000000000014",
-        name: "Supervision réseau - Nagios → Zabbix",
+        name: "Supervision réseau - Nagios \u2192 Zabbix",
         description: "Migration de l'outil de supervision réseau",
         status: "SUSPENDED",
         priority: "LOW",
@@ -594,6 +605,8 @@ async function main() {
         endDate: new Date("2026-03-31"),
         budgetHours: 400,
         createdById: admin.id,
+        managerId: admin.id,
+        icon: "\u{1F4CA}",
       },
     }),
   ]);

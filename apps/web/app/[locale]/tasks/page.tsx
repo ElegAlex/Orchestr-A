@@ -23,6 +23,7 @@ import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import { getTaskProgress } from "@/lib/task-progress";
+import { ProjectIcon } from "@/components/ProjectIcon";
 import toast from "react-hot-toast";
 
 export default function TasksPage() {
@@ -615,7 +616,7 @@ export default function TasksPage() {
 
                                 {task.project ? (
                                   <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
-                                    <span>📁</span>
+                                    <ProjectIcon icon={task.project.icon} size={14} />
                                     <span className="truncate">
                                       {task.project.name}
                                     </span>

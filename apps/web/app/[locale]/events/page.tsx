@@ -14,6 +14,7 @@ import { usersService } from "@/services/users.service";
 import { servicesService } from "@/services/services.service";
 import { Project, User, Service } from "@/types";
 import { usePermissions } from "@/hooks/usePermissions";
+import { ProjectIcon } from "@/components/ProjectIcon";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import toast from "react-hot-toast";
@@ -493,8 +494,9 @@ export default function EventsPage() {
                     {/* Row 2 */}
                     <div className="flex items-center gap-4 mt-1">
                       {event.project && (
-                        <span className="text-xs text-gray-500 shrink-0">
-                          📁 {event.project.name}
+                        <span className="text-xs text-gray-500 shrink-0 inline-flex items-center gap-1">
+                          <ProjectIcon icon={event.project.icon} size={14} />
+                          {event.project.name}
                         </span>
                       )}
                       {event.description && (

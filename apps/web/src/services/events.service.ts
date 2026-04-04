@@ -16,6 +16,7 @@ export interface Event {
   project?: {
     id: string;
     name: string;
+    icon?: string | null;
     status?: string;
   };
   createdBy?: {
