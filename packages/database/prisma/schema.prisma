@@ -163,8 +163,23 @@ model Project {
   documents     Document[]
   timeEntries   TimeEntry[]
   events        Event[]
+  snapshots     ProjectSnapshot[]
 
   @@map("projects")
+}
+
+model ProjectSnapshot {
+  id         String   @id @default(uuid())
+  projectId  String
+  progress   Float
+  tasksDone  Int
+  tasksTotal Int
+  date       DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_snapshots")
 }
 
 enum ProjectStatus {

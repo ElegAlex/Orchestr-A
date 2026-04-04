@@ -4,9 +4,6 @@ import { AnalyticsService } from './analytics.service';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import {
   AnalyticsResponseDto,
-  WorkloadUserDto,
-  VelocityPeriodDto,
-  BurndownPointDto,
 } from './dto/analytics-response.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 
@@ -32,36 +29,4 @@ export class AnalyticsController {
     return this.analyticsService.exportAnalytics(query);
   }
 
-  @Get('workload')
-  @Permissions('reports:view')
-  @ApiOperation({
-    summary: 'Get workload per user (planned hours vs capacity)',
-  })
-  async getWorkload(
-    @Query() query: AnalyticsQueryDto,
-  ): Promise<WorkloadUserDto[]> {
-    return this.analyticsService.getWorkload(query);
-  }
-
-  @Get('velocity')
-  @Permissions('reports:view')
-  @ApiOperation({
-    summary: 'Get team velocity: completed vs planned tasks per week',
-  })
-  async getVelocity(
-    @Query() query: AnalyticsQueryDto,
-  ): Promise<VelocityPeriodDto[]> {
-    return this.analyticsService.getVelocity(query);
-  }
-
-  @Get('burndown')
-  @Permissions('reports:view')
-  @ApiOperation({
-    summary: 'Get burndown chart data: ideal vs actual remaining tasks',
-  })
-  async getBurndown(
-    @Query() query: AnalyticsQueryDto,
-  ): Promise<BurndownPointDto[]> {
-    return this.analyticsService.getBurndown(query);
-  }
 }

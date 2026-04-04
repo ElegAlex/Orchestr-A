@@ -58,7 +58,6 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
                   >
                     {project.name}
                   </Link>
-                  <div className="text-sm text-gray-900">{project.code}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span

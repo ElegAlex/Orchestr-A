@@ -83,6 +83,13 @@ export class ProjectsController {
     return this.projectsService.findAll(page, limit, status, userId, userRole);
   }
 
+  @Post('snapshots/capture')
+  @Permissions('admin:access')
+  @ApiOperation({ summary: 'Capture progress snapshot for all active projects' })
+  async captureSnapshots() {
+    return this.projectsService.captureSnapshots();
+  }
+
   @Get('user/:userId')
   @Permissions('projects:read')
   @ApiOperation({ summary: "Récupérer les projets d'un utilisateur" })
@@ -126,6 +133,17 @@ export class ProjectsController {
   })
   getStats(@Param('id', ParseUUIDPipe) id: string) {
     return this.projectsService.getProjectStats(id);
+  }
+
+  @Get(':id/snapshots')
+  @Permissions('reports:view')
+  @ApiOperation({ summary: 'Get progress snapshots for a project' })
+  async getSnapshots(
+    @Param('id') id: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.projectsService.getSnapshots(id, from, to);
   }
 
   @Patch(':id')

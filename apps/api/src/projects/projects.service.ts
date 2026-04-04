@@ -558,6 +558,52 @@ export class ProjectsService {
   }
 
   /**
+   * Capture un snapshot de progression pour tous les projets actifs
+   */
+  async captureSnapshots() {
+    const projects = await this.prisma.project.findMany({
+      where: { status: 'ACTIVE' },
+      include: { tasks: { select: { status: true } } },
+    });
+
+    const snapshots = await Promise.all(
+      projects.map(async (project) => {
+        const tasksTotal = project.tasks.length;
+        const tasksDone = project.tasks.filter((t) => t.status === 'DONE').length;
+        const progress = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
+
+        return this.prisma.projectSnapshot.create({
+          data: {
+            projectId: project.id,
+            progress,
+            tasksDone,
+            tasksTotal,
+          },
+        });
+      }),
+    );
+
+    return { captured: snapshots.length };
+  }
+
+  /**
+   * Récupérer les snapshots de progression d'un projet
+   */
+  async getSnapshots(projectId: string, from?: string, to?: string) {
+    const where: any = { projectId };
+    if (from || to) {
+      where.date = {};
+      if (from) where.date.gte = new Date(from);
+      if (to) where.date.lte = new Date(to);
+    }
+
+    return this.prisma.projectSnapshot.findMany({
+      where,
+      orderBy: { date: 'asc' },
+    });
+  }
+
+  /**
    * Récupérer les statistiques d'un projet
    */
   async getProjectStats(id: string) {

@@ -7,9 +7,13 @@ import { ProjectProgressChart } from "./components/ProjectProgressChart";
 import { TaskStatusCards } from "./components/TaskStatusCards";
 import { ProjectsTable } from "./components/ProjectsTable";
 import PortfolioGantt from "./components/PortfolioGantt";
-import { BurndownChart } from "./components/BurndownChart";
-import { VelocityChart } from "./components/VelocityChart";
-import { WorkloadChart } from "./components/WorkloadChart";
+import { ProjectProgressionChart } from "./components/ProjectProgressionChart";
+import { CollaboratorWorkloadChart } from "./components/CollaboratorWorkloadChart";
+import { ProjectHealthTable } from "./components/ProjectHealthTable";
+import { ProgressTrendChart } from "./components/ProgressTrendChart";
+import { MilestoneCompletionChart } from "./components/MilestoneCompletionChart";
+import { PriorityDistributionChart } from "./components/PriorityDistributionChart";
+import { RecentActivityCards } from "./components/RecentActivityCards";
 import { AnalyticsData, DateRange } from "./types";
 import { format } from "date-fns";
 import { ExportService } from "@/services/export.service";
@@ -328,17 +332,47 @@ export default function ReportsPage() {
         {/* Tab: Analytics Avancés */}
         {activeTab === 1 && (
           <div className="space-y-8">
+            {/* Row 1: Progression + Charge */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <BurndownChart
-                projectId={projectIdFilter}
+              <ProjectProgressionChart
                 dateRange={dateRange}
+                projectId={projectIdFilter}
               />
-              <VelocityChart
+              <CollaboratorWorkloadChart
                 dateRange={dateRange}
                 projectId={projectIdFilter}
               />
             </div>
-            <WorkloadChart dateRange={dateRange} projectId={projectIdFilter} />
+
+            {/* Row 2: Tableau de santé — pleine largeur */}
+            <ProjectHealthTable
+              dateRange={dateRange}
+              projectId={projectIdFilter}
+            />
+
+            {/* Row 3: Tendance + Jalons */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ProgressTrendChart
+                dateRange={dateRange}
+                projectId={projectIdFilter}
+              />
+              <MilestoneCompletionChart
+                dateRange={dateRange}
+                projectId={projectIdFilter}
+              />
+            </div>
+
+            {/* Row 4: Priorités + Activité */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PriorityDistributionChart
+                dateRange={dateRange}
+                projectId={projectIdFilter}
+              />
+              <RecentActivityCards
+                dateRange={dateRange}
+                projectId={projectIdFilter}
+              />
+            </div>
           </div>
         )}
 

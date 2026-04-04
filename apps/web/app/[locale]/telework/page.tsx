@@ -413,7 +413,7 @@ export default function TeleworkPage() {
       );
       const endDate = new Date(
         currentMonth.getFullYear(),
-        currentMonth.getMonth() + 6,
+        currentMonth.getMonth() + 3,
         0,
       );
 
@@ -440,10 +440,10 @@ export default function TeleworkPage() {
     fetchTeleworkData();
   }, [fetchTeleworkData]);
 
-  // Générer les 6 prochains mois
+  // Générer les 3 prochains mois
   const getMonthsToDisplay = () => {
     const months = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 3; i++) {
       const date = new Date(
         currentMonth.getFullYear(),
         currentMonth.getMonth() + i,
