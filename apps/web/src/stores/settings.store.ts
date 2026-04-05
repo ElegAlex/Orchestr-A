@@ -85,7 +85,12 @@ export const useSettingsStore = create<SettingsState>()(
       name: "orchestr-a-settings",
       partialize: (state) => ({
         settings: state.settings,
-        isLoaded: state.isLoaded,
+      }),
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<SettingsState>),
+        // Never restore isLoaded from cache — always require a fresh fetch
+        isLoaded: false,
       }),
     },
   ),

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePredefinedTaskDto } from './dto/create-predefined-task.dto';
@@ -39,6 +40,17 @@ export class PredefinedTasksService {
   }
 
   async create(createdById: string, dto: CreatePredefinedTaskDto) {
+    if (dto.defaultDuration === 'TIME_SLOT') {
+      if (!dto.startTime || !dto.endTime) {
+        throw new BadRequestException(
+          'startTime et endTime sont requis quand defaultDuration est TIME_SLOT',
+        );
+      }
+    }
+
+    const startTime = dto.defaultDuration === 'TIME_SLOT' ? dto.startTime : null;
+    const endTime = dto.defaultDuration === 'TIME_SLOT' ? dto.endTime : null;
+
     return this.prisma.predefinedTask.create({
       data: {
         name: dto.name,
@@ -46,6 +58,8 @@ export class PredefinedTasksService {
         color: dto.color,
         icon: dto.icon,
         defaultDuration: dto.defaultDuration,
+        startTime,
+        endTime,
         createdById,
       },
       include: {
@@ -64,6 +78,28 @@ export class PredefinedTasksService {
       throw new NotFoundException(`Tâche prédéfinie ${id} introuvable`);
     }
 
+    const effectiveDuration = dto.defaultDuration ?? existing.defaultDuration;
+
+    if (effectiveDuration === 'TIME_SLOT') {
+      const effectiveStartTime = dto.startTime !== undefined ? dto.startTime : existing.startTime;
+      const effectiveEndTime = dto.endTime !== undefined ? dto.endTime : existing.endTime;
+      if (!effectiveStartTime || !effectiveEndTime) {
+        throw new BadRequestException(
+          'startTime et endTime sont requis quand defaultDuration est TIME_SLOT',
+        );
+      }
+    }
+
+    const timeSlotData: Record<string, string | null> = {};
+    if (effectiveDuration === 'TIME_SLOT') {
+      if (dto.startTime !== undefined) timeSlotData.startTime = dto.startTime;
+      if (dto.endTime !== undefined) timeSlotData.endTime = dto.endTime;
+    } else if (dto.defaultDuration !== undefined) {
+      // Switching away from TIME_SLOT, nullify time fields
+      timeSlotData.startTime = null;
+      timeSlotData.endTime = null;
+    }
+
     return this.prisma.predefinedTask.update({
       where: { id },
       data: {
@@ -75,6 +111,7 @@ export class PredefinedTasksService {
           defaultDuration: dto.defaultDuration,
         }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        ...timeSlotData,
       },
       include: {
         createdBy: {

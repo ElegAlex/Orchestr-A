@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth.store";
+import { useSettingsStore } from "@/stores/settings.store";
 import { permissionsService } from "@/services/permissions.service";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -20,7 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, [checkAuth]);
 
-  // Load permissions when authenticated
+  // Load permissions and settings when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       permissionsService
@@ -30,6 +31,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error("Failed to load permissions:", err);
           setPermissions([]);
         });
+
+      useSettingsStore.getState().fetchSettings();
     }
   }, [isAuthenticated, setPermissions]);
 

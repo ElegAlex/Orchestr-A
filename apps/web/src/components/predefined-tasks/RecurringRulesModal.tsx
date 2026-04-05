@@ -26,6 +26,7 @@ const DAY_OF_WEEK_LABELS: Record<DayOfWeek, string> = {
 const DURATION_LABELS: Record<TaskDuration, string> = {
   HALF_DAY: "Demi-journée",
   FULL_DAY: "Journée entière",
+  TIME_SLOT: "Créneau horaire",
 };
 
 const WEEK_INTERVAL_LABELS: Record<number, string> = {
@@ -116,7 +117,7 @@ export function RecurringRulesModal({
         predefinedTaskId: task.id,
         userIds: formData.userIds,
         daysOfWeek: formData.daysOfWeek,
-        duration: formData.duration,
+        period: formData.duration,
         weekInterval: formData.weekInterval,
         startDate: formData.startDate,
         endDate: formData.endDate || undefined,
@@ -238,7 +239,7 @@ export function RecurringRulesModal({
                           ? `Un ${DAY_OF_WEEK_LABELS[rule.dayOfWeek].toLowerCase()} sur ${rule.weekInterval}`
                           : `Chaque ${DAY_OF_WEEK_LABELS[rule.dayOfWeek].toLowerCase()}`}
                         {" \u2022 "}
-                        {DURATION_LABELS[rule.duration]}
+                        {DURATION_LABELS[rule.period]}
                         {rule.startDate &&
                           ` \u2022 À partir du ${new Date(rule.startDate).toLocaleDateString("fr-FR")}`}
                         {rule.endDate &&

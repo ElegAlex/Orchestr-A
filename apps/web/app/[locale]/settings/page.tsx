@@ -332,34 +332,68 @@ export default function SettingsPage() {
                     const currentDays = (settings[
                       "planning.visibleDays"
                     ] as number[]) || [1, 2, 3, 4, 5];
+                    const currentSpecialDays = (settings[
+                      "planning.specialDays"
+                    ] as number[]) || [];
                     const isChecked = currentDays.includes(day.isoDay);
                     const isLastChecked = isChecked && currentDays.length === 1;
+                    const isSpecial = currentSpecialDays.includes(day.isoDay);
 
                     return (
-                      <label
+                      <div
                         key={day.isoDay}
-                        className="flex items-center space-x-3 cursor-pointer"
+                        className="flex items-center space-x-4"
                       >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          disabled={isLastChecked}
-                          onChange={() => {
-                            const newDays = isChecked
-                              ? currentDays.filter((d) => d !== day.isoDay)
-                              : [...currentDays, day.isoDay].sort(
-                                  (a, b) => a - b,
+                        <label className="flex items-center space-x-3 cursor-pointer min-w-[180px]">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            disabled={isLastChecked}
+                            onChange={() => {
+                              const newDays = isChecked
+                                ? currentDays.filter((d) => d !== day.isoDay)
+                                : [...currentDays, day.isoDay].sort(
+                                    (a, b) => a - b,
+                                  );
+                              handleChange("planning.visibleDays", newDays);
+                              // Si on décoche un jour visible, le retirer aussi des jours spéciaux
+                              if (isChecked && isSpecial) {
+                                handleChange(
+                                  "planning.specialDays",
+                                  currentSpecialDays.filter((d) => d !== day.isoDay),
                                 );
-                            handleChange("planning.visibleDays", newDays);
-                          }}
-                          className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50"
-                        />
-                        <span
-                          className={`text-sm ${isLastChecked ? "text-gray-400" : "text-gray-700"}`}
+                              }
+                            }}
+                            className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50"
+                          />
+                          <span
+                            className={`text-sm ${isLastChecked ? "text-gray-400" : "text-gray-700"}`}
+                          >
+                            {t(day.labelKey)}
+                          </span>
+                        </label>
+                        <label
+                          className={`flex items-center space-x-2 cursor-pointer ${!isChecked ? "opacity-40" : ""}`}
                         >
-                          {t(day.labelKey)}
-                        </span>
-                      </label>
+                          <input
+                            type="checkbox"
+                            checked={isSpecial}
+                            disabled={!isChecked}
+                            onChange={() => {
+                              const newSpecialDays = isSpecial
+                                ? currentSpecialDays.filter((d) => d !== day.isoDay)
+                                : [...currentSpecialDays, day.isoDay].sort(
+                                    (a, b) => a - b,
+                                  );
+                              handleChange("planning.specialDays", newSpecialDays);
+                            }}
+                            className="h-4 w-4 text-gray-600 rounded border-gray-300 focus:ring-gray-500 disabled:opacity-50"
+                          />
+                          <span className="text-sm text-gray-500">
+                            Jour spécial
+                          </span>
+                        </label>
+                      </div>
                     );
                   })}
                 </div>

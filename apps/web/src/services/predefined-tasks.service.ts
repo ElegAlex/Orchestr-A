@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 // TYPES
 // ===========================
 
-export type TaskDuration = "HALF_DAY" | "FULL_DAY";
+export type TaskDuration = "HALF_DAY" | "FULL_DAY" | "TIME_SLOT";
 export type DayOfWeek =
   | "MONDAY"
   | "TUESDAY"
@@ -21,6 +21,8 @@ export interface PredefinedTask {
   color: string;
   icon: string;
   defaultDuration: TaskDuration;
+  startTime?: string | null;  // Format "HH:mm"
+  endTime?: string | null;    // Format "HH:mm"
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -31,7 +33,7 @@ export interface PredefinedTaskAssignment {
   predefinedTaskId: string;
   userId: string;
   date: string;
-  duration: TaskDuration;
+  period: AssignmentPeriod;
   note?: string | null;
   createdById: string;
   createdAt: string;
@@ -50,7 +52,7 @@ export interface PredefinedTaskRecurringRule {
   predefinedTaskId: string;
   userId: string;
   dayOfWeek: DayOfWeek;
-  duration: TaskDuration;
+  period: TaskDuration;
   weekInterval: number;
   startDate: string;
   endDate?: string | null;
@@ -77,6 +79,8 @@ export interface CreatePredefinedTaskDto {
   color: string;
   icon: string;
   defaultDuration: TaskDuration;
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface UpdatePredefinedTaskDto {
@@ -85,14 +89,18 @@ export interface UpdatePredefinedTaskDto {
   color?: string;
   icon?: string;
   defaultDuration?: TaskDuration;
+  startTime?: string;
+  endTime?: string;
   isActive?: boolean;
 }
+
+export type AssignmentPeriod = "MORNING" | "AFTERNOON" | "FULL_DAY";
 
 export interface CreateAssignmentDto {
   predefinedTaskId: string;
   userId: string;
   date: string;
-  duration: TaskDuration;
+  period: AssignmentPeriod;
   note?: string;
 }
 
@@ -100,7 +108,7 @@ export interface BulkAssignmentDto {
   predefinedTaskId: string;
   userIds: string[];
   dates: string[];
-  duration: TaskDuration;
+  period: AssignmentPeriod;
   note?: string;
 }
 
@@ -108,14 +116,14 @@ export interface CreateRecurringRuleDto {
   predefinedTaskId: string;
   userId: string;
   dayOfWeek: DayOfWeek;
-  duration: TaskDuration;
+  period: TaskDuration;
   weekInterval?: number;
   startDate: string;
   endDate?: string;
 }
 
 export interface UpdateRecurringRuleDto {
-  duration?: TaskDuration;
+  period?: TaskDuration;
   startDate?: string;
   endDate?: string;
   isActive?: boolean;
@@ -131,7 +139,7 @@ export interface BulkCreateRecurringRulesDto {
   predefinedTaskId: string;
   userIds: string[];
   daysOfWeek: DayOfWeek[];
-  duration: TaskDuration;
+  period: TaskDuration;
   weekInterval?: number;
   startDate: string;
   endDate?: string;

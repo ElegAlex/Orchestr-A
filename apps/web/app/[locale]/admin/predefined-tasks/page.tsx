@@ -17,6 +17,7 @@ import { RecurringRulesModal } from "@/components/predefined-tasks/RecurringRule
 const DURATION_LABELS: Record<TaskDuration, string> = {
   HALF_DAY: "Demi-journée",
   FULL_DAY: "Journée entière",
+  TIME_SLOT: "Créneau horaire",
 };
 
 const DEFAULT_COLORS = [
@@ -61,6 +62,8 @@ interface TaskFormData {
   color: string;
   icon: string;
   defaultDuration: TaskDuration;
+  startTime: string;
+  endTime: string;
 }
 
 const EMPTY_FORM: TaskFormData = {
@@ -69,7 +72,16 @@ const EMPTY_FORM: TaskFormData = {
   color: "#3B82F6",
   icon: "📋",
   defaultDuration: "FULL_DAY",
+  startTime: "09:00",
+  endTime: "12:00",
 };
+
+function formatDuration(task: PredefinedTask): string {
+  if (task.defaultDuration === "TIME_SLOT" && task.startTime && task.endTime) {
+    return `${task.startTime} - ${task.endTime}`;
+  }
+  return DURATION_LABELS[task.defaultDuration];
+}
 
 export default function PredefinedTasksAdminPage() {
   const { hasPermission } = usePermissions();
@@ -124,6 +136,8 @@ export default function PredefinedTasksAdminPage() {
       color: task.color,
       icon: task.icon,
       defaultDuration: task.defaultDuration,
+      startTime: task.startTime ?? "09:00",
+      endTime: task.endTime ?? "12:00",
     });
     setShowEditModal(true);
   };
@@ -138,6 +152,10 @@ export default function PredefinedTasksAdminPage() {
         color: formData.color,
         icon: formData.icon,
         defaultDuration: formData.defaultDuration,
+        ...(formData.defaultDuration === "TIME_SLOT" && {
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+        }),
       };
       await predefinedTasksService.create(dto);
       toast.success("Tâche prédéfinie créée");
@@ -164,6 +182,10 @@ export default function PredefinedTasksAdminPage() {
         color: formData.color,
         icon: formData.icon,
         defaultDuration: formData.defaultDuration,
+        ...(formData.defaultDuration === "TIME_SLOT" && {
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+        }),
       };
       await predefinedTasksService.update(editingTask.id, dto);
       toast.success("Tâche prédéfinie mise à jour");
@@ -326,7 +348,7 @@ export default function PredefinedTasksAdminPage() {
                           color: task.color,
                         }}
                       >
-                        {DURATION_LABELS[task.defaultDuration]}
+                        {formatDuration(task)}
                       </span>
                     </div>
                   </div>
@@ -521,8 +543,43 @@ function TaskFormModal({
             >
               <option value="FULL_DAY">Journée entière</option>
               <option value="HALF_DAY">Demi-journée</option>
+              <option value="TIME_SLOT">Créneau horaire</option>
             </select>
           </div>
+
+          {/* Time slot inputs */}
+          {formData.defaultDuration === "TIME_SLOT" && (
+            <div className="flex items-center space-x-3">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Début *
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={formData.startTime}
+                  onChange={(e) =>
+                    onChange({ ...formData, startTime: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fin *
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={formData.endTime}
+                  onChange={(e) =>
+                    onChange({ ...formData, endTime: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Icon picker */}
           <div>
@@ -617,7 +674,9 @@ function TaskFormModal({
                     color: formData.color,
                   }}
                 >
-                  {DURATION_LABELS[formData.defaultDuration]}
+                  {formData.defaultDuration === "TIME_SLOT" && formData.startTime && formData.endTime
+                    ? `${formData.startTime} - ${formData.endTime}`
+                    : DURATION_LABELS[formData.defaultDuration]}
                 </span>
               </div>
             </div>

@@ -72,6 +72,12 @@ const DEFAULT_SETTINGS: Record<string, SettingConfig> = {
     description:
       'Jours visibles dans le planning (1=Lundi, 2=Mardi, ..., 7=Dimanche)',
   },
+  'planning.specialDays': {
+    value: [],
+    category: 'planning',
+    description:
+      'Jours marqués comme spéciaux (fond distinctif) - numéros 1=Lundi à 7=Dimanche',
+  },
 };
 
 @Injectable()

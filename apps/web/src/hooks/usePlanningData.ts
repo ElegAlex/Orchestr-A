@@ -49,6 +49,7 @@ export interface DayCell {
   teleworkSchedule: TeleworkSchedule | null;
   isHoliday: boolean;
   holidayName?: string;
+  isSpecialDay: boolean;
 }
 
 export interface ServiceGroup {
@@ -84,6 +85,7 @@ interface UsePlanningDataReturn {
   filteredGroups: ServiceGroup[];
   getDayCell: (userId: string, date: Date) => DayCell;
   getHolidayForDate: (date: Date) => Holiday | undefined;
+  isSpecialDay: (date: Date) => boolean;
   refetch: () => Promise<void>;
   silentRefetch: () => Promise<void>;
   getGroupTaskCount: (groupUsers: User[]) => number;
@@ -117,6 +119,12 @@ export const usePlanningData = ({
     (state) =>
       (state.settings["planning.visibleDays"] as number[] | undefined) ??
       DEFAULT_VISIBLE_DAYS,
+  );
+
+  // Lire les jours spéciaux depuis les paramètres (ISO: 1=Lun, 7=Dim)
+  const specialDays = useSettingsStore(
+    (state) =>
+      (state.settings["planning.specialDays"] as number[] | undefined) ?? [],
   );
 
   // Calculer les jours à afficher et la plage de requête complète
@@ -391,6 +399,17 @@ export const usePlanningData = ({
     return result;
   }, [groupedUsers, filterUserId, filterServiceIds]);
 
+  // Vérifier si un jour est marqué comme "spécial" (fond distinctif)
+  const isSpecialDay = useCallback(
+    (date: Date): boolean => {
+      // Convertir JS getDay() (0=Dim..6=Sam) en ISO (1=Lun..7=Dim)
+      const jsDay = date.getDay();
+      const isoDay = jsDay === 0 ? 7 : jsDay;
+      return specialDays.includes(isoDay);
+    },
+    [specialDays],
+  );
+
   // Obtenir les données d'une cellule (avec filtrage selon viewFilter)
   const getDayCell = useCallback(
     (userId: string, date: Date): DayCell => {
@@ -399,6 +418,8 @@ export const usePlanningData = ({
         (a) => a.userId === userId && a.date.slice(0, 10) === dateStr,
       );
       const dayTasks = tasks.filter((t) => {
+        // Exclure les tâches terminées du planning
+        if (t.status === "DONE") return false;
         // Vérifier si la date est dans la plage de la tâche (startDate <= date <= endDate)
         // Si pas de startDate, on utilise endDate comme seul jour
         // Si pas de endDate, la tâche n'apparaît pas dans le planning
@@ -519,6 +540,7 @@ export const usePlanningData = ({
         teleworkSchedule: teleworkSchedule || null,
         isHoliday: !!holiday,
         holidayName: holiday?.name,
+        isSpecialDay: isSpecialDay(date),
       };
     },
     [
@@ -530,6 +552,7 @@ export const usePlanningData = ({
       predefinedAssignments,
       viewFilter,
       displayFilters,
+      isSpecialDay,
     ],
   );
 
@@ -579,6 +602,7 @@ export const usePlanningData = ({
     filteredGroups,
     getDayCell,
     getHolidayForDate,
+    isSpecialDay,
     refetch: fetchData,
     silentRefetch: () => fetchData(true),
     getGroupTaskCount,

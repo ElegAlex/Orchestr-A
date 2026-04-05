@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsIn, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsIn, IsBoolean, Matches } from 'class-validator';
 
 export class UpdatePredefinedTaskDto {
   @ApiPropertyOptional({
@@ -36,12 +36,12 @@ export class UpdatePredefinedTaskDto {
 
   @ApiPropertyOptional({
     description: 'Durée par défaut de la tâche',
-    enum: ['HALF_DAY', 'FULL_DAY'],
+    enum: ['HALF_DAY', 'FULL_DAY', 'TIME_SLOT'],
     example: 'FULL_DAY',
   })
   @IsString()
   @IsOptional()
-  @IsIn(['HALF_DAY', 'FULL_DAY'])
+  @IsIn(['HALF_DAY', 'FULL_DAY', 'TIME_SLOT'])
   defaultDuration?: string;
 
   @ApiPropertyOptional({
@@ -51,4 +51,22 @@ export class UpdatePredefinedTaskDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Heure de début du créneau (format HH:mm)',
+    example: '09:00',
+  })
+  @IsString()
+  @IsOptional()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'startTime doit être au format HH:mm' })
+  startTime?: string;
+
+  @ApiPropertyOptional({
+    description: 'Heure de fin du créneau (format HH:mm)',
+    example: '12:00',
+  })
+  @IsString()
+  @IsOptional()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'endTime doit être au format HH:mm' })
+  endTime?: string;
 }

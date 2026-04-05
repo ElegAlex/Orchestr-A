@@ -60,12 +60,14 @@ export const DayCell = ({
   const leaveName =
     leave?.leaveType?.name ?? t(`leaveTypes.${leave?.type ?? "OTHER"}`);
 
-  // Déterminer le background
+  // Déterminer le background (priorité : holiday > today > specialDay > default)
   let bgClass = "";
   if (cell.isHoliday) {
     bgClass = "bg-red-50";
   } else if (isToday(cell.date)) {
     bgClass = "bg-blue-50";
+  } else if (cell.isSpecialDay) {
+    bgClass = "bg-gray-50";
   }
 
   return (
@@ -290,7 +292,7 @@ export const DayCell = ({
                     <div className="flex-1 min-w-0">
                       <p className="font-medium line-clamp-1">{pt.name}</p>
                       <p className="text-[10px] opacity-80">
-                        {assignment.duration === "FULL_DAY"
+                        {assignment.period === "FULL_DAY"
                           ? "Journée"
                           : "Demi-journée"}
                       </p>

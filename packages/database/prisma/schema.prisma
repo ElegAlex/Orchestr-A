@@ -792,7 +792,9 @@ model PredefinedTask {
   description     String?
   color           String?
   icon            String?
-  defaultDuration String    // "HALF_DAY" | "FULL_DAY"
+  defaultDuration String    // "HALF_DAY" | "FULL_DAY" | "TIME_SLOT"
+  startTime       String?   // Format "HH:mm", utilisé quand defaultDuration = "TIME_SLOT"
+  endTime         String?   // Format "HH:mm", utilisé quand defaultDuration = "TIME_SLOT"
   isActive        Boolean   @default(true)
   createdById     String
   createdAt       DateTime  @default(now())

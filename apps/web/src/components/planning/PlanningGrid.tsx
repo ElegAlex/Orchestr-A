@@ -142,6 +142,7 @@ export const PlanningGrid = ({
     filteredGroups,
     getDayCell,
     getHolidayForDate,
+    isSpecialDay,
     silentRefetch,
     getGroupTaskCount,
   } = usePlanningData({
@@ -365,7 +366,7 @@ export const PlanningGrid = ({
                       viewMode === "month"
                         ? "px-1 py-1"
                         : "px-2 py-3"
-                    } ${holiday ? "bg-red-50 text-red-900" : isToday(day) ? "bg-blue-50 text-blue-900" : "text-gray-900"} ${
+                    } ${holiday ? "bg-red-50 text-red-900" : isToday(day) ? "bg-blue-50 text-blue-900" : isSpecialDay(day) ? "bg-gray-100 text-gray-900" : "text-gray-900"} ${
                       showWeekSeparator
                         ? "border-l-2 border-l-indigo-400"
                         : ""
