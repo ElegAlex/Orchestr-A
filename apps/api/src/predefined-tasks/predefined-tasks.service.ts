@@ -60,6 +60,7 @@ export class PredefinedTasksService {
         defaultDuration: dto.defaultDuration,
         startTime,
         endTime,
+        isExternalIntervention: dto.isExternalIntervention ?? false,
         createdById,
       },
       include: {
@@ -111,6 +112,7 @@ export class PredefinedTasksService {
           defaultDuration: dto.defaultDuration,
         }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        ...(dto.isExternalIntervention !== undefined && { isExternalIntervention: dto.isExternalIntervention }),
         ...timeSlotData,
       },
       include: {
@@ -168,6 +170,9 @@ export class PredefinedTasksService {
             color: true,
             icon: true,
             defaultDuration: true,
+            startTime: true,
+            endTime: true,
+            isExternalIntervention: true,
           },
         },
         user: {
@@ -312,6 +317,9 @@ export class PredefinedTasksService {
             color: true,
             icon: true,
             defaultDuration: true,
+            startTime: true,
+            endTime: true,
+            isExternalIntervention: true,
           },
         },
         user: {
