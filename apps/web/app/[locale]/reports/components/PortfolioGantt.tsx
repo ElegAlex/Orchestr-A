@@ -42,7 +42,7 @@ interface PortfolioGanttProps {
 type TimeScale = "day" | "week" | "month";
 type RagStatus = 'onTrack' | 'atRisk' | 'late' | 'upcoming' | 'completed';
 
-export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
+const PortfolioGantt = React.forwardRef<HTMLDivElement, PortfolioGanttProps>(function PortfolioGantt({ projects }, ref) {
   const [timeScale, setTimeScale] = useState<TimeScale>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -459,7 +459,7 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 h-full flex flex-col">
+    <div ref={ref} className="bg-white rounded-lg shadow p-6 h-full flex flex-col">
       {/* En-tete avec controles */}
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-semibold">
@@ -898,4 +898,6 @@ export default function PortfolioGantt({ projects }: PortfolioGanttProps) {
       </div>
     </div>
   );
-}
+});
+
+export default PortfolioGantt;

@@ -39,6 +39,7 @@ export default function ReportsPage() {
   );
   const [exporting, setExporting] = useState(false);
   const progressChartRef = useRef<HTMLDivElement>(null);
+  const ganttRef = useRef<HTMLDivElement>(null);
 
   const canView = !permissionsLoaded || hasPermission("reports:view");
   const canExport = hasPermission("reports:export");
@@ -104,9 +105,9 @@ export default function ReportsPage() {
     try {
       switch (exportFormat) {
         case "pdf":
-          if (activeTab === 0) {
-            setExporting(true);
-            try {
+          setExporting(true);
+          try {
+            if (activeTab === 0) {
               await ExportService.exportOverviewToPDF(
                 {
                   metrics: data.metrics,
@@ -118,15 +119,22 @@ export default function ReportsPage() {
                 selectedProject !== "all" ? selectedProject : undefined,
                 progressChartRef.current,
               );
-            } finally {
-              setExporting(false);
+            } else if (activeTab === 2) {
+              if (ganttRef.current) {
+                await ExportService.exportGanttPortfolioToPDF(
+                  ganttRef.current,
+                  dateRange,
+                );
+              }
+            } else {
+              await ExportService.exportToPDF(
+                data,
+                dateRange,
+                selectedProject !== "all" ? selectedProject : undefined,
+              );
             }
-          } else {
-            await ExportService.exportToPDF(
-              data,
-              dateRange,
-              selectedProject !== "all" ? selectedProject : undefined,
-            );
+          } finally {
+            setExporting(false);
           }
           break;
 
@@ -414,7 +422,7 @@ export default function ReportsPage() {
         {/* Tab: Gantt Portfolio */}
         {activeTab === 2 && (
           <div className="min-h-[600px]">
-            <PortfolioGantt projects={data.projectDetails} />
+            <PortfolioGantt ref={ganttRef} projects={data.projectDetails} />
           </div>
         )}
       </div>

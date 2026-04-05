@@ -616,6 +616,112 @@ export class ExportService {
   }
 
   /**
+   * Export Gantt Portfolio to a landscape PDF (single page)
+   */
+  static async exportGanttPortfolioToPDF(
+    ganttElement: HTMLElement,
+    dateRange: string,
+  ): Promise<void> {
+    const doc = new jsPDF({ orientation: "landscape", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth(); // 297mm
+    const pageHeight = doc.internal.pageSize.getHeight(); // 210mm
+    const margin = 10;
+    const contentWidth = pageWidth - margin * 2;
+    const now = new Date();
+
+    // --- Header ---
+    let currentY = margin + 8;
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0);
+    doc.text(
+      "Gantt Portfolio — Vue d'ensemble des Projets",
+      pageWidth / 2,
+      currentY,
+      { align: "center" },
+    );
+
+    currentY += 7;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80);
+    doc.text(
+      `Période : ${this.translateDateRange(dateRange)}`,
+      pageWidth / 2,
+      currentY,
+      { align: "center" },
+    );
+
+    currentY += 5;
+    doc.text(
+      `Généré le ${format(now, "dd/MM/yyyy à HH:mm", { locale: fr })}`,
+      pageWidth / 2,
+      currentY,
+      { align: "center" },
+    );
+
+    currentY += 6;
+
+    // --- Capture the Gantt element ---
+    // Temporarily expand the container so the full Gantt is captured (no overflow clipping)
+    const scrollContainer = ganttElement.querySelector<HTMLElement>(".overflow-auto");
+    const prevOverflow = scrollContainer?.style.overflow;
+    const prevHeight = scrollContainer?.style.height;
+    if (scrollContainer) {
+      scrollContainer.style.overflow = "visible";
+      scrollContainer.style.height = "auto";
+    }
+
+    try {
+      const dataUrl = await toPng(ganttElement, {
+        cacheBust: true,
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+      });
+
+      const imgProps = doc.getImageProperties(dataUrl);
+      const availableHeight = pageHeight - currentY - 12; // 12mm for footer
+      const availableWidth = contentWidth;
+
+      // Scale to fit within the available area
+      const imgAspect = imgProps.width / imgProps.height;
+      let imgWidth = availableWidth;
+      let imgHeight = imgWidth / imgAspect;
+
+      if (imgHeight > availableHeight) {
+        imgHeight = availableHeight;
+        imgWidth = imgHeight * imgAspect;
+      }
+
+      // Center horizontally
+      const imgX = margin + (availableWidth - imgWidth) / 2;
+
+      doc.addImage(dataUrl, "PNG", imgX, currentY, imgWidth, imgHeight);
+    } finally {
+      // Restore overflow
+      if (scrollContainer) {
+        scrollContainer.style.overflow = prevOverflow || "";
+        scrollContainer.style.height = prevHeight || "";
+      }
+    }
+
+    // --- Footer ---
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(128);
+    const footerY = pageHeight - margin;
+    doc.text(
+      `Orchestr'A — ${format(now, "dd/MM/yyyy HH:mm")}`,
+      margin,
+      footerY,
+    );
+    doc.text("Page 1 / 1", pageWidth / 2, footerY, { align: "center" });
+
+    const filename = `orchestr-a-gantt-portfolio-${format(now, "yyyy-MM-dd")}.pdf`;
+    doc.save(filename);
+  }
+
+  /**
    * Translate date range to French
    */
   private static translateDateRange(dateRange: string): string {
