@@ -23,6 +23,7 @@ export interface PredefinedTask {
   defaultDuration: TaskDuration;
   startTime?: string | null;  // Format "HH:mm"
   endTime?: string | null;    // Format "HH:mm"
+  isExternalIntervention: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -81,6 +82,7 @@ export interface CreatePredefinedTaskDto {
   defaultDuration: TaskDuration;
   startTime?: string;
   endTime?: string;
+  isExternalIntervention?: boolean;
 }
 
 export interface UpdatePredefinedTaskDto {
@@ -91,6 +93,7 @@ export interface UpdatePredefinedTaskDto {
   defaultDuration?: TaskDuration;
   startTime?: string;
   endTime?: string;
+  isExternalIntervention?: boolean;
   isActive?: boolean;
 }
 

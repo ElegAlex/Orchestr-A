@@ -69,4 +69,12 @@ export class UpdatePredefinedTaskDto {
   @IsOptional()
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'endTime doit être au format HH:mm' })
   endTime?: string;
+
+  @ApiPropertyOptional({
+    description: 'Intervention extérieure',
+    example: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  isExternalIntervention?: boolean;
 }

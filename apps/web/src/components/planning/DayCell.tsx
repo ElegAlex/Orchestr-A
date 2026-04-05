@@ -271,31 +271,38 @@ export const DayCell = ({
           cell.predefinedTaskAssignments.map((assignment) => {
             const pt = assignment.predefinedTask;
             if (!pt) return null;
+            const isExternal = pt.isExternalIntervention;
             return (
               <div
                 key={assignment.id}
                 onClick={() => onPredefinedTaskClick(assignment, cell.date)}
                 className={`rounded border-2 cursor-pointer hover:shadow-md transition ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
-                style={{
-                  borderColor: pt.color,
-                  backgroundColor: `${pt.color}20`,
-                  color: pt.color,
-                }}
+                style={isExternal
+                  ? { borderColor: "#f87171", backgroundColor: "#fee2e2", color: "#7f1d1d" }
+                  : { borderColor: pt.color, backgroundColor: `${pt.color}20`, color: pt.color }
+                }
               >
                 {viewMode === "month" ? (
                   <div className="text-center" title={pt.name}>
-                    <span>{pt.icon}</span>
+                    <span>{isExternal ? "🔴" : pt.icon}</span>
                   </div>
                 ) : (
                   <div className="flex items-start space-x-1">
-                    <span className="text-sm flex-shrink-0">{pt.icon}</span>
+                    <span className="text-sm flex-shrink-0">{isExternal ? "🔴" : pt.icon}</span>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium line-clamp-1">{pt.name}</p>
                       <p className="text-[10px] opacity-80">
-                        {assignment.period === "FULL_DAY"
-                          ? "Journée"
-                          : "Demi-journée"}
+                        {pt.defaultDuration === "TIME_SLOT" && pt.startTime && pt.endTime
+                          ? `${pt.startTime} - ${pt.endTime}`
+                          : assignment.period === "FULL_DAY"
+                            ? "Journée"
+                            : "Demi-journée"}
                       </p>
+                      {isExternal && (
+                        <p className="text-[10px] font-bold text-red-800 mt-0.5">
+                          🔴 {t("dayCell.externalIntervention")}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

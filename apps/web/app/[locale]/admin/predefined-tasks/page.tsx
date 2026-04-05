@@ -64,6 +64,7 @@ interface TaskFormData {
   defaultDuration: TaskDuration;
   startTime: string;
   endTime: string;
+  isExternalIntervention: boolean;
 }
 
 const EMPTY_FORM: TaskFormData = {
@@ -74,6 +75,7 @@ const EMPTY_FORM: TaskFormData = {
   defaultDuration: "FULL_DAY",
   startTime: "09:00",
   endTime: "12:00",
+  isExternalIntervention: false,
 };
 
 function formatDuration(task: PredefinedTask): string {
@@ -138,6 +140,7 @@ export default function PredefinedTasksAdminPage() {
       defaultDuration: task.defaultDuration,
       startTime: task.startTime ?? "09:00",
       endTime: task.endTime ?? "12:00",
+      isExternalIntervention: task.isExternalIntervention ?? false,
     });
     setShowEditModal(true);
   };
@@ -152,6 +155,7 @@ export default function PredefinedTasksAdminPage() {
         color: formData.color,
         icon: formData.icon,
         defaultDuration: formData.defaultDuration,
+        isExternalIntervention: formData.isExternalIntervention,
         ...(formData.defaultDuration === "TIME_SLOT" && {
           startTime: formData.startTime,
           endTime: formData.endTime,
@@ -182,6 +186,7 @@ export default function PredefinedTasksAdminPage() {
         color: formData.color,
         icon: formData.icon,
         defaultDuration: formData.defaultDuration,
+        isExternalIntervention: formData.isExternalIntervention,
         ...(formData.defaultDuration === "TIME_SLOT" && {
           startTime: formData.startTime,
           endTime: formData.endTime,
@@ -352,11 +357,18 @@ export default function PredefinedTasksAdminPage() {
                       </span>
                     </div>
                   </div>
-                  {!task.isActive && (
-                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                      Inactif
-                    </span>
-                  )}
+                  <div className="flex flex-col items-end gap-1">
+                    {task.isExternalIntervention && (
+                      <span className="text-xs text-red-600 bg-red-100 px-2 py-0.5 rounded-full font-medium">
+                        🔴 Ext.
+                      </span>
+                    )}
+                    {!task.isActive && (
+                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                        Inactif
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Description */}
@@ -580,6 +592,25 @@ function TaskFormModal({
               </div>
             </div>
           )}
+
+          {/* External intervention */}
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="isExternalIntervention"
+              checked={formData.isExternalIntervention}
+              onChange={(e) =>
+                onChange({ ...formData, isExternalIntervention: e.target.checked })
+              }
+              className="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
+            />
+            <label
+              htmlFor="isExternalIntervention"
+              className="ml-2 block text-sm font-medium text-gray-700"
+            >
+              🔴 Intervention extérieure
+            </label>
+          </div>
 
           {/* Icon picker */}
           <div>
