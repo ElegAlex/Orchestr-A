@@ -78,7 +78,6 @@
   },
   "taskStatus": {
     "TODO": "À faire",
-    "STARTED": "Débuté",
     "IN_PROGRESS": "En cours",
     "IN_REVIEW": "En revue",
     "DONE": "Terminé",

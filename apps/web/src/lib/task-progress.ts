@@ -4,8 +4,6 @@ export function getTaskProgress(status: TaskStatus): number {
   switch (status) {
     case TaskStatus.TODO:
       return 0;
-    case TaskStatus.STARTED:
-      return 25;
     case TaskStatus.IN_PROGRESS:
       return 50;
     case TaskStatus.IN_REVIEW:

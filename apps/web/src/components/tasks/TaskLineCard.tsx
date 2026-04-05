@@ -21,7 +21,6 @@ interface TaskLineCardProps {
 
 const statusColumns: TaskStatus[] = [
   TaskStatus.TODO,
-  TaskStatus.STARTED,
   TaskStatus.IN_PROGRESS,
   TaskStatus.IN_REVIEW,
   TaskStatus.DONE,
@@ -143,9 +142,16 @@ export function TaskLineCard({
                 onDateChange(task.id, "endDate", e.target.value);
               }
             }}
-            className="text-xs text-gray-500 border border-gray-200 rounded px-1 py-0.5 w-[110px] hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+            className={`text-xs border rounded px-1 py-0.5 w-[110px] hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none ${
+              task.endDate && new Date(task.endDate) < new Date() && task.status !== TaskStatus.DONE
+                ? "text-red-600 border-red-300 bg-red-50"
+                : "text-gray-500 border-gray-200"
+            }`}
             title="Date de fin"
           />
+          {task.endDate && new Date(task.endDate) < new Date() && task.status !== TaskStatus.DONE && (
+            <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" title="En retard" />
+          )}
         </div>
 
         {task.progress > 0 && (

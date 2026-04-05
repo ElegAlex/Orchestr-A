@@ -77,6 +77,12 @@ export class RoleManagementService implements OnModuleInit {
         action: 'create_in_project',
       },
       { code: 'tasks:create_orphan', module: 'tasks', action: 'create_orphan' },
+      {
+        code: 'tasks:readAll',
+        module: 'tasks',
+        action: 'readAll',
+        description: 'Voir toutes les tâches (pas seulement les siennes)',
+      },
       // Events
       { code: 'events:create', module: 'events', action: 'create' },
       { code: 'events:read', module: 'events', action: 'read' },
@@ -371,6 +377,7 @@ export class RoleManagementService implements OnModuleInit {
           'tasks:update',
           'tasks:delete',
           'tasks:create_in_project',
+          'tasks:readAll',
           'events:create',
           'events:read',
           'events:update',
@@ -444,6 +451,7 @@ export class RoleManagementService implements OnModuleInit {
           'tasks:update',
           'tasks:delete',
           'tasks:create_in_project',
+          'tasks:readAll',
           'events:create',
           'events:read',
           'events:update',

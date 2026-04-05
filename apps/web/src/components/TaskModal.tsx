@@ -48,7 +48,6 @@ export function TaskModal({
 
   const allStatuses = [
     TaskStatus.TODO,
-    TaskStatus.STARTED,
     TaskStatus.IN_PROGRESS,
     TaskStatus.IN_REVIEW,
     TaskStatus.DONE,

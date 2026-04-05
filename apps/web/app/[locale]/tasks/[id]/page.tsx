@@ -404,8 +404,6 @@ export default function TaskDetailPage() {
     switch (status) {
       case TaskStatus.TODO:
         return "bg-gray-200 text-gray-800";
-      case TaskStatus.STARTED:
-        return "bg-sky-100 text-sky-800";
       case TaskStatus.IN_PROGRESS:
         return "bg-blue-100 text-blue-800";
       case TaskStatus.IN_REVIEW:
@@ -660,9 +658,6 @@ export default function TaskDetailPage() {
                     >
                       <option value={TaskStatus.TODO}>
                         {t("status.TODO")}
-                      </option>
-                      <option value={TaskStatus.STARTED}>
-                        {t("status.STARTED")}
                       </option>
                       <option value={TaskStatus.IN_PROGRESS}>
                         {t("status.IN_PROGRESS")}

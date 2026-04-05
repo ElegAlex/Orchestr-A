@@ -19,13 +19,17 @@ import {
 } from './dto/import-tasks.dto';
 import { TaskStatus, Priority, RACIRole, Role } from 'database';
 import { Prisma } from 'database';
+import { RoleManagementService } from '../role-management/role-management.service';
 import { getTaskProgress } from './task-progress.helper';
 import { CreateSubtaskDto } from './dto/create-subtask.dto';
 import { UpdateSubtaskDto } from './dto/update-subtask.dto';
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly roleManagementService: RoleManagementService,
+  ) {}
 
   /**
    * Créer une nouvelle tâche
@@ -249,6 +253,8 @@ export class TasksService {
     assigneeId?: string,
     startDate?: string,
     endDate?: string,
+    overdue?: boolean,
+    currentUser?: { id: string; role: string },
   ) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
@@ -257,6 +263,25 @@ export class TasksService {
     if (status) where.status = status;
     if (projectId) where.projectId = projectId;
     if (assigneeId) where.assigneeId = assigneeId;
+
+    // RBAC: filtrer par utilisateur si pas la permission tasks:readAll
+    if (currentUser) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(
+          currentUser.role,
+        );
+      if (!permissions.includes('tasks:readAll')) {
+        where.OR = [
+          { assigneeId: currentUser.id },
+          { assignees: { some: { userId: currentUser.id } } },
+        ];
+      }
+    }
+
+    if (overdue) {
+      where.endDate = { ...((where.endDate as object) || {}), lt: new Date() };
+      where.status = { not: TaskStatus.DONE };
+    }
 
     // Filtrage par plage de dates : on récupère les tâches qui chevauchent la plage
     // Une tâche chevauche si : startDate <= finPlage ET endDate >= débutPlage

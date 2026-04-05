@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
@@ -28,6 +28,7 @@ import toast from "react-hot-toast";
 
 export default function TasksPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const locale = useLocale();
   const t = useTranslations("tasks");
   const tCommon = useTranslations("common");
@@ -45,6 +46,9 @@ export default function TasksPage() {
   const [orphanTasks, setOrphanTasks] = useState<Task[]>([]);
   const [selectedPriority, setSelectedPriority] = useState<Priority | "ALL">(
     "ALL",
+  );
+  const [overdueFilter, setOverdueFilter] = useState(
+    searchParams.get("overdue") === "true",
   );
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
@@ -286,6 +290,26 @@ export default function TasksPage() {
     setProjectMembers([]);
   };
 
+  const isTaskOverdue = (task: Task) => {
+    return (
+      task.endDate &&
+      new Date(task.endDate) < new Date() &&
+      task.status !== TaskStatus.DONE
+    );
+  };
+
+  const toggleOverdueFilter = () => {
+    const next = !overdueFilter;
+    setOverdueFilter(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next) {
+      params.set("overdue", "true");
+    } else {
+      params.delete("overdue");
+    }
+    router.replace(`/${locale}/tasks?${params.toString()}`, { scroll: false });
+  };
+
   const getFilteredTasks = () => {
     let filtered: Task[] = [];
 
@@ -304,6 +328,10 @@ export default function TasksPage() {
 
     if (selectedPriority !== "ALL") {
       filtered = filtered.filter((t) => t.priority === selectedPriority);
+    }
+
+    if (overdueFilter) {
+      filtered = filtered.filter(isTaskOverdue);
     }
 
     return filtered;
@@ -394,11 +422,6 @@ export default function TasksPage() {
 
   const columns: { status: TaskStatus; title: string; color: string }[] = [
     { status: TaskStatus.TODO, title: t("status.TODO"), color: "bg-gray-100" },
-    {
-      status: TaskStatus.STARTED,
-      title: t("status.STARTED"),
-      color: "bg-sky-100",
-    },
     {
       status: TaskStatus.IN_PROGRESS,
       title: t("status.IN_PROGRESS"),
@@ -522,12 +545,26 @@ export default function TasksPage() {
               </select>
             </div>
           </div>
+          {/* Overdue Filter Toggle */}
+          <div className="mt-3 flex items-center">
+            <button
+              onClick={toggleOverdueFilter}
+              className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                overdueFilter
+                  ? "bg-red-100 text-red-800 ring-1 ring-red-300"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full mr-2 ${overdueFilter ? "bg-red-500" : "bg-gray-400"}`} />
+              {t("filters.overdue")}
+            </button>
+          </div>
         </div>
 
         {/* Kanban Board / List View */}
         {viewMode === "kanban" ? (
-          <div className="overflow-x-auto pb-4">
-            <div className="flex space-x-4 min-w-max">
+          <div className="pb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {columns.map((column) => {
                 const columnTasks = getTasksByStatus(column.status);
                 const isDropTarget = dragOverColumn === column.status;
@@ -535,7 +572,7 @@ export default function TasksPage() {
                 return (
                   <div
                     key={column.status}
-                    className="flex-shrink-0 w-80 bg-white rounded-lg shadow-sm border border-gray-200"
+                    className="min-w-0 bg-white rounded-lg shadow-sm border border-gray-200"
                   >
                     {/* Column Header */}
                     <div
@@ -673,6 +710,18 @@ export default function TasksPage() {
                                       </span>
                                     </div>
                                   )
+                                )}
+
+                                {isTaskOverdue(task) && (
+                                  <div className="flex items-center space-x-1 text-xs text-red-600 font-medium mb-1">
+                                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                                    <span>{t("filters.overdue")}</span>
+                                    {task.endDate && (
+                                      <span className="text-red-400">
+                                        ({new Date(task.endDate).toLocaleDateString()})
+                                      </span>
+                                    )}
+                                  </div>
                                 )}
 
                                 {task.estimatedHours && (
@@ -878,9 +927,6 @@ export default function TasksPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value={TaskStatus.TODO}>{t("status.TODO")}</option>
-                    <option value={TaskStatus.STARTED}>
-                      {t("status.STARTED")}
-                    </option>
                     <option value={TaskStatus.IN_PROGRESS}>
                       {t("status.IN_PROGRESS")}
                     </option>

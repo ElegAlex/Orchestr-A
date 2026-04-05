@@ -266,7 +266,6 @@ export default function SuiviPage() {
         return tasks.filter((task) =>
           [
             TaskStatus.TODO,
-            TaskStatus.STARTED,
             TaskStatus.IN_PROGRESS,
             TaskStatus.IN_REVIEW,
           ].includes(task.status),
@@ -297,7 +296,6 @@ export default function SuiviPage() {
     const activeTasks = tasks.filter((task) =>
       [
         TaskStatus.TODO,
-        TaskStatus.STARTED,
         TaskStatus.IN_PROGRESS,
         TaskStatus.IN_REVIEW,
       ].includes(task.status),
@@ -362,7 +360,6 @@ export default function SuiviPage() {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       TODO: "bg-gray-100 text-gray-800",
-      STARTED: "bg-blue-100 text-blue-800",
       IN_PROGRESS: "bg-yellow-100 text-yellow-800",
       IN_REVIEW: "bg-purple-100 text-purple-800",
       DONE: "bg-green-100 text-green-800",

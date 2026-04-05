@@ -138,8 +138,6 @@ export const getStatusIcon = (status: TaskStatus) => {
   switch (status) {
     case TaskStatus.TODO:
       return "○";
-    case TaskStatus.STARTED:
-      return "◔";
     case TaskStatus.IN_PROGRESS:
       return "◐";
     case TaskStatus.IN_REVIEW:
@@ -155,8 +153,6 @@ export const getStatusDotColor = (status: TaskStatus): string => {
   switch (status) {
     case TaskStatus.TODO:
       return "bg-gray-400";
-    case TaskStatus.STARTED:
-      return "bg-sky-400";
     case TaskStatus.IN_PROGRESS:
       return "bg-blue-500";
     case TaskStatus.IN_REVIEW:

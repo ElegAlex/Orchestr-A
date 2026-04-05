@@ -78,6 +78,10 @@ const ACTION_LABELS: Record<string, string> = {
   read_reports: "Voir rapports",
   read_team: "Voir équipe",
   declare_for_others: "Déclarer pour autrui",
+  readAll: "Voir tout",
+  manage_recurring: "Gérer récurrences",
+  reset_password: "Réinitialiser MDP",
+  assign: "Assigner",
 };
 
 function getActionLabel(action: string): string {

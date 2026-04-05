@@ -91,6 +91,13 @@ export class TasksController {
     type: String,
     description: 'Date de fin (ISO 8601)',
   })
+  @ApiQuery({
+    name: 'overdue',
+    required: false,
+    type: String,
+    description:
+      'Filtrer les tâches en retard (endDate < maintenant ET status != DONE)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Liste des tâches',
@@ -103,6 +110,8 @@ export class TasksController {
     @Query('assigneeId') assigneeId?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('overdue') overdue?: string,
+    @CurrentUser() currentUser?: { id: string; role: Role },
   ) {
     return this.tasksService.findAll(
       page,
@@ -112,6 +121,8 @@ export class TasksController {
       assigneeId,
       startDate,
       endDate,
+      overdue === 'true',
+      currentUser,
     );
   }
 

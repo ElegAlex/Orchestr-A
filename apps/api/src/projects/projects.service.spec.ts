@@ -522,20 +522,20 @@ describe('ProjectsService', () => {
     it('should update hiddenStatuses with valid statuses', async () => {
       const updatedProject = {
         ...mockProject,
-        hiddenStatuses: [TaskStatus.STARTED, TaskStatus.BLOCKED],
+        hiddenStatuses: [TaskStatus.IN_REVIEW, TaskStatus.BLOCKED],
       };
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.project.update.mockResolvedValue(updatedProject);
 
       const result = await service.update('project-1', {
-        hiddenStatuses: [TaskStatus.STARTED, TaskStatus.BLOCKED] as any,
+        hiddenStatuses: [TaskStatus.IN_REVIEW, TaskStatus.BLOCKED] as any,
       });
 
       expect(result).toBeDefined();
       expect(mockPrismaService.project.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            hiddenStatuses: [TaskStatus.STARTED, TaskStatus.BLOCKED],
+            hiddenStatuses: [TaskStatus.IN_REVIEW, TaskStatus.BLOCKED],
           }) as object,
         }),
       );

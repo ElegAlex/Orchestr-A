@@ -2,7 +2,6 @@ import { TaskStatus } from 'database';
 
 const PROGRESS_MAP: Record<string, number> = {
   TODO: 0,
-  STARTED: 25,
   IN_PROGRESS: 50,
   IN_REVIEW: 75,
   DONE: 100,

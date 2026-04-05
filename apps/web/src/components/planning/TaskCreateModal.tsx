@@ -300,9 +300,6 @@ export const TaskCreateModal = ({
                 <option value={TaskStatus.TODO}>
                   {tCommon("taskStatus.TODO")}
                 </option>
-                <option value={TaskStatus.STARTED}>
-                  {tCommon("taskStatus.STARTED")}
-                </option>
                 <option value={TaskStatus.IN_PROGRESS}>
                   {tCommon("taskStatus.IN_PROGRESS")}
                 </option>

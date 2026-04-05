@@ -36,14 +36,13 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, string> = {
   TODO: "#9ca3af",
-  STARTED: "#38bdf8",
   IN_PROGRESS: "#3b82f6",
   IN_REVIEW: "#eab308",
   BLOCKED: "#ef4444",
 };
 
 const PRIORITIES = ["CRITICAL", "HIGH", "NORMAL", "LOW"] as const;
-const STATUSES = ["TODO", "STARTED", "IN_PROGRESS", "IN_REVIEW", "BLOCKED"] as const;
+const STATUSES = ["TODO", "IN_PROGRESS", "IN_REVIEW", "BLOCKED"] as const;
 
 export function PriorityDistributionChart({
   dateRange,
@@ -138,7 +137,6 @@ export function PriorityDistributionChart({
     (key: string) => {
       const map: Record<string, string> = {
         TODO: t("todo"),
-        STARTED: t("started"),
         IN_PROGRESS: t("inProgress"),
         IN_REVIEW: t("inReview"),
         BLOCKED: t("blocked"),

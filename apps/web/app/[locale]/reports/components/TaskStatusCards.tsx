@@ -10,7 +10,7 @@ export function TaskStatusCards({ data }: TaskStatusCardsProps) {
   const total = data.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       {data.map((item) => (
         <div
           key={item.name}

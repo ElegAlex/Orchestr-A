@@ -15,12 +15,14 @@ export const tasksService = {
     limit?: number,
     status?: TaskStatus,
     priority?: Priority,
+    overdue?: boolean,
   ): Promise<PaginatedResponse<Task>> {
     const params = new URLSearchParams();
     if (page !== undefined) params.append("page", page.toString());
     if (limit !== undefined) params.append("limit", limit.toString());
     if (status) params.append("status", status);
     if (priority) params.append("priority", priority);
+    if (overdue) params.append("overdue", "true");
 
     const response = await api.get<PaginatedResponse<Task>>(
       `/tasks?${params.toString()}`,

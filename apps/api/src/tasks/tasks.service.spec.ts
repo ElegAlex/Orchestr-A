@@ -1416,10 +1416,6 @@ describe('TasksService', () => {
       expect(getTaskProgress(TaskStatus.TODO)).toBe(0);
     });
 
-    it('should return 25 for STARTED', () => {
-      expect(getTaskProgress('STARTED' as TaskStatus)).toBe(25);
-    });
-
     it('should return 50 for IN_PROGRESS', () => {
       expect(getTaskProgress(TaskStatus.IN_PROGRESS)).toBe(50);
     });

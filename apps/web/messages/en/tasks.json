@@ -10,12 +10,12 @@
     "priority": "Priority",
     "allProjects": "All projects",
     "orphanTasks": "Tasks without project",
-    "allPriorities": "All"
+    "allPriorities": "All",
+    "overdue": "Overdue"
   },
 
   "status": {
     "TODO": "To Do",
-    "STARTED": "Started",
     "IN_PROGRESS": "In Progress",
     "IN_REVIEW": "In Review",
     "DONE": "Done",

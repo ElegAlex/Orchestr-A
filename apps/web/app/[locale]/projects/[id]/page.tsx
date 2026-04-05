@@ -1297,18 +1297,13 @@ export default function ProjectDetailPage() {
                 onDateChange={handleTaskDateChange}
               />
             ) : (
-              <div className="overflow-x-auto pb-4">
-                <div className="flex space-x-4 min-w-max">
+              <div className="pb-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                   {[
                     {
                       status: TaskStatus.TODO,
                       title: tTasks("status.TODO"),
                       color: "bg-gray-100",
-                    },
-                    {
-                      status: TaskStatus.STARTED,
-                      title: tTasks("status.STARTED"),
-                      color: "bg-sky-100",
                     },
                     {
                       status: TaskStatus.IN_PROGRESS,
@@ -1339,7 +1334,7 @@ export default function ProjectDetailPage() {
                       return (
                         <div
                           key={column.status}
-                          className="flex-shrink-0 w-80 bg-white rounded-lg shadow-sm border border-gray-200"
+                          className="min-w-0 bg-white rounded-lg shadow-sm border border-gray-200"
                         >
                           {/* Column Header */}
                           <div
@@ -2141,11 +2136,6 @@ export default function ProjectDetailPage() {
                       status: TaskStatus.TODO,
                       label: tTasks("status.TODO"),
                       required: true,
-                    },
-                    {
-                      status: TaskStatus.STARTED,
-                      label: tTasks("status.STARTED"),
-                      required: false,
                     },
                     {
                       status: TaskStatus.IN_PROGRESS,

@@ -56,7 +56,6 @@ export function MilestoneRoadmap({
       );
       const inProgressTasks = milestoneTasks.filter(
         (t) =>
-          t.status === TaskStatus.STARTED ||
           t.status === TaskStatus.IN_PROGRESS ||
           t.status === TaskStatus.IN_REVIEW,
       );

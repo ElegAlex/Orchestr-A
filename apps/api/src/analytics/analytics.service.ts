@@ -253,7 +253,6 @@ export class AnalyticsService {
     // All tasks (no subtask concept in schema)
     const statusCounts = {
       'À faire': tasks.filter((t) => t.status === 'TODO').length,
-      Débuté: tasks.filter((t) => t.status === 'STARTED').length,
       'En cours': tasks.filter((t) => t.status === 'IN_PROGRESS').length,
       'En revue': tasks.filter((t) => t.status === 'IN_REVIEW').length,
       Terminé: tasks.filter((t) => t.status === 'DONE').length,
@@ -268,11 +267,9 @@ export class AnalyticsService {
           ? '#4caf50'
           : name === 'En cours' || name === 'En revue'
             ? '#ff9800'
-            : name === 'Débuté'
-              ? '#64b5f6'
-              : name === 'Bloqué'
-                ? '#f44336'
-                : '#2196f3',
+            : name === 'Bloqué'
+              ? '#f44336'
+              : '#2196f3',
     }));
   }
 
