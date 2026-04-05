@@ -218,6 +218,7 @@
       "loadFailed": "Unable to load analytics data.",
       "exportError": "Error during export. Check the console for details."
     },
+    "exportingPdf": "Generating PDF...",
     "loading": "Loading...",
     "analytics": {
       "projectProgression": "Project Progression",

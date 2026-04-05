@@ -3,6 +3,7 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { toPng } from "html-to-image";
 
 interface AnalyticsData {
   metrics: Array<{
@@ -24,6 +25,30 @@ interface AnalyticsData {
     startDate: string;
     dueDate?: string;
     isOverdue: boolean;
+  }>;
+}
+
+interface OverviewMetric {
+  title: string;
+  value: string | number;
+  change?: string;
+  color?: "primary" | "secondary" | "success" | "warning" | "error" | "info";
+}
+
+interface OverviewExportData {
+  metrics: OverviewMetric[];
+  projectDetails: AnalyticsData["projectDetails"];
+  taskStatusData: Array<{
+    name: string;
+    value: number;
+    color: string;
+  }>;
+  projectProgressData: Array<{
+    name: string;
+    progress: number;
+    status: string;
+    tasks: number;
+    endDate?: string;
   }>;
 }
 
@@ -307,6 +332,287 @@ export class ExportService {
     // Save
     const filename = `orchestr-a-analytics-${format(new Date(), "yyyy-MM-dd-HHmm")}.xlsx`;
     XLSX.writeFile(workbook, filename);
+  }
+
+  /**
+   * Export Overview tab to a rich landscape PDF
+   */
+  static async exportOverviewToPDF(
+    data: OverviewExportData,
+    dateRange: string,
+    selectedProject?: string,
+    progressChartElement?: HTMLElement | null,
+  ): Promise<void> {
+    const doc = new jsPDF({ orientation: "landscape", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginLeft = 14;
+    const marginRight = 14;
+    const contentWidth = pageWidth - marginLeft - marginRight;
+    let currentY = 20;
+
+    const colorRgbMap: Record<string, [number, number, number]> = {
+      primary: [59, 130, 246],
+      secondary: [107, 114, 128],
+      success: [34, 197, 94],
+      warning: [234, 179, 8],
+      error: [239, 68, 68],
+      info: [6, 182, 212],
+    };
+
+    const now = new Date();
+
+    // --- Header ---
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0);
+    doc.text(
+      "Rapports & Analytics — Vue d'ensemble",
+      pageWidth / 2,
+      currentY,
+      { align: "center" },
+    );
+
+    currentY += 8;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      `Généré le ${format(now, "dd MMMM yyyy à HH:mm", { locale: fr })}`,
+      pageWidth / 2,
+      currentY,
+      { align: "center" },
+    );
+
+    currentY += 5;
+    doc.text(
+      `Période: ${this.translateDateRange(dateRange)}${selectedProject ? " — Projet spécifique" : ""}`,
+      pageWidth / 2,
+      currentY,
+      { align: "center" },
+    );
+
+    currentY += 12;
+
+    // --- KPI Cards ---
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0);
+    doc.text("Indicateurs Clés", marginLeft, currentY);
+    currentY += 8;
+
+    const cardGap = 3;
+    const cardCount = Math.min(data.metrics.length, 4);
+    const cardWidth = (contentWidth - cardGap * (cardCount - 1)) / cardCount;
+    const cardHeight = 28;
+
+    for (let i = 0; i < cardCount; i++) {
+      const metric = data.metrics[i];
+      const x = marginLeft + i * (cardWidth + cardGap);
+      const color =
+        colorRgbMap[metric.color || "primary"] || colorRgbMap.primary;
+
+      doc.setFillColor(color[0], color[1], color[2]);
+      doc.roundedRect(x, currentY, cardWidth, cardHeight, 3, 3, "F");
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(String(metric.value), x + cardWidth / 2, currentY + 11, {
+        align: "center",
+      });
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(metric.title, x + cardWidth / 2, currentY + 18, {
+        align: "center",
+      });
+
+      if (metric.change) {
+        doc.setFontSize(7);
+        doc.text(metric.change, x + cardWidth / 2, currentY + 24, {
+          align: "center",
+        });
+      }
+    }
+
+    currentY += cardHeight + 10;
+
+    // --- Task Status ---
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0);
+    doc.text("Volumes par statut", marginLeft, currentY);
+    currentY += 8;
+
+    const totalTasks = data.taskStatusData.reduce((s, t) => s + t.value, 0);
+    const statusItemWidth =
+      contentWidth / Math.max(data.taskStatusData.length, 1);
+
+    data.taskStatusData.forEach((status, i) => {
+      const x = marginLeft + i * statusItemWidth;
+      const pct =
+        totalTasks > 0
+          ? ((status.value / totalTasks) * 100).toFixed(1)
+          : "0";
+
+      const hexColor = status.color.replace("#", "");
+      const r = parseInt(hexColor.substring(0, 2), 16) || 100;
+      const g = parseInt(hexColor.substring(2, 4), 16) || 100;
+      const b = parseInt(hexColor.substring(4, 6), 16) || 100;
+      doc.setFillColor(r, g, b);
+      doc.circle(x + 4, currentY + 2, 2.5, "F");
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0);
+      doc.text(String(status.value), x + 10, currentY + 4);
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(80);
+      doc.text(`${status.name} (${pct}%)`, x + 10, currentY + 9);
+    });
+
+    currentY += 16;
+
+    // --- Project Progress ---
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0);
+    doc.text("Progression des projets", marginLeft, currentY);
+    currentY += 8;
+
+    let chartRendered = false;
+
+    if (progressChartElement) {
+      try {
+        const dataUrl = await toPng(progressChartElement, {
+          cacheBust: true,
+          backgroundColor: "#ffffff",
+          pixelRatio: 2,
+        });
+        const imgProps = doc.getImageProperties(dataUrl);
+        const imgWidth = contentWidth;
+        const imgHeight = (imgProps.height / imgProps.width) * imgWidth;
+
+        if (currentY + imgHeight > pageHeight - 20) {
+          doc.addPage();
+          currentY = 20;
+        }
+
+        doc.addImage(
+          dataUrl,
+          "PNG",
+          marginLeft,
+          currentY,
+          imgWidth,
+          imgHeight,
+        );
+        currentY += imgHeight + 8;
+        chartRendered = true;
+      } catch (err) {
+        console.warn("Chart capture failed, falling back to table:", err);
+      }
+    }
+
+    if (!chartRendered) {
+      if (currentY > pageHeight - 60) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Projet", "Progression", "Statut", "Tâches", "Échéance"]],
+        body: data.projectProgressData.map((p) => [
+          p.name,
+          `${p.progress}%`,
+          p.status,
+          String(p.tasks),
+          p.endDate ? format(new Date(p.endDate), "dd/MM/yyyy") : "-",
+        ]),
+        theme: "striped",
+        headStyles: { fillColor: [59, 130, 246] },
+        styles: { fontSize: 8 },
+      });
+
+      currentY =
+        (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable
+          .finalY + 10;
+    }
+
+    // --- Projects Table ---
+    if (currentY > pageHeight - 50) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0);
+    doc.text("Détail des Projets", marginLeft, currentY);
+    currentY += 8;
+
+    const projectsData = data.projectDetails.map((p) => [
+      p.name,
+      p.status,
+      `${p.progress}%`,
+      `${p.completedTasks}/${p.totalTasks}`,
+      p.projectManager || "-",
+      `${p.loggedHours}h / ${p.budgetHours}h`,
+      p.dueDate ? format(new Date(p.dueDate), "dd/MM/yyyy") : "-",
+    ]);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [
+        [
+          "Projet",
+          "Statut",
+          "Progression",
+          "Tâches",
+          "Manager",
+          "Heures",
+          "Échéance",
+        ],
+      ],
+      body: projectsData,
+      theme: "striped",
+      headStyles: { fillColor: [59, 130, 246] },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 55 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 45 },
+        5: { cellWidth: 40 },
+        6: { cellWidth: 30 },
+      },
+    });
+
+    // --- Footer ---
+    const pageCount = doc.internal.pages.length - 1;
+    const footerY = pageHeight - 10;
+    const footerTimestamp = format(now, "dd/MM/yyyy HH:mm");
+
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(128);
+      doc.text(
+        `Généré par Orchestr'A — ${footerTimestamp}`,
+        marginLeft,
+        footerY,
+      );
+      doc.text(`Page ${i} / ${pageCount}`, pageWidth / 2, footerY, {
+        align: "center",
+      });
+    }
+
+    const filename = `orchestr-a-vue-ensemble-${format(now, "yyyy-MM-dd")}.pdf`;
+    doc.save(filename);
   }
 
   /**

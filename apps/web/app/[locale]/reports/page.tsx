@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { MainLayout } from "@/components/MainLayout";
 import { MetricCard } from "./components/MetricCard";
 import { ProjectProgressChart } from "./components/ProjectProgressChart";
@@ -17,11 +17,14 @@ import { RecentActivityCards } from "./components/RecentActivityCards";
 import { AnalyticsData, DateRange } from "./types";
 import { format } from "date-fns";
 import { ExportService } from "@/services/export.service";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/usePermissions";
 
 export default function ReportsPage() {
   const t = useTranslations("admin.reports");
+  const router = useRouter();
+  const locale = useLocale();
   const { hasPermission, permissionsLoaded } = usePermissions();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +37,8 @@ export default function ReportsPage() {
   const [exportFormat, setExportFormat] = useState<"json" | "pdf" | "excel">(
     "pdf",
   );
+  const [exporting, setExporting] = useState(false);
+  const progressChartRef = useRef<HTMLDivElement>(null);
 
   const canView = !permissionsLoaded || hasPermission("reports:view");
   const canExport = hasPermission("reports:export");
@@ -99,11 +104,30 @@ export default function ReportsPage() {
     try {
       switch (exportFormat) {
         case "pdf":
-          await ExportService.exportToPDF(
-            data,
-            dateRange,
-            selectedProject !== "all" ? selectedProject : undefined,
-          );
+          if (activeTab === 0) {
+            setExporting(true);
+            try {
+              await ExportService.exportOverviewToPDF(
+                {
+                  metrics: data.metrics,
+                  projectDetails: data.projectDetails,
+                  taskStatusData: data.taskStatusData,
+                  projectProgressData: data.projectProgressData,
+                },
+                dateRange,
+                selectedProject !== "all" ? selectedProject : undefined,
+                progressChartRef.current,
+              );
+            } finally {
+              setExporting(false);
+            }
+          } else {
+            await ExportService.exportToPDF(
+              data,
+              dateRange,
+              selectedProject !== "all" ? selectedProject : undefined,
+            );
+          }
           break;
 
         case "excel":
@@ -288,9 +312,10 @@ export default function ReportsPage() {
 
               <button
                 onClick={exportReport}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
+                disabled={exporting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {t("filters.export")}
+                {exporting ? t("exportingPdf") : t("filters.export")}
               </button>
             </>
           )}
@@ -302,7 +327,15 @@ export default function ReportsPage() {
             {/* Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {data.metrics.map((metric, index) => (
-                <MetricCard key={index} metric={metric} />
+                <MetricCard
+                  key={index}
+                  metric={metric}
+                  onClick={
+                    metric.title === "Tâches en Retard"
+                      ? () => router.push(`/${locale}/tasks?overdue=true`)
+                      : undefined
+                  }
+                />
               ))}
             </div>
 
@@ -310,7 +343,9 @@ export default function ReportsPage() {
             <TaskStatusCards data={data.taskStatusData} />
 
             {/* Project progress — full width, horizontal bars */}
-            <ProjectProgressChart data={data.projectProgressData} />
+            <div ref={progressChartRef}>
+              <ProjectProgressChart data={data.projectProgressData} />
+            </div>
 
             {/* Projects Table */}
             <ProjectsTable projects={data.projectDetails} />

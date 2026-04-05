@@ -2,6 +2,7 @@ import { Metric } from "../types";
 
 interface MetricCardProps {
   metric: Metric;
+  onClick?: () => void;
 }
 
 const colorMap = {
@@ -13,7 +14,7 @@ const colorMap = {
   info: "bg-cyan-100 text-cyan-800",
 };
 
-export function MetricCard({ metric }: MetricCardProps) {
+export function MetricCard({ metric, onClick }: MetricCardProps) {
   const getTrendIcon = () => {
     switch (metric.trend) {
       case "up":
@@ -26,7 +27,11 @@ export function MetricCard({ metric }: MetricCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div
+      className={`bg-white rounded-lg shadow p-6${onClick ? " cursor-pointer hover:shadow-lg transition-shadow duration-200" : ""}`}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+    >
       <div className="flex items-center gap-4">
         <div className={`p-3 rounded-lg ${colorMap[metric.color]}`}>
           <span className="text-2xl">{metric.trend && getTrendIcon()}</span>

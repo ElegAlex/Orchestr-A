@@ -218,6 +218,7 @@
       "loadFailed": "Impossible de charger les données analytiques.",
       "exportError": "Erreur lors de l'export. Vérifiez la console pour plus de détails."
     },
+    "exportingPdf": "Génération du PDF en cours...",
     "loading": "Chargement...",
     "analytics": {
       "projectProgression": "Progression des projets",
