@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { Task } from "@/types";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { Task, SchoolVacation } from "@/types";
 import { Event } from "@/services/events.service";
 import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
 import {
@@ -18,7 +18,7 @@ import { AssignmentModal } from "@/components/predefined-tasks/AssignmentModal";
 import { teleworkService } from "@/services/telework.service";
 import { tasksService } from "@/services/tasks.service";
 import { usePlanningViewStore } from "@/stores/planningView.store";
-import { format, isToday, getDay } from "date-fns";
+import { format, isToday, getDay, parseISO } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import toast from "react-hot-toast";
 import { useTranslations, useLocale } from "next-intl";
@@ -145,6 +145,7 @@ export const PlanningGrid = ({
     isSpecialDay,
     silentRefetch,
     getGroupTaskCount,
+    schoolVacations,
   } = usePlanningData({
     currentDate,
     viewMode,
@@ -156,6 +157,49 @@ export const PlanningGrid = ({
 
   // Shared grid template for all rows
   const gridCols = `220px repeat(${displayDays.length}, 1fr)`;
+
+  // Compute school vacation banners overlapping displayed days
+  const vacationBanners = useMemo(() => {
+    if (!schoolVacations || schoolVacations.length === 0 || displayDays.length === 0) return [];
+
+    const banners: {
+      id: string;
+      name: string;
+      zone: string;
+      startCol: number;
+      endCol: number;
+    }[] = [];
+
+    for (const vacation of schoolVacations) {
+      const vacStart = parseISO(vacation.startDate);
+      const vacEnd = parseISO(vacation.endDate);
+
+      // Find the first and last displayed day indices that overlap with this vacation
+      let firstIdx = -1;
+      let lastIdx = -1;
+
+      for (let i = 0; i < displayDays.length; i++) {
+        const day = displayDays[i];
+        if (day >= vacStart && day <= vacEnd) {
+          if (firstIdx === -1) firstIdx = i;
+          lastIdx = i;
+        }
+      }
+
+      if (firstIdx !== -1) {
+        banners.push({
+          id: vacation.id,
+          name: vacation.name,
+          zone: vacation.zone,
+          // +2 because grid col 1 is the resource column, and CSS grid is 1-indexed
+          startCol: firstIdx + 2,
+          endCol: lastIdx + 3,
+        });
+      }
+    }
+
+    return banners;
+  }, [schoolVacations, displayDays]);
 
   const currentUser = useAuthStore((state) => state.user);
   const { hasPermission } = usePermissions();
@@ -402,6 +446,42 @@ export const PlanningGrid = ({
                 );
               })}
             </div>
+
+            {/* School vacation banners */}
+            {vacationBanners.length > 0 && (
+              <div
+                style={{ display: "grid", gridTemplateColumns: gridCols }}
+              >
+                {/* Empty resource column */}
+                <div />
+                {/* Vacation bars positioned via grid columns */}
+                {vacationBanners.map((banner) => {
+                  const shortName = banner.name
+                    .replace(/^Vacances\s+d[eu']/i, "")
+                    .replace(/^Vacances\s+/i, "")
+                    .trim();
+                  return (
+                    <div
+                      key={banner.id}
+                      className={`flex items-center justify-center border-b-2 border-blue-500 text-blue-800 font-medium truncate ${
+                        viewMode === "month"
+                          ? "text-[9px] py-0.5"
+                          : "text-xs py-1"
+                      }`}
+                      style={{
+                        gridColumn: `${banner.startCol} / ${banner.endCol}`,
+                        background: "linear-gradient(to right, #dbeafe, #bfdbfe)",
+                      }}
+                      title={`${banner.name} — Zone ${banner.zone}`}
+                    >
+                      {viewMode === "month"
+                        ? `\uD83C\uDFD6\uFE0F ${shortName}`
+                        : `\uD83C\uDFD6\uFE0F ${banner.name} — Zone ${banner.zone}`}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Service sections */}
             {filteredGroups.length === 0 ? (
