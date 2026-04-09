@@ -95,7 +95,7 @@ export class SchoolVacationsService {
           name: dto.name,
           startDate: new Date(dto.startDate),
           endDate: new Date(dto.endDate),
-          zone: dto.zone as SchoolVacationZone,
+          zone: dto.zone ?? SchoolVacationZone.C,
           year: dto.year,
           source: dto.source ?? SchoolVacationSource.MANUAL,
           createdById: userId,

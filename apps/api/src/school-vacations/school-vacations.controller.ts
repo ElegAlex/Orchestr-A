@@ -10,7 +10,6 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
-  Optional,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -37,7 +36,7 @@ import type { User } from '@prisma/client';
 export class SchoolVacationsController {
   constructor(
     private readonly schoolVacationsService: SchoolVacationsService,
-    @Optional() private readonly settingsService: SettingsService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   @Get()
