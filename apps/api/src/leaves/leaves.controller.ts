@@ -349,7 +349,7 @@ export class LeavesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Supprimer une demande de congé (en attente ou refusée uniquement)',
+      'Supprimer une demande de congé (tous statuts pour les rôles de management)',
   })
   @ApiResponse({
     status: 200,

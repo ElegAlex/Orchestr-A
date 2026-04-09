@@ -1020,6 +1020,15 @@ describe('LeavesService', () => {
       const result = await service.remove('leave-1', 'contrib-user-id', 'CONTRIBUTEUR');
       expect(result.message).toBe('Demande de congé supprimée avec succès');
     });
+
+    it('should allow management roles to delete a cancellation-requested leave', async () => {
+      const cancelRequestedLeave = { ...mockLeave, status: LeaveStatus.CANCELLATION_REQUESTED };
+      mockPrismaService.leave.findUnique.mockResolvedValue(cancelRequestedLeave);
+      mockPrismaService.leave.delete.mockResolvedValue(cancelRequestedLeave);
+
+      const result = await service.remove('leave-1', 'admin-user-id', 'ADMIN');
+      expect(result.message).toBe('Demande de congé supprimée avec succès');
+    });
   });
 
   // ============================================
