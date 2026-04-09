@@ -54,6 +54,7 @@ describe('LeavesService', () => {
     },
     userService: {
       findMany: vi.fn(),
+      findFirst: vi.fn(),
     },
     service: {
       findMany: vi.fn(),
@@ -989,6 +990,50 @@ describe('LeavesService', () => {
       expect(result).toEqual(updatedLeave);
     });
 
+    it('should allow MANAGER to update an approved leave in their perimeter', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        leaveTypeId: 'type-1',
+      };
+      const updatedLeave = { ...approvedLeave, comment: 'Updated by mgr' };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
+      mockPrismaService.userService.findMany.mockResolvedValue([{ serviceId: 'service-1' }]);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findFirst.mockResolvedValue({ userId: mockLeave.userId, serviceId: 'service-1' });
+
+      const result = await service.update(
+        'leave-1',
+        { reason: 'Updated by mgr' },
+        'mgr-user-id',
+        'MANAGER',
+      );
+
+      expect(result).toEqual(updatedLeave);
+    });
+
+    it('should throw ForbiddenException when MANAGER updates leave outside perimeter', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+      };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.userService.findMany.mockResolvedValue([{ serviceId: 'other-service' }]);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.update(
+          'leave-1',
+          { reason: 'Want to change' },
+          'mgr-user-id',
+          'MANAGER',
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
     it('should throw BadRequestException when CONTRIBUTEUR updates approved leave', async () => {
       const approvedLeave = {
         ...mockLeave,
@@ -1058,13 +1103,30 @@ describe('LeavesService', () => {
       expect(result.message).toBe('Demande de congé supprimée avec succès');
     });
 
-    it('should allow MANAGER to delete an approved leave', async () => {
+    it('should allow MANAGER to delete an approved leave in their perimeter', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
       mockPrismaService.leave.delete.mockResolvedValue(approvedLeave);
+      // Mock perimeter: manager belongs to same service as leave user
+      mockPrismaService.userService.findMany.mockResolvedValue([{ serviceId: 'service-1' }]);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findFirst.mockResolvedValue({ userId: mockLeave.userId, serviceId: 'service-1' });
 
       const result = await service.remove('leave-1', 'mgr-user-id', 'MANAGER');
       expect(result.message).toBe('Demande de congé supprimée avec succès');
+    });
+
+    it('should throw ForbiddenException when MANAGER deletes leave outside perimeter', async () => {
+      const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      // Mock perimeter: manager has no shared service with leave user
+      mockPrismaService.userService.findMany.mockResolvedValue([{ serviceId: 'other-service' }]);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.remove('leave-1', 'mgr-user-id', 'MANAGER'),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException when non-management role deletes approved leave', async () => {

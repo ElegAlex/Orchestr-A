@@ -26,6 +26,53 @@ export class LeavesService {
   }
 
   /**
+   * Vérifier si un manager a le droit d'agir sur le congé d'un utilisateur (périmètre services)
+   * ADMIN et RESPONSABLE : tous périmètres
+   * MANAGER : uniquement les agents de ses services
+   */
+  private async canManageLeave(
+    leaveUserId: string,
+    currentUserId: string,
+    currentUserRole: string,
+  ): Promise<boolean> {
+    if (
+      currentUserRole === Role.ADMIN ||
+      currentUserRole === Role.RESPONSABLE
+    ) {
+      return true;
+    }
+
+    if (currentUserRole === Role.MANAGER) {
+      const userServices = await this.prisma.userService.findMany({
+        where: { userId: currentUserId },
+        select: { serviceId: true },
+      });
+      const managedServices = await this.prisma.service.findMany({
+        where: { managerId: currentUserId },
+        select: { id: true },
+      });
+      const serviceIds = [
+        ...new Set([
+          ...userServices.map((us) => us.serviceId),
+          ...managedServices.map((s) => s.id),
+        ]),
+      ];
+
+      if (serviceIds.length === 0) return false;
+
+      const leaveUserService = await this.prisma.userService.findFirst({
+        where: {
+          userId: leaveUserId,
+          serviceId: { in: serviceIds },
+        },
+      });
+      return !!leaveUserService;
+    }
+
+    return false;
+  }
+
+  /**
    * Vérifier qu'un rôle possède une permission donnée (en DB via RoleConfig)
    */
   private async hasPermission(
@@ -792,22 +839,28 @@ export class LeavesService {
       throw new NotFoundException('Demande de congé introuvable');
     }
 
-    // Ownership check: non-management roles can only update their own leaves
-    if (
-      currentUserRole &&
-      !this.isManagementRole(currentUserRole) &&
-      existingLeave.userId !== currentUserId
-    ) {
+    // Check if current user can manage this leave (ownership or perimeter)
+    const isOwner = existingLeave.userId === currentUserId;
+    const isManager =
+      currentUserRole && this.isManagementRole(currentUserRole);
+    const canManage =
+      isManager && currentUserId && currentUserRole
+        ? await this.canManageLeave(
+            existingLeave.userId,
+            currentUserId,
+            currentUserRole,
+          )
+        : false;
+
+    if (!isOwner && !canManage) {
       throw new ForbiddenException(
         'Vous ne pouvez modifier que vos propres demandes de congé',
       );
     }
 
-    // Management roles can also update APPROVED leaves (change type, dates)
-    const canUpdateAnyStatus =
-      currentUserRole && this.isManagementRole(currentUserRole);
-
-    if (!canUpdateAnyStatus && existingLeave.status !== LeaveStatus.PENDING) {
+    // Management roles with perimeter access can update any status
+    // Other users: only PENDING
+    if (!canManage && existingLeave.status !== LeaveStatus.PENDING) {
       throw new BadRequestException(
         'Seules les demandes en attente peuvent être modifiées',
       );
@@ -918,23 +971,24 @@ export class LeavesService {
       throw new NotFoundException('Demande de congé introuvable');
     }
 
-    // Ownership check: non-management roles can only delete their own leaves
-    if (
-      currentUserRole &&
-      !this.isManagementRole(currentUserRole) &&
-      leave.userId !== currentUserId
-    ) {
+    // Check if current user can manage this leave (ownership or perimeter)
+    const isOwner = leave.userId === currentUserId;
+    const isManager =
+      currentUserRole && this.isManagementRole(currentUserRole);
+    const canManage =
+      isManager && currentUserId && currentUserRole
+        ? await this.canManageLeave(leave.userId, currentUserId, currentUserRole)
+        : false;
+
+    if (!isOwner && !canManage) {
       throw new ForbiddenException(
         'Vous ne pouvez supprimer que vos propres demandes de congé',
       );
     }
 
-    // Management roles can also delete APPROVED and CANCELLATION_REQUESTED leaves
-    const canDeleteAnyStatus =
-      currentUserRole && this.isManagementRole(currentUserRole);
-
-    if (!canDeleteAnyStatus) {
-      // Non-management: only PENDING or REJECTED
+    // Management roles with perimeter access can delete any status
+    // Other users: only PENDING or REJECTED
+    if (!canManage) {
       if (
         leave.status !== LeaveStatus.PENDING &&
         leave.status !== LeaveStatus.REJECTED
