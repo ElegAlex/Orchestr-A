@@ -25,6 +25,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   defaultLeaveDays: 25,
   maxTeleworkDaysPerWeek: 3,
   "planning.visibleDays": [1, 2, 3, 4, 5],
+  "planning.schoolVacationZone": "C",
 };
 
 export const useSettingsStore = create<SettingsState>()(

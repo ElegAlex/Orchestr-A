@@ -8,9 +8,11 @@ import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { HolidaysManager } from "@/components/holidays/HolidaysManager";
+import { SchoolVacationsManager } from "@/components/school-vacations/SchoolVacationsManager";
+import { SchoolVacationZone, SCHOOL_VACATION_ZONE_LABELS } from "@/types";
 import { useTranslations, useLocale } from "next-intl";
 
-type CategoryTab = "display" | "planning" | "holidays";
+type CategoryTab = "display" | "planning" | "holidays" | "schoolVacations";
 
 const WEEKDAY_OPTIONS = [
   { isoDay: 1, labelKey: "planning.days.monday" },
@@ -221,6 +223,16 @@ export default function SettingsPage() {
             >
               {t("tabs.holidays")}
             </button>
+            <button
+              onClick={() => setActiveTab("schoolVacations")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "schoolVacations"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              {t("tabs.schoolVacations")}
+            </button>
           </nav>
         </div>
 
@@ -411,6 +423,31 @@ export default function SettingsPage() {
           {activeTab === "holidays" && (
             <div className="p-6">
               <HolidaysManager />
+            </div>
+          )}
+
+          {/* School Vacations Settings */}
+          {activeTab === "schoolVacations" && (
+            <div className="p-6 space-y-6">
+              {/* Zone selector */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  {t("schoolVacations.zoneLabel")}
+                </h3>
+                <select
+                  value={(settings["planning.schoolVacationZone"] as string) ?? "C"}
+                  onChange={(e) => handleChange("planning.schoolVacationZone", e.target.value)}
+                  className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {Object.entries(SCHOOL_VACATION_ZONE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {t("schoolVacations.zoneHint")}
+                </p>
+              </div>
+              <SchoolVacationsManager />
             </div>
           )}
         </div>
