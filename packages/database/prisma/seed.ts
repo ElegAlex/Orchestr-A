@@ -1857,6 +1857,31 @@ async function main() {
       action: "delete",
       description: "Supprimer un jour férié",
     },
+    // School Vacations
+    {
+      code: "school_vacations:create",
+      module: "school_vacations",
+      action: "create",
+      description: "Creer une periode de vacances scolaires",
+    },
+    {
+      code: "school_vacations:read",
+      module: "school_vacations",
+      action: "read",
+      description: "Voir les vacances scolaires",
+    },
+    {
+      code: "school_vacations:update",
+      module: "school_vacations",
+      action: "update",
+      description: "Modifier une periode de vacances scolaires",
+    },
+    {
+      code: "school_vacations:delete",
+      module: "school_vacations",
+      action: "delete",
+      description: "Supprimer une periode de vacances scolaires",
+    },
     // Predefined Tasks
     {
       code: "predefined_tasks:view",
