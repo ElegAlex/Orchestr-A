@@ -60,11 +60,11 @@ export const schoolVacationsService = {
   /**
    * Importe les vacances scolaires depuis l'Open Data
    */
-  async importFromOpenData(year?: number): Promise<ImportSchoolVacationResult> {
-    const url = year
-      ? `/school-vacations/import?year=${year}`
-      : "/school-vacations/import";
-    const response = await api.post<ImportSchoolVacationResult>(url);
+  async importFromOpenData(year: number): Promise<ImportSchoolVacationResult> {
+    const response = await api.post<ImportSchoolVacationResult>(
+      "/school-vacations/import",
+      { year },
+    );
     return response.data;
   },
 };
