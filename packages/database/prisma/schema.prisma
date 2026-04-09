@@ -52,6 +52,7 @@ model User {
   comments          Comment[]
   personalTodos     PersonalTodo[]
   createdHolidays   Holiday[]         @relation("HolidayCreator")
+  createdSchoolVacations SchoolVacation[] @relation("SchoolVacationCreator")
   createdEvents     Event[]           @relation("EventCreator")
   eventParticipations EventParticipant[]
   createdPredefinedTasks     PredefinedTask[]              @relation("PredefinedTaskCreator")
@@ -710,6 +711,42 @@ enum HolidayType {
   BRIDGE       // Pont accordé
   CLOSURE      // Fermeture exceptionnelle
   CUSTOM       // Autre (personnalisé)
+}
+
+enum SchoolVacationZone {
+  A
+  B
+  C
+}
+
+enum SchoolVacationSource {
+  IMPORT
+  MANUAL
+}
+
+// ===========================
+// SCHOOL VACATIONS (VACANCES SCOLAIRES)
+// ===========================
+
+model SchoolVacation {
+  id          String               @id @default(uuid())
+  name        String               @db.VarChar(100)
+  startDate   DateTime             @db.Date
+  endDate     DateTime             @db.Date
+  zone        SchoolVacationZone
+  year        Int
+  source      SchoolVacationSource @default(MANUAL)
+  createdById String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  // Relations
+  createdBy   User                 @relation("SchoolVacationCreator", fields: [createdById], references: [id])
+
+  @@unique([name, zone, year])
+  @@index([startDate, endDate])
+  @@index([zone, year])
+  @@map("school_vacations")
 }
 
 // ===========================
