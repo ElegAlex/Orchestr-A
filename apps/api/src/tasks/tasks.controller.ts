@@ -44,7 +44,6 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Post()
-  @Permissions('tasks:create')
   @ApiOperation({ summary: 'Créer une nouvelle tâche' })
   @ApiResponse({
     status: 201,

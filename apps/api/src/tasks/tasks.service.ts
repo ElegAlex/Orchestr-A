@@ -60,10 +60,28 @@ export class TasksService {
       assigneeIds = [...new Set(merged)];
     }
 
-    // Vérification des permissions en fonction du rôle
-    if (user.role === Role.CONTRIBUTEUR && projectId) {
+    // Vérification dynamique des permissions de création
+    const userPermissions =
+      await this.roleManagementService.getPermissionsForRole(user.role);
+    const canCreate = userPermissions.includes('tasks:create');
+    const canCreateOrphan = userPermissions.includes('tasks:create_orphan');
+    const canCreateInProject = userPermissions.includes('tasks:create_in_project');
+
+    if (!canCreate && !canCreateOrphan && !canCreateInProject) {
       throw new ForbiddenException(
-        'Les contributeurs ne peuvent créer que des tâches hors projet',
+        "Vous n'avez aucune permission de création de tâche",
+      );
+    }
+
+    if (projectId && !canCreate && !canCreateInProject) {
+      throw new ForbiddenException(
+        "Vous n'avez pas la permission de créer des tâches dans un projet",
+      );
+    }
+
+    if (!projectId && !canCreate && !canCreateOrphan) {
+      throw new ForbiddenException(
+        "Vous n'avez pas la permission de créer des tâches orphelines",
       );
     }
 
