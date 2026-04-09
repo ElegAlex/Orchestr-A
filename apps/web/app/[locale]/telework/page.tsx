@@ -389,17 +389,18 @@ export default function TeleworkPage() {
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  // Charger les utilisateurs si autorisé à gérer les autres
+  // Charger les utilisateurs si autorisé à gérer les autres ET à lire les users
+  const canListUsers = hasPermission("users:read");
   useEffect(() => {
     if (!user) return;
     setSelectedUserId(user.id);
 
-    if (canManageOthers) {
+    if (canManageOthers && canListUsers) {
       usersService.getAll().then((data) => {
         setAllUsers(Array.isArray(data) ? data : []);
       });
     }
-  }, [user, canManageOthers]);
+  }, [user, canManageOthers, canListUsers]);
 
   // Charger les données de télétravail
   const fetchTeleworkData = useCallback(async () => {
