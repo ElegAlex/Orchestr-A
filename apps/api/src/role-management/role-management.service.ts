@@ -84,6 +84,12 @@ export class RoleManagementService implements OnModuleInit {
         description: 'Voir toutes les tâches (pas seulement les siennes)',
       },
       // Events
+      {
+        code: 'events:readAll',
+        module: 'events',
+        action: 'readAll',
+        description: 'Voir tous les événements (pas seulement les siens)',
+      },
       { code: 'events:create', module: 'events', action: 'create' },
       { code: 'events:read', module: 'events', action: 'read' },
       { code: 'events:update', module: 'events', action: 'update' },
@@ -109,6 +115,12 @@ export class RoleManagementService implements OnModuleInit {
         module: 'leaves',
         action: 'manage_delegations',
       },
+      {
+        code: 'leaves:readAll',
+        module: 'leaves',
+        action: 'readAll',
+        description: 'Voir tous les congés (pas seulement les siens) — nécessaire pour le planning',
+      },
       // Telework
       { code: 'telework:create', module: 'telework', action: 'create' },
       { code: 'telework:read', module: 'telework', action: 'read' },
@@ -125,6 +137,12 @@ export class RoleManagementService implements OnModuleInit {
         module: 'telework',
         action: 'manage_recurring',
         description: 'Gérer les règles de télétravail récurrentes pour autrui',
+      },
+      {
+        code: 'telework:readAll',
+        module: 'telework',
+        action: 'readAll',
+        description: 'Voir tous les télétravails (pas seulement les siens) — nécessaire pour le planning',
       },
       // Skills
       { code: 'skills:create', module: 'skills', action: 'create' },
@@ -377,7 +395,6 @@ export class RoleManagementService implements OnModuleInit {
           'tasks:update',
           'tasks:delete',
           'tasks:create_in_project',
-          'tasks:readAll',
           'events:create',
           'events:read',
           'events:update',
@@ -451,7 +468,6 @@ export class RoleManagementService implements OnModuleInit {
           'tasks:update',
           'tasks:delete',
           'tasks:create_in_project',
-          'tasks:readAll',
           'events:create',
           'events:read',
           'events:update',
@@ -893,6 +909,24 @@ export class RoleManagementService implements OnModuleInit {
         ],
       },
     ];
+
+    // ── Planning : permissions de lecture globale ──────────────────────
+    // Injectées automatiquement à TOUS les rôles pour que le planning
+    // affiche l'intégralité des données quel que soit le rôle connecté.
+    // Ajouter un rôle à rolesConfig suffit : il héritera de ces perms.
+    const PLANNING_READ_PERMISSIONS = [
+      'tasks:readAll',
+      'leaves:readAll',
+      'telework:readAll',
+      'events:readAll',
+    ];
+    for (const role of rolesConfig) {
+      for (const perm of PLANNING_READ_PERMISSIONS) {
+        if (!role.permissions.includes(perm)) {
+          role.permissions.push(perm);
+        }
+      }
+    }
 
     // Créer les rôles avec leurs permissions
     for (const roleData of rolesConfig) {

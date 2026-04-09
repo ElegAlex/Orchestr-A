@@ -6,6 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { UpsertLeaveBalanceDto } from './dto/upsert-leave-balance.dto';
@@ -53,6 +54,7 @@ export class LeavesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly roleManagementService: RoleManagementService,
   ) {}
 
   /**
@@ -371,9 +373,13 @@ export class LeavesService {
     currentUserId?: string,
     currentUserRole?: string,
   ) {
-    // Ownership check: non-management roles can only see their own leaves
-    if (currentUserRole && !this.isManagementRole(currentUserRole)) {
-      userId = currentUserId;
+    // Lecture globale : vérifier la permission dynamique leaves:readAll
+    if (currentUserRole) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('leaves:readAll')) {
+        userId = currentUserId;
+      }
     }
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;

@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Prisma } from 'database';
@@ -13,7 +14,10 @@ import { Prisma } from 'database';
 export class EventsService {
   private readonly MANAGEMENT_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'];
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly roleManagementService: RoleManagementService,
+  ) {}
 
   private isManagementRole(role: string): boolean {
     return this.MANAGEMENT_ROLES.includes(role);
@@ -201,8 +205,10 @@ export class EventsService {
       where.date = { lte: new Date(endDate) };
     }
 
-    // IDOR protection: non-management roles can only see events they participate in or created
-    if (!this.isManagementRole(currentUserRole)) {
+    // Lecture globale : vérifier la permission dynamique events:readAll
+    const permissions =
+      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+    if (!permissions.includes('events:readAll')) {
       where.OR = [
         { participants: { some: { userId: currentUserId } } },
         { createdById: currentUserId },

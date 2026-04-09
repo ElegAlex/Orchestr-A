@@ -120,8 +120,10 @@ export class TeleworkService {
 
     const where: Prisma.TeleworkScheduleWhereInput = {};
 
-    // IDOR protection: non-management roles can only see their own data
-    if (!this.isManagementRole(currentUserRole)) {
+    // Lecture globale : vérifier la permission dynamique telework:readAll
+    const permissions =
+      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+    if (!permissions.includes('telework:readAll')) {
       where.userId = currentUserId;
     } else if (userId) {
       where.userId = userId;

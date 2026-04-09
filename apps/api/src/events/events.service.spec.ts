@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventsService } from './events.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -55,6 +56,18 @@ describe('EventsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: RoleManagementService,
+          useValue: {
+            getPermissionsForRole: vi.fn().mockResolvedValue([
+              'events:read',
+              'events:readAll',
+              'tasks:readAll',
+              'leaves:readAll',
+              'telework:readAll',
+            ]),
+          },
         },
       ],
     }).compile();

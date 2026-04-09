@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { LeaveStatus, LeaveType, Role } from '../__mocks__/database';
 import { AuditService } from '../audit/audit.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 
 describe('LeavesService', () => {
   let service: LeavesService;
@@ -117,6 +118,18 @@ describe('LeavesService', () => {
         {
           provide: AuditService,
           useValue: { log: vi.fn() },
+        },
+        {
+          provide: RoleManagementService,
+          useValue: {
+            getPermissionsForRole: vi.fn().mockResolvedValue([
+              'leaves:read',
+              'leaves:readAll',
+              'tasks:readAll',
+              'telework:readAll',
+              'events:readAll',
+            ]),
+          },
         },
       ],
     }).compile();
