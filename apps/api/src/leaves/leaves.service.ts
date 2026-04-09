@@ -30,94 +30,64 @@ export class LeavesService {
    * ADMIN et RESPONSABLE : tous périmètres
    * MANAGER : uniquement les agents de ses services
    */
+  /**
+   * Vérifier si le user courant peut gérer (edit/delete) le congé d'un autre user.
+   * Basé sur la permission leaves:delete + périmètre services.
+   */
   private async canManageLeave(
     leaveUserId: string,
     currentUserId: string,
     currentUserRole: string,
   ): Promise<boolean> {
-    if (
-      currentUserRole === Role.ADMIN ||
-      currentUserRole === Role.RESPONSABLE
-    ) {
-      return true;
+    const permissions =
+      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+    if (!permissions.includes('leaves:delete')) {
+      return false;
     }
 
-    if (currentUserRole === Role.MANAGER) {
-      const userServices = await this.prisma.userService.findMany({
-        where: { userId: currentUserId },
-        select: { serviceId: true },
-      });
-      const managedServices = await this.prisma.service.findMany({
-        where: { managerId: currentUserId },
-        select: { id: true },
-      });
-      const serviceIds = [
-        ...new Set([
-          ...userServices.map((us) => us.serviceId),
-          ...managedServices.map((s) => s.id),
-        ]),
-      ];
-
-      if (serviceIds.length === 0) return false;
-
-      const leaveUserService = await this.prisma.userService.findFirst({
-        where: {
-          userId: leaveUserId,
-          serviceId: { in: serviceIds },
-        },
-      });
-      return !!leaveUserService;
-    }
-
-    return false;
+    const managedUserIds = await this.getManagedUserIds(currentUserId);
+    return managedUserIds === 'all' || managedUserIds.has(leaveUserId);
   }
 
   /**
-   * Récupérer les IDs des utilisateurs dans le périmètre du manager
-   * (une seule requête, réutilisable pour enrichir N congés sans N+1)
+   * Récupérer les IDs des utilisateurs dans le périmètre du user courant
+   * Basé sur les services managés (managerId) et l'appartenance (user_services).
+   * Retourne 'all' si le user n'a aucun service (= pas de restriction de périmètre).
    */
   private async getManagedUserIds(
     currentUserId: string,
-    currentUserRole: string,
   ): Promise<Set<string> | 'all'> {
-    if (
-      currentUserRole === Role.ADMIN ||
-      currentUserRole === Role.RESPONSABLE
-    ) {
-      return 'all';
-    }
+    const managedServices = await this.prisma.service.findMany({
+      where: { managerId: currentUserId },
+      select: { id: true },
+    });
+    const userServices = await this.prisma.userService.findMany({
+      where: { userId: currentUserId },
+      select: { serviceId: true },
+    });
 
-    if (currentUserRole === Role.MANAGER) {
-      const userServices = await this.prisma.userService.findMany({
-        where: { userId: currentUserId },
-        select: { serviceId: true },
-      });
-      const managedServices = await this.prisma.service.findMany({
-        where: { managerId: currentUserId },
-        select: { id: true },
-      });
-      const serviceIds = [
-        ...new Set([
-          ...userServices.map((us) => us.serviceId),
-          ...managedServices.map((s) => s.id),
-        ]),
-      ];
+    const serviceIds = [
+      ...new Set([
+        ...managedServices.map((s) => s.id),
+        ...userServices.map((us) => us.serviceId),
+      ]),
+    ];
 
-      if (serviceIds.length === 0) return new Set();
+    // Pas de services = pas de périmètre restreint (ex: admin sans service)
+    if (serviceIds.length === 0) return 'all';
 
-      const usersInServices = await this.prisma.userService.findMany({
-        where: { serviceId: { in: serviceIds } },
-        select: { userId: true },
-        distinct: ['userId'],
-      });
-      return new Set(usersInServices.map((us) => us.userId));
-    }
-
-    return new Set();
+    const usersInServices = await this.prisma.userService.findMany({
+      where: { serviceId: { in: serviceIds } },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    return new Set(usersInServices.map((us) => us.userId));
   }
 
   /**
-   * Enrichir les congés avec canEdit/canDelete calculés selon le périmètre
+   * Enrichir les congés avec canEdit/canDelete calculés selon :
+   * - les permissions dynamiques du rôle (leaves:delete, leaves:approve)
+   * - le périmètre services du user courant
    */
   private async enrichLeavesWithPermissions(
     leaves: any[],
@@ -128,10 +98,29 @@ export class LeavesService {
       return leaves.map((l) => ({ ...l, canEdit: false, canDelete: false }));
     }
 
-    const managedUserIds = await this.getManagedUserIds(
-      currentUserId,
-      currentUserRole,
-    );
+    // Permissions dynamiques depuis le RBAC
+    const permissions =
+      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+    const hasDeletePerm = permissions.includes('leaves:delete');
+    const hasApprovePerm = permissions.includes('leaves:approve');
+
+    // Si pas de permission de gestion, seul l'ownership compte
+    if (!hasDeletePerm && !hasApprovePerm) {
+      return leaves.map((leave) => {
+        const isOwner = leave.userId === currentUserId;
+        return {
+          ...leave,
+          canEdit: isOwner && leave.status === LeaveStatus.PENDING,
+          canDelete:
+            isOwner &&
+            (leave.status === LeaveStatus.PENDING ||
+              leave.status === LeaveStatus.REJECTED),
+        };
+      });
+    }
+
+    // Périmètre basé sur les services
+    const managedUserIds = await this.getManagedUserIds(currentUserId);
 
     return leaves.map((leave) => {
       const isOwner = leave.userId === currentUserId;
@@ -140,13 +129,17 @@ export class LeavesService {
 
       const canEdit =
         (isOwner && leave.status === LeaveStatus.PENDING) ||
-        (isInPerimeter && (leave.status === LeaveStatus.PENDING || leave.status === LeaveStatus.APPROVED));
+        (hasDeletePerm &&
+          isInPerimeter &&
+          (leave.status === LeaveStatus.PENDING ||
+            leave.status === LeaveStatus.APPROVED));
 
       const canDelete =
         (isOwner &&
           (leave.status === LeaveStatus.PENDING ||
             leave.status === LeaveStatus.REJECTED)) ||
-        (isInPerimeter &&
+        (hasDeletePerm &&
+          isInPerimeter &&
           (leave.status === LeaveStatus.PENDING ||
             leave.status === LeaveStatus.REJECTED ||
             leave.status === LeaveStatus.APPROVED ||

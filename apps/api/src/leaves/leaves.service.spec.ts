@@ -12,6 +12,20 @@ import { LeaveStatus, LeaveType, Role } from '../__mocks__/database';
 import { AuditService } from '../audit/audit.service';
 import { RoleManagementService } from '../role-management/role-management.service';
 
+const mockGetPermissionsForRole = vi.fn().mockImplementation((role: string) => {
+  const base = [
+    'leaves:read',
+    'leaves:readAll',
+    'tasks:readAll',
+    'telework:readAll',
+    'events:readAll',
+  ];
+  if (role === 'ADMIN' || role === 'RESPONSABLE' || role === 'MANAGER') {
+    return Promise.resolve([...base, 'leaves:delete', 'leaves:approve']);
+  }
+  return Promise.resolve(base);
+});
+
 describe('LeavesService', () => {
   let service: LeavesService;
 
@@ -53,11 +67,11 @@ describe('LeavesService', () => {
       update: vi.fn(),
     },
     userService: {
-      findMany: vi.fn(),
-      findFirst: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
+      findFirst: vi.fn().mockResolvedValue(null),
     },
     service: {
-      findMany: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
     },
   };
 
@@ -123,13 +137,7 @@ describe('LeavesService', () => {
         {
           provide: RoleManagementService,
           useValue: {
-            getPermissionsForRole: vi.fn().mockResolvedValue([
-              'leaves:read',
-              'leaves:readAll',
-              'tasks:readAll',
-              'telework:readAll',
-              'events:readAll',
-            ]),
+            getPermissionsForRole: mockGetPermissionsForRole,
           },
         },
       ],
@@ -140,6 +148,30 @@ describe('LeavesService', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    // Restore default mock implementations after clearAllMocks
+    mockPrismaService.userService.findMany.mockResolvedValue([]);
+    mockPrismaService.userService.findFirst.mockResolvedValue(null);
+    mockPrismaService.service.findMany.mockResolvedValue([]);
+    mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([]);
+    mockPrismaService.leaveBalance.findFirst.mockResolvedValue(null);
+    mockPrismaService.leaveBalance.findMany.mockResolvedValue([]);
+    mockPrismaService.leaveBalance.findUnique.mockResolvedValue(null);
+    mockPrismaService.roleConfig.findMany.mockResolvedValue([]);
+    mockPrismaService.roleConfig.findFirst.mockResolvedValue(null);
+    // Restore dynamic permissions mock
+    mockGetPermissionsForRole.mockImplementation((role: string) => {
+      const base = [
+        'leaves:read',
+        'leaves:readAll',
+        'tasks:readAll',
+        'telework:readAll',
+        'events:readAll',
+      ];
+      if (role === 'ADMIN' || role === 'RESPONSABLE' || role === 'MANAGER') {
+        return Promise.resolve([...base, 'leaves:delete', 'leaves:approve']);
+      }
+      return Promise.resolve(base);
+    });
   });
 
   // ============================================
@@ -1000,9 +1032,11 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
       mockPrismaService.leave.findMany.mockResolvedValue([]);
       mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
-      mockPrismaService.userService.findMany.mockResolvedValue([{ serviceId: 'service-1' }]);
-      mockPrismaService.service.findMany.mockResolvedValue([]);
-      mockPrismaService.userService.findFirst.mockResolvedValue({ userId: mockLeave.userId, serviceId: 'service-1' });
+      // getManagedUserIds: 1st call = manager's services, 2nd call = users in those services
+      mockPrismaService.service.findMany.mockResolvedValue([{ id: 'service-1' }]);
+      mockPrismaService.userService.findMany
+        .mockResolvedValueOnce([{ serviceId: 'service-1' }])
+        .mockResolvedValueOnce([{ userId: mockLeave.userId }]);
 
       const result = await service.update(
         'leave-1',
@@ -1020,9 +1054,11 @@ describe('LeavesService', () => {
         status: LeaveStatus.APPROVED,
       };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
-      mockPrismaService.userService.findMany.mockResolvedValue([{ serviceId: 'other-service' }]);
+      // getManagedUserIds: manager has services but leave user not in them
       mockPrismaService.service.findMany.mockResolvedValue([]);
-      mockPrismaService.userService.findFirst.mockResolvedValue(null);
+      mockPrismaService.userService.findMany
+        .mockResolvedValueOnce([{ serviceId: 'other-service' }])
+        .mockResolvedValueOnce([{ userId: 'other-user' }]);
 
       await expect(
         service.update(
@@ -1107,10 +1143,11 @@ describe('LeavesService', () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
       mockPrismaService.leave.delete.mockResolvedValue(approvedLeave);
-      // Mock perimeter: manager belongs to same service as leave user
-      mockPrismaService.userService.findMany.mockResolvedValue([{ serviceId: 'service-1' }]);
-      mockPrismaService.service.findMany.mockResolvedValue([]);
-      mockPrismaService.userService.findFirst.mockResolvedValue({ userId: mockLeave.userId, serviceId: 'service-1' });
+      // getManagedUserIds: 1st call = manager's services, 2nd call = users in those services
+      mockPrismaService.service.findMany.mockResolvedValue([{ id: 'service-1' }]);
+      mockPrismaService.userService.findMany
+        .mockResolvedValueOnce([{ serviceId: 'service-1' }]) // manager's own services
+        .mockResolvedValueOnce([{ userId: mockLeave.userId }]); // users in perimeter
 
       const result = await service.remove('leave-1', 'mgr-user-id', 'MANAGER');
       expect(result.message).toBe('Demande de congé supprimée avec succès');
@@ -1119,10 +1156,11 @@ describe('LeavesService', () => {
     it('should throw ForbiddenException when MANAGER deletes leave outside perimeter', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
-      // Mock perimeter: manager has no shared service with leave user
-      mockPrismaService.userService.findMany.mockResolvedValue([{ serviceId: 'other-service' }]);
+      // getManagedUserIds: manager has services but leave user is not in them
       mockPrismaService.service.findMany.mockResolvedValue([]);
-      mockPrismaService.userService.findFirst.mockResolvedValue(null);
+      mockPrismaService.userService.findMany
+        .mockResolvedValueOnce([{ serviceId: 'other-service' }]) // manager's own services
+        .mockResolvedValueOnce([{ userId: 'other-user' }]); // only other users in perimeter
 
       await expect(
         service.remove('leave-1', 'mgr-user-id', 'MANAGER'),
