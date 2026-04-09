@@ -63,7 +63,7 @@ export default function EventsPage() {
       let projectsData: Project[] = [];
       if (hasPermission("projects:read")) {
         try {
-          if (hasPermission("users:read")) {
+          if (hasPermission("events:readAll")) {
             const response = await projectsService.getAll();
             projectsData = Array.isArray(response.data) ? response.data : [];
           } else if (user?.id) {
@@ -93,7 +93,7 @@ export default function EventsPage() {
       setEvents(eventsData);
 
       // Fetch users for assignment
-      if (hasPermission("events:update")) {
+      if (hasPermission("events:update") && hasPermission("users:read")) {
         try {
           const usersData = await usersService.getAll();
           setUsers(Array.isArray(usersData) ? usersData : []);

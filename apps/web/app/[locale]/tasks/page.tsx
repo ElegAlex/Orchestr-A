@@ -81,7 +81,7 @@ export default function TasksPage() {
       let projectsData: Project[] = [];
       if (hasPermission("projects:read")) {
         try {
-          if (hasPermission("users:read")) {
+          if (hasPermission("tasks:readAll")) {
             const response = await projectsService.getAll();
             projectsData = Array.isArray(response.data) ? response.data : [];
           } else if (user?.id) {
@@ -101,8 +101,7 @@ export default function TasksPage() {
       let tasksData: Task[] = [];
       if (user?.id) {
         try {
-          if (hasPermission("users:read")) {
-            // Users with broad access see ALL tasks
+          if (hasPermission("tasks:readAll")) {
             const response = await tasksService.getAll(1, 1000);
             tasksData = Array.isArray(response.data) ? response.data : [];
           } else {
@@ -132,7 +131,7 @@ export default function TasksPage() {
       }
 
       // Fetch users for assignment
-      if (hasPermission("tasks:update")) {
+      if (hasPermission("tasks:update") && hasPermission("users:read")) {
         try {
           const usersData = await usersService.getAll();
           setUsers(Array.isArray(usersData) ? usersData : []);
