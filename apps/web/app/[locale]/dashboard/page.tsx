@@ -7,6 +7,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { PlanningView } from "@/components/planning/PlanningView";
 import { useAuthStore } from "@/stores/auth.store";
+import { usePermissions } from "@/hooks/usePermissions";
 import { projectsService } from "@/services/projects.service";
 import { tasksService } from "@/services/tasks.service";
 import {
@@ -28,6 +29,7 @@ export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [myProjects, setMyProjects] = useState<Project[]>([]);
   const [myTasks, setMyTasks] = useState<Task[]>([]);
@@ -211,21 +213,24 @@ export default function DashboardPage() {
       try {
         setLoading(true);
 
-        // Fetch user's projects
+        // Fetch user's projects (requires projects:read)
         if (user?.id) {
           let projects: Project[] = [];
           let tasks: Task[] = [];
 
-          try {
-            projects = await projectsService.getByUser(user.id);
-            setMyProjects(Array.isArray(projects) ? projects : []);
-          } catch (err) {
-            // Si 404 ou autre erreur, on met un tableau vide
-            setMyProjects([]);
-            const axiosError = err as { response?: { status?: number } };
-            if (axiosError.response?.status !== 404) {
-              console.error("Error fetching projects:", err);
+          if (hasPermission("projects:read")) {
+            try {
+              projects = await projectsService.getByUser(user.id);
+              setMyProjects(Array.isArray(projects) ? projects : []);
+            } catch (err) {
+              setMyProjects([]);
+              const axiosError = err as { response?: { status?: number } };
+              if (axiosError.response?.status !== 404) {
+                console.error("Error fetching projects:", err);
+              }
             }
+          } else {
+            setMyProjects([]);
           }
 
           // Fetch user's tasks

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
+import { usePermissions } from "@/hooks/usePermissions";
 import { timeTrackingService } from "@/services/time-tracking.service";
 import { projectsService } from "@/services/projects.service";
 import { tasksService } from "@/services/tasks.service";
@@ -21,6 +22,7 @@ export default function TimeTrackingPage() {
   const t = useTranslations("hr.timeTracking");
   const tc = useTranslations("common");
   const user = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -47,8 +49,8 @@ export default function TimeTrackingPage() {
       const entriesData = await timeTrackingService.getMyEntries();
       setEntries(entriesData);
 
-      // Fetch projects
-      if (user?.id) {
+      // Fetch projects (requires projects:read)
+      if (hasPermission("projects:read") && user?.id) {
         try {
           const projectsData = await projectsService.getByUser(user.id);
           setProjects(Array.isArray(projectsData) ? projectsData : []);

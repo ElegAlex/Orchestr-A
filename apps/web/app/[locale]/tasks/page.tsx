@@ -77,15 +77,17 @@ export default function TasksPage() {
     try {
       setLoading(true);
 
-      // Fetch projects
+      // Fetch projects (requires projects:read)
       let projectsData: Project[] = [];
-      if (hasPermission("users:read")) {
-        const response = await projectsService.getAll();
-        projectsData = Array.isArray(response.data) ? response.data : [];
-      } else if (user?.id) {
+      if (hasPermission("projects:read")) {
         try {
-          projectsData = await projectsService.getByUser(user.id);
-          projectsData = Array.isArray(projectsData) ? projectsData : [];
+          if (hasPermission("users:read")) {
+            const response = await projectsService.getAll();
+            projectsData = Array.isArray(response.data) ? response.data : [];
+          } else if (user?.id) {
+            projectsData = await projectsService.getByUser(user.id);
+            projectsData = Array.isArray(projectsData) ? projectsData : [];
+          }
         } catch (err) {
           projectsData = [];
           const axiosError = err as { response?: { status?: number } };
