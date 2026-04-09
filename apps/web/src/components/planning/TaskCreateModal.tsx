@@ -71,15 +71,17 @@ export const TaskCreateModal = ({
 
   const fetchInitialData = async () => {
     try {
-      // Fetch projects
+      // Fetch projects (requires projects:read)
       let projectsData: Project[] = [];
-      if (hasPermission("users:read")) {
-        const response = await projectsService.getAll();
-        projectsData = Array.isArray(response.data) ? response.data : [];
-      } else if (user?.id) {
+      if (hasPermission("projects:read")) {
         try {
-          projectsData = await projectsService.getByUser(user.id);
-          projectsData = Array.isArray(projectsData) ? projectsData : [];
+          if (hasPermission("tasks:readAll")) {
+            const response = await projectsService.getAll();
+            projectsData = Array.isArray(response.data) ? response.data : [];
+          } else if (user?.id) {
+            projectsData = await projectsService.getByUser(user.id);
+            projectsData = Array.isArray(projectsData) ? projectsData : [];
+          }
         } catch {
           projectsData = [];
         }
@@ -87,7 +89,7 @@ export const TaskCreateModal = ({
       setProjects(projectsData);
 
       // Fetch users for assignment
-      if (hasPermission("tasks:update")) {
+      if (hasPermission("tasks:update") && hasPermission("users:read")) {
         try {
           const usersData = await usersService.getAll();
           setUsers(Array.isArray(usersData) ? usersData : []);

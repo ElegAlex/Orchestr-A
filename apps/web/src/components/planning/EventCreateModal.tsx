@@ -65,20 +65,22 @@ export const EventCreateModal = ({
   const fetchInitialData = async () => {
     try {
       let projectsData: Project[] = [];
-      if (hasPermission("users:read")) {
-        const response = await projectsService.getAll();
-        projectsData = Array.isArray(response.data) ? response.data : [];
-      } else if (user?.id) {
+      if (hasPermission("projects:read")) {
         try {
-          projectsData = await projectsService.getByUser(user.id);
-          projectsData = Array.isArray(projectsData) ? projectsData : [];
+          if (hasPermission("events:readAll")) {
+            const response = await projectsService.getAll();
+            projectsData = Array.isArray(response.data) ? response.data : [];
+          } else if (user?.id) {
+            projectsData = await projectsService.getByUser(user.id);
+            projectsData = Array.isArray(projectsData) ? projectsData : [];
+          }
         } catch {
           projectsData = [];
         }
       }
       setProjects(projectsData);
 
-      if (hasPermission("events:update")) {
+      if (hasPermission("events:update") && hasPermission("users:read")) {
         try {
           const usersData = await usersService.getAll();
           setUsers(Array.isArray(usersData) ? usersData : []);
