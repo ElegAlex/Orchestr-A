@@ -28,6 +28,7 @@ import { RoleManagementModule } from './role-management/role-management.module';
 import { PlanningExportModule } from './planning-export/planning-export.module';
 import { AuditModule } from './audit/audit.module';
 import { PredefinedTasksModule } from './predefined-tasks/predefined-tasks.module';
+import { SchoolVacationsModule } from './school-vacations/school-vacations.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { PredefinedTasksModule } from './predefined-tasks/predefined-tasks.modul
     RoleManagementModule,
     PlanningExportModule,
     PredefinedTasksModule,
+    SchoolVacationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
