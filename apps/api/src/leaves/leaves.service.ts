@@ -926,14 +926,20 @@ export class LeavesService {
       );
     }
 
-    // Seules les demandes en attente ou refusées peuvent être supprimées
-    if (
-      leave.status !== LeaveStatus.PENDING &&
-      leave.status !== LeaveStatus.REJECTED
-    ) {
-      throw new BadRequestException(
-        'Seules les demandes en attente ou refusées peuvent être supprimées',
-      );
+    // Management roles can also delete APPROVED and CANCELLATION_REQUESTED leaves
+    const canDeleteAnyStatus =
+      currentUserRole && this.isManagementRole(currentUserRole);
+
+    if (!canDeleteAnyStatus) {
+      // Non-management: only PENDING or REJECTED
+      if (
+        leave.status !== LeaveStatus.PENDING &&
+        leave.status !== LeaveStatus.REJECTED
+      ) {
+        throw new BadRequestException(
+          'Seules les demandes en attente ou refusées peuvent être supprimées',
+        );
+      }
     }
 
     await this.prisma.leave.delete({

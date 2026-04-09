@@ -976,13 +976,49 @@ describe('LeavesService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw BadRequestException when leave is approved', async () => {
+    it('should allow management roles to delete an approved leave', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.leave.delete.mockResolvedValue(approvedLeave);
+
+      const result = await service.remove('leave-1', 'admin-user-id', 'ADMIN');
+      expect(result.message).toBe('Demande de congé supprimée avec succès');
+    });
+
+    it('should allow RESPONSABLE to delete an approved leave', async () => {
+      const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.leave.delete.mockResolvedValue(approvedLeave);
+
+      const result = await service.remove('leave-1', 'resp-user-id', 'RESPONSABLE');
+      expect(result.message).toBe('Demande de congé supprimée avec succès');
+    });
+
+    it('should allow MANAGER to delete an approved leave', async () => {
+      const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.leave.delete.mockResolvedValue(approvedLeave);
+
+      const result = await service.remove('leave-1', 'mgr-user-id', 'MANAGER');
+      expect(result.message).toBe('Demande de congé supprimée avec succès');
+    });
+
+    it('should throw BadRequestException when non-management role deletes approved leave', async () => {
+      const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED, userId: 'contrib-user-id' };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
 
       await expect(
-        service.remove('leave-1', 'admin-user-id', 'ADMIN'),
+        service.remove('leave-1', 'contrib-user-id', 'CONTRIBUTEUR'),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should still allow any role to delete PENDING leaves', async () => {
+      const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING, userId: 'contrib-user-id' };
+      mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
+      mockPrismaService.leave.delete.mockResolvedValue(pendingLeave);
+
+      const result = await service.remove('leave-1', 'contrib-user-id', 'CONTRIBUTEUR');
+      expect(result.message).toBe('Demande de congé supprimée avec succès');
     });
   });
 
