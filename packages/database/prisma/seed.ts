@@ -2483,38 +2483,58 @@ async function main() {
       create: roleInfo,
     });
 
-    // Si le rôle existait déjà ET avait des permissions → préserver (ne pas écraser)
+    // Permissions cibles définies dans le seed (source de vérité)
+    const targetPermIds = new Set(
+      permissions
+        .map((permCode) => permissionsMap.get(permCode))
+        .filter((permId): permId is string => !!permId),
+    );
+
     if (existingRole && existingRole.permissions.length > 0) {
-      // Ajouter uniquement les nouvelles permissions manquantes (sans supprimer les existantes)
       const existingPermIds = new Set(
         existingRole.permissions.map((rp) => rp.permissionId),
       );
-      const toAdd = permissions
-        .map((permCode) => permissionsMap.get(permCode))
-        .filter(
-          (permId): permId is string =>
-            !!permId && !existingPermIds.has(permId),
-        )
+
+      // Permissions à ajouter (dans le seed mais pas en BDD)
+      const toAdd = [...targetPermIds]
+        .filter((permId) => !existingPermIds.has(permId))
         .map((permId) => ({ roleConfigId: role.id, permissionId: permId }));
+
+      // Permissions à retirer (en BDD mais plus dans le seed)
+      const toRemove = [...existingPermIds].filter(
+        (permId) => !targetPermIds.has(permId),
+      );
 
       if (toAdd.length > 0) {
         await prisma.rolePermission.createMany({
           data: toAdd,
           skipDuplicates: true,
         });
+      }
+
+      if (toRemove.length > 0) {
+        await prisma.rolePermission.deleteMany({
+          where: {
+            roleConfigId: role.id,
+            permissionId: { in: toRemove },
+          },
+        });
+      }
+
+      if (toAdd.length > 0 || toRemove.length > 0) {
         console.log(
-          `  → ${roleData.code}: ${toAdd.length} nouvelles permissions ajoutées`,
+          `  → ${roleData.code}: +${toAdd.length} permissions, -${toRemove.length} permissions`,
         );
       }
       rolesSkipped++;
       continue;
     }
 
-    // Nouveau rôle : créer toutes les permissions par défaut
-    const permissionAssignments = permissions
-      .map((permCode) => permissionsMap.get(permCode))
-      .filter((permId): permId is string => !!permId)
-      .map((permId) => ({ roleConfigId: role.id, permissionId: permId }));
+    // Nouveau rôle : créer toutes les permissions
+    const permissionAssignments = [...targetPermIds].map((permId) => ({
+      roleConfigId: role.id,
+      permissionId: permId,
+    }));
 
     if (permissionAssignments.length > 0) {
       await prisma.rolePermission.createMany({
@@ -2526,7 +2546,7 @@ async function main() {
   }
 
   console.log(
-    `✅ RBAC: ${rolesCreated} rôles créés avec permissions par défaut, ${rolesSkipped} rôles existants mis à jour (nouvelles permissions uniquement)`,
+    `✅ RBAC: ${rolesCreated} rôles créés, ${rolesSkipped} rôles existants synchronisés (seed = source de vérité)`,
   );
 
   // ============================================================
