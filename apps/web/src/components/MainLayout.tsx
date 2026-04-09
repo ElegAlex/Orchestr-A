@@ -51,7 +51,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       key: "users",
       href: `/${locale}/users`,
       icon: "👥",
-      permission: "users:read",
+      permission: "users:manage",
     },
     {
       key: "departments",

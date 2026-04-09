@@ -1705,6 +1705,12 @@ async function main() {
       action: "edit",
       description: "Modifier les utilisateurs (granularité RBAC)",
     },
+    {
+      code: "users:manage",
+      module: "users",
+      action: "manage",
+      description: "Accéder à la page d'administration des utilisateurs",
+    },
     // Departments
     {
       code: "departments:create",
@@ -2055,6 +2061,7 @@ async function main() {
         "reports:export",
         "users:read",
         "users:view",
+        "users:manage",
         "departments:read",
         "departments:view",
         "skills:read",
