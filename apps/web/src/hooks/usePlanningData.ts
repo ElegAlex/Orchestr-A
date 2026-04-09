@@ -16,12 +16,13 @@ import { leavesService } from "@/services/leaves.service";
 import { teleworkService } from "@/services/telework.service";
 import { servicesService } from "@/services/services.service";
 import { holidaysService } from "@/services/holidays.service";
+import { schoolVacationsService } from "@/services/school-vacations.service";
 import { eventsService, Event } from "@/services/events.service";
 import {
   predefinedTasksService,
   PredefinedTaskAssignment,
 } from "@/services/predefined-tasks.service";
-import { Task, User, Leave, TeleworkSchedule, Service, Holiday } from "@/types";
+import { Task, User, Leave, TeleworkSchedule, Service, Holiday, SchoolVacation } from "@/types";
 import { getServiceStyle } from "@/lib/planning-utils";
 import { useSettingsStore } from "@/stores/settings.store";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -81,6 +82,7 @@ interface UsePlanningDataReturn {
   events: Event[];
   teleworkSchedules: TeleworkSchedule[];
   holidays: Holiday[];
+  schoolVacations: SchoolVacation[];
   groupedUsers: ServiceGroup[];
   filteredGroups: ServiceGroup[];
   getDayCell: (userId: string, date: Date) => DayCell;
@@ -110,6 +112,7 @@ export const usePlanningData = ({
     TeleworkSchedule[]
   >([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [schoolVacations, setSchoolVacations] = useState<SchoolVacation[]>([]);
   const [predefinedAssignments, setPredefinedAssignments] = useState<
     PredefinedTaskAssignment[]
   >([]);
@@ -194,6 +197,7 @@ export const usePlanningData = ({
           teleworkData,
           servicesData,
           holidaysData,
+          schoolVacationsData,
           predefinedAssignmentsData,
         ] = await Promise.all([
           // Le planning a toujours besoin des users pour afficher la grille
@@ -212,6 +216,9 @@ export const usePlanningData = ({
             .catch(() => []),
           servicesService.getAll().catch(() => []),
           holidaysService
+            .getByRange(teleworkStartDate, teleworkEndDate)
+            .catch(() => []),
+          schoolVacationsService
             .getByRange(teleworkStartDate, teleworkEndDate)
             .catch(() => []),
           // Conditionner predefinedTasksService.getAssignments() à la permission predefined_tasks:view
@@ -247,6 +254,7 @@ export const usePlanningData = ({
         setTeleworkSchedules(Array.isArray(teleworkData) ? teleworkData : []);
         setServices(Array.isArray(servicesData) ? servicesData : []);
         setHolidays(Array.isArray(holidaysData) ? holidaysData : []);
+        setSchoolVacations(Array.isArray(schoolVacationsData) ? schoolVacationsData : []);
         const assignmentsList = Array.isArray(predefinedAssignmentsData)
           ? predefinedAssignmentsData
           : Array.isArray(
@@ -272,6 +280,7 @@ export const usePlanningData = ({
           setTeleworkSchedules([]);
           setServices([]);
           setHolidays([]);
+          setSchoolVacations([]);
           setPredefinedAssignments([]);
           toast.error("Erreur lors du chargement des données");
         }
@@ -599,6 +608,7 @@ export const usePlanningData = ({
     events,
     teleworkSchedules,
     holidays,
+    schoolVacations,
     groupedUsers,
     filteredGroups,
     getDayCell,
