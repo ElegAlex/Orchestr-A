@@ -1374,6 +1374,12 @@ async function main() {
       description: "Supprimer une tâche",
     },
     {
+      code: "tasks:readAll",
+      module: "tasks",
+      action: "readAll",
+      description: "Voir toutes les tâches (pas uniquement les siennes)",
+    },
+    {
       code: "tasks:create_in_project",
       module: "tasks",
       action: "create_in_project",
@@ -1409,6 +1415,12 @@ async function main() {
       module: "events",
       action: "delete",
       description: "Supprimer un événement",
+    },
+    {
+      code: "events:readAll",
+      module: "events",
+      action: "readAll",
+      description: "Voir tous les événements (pas uniquement les siens)",
     },
     // Epics
     {
@@ -1486,6 +1498,12 @@ async function main() {
       description: "Supprimer une demande de congé",
     },
     {
+      code: "leaves:readAll",
+      module: "leaves",
+      action: "readAll",
+      description: "Voir tous les congés (pas uniquement les siens)",
+    },
+    {
       code: "leaves:approve",
       module: "leaves",
       action: "approve",
@@ -1539,6 +1557,12 @@ async function main() {
       module: "telework",
       action: "delete",
       description: "Supprimer une déclaration de télétravail",
+    },
+    {
+      code: "telework:readAll",
+      module: "telework",
+      action: "readAll",
+      description: "Voir tous les télétravails (pas uniquement les siens)",
     },
     {
       code: "telework:read_team",
