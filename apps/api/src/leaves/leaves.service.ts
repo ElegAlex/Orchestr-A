@@ -73,6 +73,90 @@ export class LeavesService {
   }
 
   /**
+   * Récupérer les IDs des utilisateurs dans le périmètre du manager
+   * (une seule requête, réutilisable pour enrichir N congés sans N+1)
+   */
+  private async getManagedUserIds(
+    currentUserId: string,
+    currentUserRole: string,
+  ): Promise<Set<string> | 'all'> {
+    if (
+      currentUserRole === Role.ADMIN ||
+      currentUserRole === Role.RESPONSABLE
+    ) {
+      return 'all';
+    }
+
+    if (currentUserRole === Role.MANAGER) {
+      const userServices = await this.prisma.userService.findMany({
+        where: { userId: currentUserId },
+        select: { serviceId: true },
+      });
+      const managedServices = await this.prisma.service.findMany({
+        where: { managerId: currentUserId },
+        select: { id: true },
+      });
+      const serviceIds = [
+        ...new Set([
+          ...userServices.map((us) => us.serviceId),
+          ...managedServices.map((s) => s.id),
+        ]),
+      ];
+
+      if (serviceIds.length === 0) return new Set();
+
+      const usersInServices = await this.prisma.userService.findMany({
+        where: { serviceId: { in: serviceIds } },
+        select: { userId: true },
+        distinct: ['userId'],
+      });
+      return new Set(usersInServices.map((us) => us.userId));
+    }
+
+    return new Set();
+  }
+
+  /**
+   * Enrichir les congés avec canEdit/canDelete calculés selon le périmètre
+   */
+  private async enrichLeavesWithPermissions(
+    leaves: any[],
+    currentUserId?: string,
+    currentUserRole?: string,
+  ) {
+    if (!currentUserId || !currentUserRole) {
+      return leaves.map((l) => ({ ...l, canEdit: false, canDelete: false }));
+    }
+
+    const managedUserIds = await this.getManagedUserIds(
+      currentUserId,
+      currentUserRole,
+    );
+
+    return leaves.map((leave) => {
+      const isOwner = leave.userId === currentUserId;
+      const isInPerimeter =
+        managedUserIds === 'all' || managedUserIds.has(leave.userId);
+
+      const canEdit =
+        (isOwner && leave.status === LeaveStatus.PENDING) ||
+        (isInPerimeter && (leave.status === LeaveStatus.PENDING || leave.status === LeaveStatus.APPROVED));
+
+      const canDelete =
+        (isOwner &&
+          (leave.status === LeaveStatus.PENDING ||
+            leave.status === LeaveStatus.REJECTED)) ||
+        (isInPerimeter &&
+          (leave.status === LeaveStatus.PENDING ||
+            leave.status === LeaveStatus.REJECTED ||
+            leave.status === LeaveStatus.APPROVED ||
+            leave.status === LeaveStatus.CANCELLATION_REQUESTED));
+
+      return { ...leave, canEdit, canDelete };
+    });
+  }
+
+  /**
    * Vérifier qu'un rôle possède une permission donnée (en DB via RoleConfig)
    */
   private async hasPermission(
@@ -491,13 +575,20 @@ export class LeavesService {
       this.prisma.leave.count({ where }),
     ]);
 
+    // Calculer canEdit/canDelete pour chaque congé
+    const enrichedLeaves = await this.enrichLeavesWithPermissions(
+      leaves,
+      currentUserId,
+      currentUserRole,
+    );
+
     // Si on filtre par dates, retourner directement un tableau pour la compatibilité avec le planning
     if (startDate || endDate) {
-      return leaves;
+      return enrichedLeaves;
     }
 
     return {
-      data: leaves,
+      data: enrichedLeaves,
       meta: {
         total,
         page,
@@ -749,7 +840,14 @@ export class LeavesService {
       },
     });
 
-    return leaves;
+    // Own leaves: canEdit/canDelete based on ownership rules
+    return leaves.map((leave) => ({
+      ...leave,
+      canEdit: leave.status === LeaveStatus.PENDING,
+      canDelete:
+        leave.status === LeaveStatus.PENDING ||
+        leave.status === LeaveStatus.REJECTED,
+    }));
   }
 
   /**

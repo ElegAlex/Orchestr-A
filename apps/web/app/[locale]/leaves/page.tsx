@@ -100,7 +100,6 @@ export default function LeavesPage() {
 
   const isAdmin = hasPermission("leaves:read");
   const canValidate = hasPermission("leaves:approve") || isAdmin;
-  const canManageLeaves = hasPermission("leaves:delete");
   const canManageBalances = hasPermission("leaves:manage");
   const canDeclareForOthers =
     hasPermission("leaves:declare_for_others") || canManageBalances;
@@ -751,7 +750,7 @@ export default function LeavesPage() {
                 </button>
               </>
             )}
-            {!showValidationActions && (leave.status === LeaveStatus.PENDING || (canManageLeaves && leave.status === LeaveStatus.APPROVED)) && (
+            {!showValidationActions && (leave as Leave & { canEdit?: boolean }).canEdit && (
               <button
                 onClick={() => openEditModal(leave)}
                 className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
@@ -760,10 +759,7 @@ export default function LeavesPage() {
                 ✏️
               </button>
             )}
-            {((leave.status === LeaveStatus.PENDING ||
-              leave.status === LeaveStatus.REJECTED) ||
-              (canManageLeaves && (leave.status === LeaveStatus.APPROVED || leave.status === LeaveStatus.CANCELLATION_REQUESTED))) &&
-              !showValidationActions && (
+            {!showValidationActions && (leave as Leave & { canDelete?: boolean }).canDelete && (
                 <button
                   onClick={() => handleDelete(leave.id)}
                   className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
