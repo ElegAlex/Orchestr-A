@@ -843,12 +843,16 @@ describe('LeavesService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw BadRequestException when leave is not pending', async () => {
-      const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
+    it('should throw BadRequestException when non-management role updates a non-pending leave', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        userId: 'contrib-user-id',
+      };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
 
       await expect(
-        service.update('leave-1', updateDto, 'admin-user-id', 'ADMIN'),
+        service.update('leave-1', updateDto, 'contrib-user-id', 'CONTRIBUTEUR'),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -941,6 +945,66 @@ describe('LeavesService', () => {
       );
 
       expect(result).toBeDefined();
+    });
+
+    it('should allow ADMIN to update an approved leave', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        leaveTypeId: 'type-1',
+      };
+      const updatedLeave = { ...approvedLeave, comment: 'Updated by admin' };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.leave.findMany.mockResolvedValue([]); // No overlap
+      mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
+
+      const result = await service.update(
+        'leave-1',
+        { reason: 'Updated by admin' },
+        'admin-user-id',
+        'ADMIN',
+      );
+
+      expect(result).toEqual(updatedLeave);
+    });
+
+    it('should allow RESPONSABLE to update an approved leave', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        leaveTypeId: 'type-1',
+      };
+      const updatedLeave = { ...approvedLeave, comment: 'Updated by resp' };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
+
+      const result = await service.update(
+        'leave-1',
+        { reason: 'Updated by resp' },
+        'resp-user-id',
+        'RESPONSABLE',
+      );
+
+      expect(result).toEqual(updatedLeave);
+    });
+
+    it('should throw BadRequestException when CONTRIBUTEUR updates approved leave', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        userId: 'contrib-user-id',
+      };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+
+      await expect(
+        service.update(
+          'leave-1',
+          { reason: 'Want to change' },
+          'contrib-user-id',
+          'CONTRIBUTEUR',
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

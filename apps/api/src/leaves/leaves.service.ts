@@ -803,8 +803,11 @@ export class LeavesService {
       );
     }
 
-    // Seules les demandes en attente peuvent être modifiées
-    if (existingLeave.status !== LeaveStatus.PENDING) {
+    // Management roles can also update APPROVED leaves (change type, dates)
+    const canUpdateAnyStatus =
+      currentUserRole && this.isManagementRole(currentUserRole);
+
+    if (!canUpdateAnyStatus && existingLeave.status !== LeaveStatus.PENDING) {
       throw new BadRequestException(
         'Seules les demandes en attente peuvent être modifiées',
       );
