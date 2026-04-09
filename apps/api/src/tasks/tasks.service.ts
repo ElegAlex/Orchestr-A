@@ -684,16 +684,36 @@ export class TasksService {
   /**
    * Supprimer une tâche
    */
-  async remove(id: string) {
+  async remove(id: string, user?: { id: string; role: Role }) {
     const task = await this.prisma.task.findUnique({
       where: { id },
       include: {
         dependents: true,
+        assignees: true,
       },
     });
 
     if (!task) {
       throw new NotFoundException('Tâche introuvable');
+    }
+
+    // Vérification dynamique des permissions de suppression
+    if (user) {
+      const userPermissions =
+        await this.roleManagementService.getPermissionsForRole(user.role);
+      const canDeleteAll = userPermissions.includes('tasks:delete');
+
+      if (!canDeleteAll) {
+        // Sans tasks:delete, on ne peut supprimer que ses propres tâches
+        const isAssignee =
+          task.assigneeId === user.id ||
+          task.assignees.some((a) => a.userId === user.id);
+        if (!isAssignee) {
+          throw new ForbiddenException(
+            "Vous ne pouvez supprimer que les tâches qui vous sont assignées",
+          );
+        }
+      }
     }
 
     // Vérifier qu'aucune autre tâche ne dépend de celle-ci

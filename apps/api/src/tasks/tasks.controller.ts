@@ -219,9 +219,8 @@ export class TasksController {
   }
 
   @Delete(':id')
-  @Permissions('tasks:delete')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Supprimer une tâche (Admin/Responsable/Manager)' })
+  @ApiOperation({ summary: 'Supprimer une tâche' })
   @ApiResponse({
     status: 200,
     description: 'Tâche supprimée',
@@ -231,11 +230,18 @@ export class TasksController {
     description: 'Impossible de supprimer (dépendances)',
   })
   @ApiResponse({
+    status: 403,
+    description: "Pas la permission de supprimer cette tâche",
+  })
+  @ApiResponse({
     status: 404,
     description: 'Tâche introuvable',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.tasksService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: { id: string; role: Role },
+  ) {
+    return this.tasksService.remove(id, user);
   }
 
   @Post(':id/dependencies')
