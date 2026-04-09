@@ -8,7 +8,8 @@
   "tabs": {
     "display": "Display",
     "planning": "Planning",
-    "holidays": "Holidays"
+    "holidays": "Holidays",
+    "schoolVacations": "School Vacations"
   },
   "display": {
     "title": "Display Settings",
@@ -136,5 +137,65 @@
       "confirm": "Confirm",
       "cancel": "Cancel"
     }
+  },
+  "schoolVacations": {
+    "title": "School Vacations",
+    "importButton": "Import {year}",
+    "addButton": "Add",
+    "table": {
+      "headers": {
+        "name": "Period",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "source": "Source",
+        "actions": "Actions"
+      },
+      "empty": "No school vacations for year {year}"
+    },
+    "stats": {
+      "total": "Total",
+      "imported": "Imported",
+      "manual": "Manual"
+    },
+    "messages": {
+      "loadError": "Error loading school vacations",
+      "deleteSuccess": "Period deleted",
+      "deleteError": "Error deleting period",
+      "importSuccess": "{created} periods imported, {skipped} skipped",
+      "importError": "Error during import"
+    },
+    "tooltips": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "modal": {
+      "titleCreate": "Add a vacation period",
+      "titleEdit": "Edit vacation period",
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "Ex: Spring Break",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "year": "School Year",
+        "yearHint": "School year {year}-{nextYear}"
+      },
+      "validation": {
+        "required": "Please fill in all required fields",
+        "endBeforeStart": "End date must be after start date"
+      },
+      "messages": {
+        "createSuccess": "Period created successfully",
+        "updateSuccess": "Period updated",
+        "saveError": "Error saving period"
+      },
+      "cancel": "Cancel",
+      "create": "Create",
+      "update": "Update",
+      "saving": "Saving..."
+    },
+    "zoneLabel": "School Zone",
+    "zoneHint": "Zone used for importing from the official calendar"
   }
 }

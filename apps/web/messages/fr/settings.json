@@ -8,7 +8,8 @@
   "tabs": {
     "display": "Affichage",
     "planning": "Planning",
-    "holidays": "Jours fériés"
+    "holidays": "Jours fériés",
+    "schoolVacations": "Vacances scolaires"
   },
   "display": {
     "title": "Paramètres d'affichage",
@@ -136,5 +137,65 @@
       "confirm": "Confirmer",
       "cancel": "Annuler"
     }
+  },
+  "schoolVacations": {
+    "title": "Vacances scolaires",
+    "importButton": "Importer {year}",
+    "addButton": "Ajouter",
+    "table": {
+      "headers": {
+        "name": "Periode",
+        "startDate": "Debut",
+        "endDate": "Fin",
+        "source": "Source",
+        "actions": "Actions"
+      },
+      "empty": "Aucune vacance scolaire pour l'annee {year}"
+    },
+    "stats": {
+      "total": "Total",
+      "imported": "Importees",
+      "manual": "Manuelles"
+    },
+    "messages": {
+      "loadError": "Erreur lors du chargement des vacances scolaires",
+      "deleteSuccess": "Periode supprimee",
+      "deleteError": "Erreur lors de la suppression",
+      "importSuccess": "{created} periodes importees, {skipped} ignorees",
+      "importError": "Erreur lors de l'import"
+    },
+    "tooltips": {
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "confirm": "Confirmer",
+      "cancel": "Annuler"
+    },
+    "modal": {
+      "titleCreate": "Ajouter une periode de vacances",
+      "titleEdit": "Modifier la periode de vacances",
+      "fields": {
+        "name": "Nom",
+        "namePlaceholder": "Ex: Vacances de Printemps",
+        "startDate": "Date de debut",
+        "endDate": "Date de fin",
+        "year": "Annee scolaire",
+        "yearHint": "Annee scolaire {year}-{nextYear}"
+      },
+      "validation": {
+        "required": "Veuillez remplir tous les champs obligatoires",
+        "endBeforeStart": "La date de fin doit etre posterieure a la date de debut"
+      },
+      "messages": {
+        "createSuccess": "Periode creee avec succes",
+        "updateSuccess": "Periode mise a jour",
+        "saveError": "Erreur lors de l'enregistrement"
+      },
+      "cancel": "Annuler",
+      "create": "Creer",
+      "update": "Mettre a jour",
+      "saving": "Enregistrement..."
+    },
+    "zoneLabel": "Zone scolaire",
+    "zoneHint": "Zone utilisee pour l'import depuis le calendrier officiel"
   }
 }
