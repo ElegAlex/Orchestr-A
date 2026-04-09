@@ -104,6 +104,17 @@ export enum HolidayType {
   COMPANY = 'COMPANY',
 }
 
+export enum SchoolVacationZone {
+  A = 'A',
+  B = 'B',
+  C = 'C',
+}
+
+export enum SchoolVacationSource {
+  IMPORT = 'IMPORT',
+  MANUAL = 'MANUAL',
+}
+
 // Mock PrismaClient for tests
 class MockPrismaClient {
   $connect = vi.fn();
@@ -139,5 +150,7 @@ vi.mock('database', () => {
     SkillCategory,
     SkillLevel,
     HolidayType,
+    SchoolVacationZone,
+    SchoolVacationSource,
   };
 });

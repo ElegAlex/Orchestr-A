@@ -93,3 +93,14 @@ export const HalfDay = {
   MORNING: 'MORNING',
   AFTERNOON: 'AFTERNOON',
 } as const;
+
+export const SchoolVacationZone = {
+  A: 'A',
+  B: 'B',
+  C: 'C',
+} as const;
+
+export const SchoolVacationSource = {
+  IMPORT: 'IMPORT',
+  MANUAL: 'MANUAL',
+} as const;
