@@ -751,6 +751,76 @@ export const HOLIDAY_TYPE_COLORS: Record<HolidayType, string> = {
 };
 
 // ===========================
+// SCHOOL VACATIONS (VACANCES SCOLAIRES)
+// ===========================
+
+export enum SchoolVacationZone {
+  A = "A",
+  B = "B",
+  C = "C",
+}
+
+export enum SchoolVacationSource {
+  IMPORT = "IMPORT",
+  MANUAL = "MANUAL",
+}
+
+export interface SchoolVacation {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  zone: SchoolVacationZone;
+  year: number;
+  source: SchoolVacationSource;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface CreateSchoolVacationDto {
+  name: string;
+  startDate: string;
+  endDate: string;
+  zone?: SchoolVacationZone;
+  year: number;
+  source?: SchoolVacationSource;
+}
+
+export interface UpdateSchoolVacationDto {
+  name?: string;
+  startDate?: string;
+  endDate?: string;
+  zone?: SchoolVacationZone;
+  year?: number;
+}
+
+export interface ImportSchoolVacationResult {
+  created: number;
+  skipped: number;
+}
+
+export const SCHOOL_VACATION_ZONE_LABELS: Record<SchoolVacationZone, string> = {
+  [SchoolVacationZone.A]: "Zone A",
+  [SchoolVacationZone.B]: "Zone B",
+  [SchoolVacationZone.C]: "Zone C",
+};
+
+export const SCHOOL_VACATION_SOURCE_LABELS: Record<SchoolVacationSource, string> = {
+  [SchoolVacationSource.IMPORT]: "Import",
+  [SchoolVacationSource.MANUAL]: "Manuel",
+};
+
+export const SCHOOL_VACATION_SOURCE_COLORS: Record<SchoolVacationSource, string> = {
+  [SchoolVacationSource.IMPORT]: "bg-blue-100 text-blue-800",
+  [SchoolVacationSource.MANUAL]: "bg-gray-100 text-gray-800",
+};
+
+// ===========================
 // RBAC - ROLE MANAGEMENT
 // ===========================
 
