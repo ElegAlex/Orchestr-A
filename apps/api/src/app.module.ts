@@ -40,12 +40,12 @@ import { SchoolVacationsModule } from './school-vacations/school-vacations.modul
       {
         name: 'short',
         ttl: 1000,
-        limit: 10,
+        limit: 30,
       },
       {
         name: 'medium',
         ttl: 60000,
-        limit: 100,
+        limit: 600,
       },
     ]),
     AuditModule,

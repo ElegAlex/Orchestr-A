@@ -31,8 +31,8 @@ export class AuthController {
   @Public()
   @Post('login')
   @Throttle({
-    short: { ttl: 60000, limit: 5 },
-    medium: { ttl: 900000, limit: 15 },
+    short: { ttl: 60000, limit: 20 },
+    medium: { ttl: 900000, limit: 100 },
   })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Connexion utilisateur' })
@@ -61,8 +61,8 @@ export class AuthController {
   @Public()
   @Post('register')
   @Throttle({
-    short: { ttl: 60000, limit: 3 },
-    medium: { ttl: 900000, limit: 10 },
+    short: { ttl: 60000, limit: 10 },
+    medium: { ttl: 900000, limit: 30 },
   })
   @ApiOperation({ summary: "Inscription d'un nouvel utilisateur" })
   @ApiResponse({
@@ -149,8 +149,8 @@ export class AuthController {
   @Public()
   @Post('reset-password')
   @Throttle({
-    short: { ttl: 60000, limit: 5 },
-    medium: { ttl: 900000, limit: 15 },
+    short: { ttl: 60000, limit: 20 },
+    medium: { ttl: 900000, limit: 100 },
   })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Réinitialiser le mot de passe via token (public)' })
