@@ -318,7 +318,10 @@ export default function DashboardPage() {
         {/* Stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* KPI Cards */}
-          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)]">
+          <Link
+            href={`/${locale}/projects?status=ACTIVE`}
+            className="block bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)] hover:shadow-md hover:border-[var(--primary)] transition"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--muted-foreground)]">
@@ -333,9 +336,12 @@ export default function DashboardPage() {
             <p className="text-xs text-[var(--muted-foreground)] mt-2">
               {t("stats.onProjects", { total: stats.totalProjects })}
             </p>
-          </div>
+          </Link>
 
-          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)]">
+          <Link
+            href={`/${locale}/tasks?status=IN_PROGRESS`}
+            className="block bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)] hover:shadow-md hover:border-[var(--primary)] transition"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--muted-foreground)]">
@@ -350,9 +356,12 @@ export default function DashboardPage() {
             <p className="text-xs text-[var(--muted-foreground)] mt-2">
               {t("stats.onTasks", { total: stats.totalTasks })}
             </p>
-          </div>
+          </Link>
 
-          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)]">
+          <Link
+            href={`/${locale}/tasks?status=DONE`}
+            className="block bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)] hover:shadow-md hover:border-[var(--primary)] transition"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--muted-foreground)]">
@@ -372,9 +381,12 @@ export default function DashboardPage() {
                     : 0,
               })}
             </p>
-          </div>
+          </Link>
 
-          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)]">
+          <Link
+            href={`/${locale}/tasks?status=BLOCKED`}
+            className="block bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)] hover:shadow-md hover:border-[var(--primary)] transition"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--muted-foreground)]">
@@ -389,7 +401,7 @@ export default function DashboardPage() {
             <p className="text-xs text-[var(--muted-foreground)] mt-2">
               {t("stats.needAttention")}
             </p>
-          </div>
+          </Link>
         </div>
 
         {/* Personal Planning - Composant réutilisable */}

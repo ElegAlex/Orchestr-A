@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
 import { EmojiPicker } from "@/components/EmojiPicker";
@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const locale = useLocale();
   const t = useTranslations("projects");
   const tCommon = useTranslations("common");
@@ -32,8 +33,13 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const initialStatusParam = searchParams.get("status");
+  const isValidProjectStatus = (
+    v: string | null,
+  ): v is ProjectStatus =>
+    !!v && (Object.values(ProjectStatus) as string[]).includes(v);
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "ALL">(
-    "ALL",
+    isValidProjectStatus(initialStatusParam) ? initialStatusParam : "ALL",
   );
   const [priorityFilter, setPriorityFilter] = useState<Priority | "ALL">("ALL");
   const [searchQuery, setSearchQuery] = useState("");

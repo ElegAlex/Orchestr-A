@@ -50,7 +50,15 @@ export default function TasksPage() {
   const [overdueFilter, setOverdueFilter] = useState(
     searchParams.get("overdue") === "true",
   );
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const initialStatusParam = searchParams.get("status");
+  const isValidTaskStatus = (v: string | null): v is TaskStatus =>
+    !!v && (Object.values(TaskStatus) as string[]).includes(v);
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | "ALL">(
+    isValidTaskStatus(initialStatusParam) ? initialStatusParam : "ALL",
+  );
+  const [viewMode, setViewMode] = useState<"kanban" | "list">(
+    isValidTaskStatus(initialStatusParam) ? "list" : "kanban",
+  );
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -335,7 +343,21 @@ export default function TasksPage() {
       filtered = filtered.filter(isTaskOverdue);
     }
 
+    if (statusFilter !== "ALL") {
+      filtered = filtered.filter((t) => t.status === statusFilter);
+    }
+
     return filtered;
+  };
+
+  const clearStatusFilter = () => {
+    setStatusFilter("ALL");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("status");
+    router.replace(
+      `/${locale}/tasks${params.toString() ? `?${params.toString()}` : ""}`,
+      { scroll: false },
+    );
   };
 
   const getTasksByStatus = (status: TaskStatus) => {
@@ -547,7 +569,7 @@ export default function TasksPage() {
             </div>
           </div>
           {/* Overdue Filter Toggle */}
-          <div className="mt-3 flex items-center">
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
             <button
               onClick={toggleOverdueFilter}
               className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition ${
@@ -559,6 +581,17 @@ export default function TasksPage() {
               <span className={`w-2 h-2 rounded-full mr-2 ${overdueFilter ? "bg-red-500" : "bg-gray-400"}`} />
               {t("filters.overdue")}
             </button>
+            {statusFilter !== "ALL" && (
+              <button
+                onClick={clearStatusFilter}
+                className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800 ring-1 ring-blue-300 hover:bg-blue-200 transition"
+                aria-label="clear status filter"
+              >
+                <span className="w-2 h-2 rounded-full mr-2 bg-blue-500" />
+                {t(`status.${statusFilter}`, { defaultValue: statusFilter })}
+                <span className="ml-2 text-blue-600">×</span>
+              </button>
+            )}
           </div>
         </div>
 
