@@ -319,7 +319,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* KPI Cards */}
           <Link
-            href={`/${locale}/projects?status=ACTIVE`}
+            href={`/${locale}/projects?status=ACTIVE&member=me`}
             className="block bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)] hover:shadow-md hover:border-[var(--primary)] transition"
           >
             <div className="flex items-center justify-between">
@@ -339,7 +339,7 @@ export default function DashboardPage() {
           </Link>
 
           <Link
-            href={`/${locale}/tasks?status=IN_PROGRESS`}
+            href={`/${locale}/tasks?status=IN_PROGRESS&assignee=me`}
             className="block bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)] hover:shadow-md hover:border-[var(--primary)] transition"
           >
             <div className="flex items-center justify-between">
@@ -359,7 +359,7 @@ export default function DashboardPage() {
           </Link>
 
           <Link
-            href={`/${locale}/tasks?status=DONE`}
+            href={`/${locale}/tasks?status=DONE&assignee=me`}
             className="block bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)] hover:shadow-md hover:border-[var(--primary)] transition"
           >
             <div className="flex items-center justify-between">
@@ -384,7 +384,7 @@ export default function DashboardPage() {
           </Link>
 
           <Link
-            href={`/${locale}/tasks?status=BLOCKED`}
+            href={`/${locale}/tasks?status=BLOCKED&assignee=me`}
             className="block bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)] hover:shadow-md hover:border-[var(--primary)] transition"
           >
             <div className="flex items-center justify-between">

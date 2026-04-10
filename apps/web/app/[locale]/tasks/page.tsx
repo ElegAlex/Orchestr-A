@@ -56,6 +56,7 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "ALL">(
     isValidTaskStatus(initialStatusParam) ? initialStatusParam : "ALL",
   );
+  const assigneeMeFilter = searchParams.get("assignee") === "me";
   const [viewMode, setViewMode] = useState<"kanban" | "list">(
     isValidTaskStatus(initialStatusParam) ? "list" : "kanban",
   );
@@ -109,7 +110,12 @@ export default function TasksPage() {
       let tasksData: Task[] = [];
       if (user?.id) {
         try {
-          if (hasPermission("tasks:readAll")) {
+          // ?assignee=me force le scope "mes tâches" quel que soit le rôle
+          // (utilisé par les CTA du Dashboard)
+          if (assigneeMeFilter) {
+            tasksData = await tasksService.getByAssignee(user.id);
+            tasksData = Array.isArray(tasksData) ? tasksData : [];
+          } else if (hasPermission("tasks:readAll")) {
             const response = await tasksService.getAll(1, 1000);
             tasksData = Array.isArray(response.data) ? response.data : [];
           } else {
@@ -166,7 +172,7 @@ export default function TasksPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, assigneeMeFilter]);
 
   useEffect(() => {
     fetchData();

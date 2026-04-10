@@ -69,13 +69,26 @@ export default function ProjectsPage() {
     estimatedHours: undefined,
   });
 
+  const memberMeFilter = searchParams.get("member") === "me";
+
   const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
       let projectsData: Project[] = [];
 
-      // Users with project read access see all projects (ADMIN, RESPONSABLE, MANAGER, etc.)
-      if (hasPermission("projects:read")) {
+      // Si ?member=me dans l'URL, on force le scope "mes projets" quel que
+      // soit le rôle (pour les CTA du Dashboard notamment).
+      if (memberMeFilter && user?.id) {
+        try {
+          projectsData = await projectsService.getByUser(user.id);
+        } catch (err) {
+          const axiosError = err as { response?: { status?: number } };
+          if (axiosError.response?.status !== 404) {
+            throw err;
+          }
+        }
+      } else if (hasPermission("projects:read")) {
+        // Users with project read access see all projects (ADMIN, RESPONSABLE, MANAGER, etc.)
         const response = await projectsService.getAll();
         projectsData = response.data;
       } else if (user?.id) {
@@ -100,7 +113,7 @@ export default function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, memberMeFilter]);
 
   useEffect(() => {
     fetchProjects();
