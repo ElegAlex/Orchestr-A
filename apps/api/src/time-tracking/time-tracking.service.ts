@@ -65,6 +65,7 @@ export class TimeTrackingService {
     const timeEntry = await this.prisma.timeEntry.create({
       data: {
         userId,
+        declaredById: userId,
         date: new Date(date),
         hours,
         activityType,
@@ -503,9 +504,10 @@ export class TimeTrackingService {
 
     const totalHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
 
-    // Grouper par utilisateur
+    // Grouper par utilisateur (les entries tiers — user null — seront ségrégées en Wave 3)
     const byUser = entries.reduce(
       (acc, entry) => {
+        if (!entry.user) return acc;
         const key = entry.user.id;
         if (!acc[key]) {
           acc[key] = {

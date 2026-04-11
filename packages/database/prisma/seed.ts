@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import Redis from "ioredis";
 
 const prisma = new PrismaClient();
 
@@ -1957,6 +1958,50 @@ async function main() {
       action: "reset_password",
       description: "Réinitialiser le mot de passe d'un utilisateur",
     },
+    // Third Parties
+    {
+      code: "third_parties:read",
+      module: "third_parties",
+      action: "read",
+      description: "Voir les tiers",
+    },
+    {
+      code: "third_parties:create",
+      module: "third_parties",
+      action: "create",
+      description: "Créer un tiers",
+    },
+    {
+      code: "third_parties:update",
+      module: "third_parties",
+      action: "update",
+      description: "Modifier un tiers",
+    },
+    {
+      code: "third_parties:delete",
+      module: "third_parties",
+      action: "delete",
+      description: "Supprimer un tiers (hard delete en cascade)",
+    },
+    {
+      code: "third_parties:assign_to_task",
+      module: "third_parties",
+      action: "assign_to_task",
+      description: "Assigner un tiers à une tâche",
+    },
+    {
+      code: "third_parties:assign_to_project",
+      module: "third_parties",
+      action: "assign_to_project",
+      description: "Rattacher un tiers à un projet",
+    },
+    // Time tracking extension
+    {
+      code: "time_tracking:declare_for_third_party",
+      module: "time_tracking",
+      action: "declare_for_third_party",
+      description: "Déclarer du temps pour le compte d'un tiers",
+    },
   ];
 
   // Upsert toutes les permissions
@@ -2071,6 +2116,13 @@ async function main() {
         "predefined_tasks:edit",
         "predefined_tasks:delete",
         "predefined_tasks:assign",
+        "third_parties:read",
+        "third_parties:create",
+        "third_parties:update",
+        "third_parties:delete",
+        "third_parties:assign_to_task",
+        "third_parties:assign_to_project",
+        "time_tracking:declare_for_third_party",
       ],
     },
     {
@@ -2132,6 +2184,13 @@ async function main() {
         "users:read",
         "users:view",
         "reports:view",
+        "third_parties:read",
+        "third_parties:create",
+        "third_parties:update",
+        "third_parties:delete",
+        "third_parties:assign_to_task",
+        "third_parties:assign_to_project",
+        "time_tracking:declare_for_third_party",
       ],
     },
     {
@@ -2948,6 +3007,40 @@ async function main() {
     console.log("✅ E2E telework entry ready");
     console.log(
       "🧪 E2E seed complete — 6 users, 1 project, 3 tasks, 1 leave, 1 telework",
+    );
+  }
+
+  // Flush du cache RBAC Redis : nécessaire pour propager les permissions
+  // nouvellement ajoutées/retirées aux users connectés sans attendre le TTL.
+  // Non-bloquant : si Redis est injoignable (test isolé, env sans cache), on
+  // log un warning mais le seed reste un succès.
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    const redis = new Redis(redisUrl, {
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+      retryStrategy: () => null,
+    });
+    try {
+      await redis.connect();
+      const keys = await redis.keys("role-permissions:*");
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+      console.log(`✅ Flushed ${keys.length} RBAC cache key(s) from Redis`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(
+        `⚠️  Redis RBAC cache flush failed (non-blocking): ${msg}. ` +
+          `Run manually: redis-cli DEL "role-permissions:*"`,
+      );
+    } finally {
+      redis.disconnect();
+    }
+  } else {
+    console.warn(
+      "⚠️  REDIS_URL not set — skipping RBAC cache flush. " +
+        'Run manually: redis-cli DEL "role-permissions:*"',
     );
   }
 

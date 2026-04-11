@@ -15,55 +15,59 @@ datasource db {
 // ===========================
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  login         String    @unique
-  passwordHash  String
-  firstName     String
-  lastName      String
-  role          Role      @default(CONTRIBUTEUR)
-  departmentId  String?
-  isActive      Boolean   @default(true)
-  avatarUrl     String?
-  avatarPreset  String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String   @id @default(uuid())
+  email        String   @unique
+  login        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         Role     @default(CONTRIBUTEUR)
+  departmentId String?
+  isActive     Boolean  @default(true)
+  avatarUrl    String?
+  avatarPreset String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  department        Department?       @relation("DepartmentUsers", fields: [departmentId], references: [id], onDelete: SetNull)
-  userServices      UserService[]
-  managedDepartments Department[]     @relation("DepartmentManager")
-  managedServices   Service[]         @relation("ServiceManager")
-  projectMembers    ProjectMember[]
-  createdProjects   Project[]         @relation("ProjectCreator")
-  tasks             Task[]            // Tâches où l'user est assigné principal
-  taskAssignments   TaskAssignee[]    // Tâches où l'user est co-assigné
-  leaves            Leave[]           @relation("UserLeaves")
-  leavesToValidate  Leave[]           @relation("LeaveValidator")
-  leavesValidated   Leave[]           @relation("LeaveValidatedBy")
-  delegationsGiven  LeaveValidationDelegate[] @relation("DelegatorUser")
-  delegationsReceived LeaveValidationDelegate[] @relation("DelegateUser")
-  leaveBalances     LeaveBalance[]
-  telework          TeleworkSchedule[]
-  teleworkRecurringRules TeleworkRecurringRule[] @relation("TeleworkRecurringRuleUser")
-  createdTeleworkRules   TeleworkRecurringRule[] @relation("TeleworkRecurringRuleCreator")
-  skills            UserSkill[]
-  timeEntries       TimeEntry[]
-  comments          Comment[]
-  personalTodos     PersonalTodo[]
-  createdHolidays   Holiday[]         @relation("HolidayCreator")
-  createdSchoolVacations SchoolVacation[] @relation("SchoolVacationCreator")
-  createdEvents     Event[]           @relation("EventCreator")
-  eventParticipations EventParticipant[]
-  createdPredefinedTasks     PredefinedTask[]              @relation("PredefinedTaskCreator")
-  predefinedTaskAssignments  PredefinedTaskAssignment[]    @relation("PredefinedTaskAssignmentUser")
-  assignedPredefinedTasks    PredefinedTaskAssignment[]    @relation("PredefinedTaskAssignmentAssigner")
-  predefinedTaskRecurringRules PredefinedTaskRecurringRule[] @relation("PredefinedTaskRecurringRuleUser")
-  createdPredefinedTaskRules   PredefinedTaskRecurringRule[] @relation("PredefinedTaskRecurringRuleCreator")
-  passwordResetTokens        PasswordResetToken[]          @relation("PasswordResetTokenUser")
-  createdPasswordResetTokens PasswordResetToken[]          @relation("PasswordResetTokenCreator")
-  managedProjects            Project[]                     @relation("ProjectManager")
-  sponsoredProjects          Project[]                     @relation("ProjectSponsor")
+  department                       Department?                   @relation("DepartmentUsers", fields: [departmentId], references: [id], onDelete: SetNull)
+  userServices                     UserService[]
+  managedDepartments               Department[]                  @relation("DepartmentManager")
+  managedServices                  Service[]                     @relation("ServiceManager")
+  projectMembers                   ProjectMember[]
+  createdProjects                  Project[]                     @relation("ProjectCreator")
+  tasks                            Task[] // Tâches où l'user est assigné principal
+  taskAssignments                  TaskAssignee[] // Tâches où l'user est co-assigné
+  leaves                           Leave[]                       @relation("UserLeaves")
+  leavesToValidate                 Leave[]                       @relation("LeaveValidator")
+  leavesValidated                  Leave[]                       @relation("LeaveValidatedBy")
+  delegationsGiven                 LeaveValidationDelegate[]     @relation("DelegatorUser")
+  delegationsReceived              LeaveValidationDelegate[]     @relation("DelegateUser")
+  leaveBalances                    LeaveBalance[]
+  telework                         TeleworkSchedule[]
+  teleworkRecurringRules           TeleworkRecurringRule[]       @relation("TeleworkRecurringRuleUser")
+  createdTeleworkRules             TeleworkRecurringRule[]       @relation("TeleworkRecurringRuleCreator")
+  skills                           UserSkill[]
+  timeEntries                      TimeEntry[]                   @relation("TimeEntryUser")
+  declaredTimeEntries              TimeEntry[]                   @relation("TimeEntryDeclaredBy")
+  createdThirdParties              ThirdParty[]                  @relation("ThirdPartyCreatedBy")
+  taskThirdPartyAssignmentsMade    TaskThirdPartyAssignee[]      @relation("TaskThirdPartyAssignedBy")
+  projectThirdPartyMembershipsMade ProjectThirdPartyMember[]     @relation("ProjectThirdPartyAssignedBy")
+  comments                         Comment[]
+  personalTodos                    PersonalTodo[]
+  createdHolidays                  Holiday[]                     @relation("HolidayCreator")
+  createdSchoolVacations           SchoolVacation[]              @relation("SchoolVacationCreator")
+  createdEvents                    Event[]                       @relation("EventCreator")
+  eventParticipations              EventParticipant[]
+  createdPredefinedTasks           PredefinedTask[]              @relation("PredefinedTaskCreator")
+  predefinedTaskAssignments        PredefinedTaskAssignment[]    @relation("PredefinedTaskAssignmentUser")
+  assignedPredefinedTasks          PredefinedTaskAssignment[]    @relation("PredefinedTaskAssignmentAssigner")
+  predefinedTaskRecurringRules     PredefinedTaskRecurringRule[] @relation("PredefinedTaskRecurringRuleUser")
+  createdPredefinedTaskRules       PredefinedTaskRecurringRule[] @relation("PredefinedTaskRecurringRuleCreator")
+  passwordResetTokens              PasswordResetToken[]          @relation("PasswordResetTokenUser")
+  createdPasswordResetTokens       PasswordResetToken[]          @relation("PasswordResetTokenCreator")
+  managedProjects                  Project[]                     @relation("ProjectManager")
+  sponsoredProjects                Project[]                     @relation("ProjectSponsor")
 
   @@map("users")
 }
@@ -91,35 +95,35 @@ enum Role {
 // ===========================
 
 model Department {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
   description String?
   managerId   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
-  manager     User?     @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
-  users       User[]    @relation("DepartmentUsers")
-  services    Service[]
+  manager  User?     @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
+  users    User[]    @relation("DepartmentUsers")
+  services Service[]
 
   @@map("departments")
 }
 
 model Service {
-  id            String     @id @default(uuid())
-  name          String
-  description   String?
-  color         String?
-  departmentId  String
-  managerId     String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  color        String?
+  departmentId String
+  managerId    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  manager       User?      @relation("ServiceManager", fields: [managerId], references: [id], onDelete: SetNull)
-  userServices  UserService[]
+  department   Department    @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  manager      User?         @relation("ServiceManager", fields: [managerId], references: [id], onDelete: SetNull)
+  userServices UserService[]
 
   @@map("services")
 }
@@ -143,35 +147,36 @@ model UserService {
 // ===========================
 
 model Project {
-  id            String        @id @default(uuid())
-  name          String
-  description   String?
-  status        ProjectStatus @default(DRAFT)
-  priority      Priority      @default(NORMAL)
-  startDate     DateTime?
-  endDate       DateTime?
+  id              String        @id @default(uuid())
+  name            String
+  description     String?
+  status          ProjectStatus @default(DRAFT)
+  priority        Priority      @default(NORMAL)
+  startDate       DateTime?
+  endDate         DateTime?
   budgetHours     Int?
   icon            String?
   hiddenStatuses  TaskStatus[]  @default([])
   visibleStatuses String[]      @default([])
-  createdById   String?
-  managerId     String?
-  sponsorId     String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdById     String?
+  managerId       String?
+  sponsorId       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   // Relations
-  createdBy     User?           @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  manager       User?           @relation("ProjectManager", fields: [managerId], references: [id], onDelete: SetNull)
-  sponsor       User?           @relation("ProjectSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
-  members       ProjectMember[]
-  epics         Epic[]
-  milestones    Milestone[]
-  tasks         Task[]
-  documents     Document[]
-  timeEntries   TimeEntry[]
-  events        Event[]
-  snapshots     ProjectSnapshot[]
+  createdBy         User?                     @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  manager           User?                     @relation("ProjectManager", fields: [managerId], references: [id], onDelete: SetNull)
+  sponsor           User?                     @relation("ProjectSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
+  members           ProjectMember[]
+  thirdPartyMembers ProjectThirdPartyMember[]
+  epics             Epic[]
+  milestones        Milestone[]
+  tasks             Task[]
+  documents         Document[]
+  timeEntries       TimeEntry[]
+  events            Event[]
+  snapshots         ProjectSnapshot[]
 
   @@map("projects")
 }
@@ -185,7 +190,7 @@ model ProjectSnapshot {
   date       DateTime @default(now())
   createdAt  DateTime @default(now())
 
-  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("project_snapshots")
 }
@@ -199,18 +204,18 @@ enum ProjectStatus {
 }
 
 model ProjectMember {
-  id            String   @id @default(uuid())
-  projectId     String
-  userId        String
-  role          String   // Chef de projet, Membre, Observateur...
-  allocation    Int?     // Pourcentage d'allocation (0-100)
-  startDate     DateTime?
-  endDate       DateTime?
-  createdAt     DateTime @default(now())
+  id         String    @id @default(uuid())
+  projectId  String
+  userId     String
+  role       String // Chef de projet, Membre, Observateur...
+  allocation Int? // Pourcentage d'allocation (0-100)
+  startDate  DateTime?
+  endDate    DateTime?
+  createdAt  DateTime  @default(now())
 
   // Relations
-  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
   @@map("project_members")
@@ -221,36 +226,36 @@ model ProjectMember {
 // ===========================
 
 model Epic {
-  id            String   @id @default(uuid())
-  name          String
-  description   String?
-  projectId     String
-  progress      Int      @default(0) // 0-100%
-  startDate     DateTime?
-  endDate       DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  projectId   String
+  progress    Int       @default(0) // 0-100%
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relations
-  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks         Task[]
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
 
   @@map("epics")
 }
 
 model Milestone {
-  id            String          @id @default(uuid())
-  name          String
-  description   String?
-  projectId     String
-  dueDate       DateTime
-  status        MilestoneStatus @default(PENDING)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  projectId   String
+  dueDate     DateTime
+  status      MilestoneStatus @default(PENDING)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   // Relations
-  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks         Task[]
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
 
   @@map("milestones")
 }
@@ -267,37 +272,38 @@ enum MilestoneStatus {
 // ===========================
 
 model Task {
-  id                      String     @id @default(uuid())
-  title                   String
-  description             String?
-  status                  TaskStatus @default(TODO)
-  priority                Priority   @default(NORMAL)
-  projectId               String?    // Nullable pour permettre les tâches orphelines (réunions, tâches transverses)
-  epicId                  String?
-  milestoneId             String?
-  assigneeId              String?    // Assigné principal (rétrocompatibilité)
-  estimatedHours          Float?
-  progress                Int        @default(0) // 0-100%
-  startDate               DateTime?
-  endDate                 DateTime?
-  startTime               String?    // Horaire de début optionnel (format HH:MM)
-  endTime                 String?    // Horaire de fin optionnel (format HH:MM)
-  isExternalIntervention  Boolean    @default(false)
-  createdAt               DateTime   @default(now())
-  updatedAt               DateTime   @updatedAt
+  id                     String     @id @default(uuid())
+  title                  String
+  description            String?
+  status                 TaskStatus @default(TODO)
+  priority               Priority   @default(NORMAL)
+  projectId              String? // Nullable pour permettre les tâches orphelines (réunions, tâches transverses)
+  epicId                 String?
+  milestoneId            String?
+  assigneeId             String? // Assigné principal (rétrocompatibilité)
+  estimatedHours         Float?
+  progress               Int        @default(0) // 0-100%
+  startDate              DateTime?
+  endDate                DateTime?
+  startTime              String? // Horaire de début optionnel (format HH:MM)
+  endTime                String? // Horaire de fin optionnel (format HH:MM)
+  isExternalIntervention Boolean    @default(false)
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
 
   // Relations
-  project         Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  epic            Epic?            @relation(fields: [epicId], references: [id], onDelete: SetNull)
-  milestone       Milestone?       @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
-  assignee        User?            @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
-  assignees       TaskAssignee[]   // Relation many-to-many pour multiple assignés
-  dependencies    TaskDependency[] @relation("TaskDependencies")
-  dependents      TaskDependency[] @relation("DependentTasks")
-  timeEntries     TimeEntry[]
-  comments        Comment[]
-  raci            TaskRACI[]
-  subtasks        Subtask[]
+  project             Project?                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  epic                Epic?                    @relation(fields: [epicId], references: [id], onDelete: SetNull)
+  milestone           Milestone?               @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  assignee            User?                    @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  assignees           TaskAssignee[] // Relation many-to-many pour multiple assignés
+  thirdPartyAssignees TaskThirdPartyAssignee[]
+  dependencies        TaskDependency[]         @relation("TaskDependencies")
+  dependents          TaskDependency[]         @relation("DependentTasks")
+  timeEntries         TimeEntry[]
+  comments            Comment[]
+  raci                TaskRACI[]
+  subtasks            Subtask[]
 
   @@index([projectId])
   @@index([assigneeId])
@@ -313,8 +319,8 @@ model TaskAssignee {
   createdAt DateTime @default(now())
 
   // Relations
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, userId])
   @@index([taskId])
@@ -344,8 +350,8 @@ model TaskDependency {
   createdAt       DateTime @default(now())
 
   // Relations
-  task            Task     @relation("TaskDependencies", fields: [taskId], references: [id], onDelete: Cascade)
-  dependsOnTask   Task     @relation("DependentTasks", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+  task          Task @relation("TaskDependencies", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTask Task @relation("DependentTasks", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, dependsOnTaskId])
   @@map("task_dependencies")
@@ -359,17 +365,17 @@ model TaskRACI {
   createdAt DateTime @default(now())
 
   // Relations
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, userId, role])
   @@map("task_raci")
 }
 
 enum RACIRole {
-  RESPONSIBLE  // Réalisateur
-  ACCOUNTABLE  // Approbateur
-  CONSULTED    // Consulté
-  INFORMED     // Informé
+  RESPONSIBLE // Réalisateur
+  ACCOUNTABLE // Approbateur
+  CONSULTED // Consulté
+  INFORMED // Informé
 }
 
 model Subtask {
@@ -382,7 +388,7 @@ model Subtask {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
   @@map("subtasks")
@@ -393,22 +399,31 @@ model Subtask {
 // ===========================
 
 model TimeEntry {
-  id            String       @id @default(uuid())
-  userId        String
-  projectId     String?
-  taskId        String?
-  date          DateTime     @db.Date
-  hours         Float
-  description   String?
-  activityType  ActivityType
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id           String       @id @default(uuid())
+  userId       String?
+  thirdPartyId String?
+  declaredById String
+  projectId    String?
+  taskId       String?
+  date         DateTime     @db.Date
+  hours        Float
+  description  String?
+  activityType ActivityType
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   // Relations
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project       Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  task          Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  user       User?       @relation("TimeEntryUser", fields: [userId], references: [id], onDelete: Cascade)
+  thirdParty ThirdParty? @relation(fields: [thirdPartyId], references: [id], onDelete: Cascade)
+  declaredBy User        @relation("TimeEntryDeclaredBy", fields: [declaredById], references: [id], onDelete: Restrict)
+  project    Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  task       Task?       @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
+  @@index([userId, date])
+  @@index([thirdPartyId, date])
+  @@index([declaredById])
+  @@index([projectId, date])
+  @@index([taskId])
   @@map("time_entries")
 }
 
@@ -421,87 +436,155 @@ enum ActivityType {
 }
 
 // ===========================
+// THIRD PARTIES
+// ===========================
+
+enum ThirdPartyType {
+  EXTERNAL_PROVIDER
+  INTERNAL_NON_USER
+  LEGAL_ENTITY
+}
+
+model ThirdParty {
+  id               String         @id @default(uuid())
+  type             ThirdPartyType
+  organizationName String
+  contactFirstName String?
+  contactLastName  String?
+  contactEmail     String?
+  notes            String?
+  isActive         Boolean        @default(true)
+  createdById      String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  createdBy          User                      @relation("ThirdPartyCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  taskAssignments    TaskThirdPartyAssignee[]
+  projectMemberships ProjectThirdPartyMember[]
+  timeEntries        TimeEntry[]
+
+  @@index([type, isActive])
+  @@index([organizationName])
+  @@map("third_parties")
+}
+
+model TaskThirdPartyAssignee {
+  id           String   @id @default(uuid())
+  taskId       String
+  thirdPartyId String
+  assignedById String
+  createdAt    DateTime @default(now())
+
+  task       Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  thirdParty ThirdParty @relation(fields: [thirdPartyId], references: [id], onDelete: Cascade)
+  assignedBy User       @relation("TaskThirdPartyAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  @@unique([taskId, thirdPartyId])
+  @@index([taskId])
+  @@index([thirdPartyId])
+  @@map("task_third_party_assignees")
+}
+
+model ProjectThirdPartyMember {
+  id           String   @id @default(uuid())
+  projectId    String
+  thirdPartyId String
+  allocation   Int?
+  assignedById String
+  createdAt    DateTime @default(now())
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  thirdParty ThirdParty @relation(fields: [thirdPartyId], references: [id], onDelete: Cascade)
+  assignedBy User       @relation("ProjectThirdPartyAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, thirdPartyId])
+  @@index([projectId])
+  @@index([thirdPartyId])
+  @@map("project_third_party_members")
+}
+
+// ===========================
 // HR - LEAVES
 // ===========================
 
 // Configuration des types de congés (modifiable par admin/responsable)
 model LeaveTypeConfig {
-  id              String    @id @default(uuid())
-  code            String    @unique  // Code technique (ex: CP, RTT, SICK_LEAVE)
-  name            String              // Nom affiché (ex: "Congés payés")
-  description     String?             // Description optionnelle
-  color           String    @default("#10B981")  // Couleur pour l'affichage
-  icon            String    @default("🌴")       // Emoji/icône
-  isPaid          Boolean   @default(true)       // Congé rémunéré ou non
-  requiresApproval Boolean  @default(true)       // Nécessite validation
-  maxDaysPerYear  Int?                           // Limite annuelle (null = illimité)
-  isActive        Boolean   @default(true)       // Type actif ou archivé
-  isSystem        Boolean   @default(false)      // Type système (non supprimable)
-  sortOrder       Int       @default(0)          // Ordre d'affichage
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String   @id @default(uuid())
+  code             String   @unique // Code technique (ex: CP, RTT, SICK_LEAVE)
+  name             String // Nom affiché (ex: "Congés payés")
+  description      String? // Description optionnelle
+  color            String   @default("#10B981") // Couleur pour l'affichage
+  icon             String   @default("🌴") // Emoji/icône
+  isPaid           Boolean  @default(true) // Congé rémunéré ou non
+  requiresApproval Boolean  @default(true) // Nécessite validation
+  maxDaysPerYear   Int? // Limite annuelle (null = illimité)
+  isActive         Boolean  @default(true) // Type actif ou archivé
+  isSystem         Boolean  @default(false) // Type système (non supprimable)
+  sortOrder        Int      @default(0) // Ordre d'affichage
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
-  leaves          Leave[]
-  leaveBalances   LeaveBalance[]
+  leaves        Leave[]
+  leaveBalances LeaveBalance[]
 
   @@map("leave_type_configs")
 }
 
 model Leave {
-  id              String      @id @default(uuid())
-  userId          String
-  leaveTypeId     String      @map("leave_type_id")  // Référence au type de congé
-  type            LeaveType?  // Gardé pour rétrocompatibilité (sera supprimé plus tard)
-  startDate       DateTime    @db.Date
-  endDate         DateTime    @db.Date
-  halfDay         HalfDay?
-  days            Float       // Jours ouvrés calculés
-  status          LeaveStatus @default(PENDING)
-  comment         String?
+  id          String      @id @default(uuid())
+  userId      String
+  leaveTypeId String      @map("leave_type_id") // Référence au type de congé
+  type        LeaveType? // Gardé pour rétrocompatibilité (sera supprimé plus tard)
+  startDate   DateTime    @db.Date
+  endDate     DateTime    @db.Date
+  halfDay     HalfDay?
+  days        Float // Jours ouvrés calculés
+  status      LeaveStatus @default(PENDING)
+  comment     String?
 
   // Champs de validation
-  validatorId       String?     @map("validator_id")    // Qui doit valider (manager, responsable ou délégué)
-  validatedById     String?     @map("validated_by_id") // Qui a effectivement validé/rejeté
-  validatedAt       DateTime?   @map("validated_at")    // Date de validation/rejet
-  validationComment String?     @map("validation_comment") // Commentaire du validateur (motif de refus, etc.)
+  validatorId       String?   @map("validator_id") // Qui doit valider (manager, responsable ou délégué)
+  validatedById     String?   @map("validated_by_id") // Qui a effectivement validé/rejeté
+  validatedAt       DateTime? @map("validated_at") // Date de validation/rejet
+  validationComment String?   @map("validation_comment") // Commentaire du validateur (motif de refus, etc.)
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user            User        @relation("UserLeaves", fields: [userId], references: [id], onDelete: Cascade)
-  leaveType       LeaveTypeConfig @relation(fields: [leaveTypeId], references: [id])
-  validator       User?       @relation("LeaveValidator", fields: [validatorId], references: [id], onDelete: SetNull)
-  validatedBy     User?       @relation("LeaveValidatedBy", fields: [validatedById], references: [id], onDelete: SetNull)
+  user        User            @relation("UserLeaves", fields: [userId], references: [id], onDelete: Cascade)
+  leaveType   LeaveTypeConfig @relation(fields: [leaveTypeId], references: [id])
+  validator   User?           @relation("LeaveValidator", fields: [validatorId], references: [id], onDelete: SetNull)
+  validatedBy User?           @relation("LeaveValidatedBy", fields: [validatedById], references: [id], onDelete: SetNull)
 
   @@map("leaves")
 }
 
 // Table de délégation de validation des congés
 model LeaveValidationDelegate {
-  id              String    @id @default(uuid())
-  delegatorId     String    @map("delegator_id")  // Qui délègue (manager/responsable)
-  delegateId      String    @map("delegate_id")   // À qui on délègue
-  startDate       DateTime  @db.Date @map("start_date")
-  endDate         DateTime  @db.Date @map("end_date")
-  isActive        Boolean   @default(true) @map("is_active")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id          String   @id @default(uuid())
+  delegatorId String   @map("delegator_id") // Qui délègue (manager/responsable)
+  delegateId  String   @map("delegate_id") // À qui on délègue
+  startDate   DateTime @map("start_date") @db.Date
+  endDate     DateTime @map("end_date") @db.Date
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
-  delegator       User      @relation("DelegatorUser", fields: [delegatorId], references: [id], onDelete: Cascade)
-  delegate        User      @relation("DelegateUser", fields: [delegateId], references: [id], onDelete: Cascade)
+  delegator User @relation("DelegatorUser", fields: [delegatorId], references: [id], onDelete: Cascade)
+  delegate  User @relation("DelegateUser", fields: [delegateId], references: [id], onDelete: Cascade)
 
   @@map("leave_validation_delegates")
 }
 
 // Enum gardé pour rétrocompatibilité (sera supprimé après migration complète)
 enum LeaveType {
-  CP          // Congés payés
+  CP // Congés payés
   RTT
-  SICK_LEAVE  // Maladie
-  UNPAID      // Sans solde
+  SICK_LEAVE // Maladie
+  UNPAID // Sans solde
   OTHER
 }
 
@@ -520,17 +603,17 @@ enum HalfDay {
 // Soldes de congés par utilisateur, type et année
 // Si userId est null → valeur globale par défaut pour ce type et cette année
 model LeaveBalance {
-  id            String          @id @default(uuid())
-  userId        String?         // null = solde global par défaut
-  leaveTypeId   String
-  year          Int             // Année d'application
-  totalDays     Float           // Nombre de jours attribués
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id          String   @id @default(uuid())
+  userId      String? // null = solde global par défaut
+  leaveTypeId String
+  year        Int // Année d'application
+  totalDays   Float // Nombre de jours attribués
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
-  user          User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  leaveType     LeaveTypeConfig @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaveType LeaveTypeConfig @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, leaveTypeId, year])
   @@index([year])
@@ -551,7 +634,7 @@ model TeleworkSchedule {
   createdAt   DateTime @default(now())
 
   // Relations
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
   @@map("telework_schedules")
@@ -571,7 +654,7 @@ model Skill {
   updatedAt     DateTime      @updatedAt
 
   // Relations
-  users         UserSkill[]
+  users UserSkill[]
 
   @@map("skills")
 }
@@ -592,18 +675,18 @@ model UserSkill {
   updatedAt   DateTime   @updatedAt
 
   // Relations
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skill       Skill      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@id([userId, skillId])
   @@map("user_skills")
 }
 
 enum SkillLevel {
-  BEGINNER      // Débutant
-  INTERMEDIATE  // Intermédiaire
-  EXPERT        // Expert
-  MASTER        // Maître
+  BEGINNER // Débutant
+  INTERMEDIATE // Intermédiaire
+  EXPERT // Expert
+  MASTER // Maître
 }
 
 // ===========================
@@ -616,13 +699,13 @@ model Document {
   description String?
   url         String
   mimeType    String
-  size        Int      // Size in bytes
+  size        Int // Size in bytes
   projectId   String
   uploadedBy  String
   createdAt   DateTime @default(now())
 
   // Relations
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("documents")
 }
@@ -632,16 +715,16 @@ model Document {
 // ===========================
 
 model Comment {
-  id          String   @id @default(uuid())
-  content     String
-  taskId      String
-  authorId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  content   String
+  taskId    String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("comments")
 }
@@ -660,7 +743,7 @@ model PersonalTodo {
   updatedAt   DateTime  @updatedAt
 
   // Relations
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, completed, createdAt])
   @@map("personal_todos")
@@ -671,13 +754,13 @@ model PersonalTodo {
 // ===========================
 
 model AppSettings {
-  id            String    @id @default(uuid())
-  key           String    @unique
-  value         String    // JSON stringified value
-  category      String    @default("general") // general, display, notifications, etc.
-  description   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String // JSON stringified value
+  category    String   @default("general") // general, display, notifications, etc.
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("app_settings")
 }
@@ -691,15 +774,15 @@ model Holiday {
   date        DateTime    @db.Date
   name        String      @db.VarChar(100)
   type        HolidayType @default(LEGAL)
-  isWorkDay   Boolean     @default(false)  // true = jour ouvré, false = non ouvré (chômé)
+  isWorkDay   Boolean     @default(false) // true = jour ouvré, false = non ouvré (chômé)
   description String?     @db.VarChar(255)
-  recurring   Boolean     @default(false)  // Se répète chaque année à la même date
+  recurring   Boolean     @default(false) // Se répète chaque année à la même date
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   createdById String
 
   // Relations
-  createdBy   User        @relation("HolidayCreator", fields: [createdById], references: [id])
+  createdBy User @relation("HolidayCreator", fields: [createdById], references: [id])
 
   @@unique([date])
   @@index([date])
@@ -707,10 +790,10 @@ model Holiday {
 }
 
 enum HolidayType {
-  LEGAL        // Jour férié légal (1er janvier, 14 juillet, etc.)
-  BRIDGE       // Pont accordé
-  CLOSURE      // Fermeture exceptionnelle
-  CUSTOM       // Autre (personnalisé)
+  LEGAL // Jour férié légal (1er janvier, 14 juillet, etc.)
+  BRIDGE // Pont accordé
+  CLOSURE // Fermeture exceptionnelle
+  CUSTOM // Autre (personnalisé)
 }
 
 enum SchoolVacationZone {
@@ -741,7 +824,7 @@ model SchoolVacation {
   updatedAt   DateTime             @updatedAt
 
   // Relations
-  createdBy   User                 @relation("SchoolVacationCreator", fields: [createdById], references: [id])
+  createdBy User @relation("SchoolVacationCreator", fields: [createdById], references: [id])
 
   @@unique([name, zone, year])
   @@index([startDate, endDate])
@@ -754,43 +837,43 @@ model SchoolVacation {
 // ===========================
 
 model Event {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  date        DateTime
-  startTime   String?  // Format HH:MM
-  endTime     String?  // Format HH:MM
-  isAllDay                Boolean  @default(true)
-  isExternalIntervention  Boolean  @default(false)
-  projectId               String?
-  createdById             String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  title                  String
+  description            String?
+  date                   DateTime
+  startTime              String? // Format HH:MM
+  endTime                String? // Format HH:MM
+  isAllDay               Boolean  @default(true)
+  isExternalIntervention Boolean  @default(false)
+  projectId              String?
+  createdById            String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   // Recurrence fields
   isRecurring            Boolean   @default(false)
   recurrenceWeekInterval Int?
-  recurrenceDay          Int?      // 0=Monday, 1=Tuesday, ..., 6=Sunday
+  recurrenceDay          Int? // 0=Monday, 1=Tuesday, ..., 6=Sunday
   recurrenceEndDate      DateTime?
   parentEventId          String?
 
   // Relations
-  project      Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  createdBy    User                @relation("EventCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  project      Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdBy    User               @relation("EventCreator", fields: [createdById], references: [id], onDelete: Cascade)
   participants EventParticipant[]
-  parentEvent  Event?              @relation("EventRecurrence", fields: [parentEventId], references: [id], onDelete: Cascade)
-  childEvents  Event[]             @relation("EventRecurrence")
+  parentEvent  Event?             @relation("EventRecurrence", fields: [parentEventId], references: [id], onDelete: Cascade)
+  childEvents  Event[]            @relation("EventRecurrence")
 
   @@map("events")
 }
 
 model EventParticipant {
-  eventId   String
-  userId    String
+  eventId String
+  userId  String
 
   // Relations
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([eventId, userId])
   @@map("event_participants")
@@ -803,7 +886,7 @@ model EventParticipant {
 model TeleworkRecurringRule {
   id          String    @id @default(uuid())
   userId      String
-  dayOfWeek   Int       // 0=Monday, 1=Tuesday, ..., 6=Sunday
+  dayOfWeek   Int // 0=Monday, 1=Tuesday, ..., 6=Sunday
   startDate   DateTime
   endDate     DateTime?
   isActive    Boolean   @default(true)
@@ -812,8 +895,8 @@ model TeleworkRecurringRule {
   updatedAt   DateTime  @updatedAt
 
   // Relations
-  user        User      @relation("TeleworkRecurringRuleUser", fields: [userId], references: [id], onDelete: Cascade)
-  createdBy   User      @relation("TeleworkRecurringRuleCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  user      User @relation("TeleworkRecurringRuleUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User @relation("TeleworkRecurringRuleCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@unique([userId, dayOfWeek, startDate])
   @@map("telework_recurring_rules")
@@ -824,45 +907,45 @@ model TeleworkRecurringRule {
 // ===========================
 
 model PredefinedTask {
-  id              String    @id @default(uuid())
-  name            String
-  description     String?
-  color           String?
-  icon            String?
-  defaultDuration        String    // "HALF_DAY" | "FULL_DAY" | "TIME_SLOT"
-  startTime              String?   // Format "HH:mm", utilisé quand defaultDuration = "TIME_SLOT"
-  endTime                String?   // Format "HH:mm", utilisé quand defaultDuration = "TIME_SLOT"
-  isExternalIntervention Boolean   @default(false)
-  isActive               Boolean   @default(true)
-  createdById     String
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                     String   @id @default(uuid())
+  name                   String
+  description            String?
+  color                  String?
+  icon                   String?
+  defaultDuration        String // "HALF_DAY" | "FULL_DAY" | "TIME_SLOT"
+  startTime              String? // Format "HH:mm", utilisé quand defaultDuration = "TIME_SLOT"
+  endTime                String? // Format "HH:mm", utilisé quand defaultDuration = "TIME_SLOT"
+  isExternalIntervention Boolean  @default(false)
+  isActive               Boolean  @default(true)
+  createdById            String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   // Relations
-  createdBy       User                          @relation("PredefinedTaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  assignments     PredefinedTaskAssignment[]
-  recurringRules  PredefinedTaskRecurringRule[]
+  createdBy      User                          @relation("PredefinedTaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  assignments    PredefinedTaskAssignment[]
+  recurringRules PredefinedTaskRecurringRule[]
 
   @@map("predefined_tasks")
 }
 
 model PredefinedTaskAssignment {
-  id                String    @id @default(uuid())
-  predefinedTaskId  String
-  userId            String
-  date              DateTime
-  period            String    // "MORNING" | "AFTERNOON" | "FULL_DAY"
-  assignedById      String
-  isRecurring       Boolean   @default(false)
-  recurringRuleId   String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id               String   @id @default(uuid())
+  predefinedTaskId String
+  userId           String
+  date             DateTime
+  period           String // "MORNING" | "AFTERNOON" | "FULL_DAY"
+  assignedById     String
+  isRecurring      Boolean  @default(false)
+  recurringRuleId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
-  predefinedTask    PredefinedTask              @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
-  user              User                        @relation("PredefinedTaskAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
-  assignedBy        User                        @relation("PredefinedTaskAssignmentAssigner", fields: [assignedById], references: [id], onDelete: Cascade)
-  recurringRule     PredefinedTaskRecurringRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
+  predefinedTask PredefinedTask               @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
+  user           User                         @relation("PredefinedTaskAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  assignedBy     User                         @relation("PredefinedTaskAssignmentAssigner", fields: [assignedById], references: [id], onDelete: Cascade)
+  recurringRule  PredefinedTaskRecurringRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
 
   @@unique([predefinedTaskId, userId, date, period])
   @@map("predefined_task_assignments")
@@ -872,9 +955,9 @@ model PredefinedTaskRecurringRule {
   id               String    @id @default(uuid())
   predefinedTaskId String
   userId           String
-  dayOfWeek        Int       // 0=Monday, 1=Tuesday, ..., 6=Sunday
-  period           String    // "MORNING" | "AFTERNOON" | "FULL_DAY"
-  weekInterval     Int       @default(1)  // 1=weekly, 2=biweekly, 3=every 3 weeks...
+  dayOfWeek        Int // 0=Monday, 1=Tuesday, ..., 6=Sunday
+  period           String // "MORNING" | "AFTERNOON" | "FULL_DAY"
+  weekInterval     Int       @default(1) // 1=weekly, 2=biweekly, 3=every 3 weeks...
   startDate        DateTime
   endDate          DateTime?
   isActive         Boolean   @default(true)
@@ -883,10 +966,10 @@ model PredefinedTaskRecurringRule {
   updatedAt        DateTime  @updatedAt
 
   // Relations
-  predefinedTask   PredefinedTask             @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
-  user             User                       @relation("PredefinedTaskRecurringRuleUser", fields: [userId], references: [id], onDelete: Cascade)
-  createdBy        User                       @relation("PredefinedTaskRecurringRuleCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  assignments      PredefinedTaskAssignment[]
+  predefinedTask PredefinedTask             @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
+  user           User                       @relation("PredefinedTaskRecurringRuleUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy      User                       @relation("PredefinedTaskRecurringRuleCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  assignments    PredefinedTaskAssignment[]
 
   @@map("predefined_task_recurring_rules")
 }
@@ -901,12 +984,12 @@ model PasswordResetToken {
   token       String    @unique
   expiresAt   DateTime
   usedAt      DateTime?
-  createdById String    // Admin qui a généré le token
+  createdById String // Admin qui a généré le token
   createdAt   DateTime  @default(now())
 
   // Relations
-  user        User      @relation("PasswordResetTokenUser", fields: [userId], references: [id], onDelete: Cascade)
-  createdBy   User      @relation("PasswordResetTokenCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  user      User @relation("PasswordResetTokenUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User @relation("PasswordResetTokenCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
 }
@@ -916,27 +999,29 @@ model PasswordResetToken {
 // ===========================
 
 model Permission {
-  id          String   @id @default(uuid())
-  code        String   @unique
-  module      String
-  action      String
-  description String?
+  id              String           @id @default(uuid())
+  code            String           @unique
+  module          String
+  action          String
+  description     String?
   rolePermissions RolePermission[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
   @@map("permissions")
 }
 
 model RoleConfig {
-  id          String   @id @default(uuid())
-  code        String   @unique
+  id          String           @id @default(uuid())
+  code        String           @unique
   name        String
   description String?
-  isSystem    Boolean  @default(false)
-  isDefault   Boolean  @default(false)
+  isSystem    Boolean          @default(false)
+  isDefault   Boolean          @default(false)
   permissions RolePermission[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
   @@map("role_configs")
 }
 
@@ -945,6 +1030,7 @@ model RolePermission {
   roleConfig   RoleConfig @relation(fields: [roleConfigId], references: [id], onDelete: Cascade)
   permissionId String
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
   @@id([roleConfigId, permissionId])
   @@map("role_permissions")
 }
