@@ -20,6 +20,7 @@ import { servicesService } from "@/services/services.service";
 import {
   Project,
   ProjectStats,
+  ProjectThirdPartyMember,
   Task,
   ProjectStatus,
   Priority,
@@ -29,6 +30,8 @@ import {
   Service,
   UpdateProjectDto,
 } from "@/types";
+import { thirdPartiesService } from "@/services/third-parties.service";
+import { ThirdPartySelector } from "@/components/third-parties/ThirdPartySelector";
 import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
@@ -42,7 +45,13 @@ const GanttChart = dynamic(() => import("@/components/GanttChart"), {
   ssr: false,
 });
 
-type TabType = "overview" | "tasks" | "team" | "milestones" | "gantt";
+type TabType =
+  | "overview"
+  | "tasks"
+  | "team"
+  | "milestones"
+  | "gantt"
+  | "thirdParties";
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -59,6 +68,12 @@ export default function ProjectDetailPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>("overview");
+  const [thirdPartyMembers, setThirdPartyMembers] = useState<
+    ProjectThirdPartyMember[]
+  >([]);
+  const [showAttachTpModal, setShowAttachTpModal] = useState(false);
+  const [tpToAttach, setTpToAttach] = useState<string | null>(null);
+  const [tpAllocation, setTpAllocation] = useState<number | "">("");
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -863,6 +878,70 @@ export default function ProjectDetailPage() {
 
   const canDeleteProject = hasPermission("projects:delete");
 
+  const canAssignThirdParty = hasPermission("third_parties:assign_to_project");
+  const canReadThirdParties = hasPermission("third_parties:read");
+
+  // Third parties fetch + handlers
+  const fetchThirdPartyMembers = async () => {
+    if (!canReadThirdParties) return;
+    try {
+      const data = await thirdPartiesService.listProjectMembers(projectId);
+      setThirdPartyMembers(data);
+    } catch (err) {
+      console.error("Error loading third party members:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "thirdParties") {
+      fetchThirdPartyMembers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, projectId]);
+
+  const handleAttachThirdParty = async () => {
+    if (!tpToAttach) {
+      toast.error("Sélectionnez un tiers");
+      return;
+    }
+    try {
+      await thirdPartiesService.attachToProject(
+        projectId,
+        tpToAttach,
+        typeof tpAllocation === "number" ? tpAllocation : undefined,
+      );
+      toast.success("Tiers rattaché au projet");
+      setShowAttachTpModal(false);
+      setTpToAttach(null);
+      setTpAllocation("");
+      await fetchThirdPartyMembers();
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { message?: string } } }).response?.data
+          ?.message ?? "Erreur lors du rattachement";
+      toast.error(typeof message === "string" ? message : "Erreur");
+    }
+  };
+
+  const handleDetachThirdParty = async (thirdPartyId: string) => {
+    if (
+      !confirm(
+        "Détacher ce tiers du projet ? Les déclarations de temps existantes seront conservées.",
+      )
+    )
+      return;
+    try {
+      await thirdPartiesService.detachFromProject(projectId, thirdPartyId);
+      toast.success("Tiers détaché");
+      await fetchThirdPartyMembers();
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { message?: string } } }).response?.data
+          ?.message ?? "Erreur";
+      toast.error(typeof message === "string" ? message : "Erreur");
+    }
+  };
+
   // Project update handler
   const handleUpdateProject = async (data: UpdateProjectDto) => {
     await projectsService.update(projectId, data);
@@ -1035,6 +1114,18 @@ export default function ProjectDetailPage() {
             >
               {t("detail.tabs.gantt")}
             </button>
+            {canReadThirdParties && (
+              <button
+                onClick={() => setActiveTab("thirdParties")}
+                className={`${
+                  activeTab === "thirdParties"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition`}
+              >
+                Tiers ({thirdPartyMembers.length})
+              </button>
+            )}
           </nav>
         </div>
 
@@ -1095,6 +1186,11 @@ export default function ProjectDetailPage() {
                       <p className="text-3xl font-bold text-gray-900 mt-2">
                         {stats.loggedHours}h
                       </p>
+                      {stats.thirdPartyLoggedHours > 0 && (
+                        <p className="text-xs text-gray-600 mt-1">
+                          + {stats.thirdPartyLoggedHours}h tiers
+                        </p>
+                      )}
                     </div>
                     <div className="text-4xl">⏱️</div>
                   </div>
@@ -1684,6 +1780,151 @@ export default function ProjectDetailPage() {
                 fullTasks={tasks}
                 onDependencyChange={handleTaskUpdate}
               />
+            </div>
+          </div>
+        )}
+
+        {activeTab === "thirdParties" && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Tiers rattachés au projet
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Les tiers rattachés peuvent se voir déclarer du temps sur
+                  l&apos;ensemble des tâches du projet.
+                </p>
+              </div>
+              {canAssignThirdParty && (
+                <button
+                  type="button"
+                  onClick={() => setShowAttachTpModal(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  + Rattacher un tiers
+                </button>
+              )}
+            </div>
+
+            {thirdPartyMembers.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                Aucun tiers rattaché à ce projet.
+              </div>
+            ) : (
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Organisation
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Type
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Allocation
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Rattaché le
+                    </th>
+                    {canAssignThirdParty && (
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                        Actions
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {thirdPartyMembers.map((m) => (
+                    <tr key={m.id}>
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {m.thirdParty?.organizationName ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {m.thirdParty?.type ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {m.allocation != null ? `${m.allocation}%` : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {new Date(m.createdAt).toLocaleDateString(locale)}
+                      </td>
+                      {canAssignThirdParty && (
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDetachThirdParty(m.thirdPartyId)
+                            }
+                            className="text-sm text-red-600 hover:underline"
+                          >
+                            Détacher
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {showAttachTpModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                Rattacher un tiers au projet
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tiers *
+                  </label>
+                  <ThirdPartySelector
+                    value={tpToAttach}
+                    onChange={setTpToAttach}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Allocation (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={tpAllocation}
+                    onChange={(e) =>
+                      setTpAllocation(
+                        e.target.value === "" ? "" : Number(e.target.value),
+                      )
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="optionnel"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAttachTpModal(false);
+                    setTpToAttach(null);
+                    setTpAllocation("");
+                  }}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  {tCommon("actions.cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAttachThirdParty}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  Rattacher
+                </button>
+              </div>
             </div>
           </div>
         )}

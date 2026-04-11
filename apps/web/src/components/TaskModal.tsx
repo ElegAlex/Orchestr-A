@@ -10,10 +10,14 @@ import {
   Project,
   Service,
   Subtask,
+  TaskThirdPartyAssignee,
 } from "@/types";
 import { tasksService } from "@/services/tasks.service";
+import { thirdPartiesService } from "@/services/third-parties.service";
+import { usePermissions } from "@/hooks/usePermissions";
 import { UserMultiSelect } from "./UserMultiSelect";
 import { ServiceMultiSelect } from "./ServiceMultiSelect";
+import { ThirdPartySelector } from "./third-parties/ThirdPartySelector";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 
@@ -77,6 +81,58 @@ export function TaskModal({
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { hasPermission } = usePermissions();
+  const canAssignThirdParty = hasPermission("third_parties:assign_to_task");
+  const [thirdPartyAssignees, setThirdPartyAssignees] = useState<
+    TaskThirdPartyAssignee[]
+  >([]);
+  const [tpToAssign, setTpToAssign] = useState<string | null>(null);
+  const [isAssigningTp, setIsAssigningTp] = useState(false);
+
+  useEffect(() => {
+    if (task?.id && isOpen) {
+      thirdPartiesService
+        .listTaskAssignees(task.id)
+        .then(setThirdPartyAssignees)
+        .catch(() => setThirdPartyAssignees([]));
+    } else {
+      setThirdPartyAssignees([]);
+    }
+  }, [task?.id, isOpen]);
+
+  const handleAssignThirdParty = async () => {
+    if (!task?.id || !tpToAssign) return;
+    setIsAssigningTp(true);
+    try {
+      await thirdPartiesService.assignToTask(task.id, tpToAssign);
+      const updated = await thirdPartiesService.listTaskAssignees(task.id);
+      setThirdPartyAssignees(updated);
+      setTpToAssign(null);
+      toast.success("Tiers assigné à la tâche");
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { message?: string } } }).response?.data
+          ?.message ?? "Erreur lors de l'assignation";
+      toast.error(typeof message === "string" ? message : "Erreur");
+    } finally {
+      setIsAssigningTp(false);
+    }
+  };
+
+  const handleUnassignThirdParty = async (thirdPartyId: string) => {
+    if (!task?.id) return;
+    try {
+      await thirdPartiesService.unassignFromTask(task.id, thirdPartyId);
+      setThirdPartyAssignees((prev) =>
+        prev.filter((a) => a.thirdPartyId !== thirdPartyId),
+      );
+      toast.success("Tiers retiré de la tâche");
+    } catch (err) {
+      console.error("Error unassigning tp:", err);
+      toast.error("Erreur lors du retrait");
+    }
+  };
 
   useEffect(() => {
     if (task) {
@@ -614,6 +670,61 @@ export function TaskModal({
               />
             </div>
           </div>
+
+          {/* Intervenants tiers (édition seulement) */}
+          {task?.id && canAssignThirdParty && (
+            <div className="pt-4 border-t border-gray-200">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Intervenants tiers
+              </label>
+              {thirdPartyAssignees.length > 0 && (
+                <ul className="mb-3 space-y-1">
+                  {thirdPartyAssignees.map((a) => (
+                    <li
+                      key={a.id}
+                      className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded text-sm"
+                    >
+                      <span className="text-gray-800">
+                        <span className="inline-block text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800 mr-2">
+                          Tiers
+                        </span>
+                        {a.thirdParty?.organizationName ?? a.thirdPartyId}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleUnassignThirdParty(a.thirdPartyId)
+                        }
+                        className="text-xs text-red-600 hover:underline"
+                      >
+                        Retirer
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <ThirdPartySelector
+                    value={tpToAssign}
+                    onChange={setTpToAssign}
+                    placeholder="Ajouter un tiers à la tâche…"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAssignThirdParty}
+                  disabled={!tpToAssign || isAssigningTp}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  {isAssigningTp ? "Ajout…" : "Ajouter"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Les tiers pourront se voir déclarer du temps sur cette tâche.
+              </p>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">

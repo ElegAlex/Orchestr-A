@@ -16,6 +16,7 @@ import {
   Task,
 } from "@/types";
 import { ProjectIcon } from "@/components/ProjectIcon";
+import { ThirdPartySelector } from "@/components/third-parties/ThirdPartySelector";
 import toast from "react-hot-toast";
 
 export default function TimeTrackingPage() {
@@ -40,6 +41,11 @@ export default function TimeTrackingPage() {
     description: "",
     activityType: ActivityType.DEVELOPMENT,
   });
+  const [declareForThirdParty, setDeclareForThirdParty] = useState(false);
+  const [thirdPartyId, setThirdPartyId] = useState<string | null>(null);
+  const canDeclareForThirdParty = hasPermission(
+    "time_tracking:declare_for_third_party",
+  );
 
   const fetchData = useCallback(async () => {
     try {
@@ -91,8 +97,16 @@ export default function TimeTrackingPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (declareForThirdParty && !thirdPartyId) {
+      toast.error("Sélectionnez un tiers pour déclarer en son nom");
+      return;
+    }
     try {
-      await timeTrackingService.create(formData);
+      const payload: CreateTimeEntryDto = {
+        ...formData,
+        thirdPartyId: declareForThirdParty ? (thirdPartyId ?? undefined) : undefined,
+      };
+      await timeTrackingService.create(payload);
       toast.success(t("messages.created"));
       setShowCreateModal(false);
       resetForm();
@@ -126,6 +140,8 @@ export default function TimeTrackingPage() {
       description: "",
       activityType: ActivityType.DEVELOPMENT,
     });
+    setDeclareForThirdParty(false);
+    setThirdPartyId(null);
   };
 
   const getFilteredEntries = () => {
@@ -314,7 +330,12 @@ export default function TimeTrackingPage() {
           ) : (
             <div className="divide-y divide-gray-200">
               {getFilteredEntries().map((entry) => (
-                <div key={entry.id} className="p-6 hover:bg-gray-50 transition">
+                <div
+                  key={entry.id}
+                  className={`p-6 hover:bg-gray-50 transition ${
+                    entry.thirdPartyId ? "bg-amber-50/40" : ""
+                  }`}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
@@ -328,6 +349,11 @@ export default function TimeTrackingPage() {
                         >
                           {getActivityTypeLabel(entry.activityType)}
                         </span>
+                        {entry.thirdPartyId && (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                            🤝 Tiers
+                          </span>
+                        )}
                         <span className="text-sm text-gray-500">
                           {new Date(entry.date).toLocaleDateString("fr-FR", {
                             weekday: "long",
@@ -337,6 +363,15 @@ export default function TimeTrackingPage() {
                           })}
                         </span>
                       </div>
+
+                      {entry.thirdParty && (
+                        <div className="flex items-center space-x-2 text-sm text-gray-700 mb-1">
+                          <span>🤝</span>
+                          <span className="font-medium">
+                            {entry.thirdParty.organizationName}
+                          </span>
+                        </div>
+                      )}
 
                       {entry.project && (
                         <div className="flex items-center space-x-2 text-sm text-gray-600 mb-1">
@@ -490,6 +525,35 @@ export default function TimeTrackingPage() {
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {canDeclareForThirdParty && (
+                <div className="border-t border-gray-200 pt-4">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={declareForThirdParty}
+                      onChange={(e) => {
+                        setDeclareForThirdParty(e.target.checked);
+                        if (!e.target.checked) setThirdPartyId(null);
+                      }}
+                      className="h-4 w-4"
+                    />
+                    Déclarer pour le compte d&apos;un tiers
+                  </label>
+                  {declareForThirdParty && (
+                    <div className="mt-2">
+                      <ThirdPartySelector
+                        value={thirdPartyId}
+                        onChange={setThirdPartyId}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Le tiers doit être rattaché au projet ou à la tâche
+                        sélectionnée.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 

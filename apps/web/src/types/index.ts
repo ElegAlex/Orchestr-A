@@ -278,6 +278,7 @@ export interface ProjectStats {
   progress: number;
   totalHours: number;
   loggedHours: number;
+  thirdPartyLoggedHours: number;
   remainingHours: number;
   membersCount: number;
   epicsCount: number;
@@ -404,6 +405,7 @@ export interface Task {
   raci?: TaskRACI[];
   subtasks?: Subtask[];
   dependencies?: TaskDependency[];
+  thirdPartyAssignees?: TaskThirdPartyAssignee[];
 }
 
 export interface TaskRACI {
@@ -469,7 +471,9 @@ export interface UpdateTaskDto {
 
 export interface TimeEntry {
   id: string;
-  userId: string;
+  userId?: string | null;
+  thirdPartyId?: string | null;
+  declaredById: string;
   projectId?: string;
   taskId?: string;
   date: string;
@@ -478,7 +482,9 @@ export interface TimeEntry {
   activityType: ActivityType;
   createdAt: string;
   updatedAt: string;
-  user?: User;
+  user?: User | null;
+  thirdParty?: ThirdParty | null;
+  declaredBy?: User;
   project?: Project;
   task?: Task;
 }
@@ -490,6 +496,92 @@ export interface CreateTimeEntryDto {
   hours: number;
   description?: string;
   activityType: ActivityType;
+  /**
+   * Optional — declares time on behalf of a third party instead of the current user.
+   * Requires `time_tracking:declare_for_third_party` permission.
+   */
+  thirdPartyId?: string;
+}
+
+// ===========================
+// THIRD PARTIES
+// ===========================
+
+export enum ThirdPartyType {
+  EXTERNAL_PROVIDER = "EXTERNAL_PROVIDER",
+  INTERNAL_NON_USER = "INTERNAL_NON_USER",
+  LEGAL_ENTITY = "LEGAL_ENTITY",
+}
+
+export interface ThirdParty {
+  id: string;
+  type: ThirdPartyType;
+  organizationName: string;
+  contactFirstName?: string | null;
+  contactLastName?: string | null;
+  contactEmail?: string | null;
+  notes?: string | null;
+  isActive: boolean;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+  };
+  _count?: {
+    taskAssignments: number;
+    projectMemberships: number;
+    timeEntries: number;
+  };
+}
+
+export interface CreateThirdPartyDto {
+  type: ThirdPartyType;
+  organizationName: string;
+  contactFirstName?: string;
+  contactLastName?: string;
+  contactEmail?: string;
+  notes?: string;
+}
+
+export interface UpdateThirdPartyDto extends Partial<CreateThirdPartyDto> {
+  isActive?: boolean;
+}
+
+export interface QueryThirdPartyDto {
+  type?: ThirdPartyType;
+  isActive?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ThirdPartyDeletionImpact {
+  timeEntriesCount: number;
+  taskAssignmentsCount: number;
+  projectMembershipsCount: number;
+}
+
+export interface TaskThirdPartyAssignee {
+  id: string;
+  taskId: string;
+  thirdPartyId: string;
+  assignedById: string;
+  createdAt: string;
+  thirdParty?: ThirdParty;
+}
+
+export interface ProjectThirdPartyMember {
+  id: string;
+  projectId: string;
+  thirdPartyId: string;
+  allocation?: number | null;
+  assignedById: string;
+  createdAt: string;
+  thirdParty?: ThirdParty;
 }
 
 // ===========================

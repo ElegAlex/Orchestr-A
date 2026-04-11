@@ -48,6 +48,7 @@ export const projectsService = {
       progress: d.progress ?? 0,
       totalHours: d.hours?.estimated ?? 0,
       loggedHours: d.hours?.actual ?? 0,
+      thirdPartyLoggedHours: d.hours?.thirdPartyActual ?? 0,
       remainingHours: d.hours?.remaining ?? 0,
       membersCount: d.team?.totalMembers ?? 0,
       epicsCount: d.epics?.total ?? 0,
