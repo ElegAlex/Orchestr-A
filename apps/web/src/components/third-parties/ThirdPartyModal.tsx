@@ -138,7 +138,7 @@ export function ThirdPartyModal({
                   type: e.target.value as ThirdPartyType,
                 }))
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {Object.values(ThirdPartyType).map((type) => (
                 <option key={type} value={type}>
@@ -158,7 +158,7 @@ export function ThirdPartyModal({
               onChange={(e) =>
                 setForm((f) => ({ ...f, organizationName: e.target.value }))
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               maxLength={255}
               required
             />
@@ -179,7 +179,7 @@ export function ThirdPartyModal({
                       contactFirstName: e.target.value,
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   maxLength={100}
                 />
               </div>
@@ -193,7 +193,7 @@ export function ThirdPartyModal({
                   onChange={(e) =>
                     setForm((f) => ({ ...f, contactLastName: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   maxLength={100}
                 />
               </div>
@@ -210,7 +210,7 @@ export function ThirdPartyModal({
               onChange={(e) =>
                 setForm((f) => ({ ...f, contactEmail: e.target.value }))
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -225,7 +225,7 @@ export function ThirdPartyModal({
               }
               rows={3}
               maxLength={2000}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -258,7 +258,7 @@ export function ThirdPartyModal({
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-2 text-white bg-primary rounded-md hover:bg-primary-dark disabled:opacity-50"
+              className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
               {submitting ? t("actions.loading") : t("actions.save")}
             </button>

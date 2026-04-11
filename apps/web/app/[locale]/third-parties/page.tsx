@@ -123,7 +123,7 @@ export default function ThirdPartiesPage() {
                 setEditing(null);
                 setModalOpen(true);
               }}
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               + Nouveau tiers
             </button>
@@ -204,7 +204,7 @@ export default function ThirdPartiesPage() {
                     <td className="px-4 py-3">
                       <Link
                         href={`/${locale}/third-parties/${tp.id}`}
-                        className="font-medium text-gray-900 hover:text-primary"
+                        className="font-medium text-gray-900 hover:text-blue-600"
                       >
                         {tp.organizationName}
                       </Link>
@@ -245,7 +245,7 @@ export default function ThirdPartiesPage() {
                             setEditing(tp);
                             setModalOpen(true);
                           }}
-                          className="text-sm text-primary hover:underline"
+                          className="text-sm text-blue-600 hover:underline"
                         >
                           {tc("actions.edit")}
                         </button>

@@ -66,13 +66,13 @@ export function ThirdPartySelector({
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Rechercher un tiers…"
         disabled={disabled || loading}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100"
+        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
       />
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value || null)}
         disabled={disabled || loading}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100"
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
       >
         <option value="">{loading ? "Chargement…" : placeholder}</option>
         {filtered.map((tp) => (

@@ -159,7 +159,7 @@ export default function ThirdPartyDetailPage() {
                     <dd className="font-medium text-gray-900">
                       <a
                         href={`mailto:${thirdParty.contactEmail}`}
-                        className="text-primary hover:underline"
+                        className="text-blue-600 hover:underline"
                       >
                         {thirdParty.contactEmail}
                       </a>
