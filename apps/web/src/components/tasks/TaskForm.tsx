@@ -33,6 +33,7 @@ import {
   User,
 } from "@/types";
 import { tasksService } from "@/services/tasks.service";
+import { projectsService } from "@/services/projects.service";
 import { thirdPartiesService } from "@/services/third-parties.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
@@ -104,6 +105,14 @@ export interface TaskFormProps {
   enableThirdParties?: boolean;
   /** Masque certains statuts (celui de la tâche courante reste toujours visible). */
   hiddenStatuses?: TaskStatus[];
+  /**
+   * Si true, lorsque l'utilisateur sélectionne un projet, TaskForm fetch
+   * les membres du projet via projectsService.getById(projectId) et filtre
+   * la liste des assignés sélectionnables à ces membres uniquement.
+   * Utilisé par les consumers planning et tasks/page (alignement historique).
+   * default: false.
+   */
+  filterAssigneesByProjectMembers?: boolean;
 
   /**
    * Appelé au submit. Le parent fait l'appel API (create ou update) et
@@ -186,12 +195,18 @@ function makeDefaultValues(
 
 function toSubmitPayload(
   values: TaskFormValues,
+  mode: "create" | "edit",
   enableMilestone: boolean,
   enableExternalIntervention: boolean,
 ): TaskFormSubmitPayload {
+  // In edit mode we keep the raw description string (including empty) so the
+  // user can clear an existing description. In create mode empty = absent.
+  const description =
+    mode === "edit" ? values.description : values.description || undefined;
+
   const payload: TaskFormSubmitPayload = {
     title: values.title,
-    description: values.description || undefined,
+    description,
     status: values.status,
     priority: values.priority,
     projectId: values.projectId || null,
@@ -239,6 +254,7 @@ export function TaskForm({
   enableExternalIntervention = false,
   enableThirdParties = false,
   hiddenStatuses = [],
+  filterAssigneesByProjectMembers = false,
   onSubmit,
   onCancel,
 }: TaskFormProps) {
@@ -262,6 +278,10 @@ export function TaskForm({
   >([]);
   const [tpToAssign, setTpToAssign] = useState<string | null>(null);
   const [isAssigningTp, setIsAssigningTp] = useState(false);
+
+  // Project members (filtered assignee list). Only populated when
+  // filterAssigneesByProjectMembers is true AND a project is selected.
+  const [projectMembers, setProjectMembers] = useState<User[]>([]);
 
   const visibleStatuses = ALL_STATUSES.filter(
     (s) => !hiddenStatuses.includes(s) || s === initialTask?.status,
@@ -420,6 +440,7 @@ export function TaskForm({
     try {
       const payload = toSubmitPayload(
         values,
+        mode,
         enableMilestone,
         enableExternalIntervention,
       );
@@ -462,30 +483,71 @@ export function TaskForm({
 
   // ─── Project change handler (filters assignees to project members) ───────
 
-  const handleProjectChange = (newProjectId: string) => {
-    if (newProjectId) {
-      const selectedProject = projects.find((p) => p.id === newProjectId);
-      const projectMemberIds =
-        selectedProject?.members?.map((m) => m.userId) || [];
-      // If the project has no member data, skip the filter (keep current assignees)
-      const filteredAssigneeIds =
-        projectMemberIds.length > 0
-          ? values.assigneeIds.filter((id) => projectMemberIds.includes(id))
-          : values.assigneeIds;
-      setValues({
-        ...values,
-        projectId: newProjectId,
-        milestoneId: "",
-        assigneeIds: filteredAssigneeIds,
-      });
-    } else {
+  const handleProjectChange = async (newProjectId: string) => {
+    if (!newProjectId) {
+      setProjectMembers([]);
       setValues({
         ...values,
         projectId: "",
         milestoneId: "",
       });
+      return;
     }
+
+    if (filterAssigneesByProjectMembers) {
+      // Rich mode: fetch the project to get its .members relation and
+      // narrow both the assignee dropdown and the current selection.
+      try {
+        const project = await projectsService.getById(newProjectId);
+        const members =
+          (project.members?.map((m) => m.user).filter(Boolean) as User[]) || [];
+        setProjectMembers(members);
+        const memberIds = members.map((m) => m.id);
+        setValues({
+          ...values,
+          projectId: newProjectId,
+          milestoneId: "",
+          assigneeIds: values.assigneeIds.filter((id) =>
+            memberIds.includes(id),
+          ),
+        });
+      } catch {
+        setProjectMembers([]);
+        setValues({
+          ...values,
+          projectId: newProjectId,
+          milestoneId: "",
+          assigneeIds: [],
+        });
+      }
+      return;
+    }
+
+    // Light mode (default): filter assignees using whatever member data
+    // the projects prop already carries. If no member data, keep current.
+    const selectedProject = projects.find((p) => p.id === newProjectId);
+    const projectMemberIds =
+      selectedProject?.members?.map((m) => m.userId) || [];
+    const filteredAssigneeIds =
+      projectMemberIds.length > 0
+        ? values.assigneeIds.filter((id) => projectMemberIds.includes(id))
+        : values.assigneeIds;
+    setValues({
+      ...values,
+      projectId: newProjectId,
+      milestoneId: "",
+      assigneeIds: filteredAssigneeIds,
+    });
   };
+
+  // List of users shown in the UserMultiSelect. When filter is active AND a
+  // project is selected AND we fetched its members, narrow the list.
+  const availableAssignees: User[] =
+    filterAssigneesByProjectMembers &&
+    values.projectId &&
+    projectMembers.length > 0
+      ? projectMembers
+      : users;
 
   // ─── Render ──────────────────────────────────────────────────────────────
 
@@ -721,11 +783,18 @@ export function TaskForm({
         <div className={enableMilestone ? "" : "col-span-2"}>
           <UserMultiSelect
             label={t("modal.create.assigneesLabel")}
-            users={users}
+            users={availableAssignees}
             selectedIds={values.assigneeIds}
             onChange={(ids) => setValues({ ...values, assigneeIds: ids })}
             placeholder={t("modal.create.assigneesPlaceholder")}
           />
+          {filterAssigneesByProjectMembers && values.projectId && (
+            <p className="text-xs text-gray-500 mt-1">
+              {projectMembers.length > 0
+                ? `${projectMembers.length} membre(s) du projet disponibles`
+                : "Aucun membre sur ce projet — ajoutez-en via l'onglet Équipe"}
+            </p>
+          )}
         </div>
       </div>
 

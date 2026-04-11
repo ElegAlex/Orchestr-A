@@ -120,6 +120,7 @@ export const TaskCreateModal = ({
           memberCounts={memberCounts}
           enableExternalIntervention
           enableThirdParties={hasPermission("third_parties:assign_to_task")}
+          filterAssigneesByProjectMembers
           onSubmit={async (payload) => {
             try {
               const created = await tasksService.create(
