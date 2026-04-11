@@ -29,6 +29,7 @@ import { PlanningExportModule } from './planning-export/planning-export.module';
 import { AuditModule } from './audit/audit.module';
 import { PredefinedTasksModule } from './predefined-tasks/predefined-tasks.module';
 import { SchoolVacationsModule } from './school-vacations/school-vacations.module';
+import { ThirdPartiesModule } from './third-parties/third-parties.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { SchoolVacationsModule } from './school-vacations/school-vacations.modul
     PlanningExportModule,
     PredefinedTasksModule,
     SchoolVacationsModule,
+    ThirdPartiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

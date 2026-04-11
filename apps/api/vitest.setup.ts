@@ -115,6 +115,12 @@ export enum SchoolVacationSource {
   MANUAL = 'MANUAL',
 }
 
+export enum ThirdPartyType {
+  EXTERNAL_PROVIDER = 'EXTERNAL_PROVIDER',
+  INTERNAL_NON_USER = 'INTERNAL_NON_USER',
+  LEGAL_ENTITY = 'LEGAL_ENTITY',
+}
+
 // Mock PrismaClient for tests
 class MockPrismaClient {
   $connect = vi.fn();
@@ -152,5 +158,6 @@ vi.mock('database', () => {
     HolidayType,
     SchoolVacationZone,
     SchoolVacationSource,
+    ThirdPartyType,
   };
 });
