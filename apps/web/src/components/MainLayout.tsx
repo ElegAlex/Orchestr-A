@@ -36,7 +36,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     { key: "events", href: `/${locale}/events`, icon: "📣", permission: "events:read" },
     { key: "planning", href: `/${locale}/planning`, icon: "🗓️" },
     { key: "timeTracking", href: `/${locale}/time-tracking`, icon: "⏱️", permission: "time_tracking:read" },
-    { key: "thirdParties", href: `/${locale}/third-parties`, icon: "🤝", permission: "third_parties:read" },
     { key: "leaves", href: `/${locale}/leaves`, icon: "🏖️", permission: "leaves:read" },
     { key: "telework", href: `/${locale}/telework`, icon: "🏠", permission: "telework:read" },
   ];
@@ -65,6 +64,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       href: `/${locale}/skills`,
       icon: "⭐",
       permission: "skills:read",
+    },
+    {
+      key: "thirdParties",
+      href: `/${locale}/third-parties`,
+      icon: "🤝",
+      permission: "third_parties:read",
     },
     {
       key: "roleManagement",
