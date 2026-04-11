@@ -686,13 +686,26 @@ export class ProjectsService {
       0,
     );
 
-    // Calculer les heures réelles depuis les TimeEntry
+    // Calculer les heures réelles depuis les TimeEntry, en ségrégeant
+    // strictement les heures user et les heures tiers. totalActualHours
+    // = heures déclarées par des users (jamais mélangé avec des heures
+    // tiers), et totalThirdPartyHours est exposé en parallèle.
     const taskIds = project.tasks.map((t) => t.id);
-    const timeEntries = await this.prisma.timeEntry.findMany({
-      where: { taskId: { in: taskIds } },
-      select: { hours: true },
-    });
-    const totalActualHours = timeEntries.reduce(
+    const [userTimeEntries, thirdPartyTimeEntries] = await Promise.all([
+      this.prisma.timeEntry.findMany({
+        where: { taskId: { in: taskIds }, userId: { not: null } },
+        select: { hours: true },
+      }),
+      this.prisma.timeEntry.findMany({
+        where: { taskId: { in: taskIds }, thirdPartyId: { not: null } },
+        select: { hours: true },
+      }),
+    ]);
+    const totalActualHours = userTimeEntries.reduce(
+      (sum, entry) => sum + entry.hours,
+      0,
+    );
+    const totalThirdPartyHours = thirdPartyTimeEntries.reduce(
       (sum, entry) => sum + entry.hours,
       0,
     );
@@ -715,6 +728,7 @@ export class ProjectsService {
       hours: {
         estimated: totalEstimatedHours,
         actual: totalActualHours,
+        thirdPartyActual: totalThirdPartyHours,
         remaining: Math.max(0, totalEstimatedHours - totalActualHours),
       },
       team: {

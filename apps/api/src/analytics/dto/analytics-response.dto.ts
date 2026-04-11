@@ -72,8 +72,13 @@ export class ProjectDetailDto {
   @ApiProperty({ required: false })
   projectManager?: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Hours logged by users only (segregated)' })
   loggedHours: number;
+
+  @ApiProperty({
+    description: 'Hours logged by third parties only (segregated)',
+  })
+  thirdPartyLoggedHours: number;
 
   @ApiProperty()
   budgetHours: number;

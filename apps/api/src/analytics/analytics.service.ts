@@ -277,19 +277,40 @@ export class AnalyticsService {
     projects: ProjectWithDetails[],
     tasks: Task[],
   ): Promise<ProjectDetailDto[]> {
-    // Fetch all time entries for these projects
+    // Segregate user hours and third-party hours via two parallel groupBy
+    // so that workload aggregations never mix them. loggedHours = user hours,
+    // thirdPartyLoggedHours = third-party hours.
     const projectIds = projects.map((p) => p.id);
-    const timeEntries = await this.prisma.timeEntry.groupBy({
-      by: ['projectId'],
-      where: {
-        projectId: { in: projectIds },
-      },
-      _sum: {
-        hours: true,
-      },
-    });
+    const [userTimeEntries, thirdPartyTimeEntries] = await Promise.all([
+      this.prisma.timeEntry.groupBy({
+        by: ['projectId'],
+        where: {
+          projectId: { in: projectIds },
+          userId: { not: null },
+        },
+        _sum: { hours: true },
+      }),
+      this.prisma.timeEntry.groupBy({
+        by: ['projectId'],
+        where: {
+          projectId: { in: projectIds },
+          thirdPartyId: { not: null },
+        },
+        _sum: { hours: true },
+      }),
+    ]);
 
-    const timeEntriesMap = timeEntries.reduce(
+    const userHoursMap = userTimeEntries.reduce(
+      (acc, entry) => {
+        if (entry.projectId) {
+          acc[entry.projectId] = entry._sum.hours || 0;
+        }
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    const thirdPartyHoursMap = thirdPartyTimeEntries.reduce(
       (acc, entry) => {
         if (entry.projectId) {
           acc[entry.projectId] = entry._sum.hours || 0;
@@ -302,7 +323,8 @@ export class AnalyticsService {
     return projects.map((project) => {
       const projectTasks = tasks.filter((t) => t.projectId === project.id);
       const completedTasks = projectTasks.filter((t) => t.status === 'DONE');
-      const totalLoggedHours = timeEntriesMap[project.id] || 0;
+      const totalLoggedHours = userHoursMap[project.id] || 0;
+      const totalThirdPartyLoggedHours = thirdPartyHoursMap[project.id] || 0;
       const isOverdue =
         project.endDate &&
         new Date(project.endDate) < new Date() &&
@@ -324,6 +346,7 @@ export class AnalyticsService {
         } : null,
         icon: project.icon ?? null,
         loggedHours: totalLoggedHours,
+        thirdPartyLoggedHours: totalThirdPartyLoggedHours,
         budgetHours: project.budgetHours || 0,
         startDate: project.startDate || project.createdAt,
         dueDate: project.endDate ?? undefined,

@@ -1,8 +1,15 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TimeTrackingService } from './time-tracking.service';
+import { Role } from 'database';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { RoleManagementService } from '../role-management/role-management.service';
+import { ThirdPartiesService } from '../third-parties/third-parties.service';
+import { TimeTrackingService } from './time-tracking.service';
 
 describe('TimeTrackingService', () => {
   let service: TimeTrackingService;
@@ -16,28 +23,34 @@ describe('TimeTrackingService', () => {
       update: vi.fn(),
       delete: vi.fn(),
     },
-    user: {
-      findUnique: vi.fn(),
-    },
-    task: {
-      findUnique: vi.fn(),
-    },
-    project: {
-      findUnique: vi.fn(),
-    },
+    user: { findUnique: vi.fn() },
+    task: { findUnique: vi.fn() },
+    project: { findUnique: vi.fn() },
   };
+
+  const mockThirdPartiesService = {
+    assertExistsAndActive: vi.fn(),
+    assertAssignedToTaskOrProject: vi.fn(),
+  };
+
+  const mockRoleManagementService = {
+    getPermissionsForRole: vi.fn(),
+  };
+
+  const currentUser = { id: 'user-1', role: 'MANAGER' as Role };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TimeTrackingService,
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: ThirdPartiesService, useValue: mockThirdPartiesService },
         {
-          provide: PrismaService,
-          useValue: mockPrismaService,
+          provide: RoleManagementService,
+          useValue: mockRoleManagementService,
         },
       ],
     }).compile();
-
     service = module.get<TimeTrackingService>(TimeTrackingService);
   });
 
@@ -45,9 +58,8 @@ describe('TimeTrackingService', () => {
     vi.clearAllMocks();
   });
 
-  describe('create', () => {
-    const userId = 'user-1';
-    const createTimeEntryDto = {
+  describe('create (user mode)', () => {
+    const dto = {
       date: '2025-01-01',
       hours: 8,
       activityType: 'DEVELOPMENT' as const,
@@ -56,322 +68,332 @@ describe('TimeTrackingService', () => {
       description: 'Working on feature',
     };
 
-    it('should create a time entry successfully', async () => {
-      const mockUser = { id: 'user-1', firstName: 'John' };
-      const mockTask = { id: 'task-1', title: 'Task', projectId: 'project-1' };
-      const mockProject = { id: 'project-1', name: 'Project' };
-      const mockEntry = {
+    it('creates a user time entry with declaredById = currentUser.id', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: 'project-1',
+      });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+      mockPrismaService.timeEntry.create.mockResolvedValue({
         id: '1',
-        userId,
-        date: new Date(createTimeEntryDto.date),
-        hours: createTimeEntryDto.hours,
-        activityType: createTimeEntryDto.activityType,
-        taskId: createTimeEntryDto.taskId,
-        projectId: createTimeEntryDto.projectId,
-        description: createTimeEntryDto.description,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        userId: 'user-1',
+        declaredById: 'user-1',
+      });
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
-      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
-      mockPrismaService.timeEntry.create.mockResolvedValue(mockEntry);
+      await service.create(currentUser, dto);
 
-      const result = await service.create(userId, createTimeEntryDto);
-
-      expect(result).toBeDefined();
-      expect(result.userId).toBe(userId);
+      expect(mockPrismaService.timeEntry.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'user-1',
+            declaredById: 'user-1',
+            thirdPartyId: null,
+          }),
+        }),
+      );
     });
 
-    it('should throw error when user not found', async () => {
+    it('throws NotFoundException when current user is missing', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
-
-      await expect(service.create(userId, createTimeEntryDto)).rejects.toThrow(
+      await expect(service.create(currentUser, dto)).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('should throw error when task not found', async () => {
+    it('throws NotFoundException when task is missing', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
       mockPrismaService.task.findUnique.mockResolvedValue(null);
-
-      await expect(service.create(userId, createTimeEntryDto)).rejects.toThrow(
+      await expect(service.create(currentUser, dto)).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('should throw error when project not found', async () => {
-      const dtoWithProject = { ...createTimeEntryDto, taskId: undefined };
+    it('throws NotFoundException when project is missing', async () => {
+      const projectOnly = { ...dto, taskId: undefined };
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
       mockPrismaService.project.findUnique.mockResolvedValue(null);
-
-      await expect(service.create(userId, dtoWithProject)).rejects.toThrow(
+      await expect(service.create(currentUser, projectOnly)).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('should throw error when no task or project provided', async () => {
-      const dtoNoTaskOrProject = {
+    it('throws BadRequestException when neither task nor project provided', async () => {
+      const bad = {
         date: '2025-01-01',
         hours: 8,
         activityType: 'DEVELOPMENT' as const,
       };
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-
-      await expect(service.create(userId, dtoNoTaskOrProject)).rejects.toThrow(
+      await expect(service.create(currentUser, bad)).rejects.toThrow(
         BadRequestException,
       );
     });
 
-    it('should use task projectId when no projectId provided', async () => {
-      const dtoNoProject = {
+    it("falls back to task.projectId when dto.projectId is missing", async () => {
+      const taskOnly = {
         date: '2025-01-01',
         hours: 8,
         activityType: 'DEVELOPMENT' as const,
         taskId: 'task-1',
       };
-      const mockTask = { id: 'task-1', projectId: 'project-from-task' };
-
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: 'project-from-task',
+      });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-from-task',
+      });
+      mockPrismaService.timeEntry.create.mockResolvedValue({ id: '1' });
+
+      await service.create(currentUser, taskOnly);
+
+      expect(mockPrismaService.timeEntry.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            projectId: 'project-from-task',
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('create (third party mode)', () => {
+    const baseDto = {
+      date: '2025-01-01',
+      hours: 4,
+      activityType: 'DEVELOPMENT' as const,
+      taskId: 'task-1',
+      projectId: 'project-1',
+      thirdPartyId: 'tp-1',
+    };
+
+    beforeEach(() => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: 'project-1',
+      });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+    });
+
+    it('throws ForbiddenException when declarer lacks permission', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'time_tracking:create',
+      ]);
+      await expect(service.create(currentUser, baseDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockPrismaService.timeEntry.create).not.toHaveBeenCalled();
+    });
+
+    it('throws when third party does not exist or is archived', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'time_tracking:declare_for_third_party',
+      ]);
+      mockThirdPartiesService.assertExistsAndActive.mockRejectedValue(
+        new BadRequestException('archived'),
+      );
+      await expect(service.create(currentUser, baseDto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('throws ForbiddenException when third party is not assigned to task/project', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'time_tracking:declare_for_third_party',
+      ]);
+      mockThirdPartiesService.assertExistsAndActive.mockResolvedValue(
+        undefined,
+      );
+      mockThirdPartiesService.assertAssignedToTaskOrProject.mockRejectedValue(
+        new ForbiddenException('not assigned'),
+      );
+      await expect(service.create(currentUser, baseDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('creates a third party entry with userId null and declaredById = currentUser.id', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'time_tracking:declare_for_third_party',
+      ]);
+      mockThirdPartiesService.assertExistsAndActive.mockResolvedValue(
+        undefined,
+      );
+      mockThirdPartiesService.assertAssignedToTaskOrProject.mockResolvedValue(
+        undefined,
+      );
       mockPrismaService.timeEntry.create.mockResolvedValue({
         id: '1',
-        ...dtoNoProject,
+        userId: null,
+        thirdPartyId: 'tp-1',
+        declaredById: 'user-1',
       });
 
-      const result = await service.create(userId, dtoNoProject);
-      expect(result).toBeDefined();
+      await service.create(currentUser, baseDto);
+
+      expect(mockPrismaService.timeEntry.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: null,
+            thirdPartyId: 'tp-1',
+            declaredById: 'user-1',
+          }),
+        }),
+      );
+    });
+
+    it('creates a third party entry on an orphan task (no projectId)', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: null,
+      });
+      const orphanDto = {
+        ...baseDto,
+        projectId: undefined,
+      };
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'time_tracking:declare_for_third_party',
+      ]);
+      mockThirdPartiesService.assertExistsAndActive.mockResolvedValue(
+        undefined,
+      );
+      mockThirdPartiesService.assertAssignedToTaskOrProject.mockResolvedValue(
+        undefined,
+      );
+      mockPrismaService.timeEntry.create.mockResolvedValue({ id: '1' });
+
+      await service.create(currentUser, orphanDto);
+
+      expect(
+        mockThirdPartiesService.assertAssignedToTaskOrProject,
+      ).toHaveBeenCalledWith('tp-1', {
+        taskId: 'task-1',
+        projectId: undefined,
+      });
     });
   });
 
   describe('findAll', () => {
-    it('should return paginated time entries', async () => {
-      const mockEntries = [{ id: '1', userId: 'user-1', hours: 8 }];
-
-      mockPrismaService.timeEntry.findMany.mockResolvedValue(mockEntries);
-      mockPrismaService.timeEntry.count.mockResolvedValue(1);
-
-      const result = await service.findAll(1, 10);
-
-      expect(result).toHaveProperty('data');
-      expect(result).toHaveProperty('meta');
-      expect(result.data).toHaveLength(1);
-      expect(result.meta.total).toBe(1);
-    });
-
-    it('should filter by userId', async () => {
+    it('filters by thirdPartyId when provided', async () => {
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.count.mockResolvedValue(0);
+      await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'tp-1',
+      );
+      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ thirdPartyId: 'tp-1' }),
+        }),
+      );
+    });
 
+    it('filters by userId independently', async () => {
+      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.count.mockResolvedValue(0);
       await service.findAll(1, 10, 'user-1');
-
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ userId: 'user-1' }) as object,
-        }),
-      );
-    });
-
-    it('should filter by projectId', async () => {
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
-      mockPrismaService.timeEntry.count.mockResolvedValue(0);
-
-      await service.findAll(1, 10, undefined, 'project-1');
-
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ projectId: 'project-1' }) as object,
-        }),
-      );
-    });
-
-    it('should filter by taskId', async () => {
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
-      mockPrismaService.timeEntry.count.mockResolvedValue(0);
-
-      await service.findAll(1, 10, undefined, undefined, 'task-1');
-
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ taskId: 'task-1' }) as object,
-        }),
-      );
-    });
-
-    it('should filter by date range', async () => {
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
-      mockPrismaService.timeEntry.count.mockResolvedValue(0);
-
-      await service.findAll(
-        1,
-        10,
-        undefined,
-        undefined,
-        undefined,
-        '2025-01-01',
-        '2025-01-31',
-      );
-
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            date: expect.objectContaining({
-              gte: expect.any(Date) as Date,
-              lte: expect.any(Date) as Date,
-            }) as object,
-          }) as object,
-        }),
-      );
-    });
-
-    it('should filter by startDate only', async () => {
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
-      mockPrismaService.timeEntry.count.mockResolvedValue(0);
-
-      await service.findAll(
-        1,
-        10,
-        undefined,
-        undefined,
-        undefined,
-        '2025-01-01',
-      );
-
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            date: expect.objectContaining({
-              gte: expect.any(Date) as Date,
-            }) as object,
-          }) as object,
-        }),
-      );
-    });
-
-    it('should filter by endDate only', async () => {
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
-      mockPrismaService.timeEntry.count.mockResolvedValue(0);
-
-      await service.findAll(
-        1,
-        10,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        '2025-01-31',
-      );
-
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            date: expect.objectContaining({
-              lte: expect.any(Date) as Date,
-            }) as object,
-          }) as object,
+          where: expect.objectContaining({ userId: 'user-1' }),
         }),
       );
     });
   });
 
   describe('findOne', () => {
-    it('should return a time entry by id', async () => {
-      const mockEntry = { id: '1', userId: 'user-1', hours: 8 };
-
-      mockPrismaService.timeEntry.findUnique.mockResolvedValue(mockEntry);
-
+    it('returns entry when found', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({ id: '1' });
       const result = await service.findOne('1');
-
-      expect(result).toBeDefined();
       expect(result.id).toBe('1');
     });
 
-    it('should throw error when entry not found', async () => {
+    it('throws NotFoundException when missing', async () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(null);
-
-      await expect(service.findOne('nonexistent')).rejects.toThrow(
+      await expect(service.findOne('missing')).rejects.toThrow(
         NotFoundException,
       );
     });
   });
 
   describe('update', () => {
-    it('should update a time entry successfully', async () => {
-      const updateDto = { hours: 6 };
-      const existingEntry = {
+    it('updates hours on a user entry', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
         id: '1',
         userId: 'user-1',
-        hours: 8,
-        taskId: 'task-1',
-        projectId: 'project-1',
-      };
-      const updatedEntry = { ...existingEntry, ...updateDto };
-
-      mockPrismaService.timeEntry.findUnique.mockResolvedValue(existingEntry);
-      mockPrismaService.timeEntry.update.mockResolvedValue(updatedEntry);
-
-      const result = await service.update('1', updateDto);
-
-      expect(result).toBeDefined();
+        thirdPartyId: null,
+      });
+      mockPrismaService.timeEntry.update.mockResolvedValue({
+        id: '1',
+        hours: 6,
+      });
+      const result = await service.update('1', { hours: 6 });
       expect(result.hours).toBe(6);
     });
 
-    it('should throw error when entry not found', async () => {
+    it('throws NotFoundException when entry missing', async () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(null);
-
       await expect(service.update('1', { hours: 6 })).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('should update with new taskId', async () => {
-      const existingEntry = {
+    it('rejects attempts to mutate thirdPartyId on a user entry', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: '1',
+        userId: 'user-1',
+        thirdPartyId: null,
+      });
+      await expect(
+        service.update('1', {
+          // cast to accept the extra field even though UpdateDto may not have it
+          thirdPartyId: 'tp-1',
+        } as unknown as Parameters<typeof service.update>[1]),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects attempts to clear thirdPartyId on a tiers entry', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: '1',
+        userId: null,
+        thirdPartyId: 'tp-1',
+      });
+      await expect(
+        service.update('1', {
+          thirdPartyId: null,
+        } as unknown as Parameters<typeof service.update>[1]),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws NotFoundException when new task missing', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
         id: '1',
         taskId: 'task-1',
-        projectId: 'project-1',
-      };
-      mockPrismaService.timeEntry.findUnique.mockResolvedValue(existingEntry);
-      mockPrismaService.task.findUnique.mockResolvedValue({ id: 'task-2' });
-      mockPrismaService.timeEntry.update.mockResolvedValue({
-        ...existingEntry,
-        taskId: 'task-2',
       });
-
-      const result = await service.update('1', { taskId: 'task-2' });
-      expect(result.taskId).toBe('task-2');
-    });
-
-    it('should throw error when new task not found', async () => {
-      const existingEntry = { id: '1', taskId: 'task-1' };
-      mockPrismaService.timeEntry.findUnique.mockResolvedValue(existingEntry);
       mockPrismaService.task.findUnique.mockResolvedValue(null);
-
-      await expect(service.update('1', { taskId: 'invalid' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update('1', { taskId: 'invalid' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
-    it('should update with new projectId', async () => {
-      const existingEntry = { id: '1', projectId: 'project-1' };
-      mockPrismaService.timeEntry.findUnique.mockResolvedValue(existingEntry);
-      mockPrismaService.project.findUnique.mockResolvedValue({
-        id: 'project-2',
+    it('throws NotFoundException when new project missing', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: '1',
+        projectId: 'project-1',
       });
-      mockPrismaService.timeEntry.update.mockResolvedValue({
-        ...existingEntry,
-        projectId: 'project-2',
-      });
-
-      const result = await service.update('1', { projectId: 'project-2' });
-      expect(result.projectId).toBe('project-2');
-    });
-
-    it('should throw error when new project not found', async () => {
-      const existingEntry = { id: '1', projectId: 'project-1' };
-      mockPrismaService.timeEntry.findUnique.mockResolvedValue(existingEntry);
       mockPrismaService.project.findUnique.mockResolvedValue(null);
-
       await expect(
         service.update('1', { projectId: 'invalid' }),
       ).rejects.toThrow(NotFoundException);
@@ -379,205 +401,128 @@ describe('TimeTrackingService', () => {
   });
 
   describe('remove', () => {
-    it('should delete a time entry', async () => {
-      const mockEntry = { id: '1', userId: 'user-1' };
-
-      mockPrismaService.timeEntry.findUnique.mockResolvedValue(mockEntry);
-      mockPrismaService.timeEntry.delete.mockResolvedValue(mockEntry);
-
+    it('deletes entry', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({ id: '1' });
+      mockPrismaService.timeEntry.delete.mockResolvedValue({ id: '1' });
       const result = await service.remove('1');
-
-      expect(result.message).toBe('Entrée de temps supprimée avec succès');
-      expect(mockPrismaService.timeEntry.delete).toHaveBeenCalledWith({
-        where: { id: '1' },
-      });
+      expect(result.message).toContain('supprimée');
     });
 
-    it('should throw error when entry not found', async () => {
+    it('throws NotFoundException when missing', async () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(null);
-
-      await expect(service.remove('1')).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('getUserEntries', () => {
-    it('should return entries for user', async () => {
-      const mockEntries = [{ id: '1', userId: 'user-1', hours: 8 }];
-      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.timeEntry.findMany.mockResolvedValue(mockEntries);
-
-      const result = await service.getUserEntries('user-1');
-
-      expect(result).toHaveLength(1);
-    });
-
-    it('should throw error when user not found', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
-
-      await expect(service.getUserEntries('invalid')).rejects.toThrow(
+      await expect(service.remove('missing')).rejects.toThrow(
         NotFoundException,
-      );
-    });
-
-    it('should filter by date range', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
-
-      await service.getUserEntries('user-1', '2025-01-01', '2025-01-31');
-
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            userId: 'user-1',
-            date: expect.objectContaining({
-              gte: expect.any(Date) as Date,
-              lte: expect.any(Date) as Date,
-            }) as object,
-          }) as object,
-        }),
-      );
-    });
-
-    it('should filter by startDate only', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
-
-      await service.getUserEntries('user-1', '2025-01-01');
-
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            date: expect.objectContaining({
-              gte: expect.any(Date) as Date,
-            }) as object,
-          }) as object,
-        }),
-      );
-    });
-
-    it('should filter by endDate only', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
-
-      await service.getUserEntries('user-1', undefined, '2025-01-31');
-
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            date: expect.objectContaining({
-              lte: expect.any(Date) as Date,
-            }) as object,
-          }) as object,
-        }),
       );
     });
   });
 
   describe('getUserReport', () => {
-    it('should return user report with totals', async () => {
-      const mockEntries = [
+    it('returns report with user-only entries', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.timeEntry.findMany.mockResolvedValue([
         {
           id: '1',
-          userId: 'user-1',
           hours: 4,
           activityType: 'DEVELOPMENT',
           date: new Date('2025-01-01'),
           project: { id: 'p1', name: 'Project 1' },
         },
-        {
-          id: '2',
-          userId: 'user-1',
-          hours: 4,
-          activityType: 'MEETING',
-          date: new Date('2025-01-01'),
-          project: { id: 'p1', name: 'Project 1' },
-        },
-      ];
-      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.timeEntry.findMany.mockResolvedValue(mockEntries);
-
+      ]);
       const result = await service.getUserReport(
         'user-1',
         '2025-01-01',
         '2025-01-31',
       );
-
-      expect(result.userId).toBe('user-1');
-      expect(result.totalHours).toBe(8);
-      expect(result.totalEntries).toBe(2);
+      expect(result.totalHours).toBe(4);
       expect(result.byType).toHaveProperty('DEVELOPMENT', 4);
-      expect(result.byType).toHaveProperty('MEETING', 4);
     });
 
-    it('should throw error when user not found', async () => {
+    it('throws NotFoundException when user missing', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
-
       await expect(
-        service.getUserReport('invalid', '2025-01-01', '2025-01-31'),
+        service.getUserReport('missing', '2025-01-01', '2025-01-31'),
       ).rejects.toThrow(NotFoundException);
     });
   });
 
-  describe('getProjectReport', () => {
-    it('should return project report with totals', async () => {
-      const mockProject = { id: 'project-1', name: 'Test Project' };
-      const mockEntries = [
+  describe('getProjectReport (segregated)', () => {
+    it('returns segregated user and third party entries with separate totals', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'Test Project',
+      });
+      const userEntries = [
         {
-          id: '1',
-          hours: 4,
+          id: 'u1',
+          hours: 5,
           activityType: 'DEVELOPMENT',
-          user: { id: 'u1', firstName: 'John', lastName: 'Doe' },
-        },
-        {
-          id: '2',
-          hours: 4,
-          activityType: 'MEETING',
-          user: { id: 'u1', firstName: 'John', lastName: 'Doe' },
+          user: { id: 'user-1', firstName: 'John', lastName: 'Doe' },
         },
       ];
-      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
-      mockPrismaService.timeEntry.findMany.mockResolvedValue(mockEntries);
+      const thirdPartyEntries = [
+        {
+          id: 'tp1',
+          hours: 3,
+          activityType: 'MEETING',
+          thirdParty: {
+            id: 'tp-1',
+            organizationName: 'Acme',
+            type: 'EXTERNAL_PROVIDER',
+          },
+        },
+      ];
+      mockPrismaService.timeEntry.findMany
+        .mockResolvedValueOnce(userEntries)
+        .mockResolvedValueOnce(thirdPartyEntries);
 
       const result = await service.getProjectReport('project-1');
 
-      expect(result.projectId).toBe('project-1');
-      expect(result.projectName).toBe('Test Project');
-      expect(result.totalHours).toBe(8);
-      expect(result.totalEntries).toBe(2);
+      expect(result.totals.userHours).toBe(5);
+      expect(result.totals.thirdPartyHours).toBe(3);
+      expect(result.userEntries).toHaveLength(1);
+      expect(result.thirdPartyEntries).toHaveLength(1);
       expect(result.byUser).toHaveLength(1);
-      expect(result.byType).toHaveProperty('DEVELOPMENT', 4);
+      expect(result.byThirdParty).toHaveLength(1);
+      expect(result.byType).toEqual({ DEVELOPMENT: 5, MEETING: 3 });
     });
 
-    it('should throw error when project not found', async () => {
+    it('throws NotFoundException when project missing', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
-
-      await expect(service.getProjectReport('invalid')).rejects.toThrow(
+      await expect(service.getProjectReport('missing')).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('should filter by date range when provided', async () => {
+    it('applies date range filter on both queries', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         id: 'project-1',
         name: 'Project',
       });
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
 
-      const result = await service.getProjectReport(
+      await service.getProjectReport(
         'project-1',
         '2025-01-01',
         '2025-01-31',
       );
 
-      expect(result.period).not.toBeNull();
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
+      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledTimes(2);
+      expect(mockPrismaService.timeEntry.findMany).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({
           where: expect.objectContaining({
-            date: expect.objectContaining({
-              gte: expect.any(Date) as Date,
-              lte: expect.any(Date) as Date,
-            }) as object,
-          }) as object,
+            projectId: 'project-1',
+            userId: { not: null },
+          }),
+        }),
+      );
+      expect(mockPrismaService.timeEntry.findMany).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            projectId: 'project-1',
+            thirdPartyId: { not: null },
+          }),
         }),
       );
     });

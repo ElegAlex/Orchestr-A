@@ -24,6 +24,7 @@ import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Role } from 'database';
 
 @ApiTags('time-tracking')
 @Controller('time-tracking')
@@ -47,10 +48,10 @@ export class TimeTrackingController {
     description: 'Tâche ou projet introuvable',
   })
   create(
-    @CurrentUser('id') userId: string,
+    @CurrentUser() user: { id: string; role: Role },
     @Body() createTimeEntryDto: CreateTimeEntryDto,
   ) {
-    return this.timeTrackingService.create(userId, createTimeEntryDto);
+    return this.timeTrackingService.create(user, createTimeEntryDto);
   }
 
   @Get()
@@ -61,6 +62,7 @@ export class TimeTrackingController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'userId', required: false, type: String })
+  @ApiQuery({ name: 'thirdPartyId', required: false, type: String })
   @ApiQuery({ name: 'projectId', required: false, type: String })
   @ApiQuery({ name: 'taskId', required: false, type: String })
   @ApiQuery({ name: 'startDate', required: false, type: String })
@@ -77,6 +79,7 @@ export class TimeTrackingController {
     @Query('taskId') taskId?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('thirdPartyId') thirdPartyId?: string,
   ) {
     return this.timeTrackingService.findAll(
       page,
@@ -86,6 +89,7 @@ export class TimeTrackingController {
       taskId,
       startDate,
       endDate,
+      thirdPartyId,
     );
   }
 

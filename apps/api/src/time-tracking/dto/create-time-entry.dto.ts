@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsNotEmpty,
   IsDateString,
@@ -68,4 +68,12 @@ export class CreateTimeEntryDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "ID d'un tiers pour déclarer du temps pour son compte (nécessite la permission time_tracking:declare_for_third_party)",
+  })
+  @IsOptional()
+  @IsUUID()
+  thirdPartyId?: string;
 }

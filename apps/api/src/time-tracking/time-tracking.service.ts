@@ -1,102 +1,152 @@
 import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
+import { Prisma, Role } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
+import { RoleManagementService } from '../role-management/role-management.service';
+import { ThirdPartiesService } from '../third-parties/third-parties.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
-import { Prisma } from 'database';
+
+const DECLARE_FOR_THIRD_PARTY_PERMISSION =
+  'time_tracking:declare_for_third_party';
+
+type TimeEntryActor =
+  | { kind: 'user'; userId: string }
+  | { kind: 'thirdParty'; thirdPartyId: string };
 
 @Injectable()
 export class TimeTrackingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly thirdPartiesService: ThirdPartiesService,
+    private readonly roleManagementService: RoleManagementService,
+  ) {}
 
   /**
-   * Créer une nouvelle entrée de temps
+   * Créer une nouvelle entrée de temps.
+   *
+   * Deux modes d'écriture :
+   * - standard : `userId = currentUser`, `declaredById = currentUser`, `thirdPartyId = null`
+   * - pour compte d'un tiers : `thirdPartyId` fourni → `userId = null`, `declaredById = currentUser`.
+   *   Nécessite la permission `time_tracking:declare_for_third_party` et que le tiers soit
+   *   rattaché à la tâche ou au projet cible.
    */
-  async create(userId: string, createTimeEntryDto: CreateTimeEntryDto) {
-    const { date, hours, activityType, taskId, projectId, description } =
-      createTimeEntryDto;
+  async create(
+    currentUser: { id: string; role: Role },
+    createTimeEntryDto: CreateTimeEntryDto,
+  ) {
+    const {
+      date,
+      hours,
+      activityType,
+      taskId,
+      projectId,
+      description,
+      thirdPartyId,
+    } = createTimeEntryDto;
 
-    // Vérifier que l'utilisateur existe
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+    const currentUserRecord = await this.prisma.user.findUnique({
+      where: { id: currentUser.id },
     });
-
-    if (!user) {
+    if (!currentUserRecord) {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    // Vérifier la tâche si fournie
     if (taskId) {
       const task = await this.prisma.task.findUnique({
         where: { id: taskId },
       });
-
       if (!task) {
         throw new NotFoundException('Tâche introuvable');
       }
-
-      // Si task fournie, prendre son projet
       if (!projectId && task.projectId) {
         createTimeEntryDto.projectId = task.projectId;
       }
     }
 
-    // Vérifier le projet si fourni
-    if (projectId) {
-      const project = await this.prisma.project.findUnique({
-        where: { id: projectId },
-      });
+    const effectiveProjectId = createTimeEntryDto.projectId || projectId;
 
+    if (effectiveProjectId) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: effectiveProjectId },
+      });
       if (!project) {
         throw new NotFoundException('Projet introuvable');
       }
     }
 
-    // Vérifier qu'au moins une tâche ou un projet est fourni
-    if (!taskId && !projectId) {
+    if (!taskId && !effectiveProjectId) {
       throw new BadRequestException(
         'Une tâche ou un projet doit être spécifié',
       );
     }
 
-    const timeEntry = await this.prisma.timeEntry.create({
+    const actor = await this.resolveActor(currentUser, thirdPartyId, {
+      taskId,
+      projectId: effectiveProjectId ?? undefined,
+    });
+
+    return this.prisma.timeEntry.create({
       data: {
-        userId,
-        declaredById: userId,
+        userId: actor.kind === 'user' ? actor.userId : null,
+        thirdPartyId:
+          actor.kind === 'thirdParty' ? actor.thirdPartyId : null,
+        declaredById: currentUser.id,
         date: new Date(date),
         hours,
         activityType,
         taskId,
-        projectId: createTimeEntryDto.projectId || projectId,
+        projectId: effectiveProjectId,
         description,
       },
       include: {
         user: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        thirdParty: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
+            organizationName: true,
+            type: true,
           },
         },
-        task: {
-          select: {
-            id: true,
-            title: true,
-          },
+        declaredBy: {
+          select: { id: true, firstName: true, lastName: true },
         },
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        task: { select: { id: true, title: true } },
+        project: { select: { id: true, name: true } },
       },
     });
+  }
 
-    return timeEntry;
+  private async resolveActor(
+    currentUser: { id: string; role: Role },
+    thirdPartyId: string | undefined,
+    ctx: { taskId?: string; projectId?: string },
+  ): Promise<TimeEntryActor> {
+    if (!thirdPartyId) {
+      return { kind: 'user', userId: currentUser.id };
+    }
+
+    const permissions =
+      await this.roleManagementService.getPermissionsForRole(currentUser.role);
+    if (!permissions.includes(DECLARE_FOR_THIRD_PARTY_PERMISSION)) {
+      throw new ForbiddenException(
+        'Permission time_tracking:declare_for_third_party requise pour déclarer pour un tiers',
+      );
+    }
+
+    await this.thirdPartiesService.assertExistsAndActive(thirdPartyId);
+    await this.thirdPartiesService.assertAssignedToTaskOrProject(
+      thirdPartyId,
+      ctx,
+    );
+
+    return { kind: 'thirdParty', thirdPartyId };
   }
 
   /**
@@ -110,12 +160,14 @@ export class TimeTrackingService {
     taskId?: string,
     startDate?: string,
     endDate?: string,
+    thirdPartyId?: string,
   ) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
 
     const where: Prisma.TimeEntryWhereInput = {};
     if (userId) where.userId = userId;
+    if (thirdPartyId) where.thirdPartyId = thirdPartyId;
     if (projectId) where.projectId = projectId;
     if (taskId) where.taskId = taskId;
 
@@ -137,28 +189,22 @@ export class TimeTrackingService {
         take: safeLimit,
         include: {
           user: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          thirdParty: {
             select: {
               id: true,
-              firstName: true,
-              lastName: true,
+              organizationName: true,
+              type: true,
             },
           },
-          task: {
-            select: {
-              id: true,
-              title: true,
-            },
+          declaredBy: {
+            select: { id: true, firstName: true, lastName: true },
           },
-          project: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
+          task: { select: { id: true, title: true } },
+          project: { select: { id: true, name: true } },
         },
-        orderBy: {
-          date: 'desc',
-        },
+        orderBy: { date: 'desc' },
       }),
       this.prisma.timeEntry.count({ where }),
     ]);
@@ -182,27 +228,20 @@ export class TimeTrackingService {
       where: { id },
       include: {
         user: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        thirdParty: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+            organizationName: true,
+            type: true,
           },
         },
-        task: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-          },
+        declaredBy: {
+          select: { id: true, firstName: true, lastName: true },
         },
-        project: {
-          select: {
-            id: true,
-            name: true,
-            status: true,
-          },
-        },
+        task: { select: { id: true, title: true, status: true } },
+        project: { select: { id: true, name: true, status: true } },
       },
     });
 
@@ -214,7 +253,11 @@ export class TimeTrackingService {
   }
 
   /**
-   * Mettre à jour une entrée
+   * Mettre à jour une entrée.
+   *
+   * Interdit explicitement toute mutation croisant l'acteur (user → thirdParty
+   * ou inverse) : une entry user reste une entry user, une entry tiers reste
+   * une entry tiers. Pour changer d'acteur, supprimer et recréer.
    */
   async update(id: string, updateTimeEntryDto: UpdateTimeEntryDto) {
     const existing = await this.prisma.timeEntry.findUnique({
@@ -228,7 +271,20 @@ export class TimeTrackingService {
     const { date, hours, activityType, taskId, projectId, description } =
       updateTimeEntryDto;
 
-    // Vérifications similaires à create si les champs sont fournis
+    // Interdiction explicite d'une mutation d'acteur via update
+    if ('thirdPartyId' in updateTimeEntryDto) {
+      const dtoThirdPartyId = (
+        updateTimeEntryDto as UpdateTimeEntryDto & {
+          thirdPartyId?: string | null;
+        }
+      ).thirdPartyId;
+      if (dtoThirdPartyId !== existing.thirdPartyId) {
+        throw new BadRequestException(
+          "Impossible de changer l'acteur (user/tiers) d'une entrée existante. Supprimer et recréer.",
+        );
+      }
+    }
+
     if (taskId && taskId !== existing.taskId) {
       const task = await this.prisma.task.findUnique({
         where: { id: taskId },
@@ -259,24 +315,20 @@ export class TimeTrackingService {
       },
       include: {
         user: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        thirdParty: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
+            organizationName: true,
+            type: true,
           },
         },
-        task: {
-          select: {
-            id: true,
-            title: true,
-          },
+        declaredBy: {
+          select: { id: true, firstName: true, lastName: true },
         },
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        task: { select: { id: true, title: true } },
+        project: { select: { id: true, name: true } },
       },
     });
 
@@ -303,7 +355,7 @@ export class TimeTrackingService {
   }
 
   /**
-   * Récupérer les entrées de temps d'un utilisateur
+   * Récupérer les entrées de temps d'un utilisateur (user-only, par définition)
    */
   async getUserEntries(userId: string, startDate?: string, endDate?: string) {
     const user = await this.prisma.user.findUnique({
@@ -330,36 +382,18 @@ export class TimeTrackingService {
     const entries = await this.prisma.timeEntry.findMany({
       where,
       include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        task: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        user: { select: { id: true, firstName: true, lastName: true } },
+        task: { select: { id: true, title: true } },
+        project: { select: { id: true, name: true } },
       },
-      orderBy: {
-        date: 'desc',
-      },
+      orderBy: { date: 'desc' },
     });
 
     return entries;
   }
 
   /**
-   * Récupérer le rapport de temps d'un utilisateur
+   * Récupérer le rapport de temps d'un utilisateur (user-only, par définition)
    */
   async getUserReport(userId: string, startDate: string, endDate: string) {
     const user = await this.prisma.user.findUnique({
@@ -379,27 +413,14 @@ export class TimeTrackingService {
         },
       },
       include: {
-        task: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        task: { select: { id: true, title: true } },
+        project: { select: { id: true, name: true } },
       },
-      orderBy: {
-        date: 'asc',
-      },
+      orderBy: { date: 'asc' },
     });
 
     const totalHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
 
-    // Grouper par type d'activité
     const byType = entries.reduce(
       (acc, entry) => {
         acc[entry.activityType] = (acc[entry.activityType] || 0) + entry.hours;
@@ -408,7 +429,6 @@ export class TimeTrackingService {
       {} as Record<string, number>,
     );
 
-    // Grouper par projet
     const byProject = entries.reduce(
       (acc, entry) => {
         if (entry.project) {
@@ -430,7 +450,6 @@ export class TimeTrackingService {
       >,
     );
 
-    // Grouper par date
     const byDate = entries.reduce(
       (acc, entry) => {
         const dateKey = entry.date.toISOString().split('T')[0];
@@ -456,7 +475,11 @@ export class TimeTrackingService {
   }
 
   /**
-   * Récupérer le rapport de temps d'un projet
+   * Récupérer le rapport de temps d'un projet.
+   *
+   * Ségrégation explicite : les `userEntries` et `thirdPartyEntries` sont retournées
+   * séparément, avec des totaux distincts. Aucune somme mélangée n'est exposée pour
+   * éviter toute confusion entre charge user et charge tiers dans les agrégations.
    */
   async getProjectReport(
     projectId: string,
@@ -471,41 +494,56 @@ export class TimeTrackingService {
       throw new NotFoundException('Projet introuvable');
     }
 
-    const where: Prisma.TimeEntryWhereInput = { projectId };
+    const dateFilter =
+      startDate && endDate
+        ? {
+            date: {
+              gte: new Date(startDate),
+              lte: new Date(endDate),
+            },
+          }
+        : {};
 
-    if (startDate && endDate) {
-      where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
-    }
-
-    const entries = await this.prisma.timeEntry.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+    const [userEntries, thirdPartyEntries] = await Promise.all([
+      this.prisma.timeEntry.findMany({
+        where: { projectId, userId: { not: null }, ...dateFilter },
+        include: {
+          user: {
+            select: { id: true, firstName: true, lastName: true },
           },
-        },
-        task: {
-          select: {
-            id: true,
-            title: true,
+          declaredBy: {
+            select: { id: true, firstName: true, lastName: true },
           },
+          task: { select: { id: true, title: true } },
         },
-      },
-      orderBy: {
-        date: 'asc',
-      },
-    });
+        orderBy: { date: 'asc' },
+      }),
+      this.prisma.timeEntry.findMany({
+        where: { projectId, thirdPartyId: { not: null }, ...dateFilter },
+        include: {
+          thirdParty: {
+            select: {
+              id: true,
+              organizationName: true,
+              type: true,
+            },
+          },
+          declaredBy: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          task: { select: { id: true, title: true } },
+        },
+        orderBy: { date: 'asc' },
+      }),
+    ]);
 
-    const totalHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
+    const userHours = userEntries.reduce((sum, e) => sum + e.hours, 0);
+    const thirdPartyHours = thirdPartyEntries.reduce(
+      (sum, e) => sum + e.hours,
+      0,
+    );
 
-    // Grouper par utilisateur (les entries tiers — user null — seront ségrégées en Wave 3)
-    const byUser = entries.reduce(
+    const byUser = userEntries.reduce(
       (acc, entry) => {
         if (!entry.user) return acc;
         const key = entry.user.id;
@@ -519,11 +557,40 @@ export class TimeTrackingService {
         acc[key].hours += entry.hours;
         return acc;
       },
-      {} as Record<string, { userId: string; userName: string; hours: number }>,
+      {} as Record<
+        string,
+        { userId: string; userName: string; hours: number }
+      >,
     );
 
-    // Grouper par type
-    const byType = entries.reduce(
+    const byThirdParty = thirdPartyEntries.reduce(
+      (acc, entry) => {
+        if (!entry.thirdParty) return acc;
+        const key = entry.thirdParty.id;
+        if (!acc[key]) {
+          acc[key] = {
+            thirdPartyId: entry.thirdParty.id,
+            organizationName: entry.thirdParty.organizationName,
+            type: entry.thirdParty.type,
+            hours: 0,
+          };
+        }
+        acc[key].hours += entry.hours;
+        return acc;
+      },
+      {} as Record<
+        string,
+        {
+          thirdPartyId: string;
+          organizationName: string;
+          type: string;
+          hours: number;
+        }
+      >,
+    );
+
+    const allEntries = [...userEntries, ...thirdPartyEntries];
+    const byType = allEntries.reduce(
       (acc, entry) => {
         acc[entry.activityType] = (acc[entry.activityType] || 0) + entry.hours;
         return acc;
@@ -536,16 +603,21 @@ export class TimeTrackingService {
       projectName: project.name,
       period:
         startDate && endDate
-          ? {
-              start: new Date(startDate),
-              end: new Date(endDate),
-            }
+          ? { start: new Date(startDate), end: new Date(endDate) }
           : null,
-      totalHours,
-      totalEntries: entries.length,
+      totals: {
+        userHours,
+        thirdPartyHours,
+      },
+      totalEntries: {
+        user: userEntries.length,
+        thirdParty: thirdPartyEntries.length,
+      },
       byUser: Object.values(byUser),
+      byThirdParty: Object.values(byThirdParty),
       byType,
-      entries,
+      userEntries,
+      thirdPartyEntries,
     };
   }
 }
