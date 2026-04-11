@@ -24,7 +24,12 @@ import { useTranslations } from "next-intl";
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: Record<string, unknown>) => Promise<void>;
+  /**
+   * Save handler. For create mode, returns the newly created Task so the
+   * modal can chain follow-up operations (e.g. third-party assignments).
+   * For update mode, return value is ignored.
+   */
+  onSave: (data: Record<string, unknown>) => Promise<Task | void>;
   task?: Task | null;
   projectId?: string | null; // Rendu optionnel pour les taches orphelines
   projects?: Project[]; // Liste des projets disponibles
@@ -89,6 +94,10 @@ export function TaskModal({
   >([]);
   const [tpToAssign, setTpToAssign] = useState<string | null>(null);
   const [isAssigningTp, setIsAssigningTp] = useState(false);
+  // Pending tiers for create mode (no taskId yet, buffered locally until save)
+  const [pendingThirdParties, setPendingThirdParties] = useState<
+    { id: string; organizationName: string }[]
+  >([]);
 
   useEffect(() => {
     if (task?.id && isOpen) {
@@ -96,20 +105,38 @@ export function TaskModal({
         .listTaskAssignees(task.id)
         .then(setThirdPartyAssignees)
         .catch(() => setThirdPartyAssignees([]));
-    } else {
+      setPendingThirdParties([]);
+    } else if (isOpen) {
+      // Create mode: start with empty buffer and no loaded assignees
       setThirdPartyAssignees([]);
+      setPendingThirdParties([]);
     }
   }, [task?.id, isOpen]);
 
-  const handleAssignThirdParty = async () => {
-    if (!task?.id || !tpToAssign) return;
+  const handleAddThirdPartyToBuffer = async () => {
+    if (!tpToAssign) return;
     setIsAssigningTp(true);
     try {
-      await thirdPartiesService.assignToTask(task.id, tpToAssign);
-      const updated = await thirdPartiesService.listTaskAssignees(task.id);
-      setThirdPartyAssignees(updated);
+      if (task?.id) {
+        // Edit mode: immediate API call
+        await thirdPartiesService.assignToTask(task.id, tpToAssign);
+        const updated = await thirdPartiesService.listTaskAssignees(task.id);
+        setThirdPartyAssignees(updated);
+        toast.success("Tiers assigné à la tâche");
+      } else {
+        // Create mode: buffer locally, will be POSTed after task creation
+        if (pendingThirdParties.some((p) => p.id === tpToAssign)) {
+          toast.error("Ce tiers est déjà dans la liste");
+          return;
+        }
+        // Fetch organizationName for display
+        const tp = await thirdPartiesService.getById(tpToAssign);
+        setPendingThirdParties((prev) => [
+          ...prev,
+          { id: tp.id, organizationName: tp.organizationName },
+        ]);
+      }
       setTpToAssign(null);
-      toast.success("Tiers assigné à la tâche");
     } catch (err) {
       const message =
         (err as { response?: { data?: { message?: string } } }).response?.data
@@ -121,16 +148,23 @@ export function TaskModal({
   };
 
   const handleUnassignThirdParty = async (thirdPartyId: string) => {
-    if (!task?.id) return;
-    try {
-      await thirdPartiesService.unassignFromTask(task.id, thirdPartyId);
-      setThirdPartyAssignees((prev) =>
-        prev.filter((a) => a.thirdPartyId !== thirdPartyId),
+    if (task?.id) {
+      // Edit mode: immediate API call
+      try {
+        await thirdPartiesService.unassignFromTask(task.id, thirdPartyId);
+        setThirdPartyAssignees((prev) =>
+          prev.filter((a) => a.thirdPartyId !== thirdPartyId),
+        );
+        toast.success("Tiers retiré de la tâche");
+      } catch (err) {
+        console.error("Error unassigning tp:", err);
+        toast.error("Erreur lors du retrait");
+      }
+    } else {
+      // Create mode: remove from local buffer
+      setPendingThirdParties((prev) =>
+        prev.filter((p) => p.id !== thirdPartyId),
       );
-      toast.success("Tiers retiré de la tâche");
-    } catch (err) {
-      console.error("Error unassigning tp:", err);
-      toast.error("Erreur lors du retrait");
     }
   };
 
@@ -239,7 +273,28 @@ export function TaskModal({
       if (formData.startTime) taskData.startTime = formData.startTime;
       if (formData.endTime) taskData.endTime = formData.endTime;
 
-      await onSave(taskData);
+      const result = await onSave(taskData);
+      // Create mode: chain third-party assignments now that we have the task id
+      if (!task?.id && result && "id" in result && pendingThirdParties.length > 0) {
+        const newTaskId = (result as Task).id;
+        const failures: string[] = [];
+        await Promise.all(
+          pendingThirdParties.map((p) =>
+            thirdPartiesService.assignToTask(newTaskId, p.id).catch(() => {
+              failures.push(p.organizationName);
+            }),
+          ),
+        );
+        if (failures.length > 0) {
+          toast.error(
+            `Échec assignation: ${failures.join(", ")}. Modifiez la tâche pour réessayer.`,
+          );
+        } else {
+          toast.success(
+            `${pendingThirdParties.length} tiers assigné(s) à la tâche`,
+          );
+        }
+      }
       onClose();
     } catch (err) {
       console.error("Error saving task:", err);
@@ -671,13 +726,14 @@ export function TaskModal({
             </div>
           </div>
 
-          {/* Intervenants tiers (édition seulement) */}
-          {task?.id && canAssignThirdParty && (
+          {/* Intervenants tiers */}
+          {canAssignThirdParty && (
             <div className="pt-4 border-t border-gray-200">
               <label className="block text-sm font-medium text-gray-900 mb-2">
                 Intervenants tiers
               </label>
-              {thirdPartyAssignees.length > 0 && (
+              {(thirdPartyAssignees.length > 0 ||
+                pendingThirdParties.length > 0) && (
                 <ul className="mb-3 space-y-1">
                   {thirdPartyAssignees.map((a) => (
                     <li
@@ -701,6 +757,26 @@ export function TaskModal({
                       </button>
                     </li>
                   ))}
+                  {pendingThirdParties.map((p) => (
+                    <li
+                      key={`pending-${p.id}`}
+                      className="flex items-center justify-between bg-amber-50 px-3 py-2 rounded text-sm border border-amber-200"
+                    >
+                      <span className="text-gray-800">
+                        <span className="inline-block text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 mr-2">
+                          Tiers (en attente)
+                        </span>
+                        {p.organizationName}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleUnassignThirdParty(p.id)}
+                        className="text-xs text-red-600 hover:underline"
+                      >
+                        Retirer
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               )}
               <div className="flex items-end gap-2">
@@ -713,7 +789,7 @@ export function TaskModal({
                 </div>
                 <button
                   type="button"
-                  onClick={handleAssignThirdParty}
+                  onClick={handleAddThirdPartyToBuffer}
                   disabled={!tpToAssign || isAssigningTp}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
@@ -721,7 +797,9 @@ export function TaskModal({
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Les tiers pourront se voir déclarer du temps sur cette tâche.
+                {task?.id
+                  ? "Les tiers pourront se voir déclarer du temps sur cette tâche."
+                  : "Les tiers ajoutés ici seront assignés à la tâche une fois créée."}
               </p>
             </div>
           )}

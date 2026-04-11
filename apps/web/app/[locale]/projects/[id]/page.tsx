@@ -614,13 +614,16 @@ export default function ProjectDetailPage() {
     setShowTaskModal(true);
   };
 
-  const handleSaveTask = async (data: Record<string, unknown>) => {
+  const handleSaveTask = async (
+    data: Record<string, unknown>,
+  ): Promise<Task | void> => {
     try {
+      let created: Task | undefined;
       if (editingTask) {
         await tasksService.update(editingTask.id, data);
         toast.success(tTasks("messages.updateSuccess"));
       } else {
-        await tasksService.create(
+        created = await tasksService.create(
           data as { title: string; [key: string]: unknown },
         );
         toast.success(tTasks("messages.createSuccess"));
@@ -632,11 +635,13 @@ export default function ProjectDetailPage() {
 
       setShowTaskModal(false);
       setEditingTask(null);
+      return created;
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
         axiosError.response?.data?.message || tTasks("messages.saveError"),
       );
+      throw err;
     }
   };
 
