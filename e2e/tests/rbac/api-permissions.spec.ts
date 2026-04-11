@@ -60,20 +60,26 @@ async function callApi(
   token: string,
 ): Promise<import("@playwright/test").APIResponse> {
   const url = `${baseURL}${entry.apiEndpoint}`;
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
+  // Content-Type: application/json n'est envoyé que pour POST/PATCH (avec body).
+  // Fastify rejette GET/DELETE avec Content-Type JSON et body vide ("Body cannot be empty").
+  const baseHeaders = { Authorization: `Bearer ${token}` };
+  const jsonHeaders = { ...baseHeaders, "Content-Type": "application/json" };
 
   switch (entry.method) {
     case "GET":
-      return request.get(url, { headers });
+      return request.get(url, { headers: baseHeaders });
     case "POST":
-      return request.post(url, { headers, data: entry.testBody ?? {} });
+      return request.post(url, {
+        headers: jsonHeaders,
+        data: entry.testBody ?? {},
+      });
     case "PATCH":
-      return request.patch(url, { headers, data: entry.testBody ?? {} });
+      return request.patch(url, {
+        headers: jsonHeaders,
+        data: entry.testBody ?? {},
+      });
     case "DELETE":
-      return request.delete(url, { headers });
+      return request.delete(url, { headers: baseHeaders });
     default:
       throw new Error(`Méthode HTTP non supportée : ${entry.method}`);
   }

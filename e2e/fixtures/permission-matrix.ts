@@ -43,6 +43,10 @@ export interface PermissionEntry {
 // 404 = autorisé mais ressource absente ; 403 = interdit
 const PLACEHOLDER_UUID = "00000000-0000-0000-0000-000000000001";
 
+// UUID v4 valide pour les endpoints utilisant ParseUUIDPipe (version: 4 par défaut).
+// Le nil UUID ci-dessus n'étant pas v4, le pipe 400-reject avant le guard d'autorisation.
+const PLACEHOLDER_UUID_V4 = "00000000-0000-4000-8000-000000000001";
+
 export const PERMISSION_MATRIX: PermissionEntry[] = [
   // ═══════════════════════════════════════════════════════════
   // PROJECTS
@@ -415,6 +419,95 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     description:
       "Créer des règles récurrentes en masse — Admin, Responsable, Manager",
   },
+
+  // ═══════════════════════════════════════════════════════════
+  // THIRD PARTIES (Tiers)
+  // ═══════════════════════════════════════════════════════════
+  {
+    action: "third_parties:read",
+    resource: "third-parties",
+    method: "GET",
+    apiEndpoint: "/api/third-parties",
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "observateur",
+    ],
+    deniedRoles: ["referent", "contributeur"],
+    description:
+      "Lister les tiers — Admin, Responsable, Manager, Observateur (hérite :read via action=read pattern)",
+  },
+  {
+    action: "third_parties:create",
+    resource: "third-parties",
+    method: "POST",
+    apiEndpoint: "/api/third-parties",
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+    testBody: {
+      type: "EXTERNAL_PROVIDER",
+      organizationName: "Acme RBAC Test",
+    },
+    description:
+      "Créer un tiers — Admin, Responsable, Manager, Chef de projet (Chef de projet non testé : absent des 6 rôles de test)",
+  },
+  {
+    action: "third_parties:update",
+    resource: "third-parties",
+    method: "PATCH",
+    apiEndpoint: `/api/third-parties/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+    testBody: {
+      organizationName: "Acme modifié",
+    },
+    description:
+      "Modifier un tiers — Admin, Responsable, Manager, Chef de projet",
+  },
+  {
+    action: "third_parties:delete",
+    resource: "third-parties",
+    method: "DELETE",
+    apiEndpoint: `/api/third-parties/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+    description:
+      "Hard delete d'un tiers — Admin, Responsable, Manager, Chef de projet",
+  },
+  {
+    action: "third_parties:assign_to_task",
+    resource: "third-parties",
+    method: "POST",
+    apiEndpoint: `/api/tasks/${PLACEHOLDER_UUID_V4}/third-party-assignees`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+    testBody: {
+      thirdPartyId: PLACEHOLDER_UUID_V4,
+    },
+    description:
+      "Assigner un tiers à une tâche — Admin, Responsable, Manager, Chef de projet",
+  },
+  {
+    action: "third_parties:assign_to_project",
+    resource: "third-parties",
+    method: "POST",
+    apiEndpoint: `/api/projects/${PLACEHOLDER_UUID_V4}/third-party-members`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+    testBody: {
+      thirdPartyId: PLACEHOLDER_UUID_V4,
+    },
+    description:
+      "Rattacher un tiers à un projet — Admin, Responsable, Manager, Chef de projet",
+  },
+
+  // NOTE : time_tracking:declare_for_third_party n'est PAS exposé via
+  // @Permissions() sur le controller — le gating se fait côté service
+  // APRÈS la vérification d'existence du projet/tâche. Impossible à
+  // tester au niveau matrix (un PLACEHOLDER projet inexistant renverrait
+  // 404 avant le check de permission). Couverture assurée par les
+  // scenarios dans time-tracking-third-parties.spec.ts.
 ];
 
 /**
