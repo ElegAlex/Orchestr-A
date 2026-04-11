@@ -15,6 +15,8 @@ import { usersService } from "@/services/users.service";
 import { servicesService } from "@/services/services.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
+import { ThirdPartySelector } from "@/components/third-parties/ThirdPartySelector";
+import { thirdPartiesService } from "@/services/third-parties.service";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
@@ -59,6 +61,35 @@ export const TaskCreateModal = ({
     endTime: "",
     isExternalIntervention: false,
   });
+
+  const canAssignThirdParty = hasPermission("third_parties:assign_to_task");
+  const [pendingThirdParties, setPendingThirdParties] = useState<
+    { id: string; organizationName: string }[]
+  >([]);
+  const [tpToAssign, setTpToAssign] = useState<string | null>(null);
+
+  const handleAddPendingTp = async () => {
+    if (!tpToAssign) return;
+    if (pendingThirdParties.some((p) => p.id === tpToAssign)) {
+      toast.error("Ce tiers est déjà dans la liste");
+      return;
+    }
+    try {
+      const tp = await thirdPartiesService.getById(tpToAssign);
+      setPendingThirdParties((prev) => [
+        ...prev,
+        { id: tp.id, organizationName: tp.organizationName },
+      ]);
+      setTpToAssign(null);
+    } catch (err) {
+      console.error("Error fetching third party:", err);
+      toast.error("Erreur lors de l'ajout du tiers");
+    }
+  };
+
+  const handleRemovePendingTp = (id: string) => {
+    setPendingThirdParties((prev) => prev.filter((p) => p.id !== id));
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -175,8 +206,28 @@ export const TaskCreateModal = ({
         endTime: formData.endTime || undefined,
         isExternalIntervention: formData.isExternalIntervention,
       };
-      await tasksService.create(taskData);
-      toast.success(t("success"));
+      const created = await tasksService.create(taskData);
+      if (pendingThirdParties.length > 0) {
+        const failures: string[] = [];
+        await Promise.all(
+          pendingThirdParties.map((p) =>
+            thirdPartiesService.assignToTask(created.id, p.id).catch(() => {
+              failures.push(p.organizationName);
+            }),
+          ),
+        );
+        if (failures.length > 0) {
+          toast.error(
+            `Échec assignation tiers: ${failures.join(", ")}`,
+          );
+        } else {
+          toast.success(
+            `Tâche créée + ${pendingThirdParties.length} tiers assigné(s)`,
+          );
+        }
+      } else {
+        toast.success(t("success"));
+      }
       if (onSuccess) await onSuccess();
       resetForm();
       onClose();
@@ -205,6 +256,8 @@ export const TaskCreateModal = ({
       isExternalIntervention: false,
     });
     setProjectMembers([]);
+    setPendingThirdParties([]);
+    setTpToAssign(null);
   };
 
   if (!isOpen) return null;
@@ -458,6 +511,59 @@ export const TaskCreateModal = ({
               {t("externalIntervention")}
             </label>
           </div>
+
+          {canAssignThirdParty && (
+            <div className="pt-4 border-t border-gray-200">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Intervenants tiers
+              </label>
+              {pendingThirdParties.length > 0 && (
+                <ul className="mb-3 space-y-1">
+                  {pendingThirdParties.map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex items-center justify-between bg-amber-50 px-3 py-2 rounded text-sm border border-amber-200"
+                    >
+                      <span className="text-gray-800">
+                        <span className="inline-block text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 mr-2">
+                          🤝 Tiers
+                        </span>
+                        {p.organizationName}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePendingTp(p.id)}
+                        className="text-xs text-red-600 hover:underline"
+                      >
+                        Retirer
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <ThirdPartySelector
+                    value={tpToAssign}
+                    onChange={setTpToAssign}
+                    placeholder="Ajouter un tiers à la tâche…"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddPendingTp}
+                  disabled={!tpToAssign}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  Ajouter
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Les tiers ajoutés seront assignés à la tâche après
+                création.
+              </p>
+            </div>
+          )}
 
           <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
             <button

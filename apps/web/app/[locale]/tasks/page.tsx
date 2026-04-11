@@ -21,6 +21,8 @@ import { usersService } from "@/services/users.service";
 import { servicesService } from "@/services/services.service";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
+import { ThirdPartySelector } from "@/components/third-parties/ThirdPartySelector";
+import { thirdPartiesService } from "@/services/third-parties.service";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import { getTaskProgress } from "@/lib/task-progress";
 import { ProjectIcon } from "@/components/ProjectIcon";
@@ -42,6 +44,11 @@ export default function TasksPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const canAssignThirdParty = hasPermission("third_parties:assign_to_task");
+  const [pendingThirdParties, setPendingThirdParties] = useState<
+    { id: string; organizationName: string }[]
+  >([]);
+  const [tpToAssign, setTpToAssign] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>("ALL");
   const [orphanTasks, setOrphanTasks] = useState<Task[]>([]);
   const [selectedPriority, setSelectedPriority] = useState<Priority | "ALL">(
@@ -199,8 +206,29 @@ export default function TasksPage() {
         endTime: formData.endTime || undefined,
         isExternalIntervention: formData.isExternalIntervention,
       };
-      await tasksService.create(taskData);
-      toast.success(t("messages.createSuccess"));
+      const created = await tasksService.create(taskData);
+      // Chain pending third-party assignments now that we have the task id
+      if (pendingThirdParties.length > 0) {
+        const failures: string[] = [];
+        await Promise.all(
+          pendingThirdParties.map((p) =>
+            thirdPartiesService.assignToTask(created.id, p.id).catch(() => {
+              failures.push(p.organizationName);
+            }),
+          ),
+        );
+        if (failures.length > 0) {
+          toast.error(
+            `Échec assignation tiers: ${failures.join(", ")}. Modifiez la tâche pour réessayer.`,
+          );
+        } else {
+          toast.success(
+            `Tâche créée + ${pendingThirdParties.length} tiers assigné(s)`,
+          );
+        }
+      } else {
+        toast.success(t("messages.createSuccess"));
+      }
       setShowCreateModal(false);
       resetForm();
       fetchData();
@@ -210,6 +238,29 @@ export default function TasksPage() {
         axiosError.response?.data?.message || t("messages.createError"),
       );
     }
+  };
+
+  const handleAddPendingTp = async () => {
+    if (!tpToAssign) return;
+    if (pendingThirdParties.some((p) => p.id === tpToAssign)) {
+      toast.error("Ce tiers est déjà dans la liste");
+      return;
+    }
+    try {
+      const tp = await thirdPartiesService.getById(tpToAssign);
+      setPendingThirdParties((prev) => [
+        ...prev,
+        { id: tp.id, organizationName: tp.organizationName },
+      ]);
+      setTpToAssign(null);
+    } catch (err) {
+      console.error("Error fetching third party:", err);
+      toast.error("Erreur lors de l'ajout du tiers");
+    }
+  };
+
+  const handleRemovePendingTp = (id: string) => {
+    setPendingThirdParties((prev) => prev.filter((p) => p.id !== id));
   };
 
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
@@ -303,6 +354,8 @@ export default function TasksPage() {
       isExternalIntervention: false,
     });
     setProjectMembers([]);
+    setPendingThirdParties([]);
+    setTpToAssign(null);
   };
 
   const isTaskOverdue = (task: Task) => {
@@ -1119,6 +1172,59 @@ export default function TasksPage() {
                   {t("modal.create.externalInterventionLabel")}
                 </label>
               </div>
+
+              {canAssignThirdParty && (
+                <div className="pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Intervenants tiers
+                  </label>
+                  {pendingThirdParties.length > 0 && (
+                    <ul className="mb-3 space-y-1">
+                      {pendingThirdParties.map((p) => (
+                        <li
+                          key={p.id}
+                          className="flex items-center justify-between bg-amber-50 px-3 py-2 rounded text-sm border border-amber-200"
+                        >
+                          <span className="text-gray-800">
+                            <span className="inline-block text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 mr-2">
+                              🤝 Tiers
+                            </span>
+                            {p.organizationName}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePendingTp(p.id)}
+                            className="text-xs text-red-600 hover:underline"
+                          >
+                            Retirer
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <ThirdPartySelector
+                        value={tpToAssign}
+                        onChange={setTpToAssign}
+                        placeholder="Ajouter un tiers à la tâche…"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddPendingTp}
+                      disabled={!tpToAssign}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      Ajouter
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Les tiers ajoutés seront assignés à la tâche après
+                    création.
+                  </p>
+                </div>
+              )}
 
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
                 <button
