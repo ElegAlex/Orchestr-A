@@ -19,10 +19,7 @@ import {
 import { usePermissions } from "@/hooks/usePermissions";
 import { usersService } from "@/services/users.service";
 import { servicesService } from "@/services/services.service";
-import { UserMultiSelect } from "@/components/UserMultiSelect";
-import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
-import { ThirdPartySelector } from "@/components/third-parties/ThirdPartySelector";
-import { thirdPartiesService } from "@/services/third-parties.service";
+import { TaskForm } from "@/components/tasks/TaskForm";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import { getTaskProgress } from "@/lib/task-progress";
 import { ProjectIcon } from "@/components/ProjectIcon";
@@ -40,15 +37,9 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [projectMembers, setProjectMembers] = useState<User[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const canAssignThirdParty = hasPermission("third_parties:assign_to_task");
-  const [pendingThirdParties, setPendingThirdParties] = useState<
-    { id: string; organizationName: string }[]
-  >([]);
-  const [tpToAssign, setTpToAssign] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>("ALL");
   const [orphanTasks, setOrphanTasks] = useState<Task[]>([]);
   const [selectedPriority, setSelectedPriority] = useState<Priority | "ALL">(
@@ -70,24 +61,6 @@ export default function TasksPage() {
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-
-  const [formData, setFormData] = useState<
-    CreateTaskDto & { assigneeIds: string[]; serviceIds: string[] }
-  >({
-    title: "",
-    description: "",
-    status: TaskStatus.TODO,
-    priority: Priority.NORMAL,
-    projectId: "",
-    assigneeIds: [],
-    serviceIds: [],
-    estimatedHours: undefined,
-    startDate: "",
-    endDate: "",
-    startTime: "",
-    endTime: "",
-    isExternalIntervention: false,
-  });
 
   const fetchData = useCallback(async () => {
     try {
@@ -185,84 +158,6 @@ export default function TasksPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      // Clean up empty strings before sending
-      const taskData: CreateTaskDto = {
-        title: formData.title,
-        description: formData.description || undefined,
-        status: formData.status,
-        priority: formData.priority,
-        projectId: formData.projectId || null,
-        assigneeIds:
-          formData.assigneeIds.length > 0 ? formData.assigneeIds : undefined,
-        serviceIds:
-          formData.serviceIds.length > 0 ? formData.serviceIds : undefined,
-        estimatedHours: formData.estimatedHours || undefined,
-        startDate: formData.startDate || undefined,
-        endDate: formData.endDate || undefined,
-        startTime: formData.startTime || undefined,
-        endTime: formData.endTime || undefined,
-        isExternalIntervention: formData.isExternalIntervention,
-      };
-      const created = await tasksService.create(taskData);
-      // Chain pending third-party assignments now that we have the task id
-      if (pendingThirdParties.length > 0) {
-        const failures: string[] = [];
-        await Promise.all(
-          pendingThirdParties.map((p) =>
-            thirdPartiesService.assignToTask(created.id, p.id).catch(() => {
-              failures.push(p.organizationName);
-            }),
-          ),
-        );
-        if (failures.length > 0) {
-          toast.error(
-            `Échec assignation tiers: ${failures.join(", ")}. Modifiez la tâche pour réessayer.`,
-          );
-        } else {
-          toast.success(
-            `Tâche créée + ${pendingThirdParties.length} tiers assigné(s)`,
-          );
-        }
-      } else {
-        toast.success(t("messages.createSuccess"));
-      }
-      setShowCreateModal(false);
-      resetForm();
-      fetchData();
-    } catch (err) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        axiosError.response?.data?.message || t("messages.createError"),
-      );
-    }
-  };
-
-  const handleAddPendingTp = async () => {
-    if (!tpToAssign) return;
-    if (pendingThirdParties.some((p) => p.id === tpToAssign)) {
-      toast.error("Ce tiers est déjà dans la liste");
-      return;
-    }
-    try {
-      const tp = await thirdPartiesService.getById(tpToAssign);
-      setPendingThirdParties((prev) => [
-        ...prev,
-        { id: tp.id, organizationName: tp.organizationName },
-      ]);
-      setTpToAssign(null);
-    } catch (err) {
-      console.error("Error fetching third party:", err);
-      toast.error("Erreur lors de l'ajout du tiers");
-    }
-  };
-
-  const handleRemovePendingTp = (id: string) => {
-    setPendingThirdParties((prev) => prev.filter((p) => p.id !== id));
-  };
-
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
       await tasksService.update(taskId, { status: newStatus });
@@ -308,54 +203,6 @@ export default function TasksPage() {
         }),
       );
     }
-  };
-
-  // Fetch project members when a project is selected in the form
-  const handleFormProjectChange = async (projectId: string) => {
-    setFormData({ ...formData, projectId, assigneeIds: [] }); // Reset assignees when project changes
-
-    if (projectId) {
-      try {
-        const project = await projectsService.getById(projectId);
-        const members =
-          (project.members?.map((m) => m.user).filter(Boolean) as User[]) || [];
-        setProjectMembers(members);
-      } catch (error) {
-        console.error("Error fetching project members:", error);
-        setProjectMembers([]);
-      }
-    } else {
-      setProjectMembers([]);
-    }
-  };
-
-  // Get available users for assignment (project members if project selected, all users otherwise)
-  const getAvailableAssignees = (): User[] => {
-    if (formData.projectId && projectMembers.length > 0) {
-      return projectMembers;
-    }
-    return users;
-  };
-
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      description: "",
-      status: TaskStatus.TODO,
-      priority: Priority.NORMAL,
-      projectId: "",
-      assigneeIds: [],
-      serviceIds: [],
-      estimatedHours: undefined,
-      startDate: "",
-      endDate: "",
-      startTime: "",
-      endTime: "",
-      isExternalIntervention: false,
-    });
-    setProjectMembers([]);
-    setPendingThirdParties([]);
-    setTpToAssign(null);
   };
 
   const isTaskOverdue = (task: Task) => {
@@ -912,339 +759,48 @@ export default function TasksPage() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {t("modal.create.title")}
-            </h2>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t("modal.create.titleLabel")}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t("modal.create.titlePlaceholder")}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t("modal.create.descriptionLabel")}
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t("modal.create.descriptionPlaceholder")}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t("modal.create.projectLabel")}
-                </label>
-                <select
-                  value={formData.projectId || ""}
-                  onChange={(e) => handleFormProjectChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">{t("modal.create.projectNone")}</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  {t("modal.create.projectHint")}
-                </p>
-              </div>
-
-              {/* Assignee multi-selector */}
-              <UserMultiSelect
-                label={t("modal.create.assigneesLabel")}
-                users={getAvailableAssignees()}
-                selectedIds={formData.assigneeIds}
-                onChange={(ids) =>
-                  setFormData({ ...formData, assigneeIds: ids })
-                }
-                placeholder={t("modal.create.assigneesPlaceholder")}
-                hint={
-                  formData.projectId && projectMembers.length > 0
-                    ? t("modal.create.assigneesHintMembers")
-                    : formData.projectId && projectMembers.length === 0
-                      ? t("modal.create.assigneesHintNoMembers")
-                      : undefined
-                }
-              />
-
-              {/* Service multi-selector */}
-              {services.length > 0 && (
-                <ServiceMultiSelect
-                  label={t("modal.create.servicesLabel") || "Services"}
-                  services={services}
-                  selectedIds={formData.serviceIds}
-                  onChange={(ids) =>
-                    setFormData({ ...formData, serviceIds: ids })
-                  }
-                  placeholder={
-                    t("modal.create.servicesPlaceholder") ||
-                    "Inviter des services entiers"
-                  }
-                  memberCounts={memberCounts}
-                />
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("modal.create.statusLabel")}
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        status: e.target.value as TaskStatus,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value={TaskStatus.TODO}>{t("status.TODO")}</option>
-                    <option value={TaskStatus.IN_PROGRESS}>
-                      {t("status.IN_PROGRESS")}
-                    </option>
-                    <option value={TaskStatus.IN_REVIEW}>
-                      {t("status.IN_REVIEW")}
-                    </option>
-                    <option value={TaskStatus.DONE}>{t("status.DONE")}</option>
-                    <option value={TaskStatus.BLOCKED}>
-                      {t("status.BLOCKED")}
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("modal.create.priorityLabel")}
-                  </label>
-                  <select
-                    value={formData.priority}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        priority: e.target.value as Priority,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value={Priority.LOW}>{t("priority.LOW")}</option>
-                    <option value={Priority.NORMAL}>
-                      {t("priority.NORMAL")}
-                    </option>
-                    <option value={Priority.HIGH}>{t("priority.HIGH")}</option>
-                    <option value={Priority.CRITICAL}>
-                      {t("priority.CRITICAL")}
-                    </option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("modal.create.startDateLabel")}
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => {
-                      const newStartDate = e.target.value;
-                      const currentEndDate = formData.endDate;
-                      const newEndDate =
-                        !currentEndDate || currentEndDate < newStartDate
-                          ? newStartDate
-                          : currentEndDate;
-                      setFormData({
-                        ...formData,
-                        startDate: newStartDate,
-                        endDate: newEndDate,
-                      });
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("modal.create.endDateLabel")}
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.endDate}
-                    min={formData.startDate || undefined}
-                    onChange={(e) =>
-                      setFormData({ ...formData, endDate: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("modal.create.startTimeLabel")}
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.startTime}
-                    onChange={(e) =>
-                      setFormData({ ...formData, startTime: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("modal.create.endTimeLabel")}
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.endTime}
-                    onChange={(e) =>
-                      setFormData({ ...formData, endTime: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t("modal.create.estimatedHoursLabel")}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={formData.estimatedHours || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      estimatedHours: e.target.value
-                        ? parseFloat(e.target.value)
-                        : undefined,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t("modal.create.estimatedHoursPlaceholder")}
-                />
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isExternalIntervention"
-                  checked={formData.isExternalIntervention}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      isExternalIntervention: e.target.checked,
-                    })
-                  }
-                  className="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
-                />
-                <label
-                  htmlFor="isExternalIntervention"
-                  className="ml-2 block text-sm font-medium text-gray-700"
-                >
-                  {t("modal.create.externalInterventionLabel")}
-                </label>
-              </div>
-
-              {canAssignThirdParty && (
-                <div className="pt-4 border-t border-gray-200">
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Intervenants tiers
-                  </label>
-                  {pendingThirdParties.length > 0 && (
-                    <ul className="mb-3 space-y-1">
-                      {pendingThirdParties.map((p) => (
-                        <li
-                          key={p.id}
-                          className="flex items-center justify-between bg-amber-50 px-3 py-2 rounded text-sm border border-amber-200"
-                        >
-                          <span className="text-gray-800">
-                            <span className="inline-block text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 mr-2">
-                              🤝 Tiers
-                            </span>
-                            {p.organizationName}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePendingTp(p.id)}
-                            className="text-xs text-red-600 hover:underline"
-                          >
-                            Retirer
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                      <ThirdPartySelector
-                        value={tpToAssign}
-                        onChange={setTpToAssign}
-                        placeholder="Ajouter un tiers à la tâche…"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleAddPendingTp}
-                      disabled={!tpToAssign}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                    >
-                      Ajouter
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Les tiers ajoutés seront assignés à la tâche après
-                    création.
-                  </p>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {t("modal.create.title")}
+                </h2>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    resetForm();
-                  }}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition"
                 >
-                  {t("modal.create.cancel")}
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                >
-                  {t("modal.create.submit")}
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
-            </form>
+            </div>
+            <TaskForm
+              mode="create"
+              projects={projects}
+              users={users}
+              services={services}
+              memberCounts={memberCounts}
+              enableExternalIntervention
+              enableThirdParties={hasPermission("third_parties:assign_to_task")}
+              onSubmit={async (payload) => {
+                try {
+                  const created = await tasksService.create(
+                    payload as Parameters<typeof tasksService.create>[0],
+                  );
+                  toast.success(t("messages.createSuccess"));
+                  setShowCreateModal(false);
+                  await fetchData();
+                  return created;
+                } catch (err) {
+                  const axiosError = err as { response?: { data?: { message?: string } } };
+                  toast.error(axiosError.response?.data?.message || t("messages.createError"));
+                  throw err;
+                }
+              }}
+              onCancel={() => setShowCreateModal(false)}
+            />
           </div>
         </div>
       )}
