@@ -919,6 +919,7 @@ export class RoleManagementService implements OnModuleInit {
       'leaves:readAll',
       'telework:readAll',
       'events:readAll',
+      'predefined_tasks:view',
     ];
     for (const role of rolesConfig) {
       for (const perm of PLANNING_READ_PERMISSIONS) {
