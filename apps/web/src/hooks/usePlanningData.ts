@@ -10,18 +10,9 @@ import {
   parseISO,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { tasksService } from "@/services/tasks.service";
-import { usersService } from "@/services/users.service";
-import { leavesService } from "@/services/leaves.service";
-import { teleworkService } from "@/services/telework.service";
-import { servicesService } from "@/services/services.service";
-import { holidaysService } from "@/services/holidays.service";
-import { schoolVacationsService } from "@/services/school-vacations.service";
-import { eventsService, Event } from "@/services/events.service";
-import {
-  predefinedTasksService,
-  PredefinedTaskAssignment,
-} from "@/services/predefined-tasks.service";
+import { planningService } from "@/services/planning.service";
+import { Event } from "@/services/events.service";
+import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
 import { Task, User, Leave, TeleworkSchedule, Service, Holiday, SchoolVacation } from "@/types";
 import { getServiceStyle } from "@/lib/planning-utils";
 import { useSettingsStore } from "@/stores/settings.store";
@@ -101,7 +92,7 @@ export const usePlanningData = ({
   viewFilter = "all",
   displayFilters,
 }: UsePlanningDataOptions): UsePlanningDataReturn => {
-  const { hasPermission, permissionsLoaded } = usePermissions();
+  const { permissionsLoaded } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -181,96 +172,28 @@ export const usePlanningData = ({
       if (!permissionsLoaded) return;
       try {
         if (!silent) setLoading(true);
-        // Use the full calendar grid range so cross-boundary leaves are included
-        const startDate = queryStartDate;
-        const endDate = queryEndDate;
 
-        // Format YYYY-MM-DD pour telework (évite les problèmes de timezone)
-        const teleworkStartDate = format(startDate, "yyyy-MM-dd");
-        const teleworkEndDate = format(endDate, "yyyy-MM-dd");
-
-        const [
-          usersData,
-          tasksData,
-          leavesData,
-          eventsData,
-          teleworkData,
-          servicesData,
-          holidaysData,
-          schoolVacationsData,
-          predefinedAssignmentsData,
-        ] = await Promise.all([
-          // Le planning a toujours besoin des users pour afficher la grille
-          usersService.getAll().catch(() => []),
-          tasksService
-            .getByDateRange(startDate.toISOString(), endDate.toISOString())
-            .catch(() => []),
-          leavesService
-            .getByDateRange(startDate.toISOString(), endDate.toISOString())
-            .catch(() => []),
-          eventsService
-            .getByRange(teleworkStartDate, teleworkEndDate)
-            .catch(() => []),
-          teleworkService
-            .getByDateRange(teleworkStartDate, teleworkEndDate)
-            .catch(() => []),
-          servicesService.getAll().catch(() => []),
-          holidaysService
-            .getByRange(teleworkStartDate, teleworkEndDate)
-            .catch(() => []),
-          schoolVacationsService
-            .getByRange(teleworkStartDate, teleworkEndDate)
-            .catch(() => []),
-          // Conditionner predefinedTasksService.getAssignments() à la permission predefined_tasks:view
-          hasPermission("predefined_tasks:view")
-            ? predefinedTasksService
-                .getAssignments({
-                  startDate: teleworkStartDate,
-                  endDate: teleworkEndDate,
-                })
-                .catch(() => ({ data: [] as PredefinedTaskAssignment[] }))
-            : Promise.resolve([] as PredefinedTaskAssignment[]),
-        ]);
-
-        const usersList = Array.isArray(usersData)
-          ? usersData
-          : Array.isArray(usersData?.data)
-            ? usersData.data
-            : [];
+        // Un seul appel agrégé remplace les 9 requêtes parallèles historiques.
+        // Évacue toute pression sur le rate limit nginx et garantit la
+        // cohérence transactionnelle entre datasets (même snapshot DB).
+        const overview = await planningService.getOverview(
+          queryStartDate.toISOString(),
+          queryEndDate.toISOString(),
+        );
 
         setUsers(
-          Array.isArray(usersList)
-            ? usersList.filter(
-                (u) =>
-                  u.isActive &&
-                  u.userServices &&
-                  u.userServices.length > 0,
-              )
-            : [],
+          overview.users.filter(
+            (u) => u.isActive && u.userServices && u.userServices.length > 0,
+          ),
         );
-        setTasks(Array.isArray(tasksData) ? tasksData : []);
-        setLeaves(Array.isArray(leavesData) ? leavesData : []);
-        setEvents(Array.isArray(eventsData) ? eventsData : []);
-        setTeleworkSchedules(Array.isArray(teleworkData) ? teleworkData : []);
-        setServices(Array.isArray(servicesData) ? servicesData : []);
-        setHolidays(Array.isArray(holidaysData) ? holidaysData : []);
-        setSchoolVacations(Array.isArray(schoolVacationsData) ? schoolVacationsData : []);
-        const assignmentsList = Array.isArray(predefinedAssignmentsData)
-          ? predefinedAssignmentsData
-          : Array.isArray(
-                (
-                  predefinedAssignmentsData as {
-                    data?: PredefinedTaskAssignment[];
-                  }
-                ).data,
-              )
-            ? (
-                predefinedAssignmentsData as {
-                  data: PredefinedTaskAssignment[];
-                }
-              ).data
-            : [];
-        setPredefinedAssignments(assignmentsList);
+        setTasks(overview.tasks);
+        setLeaves(overview.leaves);
+        setEvents(overview.events);
+        setTeleworkSchedules(overview.telework);
+        setServices(overview.services);
+        setHolidays(overview.holidays);
+        setSchoolVacations(overview.schoolVacations);
+        setPredefinedAssignments(overview.predefinedAssignments);
       } catch (err) {
         if (!silent) {
           setUsers([]);
