@@ -2,10 +2,13 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectsService } from './projects.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { OwnershipService } from '../common/services/ownership.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ProjectStatus, TaskStatus } from '../__mocks__/database';
 
@@ -63,6 +66,14 @@ describe('ProjectsService', () => {
     role: 'CONTRIBUTEUR',
   };
 
+  const mockOwnershipService = {
+    isOwner: vi.fn(),
+  };
+
+  const mockRoleManagementService = {
+    getPermissionsForRole: vi.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -70,6 +81,14 @@ describe('ProjectsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: OwnershipService,
+          useValue: mockOwnershipService,
+        },
+        {
+          provide: RoleManagementService,
+          useValue: mockRoleManagementService,
         },
       ],
     }).compile();
@@ -569,6 +588,120 @@ describe('ProjectsService', () => {
       await expect(service.remove('nonexistent')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  // ============================================
+  // OWNERSHIP ENFORCEMENT (SEC-06 / BUG-04 / BUG-08)
+  // ============================================
+  describe('ownership enforcement on mutations', () => {
+    const caller = { id: 'contrib-1', role: 'CONTRIBUTEUR' };
+
+    describe('update', () => {
+      it('throws ForbiddenException for non-owner without projects:manage_any', async () => {
+        mockOwnershipService.isOwner.mockResolvedValue(false);
+        mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+          'projects:update',
+        ]);
+
+        await expect(
+          service.update('project-1', { name: 'x' }, caller),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(mockOwnershipService.isOwner).toHaveBeenCalledWith(
+          'project',
+          'project-1',
+          'contrib-1',
+        );
+        // Mutation must not reach Prisma.
+        expect(mockPrismaService.project.update).not.toHaveBeenCalled();
+      });
+
+      it('allows update when caller is project owner', async () => {
+        mockOwnershipService.isOwner.mockResolvedValue(true);
+        mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+        mockPrismaService.project.update.mockResolvedValue({
+          ...mockProject,
+          name: 'Updated',
+        });
+
+        const result = await service.update(
+          'project-1',
+          { name: 'Updated' },
+          caller,
+        );
+
+        expect(result.name).toBe('Updated');
+        expect(
+          mockRoleManagementService.getPermissionsForRole,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('allows update for non-owner holding projects:manage_any', async () => {
+        mockOwnershipService.isOwner.mockResolvedValue(false);
+        mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+          'projects:update',
+          'projects:manage_any',
+        ]);
+        mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+        mockPrismaService.project.update.mockResolvedValue({
+          ...mockProject,
+          name: 'Admin Override',
+        });
+
+        const admin = { id: 'admin-1', role: 'ADMIN' };
+        const result = await service.update(
+          'project-1',
+          { name: 'Admin Override' },
+          admin,
+        );
+
+        expect(result.name).toBe('Admin Override');
+      });
+    });
+
+    describe('remove', () => {
+      it('throws ForbiddenException for non-owner without projects:manage_any', async () => {
+        mockOwnershipService.isOwner.mockResolvedValue(false);
+        mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+          'projects:delete',
+        ]);
+
+        await expect(service.remove('project-1', caller)).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(mockPrismaService.project.update).not.toHaveBeenCalled();
+      });
+
+      it('allows remove when caller is project owner', async () => {
+        mockOwnershipService.isOwner.mockResolvedValue(true);
+        mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+        mockPrismaService.project.update.mockResolvedValue({
+          ...mockProject,
+          status: ProjectStatus.CANCELLED,
+        });
+
+        const result = await service.remove('project-1', caller);
+
+        expect(result.message).toBe('Projet annulé avec succès');
+      });
+
+      it('allows remove for non-owner holding projects:manage_any', async () => {
+        mockOwnershipService.isOwner.mockResolvedValue(false);
+        mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+          'projects:manage_any',
+        ]);
+        mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+        mockPrismaService.project.update.mockResolvedValue({
+          ...mockProject,
+          status: ProjectStatus.CANCELLED,
+        });
+
+        const admin = { id: 'admin-1', role: 'ADMIN' };
+        const result = await service.remove('project-1', admin);
+
+        expect(result.message).toBe('Projet annulé avec succès');
+      });
     });
   });
 

@@ -3,12 +3,24 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
+import { OwnershipService } from '../common/services/ownership.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 import { ProjectStatus, TaskStatus } from 'database';
+
+/**
+ * Caller shape accepted by mutation methods for ownership enforcement.
+ * Mirrors what JwtStrategy puts on req.user.
+ */
+export interface ProjectMutationUser {
+  id: string;
+  role?: string;
+}
 
 /**
  * Rôles qui voient tous les projets sans filtre de membership.
@@ -18,7 +30,47 @@ const FULL_VISIBILITY_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'] as const;
 
 @Injectable()
 export class ProjectsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ownershipService: OwnershipService,
+    private readonly roleManagementService: RoleManagementService,
+  ) {}
+
+  /**
+   * Defense-in-depth ownership enforcement for project mutations.
+   * Throws ForbiddenException when the caller is neither a project owner
+   * (createdById / managerId / sponsorId / ProjectMember leader role) nor
+   * a holder of the `projects:manage_any` bypass permission.
+   *
+   * Paired with the OwnershipGuard decorator in the controller — duplication
+   * is intentional (BUG-04 / BUG-08 SEC-06).
+   */
+  private async assertProjectOwnershipOrBypass(
+    projectId: string,
+    user: ProjectMutationUser | undefined,
+  ): Promise<void> {
+    if (!user || !user.id) {
+      throw new ForbiddenException('Project ownership violation');
+    }
+
+    const isOwner = await this.ownershipService.isOwner(
+      'project',
+      projectId,
+      user.id,
+    );
+    if (isOwner) return;
+
+    if (user.role) {
+      const permissions =
+        (await this.roleManagementService.getPermissionsForRole(user.role)) ??
+        [];
+      if (permissions.includes('projects:manage_any')) {
+        return;
+      }
+    }
+
+    throw new ForbiddenException('Project ownership violation');
+  }
 
   /**
    * Créer un nouveau projet
@@ -293,7 +345,16 @@ export class ProjectsService {
   /**
    * Mettre à jour un projet
    */
-  async update(id: string, updateProjectDto: UpdateProjectDto) {
+  async update(
+    id: string,
+    updateProjectDto: UpdateProjectDto,
+    user?: ProjectMutationUser,
+  ) {
+    // Defense-in-depth: enforce ownership even if guard is bypassed.
+    if (user) {
+      await this.assertProjectOwnershipOrBypass(id, user);
+    }
+
     const existingProject = await this.prisma.project.findUnique({
       where: { id },
     });
@@ -366,7 +427,12 @@ export class ProjectsService {
   /**
    * Supprimer un projet (soft delete)
    */
-  async remove(id: string) {
+  async remove(id: string, user?: ProjectMutationUser) {
+    // Defense-in-depth: enforce ownership even if guard is bypassed.
+    if (user) {
+      await this.assertProjectOwnershipOrBypass(id, user);
+    }
+
     const project = await this.prisma.project.findUnique({
       where: { id },
     });
@@ -470,7 +536,17 @@ export class ProjectsService {
   /**
    * Modifier le rôle ou l'allocation d'un membre du projet
    */
-  async updateMember(projectId: string, userId: string, dto: { role?: string; allocation?: number; startDate?: string; endDate?: string }) {
+  async updateMember(
+    projectId: string,
+    userId: string,
+    dto: { role?: string; allocation?: number; startDate?: string; endDate?: string },
+    user?: ProjectMutationUser,
+  ) {
+    // Defense-in-depth: enforce ownership even if guard is bypassed.
+    if (user) {
+      await this.assertProjectOwnershipOrBypass(projectId, user);
+    }
+
     const member = await this.prisma.projectMember.findUnique({
       where: { projectId_userId: { projectId, userId } },
     });
@@ -495,7 +571,16 @@ export class ProjectsService {
   /**
    * Retirer un membre du projet
    */
-  async removeMember(projectId: string, userId: string) {
+  async removeMember(
+    projectId: string,
+    userId: string,
+    user?: ProjectMutationUser,
+  ) {
+    // Defense-in-depth: enforce ownership even if guard is bypassed.
+    if (user) {
+      await this.assertProjectOwnershipOrBypass(projectId, user);
+    }
+
     const member = await this.prisma.projectMember.findUnique({
       where: {
         projectId_userId: {

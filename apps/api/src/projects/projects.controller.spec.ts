@@ -271,17 +271,24 @@ describe('ProjectsController', () => {
       description: 'Updated description',
     };
 
+    const caller = { id: 'admin-1', role: 'ADMIN' };
+
     it('should update a project successfully', async () => {
       const updatedProject = { ...mockProject, ...updateProjectDto };
       mockProjectsService.update.mockResolvedValue(updatedProject);
 
-      const result = await controller.update('project-id-1', updateProjectDto);
+      const result = await controller.update(
+        'project-id-1',
+        updateProjectDto,
+        caller,
+      );
 
       expect(result).toEqual(updatedProject);
       expect(result.name).toBe('Updated Project Name');
       expect(mockProjectsService.update).toHaveBeenCalledWith(
         'project-id-1',
         updateProjectDto,
+        caller,
       );
     });
 
@@ -291,7 +298,7 @@ describe('ProjectsController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', updateProjectDto),
+        controller.update('nonexistent', updateProjectDto, caller),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -300,21 +307,30 @@ describe('ProjectsController', () => {
       const completedProject = { ...mockProject, status: 'COMPLETED' };
       mockProjectsService.update.mockResolvedValue(completedProject);
 
-      const result = await controller.update('project-id-1', statusUpdate);
+      const result = await controller.update(
+        'project-id-1',
+        statusUpdate,
+        caller,
+      );
 
       expect(result.status).toBe('COMPLETED');
     });
   });
 
   describe('remove', () => {
+    const caller = { id: 'admin-1', role: 'ADMIN' };
+
     it('should soft delete a project (set status to CANCELLED)', async () => {
       const cancelledProject = { ...mockProject, status: 'CANCELLED' };
       mockProjectsService.remove.mockResolvedValue(cancelledProject);
 
-      const result = await controller.remove('project-id-1');
+      const result = await controller.remove('project-id-1', caller);
 
       expect(result.status).toBe('CANCELLED');
-      expect(mockProjectsService.remove).toHaveBeenCalledWith('project-id-1');
+      expect(mockProjectsService.remove).toHaveBeenCalledWith(
+        'project-id-1',
+        caller,
+      );
     });
 
     it('should throw NotFoundException when project not found', async () => {
@@ -322,7 +338,7 @@ describe('ProjectsController', () => {
         new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(
+      await expect(controller.remove('nonexistent', caller)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -413,17 +429,24 @@ describe('ProjectsController', () => {
   });
 
   describe('removeMember', () => {
+    const caller = { id: 'admin-1', role: 'ADMIN' };
+
     it('should remove a member from project', async () => {
       mockProjectsService.removeMember.mockResolvedValue({
         message: 'Membre retiré du projet',
       });
 
-      const result = await controller.removeMember('project-id-1', 'user-id-1');
+      const result = await controller.removeMember(
+        'project-id-1',
+        'user-id-1',
+        caller,
+      );
 
       expect(result.message).toBe('Membre retiré du projet');
       expect(mockProjectsService.removeMember).toHaveBeenCalledWith(
         'project-id-1',
         'user-id-1',
+        caller,
       );
     });
 
@@ -433,7 +456,7 @@ describe('ProjectsController', () => {
       );
 
       await expect(
-        controller.removeMember('project-id-1', 'nonexistent'),
+        controller.removeMember('project-id-1', 'nonexistent', caller),
       ).rejects.toThrow(NotFoundException);
     });
   });

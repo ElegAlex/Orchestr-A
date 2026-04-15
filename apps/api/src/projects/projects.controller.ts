@@ -26,6 +26,7 @@ import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 import { ProjectStatus } from 'database';
 
 @ApiTags('projects')
@@ -148,6 +149,7 @@ export class ProjectsController {
 
   @Patch(':id')
   @Permissions('projects:update')
+  @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
   @ApiOperation({
     summary:
       'Mettre à jour un projet (Admin/Responsable/Manager/Chef de projet)',
@@ -167,12 +169,14 @@ export class ProjectsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateProjectDto: UpdateProjectDto,
+    @CurrentUser() user: { id: string; role?: string },
   ) {
-    return this.projectsService.update(id, updateProjectDto);
+    return this.projectsService.update(id, updateProjectDto, user);
   }
 
   @Delete(':id')
   @Permissions('projects:delete')
+  @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Annuler un projet (soft delete, Admin/Responsable uniquement)',
@@ -185,8 +189,11 @@ export class ProjectsController {
     status: 404,
     description: 'Projet introuvable',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.projectsService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: { id: string; role?: string },
+  ) {
+    return this.projectsService.remove(id, user);
   }
 
   @Delete(':id/hard')
@@ -234,6 +241,11 @@ export class ProjectsController {
 
   @Patch(':projectId/members/:userId')
   @Permissions('projects:manage_members')
+  @OwnershipCheck({
+    resource: 'project',
+    paramKey: 'projectId',
+    bypassPermission: 'projects:manage_any',
+  })
   @ApiOperation({
     summary: 'Modifier le rôle ou l\'allocation d\'un membre du projet',
   })
@@ -243,12 +255,18 @@ export class ProjectsController {
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body() dto: UpdateMemberDto,
+    @CurrentUser() user: { id: string; role?: string },
   ) {
-    return this.projectsService.updateMember(projectId, userId, dto);
+    return this.projectsService.updateMember(projectId, userId, dto, user);
   }
 
   @Delete(':projectId/members/:userId')
   @Permissions('projects:manage_members')
+  @OwnershipCheck({
+    resource: 'project',
+    paramKey: 'projectId',
+    bypassPermission: 'projects:manage_any',
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
@@ -265,7 +283,8 @@ export class ProjectsController {
   removeMember(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() user: { id: string; role?: string },
   ) {
-    return this.projectsService.removeMember(projectId, userId);
+    return this.projectsService.removeMember(projectId, userId, user);
   }
 }
