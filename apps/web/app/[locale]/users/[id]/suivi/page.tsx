@@ -346,15 +346,15 @@ export default function SuiviPage() {
     router.push(`/${locale}/users/${targetUserId}/suivi`);
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(
-      locale === "fr" ? "fr-FR" : "en-US",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      },
-    );
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return "—";
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -655,7 +655,7 @@ export default function SuiviPage() {
                           {t("overview.memberSince")}
                         </dt>
                         <dd className="text-sm font-medium">
-                          {user?.createdAt && formatDate(user.createdAt)}
+                          {formatDate(user?.createdAt)}
                         </dd>
                       </div>
                       <div className="flex justify-between">

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { format, parseISO, isValid } from "date-fns";
+import { fr, enUS } from "date-fns/locale";
 import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
 import { usersService } from "@/services/users.service";
@@ -311,14 +313,11 @@ export default function ProfilePage() {
                   {t("personal.memberSince")}
                 </label>
                 <p className="text-gray-900">
-                  {new Date(user.createdAt).toLocaleDateString(
-                    locale === "en" ? "en-US" : "fr-FR",
-                    {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    },
-                  )}
+                  {user?.createdAt && isValid(parseISO(user.createdAt))
+                    ? format(parseISO(user.createdAt), "PPP", {
+                        locale: locale === "en" ? enUS : fr,
+                      })
+                    : "—"}
                 </p>
               </div>
             </div>

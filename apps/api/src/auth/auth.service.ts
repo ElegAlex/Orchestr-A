@@ -79,6 +79,9 @@ export class AuthService {
         departmentId: true,
         avatarUrl: true,
         avatarPreset: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
         department: {
           select: {
             id: true,
