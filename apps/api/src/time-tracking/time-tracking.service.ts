@@ -8,11 +8,14 @@ import { Prisma, Role } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleManagementService } from '../role-management/role-management.service';
 import { ThirdPartiesService } from '../third-parties/third-parties.service';
+import { OwnershipService } from '../common/services/ownership.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
 
 const DECLARE_FOR_THIRD_PARTY_PERMISSION =
   'time_tracking:declare_for_third_party';
+const MANAGE_ANY_PERMISSION = 'time_tracking:manage_any';
+const VIEW_ANY_PERMISSION = 'time_tracking:view_any';
 
 type TimeEntryActor =
   | { kind: 'user'; userId: string }
@@ -24,7 +27,34 @@ export class TimeTrackingService {
     private readonly prisma: PrismaService,
     private readonly thirdPartiesService: ThirdPartiesService,
     private readonly roleManagementService: RoleManagementService,
+    private readonly ownershipService: OwnershipService,
   ) {}
+
+  /**
+   * Defense-in-depth ownership enforcement for mutations.
+   * The OwnershipGuard already protects PATCH/DELETE /:id routes, but a
+   * service-level check guards against direct internal callers and keeps the
+   * invariant unit-testable.
+   *
+   * Ownership for a TimeEntry = entry.userId === user.id OR
+   * entry.declaredById === user.id (the declarer for a third-party entry).
+   * Bypassed by the `time_tracking:manage_any` permission.
+   */
+  private async ensureCanMutate(
+    entryId: string,
+    user: { id: string; role: Role },
+  ): Promise<void> {
+    const isOwner = await this.ownershipService.isOwner(
+      'timeEntry',
+      entryId,
+      user.id,
+    );
+    if (isOwner) return;
+    const permissions =
+      (await this.roleManagementService.getPermissionsForRole(user.role)) ?? [];
+    if (permissions.includes(MANAGE_ANY_PERMISSION)) return;
+    throw new ForbiddenException('Time entry ownership violation');
+  }
 
   /**
    * Créer une nouvelle entrée de temps.
@@ -150,9 +180,16 @@ export class TimeTrackingService {
   }
 
   /**
-   * Récupérer toutes les entrées avec pagination et filtres
+   * Récupérer toutes les entrées avec pagination et filtres.
+   *
+   * Contrôle d'accès : si l'appelant filtre par `userId` autre que le sien et
+   * n'a pas `time_tracking:view_any`, on renvoie 403 (choix explicite, aligné
+   * sur le pattern défensif des autres modules — events, projects — qui
+   * préfèrent rejeter un filtre cross-user plutôt que de le coercer
+   * silencieusement, ce qui masquerait une tentative d'IDOR côté logs).
    */
   async findAll(
+    currentUser: { id: string; role: Role },
     page = 1,
     limit = 10,
     userId?: string,
@@ -162,6 +199,18 @@ export class TimeTrackingService {
     endDate?: string,
     thirdPartyId?: string,
   ) {
+    if (userId && userId !== currentUser.id) {
+      const permissions =
+        (await this.roleManagementService.getPermissionsForRole(
+          currentUser.role,
+        )) ?? [];
+      if (!permissions.includes(VIEW_ANY_PERMISSION)) {
+        throw new ForbiddenException(
+          "Filtre userId d'un autre utilisateur interdit sans permission time_tracking:view_any",
+        );
+      }
+    }
+
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
 
@@ -259,7 +308,11 @@ export class TimeTrackingService {
    * ou inverse) : une entry user reste une entry user, une entry tiers reste
    * une entry tiers. Pour changer d'acteur, supprimer et recréer.
    */
-  async update(id: string, updateTimeEntryDto: UpdateTimeEntryDto) {
+  async update(
+    id: string,
+    updateTimeEntryDto: UpdateTimeEntryDto,
+    currentUser: { id: string; role: Role },
+  ) {
     const existing = await this.prisma.timeEntry.findUnique({
       where: { id },
     });
@@ -267,6 +320,8 @@ export class TimeTrackingService {
     if (!existing) {
       throw new NotFoundException('Entrée de temps introuvable');
     }
+
+    await this.ensureCanMutate(id, currentUser);
 
     const { date, hours, activityType, taskId, projectId, description } =
       updateTimeEntryDto;
@@ -338,7 +393,7 @@ export class TimeTrackingService {
   /**
    * Supprimer une entrée
    */
-  async remove(id: string) {
+  async remove(id: string, currentUser: { id: string; role: Role }) {
     const entry = await this.prisma.timeEntry.findUnique({
       where: { id },
     });
@@ -346,6 +401,8 @@ export class TimeTrackingService {
     if (!entry) {
       throw new NotFoundException('Entrée de temps introuvable');
     }
+
+    await this.ensureCanMutate(id, currentUser);
 
     await this.prisma.timeEntry.delete({
       where: { id },

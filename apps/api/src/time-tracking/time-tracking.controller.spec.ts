@@ -4,9 +4,14 @@ import { TimeTrackingController } from './time-tracking.controller';
 import { TimeTrackingService } from './time-tracking.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { PERMISSIONS_KEY } from '../auth/decorators/permissions.decorator';
+import { OwnershipService } from '../common/services/ownership.service';
+import { RoleManagementService } from '../role-management/role-management.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OwnershipGuard } from '../common/guards/ownership.guard';
 
 describe('TimeTrackingController', () => {
   let controller: TimeTrackingController;
+  const currentUser = { id: 'user-id-1', role: 'MANAGER' as const };
 
   const mockTimeEntry = {
     id: 'entry-id-1',
@@ -53,8 +58,23 @@ describe('TimeTrackingController', () => {
           provide: TimeTrackingService,
           useValue: mockTimeTrackingService,
         },
+        {
+          provide: OwnershipService,
+          useValue: { isOwner: vi.fn().mockResolvedValue(true) },
+        },
+        {
+          provide: RoleManagementService,
+          useValue: {
+            getPermissionsForRole: vi.fn().mockResolvedValue([]),
+          },
+        },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(OwnershipGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<TimeTrackingController>(TimeTrackingController);
   });
@@ -76,11 +96,11 @@ describe('TimeTrackingController', () => {
     it('should create a time entry successfully', async () => {
       mockTimeTrackingService.create.mockResolvedValue(mockTimeEntry);
 
-      const result = await controller.create('user-id-1', createTimeEntryDto);
+      const result = await controller.create(currentUser, createTimeEntryDto);
 
       expect(result).toEqual(mockTimeEntry);
       expect(mockTimeTrackingService.create).toHaveBeenCalledWith(
-        'user-id-1',
+        currentUser,
         createTimeEntryDto,
       );
       expect(mockTimeTrackingService.create).toHaveBeenCalledTimes(1);
@@ -92,7 +112,7 @@ describe('TimeTrackingController', () => {
       );
 
       await expect(
-        controller.create('user-id-1', {
+        controller.create(currentUser, {
           ...createTimeEntryDto,
           projectId: undefined,
           taskId: undefined,
@@ -106,7 +126,7 @@ describe('TimeTrackingController', () => {
       );
 
       await expect(
-        controller.create('user-id-1', createTimeEntryDto),
+        controller.create(currentUser, createTimeEntryDto),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -125,12 +145,14 @@ describe('TimeTrackingController', () => {
 
       mockTimeTrackingService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10);
+      const result = await controller.findAll(currentUser, 1, 10);
 
       expect(result).toEqual(paginatedResult);
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
+        currentUser,
         1,
         10,
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -145,12 +167,14 @@ describe('TimeTrackingController', () => {
         meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
       });
 
-      await controller.findAll(1, 10, 'user-id-1');
+      await controller.findAll(currentUser, 1, 10, 'user-id-1');
 
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
+        currentUser,
         1,
         10,
         'user-id-1',
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -164,13 +188,15 @@ describe('TimeTrackingController', () => {
         meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
       });
 
-      await controller.findAll(1, 10, undefined, 'project-id-1');
+      await controller.findAll(currentUser, 1, 10, undefined, 'project-id-1');
 
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
+        currentUser,
         1,
         10,
         undefined,
         'project-id-1',
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -184,6 +210,7 @@ describe('TimeTrackingController', () => {
       });
 
       await controller.findAll(
+        currentUser,
         1,
         10,
         undefined,
@@ -194,6 +221,7 @@ describe('TimeTrackingController', () => {
       );
 
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
+        currentUser,
         1,
         10,
         undefined,
@@ -201,6 +229,7 @@ describe('TimeTrackingController', () => {
         undefined,
         '2025-01-01',
         '2025-01-31',
+        undefined,
       );
     });
   });
@@ -372,13 +401,18 @@ describe('TimeTrackingController', () => {
       const updatedEntry = { ...mockTimeEntry, ...updateTimeEntryDto };
       mockTimeTrackingService.update.mockResolvedValue(updatedEntry);
 
-      const result = await controller.update('entry-id-1', updateTimeEntryDto);
+      const result = await controller.update(
+        'entry-id-1',
+        updateTimeEntryDto,
+        currentUser,
+      );
 
       expect(result.hours).toBe(6);
       expect(result.description).toBe('Updated description');
       expect(mockTimeTrackingService.update).toHaveBeenCalledWith(
         'entry-id-1',
         updateTimeEntryDto,
+        currentUser,
       );
     });
 
@@ -388,7 +422,7 @@ describe('TimeTrackingController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', updateTimeEntryDto),
+        controller.update('nonexistent', updateTimeEntryDto, currentUser),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -399,10 +433,13 @@ describe('TimeTrackingController', () => {
         message: 'Entrée de temps supprimée',
       });
 
-      const result = await controller.remove('entry-id-1');
+      const result = await controller.remove('entry-id-1', currentUser);
 
       expect(result.message).toBe('Entrée de temps supprimée');
-      expect(mockTimeTrackingService.remove).toHaveBeenCalledWith('entry-id-1');
+      expect(mockTimeTrackingService.remove).toHaveBeenCalledWith(
+        'entry-id-1',
+        currentUser,
+      );
     });
 
     it('should throw NotFoundException when entry not found', async () => {
@@ -410,9 +447,9 @@ describe('TimeTrackingController', () => {
         new NotFoundException('Entrée de temps introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.remove('nonexistent', currentUser),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

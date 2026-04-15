@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleManagementService } from '../role-management/role-management.service';
 import { ThirdPartiesService } from '../third-parties/third-parties.service';
+import { OwnershipService } from '../common/services/ownership.service';
 import { TimeTrackingService } from './time-tracking.service';
 
 describe('TimeTrackingService', () => {
@@ -37,6 +38,10 @@ describe('TimeTrackingService', () => {
     getPermissionsForRole: vi.fn(),
   };
 
+  const mockOwnershipService = {
+    isOwner: vi.fn(),
+  };
+
   const currentUser = { id: 'user-1', role: 'MANAGER' as Role };
 
   beforeEach(async () => {
@@ -49,6 +54,7 @@ describe('TimeTrackingService', () => {
           provide: RoleManagementService,
           useValue: mockRoleManagementService,
         },
+        { provide: OwnershipService, useValue: mockOwnershipService },
       ],
     }).compile();
     service = module.get<TimeTrackingService>(TimeTrackingService);
@@ -285,6 +291,7 @@ describe('TimeTrackingService', () => {
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.count.mockResolvedValue(0);
       await service.findAll(
+        currentUser,
         1,
         10,
         undefined,
@@ -301,13 +308,37 @@ describe('TimeTrackingService', () => {
       );
     });
 
-    it('filters by userId independently', async () => {
+    it('filters by userId === self without needing view_any', async () => {
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.count.mockResolvedValue(0);
-      await service.findAll(1, 10, 'user-1');
+      await service.findAll(currentUser, 1, 10, 'user-1');
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ userId: 'user-1' }),
+        }),
+      );
+    });
+
+    it('throws ForbiddenException when filtering by another user without time_tracking:view_any', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'time_tracking:read',
+      ]);
+      await expect(
+        service.findAll(currentUser, 1, 10, 'user-2'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockPrismaService.timeEntry.findMany).not.toHaveBeenCalled();
+    });
+
+    it('allows filtering by another user when time_tracking:view_any is granted', async () => {
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'time_tracking:view_any',
+      ]);
+      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.count.mockResolvedValue(0);
+      await service.findAll(currentUser, 1, 10, 'user-2');
+      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ userId: 'user-2' }),
         }),
       );
     });
@@ -329,25 +360,79 @@ describe('TimeTrackingService', () => {
   });
 
   describe('update', () => {
-    it('updates hours on a user entry', async () => {
+    it('updates hours on a user entry (owner)', async () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue({
         id: '1',
         userId: 'user-1',
         thirdPartyId: null,
       });
+      mockOwnershipService.isOwner.mockResolvedValue(true);
       mockPrismaService.timeEntry.update.mockResolvedValue({
         id: '1',
         hours: 6,
       });
-      const result = await service.update('1', { hours: 6 });
+      const result = await service.update('1', { hours: 6 }, currentUser);
+      expect(result.hours).toBe(6);
+    });
+
+    it('allows update when caller is the declaredBy (on-behalf actor)', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: '1',
+        userId: null,
+        thirdPartyId: 'tp-1',
+        declaredById: 'user-1',
+      });
+      // OwnershipService.isOwner accepts declaredById === userId
+      mockOwnershipService.isOwner.mockResolvedValue(true);
+      mockPrismaService.timeEntry.update.mockResolvedValue({
+        id: '1',
+        hours: 3,
+      });
+      const result = await service.update('1', { hours: 3 }, currentUser);
+      expect(result.hours).toBe(3);
+    });
+
+    it('throws ForbiddenException when caller is neither owner nor has manage_any', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: '1',
+        userId: 'user-other',
+        thirdPartyId: null,
+        declaredById: 'user-other',
+      });
+      mockOwnershipService.isOwner.mockResolvedValue(false);
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'time_tracking:update',
+      ]);
+      await expect(
+        service.update('1', { hours: 6 }, currentUser),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockPrismaService.timeEntry.update).not.toHaveBeenCalled();
+    });
+
+    it('allows update when caller has time_tracking:manage_any', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: '1',
+        userId: 'user-other',
+        thirdPartyId: null,
+        declaredById: 'user-other',
+      });
+      mockOwnershipService.isOwner.mockResolvedValue(false);
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'time_tracking:manage_any',
+      ]);
+      mockPrismaService.timeEntry.update.mockResolvedValue({
+        id: '1',
+        hours: 6,
+      });
+      const result = await service.update('1', { hours: 6 }, currentUser);
       expect(result.hours).toBe(6);
     });
 
     it('throws NotFoundException when entry missing', async () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(null);
-      await expect(service.update('1', { hours: 6 })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update('1', { hours: 6 }, currentUser),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('rejects attempts to mutate thirdPartyId on a user entry', async () => {
@@ -356,11 +441,15 @@ describe('TimeTrackingService', () => {
         userId: 'user-1',
         thirdPartyId: null,
       });
+      mockOwnershipService.isOwner.mockResolvedValue(true);
       await expect(
-        service.update('1', {
-          // cast to accept the extra field even though UpdateDto may not have it
-          thirdPartyId: 'tp-1',
-        } as unknown as Parameters<typeof service.update>[1]),
+        service.update(
+          '1',
+          {
+            thirdPartyId: 'tp-1',
+          } as unknown as Parameters<typeof service.update>[1],
+          currentUser,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -369,11 +458,17 @@ describe('TimeTrackingService', () => {
         id: '1',
         userId: null,
         thirdPartyId: 'tp-1',
+        declaredById: 'user-1',
       });
+      mockOwnershipService.isOwner.mockResolvedValue(true);
       await expect(
-        service.update('1', {
-          thirdPartyId: null,
-        } as unknown as Parameters<typeof service.update>[1]),
+        service.update(
+          '1',
+          {
+            thirdPartyId: null,
+          } as unknown as Parameters<typeof service.update>[1],
+          currentUser,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -381,10 +476,12 @@ describe('TimeTrackingService', () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue({
         id: '1',
         taskId: 'task-1',
+        userId: 'user-1',
       });
+      mockOwnershipService.isOwner.mockResolvedValue(true);
       mockPrismaService.task.findUnique.mockResolvedValue(null);
       await expect(
-        service.update('1', { taskId: 'invalid' }),
+        service.update('1', { taskId: 'invalid' }, currentUser),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -392,25 +489,76 @@ describe('TimeTrackingService', () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue({
         id: '1',
         projectId: 'project-1',
+        userId: 'user-1',
       });
+      mockOwnershipService.isOwner.mockResolvedValue(true);
       mockPrismaService.project.findUnique.mockResolvedValue(null);
       await expect(
-        service.update('1', { projectId: 'invalid' }),
+        service.update('1', { projectId: 'invalid' }, currentUser),
       ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('remove', () => {
-    it('deletes entry', async () => {
-      mockPrismaService.timeEntry.findUnique.mockResolvedValue({ id: '1' });
+    it('deletes entry when caller is owner', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: '1',
+        userId: 'user-1',
+        declaredById: 'user-1',
+      });
+      mockOwnershipService.isOwner.mockResolvedValue(true);
       mockPrismaService.timeEntry.delete.mockResolvedValue({ id: '1' });
-      const result = await service.remove('1');
+      const result = await service.remove('1', currentUser);
+      expect(result.message).toContain('supprimée');
+    });
+
+    it('deletes when caller is declaredBy (on-behalf actor)', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: '1',
+        userId: null,
+        thirdPartyId: 'tp-1',
+        declaredById: 'user-1',
+      });
+      mockOwnershipService.isOwner.mockResolvedValue(true);
+      mockPrismaService.timeEntry.delete.mockResolvedValue({ id: '1' });
+      const result = await service.remove('1', currentUser);
+      expect(result.message).toContain('supprimée');
+    });
+
+    it('throws ForbiddenException when caller is neither owner nor has manage_any', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: '1',
+        userId: 'user-other',
+        declaredById: 'user-other',
+      });
+      mockOwnershipService.isOwner.mockResolvedValue(false);
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'time_tracking:delete',
+      ]);
+      await expect(service.remove('1', currentUser)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockPrismaService.timeEntry.delete).not.toHaveBeenCalled();
+    });
+
+    it('allows delete when caller has time_tracking:manage_any', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: '1',
+        userId: 'user-other',
+        declaredById: 'user-other',
+      });
+      mockOwnershipService.isOwner.mockResolvedValue(false);
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'time_tracking:manage_any',
+      ]);
+      mockPrismaService.timeEntry.delete.mockResolvedValue({ id: '1' });
+      const result = await service.remove('1', currentUser);
       expect(result.message).toContain('supprimée');
     });
 
     it('throws NotFoundException when missing', async () => {
       mockPrismaService.timeEntry.findUnique.mockResolvedValue(null);
-      await expect(service.remove('missing')).rejects.toThrow(
+      await expect(service.remove('missing', currentUser)).rejects.toThrow(
         NotFoundException,
       );
     });

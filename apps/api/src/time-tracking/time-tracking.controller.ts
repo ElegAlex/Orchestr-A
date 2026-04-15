@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,6 +25,9 @@ import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OwnershipGuard } from '../common/guards/ownership.guard';
+import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 import { Role } from 'database';
 
 @ApiTags('time-tracking')
@@ -71,7 +75,13 @@ export class TimeTrackingController {
     status: 200,
     description: 'Liste des entrées de temps',
   })
+  @ApiResponse({
+    status: 403,
+    description:
+      "Filtre userId d'un autre utilisateur sans permission time_tracking:view_any",
+  })
   findAll(
+    @CurrentUser() currentUser: { id: string; role: Role },
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('userId') userId?: string,
@@ -82,6 +92,7 @@ export class TimeTrackingController {
     @Query('thirdPartyId') thirdPartyId?: string,
   ) {
     return this.timeTrackingService.findAll(
+      currentUser,
       page,
       limit,
       userId,
@@ -192,11 +203,21 @@ export class TimeTrackingController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, OwnershipGuard)
+  @OwnershipCheck({
+    resource: 'timeEntry',
+    bypassPermission: 'time_tracking:manage_any',
+  })
   @Permissions('time_tracking:update')
   @ApiOperation({ summary: 'Mettre à jour une entrée de temps' })
   @ApiResponse({
     status: 200,
     description: 'Entrée de temps mise à jour',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Non propriétaire et sans permission time_tracking:manage_any',
   })
   @ApiResponse({
     status: 404,
@@ -205,11 +226,17 @@ export class TimeTrackingController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTimeEntryDto: UpdateTimeEntryDto,
+    @CurrentUser() currentUser: { id: string; role: Role },
   ) {
-    return this.timeTrackingService.update(id, updateTimeEntryDto);
+    return this.timeTrackingService.update(id, updateTimeEntryDto, currentUser);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, OwnershipGuard)
+  @OwnershipCheck({
+    resource: 'timeEntry',
+    bypassPermission: 'time_tracking:manage_any',
+  })
   @Permissions('time_tracking:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer une entrée de temps' })
@@ -218,10 +245,18 @@ export class TimeTrackingController {
     description: 'Entrée de temps supprimée',
   })
   @ApiResponse({
+    status: 403,
+    description:
+      'Non propriétaire et sans permission time_tracking:manage_any',
+  })
+  @ApiResponse({
     status: 404,
     description: 'Entrée de temps introuvable',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.timeTrackingService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: { id: string; role: Role },
+  ) {
+    return this.timeTrackingService.remove(id, currentUser);
   }
 }
