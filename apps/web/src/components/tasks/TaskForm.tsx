@@ -35,6 +35,7 @@ import {
 import { tasksService } from "@/services/tasks.service";
 import { projectsService } from "@/services/projects.service";
 import { thirdPartiesService } from "@/services/third-parties.service";
+import { usePermissions } from "@/hooks/usePermissions";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import { ThirdPartySelector } from "@/components/third-parties/ThirdPartySelector";
@@ -283,6 +284,13 @@ export function TaskForm({
   // filterAssigneesByProjectMembers is true AND a project is selected.
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
 
+  // RBAC bypass: users with tasks:assign_any_user see ALL users even when
+  // the consumer asks to filter by project members (managers, admins...).
+  const { hasPermission } = usePermissions();
+  const canAssignAnyUser = hasPermission("tasks:assign_any_user");
+  const effectiveFilterByMembers =
+    filterAssigneesByProjectMembers && !canAssignAnyUser;
+
   const visibleStatuses = ALL_STATUSES.filter(
     (s) => !hiddenStatuses.includes(s) || s === initialTask?.status,
   );
@@ -494,7 +502,7 @@ export function TaskForm({
       return;
     }
 
-    if (filterAssigneesByProjectMembers) {
+    if (effectiveFilterByMembers) {
       // Rich mode: fetch the project to get its .members relation and
       // narrow both the assignee dropdown and the current selection.
       try {
@@ -543,7 +551,7 @@ export function TaskForm({
   // List of users shown in the UserMultiSelect. When filter is active AND a
   // project is selected AND we fetched its members, narrow the list.
   const availableAssignees: User[] =
-    filterAssigneesByProjectMembers &&
+    effectiveFilterByMembers &&
     values.projectId &&
     projectMembers.length > 0
       ? projectMembers
@@ -788,7 +796,7 @@ export function TaskForm({
             onChange={(ids) => setValues({ ...values, assigneeIds: ids })}
             placeholder={t("modal.create.assigneesPlaceholder")}
           />
-          {filterAssigneesByProjectMembers && values.projectId && (
+          {effectiveFilterByMembers && values.projectId && (
             <p className="text-xs text-gray-500 mt-1">
               {projectMembers.length > 0
                 ? `${projectMembers.length} membre(s) du projet disponibles`

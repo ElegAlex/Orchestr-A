@@ -83,6 +83,13 @@ export class RoleManagementService implements OnModuleInit {
         action: 'readAll',
         description: 'Voir toutes les tâches (pas seulement les siennes)',
       },
+      {
+        code: 'tasks:assign_any_user',
+        module: 'tasks',
+        action: 'assign_any_user',
+        description:
+          'Assigner une tâche à n\'importe quel utilisateur, sans restriction de périmètre ni de membres du projet',
+      },
       // Events
       {
         code: 'events:readAll',
@@ -395,6 +402,7 @@ export class RoleManagementService implements OnModuleInit {
           'tasks:update',
           'tasks:delete',
           'tasks:create_in_project',
+          'tasks:assign_any_user',
           'events:create',
           'events:read',
           'events:update',
