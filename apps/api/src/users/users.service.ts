@@ -21,6 +21,7 @@ import { Role } from 'database';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import type { MultipartFile } from '@fastify/multipart';
+import { assertMagicBytes } from '../common/upload/magic-bytes.validator';
 
 /** Type de dépendance utilisateur */
 export interface UserDependency {
@@ -1284,14 +1285,8 @@ export class UsersService {
     // Read and save the buffer
     const buffer = await file.toBuffer();
 
-    // Validate actual file content (magic bytes) — VULN-008
-    const { fileTypeFromBuffer } = await import('file-type');
-    const fileTypeResult = await fileTypeFromBuffer(buffer);
-    if (!fileTypeResult || !allowedMimeTypes.includes(fileTypeResult.mime)) {
-      throw new BadRequestException(
-        'Le contenu du fichier ne correspond pas à une image valide',
-      );
-    }
+    // Validate actual file content (magic bytes) — SEC-07 / VULN-008
+    await assertMagicBytes(buffer, 'image');
 
     await fs.writeFile(join(uploadsDir, filename), buffer);
 
