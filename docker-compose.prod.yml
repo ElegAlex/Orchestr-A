@@ -113,7 +113,6 @@ services:
 
       # API Settings
       API_PREFIX: ${API_PREFIX:-api}
-      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
 
       # Rate Limiting
       THROTTLE_TTL: ${THROTTLE_TTL:-60}
