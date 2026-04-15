@@ -4,64 +4,52 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSettingsStore } from "@/stores/settings.store";
-import { permissionsService } from "@/services/permissions.service";
+import { useAuthBootstrap } from "@/hooks/useAuthBootstrap";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const {
-    isAuthenticated,
-    isLoading,
-    checkAuth,
-    setPermissions,
-    permissionsLoaded,
-  } = useAuthStore();
+  const { isAuthenticated, isLoading, permissionsLoaded } = useAuthStore();
 
+  // SEC-03 — rehydrate user+permissions from the backend on mount.
+  // `ready` guards the first render so we don't flash stale UI
+  // (role-gated features) before /auth/me resolves.
+  const ready = useAuthBootstrap();
+
+  // Settings still fetched after successful auth
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  // Load permissions and settings when authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      permissionsService
-        .getMyPermissions()
-        .then((perms) => setPermissions(perms))
-        .catch((err) => {
-          console.error("Failed to load permissions:", err);
-          setPermissions([]);
-        });
-
+    if (isAuthenticated && ready) {
       useSettingsStore.getState().fetchSettings();
     }
-  }, [isAuthenticated, setPermissions]);
+  }, [isAuthenticated, ready]);
 
   useEffect(() => {
-    if (!isLoading) {
-      // Extract locale from pathname (e.g., /fr/dashboard -> fr)
-      const segments = pathname.split("/");
-      const locale = ["fr", "en"].includes(segments[1]) ? segments[1] : "fr";
+    if (!ready || isLoading) return;
 
-      // Check if pathname matches public routes (with locale prefix)
-      const isPublicRoute =
-        pathname === "/" ||
-        pathname.match(/^\/(fr|en)$/) ||
-        pathname.match(/^\/(fr|en)\/login$/) ||
-        pathname.match(/^\/(fr|en)\/register$/);
+    // Extract locale from pathname (e.g., /fr/dashboard -> fr)
+    const segments = pathname.split("/");
+    const locale = ["fr", "en"].includes(segments[1]) ? segments[1] : "fr";
 
-      if (!isAuthenticated && !isPublicRoute) {
-        router.push(`/${locale}/login`);
-      } else if (
-        isAuthenticated &&
-        (pathname.match(/^\/(fr|en)\/login$/) ||
-          pathname.match(/^\/(fr|en)\/register$/))
-      ) {
-        router.push(`/${locale}/dashboard`);
-      }
+    const isPublicRoute =
+      pathname === "/" ||
+      pathname.match(/^\/(fr|en)$/) ||
+      pathname.match(/^\/(fr|en)\/login$/) ||
+      pathname.match(/^\/(fr|en)\/register$/) ||
+      pathname.match(/^\/(fr|en)\/forgot-password$/) ||
+      pathname.match(/^\/(fr|en)\/reset-password$/);
+
+    if (!isAuthenticated && !isPublicRoute) {
+      router.push(`/${locale}/login`);
+    } else if (
+      isAuthenticated &&
+      (pathname.match(/^\/(fr|en)\/login$/) ||
+        pathname.match(/^\/(fr|en)\/register$/))
+    ) {
+      router.push(`/${locale}/dashboard`);
     }
-  }, [isAuthenticated, isLoading, pathname, router]);
+  }, [ready, isAuthenticated, isLoading, pathname, router]);
 
-  if (isLoading || (isAuthenticated && !permissionsLoaded)) {
+  if (!ready || isLoading || (isAuthenticated && !permissionsLoaded)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

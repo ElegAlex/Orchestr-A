@@ -1,4 +1,8 @@
-import { authService } from "../auth.service";
+import {
+  authService,
+  AUTH_TOKEN_KEY,
+  AUTH_USER_DISPLAY_KEY,
+} from "../auth.service";
 import { api } from "@/lib/api";
 
 // Mock de l'API
@@ -38,6 +42,8 @@ describe("authService", () => {
     lastName: "User",
     role: "CONTRIBUTEUR",
     isActive: true,
+    avatarUrl: null,
+    avatarPreset: null,
     createdAt: "2025-01-01",
     updatedAt: "2025-01-01",
   };
@@ -47,13 +53,22 @@ describe("authService", () => {
     user: mockUser,
   };
 
+  const expectedDisplayCache = JSON.stringify({
+    id: mockUser.id,
+    email: mockUser.email,
+    firstName: mockUser.firstName,
+    lastName: mockUser.lastName,
+    avatarUrl: null,
+    avatarPreset: null,
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     localStorageStore = {};
   });
 
   describe("login", () => {
-    it("should call API with credentials and store token", async () => {
+    it("should call API with credentials and store token + minimal display cache (no role)", async () => {
       (api.post as jest.Mock).mockResolvedValue({ data: mockAuthResponse });
 
       const result = await authService.login({
@@ -66,12 +81,26 @@ describe("authService", () => {
         password: "password123",
       });
       expect(localStorage.setItem).toHaveBeenCalledWith(
-        "access_token",
+        AUTH_TOKEN_KEY,
         "test-token-123",
       );
       expect(localStorage.setItem).toHaveBeenCalledWith(
+        AUTH_USER_DISPLAY_KEY,
+        expectedDisplayCache,
+      );
+      // SEC-03 — role MUST NOT leak into localStorage
+      const allSetItemCalls = (localStorage.setItem as jest.Mock).mock.calls;
+      for (const [, value] of allSetItemCalls) {
+        if (typeof value === "string") {
+          expect(value).not.toContain("CONTRIBUTEUR");
+          expect(value).not.toContain('"role"');
+          expect(value).not.toContain('"isActive"');
+        }
+      }
+      // Legacy "user" key must NOT be written
+      expect(localStorage.setItem).not.toHaveBeenCalledWith(
         "user",
-        JSON.stringify(mockUser),
+        expect.anything(),
       );
       expect(result).toEqual(mockAuthResponse);
     });
@@ -87,7 +116,7 @@ describe("authService", () => {
   });
 
   describe("register", () => {
-    it("should call API with registration data and store token", async () => {
+    it("should call API with registration data and store token + display cache only", async () => {
       (api.post as jest.Mock).mockResolvedValue({ data: mockAuthResponse });
 
       const registerData = {
@@ -102,59 +131,77 @@ describe("authService", () => {
 
       expect(api.post).toHaveBeenCalledWith("/auth/register", registerData);
       expect(localStorage.setItem).toHaveBeenCalledWith(
-        "access_token",
+        AUTH_TOKEN_KEY,
         "test-token-123",
       );
       expect(localStorage.setItem).toHaveBeenCalledWith(
+        AUTH_USER_DISPLAY_KEY,
+        expectedDisplayCache,
+      );
+      expect(localStorage.setItem).not.toHaveBeenCalledWith(
         "user",
-        JSON.stringify(mockUser),
+        expect.anything(),
       );
       expect(result).toEqual(mockAuthResponse);
     });
   });
 
   describe("getProfile", () => {
-    it("should fetch and store user profile", async () => {
+    it("should fetch profile and refresh display cache (not the full user)", async () => {
       (api.get as jest.Mock).mockResolvedValue({ data: mockUser });
 
       const result = await authService.getProfile();
 
       expect(api.get).toHaveBeenCalledWith("/auth/profile");
       expect(localStorage.setItem).toHaveBeenCalledWith(
+        AUTH_USER_DISPLAY_KEY,
+        expectedDisplayCache,
+      );
+      expect(localStorage.setItem).not.toHaveBeenCalledWith(
         "user",
-        JSON.stringify(mockUser),
+        expect.anything(),
       );
       expect(result).toEqual(mockUser);
     });
   });
 
   describe("logout", () => {
-    it("should clear localStorage and redirect to login", () => {
+    it("should clear token + display cache + legacy user key", () => {
       authService.logout();
 
-      expect(localStorage.removeItem).toHaveBeenCalledWith("access_token");
+      expect(localStorage.removeItem).toHaveBeenCalledWith(AUTH_TOKEN_KEY);
+      expect(localStorage.removeItem).toHaveBeenCalledWith(
+        AUTH_USER_DISPLAY_KEY,
+      );
       expect(localStorage.removeItem).toHaveBeenCalledWith("user");
-      // window.location.href assignment causes navigation in real browser
-      // In JSDOM, we just verify localStorage was cleared
     });
   });
 
-  describe("getCurrentUser", () => {
-    it("should return parsed user from localStorage", () => {
-      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser));
+  describe("getDisplayCache", () => {
+    it("should return parsed display cache when present", () => {
+      localStorageStore[AUTH_USER_DISPLAY_KEY] = expectedDisplayCache;
 
-      const result = authService.getCurrentUser();
+      const result = authService.getDisplayCache();
 
-      expect(localStorage.getItem).toHaveBeenCalledWith("user");
-      expect(result).toEqual(mockUser);
+      expect(result).toEqual({
+        id: mockUser.id,
+        email: mockUser.email,
+        firstName: mockUser.firstName,
+        lastName: mockUser.lastName,
+        avatarUrl: null,
+        avatarPreset: null,
+      });
+      // Role absent from cache by construction
+      expect(result).not.toHaveProperty("role");
+      expect(result).not.toHaveProperty("permissions");
+      expect(result).not.toHaveProperty("isActive");
     });
 
-    it("should return null if no user in localStorage", () => {
-      localStorageMock.getItem.mockReturnValue(null);
+    it("should return null if cache missing or malformed", () => {
+      expect(authService.getDisplayCache()).toBeNull();
 
-      const result = authService.getCurrentUser();
-
-      expect(result).toBeNull();
+      localStorageStore[AUTH_USER_DISPLAY_KEY] = "{not-json";
+      expect(authService.getDisplayCache()).toBeNull();
     });
   });
 
@@ -164,7 +211,7 @@ describe("authService", () => {
 
       const result = authService.isAuthenticated();
 
-      expect(localStorage.getItem).toHaveBeenCalledWith("access_token");
+      expect(localStorage.getItem).toHaveBeenCalledWith(AUTH_TOKEN_KEY);
       expect(result).toBe(true);
     });
 

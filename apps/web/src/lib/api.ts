@@ -34,10 +34,22 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
+      // Token expired or invalid — wipe client-side auth state.
+      // Note: we avoid importing the zustand store here to prevent a cyclic
+      // module dependency (store -> service -> api -> store). Instead we
+      // manually clear the storage keys the store owns; the next mount of
+      // useAuthBootstrap will observe the missing token and stay logged out.
       localStorage.removeItem("access_token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      localStorage.removeItem("auth_user_display");
+      localStorage.removeItem("user"); // legacy pre-SEC-03 key
+      // Best-effort: dispatch a synthetic event so the auth store can
+      // reset its in-memory state (listener wired in useAuthBootstrap /
+      // AuthProvider). Avoids a direct store import here which would
+      // create a cyclic module dependency (store -> service -> api -> store).
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("auth:cleared"));
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   },
