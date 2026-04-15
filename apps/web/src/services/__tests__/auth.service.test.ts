@@ -11,6 +11,8 @@ jest.mock("@/lib/api", () => ({
     post: jest.fn(),
     get: jest.fn(),
   },
+  REFRESH_TOKEN_KEY: "refresh_token",
+  ACCESS_TOKEN_KEY: "access_token",
 }));
 
 // Mock de localStorage
@@ -166,14 +168,44 @@ describe("authService", () => {
   });
 
   describe("logout", () => {
-    it("should clear token + display cache + legacy user key", () => {
-      authService.logout();
+    let originalLocation: Location;
+    beforeAll(() => {
+      originalLocation = window.location;
+      // @ts-expect-error — replace location wholesale to avoid Cannot redefine
+      delete window.location;
+      // @ts-expect-error
+      window.location = { href: "" };
+    });
+    afterAll(() => {
+      // @ts-expect-error
+      window.location = originalLocation;
+    });
 
+    it("should call /auth/logout with refresh token and clear storage", async () => {
+      localStorageStore["refresh_token"] = "rt-xyz";
+      (api.post as jest.Mock).mockResolvedValue({ data: null });
+
+      await authService.logout();
+
+      expect(api.post).toHaveBeenCalledWith("/auth/logout", {
+        refreshToken: "rt-xyz",
+      });
       expect(localStorage.removeItem).toHaveBeenCalledWith(AUTH_TOKEN_KEY);
+      expect(localStorage.removeItem).toHaveBeenCalledWith("refresh_token");
       expect(localStorage.removeItem).toHaveBeenCalledWith(
         AUTH_USER_DISPLAY_KEY,
       );
       expect(localStorage.removeItem).toHaveBeenCalledWith("user");
+    });
+
+    it("should still clear storage when server logout fails", async () => {
+      localStorageStore["refresh_token"] = "rt-xyz";
+      (api.post as jest.Mock).mockRejectedValue(new Error("network"));
+
+      await authService.logout();
+
+      expect(localStorage.removeItem).toHaveBeenCalledWith(AUTH_TOKEN_KEY);
+      expect(localStorage.removeItem).toHaveBeenCalledWith("refresh_token");
     });
   });
 

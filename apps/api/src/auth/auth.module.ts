@@ -12,6 +12,8 @@ import { PermissionsGuard } from './guards/permissions.guard';
 import { ThrottlerBehindProxyGuard } from './guards/throttler-behind-proxy.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { RoleManagementModule } from '../role-management/role-management.module';
+import { RefreshTokenService } from './refresh-token.service';
+import { JwtBlacklistService } from './jwt-blacklist.service';
 
 @Module({
   imports: [
@@ -20,7 +22,10 @@ import { RoleManagementModule } from '../role-management/role-management.module'
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const expiresIn = configService.get<string>('JWT_EXPIRES_IN') || '8h';
+        const expiresIn =
+          configService.get<string>('JWT_ACCESS_TTL') ||
+          configService.get<string>('JWT_EXPIRES_IN') ||
+          '15m';
         return {
           secret: configService.get<string>('JWT_SECRET'),
           signOptions: {
@@ -33,6 +38,8 @@ import { RoleManagementModule } from '../role-management/role-management.module'
   controllers: [AuthController],
   providers: [
     AuthService,
+    RefreshTokenService,
+    JwtBlacklistService,
     JwtStrategy,
     LocalStrategy,
     {
@@ -52,6 +59,6 @@ import { RoleManagementModule } from '../role-management/role-management.module'
       useClass: PermissionsGuard,
     },
   ],
-  exports: [AuthService],
+  exports: [AuthService, RefreshTokenService, JwtBlacklistService],
 })
 export class AuthModule {}

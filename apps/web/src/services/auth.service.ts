@@ -1,10 +1,14 @@
-import { api } from "@/lib/api";
+import { api, REFRESH_TOKEN_KEY } from "@/lib/api";
 import { AuthResponse, LoginDto, RegisterDto, User } from "@/types";
 
 /**
  * SEC-03 — Security-sensitive notes
  *
  * Only `access_token` (JWT) is persisted in localStorage (conscious project choice).
+ * Since SEC-04, a short-lived `refresh_token` is also persisted alongside it — same
+ * risk class as the access token (both live in localStorage). This is the same
+ * conscious tradeoff; client-side XSS equivalently compromises both.
+ *
  * The FULL user object (including `role`, `isActive`, `permissions`, etc.) is NEVER
  * persisted. Persisting role client-side allows trivial privilege escalation by
  * tampering with localStorage, and the frontend UI would branch on the mutated
@@ -19,6 +23,7 @@ import { AuthResponse, LoginDto, RegisterDto, User } from "@/types";
  */
 
 export const AUTH_TOKEN_KEY = "access_token";
+export const AUTH_REFRESH_TOKEN_KEY = REFRESH_TOKEN_KEY;
 export const AUTH_USER_DISPLAY_KEY = "auth_user_display";
 
 export interface AuthUserDisplay {
@@ -41,19 +46,37 @@ function toDisplayCache(user: User): AuthUserDisplay {
   };
 }
 
-function persistSession(token: string, user: User) {
+function persistSession(
+  token: string,
+  user: User,
+  refreshToken?: string | null,
+) {
   localStorage.setItem(AUTH_TOKEN_KEY, token);
+  if (refreshToken) {
+    localStorage.setItem(AUTH_REFRESH_TOKEN_KEY, refreshToken);
+  }
   localStorage.setItem(
     AUTH_USER_DISPLAY_KEY,
     JSON.stringify(toDisplayCache(user)),
   );
 }
 
+function clearSession() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_USER_DISPLAY_KEY);
+  localStorage.removeItem("user"); // legacy pre-SEC-03 key
+}
+
 export const authService = {
   async login(credentials: LoginDto): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>("/auth/login", credentials);
     if (response.data.access_token) {
-      persistSession(response.data.access_token, response.data.user);
+      persistSession(
+        response.data.access_token,
+        response.data.user,
+        response.data.refresh_token ?? null,
+      );
     }
     return response.data;
   },
@@ -61,7 +84,11 @@ export const authService = {
   async register(data: RegisterDto): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>("/auth/register", data);
     if (response.data.access_token) {
-      persistSession(response.data.access_token, response.data.user);
+      persistSession(
+        response.data.access_token,
+        response.data.user,
+        response.data.refresh_token ?? null,
+      );
     }
     return response.data;
   },
@@ -76,12 +103,20 @@ export const authService = {
     return response.data;
   },
 
-  logout(): void {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(AUTH_USER_DISPLAY_KEY);
-    // Legacy key cleanup — earlier builds persisted the full user object.
-    localStorage.removeItem("user");
-    window.location.href = "/login";
+  async logout(): Promise<void> {
+    const refreshToken = localStorage.getItem(AUTH_REFRESH_TOKEN_KEY);
+    try {
+      await api.post(
+        "/auth/logout",
+        refreshToken ? { refreshToken } : {},
+      );
+    } catch {
+      // Best-effort — even if the server call fails, wipe local state.
+    }
+    clearSession();
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
   },
 
   /**

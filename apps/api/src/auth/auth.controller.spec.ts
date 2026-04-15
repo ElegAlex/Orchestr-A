@@ -6,6 +6,8 @@ import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { RoleManagementService } from '../role-management/role-management.service';
+import { RefreshTokenService } from './refresh-token.service';
+import { JwtBlacklistService } from './jwt-blacklist.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -36,6 +38,20 @@ describe('AuthController', () => {
     getPermissionsForRole: vi.fn(),
   };
 
+  const mockRefreshTokenService = {
+    issue: vi.fn(),
+    rotate: vi.fn(),
+    revoke: vi.fn(),
+    revokeAllForUser: vi.fn(),
+  };
+
+  const mockBlacklist = {
+    blacklist: vi.fn(),
+    isBlacklisted: vi.fn(),
+  };
+
+  const mockReq = { headers: {}, ip: '127.0.0.1', ips: [] };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
@@ -47,6 +63,14 @@ describe('AuthController', () => {
         {
           provide: RoleManagementService,
           useValue: mockRoleManagementService,
+        },
+        {
+          provide: RefreshTokenService,
+          useValue: mockRefreshTokenService,
+        },
+        {
+          provide: JwtBlacklistService,
+          useValue: mockBlacklist,
         },
         PermissionsGuard,
       ],
@@ -73,10 +97,13 @@ describe('AuthController', () => {
 
       mockAuthService.login.mockResolvedValue(expectedResult);
 
-      const result = await controller.login(loginDto);
+      const result = await controller.login(loginDto, mockReq as any);
 
       expect(result).toEqual(expectedResult);
-      expect(mockAuthService.login).toHaveBeenCalledWith(loginDto);
+      expect(mockAuthService.login).toHaveBeenCalledWith(
+        loginDto,
+        expect.any(Object),
+      );
       expect(mockAuthService.login).toHaveBeenCalledTimes(1);
     });
 
@@ -85,10 +112,13 @@ describe('AuthController', () => {
         new UnauthorizedException('Login ou mot de passe incorrect'),
       );
 
-      await expect(controller.login(loginDto)).rejects.toThrow(
+      await expect(controller.login(loginDto, mockReq as any)).rejects.toThrow(
         UnauthorizedException,
       );
-      expect(mockAuthService.login).toHaveBeenCalledWith(loginDto);
+      expect(mockAuthService.login).toHaveBeenCalledWith(
+        loginDto,
+        expect.any(Object),
+      );
     });
 
     it('should handle login with email instead of login', async () => {
@@ -104,10 +134,13 @@ describe('AuthController', () => {
 
       mockAuthService.login.mockResolvedValue(expectedResult);
 
-      const result = await controller.login(emailLoginDto);
+      const result = await controller.login(emailLoginDto, mockReq as any);
 
       expect(result).toEqual(expectedResult);
-      expect(mockAuthService.login).toHaveBeenCalledWith(emailLoginDto);
+      expect(mockAuthService.login).toHaveBeenCalledWith(
+        emailLoginDto,
+        expect.any(Object),
+      );
     });
   });
 

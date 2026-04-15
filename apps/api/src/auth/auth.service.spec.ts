@@ -7,6 +7,8 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
 import { RoleManagementService } from '../role-management/role-management.service';
 import { AuditService } from '../audit/audit.service';
+import { RefreshTokenService } from './refresh-token.service';
+import { ConfigService } from '@nestjs/config';
 
 vi.mock('bcrypt');
 
@@ -66,6 +68,21 @@ describe('AuthService', () => {
     log: vi.fn(),
   };
 
+  const mockRefreshTokenService = {
+    issue: vi.fn().mockResolvedValue('mock-refresh-token'),
+    rotate: vi.fn(),
+    revoke: vi.fn(),
+    revokeAllForUser: vi.fn(),
+  };
+
+  const mockConfigService = {
+    get: vi.fn().mockImplementation((key: string) => {
+      if (key === 'JWT_ACCESS_TTL') return '15m';
+      if (key === 'JWT_EXPIRES_IN') return undefined;
+      return undefined;
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -79,12 +96,20 @@ describe('AuthService', () => {
           useValue: mockJwtService,
         },
         {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
+        {
           provide: RoleManagementService,
           useValue: mockRoleManagementService,
         },
         {
           provide: AuditService,
           useValue: mockAuditService,
+        },
+        {
+          provide: RefreshTokenService,
+          useValue: mockRefreshTokenService,
         },
       ],
     }).compile();

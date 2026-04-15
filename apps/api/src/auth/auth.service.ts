@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -13,15 +14,37 @@ import { RegisterDto } from './dto/register.dto';
 import { Role } from 'database';
 import { RoleManagementService } from '../role-management/role-management.service';
 import { AuditService, AuditAction } from '../audit/audit.service';
+import { RefreshTokenService, RefreshTokenMeta } from './refresh-token.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
     private readonly roleManagementService: RoleManagementService,
     private readonly auditService: AuditService,
+    private readonly refreshTokenService: RefreshTokenService,
   ) {}
+
+  private getAccessTtl(): string {
+    return (
+      this.configService.get<string>('JWT_ACCESS_TTL') ||
+      this.configService.get<string>('JWT_EXPIRES_IN') ||
+      '15m'
+    );
+  }
+
+  /**
+   * Sign a new access token including a jti claim so it can be revoked via blacklist.
+   */
+  signAccessToken(payload: { sub: string; login: string; role: string }): string {
+    const jti = crypto.randomUUID();
+    return this.jwtService.sign(
+      { ...payload, jti },
+      { expiresIn: this.getAccessTtl() as `${number}${'s' | 'm' | 'h' | 'd'}` },
+    );
+  }
 
   async validateUser(login: string, password: string) {
     // Accepter login ou email
@@ -54,7 +77,7 @@ export class AuthService {
     return result;
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, meta?: RefreshTokenMeta) {
     const user = await this.validateUser(loginDto.login, loginDto.password);
 
     if (!user) {
@@ -120,8 +143,12 @@ export class AuthService {
       success: true,
     });
 
+    const access_token = this.signAccessToken(payload);
+    const refresh_token = await this.refreshTokenService.issue(user.id, meta);
+
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token,
+      refresh_token,
       user: fullUser,
     };
   }
@@ -184,9 +211,28 @@ export class AuthService {
     };
 
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.signAccessToken(payload),
       user,
     };
+  }
+
+  /**
+   * Issue a new access token for a given userId (used by /auth/refresh).
+   * Re-reads current role/login from DB to prevent stale claims.
+   */
+  async issueAccessTokenForUser(userId: string): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, login: true, role: true, isActive: true },
+    });
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Utilisateur non autorisé');
+    }
+    return this.signAccessToken({
+      sub: user.id,
+      login: user.login,
+      role: user.role,
+    });
   }
 
   async getProfile(userId: string) {

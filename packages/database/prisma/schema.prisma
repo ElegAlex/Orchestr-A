@@ -67,6 +67,7 @@ model User {
   createdPredefinedTaskRules       PredefinedTaskRecurringRule[] @relation("PredefinedTaskRecurringRuleCreator")
   passwordResetTokens              PasswordResetToken[]          @relation("PasswordResetTokenUser")
   createdPasswordResetTokens       PasswordResetToken[]          @relation("PasswordResetTokenCreator")
+  refreshTokens                    RefreshToken[]
   managedProjects                  Project[]                     @relation("ProjectManager")
   sponsoredProjects                Project[]                     @relation("ProjectSponsor")
 
@@ -993,6 +994,22 @@ model PasswordResetToken {
   createdBy User @relation("PasswordResetTokenCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ip        String?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 
 // ===========================

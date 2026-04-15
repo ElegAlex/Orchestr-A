@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,19 +15,40 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
+import { RefreshTokenService } from './refresh-token.service';
+import { JwtBlacklistService } from './jwt-blacklist.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordTokenDto } from './dto/reset-password-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RefreshTokenDto, LogoutDto } from './dto/refresh-token.dto';
 import { Public } from './decorators/public.decorator';
 import { Permissions } from './decorators/permissions.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { User } from '@prisma/client';
 
+type RequestMeta = { userAgent?: string; ip?: string };
+
+function extractMeta(req: {
+  headers?: Record<string, unknown>;
+  ip?: string;
+  ips?: string[];
+}): RequestMeta {
+  const userAgentRaw = req.headers?.['user-agent'];
+  const userAgent =
+    typeof userAgentRaw === 'string' ? userAgentRaw.slice(0, 512) : undefined;
+  const ip = req.ips?.length ? req.ips[0] : (req.ip ?? undefined);
+  return { userAgent, ip };
+}
+
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly refreshTokenService: RefreshTokenService,
+    private readonly blacklist: JwtBlacklistService,
+  ) {}
 
   @Public()
   @Post('login')
@@ -42,6 +64,7 @@ export class AuthController {
     schema: {
       example: {
         access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        refresh_token: 'opaque-48-byte-base64url-token',
         user: {
           id: 'uuid',
           email: 'admin@orchestr-a.internal',
@@ -54,8 +77,48 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Login ou mot de passe incorrect' })
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(@Body() loginDto: LoginDto, @Req() req: any) {
+    return this.authService.login(loginDto, extractMeta(req));
+  }
+
+  @Public()
+  @Post('refresh')
+  @Throttle({
+    short: { limit: 5, ttl: 60_000 },
+    medium: { limit: 20, ttl: 900_000 },
+  })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rafraîchir le token d\'accès' })
+  @ApiResponse({ status: 200, description: 'Nouveau access_token + refresh_token' })
+  @ApiResponse({ status: 401, description: 'Refresh token invalide ou expiré' })
+  async refresh(@Body() body: RefreshTokenDto, @Req() req: any) {
+    const { userId, newRefreshToken } = await this.refreshTokenService.rotate(
+      body.refreshToken,
+      extractMeta(req),
+    );
+    const access_token = await this.authService.issueAccessTokenForUser(userId);
+    return { access_token, refresh_token: newRefreshToken };
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Déconnexion — blacklist du JWT et révocation du refresh token' })
+  @ApiResponse({ status: 204, description: 'Déconnexion effectuée' })
+  @ApiResponse({ status: 401, description: 'Non autorisé' })
+  async logout(
+    @Body() body: LogoutDto,
+    @CurrentUser() user: User & { jti?: string; exp?: number },
+  ): Promise<void> {
+    if (user.jti && user.exp) {
+      const remaining = user.exp - Math.floor(Date.now() / 1000);
+      if (remaining > 0) {
+        await this.blacklist.blacklist(user.jti, remaining);
+      }
+    }
+    if (body?.refreshToken) {
+      await this.refreshTokenService.revoke(body.refreshToken);
+    }
   }
 
   @Public()
