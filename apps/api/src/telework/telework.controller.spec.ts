@@ -8,6 +8,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PERMISSIONS_KEY } from '../auth/decorators/permissions.decorator';
+import { OWNERSHIP_METADATA } from '../common/decorators/ownership-check.decorator';
 
 describe('TeleworkController', () => {
   let controller: TeleworkController;
@@ -470,6 +471,44 @@ describe('TeleworkController', () => {
         TeleworkController.prototype.remove,
       );
       expect(metadata).toEqual(['telework:delete']);
+    });
+  });
+
+  describe('ownership metadata (SEC-06 / BUG-01)', () => {
+    it('applies @OwnershipCheck on findOne', () => {
+      const metadata = Reflect.getMetadata(
+        OWNERSHIP_METADATA,
+        TeleworkController.prototype.findOne,
+      );
+      expect(metadata).toEqual({
+        paramKey: 'id',
+        resource: 'telework',
+        bypassPermission: 'telework:manage_others',
+      });
+    });
+
+    it('applies @OwnershipCheck on update', () => {
+      const metadata = Reflect.getMetadata(
+        OWNERSHIP_METADATA,
+        TeleworkController.prototype.update,
+      );
+      expect(metadata).toEqual({
+        paramKey: 'id',
+        resource: 'telework',
+        bypassPermission: 'telework:manage_others',
+      });
+    });
+
+    it('applies @OwnershipCheck on remove', () => {
+      const metadata = Reflect.getMetadata(
+        OWNERSHIP_METADATA,
+        TeleworkController.prototype.remove,
+      );
+      expect(metadata).toEqual({
+        paramKey: 'id',
+        resource: 'telework',
+        bypassPermission: 'telework:manage_others',
+      });
     });
   });
 });

@@ -27,6 +27,7 @@ import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
 import { GenerateSchedulesDto } from './dto/generate-schedules.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 
 @ApiTags('telework')
 @Controller('telework')
@@ -186,6 +187,7 @@ export class TeleworkController {
 
   @Get(':id')
   @Permissions('telework:read')
+  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_others' })
   @ApiOperation({ summary: 'Récupérer un télétravail par ID' })
   @ApiResponse({
     status: 200,
@@ -205,6 +207,7 @@ export class TeleworkController {
 
   @Patch(':id')
   @Permissions('telework:update')
+  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_others' })
   @ApiOperation({ summary: 'Mettre à jour un télétravail' })
   @ApiResponse({
     status: 200,
@@ -229,6 +232,7 @@ export class TeleworkController {
 
   @Delete(':id')
   @Permissions('telework:delete')
+  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_others' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un télétravail' })
   @ApiResponse({

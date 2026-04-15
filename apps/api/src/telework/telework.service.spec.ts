@@ -235,6 +235,7 @@ describe('TeleworkService', () => {
     it('should filter by date range', async () => {
       mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
       mockPrismaService.teleworkSchedule.count.mockResolvedValue(0);
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([]);
 
       await service.findAll(
         'user-1',
