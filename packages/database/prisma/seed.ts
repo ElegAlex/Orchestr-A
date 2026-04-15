@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import Redis from "ioredis";
+import * as crypto from "crypto";
+import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
@@ -1465,23 +1467,63 @@ if (redisUrl) {
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Create or get admin user
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@orchestr-a.internal" },
-    update: {},
-    create: {
-      email: "admin@orchestr-a.internal",
-      login: "admin",
-      passwordHash:
-        "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG", // password: admin123
-      firstName: "Admin",
-      lastName: "System",
-      role: "ADMIN",
-      isActive: true,
-    },
-  });
+  // Create or get admin user — SEC-02: env-gated, no hardcoded default password
+  const envAdminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const isProd = process.env.NODE_ENV === "production";
 
-  console.log("✅ Admin user ready:", admin.email);
+  let admin: Awaited<ReturnType<typeof prisma.user.upsert>> | null = null;
+
+  if (isProd && !envAdminPassword) {
+    console.warn(
+      "[SEED] SKIPPED admin user — set SEED_ADMIN_PASSWORD to enable.",
+    );
+  } else {
+    let plaintextPassword: string;
+    let forcePasswordChange: boolean;
+
+    if (envAdminPassword) {
+      plaintextPassword = envAdminPassword;
+      forcePasswordChange = false;
+    } else {
+      plaintextPassword = crypto.randomBytes(18).toString("base64url");
+      forcePasswordChange = true;
+      console.log(
+        "============================================================\n" +
+          `[SEED] Generated admin password: ${plaintextPassword}\n` +
+          "[SEED] Save it now — it will not be shown again.\n" +
+          "============================================================",
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(plaintextPassword, 12);
+
+    admin = await prisma.user.upsert({
+      where: { email: "admin@orchestr-a.internal" },
+      update: {
+        passwordHash,
+        forcePasswordChange,
+      },
+      create: {
+        email: "admin@orchestr-a.internal",
+        login: "admin",
+        passwordHash,
+        firstName: "Admin",
+        lastName: "System",
+        role: "ADMIN",
+        isActive: true,
+        forcePasswordChange,
+      },
+    });
+
+    console.log("✅ Admin user ready:", admin.email);
+  }
+
+  if (!admin) {
+    console.warn(
+      "[SEED] Admin user not created — skipping demo data seed (prod mode without SEED_ADMIN_PASSWORD).",
+    );
+    return;
+  }
 
   // Create or get department
   let department = await prisma.department.findFirst({
