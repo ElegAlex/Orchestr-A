@@ -1,5 +1,4 @@
 import { BadRequestException } from '@nestjs/common';
-import { fileTypeFromBuffer } from 'file-type';
 
 export const UPLOAD_MIME_WHITELIST = {
   image: ['image/png', 'image/jpeg', 'image/webp'],
@@ -22,6 +21,7 @@ export async function assertMagicBytes(
   buffer: Buffer,
   kind: UploadKind,
 ): Promise<{ mime: string; ext: string }> {
+  const { fileTypeFromBuffer } = await import('file-type');
   const result = await fileTypeFromBuffer(buffer);
   if (!result) throw new BadRequestException('Unknown file type');
   if (!UPLOAD_MIME_WHITELIST[kind].includes(result.mime as never)) {
