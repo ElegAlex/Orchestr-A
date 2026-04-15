@@ -31,6 +31,7 @@ import { PredefinedTasksModule } from './predefined-tasks/predefined-tasks.modul
 import { SchoolVacationsModule } from './school-vacations/school-vacations.module';
 import { ThirdPartiesModule } from './third-parties/third-parties.module';
 import { PlanningModule } from './planning/planning.module';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { PlanningModule } from './planning/planning.module';
     SchoolVacationsModule,
     ThirdPartiesModule,
     PlanningModule,
+    CommonModule,
   ],
   controllers: [AppController],
   providers: [AppService],
