@@ -66,6 +66,13 @@ export class RoleManagementService implements OnModuleInit {
         module: 'projects',
         action: 'manage_members',
       },
+      {
+        code: 'projects:manage_any',
+        module: 'projects',
+        action: 'manage_any',
+        description:
+          "Modifier ou supprimer n'importe quel projet, y compris ceux dont on n'est pas propriétaire (bypass OwnershipGuard)",
+      },
       // Tasks
       { code: 'tasks:create', module: 'tasks', action: 'create' },
       { code: 'tasks:read', module: 'tasks', action: 'read' },
@@ -101,6 +108,13 @@ export class RoleManagementService implements OnModuleInit {
       { code: 'events:read', module: 'events', action: 'read' },
       { code: 'events:update', module: 'events', action: 'update' },
       { code: 'events:delete', module: 'events', action: 'delete' },
+      {
+        code: 'events:manage_any',
+        module: 'events',
+        action: 'manage_any',
+        description:
+          "Modifier ou supprimer n'importe quel événement, y compris ceux dont on n'est pas créateur (bypass OwnershipGuard)",
+      },
       // Epics
       { code: 'epics:create', module: 'epics', action: 'create' },
       { code: 'epics:read', module: 'epics', action: 'read' },
@@ -182,6 +196,20 @@ export class RoleManagementService implements OnModuleInit {
         code: 'time_tracking:read_reports',
         module: 'time_tracking',
         action: 'read_reports',
+      },
+      {
+        code: 'time_tracking:manage_any',
+        module: 'time_tracking',
+        action: 'manage_any',
+        description:
+          "Modifier ou supprimer n'importe quelle entrée de temps, y compris celles dont on n'est pas propriétaire (bypass OwnershipGuard)",
+      },
+      {
+        code: 'time_tracking:view_any',
+        module: 'time_tracking',
+        action: 'view_any',
+        description:
+          "Lister les entrées de temps d'autres utilisateurs (filtre userId cross-user)",
       },
       // Users
       { code: 'users:create', module: 'users', action: 'create' },
@@ -420,6 +448,7 @@ export class RoleManagementService implements OnModuleInit {
           'time_tracking:update',
           'time_tracking:delete',
           'time_tracking:read_reports',
+          'time_tracking:view_any',
           'documents:create',
           'documents:read',
           'documents:update',
