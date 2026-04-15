@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleManagementService } from '../role-management/role-management.service';
+import { OwnershipService } from '../common/services/ownership.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Prisma } from 'database';
@@ -17,10 +18,36 @@ export class EventsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly roleManagementService: RoleManagementService,
+    private readonly ownershipService: OwnershipService,
   ) {}
 
   private isManagementRole(role: string): boolean {
     return this.MANAGEMENT_ROLES.includes(role);
+  }
+
+  /**
+   * Defense-in-depth ownership enforcement for mutations.
+   * The OwnershipGuard already protects these routes, but service-layer checks
+   * guard against direct internal callers and keep the invariant testable.
+   */
+  private async ensureCanMutate(
+    eventId: string,
+    userId?: string,
+    role?: string,
+  ): Promise<void> {
+    if (!userId) return;
+    const isOwner = await this.ownershipService.isOwner(
+      'event',
+      eventId,
+      userId,
+    );
+    if (isOwner) return;
+    if (role) {
+      const permissions =
+        (await this.roleManagementService.getPermissionsForRole(role)) ?? [];
+      if (permissions.includes('events:manage_any')) return;
+    }
+    throw new ForbiddenException('Event ownership violation');
   }
 
   /**
@@ -331,7 +358,12 @@ export class EventsService {
   /**
    * Mettre à jour un événement
    */
-  async update(id: string, updateEventDto: UpdateEventDto) {
+  async update(
+    id: string,
+    updateEventDto: UpdateEventDto,
+    currentUserId?: string,
+    currentUserRole?: string,
+  ) {
     const existingEvent = await this.prisma.event.findUnique({
       where: { id },
     });
@@ -339,6 +371,8 @@ export class EventsService {
     if (!existingEvent) {
       throw new NotFoundException('Événement introuvable');
     }
+
+    await this.ensureCanMutate(id, currentUserId, currentUserRole);
 
     const {
       projectId,
@@ -461,7 +495,7 @@ export class EventsService {
   /**
    * Supprimer un événement
    */
-  async remove(id: string) {
+  async remove(id: string, currentUserId?: string, currentUserRole?: string) {
     const event = await this.prisma.event.findUnique({
       where: { id },
     });
@@ -469,6 +503,8 @@ export class EventsService {
     if (!event) {
       throw new NotFoundException('Événement introuvable');
     }
+
+    await this.ensureCanMutate(id, currentUserId, currentUserRole);
 
     await this.prisma.event.delete({
       where: { id },
@@ -600,7 +636,12 @@ export class EventsService {
   /**
    * Ajouter un participant à un événement
    */
-  async addParticipant(eventId: string, userId: string) {
+  async addParticipant(
+    eventId: string,
+    userId: string,
+    currentUserId?: string,
+    currentUserRole?: string,
+  ) {
     // Vérifier que l'événement existe
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
@@ -609,6 +650,8 @@ export class EventsService {
     if (!event) {
       throw new NotFoundException('Événement introuvable');
     }
+
+    await this.ensureCanMutate(eventId, currentUserId, currentUserRole);
 
     // Vérifier que l'utilisateur existe
     const user = await this.prisma.user.findUnique({
@@ -679,7 +722,14 @@ export class EventsService {
   /**
    * Retirer un participant d'un événement
    */
-  async removeParticipant(eventId: string, userId: string) {
+  async removeParticipant(
+    eventId: string,
+    userId: string,
+    currentUserId?: string,
+    currentUserRole?: string,
+  ) {
+    await this.ensureCanMutate(eventId, currentUserId, currentUserRole);
+
     const participation = await this.prisma.eventParticipant.findUnique({
       where: {
         eventId_userId: {

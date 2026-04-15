@@ -3,6 +3,10 @@ import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { OwnershipService } from '../common/services/ownership.service';
+import { RoleManagementService } from '../role-management/role-management.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OwnershipGuard } from '../common/guards/ownership.guard';
 
 describe('EventsController', () => {
   let controller: EventsController;
@@ -50,8 +54,23 @@ describe('EventsController', () => {
           provide: EventsService,
           useValue: mockEventsService,
         },
+        {
+          provide: OwnershipService,
+          useValue: { isOwner: vi.fn().mockResolvedValue(true) },
+        },
+        {
+          provide: RoleManagementService,
+          useValue: {
+            getPermissionsForRole: vi.fn().mockResolvedValue([]),
+          },
+        },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(OwnershipGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<EventsController>(EventsController);
     service = module.get<EventsService>(EventsService);
@@ -151,10 +170,20 @@ describe('EventsController', () => {
 
       mockEventsService.update.mockResolvedValue(updatedEvent);
 
-      const result = await controller.update('1', updateEventDto);
+      const result = await controller.update(
+        '1',
+        updateEventDto,
+        'user-1',
+        'ADMIN',
+      );
 
       expect(result).toEqual(updatedEvent);
-      expect(service.update).toHaveBeenCalledWith('1', updateEventDto);
+      expect(service.update).toHaveBeenCalledWith(
+        '1',
+        updateEventDto,
+        'user-1',
+        'ADMIN',
+      );
     });
   });
 
@@ -164,10 +193,10 @@ describe('EventsController', () => {
         message: 'Événement supprimé avec succès',
       });
 
-      const result = await controller.remove('1');
+      const result = await controller.remove('1', 'user-1', 'ADMIN');
 
       expect(result).toEqual({ message: 'Événement supprimé avec succès' });
-      expect(service.remove).toHaveBeenCalledWith('1');
+      expect(service.remove).toHaveBeenCalledWith('1', 'user-1', 'ADMIN');
     });
   });
 
@@ -211,10 +240,20 @@ describe('EventsController', () => {
         message: 'Participant ajouté avec succès',
       });
 
-      const result = await controller.addParticipant('event-1', 'user-2');
+      const result = await controller.addParticipant(
+        'event-1',
+        'user-2',
+        'user-1',
+        'ADMIN',
+      );
 
       expect(result).toEqual({ message: 'Participant ajouté avec succès' });
-      expect(service.addParticipant).toHaveBeenCalledWith('event-1', 'user-2');
+      expect(service.addParticipant).toHaveBeenCalledWith(
+        'event-1',
+        'user-2',
+        'user-1',
+        'ADMIN',
+      );
     });
   });
 
@@ -224,12 +263,19 @@ describe('EventsController', () => {
         message: 'Participant retiré avec succès',
       });
 
-      const result = await controller.removeParticipant('event-1', 'user-2');
+      const result = await controller.removeParticipant(
+        'event-1',
+        'user-2',
+        'user-1',
+        'ADMIN',
+      );
 
       expect(result).toEqual({ message: 'Participant retiré avec succès' });
       expect(service.removeParticipant).toHaveBeenCalledWith(
         'event-1',
         'user-2',
+        'user-1',
+        'ADMIN',
       );
     });
   });

@@ -1455,6 +1455,74 @@ describe('LeavesService', () => {
         BadRequestException,
       );
     });
+
+    // SEC-06 — cross-perimeter cancellation must be rejected.
+    it('should throw ForbiddenException when MANAGER cancels a leave outside their perimeter', async () => {
+      const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      // Manager has services, but the leave's user is not in them.
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findMany
+        .mockResolvedValueOnce([{ serviceId: 'other-service' }])
+        .mockResolvedValueOnce([{ userId: 'some-other-user' }]);
+
+      await expect(
+        service.cancel('leave-1', 'mgr-user-id', 'MANAGER'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow ADMIN to cancel any leave', async () => {
+      const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
+      const cancelledLeave = {
+        ...approvedLeave,
+        status: LeaveStatus.REJECTED,
+      };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.leave.update.mockResolvedValue(cancelledLeave);
+
+      const result = await service.cancel('leave-1', 'admin-1', 'ADMIN');
+      expect(result.status).toBe(LeaveStatus.REJECTED);
+    });
+  });
+
+  // ============================================
+  // REJECT CANCELLATION (SEC-06 perimeter check)
+  // ============================================
+  describe('rejectCancellation', () => {
+    it('should throw ForbiddenException when MANAGER rejects a cancellation outside their perimeter', async () => {
+      const leave = {
+        ...mockLeave,
+        status: LeaveStatus.CANCELLATION_REQUESTED,
+      };
+      mockPrismaService.leave.findUnique.mockResolvedValue(leave);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findMany
+        .mockResolvedValueOnce([{ serviceId: 'other-service' }])
+        .mockResolvedValueOnce([{ userId: 'some-other-user' }]);
+
+      await expect(
+        service.rejectCancellation('leave-1', 'mgr-user-id', 'MANAGER'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow ADMIN to reject a cancellation on any leave', async () => {
+      const leave = {
+        ...mockLeave,
+        status: LeaveStatus.CANCELLATION_REQUESTED,
+      };
+      mockPrismaService.leave.findUnique.mockResolvedValue(leave);
+      mockPrismaService.leave.update.mockResolvedValue({
+        ...leave,
+        status: LeaveStatus.APPROVED,
+      });
+
+      const result = await service.rejectCancellation(
+        'leave-1',
+        'admin-1',
+        'ADMIN',
+      );
+      expect(result.status).toBe(LeaveStatus.APPROVED);
+    });
   });
 
   // ============================================

@@ -498,8 +498,12 @@ export class LeavesController {
     status: 404,
     description: 'Demande de congé introuvable',
   })
-  cancel(@Param('id', ParseUUIDPipe) id: string) {
-    return this.leavesService.cancel(id);
+  cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    return this.leavesService.cancel(id, currentUserId, currentUserRole);
   }
 
   @Post(':id/reject-cancellation')
@@ -513,8 +517,16 @@ export class LeavesController {
     status: 400,
     description: "Ce congé n'est pas en attente d'annulation",
   })
-  rejectCancellation(@Param('id', ParseUUIDPipe) id: string) {
-    return this.leavesService.rejectCancellation(id);
+  rejectCancellation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    return this.leavesService.rejectCancellation(
+      id,
+      currentUserId,
+      currentUserRole,
+    );
   }
 
   // ===========================

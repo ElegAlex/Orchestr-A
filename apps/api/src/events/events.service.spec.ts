@@ -2,13 +2,22 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventsService } from './events.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleManagementService } from '../role-management/role-management.service';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { OwnershipService } from '../common/services/ownership.service';
+import {
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 
 describe('EventsService', () => {
   let service: EventsService;
   let prisma: PrismaService;
+  let ownershipService: { isOwner: ReturnType<typeof vi.fn> };
+  let roleManagementService: {
+    getPermissionsForRole: ReturnType<typeof vi.fn>;
+  };
 
   const mockPrismaService = {
     event: {
@@ -50,6 +59,18 @@ describe('EventsService', () => {
   };
 
   beforeEach(async () => {
+    ownershipService = {
+      isOwner: vi.fn().mockResolvedValue(false),
+    };
+    roleManagementService = {
+      getPermissionsForRole: vi.fn().mockResolvedValue([
+        'events:read',
+        'events:readAll',
+        'tasks:readAll',
+        'leaves:readAll',
+        'telework:readAll',
+      ]),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EventsService,
@@ -59,15 +80,11 @@ describe('EventsService', () => {
         },
         {
           provide: RoleManagementService,
-          useValue: {
-            getPermissionsForRole: vi.fn().mockResolvedValue([
-              'events:read',
-              'events:readAll',
-              'tasks:readAll',
-              'leaves:readAll',
-              'telework:readAll',
-            ]),
-          },
+          useValue: roleManagementService,
+        },
+        {
+          provide: OwnershipService,
+          useValue: ownershipService,
         },
       ],
     }).compile();
@@ -357,6 +374,123 @@ describe('EventsService', () => {
       await expect(service.removeParticipant('1', 'user-2')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('ownership enforcement (SEC-06 / BUG-05)', () => {
+    const updateDto: UpdateEventDto = { title: 'edit' };
+
+    describe('update', () => {
+      it('rejects non-creator CONTRIBUTEUR with 403', async () => {
+        mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
+        ownershipService.isOwner.mockResolvedValue(false);
+        roleManagementService.getPermissionsForRole.mockResolvedValue([
+          'events:update',
+        ]);
+
+        await expect(
+          service.update('1', updateDto, 'other-user', 'CONTRIBUTEUR'),
+        ).rejects.toThrow(ForbiddenException);
+        expect(ownershipService.isOwner).toHaveBeenCalledWith(
+          'event',
+          '1',
+          'other-user',
+        );
+      });
+
+      it('allows the creator', async () => {
+        mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
+        ownershipService.isOwner.mockResolvedValue(true);
+        mockPrismaService.$transaction.mockImplementation((cb) =>
+          cb(mockPrismaService),
+        );
+        mockPrismaService.event.update.mockResolvedValue({
+          ...mockEvent,
+          ...updateDto,
+        });
+
+        const result = await service.update(
+          '1',
+          updateDto,
+          'user-1',
+          'CONTRIBUTEUR',
+        );
+        expect(result.title).toBe('edit');
+      });
+
+      it('allows non-creator holding events:manage_any', async () => {
+        mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
+        ownershipService.isOwner.mockResolvedValue(false);
+        roleManagementService.getPermissionsForRole.mockResolvedValue([
+          'events:update',
+          'events:manage_any',
+        ]);
+        mockPrismaService.$transaction.mockImplementation((cb) =>
+          cb(mockPrismaService),
+        );
+        mockPrismaService.event.update.mockResolvedValue({
+          ...mockEvent,
+          ...updateDto,
+        });
+
+        const result = await service.update(
+          '1',
+          updateDto,
+          'other-user',
+          'ADMIN',
+        );
+        expect(result.title).toBe('edit');
+      });
+    });
+
+    describe('remove', () => {
+      it('rejects non-creator CONTRIBUTEUR with 403', async () => {
+        mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
+        ownershipService.isOwner.mockResolvedValue(false);
+        roleManagementService.getPermissionsForRole.mockResolvedValue([
+          'events:delete',
+        ]);
+
+        await expect(
+          service.remove('1', 'other-user', 'CONTRIBUTEUR'),
+        ).rejects.toThrow(ForbiddenException);
+      });
+
+      it('allows the creator', async () => {
+        mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
+        ownershipService.isOwner.mockResolvedValue(true);
+        mockPrismaService.event.delete.mockResolvedValue(mockEvent);
+
+        const result = await service.remove('1', 'user-1', 'CONTRIBUTEUR');
+        expect(result).toEqual({ message: 'Événement supprimé avec succès' });
+      });
+
+      it('allows non-creator holding events:manage_any', async () => {
+        mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
+        ownershipService.isOwner.mockResolvedValue(false);
+        roleManagementService.getPermissionsForRole.mockResolvedValue([
+          'events:delete',
+          'events:manage_any',
+        ]);
+        mockPrismaService.event.delete.mockResolvedValue(mockEvent);
+
+        const result = await service.remove('1', 'other-user', 'ADMIN');
+        expect(result).toEqual({ message: 'Événement supprimé avec succès' });
+      });
+    });
+
+    describe('addParticipant', () => {
+      it('rejects non-creator without bypass with 403', async () => {
+        mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
+        ownershipService.isOwner.mockResolvedValue(false);
+        roleManagementService.getPermissionsForRole.mockResolvedValue([
+          'events:update',
+        ]);
+
+        await expect(
+          service.addParticipant('1', 'user-2', 'other-user', 'CONTRIBUTEUR'),
+        ).rejects.toThrow(ForbiddenException);
+      });
     });
   });
 });

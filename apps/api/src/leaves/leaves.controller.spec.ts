@@ -512,9 +512,13 @@ describe('LeavesController', () => {
       const cancelledLeave = { ...mockLeave, status: 'PENDING' };
       mockLeavesService.cancel.mockResolvedValue(cancelledLeave);
 
-      await controller.cancel('leave-id-1');
+      await controller.cancel('leave-id-1', 'admin-1', 'ADMIN');
 
-      expect(mockLeavesService.cancel).toHaveBeenCalledWith('leave-id-1');
+      expect(mockLeavesService.cancel).toHaveBeenCalledWith(
+        'leave-id-1',
+        'admin-1',
+        'ADMIN',
+      );
     });
 
     it('should throw BadRequestException when leave is not approved', async () => {
@@ -524,9 +528,9 @@ describe('LeavesController', () => {
         ),
       );
 
-      await expect(controller.cancel('leave-id-1')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        controller.cancel('leave-id-1', 'admin-1', 'ADMIN'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

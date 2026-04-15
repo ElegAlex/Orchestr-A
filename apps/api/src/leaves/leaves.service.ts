@@ -1299,13 +1299,30 @@ export class LeavesService {
   /**
    * Annuler une demande de congé approuvée
    */
-  async cancel(id: string) {
+  async cancel(id: string, currentUserId?: string, currentUserRole?: string) {
     const leave = await this.prisma.leave.findUnique({
       where: { id },
     });
 
     if (!leave) {
       throw new NotFoundException('Demande de congé introuvable');
+    }
+
+    // SEC-06 — enforce manager-perimeter on cross-user cancellation.
+    // The controller already gates on `leaves:delete`, but without this check
+    // any MANAGER could cancel leaves of users outside their service scope.
+    if (currentUserId && currentUserRole) {
+      const isOwner = leave.userId === currentUserId;
+      const canManage = await this.canManageLeave(
+        leave.userId,
+        currentUserId,
+        currentUserRole,
+      );
+      if (!isOwner && !canManage) {
+        throw new ForbiddenException(
+          "Vous n'êtes pas autorisé à annuler cette demande",
+        );
+      }
     }
 
     if (
@@ -1383,13 +1400,32 @@ export class LeavesService {
   /**
    * Refuser la demande d'annulation — le congé redevient APPROVED
    */
-  async rejectCancellation(id: string) {
+  async rejectCancellation(
+    id: string,
+    currentUserId?: string,
+    currentUserRole?: string,
+  ) {
     const leave = await this.prisma.leave.findUnique({
       where: { id },
     });
 
     if (!leave) {
       throw new NotFoundException('Demande de congé introuvable');
+    }
+
+    // SEC-06 — enforce manager-perimeter. Without this, any user with
+    // `leaves:approve` could keep a leave approved for users outside scope.
+    if (currentUserId && currentUserRole) {
+      const canManage = await this.canManageLeave(
+        leave.userId,
+        currentUserId,
+        currentUserRole,
+      );
+      if (!canManage) {
+        throw new ForbiddenException(
+          "Vous n'êtes pas autorisé à refuser cette demande d'annulation",
+        );
+      }
     }
 
     if (leave.status !== LeaveStatus.CANCELLATION_REQUESTED) {

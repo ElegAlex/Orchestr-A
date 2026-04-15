@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   ForbiddenException,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,6 +25,9 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OwnershipGuard } from '../common/guards/ownership.guard';
+import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 
 @ApiTags('events')
 @Controller('events')
@@ -151,6 +155,8 @@ export class EventsController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, OwnershipGuard)
+  @OwnershipCheck({ resource: 'event', bypassPermission: 'events:manage_any' })
   @Permissions('events:update')
   @ApiOperation({ summary: 'Mettre à jour un événement' })
   @ApiResponse({
@@ -162,17 +168,30 @@ export class EventsController {
     description: 'Données invalides',
   })
   @ApiResponse({
+    status: 403,
+    description: "Non créateur et sans permission events:manage_any",
+  })
+  @ApiResponse({
     status: 404,
     description: 'Événement introuvable',
   })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateEventDto: UpdateEventDto,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
   ) {
-    return this.eventsService.update(id, updateEventDto);
+    return this.eventsService.update(
+      id,
+      updateEventDto,
+      currentUserId,
+      currentUserRole,
+    );
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, OwnershipGuard)
+  @OwnershipCheck({ resource: 'event', bypassPermission: 'events:manage_any' })
   @Permissions('events:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un événement' })
@@ -181,11 +200,19 @@ export class EventsController {
     description: 'Événement supprimé',
   })
   @ApiResponse({
+    status: 403,
+    description: "Non créateur et sans permission events:manage_any",
+  })
+  @ApiResponse({
     status: 404,
     description: 'Événement introuvable',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.eventsService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    return this.eventsService.remove(id, currentUserId, currentUserRole);
   }
 
   @Delete(':id/recurrence')
@@ -203,6 +230,8 @@ export class EventsController {
   }
 
   @Post(':id/participants')
+  @UseGuards(JwtAuthGuard, OwnershipGuard)
+  @OwnershipCheck({ resource: 'event', bypassPermission: 'events:manage_any' })
   @Permissions('events:update')
   @ApiOperation({ summary: 'Ajouter un participant à un événement' })
   @ApiResponse({
@@ -214,17 +243,34 @@ export class EventsController {
     description: 'Participant déjà existant',
   })
   @ApiResponse({
+    status: 403,
+    description: "Non créateur et sans permission events:manage_any",
+  })
+  @ApiResponse({
     status: 404,
     description: 'Événement ou utilisateur introuvable',
   })
   addParticipant(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
   ) {
-    return this.eventsService.addParticipant(id, userId);
+    return this.eventsService.addParticipant(
+      id,
+      userId,
+      currentUserId,
+      currentUserRole,
+    );
   }
 
   @Delete(':eventId/participants/:userId')
+  @UseGuards(JwtAuthGuard, OwnershipGuard)
+  @OwnershipCheck({
+    resource: 'event',
+    paramKey: 'eventId',
+    bypassPermission: 'events:manage_any',
+  })
   @Permissions('events:update')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Retirer un participant d'un événement" })
@@ -233,13 +279,24 @@ export class EventsController {
     description: 'Participant retiré',
   })
   @ApiResponse({
+    status: 403,
+    description: "Non créateur et sans permission events:manage_any",
+  })
+  @ApiResponse({
     status: 404,
     description: 'Participation introuvable',
   })
   removeParticipant(
     @Param('eventId', ParseUUIDPipe) eventId: string,
     @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
   ) {
-    return this.eventsService.removeParticipant(eventId, userId);
+    return this.eventsService.removeParticipant(
+      eventId,
+      userId,
+      currentUserId,
+      currentUserRole,
+    );
   }
 }
