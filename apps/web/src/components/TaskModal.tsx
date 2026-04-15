@@ -32,6 +32,7 @@ interface TaskModalProps {
   projects?: Project[];
   milestones?: Milestone[];
   users?: User[];
+  isUsersLoading?: boolean;
   services?: Service[];
   memberCounts?: Record<string, number>;
   hiddenStatuses?: TaskStatus[];
@@ -46,6 +47,7 @@ export function TaskModal({
   projects = [],
   milestones = [],
   users = [],
+  isUsersLoading = false,
   services = [],
   memberCounts = {},
   hiddenStatuses = [],
@@ -93,6 +95,7 @@ export function TaskModal({
           lockedProjectId={projectId ?? null}
           projects={projects}
           users={users}
+          isUsersLoading={isUsersLoading}
           services={services}
           milestones={milestones}
           memberCounts={memberCounts}

@@ -35,11 +35,13 @@ export const TaskCreateModal = ({
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [isUsersLoading, setIsUsersLoading] = useState(true);
   const [services, setServices] = useState<Service[]>([]);
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!isOpen) return;
+    setIsUsersLoading(true);
 
     (async () => {
       // Projects (gated by projects:read + tasks:readAll)
@@ -66,7 +68,11 @@ export const TaskCreateModal = ({
           setUsers(Array.isArray(usersData) ? usersData : []);
         } catch {
           setUsers([]);
+        } finally {
+          setIsUsersLoading(false);
         }
+      } else {
+        setIsUsersLoading(false);
       }
 
       // Services
@@ -116,6 +122,7 @@ export const TaskCreateModal = ({
           initialValues={user?.id ? { assigneeIds: [user.id] } : undefined}
           projects={projects}
           users={users}
+          isUsersLoading={isUsersLoading}
           services={services}
           memberCounts={memberCounts}
           enableExternalIntervention

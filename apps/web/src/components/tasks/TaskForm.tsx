@@ -94,6 +94,12 @@ export interface TaskFormProps {
   services: Service[];
   milestones?: Milestone[];
   memberCounts?: Record<string, number>;
+  /**
+   * Indique que la liste des utilisateurs (assignables) est en cours de
+   * résolution côté parent. Quand true, la section "assignés" affiche un
+   * squelette au lieu d'une liste vide, ce qui évite le blink (BUG-02).
+   */
+  isUsersLoading?: boolean;
 
   // Capability switches
   /** Si défini, masque le sélecteur de projet et force le projectId. */
@@ -250,6 +256,7 @@ export function TaskForm({
   services,
   milestones = [],
   memberCounts = {},
+  isUsersLoading = false,
   lockedProjectId,
   enableMilestone = false,
   enableExternalIntervention = false,
@@ -789,13 +796,22 @@ export function TaskForm({
         )}
 
         <div className={enableMilestone ? "" : "col-span-2"}>
-          <UserMultiSelect
-            label={t("modal.create.assigneesLabel")}
-            users={availableAssignees}
-            selectedIds={values.assigneeIds}
-            onChange={(ids) => setValues({ ...values, assigneeIds: ids })}
-            placeholder={t("modal.create.assigneesPlaceholder")}
-          />
+          {isUsersLoading ? (
+            <div data-testid="assignees-skeleton" aria-busy="true">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                {t("modal.create.assigneesLabel")}
+              </label>
+              <div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
+            </div>
+          ) : (
+            <UserMultiSelect
+              label={t("modal.create.assigneesLabel")}
+              users={availableAssignees}
+              selectedIds={values.assigneeIds}
+              onChange={(ids) => setValues({ ...values, assigneeIds: ids })}
+              placeholder={t("modal.create.assigneesPlaceholder")}
+            />
+          )}
           {effectiveFilterByMembers && values.projectId && (
             <p className="text-xs text-gray-500 mt-1">
               {projectMembers.length > 0

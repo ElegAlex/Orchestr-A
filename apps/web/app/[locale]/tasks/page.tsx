@@ -780,6 +780,7 @@ export default function TasksPage() {
               mode="create"
               projects={projects}
               users={users}
+              isUsersLoading={loading}
               services={services}
               memberCounts={memberCounts}
               enableExternalIntervention
