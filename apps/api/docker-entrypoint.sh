@@ -73,35 +73,27 @@ echo ""
 # ========================================
 # 3. Seed default data
 # ========================================
-echo "[3/4] Checking default data..."
+echo "[3/4] Checking default admin (SEC-02 gated)..."
 
-# Create admin user if none exists (using INSERT ... ON CONFLICT for idempotency)
-echo "      Ensuring default admin user exists..."
+# SEC-02: Never seed a hardcoded admin password. Admin bootstrap is
+# handled by packages/database/prisma/seed.ts (env-gated) when operators
+# explicitly run the seed with SEED_ADMIN_PASSWORD. At container start we
+# simply check that at least one ADMIN user exists and emit a warning
+# if none is present, so operators know to run the seed.
 
-# Extract connection details from DATABASE_URL for psql
-# Format: postgresql://user:pass@host:port/dbname
 DB_USER=$(echo "$DATABASE_URL" | sed -n 's|postgresql://\([^:]*\):.*|\1|p')
 DB_PASS=$(echo "$DATABASE_URL" | sed -n 's|postgresql://[^:]*:\([^@]*\)@.*|\1|p')
 DB_NAME=$(echo "$DATABASE_URL" | sed -n 's|.*/\([^?]*\).*|\1|p')
 
-PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "
-INSERT INTO users (id, email, login, \"passwordHash\", \"firstName\", \"lastName\", role, \"isActive\", \"createdAt\", \"updatedAt\")
-VALUES (
-    gen_random_uuid()::text,
-    'admin@orchestr-a.internal',
-    'admin',
-    '\$2b\$12\$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG',
-    'Admin',
-    'System',
-    'ADMIN',
-    true,
-    NOW(),
-    NOW()
-)
-ON CONFLICT (email) DO NOTHING;
-" 2>/dev/null || echo "      (admin may already exist)"
+ADMIN_COUNT=$(PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -tAc \
+    "SELECT COUNT(*) FROM users WHERE role = 'ADMIN' AND \"isActive\" = true;" 2>/dev/null || echo "0")
 
-echo "      Default admin: admin@orchestr-a.internal / admin123"
+if [ "$ADMIN_COUNT" = "0" ]; then
+    echo "      [SECURITY WARNING] No active ADMIN user found."
+    echo "      [SECURITY WARNING] Run the seed with SEED_ADMIN_PASSWORD set to bootstrap."
+else
+    echo "      Active ADMIN users: $ADMIN_COUNT"
+fi
 
 echo ""
 
