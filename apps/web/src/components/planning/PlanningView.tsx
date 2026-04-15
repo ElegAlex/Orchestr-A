@@ -47,12 +47,10 @@ export const PlanningView = ({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"week" | "month">(initialViewMode);
   const [selectedUser, setSelectedUser] = useState<string>("ALL");
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
   const [displayFilters, setDisplayFilters] = useState<DisplayFilters>(DEFAULT_DISPLAY_FILTERS);
   const [showDisplayDropdown, setShowDisplayDropdown] = useState(false);
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
-  const [hasInitializedServices, setHasInitializedServices] = useState(false);
   const [showTaskCreateModal, setShowTaskCreateModal] = useState(false);
   const [showEventCreateModal, setShowEventCreateModal] = useState(false);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
@@ -63,6 +61,17 @@ export const PlanningView = ({
 
   const { user: currentUser } = useAuthStore();
   const { hasPermission } = usePermissions();
+
+  // Store pour les services collapsibles + sélection persistée
+  const {
+    collapsedServices,
+    collapseAll,
+    expandAll,
+    selectedServices,
+    hasInitializedServices,
+    setSelectedServices,
+    initializeServicesIfNeeded,
+  } = usePlanningViewStore();
 
   // Utiliser filterUserId si fourni, sinon utiliser le filtre de l'interface
   const effectiveFilterUserId =
@@ -79,9 +88,6 @@ export const PlanningView = ({
     viewFilter,
     displayFilters,
   });
-
-  // Store pour les services collapsibles
-  const { collapsedServices, collapseAll, expandAll } = usePlanningViewStore();
 
   // Calculer les IDs des services visibles
   const serviceIds = useMemo(
@@ -103,48 +109,49 @@ export const PlanningView = ({
   const handleCollapseAll = () => collapseAll(serviceIds);
   const handleExpandAll = () => expandAll();
 
-  // Initialiser la sélection de services avec les services de l'utilisateur connecté par défaut
+  // Initialiser la sélection de services au premier chargement (persisté).
+  // BUG-03 : par défaut, TOUS les services sélectionnés. Préférence :
+  // les services de l'utilisateur connecté si on en trouve, sinon fallback "tous".
+  // Si l'utilisateur a déjà interagi (hasInitializedServices === true), on ne
+  // touche pas à sa sélection persistée — y compris si elle est vide.
   useEffect(() => {
-    if (groupedUsers.length > 0 && !hasInitializedServices) {
-      // Récupérer les IDs des services de l'utilisateur connecté
-      const userServiceIds =
-        currentUser?.userServices?.map((us) => us.service.id) || [];
+    if (groupedUsers.length === 0) return;
+    if (hasInitializedServices) return;
 
-      // Si l'utilisateur est manager, inclure aussi le groupe "management"
-      const isManager =
-        hasPermission("telework:read_team") ||
-        (currentUser?.managedServices &&
-          currentUser.managedServices.length > 0);
+    const allServiceIds = groupedUsers.map((g) => g.id);
 
-      if (userServiceIds.length > 0 || isManager) {
-        // Filtrer pour ne garder que les services qui existent dans groupedUsers
-        const validServiceIds = userServiceIds.filter((id) =>
-          groupedUsers.some((g) => g.id === id),
-        );
+    // Récupérer les IDs des services de l'utilisateur connecté
+    const userServiceIds =
+      currentUser?.userServices?.map((us) => us.service.id) || [];
 
-        // Ajouter "management" si l'utilisateur est manager
-        if (isManager && groupedUsers.some((g) => g.id === "management")) {
-          validServiceIds.push("management");
-        }
+    // Si l'utilisateur est manager, inclure aussi le groupe "management"
+    const isManager =
+      hasPermission("telework:read_team") ||
+      (currentUser?.managedServices &&
+        currentUser.managedServices.length > 0);
 
-        // Si des services valides ont été trouvés, les utiliser
-        if (validServiceIds.length > 0) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setSelectedServices(validServiceIds);
-        } else {
-          // Sinon, sélectionner tous les services
+    const validServiceIds = userServiceIds.filter((id) =>
+      groupedUsers.some((g) => g.id === id),
+    );
 
-          setSelectedServices(groupedUsers.map((g) => g.id));
-        }
-      } else {
-        // Utilisateur sans service assigné : afficher tous les services
-
-        setSelectedServices(groupedUsers.map((g) => g.id));
-      }
-
-      setHasInitializedServices(true);
+    if (isManager && groupedUsers.some((g) => g.id === "management")) {
+      validServiceIds.push("management");
     }
-  }, [groupedUsers, currentUser, hasInitializedServices]);
+
+    if (validServiceIds.length > 0) {
+      setSelectedServices(validServiceIds);
+    } else {
+      // Fallback : tous les services (corrige BUG-03, plus de "rien affiché")
+      initializeServicesIfNeeded(allServiceIds);
+    }
+  }, [
+    groupedUsers,
+    currentUser,
+    hasInitializedServices,
+    hasPermission,
+    setSelectedServices,
+    initializeServicesIfNeeded,
+  ]);
 
   // Fermer le dropdown quand on clique en dehors
   useEffect(() => {
@@ -189,11 +196,10 @@ export const PlanningView = ({
   }, []);
 
   const toggleService = (serviceId: string) => {
-    setSelectedServices((prev) =>
-      prev.includes(serviceId)
-        ? prev.filter((id) => id !== serviceId)
-        : [...prev, serviceId],
-    );
+    const next = selectedServices.includes(serviceId)
+      ? selectedServices.filter((id) => id !== serviceId)
+      : [...selectedServices, serviceId];
+    setSelectedServices(next);
   };
 
   const selectAllServices = () => {
