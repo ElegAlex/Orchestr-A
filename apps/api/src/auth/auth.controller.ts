@@ -53,8 +53,8 @@ export class AuthController {
   @Public()
   @Post('login')
   @Throttle({
-    short: { limit: 5, ttl: 60_000 },
-    medium: { limit: 20, ttl: 900_000 },
+    short: { limit: 30, ttl: 60_000 },
+    medium: { limit: 120, ttl: 900_000 },
   })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Connexion utilisateur' })
@@ -84,8 +84,8 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @Throttle({
-    short: { limit: 5, ttl: 60_000 },
-    medium: { limit: 20, ttl: 900_000 },
+    short: { limit: 30, ttl: 60_000 },
+    medium: { limit: 120, ttl: 900_000 },
   })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Rafraîchir le token d\'accès' })
@@ -124,8 +124,8 @@ export class AuthController {
   @Public()
   @Post('register')
   @Throttle({
-    short: { limit: 5, ttl: 60_000 },
-    medium: { limit: 20, ttl: 900_000 },
+    short: { limit: 30, ttl: 60_000 },
+    medium: { limit: 120, ttl: 900_000 },
   })
   @ApiOperation({ summary: "Inscription d'un nouvel utilisateur (compte inactif, nécessite activation admin)" })
   @ApiResponse({
