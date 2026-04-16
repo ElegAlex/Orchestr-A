@@ -27,6 +27,11 @@ interface PortfolioGanttProps {
 function projectsToPortfolioRows(projects: Project[]): GanttPortfolioRow[] {
   return projects
     .filter((p) => p.startDate)
+    .sort((a, b) => {
+      const endA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const endB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      return endA - endB;
+    })
     .map((p) => {
       const startDate = new Date(p.startDate);
       const endDate = p.dueDate ? new Date(p.dueDate) : new Date();
