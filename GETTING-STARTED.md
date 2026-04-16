@@ -157,7 +157,6 @@ Les packages nécessaires sont déjà dans `apps/web/package.json`, mais vous de
 ```bash
 cd apps/web
 pnpm add @tanstack/react-query zustand
-pnpm add @rsagiev/gantt-task-react-19
 pnpm add recharts react-big-calendar
 pnpm add @dnd-kit/core @dnd-kit/sortable
 ```

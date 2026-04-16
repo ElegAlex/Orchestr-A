@@ -416,7 +416,7 @@ export default function ProjectDetailPage() {
 
       // Temporarily remove overflow clipping to capture the full Gantt
       const overflowEls = container.querySelectorAll<HTMLElement>(
-        ".overflow-x-auto, .overflow-y-auto, .overflow-auto",
+        ".overflow-x-auto, .overflow-y-auto, .overflow-auto, .overflow-hidden",
       );
       const savedOverflows: { el: HTMLElement; value: string }[] = [];
       overflowEls.forEach((el) => {

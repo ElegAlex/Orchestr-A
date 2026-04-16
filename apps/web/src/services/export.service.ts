@@ -664,13 +664,15 @@ export class ExportService {
 
     // --- Capture the Gantt element ---
     // Temporarily expand the container so the full Gantt is captured (no overflow clipping)
-    const scrollContainer = ganttElement.querySelector<HTMLElement>(".overflow-auto");
-    const prevOverflow = scrollContainer?.style.overflow;
-    const prevHeight = scrollContainer?.style.height;
-    if (scrollContainer) {
-      scrollContainer.style.overflow = "visible";
-      scrollContainer.style.height = "auto";
-    }
+    // Remove overflow clipping from both the scroll container (.overflow-auto)
+    // and the rounded-corner clip container (.overflow-hidden) so the full Gantt is captured
+    const overflowEls = ganttElement.querySelectorAll<HTMLElement>(".overflow-auto, .overflow-hidden");
+    const savedStyles: { el: HTMLElement; overflow: string; height: string }[] = [];
+    overflowEls.forEach((el) => {
+      savedStyles.push({ el, overflow: el.style.overflow, height: el.style.height });
+      el.style.overflow = "visible";
+      el.style.height = "auto";
+    });
 
     try {
       const dataUrl = await toPng(ganttElement, {
@@ -699,10 +701,10 @@ export class ExportService {
       doc.addImage(dataUrl, "PNG", imgX, currentY, imgWidth, imgHeight);
     } finally {
       // Restore overflow
-      if (scrollContainer) {
-        scrollContainer.style.overflow = prevOverflow || "";
-        scrollContainer.style.height = prevHeight || "";
-      }
+      savedStyles.forEach(({ el, overflow, height }) => {
+        el.style.overflow = overflow;
+        el.style.height = height;
+      });
     }
 
     // --- Footer ---

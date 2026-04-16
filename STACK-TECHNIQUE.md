@@ -48,7 +48,7 @@ Refonte complète (**from scratch**) de l'application ORCHESTR'A pour les collec
 │  • React 19.2 + TypeScript 5.7              │
 │  • TanStack Query 5.90 + Zustand 5.0        │
 │  • Tailwind CSS 4 + shadcn/ui               │
-│  • Gantt: @rsagiev/gantt-task-react-19     │
+│  • Gantt: composant custom (gantt/)         │
 │  • Charts: Recharts 3                       │
 │  • Calendar: React Big Calendar 1           │
 │  • DnD: @dnd-kit 6                          │
@@ -206,7 +206,7 @@ api/
 
 | Composant                        | Version    | Usage                                    |
 | -------------------------------- | ---------- | ---------------------------------------- |
-| **@rsagiev/gantt-task-react-19** | **0.3.9+** | Diagramme de Gantt (éprouvé V1)          |
+| **Gantt custom** (`components/gantt/`)  | —          | Diagramme de Gantt unifié Portfolio + Projet |
 | **Recharts**                     | **3.x**    | Graphiques (Burndown, Vélocité, KPIs)    |
 | **React Big Calendar**           | **1.x**    | Calendrier multi-projets                 |
 | **@dnd-kit**                     | **6.x**    | Drag & drop Kanban (moderne, performant) |
@@ -1505,7 +1505,7 @@ pm2 logs orchestr-a-web
 - ✅ Architecture monorepo Turborepo
 - ✅ Stack backend : NestJS 11 + Fastify 5 + Prisma 6 + PostgreSQL 18
 - ✅ Stack frontend : Next.js + React 19 + Tailwind 4
-- ✅ Gantt : @rsagiev/gantt-task-react-19 (éprouvé V1)
+- ✅ Gantt : composant custom unifié (apps/web/src/components/gantt/)
 - ✅ 100% Open Source
 - ✅ Configuration Docker Compose
 - ✅ Pipeline CI/CD GitHub Actions

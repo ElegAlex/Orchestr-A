@@ -68,7 +68,6 @@
 | Radix UI                     | Latest        | Composants accessibles       |
 | Lucide React                 | 0.552.0       | Icônes                       |
 | Recharts                     | 3.3.0         | Graphiques                   |
-| @rsagiev/gantt-task-react-19 | 0.3.9         | Diagramme de Gantt           |
 | react-hot-toast              | 2.6.0         | Notifications                |
 | jspdf + jspdf-autotable      | 3.0.3 / 5.0.2 | Export PDF                   |
 | xlsx                         | 0.18.5        | Export Excel                 |
