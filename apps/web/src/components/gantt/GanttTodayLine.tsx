@@ -14,17 +14,25 @@ export default function GanttTodayLine({ left, height }: GanttTodayLineProps) {
       style={{ left, height }}
     >
       <div
-        className="w-0 border-l-2 border-dashed"
         style={{
-          borderColor: TODAY_LINE_COLOR,
+          width: 0,
+          borderLeft: `1.5px solid ${TODAY_LINE_COLOR}`,
           height: '100%',
         }}
       />
       <span
-        className="absolute -top-5 -translate-x-1/2 rounded px-1 py-0.5 text-white whitespace-nowrap"
-        style={{ fontSize: 10, backgroundColor: TODAY_LINE_COLOR }}
+        className="absolute -translate-x-1/2 whitespace-nowrap"
+        style={{
+          top: -24,
+          fontSize: 11,
+          fontWeight: 600,
+          color: 'white',
+          backgroundColor: TODAY_LINE_COLOR,
+          padding: '2px 8px',
+          borderRadius: 10,
+        }}
       >
-        Aujourd&apos;hui
+        TODAY
       </span>
     </div>
   );

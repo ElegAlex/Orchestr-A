@@ -21,17 +21,19 @@ import type {
   GanttPortfolioRow,
   GanttTaskRow,
   GanttGroup,
+  GanttDependency,
 } from './types';
-import type { GanttDependency } from './types';
 import {
   LEFT_COLUMN_WIDTH,
   PROJECT_ROW_HEIGHT,
-  TASK_ROW_HEIGHT,
-  MILESTONE_ROW_HEIGHT,
   GROUP_HEADER_HEIGHT,
   HEALTH_COLORS,
   TASK_STATUS_COLORS,
   TASK_STATUS_DEFAULT_COLOR,
+  TASK_STATUS_LABELS,
+  lightenColor,
+  getBarHeight,
+  getRowHeight,
 } from './tokens';
 import { dateToX, bucketsForRange, getDefaultPixelsPerUnit } from './timeline-math';
 import { groupTasks } from './grouping';
@@ -43,6 +45,7 @@ import GanttTodayLine from './GanttTodayLine';
 import GanttLegend from './GanttLegend';
 import GanttEmptyState from './GanttEmptyState';
 import GanttDependencyLayer from './GanttDependencyLayer';
+import GanttTooltip from './GanttTooltip';
 
 const VIEW_ORDER: GanttView[] = ['day', 'week', 'month', 'quarter'];
 
@@ -72,20 +75,61 @@ function isTaskRow(row: GanttPortfolioRow | GanttTaskRow): row is GanttTaskRow {
   return 'isMilestone' in row;
 }
 
-function getRowHeight(row: GanttPortfolioRow | GanttTaskRow, scope: 'portfolio' | 'project'): number {
-  if (scope === 'portfolio') return PROJECT_ROW_HEIGHT;
-  if (isTaskRow(row) && row.isMilestone) return MILESTONE_ROW_HEIGHT;
-  return TASK_ROW_HEIGHT;
-}
-
 function getBarColor(row: GanttPortfolioRow | GanttTaskRow, scope: 'portfolio' | 'project'): string {
   if (scope === 'portfolio') return HEALTH_COLORS[(row as GanttPortfolioRow).health];
   return TASK_STATUS_COLORS[(row as GanttTaskRow).status] ?? TASK_STATUS_DEFAULT_COLOR;
 }
 
+function isWeekendDate(date: Date): boolean {
+  const d = date.getDay();
+  return d === 0 || d === 6;
+}
+
+function AvatarCircle({ name, color }: { name?: string; color: string }) {
+  const initials = name
+    ? name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+    : '?';
+  return (
+    <span
+      className="inline-flex items-center justify-center shrink-0 rounded-full"
+      style={{
+        width: 24,
+        height: 24,
+        fontSize: 10,
+        fontWeight: 600,
+        backgroundColor: lightenColor(color),
+        color: color,
+      }}
+    >
+      {initials}
+    </span>
+  );
+}
+
+function StatusBadge({ status, color }: { status: string; color: string }) {
+  const label = TASK_STATUS_LABELS[status as keyof typeof TASK_STATUS_LABELS] ?? status;
+  return (
+    <span
+      className="inline-flex items-center truncate"
+      style={{
+        fontSize: 11,
+        fontWeight: 500,
+        color: color,
+        backgroundColor: lightenColor(color),
+        padding: '1px 8px',
+        borderRadius: 10,
+        maxWidth: 100,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
 export default function GanttBase(props: GanttProps) {
   const { scope, rows, view: initialView } = props;
   const containerRef = useRef<HTMLDivElement>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [view, setView] = useState<GanttView>(initialView);
@@ -93,6 +137,15 @@ export default function GanttBase(props: GanttProps) {
     scope === 'project' ? (props.groupBy ?? 'milestone') : 'none',
   );
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<{
+    row: GanttPortfolioRow | GanttTaskRow;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const barHeight = getBarHeight(view);
+  const rowHeight = getRowHeight(view);
 
   const pixelsPerUnit = useMemo(() => getDefaultPixelsPerUnit(view), [view]);
 
@@ -117,7 +170,6 @@ export default function GanttBase(props: GanttProps) {
     return dateToX(now, view, rangeStart, pixelsPerUnit);
   }, [rangeStart, rangeEnd, view, pixelsPerUnit]);
 
-  // Groups (project scope only)
   const groups = useMemo<GanttGroup[]>(() => {
     if (scope !== 'project') return [];
     return groupTasks(rows as GanttTaskRow[], groupBy).map((g) => ({
@@ -154,7 +206,6 @@ export default function GanttBase(props: GanttProps) {
   );
 
   const handleViewChange = useCallback((v: GanttView) => setView(v), []);
-
   const handleGroupByChange = useCallback((g: GanttGrouping) => setGroupBy(g), []);
 
   const handleGroupToggle = useCallback((key: string) => {
@@ -186,6 +237,33 @@ export default function GanttBase(props: GanttProps) {
     [scope, props],
   );
 
+  // Hover handlers for tooltip + dependency highlight
+  const handleBarMouseEnter = useCallback(
+    (row: GanttPortfolioRow | GanttTaskRow, e: React.MouseEvent) => {
+      setHoveredRowId(row.id);
+      if (tooltipTimeoutRef.current) clearTimeout(tooltipTimeoutRef.current);
+      tooltipTimeoutRef.current = setTimeout(() => {
+        setTooltip({ row, x: e.clientX, y: e.clientY });
+      }, 300);
+    },
+    [],
+  );
+
+  const handleBarMouseMove = useCallback(
+    (row: GanttPortfolioRow | GanttTaskRow, e: React.MouseEvent) => {
+      if (tooltip) {
+        setTooltip({ row, x: e.clientX, y: e.clientY });
+      }
+    },
+    [tooltip],
+  );
+
+  const handleBarMouseLeave = useCallback(() => {
+    setHoveredRowId(null);
+    if (tooltipTimeoutRef.current) clearTimeout(tooltipTimeoutRef.current);
+    setTooltip(null);
+  }, []);
+
   // Compute total grid height
   const computeGridHeight = useMemo(() => {
     if (scope === 'portfolio') {
@@ -195,15 +273,13 @@ export default function GanttBase(props: GanttProps) {
     for (const g of groups) {
       if (groupBy !== 'none') h += GROUP_HEADER_HEIGHT;
       if (g.isExpanded) {
-        for (const r of g.rows) {
-          h += r.isMilestone ? MILESTONE_ROW_HEIGHT : TASK_ROW_HEIGHT;
-        }
+        h += g.rows.length * rowHeight;
       }
     }
     return h;
-  }, [scope, rows, groups, groupBy]);
+  }, [scope, rows, groups, groupBy, rowHeight]);
 
-  // Compute row positions for dependency arrows (project scope only)
+  // Row positions for dependency arrows
   const rowPositions = useMemo(() => {
     const map = new Map<string, { y: number; left: number; right: number; height: number }>();
     if (scope !== 'project') return map;
@@ -212,26 +288,24 @@ export default function GanttBase(props: GanttProps) {
       if (groupBy !== 'none') y += GROUP_HEADER_HEIGHT;
       if (group.isExpanded) {
         for (const row of group.rows) {
-          const h = row.isMilestone ? MILESTONE_ROW_HEIGHT : TASK_ROW_HEIGHT;
           const barLeft = dateToX(row.startDate, view, rangeStart, pixelsPerUnit);
           const barRight = dateToX(row.endDate, view, rangeStart, pixelsPerUnit);
-          map.set(row.id, { y, left: barLeft, right: barRight, height: h });
-          y += h;
+          map.set(row.id, { y, left: barLeft, right: barRight, height: rowHeight });
+          y += rowHeight;
         }
       }
     }
     return map;
-  }, [scope, groups, groupBy, view, rangeStart, pixelsPerUnit]);
+  }, [scope, groups, groupBy, view, rangeStart, pixelsPerUnit, rowHeight]);
 
-  // Dependencies (project scope only)
   const dependencies: GanttDependency[] =
     scope === 'project' && 'dependencies' in props ? (props.dependencies ?? []) : [];
 
-  // Check if weekend (for day view background)
   const isWeekend = (bucketIdx: number) => {
-    if (view !== 'day' || !buckets[bucketIdx]) return false;
-    const day = buckets[bucketIdx].start.getDay();
-    return day === 0 || day === 6;
+    if (view !== 'day' && view !== 'week') return false;
+    if (!buckets[bucketIdx]) return false;
+    if (view === 'day') return isWeekendDate(buckets[bucketIdx].start);
+    return false;
   };
 
   if (rows.length === 0) {
@@ -245,7 +319,7 @@ export default function GanttBase(props: GanttProps) {
   // Render timeline rows
   const renderTimelineRows = () => {
     if (scope === 'portfolio') {
-      return (rows as GanttPortfolioRow[]).map((row) => {
+      return (rows as GanttPortfolioRow[]).map((row, idx) => {
         const barLeft = dateToX(row.startDate, view, rangeStart, pixelsPerUnit);
         const barRight = dateToX(row.endDate, view, rangeStart, pixelsPerUnit);
         const color = getBarColor(row, 'portfolio');
@@ -253,14 +327,22 @@ export default function GanttBase(props: GanttProps) {
           <div
             key={row.id}
             className="relative"
-            style={{ height: PROJECT_ROW_HEIGHT }}
+            style={{
+              height: PROJECT_ROW_HEIGHT,
+              backgroundColor: idx % 2 === 1 ? 'rgba(248,250,252,0.5)' : undefined,
+              borderBottom: '1px solid #F1F5F9',
+            }}
           >
             <GanttBar
               left={barLeft}
               width={Math.max(barRight - barLeft, 4)}
               progress={row.progress}
               color={color}
-              label={`${Math.round(row.progress)}%`}
+              name={row.name}
+              view={view}
+              onMouseEnter={(e) => handleBarMouseEnter(row, e)}
+              onMouseLeave={handleBarMouseLeave}
+              onMouseMove={(e) => handleBarMouseMove(row, e)}
             />
           </div>
         );
@@ -269,6 +351,7 @@ export default function GanttBase(props: GanttProps) {
 
     // Project scope
     const elements: React.ReactNode[] = [];
+    let rowIndex = 0;
     for (const group of groups) {
       if (groupBy !== 'none') {
         elements.push(
@@ -277,19 +360,32 @@ export default function GanttBase(props: GanttProps) {
       }
       if (group.isExpanded) {
         for (const row of group.rows) {
-          const h = row.isMilestone ? MILESTONE_ROW_HEIGHT : TASK_ROW_HEIGHT;
           const barLeft = dateToX(row.startDate, view, rangeStart, pixelsPerUnit);
           const barRight = dateToX(row.endDate, view, rangeStart, pixelsPerUnit);
           const color = getBarColor(row, 'project');
+          const idx = rowIndex++;
           elements.push(
-            <div key={row.id} className="relative" style={{ height: h }}>
+            <div
+              key={row.id}
+              className="relative"
+              style={{
+                height: rowHeight,
+                backgroundColor: idx % 2 === 1 ? 'rgba(248,250,252,0.5)' : undefined,
+                borderBottom: '1px solid #F1F5F9',
+              }}
+            >
               <GanttBar
                 left={barLeft}
                 width={Math.max(barRight - barLeft, 4)}
                 progress={row.progress}
                 color={color}
                 isMilestone={row.isMilestone}
-                label={row.isMilestone ? undefined : `${Math.round(row.progress)}%`}
+                name={row.name}
+                view={view}
+                milestoneDate={row.isMilestone ? row.startDate : undefined}
+                onMouseEnter={(e) => handleBarMouseEnter(row, e)}
+                onMouseLeave={handleBarMouseLeave}
+                onMouseMove={(e) => handleBarMouseMove(row, e)}
               />
             </div>,
           );
@@ -302,16 +398,22 @@ export default function GanttBase(props: GanttProps) {
   // Render left column rows
   const renderLeftColumn = () => {
     if (scope === 'portfolio') {
-      return (rows as GanttPortfolioRow[]).map((row) => {
+      return (rows as GanttPortfolioRow[]).map((row, idx) => {
         const color = getBarColor(row, 'portfolio');
         return (
           <div
             key={row.id}
             role="row"
             tabIndex={0}
-            className="flex items-center gap-2 px-3 border-b border-gray-100 hover:bg-gray-50/60 cursor-pointer transition-colors"
-            style={{ height: PROJECT_ROW_HEIGHT }}
+            className="flex items-center gap-2 px-3 cursor-pointer transition-colors"
+            style={{
+              height: PROJECT_ROW_HEIGHT,
+              borderBottom: '1px solid #F1F5F9',
+              backgroundColor: idx % 2 === 1 ? 'rgba(248,250,252,0.5)' : undefined,
+            }}
             onClick={() => handleRowClick(row)}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(248,250,252,0.6)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = idx % 2 === 1 ? 'rgba(248,250,252,0.5)' : ''; }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
@@ -319,7 +421,7 @@ export default function GanttBase(props: GanttProps) {
               }
             }}
           >
-            <span className="truncate text-sm text-gray-800">{row.name}</span>
+            <span className="truncate" style={{ fontSize: 13, color: '#1E293B' }}>{row.name}</span>
             <span
               className="ml-auto shrink-0 h-2 w-2 rounded-full"
               style={{ backgroundColor: color }}
@@ -329,8 +431,9 @@ export default function GanttBase(props: GanttProps) {
       });
     }
 
-    // Project scope
+    // Project scope — with avatar + status badge
     const elements: React.ReactNode[] = [];
+    let rowIndex = 0;
     for (const group of groups) {
       if (groupBy !== 'none') {
         elements.push(
@@ -343,16 +446,23 @@ export default function GanttBase(props: GanttProps) {
       }
       if (group.isExpanded) {
         for (const row of group.rows) {
-          const h = row.isMilestone ? MILESTONE_ROW_HEIGHT : TASK_ROW_HEIGHT;
+          const color = getBarColor(row, 'project');
+          const idx = rowIndex++;
           elements.push(
             <div
               key={row.id}
               role="row"
               tabIndex={0}
-              className="flex items-center px-3 border-b border-gray-100 hover:bg-gray-50/60 cursor-pointer transition-colors"
-              style={{ height: h }}
+              className="flex items-center cursor-pointer transition-colors"
+              style={{
+                height: rowHeight,
+                borderBottom: '1px solid #F1F5F9',
+                backgroundColor: idx % 2 === 1 ? 'rgba(248,250,252,0.5)' : undefined,
+              }}
               onClick={() => handleRowClick(row)}
               onDoubleClick={() => handleRowDoubleClick(row)}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(248,250,252,0.6)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = idx % 2 === 1 ? 'rgba(248,250,252,0.5)' : ''; }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
@@ -360,7 +470,29 @@ export default function GanttBase(props: GanttProps) {
                 }
               }}
             >
-              <span className="truncate text-sm text-gray-700">{row.name}</span>
+              {/* Task name */}
+              <span
+                className="flex-1 truncate"
+                style={{
+                  fontSize: 13,
+                  color: '#1E293B',
+                  paddingLeft: row.isMilestone ? 12 : 24,
+                }}
+              >
+                {row.name}
+              </span>
+              {/* Avatar */}
+              <div className="flex items-center justify-center" style={{ width: 40, flexShrink: 0 }}>
+                {!row.isMilestone && (
+                  <AvatarCircle name={row.assigneeName} color={color} />
+                )}
+              </div>
+              {/* Status badge */}
+              <div className="flex items-center justify-center" style={{ width: 100, flexShrink: 0, paddingRight: 8 }}>
+                {!row.isMilestone && (
+                  <StatusBadge status={row.status} color={color} />
+                )}
+              </div>
             </div>,
           );
         }
@@ -369,31 +501,45 @@ export default function GanttBase(props: GanttProps) {
     return elements;
   };
 
+  const containerRect = containerRef.current?.getBoundingClientRect();
+
   return (
     <div
       ref={containerRef}
       role="grid"
       aria-label="Diagramme de Gantt"
-      className="flex flex-col border rounded-lg bg-white overflow-hidden"
+      className="relative flex flex-col border rounded-lg bg-white overflow-hidden"
     >
       <GanttHeader
         buckets={buckets}
         view={view}
+        currentDate={currentDate}
         onNavigate={navigateTime}
         onToday={goToToday}
         onViewChange={handleViewChange}
         onZoom={handleZoom}
         groupBy={scope === 'project' ? groupBy : undefined}
         onGroupByChange={scope === 'project' ? handleGroupByChange : undefined}
+        todayLeft={todayLeft}
       />
 
       <div className="flex flex-1 overflow-auto">
         {/* Left labels column */}
         <div
-          className="shrink-0 sticky left-0 z-10 bg-white border-r border-gray-200"
-          style={{ width: LEFT_COLUMN_WIDTH, minWidth: LEFT_COLUMN_WIDTH }}
+          className="shrink-0 sticky left-0 z-10 bg-white"
+          style={{
+            width: LEFT_COLUMN_WIDTH,
+            minWidth: LEFT_COLUMN_WIDTH,
+            borderRight: '1px solid #E2E8F0',
+            cursor: 'default',
+          }}
         >
           {renderLeftColumn()}
+          {/* Resize handle */}
+          <div
+            className="absolute top-0 right-0 w-1 h-full"
+            style={{ cursor: 'col-resize' }}
+          />
         </div>
 
         {/* Timeline grid area */}
@@ -403,8 +549,12 @@ export default function GanttBase(props: GanttProps) {
             {buckets.map((bucket, i) => (
               <div
                 key={i}
-                className={`border-r border-gray-100 ${isWeekend(i) ? 'bg-gray-50/50' : ''}`}
-                style={{ flex: `${bucket.widthFraction} 0 0%`, height: '100%' }}
+                style={{
+                  flex: `${bucket.widthFraction} 0 0%`,
+                  height: '100%',
+                  borderRight: '1px solid #F1F5F9',
+                  backgroundColor: isWeekend(i) ? '#F8FAFC' : undefined,
+                }}
               />
             ))}
           </div>
@@ -421,6 +571,7 @@ export default function GanttBase(props: GanttProps) {
               rowPositions={rowPositions}
               width={totalTimelineWidth}
               height={computeGridHeight}
+              hoveredRowId={hoveredRowId}
             />
           )}
 
@@ -432,6 +583,17 @@ export default function GanttBase(props: GanttProps) {
       </div>
 
       <GanttLegend scope={scope} />
+
+      {/* Tooltip */}
+      {tooltip && containerRect && (
+        <GanttTooltip
+          row={tooltip.row}
+          scope={scope}
+          x={tooltip.x}
+          y={tooltip.y}
+          containerRect={containerRect}
+        />
+      )}
     </div>
   );
 }

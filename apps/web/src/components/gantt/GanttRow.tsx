@@ -5,11 +5,10 @@ import type { GanttPortfolioRow, GanttTaskRow, GanttView } from './types';
 import {
   LEFT_COLUMN_WIDTH,
   PROJECT_ROW_HEIGHT,
-  TASK_ROW_HEIGHT,
-  MILESTONE_ROW_HEIGHT,
   HEALTH_COLORS,
   TASK_STATUS_COLORS,
   TASK_STATUS_DEFAULT_COLOR,
+  getRowHeight as getViewRowHeight,
 } from './tokens';
 import { dateToX } from './timeline-math';
 import GanttBar from './GanttBar';
@@ -18,7 +17,6 @@ interface GanttRowProps {
   row: GanttPortfolioRow | GanttTaskRow;
   scope: 'portfolio' | 'project';
   rangeStart: Date;
-  rangeEnd: Date;
   view: GanttView;
   pixelsPerUnit: number;
   onClick?: () => void;
@@ -31,10 +29,9 @@ function isTaskRow(row: GanttPortfolioRow | GanttTaskRow): row is GanttTaskRow {
   return 'isMilestone' in row;
 }
 
-function getRowHeight(row: GanttPortfolioRow | GanttTaskRow, scope: 'portfolio' | 'project'): number {
+function getRowHeight(row: GanttPortfolioRow | GanttTaskRow, scope: 'portfolio' | 'project', view: GanttView): number {
   if (scope === 'portfolio') return PROJECT_ROW_HEIGHT;
-  if (isTaskRow(row) && row.isMilestone) return MILESTONE_ROW_HEIGHT;
-  return TASK_ROW_HEIGHT;
+  return getViewRowHeight(view);
 }
 
 function getBarColor(row: GanttPortfolioRow | GanttTaskRow, scope: 'portfolio' | 'project'): string {
@@ -56,7 +53,7 @@ export default function GanttRow({
   onMouseEnter,
   onMouseLeave,
 }: GanttRowProps) {
-  const height = getRowHeight(row, scope);
+  const height = getRowHeight(row, scope, view);
   const color = getBarColor(row, scope);
 
   const barLeft = dateToX(row.startDate, view, rangeStart, pixelsPerUnit);
@@ -106,7 +103,8 @@ export default function GanttRow({
           progress={row.progress}
           color={color}
           isMilestone={isMilestone}
-          label={isMilestone ? undefined : `${Math.round(row.progress)}%`}
+          name={row.name}
+          view={view}
         />
       </div>
     </div>

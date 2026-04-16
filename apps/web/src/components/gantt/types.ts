@@ -49,6 +49,9 @@ export interface GanttTaskRow {
   epicName?: string;
   /** When true, render as a diamond marker instead of a bar */
   isMilestone: boolean;
+  assigneeName?: string;
+  assigneeAvatar?: string;
+  priority?: string;
 }
 
 // ===========================

@@ -1,6 +1,9 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, Plus, Minus } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import type { GanttView, GanttGrouping } from './types';
 import type { TimelineBucket } from './timeline-math';
 import { LEFT_COLUMN_WIDTH } from './tokens';
@@ -8,122 +11,252 @@ import { LEFT_COLUMN_WIDTH } from './tokens';
 interface GanttHeaderProps {
   buckets: TimelineBucket[];
   view: GanttView;
+  currentDate: Date;
   onNavigate: (direction: 'prev' | 'next') => void;
   onToday: () => void;
   onViewChange: (view: GanttView) => void;
   onZoom: (direction: 'in' | 'out') => void;
   groupBy?: GanttGrouping;
   onGroupByChange?: (groupBy: GanttGrouping) => void;
+  todayLeft?: number | null;
 }
 
 const VIEW_LABELS: Record<GanttView, string> = {
-  day: 'Jour',
-  week: 'Semaine',
-  month: 'Mois',
-  quarter: 'Trimestre',
+  day: 'Day',
+  week: 'Week',
+  month: 'Month',
+  quarter: 'Quarter',
 };
 
 const VIEWS: GanttView[] = ['day', 'week', 'month', 'quarter'];
 
 const GROUP_LABELS: Record<GanttGrouping, string> = {
-  milestone: 'Jalon',
-  epic: 'Épopée',
-  none: 'Aucun',
+  milestone: 'Milestone',
+  epic: 'Epic',
+  none: 'None',
 };
 
 const GROUPINGS: GanttGrouping[] = ['milestone', 'epic', 'none'];
 
+interface SuperBucket {
+  label: string;
+  span: number;
+  totalWidthFraction: number;
+}
+
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function computeSuperBuckets(buckets: TimelineBucket[], view: GanttView): SuperBucket[] {
+  if (buckets.length === 0) return [];
+  const groups: SuperBucket[] = [];
+
+  const getKey = (bucket: TimelineBucket): string => {
+    const d = bucket.start;
+    switch (view) {
+      case 'day':
+      case 'week':
+        return `${d.getFullYear()}-${d.getMonth()}`;
+      case 'month': {
+        const q = Math.floor(d.getMonth() / 3) + 1;
+        return `${d.getFullYear()}-Q${q}`;
+      }
+      case 'quarter':
+        return `${d.getFullYear()}`;
+    }
+  };
+
+  const getLabel = (bucket: TimelineBucket): string => {
+    const d = bucket.start;
+    switch (view) {
+      case 'day':
+      case 'week':
+        return `${MONTH_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+      case 'month': {
+        const q = Math.floor(d.getMonth() / 3) + 1;
+        return `Q${q} ${d.getFullYear()}`;
+      }
+      case 'quarter':
+        return `${d.getFullYear()}`;
+    }
+  };
+
+  let currentKey = getKey(buckets[0]);
+  let currentGroup: SuperBucket = { label: getLabel(buckets[0]), span: 1, totalWidthFraction: buckets[0].widthFraction };
+
+  for (let i = 1; i < buckets.length; i++) {
+    const key = getKey(buckets[i]);
+    if (key === currentKey) {
+      currentGroup.span++;
+      currentGroup.totalWidthFraction += buckets[i].widthFraction;
+    } else {
+      groups.push(currentGroup);
+      currentKey = key;
+      currentGroup = { label: getLabel(buckets[i]), span: 1, totalWidthFraction: buckets[i].widthFraction };
+    }
+  }
+  groups.push(currentGroup);
+  return groups;
+}
+
+function getLowerLabel(bucket: TimelineBucket, view: GanttView): string {
+  switch (view) {
+    case 'day':
+      return String(bucket.start.getDate());
+    case 'week': {
+      const weekNum = getISOWeek(bucket.start);
+      return `W${weekNum}`;
+    }
+    case 'month':
+      return MONTH_SHORT[bucket.start.getMonth()];
+    case 'quarter': {
+      const q = Math.floor(bucket.start.getMonth() / 3) + 1;
+      return `Q${q}`;
+    }
+  }
+}
+
+function getLowerSublabel(bucket: TimelineBucket, view: GanttView): string | undefined {
+  if (view === 'day') {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return days[bucket.start.getDay()];
+  }
+  return undefined;
+}
+
+function getISOWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+function isWeekendDay(date: Date): boolean {
+  const d = date.getDay();
+  return d === 0 || d === 6;
+}
+
 export default function GanttHeader({
   buckets,
   view,
+  currentDate,
   onNavigate,
   onToday,
   onViewChange,
   onZoom,
   groupBy,
   onGroupByChange,
+  todayLeft,
 }: GanttHeaderProps) {
   const handlePrev = useCallback(() => onNavigate('prev'), [onNavigate]);
   const handleNext = useCallback(() => onNavigate('next'), [onNavigate]);
+  const superBuckets = useMemo(() => computeSuperBuckets(buckets, view), [buckets, view]);
+
+  const monthLabel = format(currentDate, 'MMMM yyyy', { locale: fr });
 
   return (
-    <div className="sticky top-0 z-30 bg-white border-b border-gray-200">
+    <div className="sticky top-0 z-30 bg-white" style={{ borderBottom: '1px solid #E2E8F0' }}>
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-100">
+      <div className="flex items-center gap-2 px-3 py-1.5" style={{ borderBottom: '1px solid #F1F5F9' }}>
+        {/* Navigation group */}
         <button
           onClick={handlePrev}
-          className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-          aria-label="Période précédente"
+          className="rounded p-1 transition-colors"
+          style={{ color: '#64748B' }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+          aria-label="Previous"
         >
-          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-          </svg>
+          <ChevronLeft size={16} />
         </button>
-
-        <button
-          onClick={onToday}
-          className="rounded px-2 py-0.5 text-xs font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
-        >
-          Aujourd&apos;hui
-        </button>
-
+        <span className="text-sm font-medium capitalize" style={{ color: '#0F172A', minWidth: 140, textAlign: 'center' }}>
+          {monthLabel}
+        </span>
         <button
           onClick={handleNext}
-          className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-          aria-label="Période suivante"
+          className="rounded p-1 transition-colors"
+          style={{ color: '#64748B' }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+          aria-label="Next"
         >
-          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-          </svg>
+          <ChevronRight size={16} />
+        </button>
+        <button
+          onClick={onToday}
+          className="rounded px-2 py-0.5 text-xs font-medium transition-colors"
+          style={{ color: '#475569', border: '1px solid #E2E8F0' }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+        >
+          Today
         </button>
 
-        <div className="mx-1 h-4 w-px bg-gray-200" />
+        {/* Divider */}
+        <div style={{ margin: '0 8px', height: 16, width: 1, backgroundColor: '#E2E8F0' }} />
 
-        <div className="flex items-center rounded border border-gray-200 overflow-hidden">
+        {/* Zoom group */}
+        <button
+          onClick={() => onZoom('out')}
+          className="rounded p-1 transition-colors"
+          style={{ color: '#64748B' }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+          aria-label="Zoom out"
+        >
+          <Minus size={14} />
+        </button>
+        <span className="text-xs tabular-nums" style={{ color: '#64748B', fontWeight: 500, minWidth: 32, textAlign: 'center' }}>
+          100%
+        </span>
+        <button
+          onClick={() => onZoom('in')}
+          className="rounded p-1 transition-colors"
+          style={{ color: '#64748B' }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+          aria-label="Zoom in"
+        >
+          <Plus size={14} />
+        </button>
+
+        {/* Divider */}
+        <div style={{ margin: '0 8px', height: 16, width: 1, backgroundColor: '#E2E8F0' }} />
+
+        {/* View selector */}
+        <div className="flex items-center rounded overflow-hidden" style={{ border: '1px solid #E2E8F0' }}>
           {VIEWS.map((v) => (
             <button
               key={v}
               onClick={() => onViewChange(v)}
-              className={`px-2 py-0.5 text-xs font-medium transition-colors ${
+              className="px-2.5 py-0.5 text-xs font-medium transition-colors"
+              style={
                 view === v
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-500 hover:bg-gray-100'
-              }`}
+                  ? { backgroundColor: '#0F172A', color: 'white' }
+                  : { color: '#64748B' }
+              }
+              onMouseEnter={(e) => {
+                if (view !== v) e.currentTarget.style.backgroundColor = '#F1F5F9';
+              }}
+              onMouseLeave={(e) => {
+                if (view !== v) e.currentTarget.style.backgroundColor = '';
+              }}
             >
               {VIEW_LABELS[v]}
             </button>
           ))}
         </div>
 
-        <div className="mx-1 h-4 w-px bg-gray-200" />
-
-        <button
-          onClick={() => onZoom('in')}
-          className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-          aria-label="Zoom avant"
-        >
-          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10 5a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 10 5Z" />
-          </svg>
-        </button>
-        <button
-          onClick={() => onZoom('out')}
-          className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-          aria-label="Zoom arrière"
-        >
-          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M5 10a.75.75 0 0 1 .75-.75h8.5a.75.75 0 0 1 0 1.5h-8.5A.75.75 0 0 1 5 10Z" />
-          </svg>
-        </button>
-
+        {/* Grouping (project scope only) */}
         {groupBy !== undefined && onGroupByChange && (
           <>
-            <div className="mx-1 h-4 w-px bg-gray-200" />
-            <span className="text-xs text-gray-400">Grouper :</span>
+            <div style={{ margin: '0 8px', height: 16, width: 1, backgroundColor: '#E2E8F0' }} />
+            <span className="text-xs" style={{ color: '#94A3B8' }}>Group by:</span>
             <select
               value={groupBy}
               onChange={(e) => onGroupByChange(e.target.value as GanttGrouping)}
-              className="rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-600 bg-white hover:bg-gray-50 transition-colors"
+              className="rounded px-1.5 py-0.5 text-xs bg-white transition-colors"
+              style={{ color: '#475569', border: '1px solid #E2E8F0' }}
             >
               {GROUPINGS.map((g) => (
                 <option key={g} value={g}>
@@ -135,30 +268,103 @@ export default function GanttHeader({
         )}
       </div>
 
-      {/* Timeline bucket headers */}
+      {/* Timeline header — upper level (context) */}
       <div className="flex">
         <div
-          className="shrink-0 border-r border-gray-200"
-          style={{ width: LEFT_COLUMN_WIDTH, minWidth: LEFT_COLUMN_WIDTH }}
+          className="shrink-0"
+          style={{ width: LEFT_COLUMN_WIDTH, minWidth: LEFT_COLUMN_WIDTH, borderRight: '1px solid #E2E8F0' }}
         />
         <div className="flex flex-1">
-          {buckets.map((bucket, i) => (
+          {superBuckets.map((sb, i) => (
             <div
               key={i}
-              className="flex flex-col items-center justify-center border-r border-gray-100 py-1 text-center"
-              style={{ flex: `${bucket.widthFraction} 0 0%` }}
+              className="flex items-center justify-center"
+              style={{
+                flex: `${sb.totalWidthFraction} 0 0%`,
+                height: 28,
+                borderRight: '1px solid #E2E8F0',
+                fontSize: 14,
+                fontWeight: 600,
+                color: '#0F172A',
+              }}
             >
-              <span className="text-xs font-medium text-gray-700 leading-tight">
-                {bucket.label}
-              </span>
-              {bucket.sublabel && (
-                <span className="text-[10px] text-gray-400 leading-tight">
-                  {bucket.sublabel}
-                </span>
-              )}
+              {sb.label}
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Timeline header — lower level (granularity) */}
+      <div className="flex relative">
+        <div
+          className="shrink-0"
+          style={{ width: LEFT_COLUMN_WIDTH, minWidth: LEFT_COLUMN_WIDTH, borderRight: '1px solid #E2E8F0' }}
+        />
+        <div className="flex flex-1">
+          {buckets.map((bucket, i) => {
+            const isWe = view === 'day' && isWeekendDay(bucket.start);
+            const sublabel = getLowerSublabel(bucket, view);
+            return (
+              <div
+                key={i}
+                className="flex flex-col items-center justify-center text-center"
+                style={{
+                  flex: `${bucket.widthFraction} 0 0%`,
+                  height: 28,
+                  borderRight: '1px solid #F1F5F9',
+                  backgroundColor: isWe ? '#F8FAFC' : undefined,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: isWe ? '#94A3B8' : '#334155',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {getLowerLabel(bucket, view)}
+                </span>
+                {sublabel && (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      color: isWe ? '#CBD5E1' : '#94A3B8',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {sublabel}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {/* TODAY badge on header */}
+        {todayLeft != null && (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: LEFT_COLUMN_WIDTH + todayLeft,
+              bottom: 0,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'white',
+                backgroundColor: '#F43F5E',
+                padding: '2px 8px',
+                borderRadius: 10,
+                display: 'block',
+              }}
+            >
+              TODAY
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

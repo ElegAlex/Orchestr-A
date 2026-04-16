@@ -1,6 +1,14 @@
 'use client';
 
-import { BAR_HEIGHT, BAR_BORDER_RADIUS, BAR_OPACITY } from './tokens';
+import { format } from 'date-fns';
+import type { GanttView } from './types';
+import {
+  getBarHeight,
+  hexWithAlpha,
+  darkenColor,
+  MILESTONE_COLOR,
+  MILESTONE_BORDER_COLOR,
+} from './tokens';
 
 interface GanttBarProps {
   left: number;
@@ -8,59 +16,110 @@ interface GanttBarProps {
   progress: number;
   color: string;
   isMilestone?: boolean;
-  label?: string;
+  name?: string;
+  view: GanttView;
+  milestoneDate?: Date;
+  onMouseEnter?: (e: React.MouseEvent) => void;
+  onMouseLeave?: () => void;
+  onMouseMove?: (e: React.MouseEvent) => void;
 }
 
-export default function GanttBar({ left, width, progress, color, isMilestone, label }: GanttBarProps) {
+export default function GanttBar({
+  left,
+  width,
+  progress,
+  color,
+  isMilestone,
+  name,
+  view,
+  milestoneDate,
+  onMouseEnter,
+  onMouseLeave,
+  onMouseMove,
+}: GanttBarProps) {
+  const barHeight = getBarHeight(view);
+
   if (isMilestone) {
-    const size = 16;
+    const size = 14;
+    const dateLabel = milestoneDate ? format(milestoneDate, 'MMM d') : '';
     return (
       <div
-        className="absolute top-1/2 -translate-y-1/2"
+        className="absolute top-1/2 -translate-y-1/2 flex items-center gap-2"
         style={{ left: left - size / 2 }}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        onMouseMove={onMouseMove}
       >
         <div
-          className="rotate-45 shadow-sm"
+          className="shrink-0 rotate-45"
           style={{
             width: size,
             height: size,
-            backgroundColor: color,
+            backgroundColor: MILESTONE_COLOR,
+            border: `1px solid ${MILESTONE_BORDER_COLOR}`,
           }}
         />
+        {name && (
+          <span
+            className="whitespace-nowrap"
+            style={{ fontSize: 13, fontWeight: 500, color: '#334155' }}
+          >
+            {dateLabel && `${dateLabel} — `}{name}
+          </span>
+        )}
       </div>
     );
   }
 
   const progressWidth = Math.max(0, Math.min(100, progress));
-  const showLabelInside = width > 60;
+  const showName = width > 80;
+  const showPercent = width > 40;
+  const radius = barHeight / 2;
 
   return (
     <div
-      className="absolute top-1/2 -translate-y-1/2 group cursor-default transition-transform hover:scale-[1.02] hover:shadow-md"
+      className="absolute top-1/2 -translate-y-1/2 cursor-default transition-transform hover:scale-[1.02]"
       style={{
         left,
         width: Math.max(width, 4),
-        height: BAR_HEIGHT,
-        borderRadius: BAR_BORDER_RADIUS,
-        backgroundColor: `${color}${Math.round(BAR_OPACITY * 255).toString(16).padStart(2, '0')}`,
+        height: barHeight,
+        borderRadius: radius,
+        backgroundColor: hexWithAlpha(color, 0.3),
+        overflow: 'hidden',
       }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onMouseMove={onMouseMove}
     >
       <div
         className="h-full transition-[width] duration-200"
         style={{
           width: `${progressWidth}%`,
-          backgroundColor: color,
-          borderRadius: BAR_BORDER_RADIUS,
+          background: `linear-gradient(90deg, ${color} 0%, ${darkenColor(color)} 100%)`,
         }}
       />
-      {label && (
-        <span
-          className={`absolute top-1/2 -translate-y-1/2 text-xs font-semibold whitespace-nowrap ${
-            showLabelInside ? 'left-2 text-white' : 'left-full ml-1.5 text-gray-600'
-          }`}
+      {(showName || showPercent) && (
+        <div
+          className="absolute inset-0 flex items-center justify-between pointer-events-none"
+          style={{ paddingLeft: 12, paddingRight: 12 }}
         >
-          {label}
-        </span>
+          {showName && (
+            <span
+              className="truncate text-white"
+              style={{ fontSize: 13, fontWeight: 500, maxWidth: 'calc(100% - 48px)' }}
+            >
+              {name}
+            </span>
+          )}
+          {showPercent && (
+            <span
+              className="shrink-0"
+              style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}
+            >
+              {Math.round(progress)}%
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

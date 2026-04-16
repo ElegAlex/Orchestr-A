@@ -1,6 +1,6 @@
 'use client';
 
-import { ARROW_COLOR, ARROW_INDENT } from './tokens';
+import { ARROW_COLOR, ARROW_HIGHLIGHT_COLOR } from './tokens';
 import type { GanttDependency } from './types';
 
 interface RowPosition {
@@ -15,6 +15,9 @@ interface GanttDependencyLayerProps {
   rowPositions: Map<string, RowPosition>;
   width: number;
   height: number;
+  hoveredRowId?: string | null;
+  collapsedGroupKeys?: Set<string>;
+  groupHeaderPositions?: Map<string, { y: number; left: number }>;
 }
 
 export default function GanttDependencyLayer({
@@ -22,47 +25,67 @@ export default function GanttDependencyLayer({
   rowPositions,
   width,
   height,
+  hoveredRowId,
+  collapsedGroupKeys,
+  groupHeaderPositions,
 }: GanttDependencyLayerProps) {
   return (
     <svg
       className="absolute inset-0 pointer-events-none"
       style={{ width, height }}
     >
+      <defs>
+        <marker
+          id="arrowhead"
+          markerWidth="6"
+          markerHeight="6"
+          refX="6"
+          refY="3"
+          orient="auto"
+        >
+          <polygon points="0,0 6,3 0,6" fill={ARROW_COLOR} />
+        </marker>
+        <marker
+          id="arrowhead-highlight"
+          markerWidth="6"
+          markerHeight="6"
+          refX="6"
+          refY="3"
+          orient="auto"
+        >
+          <polygon points="0,0 6,3 0,6" fill={ARROW_HIGHLIGHT_COLOR} />
+        </marker>
+      </defs>
       {dependencies.map((dep) => {
         const from = rowPositions.get(dep.fromId);
         const to = rowPositions.get(dep.toId);
+        if (!from && !to) return null;
+
+        const isHighlighted = hoveredRowId === dep.fromId || hoveredRowId === dep.toId;
+        const stroke = isHighlighted ? ARROW_HIGHLIGHT_COLOR : ARROW_COLOR;
+        const strokeWidth = isHighlighted ? 2 : 1.5;
+        const markerId = isHighlighted ? 'arrowhead-highlight' : 'arrowhead';
+
         if (!from || !to) return null;
 
-        const fromCenterY = from.y + from.height / 2;
-        const toCenterY = to.y + to.height / 2;
-        const fromRight = from.right;
-        const toLeft = to.left;
+        const x1 = from.right;
+        const y1 = from.y + from.height / 2;
+        const x2 = to.left;
+        const y2 = to.y + to.height / 2;
 
-        let d: string;
-        if (fromRight + ARROW_INDENT < toLeft) {
-          // Standard right-angle connector
-          d = `M ${fromRight},${fromCenterY} L ${fromRight + ARROW_INDENT},${fromCenterY} L ${fromRight + ARROW_INDENT},${toCenterY} L ${toLeft},${toCenterY}`;
-        } else {
-          // Overlapping: use midpoint
-          const midX = (fromRight + toLeft) / 2;
-          d = `M ${fromRight},${fromCenterY} L ${midX},${fromCenterY} L ${midX},${toCenterY} L ${toLeft},${toCenterY}`;
-        }
+        const dx = Math.min(40, Math.abs(x2 - x1) / 2);
+
+        const d = `M ${x1},${y1} C ${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
 
         return (
-          <g key={`${dep.fromId}-${dep.toId}`}>
-            <path
-              d={d}
-              stroke={ARROW_COLOR}
-              strokeWidth={1.5}
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <polygon
-              points={`${toLeft},${toCenterY} ${toLeft - 6},${toCenterY - 4} ${toLeft - 6},${toCenterY + 4}`}
-              fill={ARROW_COLOR}
-            />
-          </g>
+          <path
+            key={`${dep.fromId}-${dep.toId}`}
+            d={d}
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            fill="none"
+            markerEnd={`url(#${markerId})`}
+          />
         );
       })}
     </svg>
