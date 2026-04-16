@@ -22,18 +22,18 @@ interface GanttHeaderProps {
 }
 
 const VIEW_LABELS: Record<GanttView, string> = {
-  day: 'Day',
-  week: 'Week',
-  month: 'Month',
-  quarter: 'Quarter',
+  day: 'Jour',
+  week: 'Semaine',
+  month: 'Mois',
+  quarter: 'Trimestre',
 };
 
 const VIEWS: GanttView[] = ['day', 'week', 'month', 'quarter'];
 
 const GROUP_LABELS: Record<GanttGrouping, string> = {
-  milestone: 'Milestone',
-  epic: 'Epic',
-  none: 'None',
+  milestone: 'Jalon',
+  epic: 'Épopée',
+  none: 'Aucun',
 };
 
 const GROUPINGS: GanttGrouping[] = ['milestone', 'epic', 'none'];
@@ -44,7 +44,7 @@ interface SuperBucket {
   totalWidthFraction: number;
 }
 
-const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_SHORT = ['Janv', 'Fév', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc'];
 
 function computeSuperBuckets(buckets: TimelineBucket[], view: GanttView): SuperBucket[] {
   if (buckets.length === 0) return [];
@@ -104,7 +104,7 @@ function getLowerLabel(bucket: TimelineBucket, view: GanttView): string {
       return String(bucket.start.getDate());
     case 'week': {
       const weekNum = getISOWeek(bucket.start);
-      return `W${weekNum}`;
+      return `S${weekNum}`;
     }
     case 'month':
       return MONTH_SHORT[bucket.start.getMonth()];
@@ -117,7 +117,7 @@ function getLowerLabel(bucket: TimelineBucket, view: GanttView): string {
 
 function getLowerSublabel(bucket: TimelineBucket, view: GanttView): string | undefined {
   if (view === 'day') {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
     return days[bucket.start.getDay()];
   }
   return undefined;
@@ -165,7 +165,7 @@ export default function GanttHeader({
           style={{ color: '#64748B' }}
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
-          aria-label="Previous"
+          aria-label="Précédent"
         >
           <ChevronLeft size={16} />
         </button>
@@ -178,7 +178,7 @@ export default function GanttHeader({
           style={{ color: '#64748B' }}
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
-          aria-label="Next"
+          aria-label="Suivant"
         >
           <ChevronRight size={16} />
         </button>
@@ -189,7 +189,7 @@ export default function GanttHeader({
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
         >
-          Today
+          Aujourd'hui
         </button>
 
         {/* Divider */}
@@ -202,7 +202,7 @@ export default function GanttHeader({
           style={{ color: '#64748B' }}
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
-          aria-label="Zoom out"
+          aria-label="Dézoomer"
         >
           <Minus size={14} />
         </button>
@@ -215,7 +215,7 @@ export default function GanttHeader({
           style={{ color: '#64748B' }}
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
-          aria-label="Zoom in"
+          aria-label="Zoomer"
         >
           <Plus size={14} />
         </button>
@@ -251,7 +251,7 @@ export default function GanttHeader({
         {groupBy !== undefined && onGroupByChange && (
           <>
             <div style={{ margin: '0 8px', height: 20, width: 1, backgroundColor: '#CBD5E1' }} />
-            <span className="text-xs" style={{ color: '#94A3B8' }}>Group by:</span>
+            <span className="text-xs" style={{ color: '#94A3B8' }}>Grouper par :</span>
             <select
               value={groupBy}
               onChange={(e) => onGroupByChange(e.target.value as GanttGrouping)}
@@ -362,7 +362,7 @@ export default function GanttHeader({
                 display: 'block',
               }}
             >
-              TODAY
+              AUJOURD'HUI
             </span>
           </div>
         )}
