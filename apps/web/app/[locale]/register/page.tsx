@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { authService } from "@/services/auth.service";
-import { useAuthStore } from "@/stores/auth.store";
 import { DEFAULT_USER_ROLE } from "@/types";
 import toast from "react-hot-toast";
 
@@ -13,7 +12,6 @@ export default function RegisterPage() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("auth");
-  const setUser = useAuthStore((state) => state.setUser);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -38,8 +36,7 @@ export default function RegisterPage() {
     try {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { confirmPassword: _unused, ...registerData } = formData;
-      const response = await authService.register(registerData);
-      setUser(response.user);
+      await authService.register(registerData);
       toast.success(t("register.success"));
       router.push(`/${locale}/dashboard`);
     } catch (err) {

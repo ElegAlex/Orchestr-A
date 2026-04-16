@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { authService } from "@/services/auth.service";
-import { useAuthStore } from "@/stores/auth.store";
 import { Logo } from "@/components/Logo";
 import toast from "react-hot-toast";
 
@@ -12,7 +11,6 @@ export default function LoginPage() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("auth");
-  const setUser = useAuthStore((state) => state.setUser);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     login: "",
@@ -24,8 +22,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await authService.login(formData);
-      setUser(response.user);
+      await authService.login(formData);
       toast.success(t("login.success"));
       router.push(`/${locale}/dashboard`);
     } catch (err) {
