@@ -6,6 +6,7 @@ import {
   getBarHeight,
   hexWithAlpha,
   darkenColor,
+  lightenColor,
   MILESTONE_COLOR,
   MILESTONE_BORDER_COLOR,
 } from './tokens';
@@ -84,7 +85,8 @@ export default function GanttBar({
         width: Math.max(width, 4),
         height: barHeight,
         borderRadius: radius,
-        backgroundColor: hexWithAlpha(color, 0.3),
+        backgroundColor: hexWithAlpha(color, 0.5),
+        border: `1px solid ${hexWithAlpha(color, 0.6)}`,
         overflow: 'hidden',
       }}
       onMouseEnter={onMouseEnter}
@@ -95,7 +97,8 @@ export default function GanttBar({
         className="h-full transition-[width] duration-200"
         style={{
           width: `${progressWidth}%`,
-          background: `linear-gradient(90deg, ${color} 0%, ${darkenColor(color)} 100%)`,
+          background: `linear-gradient(180deg, ${lightenColor(color, 0.2)} 0%, ${color} 50%, ${darkenColor(color)} 100%)`,
+          boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 rgba(0, 0, 0, 0.08)',
         }}
       />
       {(showName || showPercent) && (

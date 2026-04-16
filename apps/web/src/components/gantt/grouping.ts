@@ -48,6 +48,9 @@ export function groupTasks(
   let ungrouped: GanttTaskRow[] = [];
 
   for (const task of tasks) {
+    // Skip milestone diamond rows that duplicate the group header
+    if (by === 'milestone' && task.isMilestone && task.milestoneId) continue;
+
     const groupId = task[idField];
     if (!groupId) {
       ungrouped.push(task);

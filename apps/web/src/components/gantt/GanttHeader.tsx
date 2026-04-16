@@ -193,7 +193,7 @@ export default function GanttHeader({
         </button>
 
         {/* Divider */}
-        <div style={{ margin: '0 8px', height: 16, width: 1, backgroundColor: '#E2E8F0' }} />
+        <div style={{ margin: '0 8px', height: 20, width: 1, backgroundColor: '#CBD5E1' }} />
 
         {/* Zoom group */}
         <button
@@ -221,7 +221,7 @@ export default function GanttHeader({
         </button>
 
         {/* Divider */}
-        <div style={{ margin: '0 8px', height: 16, width: 1, backgroundColor: '#E2E8F0' }} />
+        <div style={{ margin: '0 8px', height: 20, width: 1, backgroundColor: '#CBD5E1' }} />
 
         {/* View selector */}
         <div className="flex items-center rounded overflow-hidden" style={{ border: '1px solid #E2E8F0' }}>
@@ -250,7 +250,7 @@ export default function GanttHeader({
         {/* Grouping (project scope only) */}
         {groupBy !== undefined && onGroupByChange && (
           <>
-            <div style={{ margin: '0 8px', height: 16, width: 1, backgroundColor: '#E2E8F0' }} />
+            <div style={{ margin: '0 8px', height: 20, width: 1, backgroundColor: '#CBD5E1' }} />
             <span className="text-xs" style={{ color: '#94A3B8' }}>Group by:</span>
             <select
               value={groupBy}
@@ -346,8 +346,9 @@ export default function GanttHeader({
             className="absolute pointer-events-none"
             style={{
               left: LEFT_COLUMN_WIDTH + todayLeft,
-              bottom: 0,
+              top: -30,
               transform: 'translateX(-50%)',
+              zIndex: 10,
             }}
           >
             <span

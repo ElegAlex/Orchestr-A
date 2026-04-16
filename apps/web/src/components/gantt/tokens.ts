@@ -46,7 +46,7 @@ export const MILESTONE_BORDER_COLOR = '#D97706' as const; // amber-600
 // DIMENSIONS (px) — view-aware
 // ===========================
 
-export const LEFT_COLUMN_WIDTH = 256 as const;
+export const LEFT_COLUMN_WIDTH = 320 as const;
 export const BAR_BORDER_RADIUS = 9999 as const;
 export const GROUP_HEADER_HEIGHT = 40 as const;
 export const PROJECT_ROW_HEIGHT = 50 as const;
