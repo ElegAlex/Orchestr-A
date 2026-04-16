@@ -43,8 +43,10 @@ export class JwtBlacklistService {
       );
       return exists === 1;
     } catch (err) {
-      this.logger.error(`Failed to check blacklist for jti=${jti}: ${String(err)}`);
-      return false;
+      // Fail-closed: if Redis is unreachable we cannot verify the token is NOT blacklisted,
+      // so we treat it as blacklisted to prevent use of potentially revoked tokens.
+      this.logger.warn(`Redis blacklist check failed for jti=${jti}, failing closed: ${String(err)}`);
+      return true;
     }
   }
 }

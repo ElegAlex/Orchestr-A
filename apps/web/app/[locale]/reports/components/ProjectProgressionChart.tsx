@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 interface ProjectProgressionChartProps {
@@ -52,12 +53,8 @@ export function ProjectProgressionChart({
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem("access_token");
-      const res = await fetch("/api/projects", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const res = await api.get("/projects");
+      const data = res.data;
 
       const activeProjects: ProjectData[] = (Array.isArray(data) ? data : data.data || [])
         .filter(

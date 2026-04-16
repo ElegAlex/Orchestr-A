@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -70,7 +71,7 @@ export class SchoolVacationsController {
   @ApiParam({ name: 'id', description: 'ID des vacances scolaires' })
   @ApiResponse({ status: 200, description: 'Détail des vacances scolaires' })
   @ApiResponse({ status: 404, description: 'Vacances scolaires non trouvées' })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.schoolVacationsService.findOne(id);
   }
 
@@ -133,7 +134,7 @@ export class SchoolVacationsController {
   @ApiResponse({ status: 200, description: 'Vacances scolaires mises à jour' })
   @ApiResponse({ status: 404, description: 'Vacances scolaires non trouvées' })
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateDto: UpdateSchoolVacationDto,
   ) {
     return this.schoolVacationsService.update(id, updateDto);
@@ -148,7 +149,7 @@ export class SchoolVacationsController {
   @ApiParam({ name: 'id', description: 'ID des vacances scolaires' })
   @ApiResponse({ status: 204, description: 'Vacances scolaires supprimées' })
   @ApiResponse({ status: 404, description: 'Vacances scolaires non trouvées' })
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.schoolVacationsService.remove(id);
   }
 }

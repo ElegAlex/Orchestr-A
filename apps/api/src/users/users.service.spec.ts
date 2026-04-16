@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Role } from 'database';
+import { RefreshTokenService } from '../auth/refresh-token.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -76,6 +77,10 @@ describe('UsersService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: RefreshTokenService,
+          useValue: { revokeAllForUser: vi.fn().mockResolvedValue(undefined) },
         },
       ],
     }).compile();
@@ -302,7 +307,7 @@ describe('UsersService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(existingUser);
       mockPrismaService.user.update.mockResolvedValue(updatedUser);
 
-      const result = await service.update('1', updateUserDto);
+      const result = await service.update('1', updateUserDto, 'ADMIN');
 
       expect(result).toBeDefined();
       expect(result.firstName).toBe('Updated');
@@ -313,7 +318,7 @@ describe('UsersService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.update('nonexistent', updateUserDto),
+        service.update('nonexistent', updateUserDto, 'ADMIN'),
       ).rejects.toThrow('Utilisateur introuvable');
     });
   });

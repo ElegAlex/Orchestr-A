@@ -127,10 +127,10 @@ export class AuthController {
     short: { limit: 5, ttl: 60_000 },
     medium: { limit: 20, ttl: 900_000 },
   })
-  @ApiOperation({ summary: "Inscription d'un nouvel utilisateur" })
+  @ApiOperation({ summary: "Inscription d'un nouvel utilisateur (compte inactif, nécessite activation admin)" })
   @ApiResponse({
     status: 201,
-    description: 'Utilisateur créé avec succès',
+    description: 'Utilisateur créé (inactif). Un administrateur doit activer le compte avant la connexion.',
   })
   @ApiResponse({
     status: 409,

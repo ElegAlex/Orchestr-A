@@ -30,6 +30,7 @@ import {
   MilestonesValidationPreviewDto,
 } from './dto/import-milestones.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { MilestoneStatus } from 'database';
 
 @ApiTags('milestones')
@@ -73,8 +74,10 @@ export class MilestonesController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateMilestoneDto: UpdateMilestoneDto,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
   ) {
-    return this.milestonesService.update(id, updateMilestoneDto);
+    return this.milestonesService.update(id, updateMilestoneDto, currentUserId, currentUserRole);
   }
 
   @Post(':id/complete')
@@ -89,8 +92,12 @@ export class MilestonesController {
   @Permissions('milestones:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un milestone' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.milestonesService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    return this.milestonesService.remove(id, currentUserId, currentUserRole);
   }
 
   @Post('project/:projectId/import/validate')

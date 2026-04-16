@@ -69,7 +69,7 @@ if [ "$IS_UPGRADE" = false ]; then
 
     cat >> /data/postgresql/pg_hba.conf << EOF
 # Allow local connections
-local   all             all                                     trust
+local   all             all                                     md5
 host    all             all             127.0.0.1/32            md5
 host    all             all             ::1/128                 md5
 EOF
@@ -97,7 +97,7 @@ log_ok "PostgreSQL démarré"
 
 if ! gosu postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='orchestr_a'" | grep -q 1; then
     log_step "Création de la base de données..."
-    gosu postgres psql -c "CREATE USER orchestr_a WITH PASSWORD 'orchestr_a';" 2>/dev/null || true
+    gosu postgres psql -c "CREATE USER orchestr_a WITH PASSWORD '${POSTGRES_PASSWORD:-orchestr_a}';" 2>/dev/null || true
     gosu postgres psql -c "CREATE DATABASE orchestr_a OWNER orchestr_a;"
     gosu postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE orchestr_a TO orchestr_a;"
     gosu postgres psql -d orchestr_a -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
@@ -106,7 +106,7 @@ fi
 
 # ─── Sauvegarde pré-migration (uniquement en mise à jour) ────────
 
-export DATABASE_URL="postgresql://orchestr_a:orchestr_a@localhost:5432/orchestr_a"
+export DATABASE_URL="postgresql://orchestr_a:${POSTGRES_PASSWORD:-orchestr_a}@localhost:5432/orchestr_a"
 
 if [ "$IS_UPGRADE" = true ]; then
     log_step "Sauvegarde pré-migration..."
@@ -164,13 +164,25 @@ fi
 USER_COUNT=$(gosu postgres psql -d orchestr_a -tAc "SELECT COUNT(*) FROM users;" 2>/dev/null || echo "error")
 if [ "$USER_COUNT" = "0" ] || [ "$USER_COUNT" = "error" ]; then
     log_step "Création de l'utilisateur admin par défaut..."
+
+    if [ -n "${ADMIN_PASSWORD:-}" ]; then
+        ADMIN_PASS="$ADMIN_PASSWORD"
+        ADMIN_PASS_SOURCE="fourni via ADMIN_PASSWORD"
+    else
+        ADMIN_PASS=$(openssl rand -base64 16)
+        ADMIN_PASS_SOURCE="généré automatiquement"
+    fi
+
+    # Hash the password with bcrypt using node
+    ADMIN_HASH=$(node -e "const bcrypt = require('bcrypt'); bcrypt.hash('${ADMIN_PASS}', 12).then(h => console.log(h));")
+
     gosu postgres psql -d orchestr_a -c "
         INSERT INTO users (id, email, login, \"passwordHash\", \"firstName\", \"lastName\", role, \"isActive\", \"createdAt\", \"updatedAt\")
         VALUES (
             gen_random_uuid()::text,
             'admin@orchestr-a.local',
             'admin',
-            '\$2b\$12\$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG',
+            '${ADMIN_HASH}',
             'Admin',
             'Orchestr-A',
             'ADMIN',
@@ -180,7 +192,7 @@ if [ "$USER_COUNT" = "0" ] || [ "$USER_COUNT" = "error" ]; then
         )
         ON CONFLICT (email) DO NOTHING;
     " 2>/dev/null || echo "  (utilisateur admin peut déjà exister)"
-    log_ok "Utilisateur admin créé (login: admin / mot de passe: admin123)"
+    log_ok "Utilisateur admin créé (login: admin / mot de passe: ${ADMIN_PASS} [${ADMIN_PASS_SOURCE}])"
 else
     log_ok "$USER_COUNT utilisateur(s) en base — seed ignoré"
 fi
@@ -221,7 +233,7 @@ if [ "$IS_UPGRADE" = true ]; then
 echo "  Mode : MISE À JOUR ($MIGRATIONS_NEW migration(s) appliquée(s))"
 else
 echo "  Mode : PREMIÈRE INSTALLATION"
-echo "  Login par défaut : admin / admin123"
+echo "  Login par défaut : admin / ${ADMIN_PASS:-voir les logs ci-dessus}"
 fi
 echo "════════════════════════════════════════════════════════════"
 echo ""

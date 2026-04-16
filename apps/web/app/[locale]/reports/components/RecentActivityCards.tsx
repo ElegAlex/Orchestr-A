@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 
@@ -48,15 +49,11 @@ export function RecentActivityCards({
       try {
         setLoading(true);
         setError(null);
-        const token = localStorage.getItem("access_token");
         const url = projectId
-          ? `/api/tasks?projectId=${projectId}`
-          : "/api/tasks";
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+          ? `/tasks?projectId=${projectId}`
+          : "/tasks";
+        const res = await api.get(url);
+        const data = res.data;
         const taskList = Array.isArray(data) ? data : data.data ?? [];
         setTasks(taskList);
       } catch (err) {

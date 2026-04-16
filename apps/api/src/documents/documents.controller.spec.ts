@@ -4,6 +4,8 @@ import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
 import { NotFoundException } from '@nestjs/common';
 import { PERMISSIONS_KEY } from '../auth/decorators/permissions.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OwnershipGuard } from '../common/guards/ownership.guard';
 
 describe('DocumentsController', () => {
   let controller: DocumentsController;
@@ -41,7 +43,12 @@ describe('DocumentsController', () => {
           useValue: mockDocumentsService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(OwnershipGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<DocumentsController>(DocumentsController);
   });

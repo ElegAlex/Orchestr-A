@@ -182,7 +182,8 @@ export class AuthService {
         firstName: registerDto.firstName,
         lastName: registerDto.lastName,
         role: Role.CONTRIBUTEUR,
-        isActive: true,
+        // New registrations require admin activation for security
+        isActive: false,
       },
       select: {
         id: true,
@@ -199,20 +200,14 @@ export class AuthService {
     this.auditService.log({
       action: AuditAction.REGISTER,
       userId: user.id,
-      details: `New user registered: ${user.login}`,
+      details: `New user registered: ${user.login} (pending activation)`,
       success: true,
     });
 
-    // Générer un token JWT
-    const payload = {
-      sub: user.id,
-      login: user.login,
-      role: user.role,
-    };
-
+    // No JWT issued — account requires admin activation before login
     return {
-      access_token: this.signAccessToken(payload),
       user,
+      message: 'Compte créé. Un administrateur doit activer votre compte avant la connexion.',
     };
   }
 
@@ -359,6 +354,9 @@ export class AuthService {
       where: { token },
       data: { usedAt: new Date() },
     });
+
+    // Revoke all refresh tokens so existing sessions are invalidated after password reset
+    await this.refreshTokenService.revokeAllForUser(resetToken.userId);
 
     this.auditService.log({
       action: AuditAction.PASSWORD_CHANGED,

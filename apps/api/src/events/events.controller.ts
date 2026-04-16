@@ -101,8 +101,18 @@ export class EventsController {
     status: 400,
     description: 'Paramètres manquants ou invalides',
   })
-  getEventsByRange(@Query('start') start: string, @Query('end') end: string) {
-    return this.eventsService.getEventsByRange(start, end);
+  getEventsByRange(
+    @Query('start') start: string,
+    @Query('end') end: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    return this.eventsService.getEventsByRange(
+      start,
+      end,
+      currentUserId,
+      currentUserRole,
+    );
   }
 
   @Get('user/:userId')
@@ -216,6 +226,8 @@ export class EventsController {
   }
 
   @Delete(':id/recurrence')
+  @UseGuards(JwtAuthGuard, OwnershipGuard)
+  @OwnershipCheck({ resource: 'event', bypassPermission: 'events:manage_any' })
   @Permissions('events:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Arrêter la récurrence d'un événement" })
@@ -224,9 +236,17 @@ export class EventsController {
     status: 400,
     description: 'Pas un événement parent récurrent',
   })
+  @ApiResponse({
+    status: 403,
+    description: "Non créateur et sans permission events:manage_any",
+  })
   @ApiResponse({ status: 404, description: 'Événement introuvable' })
-  stopRecurrence(@Param('id', ParseUUIDPipe) id: string) {
-    return this.eventsService.stopRecurrence(id);
+  stopRecurrence(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    return this.eventsService.stopRecurrence(id, currentUserId, currentUserRole);
   }
 
   @Post(':id/participants')

@@ -74,15 +74,33 @@ async function bootstrap() {
       );
     }
 
-    // SEC-01: basic-auth hook placeholder — requires Fastify scope/prefix wiring.
-    // When SWAGGER_USER and SWAGGER_PASS are both set, /api/docs should be
-    // protected via @fastify/basic-auth registered BEFORE SwaggerModule.setup
-    // and applied to the api/docs route. Dependency not yet added; the prod
-    // warning banner above is the minimum safeguard until then.
+    // SEC-01: Protect Swagger with HTTP Basic Auth when credentials are configured
     if (process.env.SWAGGER_USER && process.env.SWAGGER_PASS) {
-      logger.warn(
-        '[SEC-01] SWAGGER_USER/SWAGGER_PASS are set but basic-auth wiring is not yet implemented. Protect /api/docs at the reverse proxy layer.',
-      );
+      app
+        .getHttpAdapter()
+        .getInstance()
+        .addHook('onRequest', (request, reply, done) => {
+          if (request.url?.startsWith('/api/docs')) {
+            const auth = request.headers.authorization;
+            if (!auth || !auth.startsWith('Basic ')) {
+              reply.header('WWW-Authenticate', 'Basic realm="Swagger"');
+              reply.code(401).send('Unauthorized');
+              return;
+            }
+            const [user, pass] = Buffer.from(auth.slice(6), 'base64')
+              .toString()
+              .split(':');
+            if (
+              user !== process.env.SWAGGER_USER ||
+              pass !== process.env.SWAGGER_PASS
+            ) {
+              reply.code(401).send('Unauthorized');
+              return;
+            }
+          }
+          done();
+        });
+      logger.log('Swagger Basic Auth protection enabled');
     }
 
     const config = new DocumentBuilder()

@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,6 +25,9 @@ import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OwnershipGuard } from '../common/guards/ownership.guard';
+import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 
 @ApiTags('documents')
 @Controller('documents')
@@ -43,6 +47,7 @@ export class DocumentsController {
   }
 
   @Get()
+  @Permissions('documents:read')
   @ApiOperation({ summary: 'Liste des documents' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -56,6 +61,7 @@ export class DocumentsController {
   }
 
   @Get(':id')
+  @Permissions('documents:read')
   @ApiOperation({ summary: "Détails d'un document" })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.documentsService.findOne(id);
@@ -63,6 +69,8 @@ export class DocumentsController {
 
   @Patch(':id')
   @Permissions('documents:update')
+  @UseGuards(JwtAuthGuard, OwnershipGuard)
+  @OwnershipCheck({ resource: 'document', bypassPermission: 'documents:manage_any' })
   @ApiOperation({ summary: 'Modifier un document' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -73,6 +81,8 @@ export class DocumentsController {
 
   @Delete(':id')
   @Permissions('documents:delete')
+  @UseGuards(JwtAuthGuard, OwnershipGuard)
+  @OwnershipCheck({ resource: 'document', bypassPermission: 'documents:manage_any' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un document' })
   remove(@Param('id', ParseUUIDPipe) id: string) {

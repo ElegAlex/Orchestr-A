@@ -137,6 +137,9 @@ describe('PredefinedTasksService', () => {
           color: dto.color,
           icon: dto.icon,
           defaultDuration: dto.defaultDuration,
+          startTime: null,
+          endTime: null,
+          isExternalIntervention: false,
           createdById: 'user-1',
         },
         include: {

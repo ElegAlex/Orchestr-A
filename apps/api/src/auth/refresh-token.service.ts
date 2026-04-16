@@ -81,35 +81,56 @@ export class RefreshTokenService {
       throw new UnauthorizedException('Refresh token invalide');
     }
     const tokenHash = this.hash(refreshToken);
-    const existing = await this.prisma.refreshToken.findUnique({
-      where: { tokenHash },
-    });
 
-    if (!existing) {
-      throw new UnauthorizedException('Refresh token inconnu');
-    }
+    // Wrap find + revoke + create in a serializable transaction to prevent TOCTOU races
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.refreshToken.findUnique({
+        where: { tokenHash },
+      });
 
-    // Reuse detection: revoked token presented again => revoke everything.
-    if (existing.revokedAt) {
-      this.logger.warn(
-        `Refresh token reuse detected for user ${existing.userId} — revoking all tokens`,
-      );
-      await this.revokeAllForUser(existing.userId);
-      throw new UnauthorizedException('Refresh token déjà utilisé');
-    }
+      if (!existing) {
+        throw new UnauthorizedException('Refresh token inconnu');
+      }
 
-    if (existing.expiresAt.getTime() < Date.now()) {
-      throw new UnauthorizedException('Refresh token expiré');
-    }
+      // Reuse detection: revoked token presented again => revoke everything.
+      if (existing.revokedAt) {
+        this.logger.warn(
+          `Refresh token reuse detected for user ${existing.userId} — revoking all tokens`,
+        );
+        await tx.refreshToken.updateMany({
+          where: { userId: existing.userId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+        throw new UnauthorizedException('Refresh token déjà utilisé');
+      }
 
-    // Revoke + issue new atomically-ish (best-effort; no strict transaction needed here).
-    await this.prisma.refreshToken.update({
-      where: { id: existing.id },
-      data: { revokedAt: new Date() },
-    });
+      if (existing.expiresAt.getTime() < Date.now()) {
+        throw new UnauthorizedException('Refresh token expiré');
+      }
 
-    const newRefreshToken = await this.issue(existing.userId, meta);
-    return { userId: existing.userId, newRefreshToken };
+      // Revoke old token
+      await tx.refreshToken.update({
+        where: { id: existing.id },
+        data: { revokedAt: new Date() },
+      });
+
+      // Issue new token within the same transaction
+      const plaintext = crypto.randomBytes(48).toString('base64url');
+      const newTokenHash = this.hash(plaintext);
+      const expiresAt = new Date(Date.now() + this.getTtlMs());
+
+      await tx.refreshToken.create({
+        data: {
+          userId: existing.userId,
+          tokenHash: newTokenHash,
+          expiresAt,
+          userAgent: meta?.userAgent ?? null,
+          ip: meta?.ip ?? null,
+        },
+      });
+
+      return { userId: existing.userId, newRefreshToken: plaintext };
+    }, { isolationLevel: 'Serializable' });
   }
 
   async revoke(refreshToken: string): Promise<void> {

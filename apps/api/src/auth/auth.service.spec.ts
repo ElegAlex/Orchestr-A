@@ -185,7 +185,7 @@ describe('AuthService', () => {
       lastName: 'User',
     };
 
-    it('should create a new user with hashed password', async () => {
+    it('should create a new user with hashed password (inactive, pending admin approval)', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
       vi.mocked(bcrypt.hash).mockResolvedValue(
         '$2b$12$hashedpassword' as never,
@@ -202,13 +202,19 @@ describe('AuthService', () => {
         createdAt: new Date(),
       };
       mockPrismaService.user.create.mockResolvedValue(createdUser);
-      mockJwtService.sign.mockReturnValue('new-user-token');
 
       const result = await service.register(registerDto);
 
       expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 12);
-      expect(result.access_token).toBe('new-user-token');
+      expect(result.message).toContain('administrateur');
       expect(result.user.email).toBe(registerDto.email);
+      // No tokens should be issued — account is inactive
+      expect(result).not.toHaveProperty('access_token');
+      expect(mockPrismaService.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ isActive: false }),
+        }),
+      );
     });
 
     it('should throw ConflictException if email already exists', async () => {
@@ -238,7 +244,6 @@ describe('AuthService', () => {
         createdAt: new Date(),
       };
       mockPrismaService.user.create.mockResolvedValue(createdUser);
-      mockJwtService.sign.mockReturnValue('new-user-token');
 
       const result = await service.register(registerDto);
 
@@ -266,7 +271,6 @@ describe('AuthService', () => {
         createdAt: new Date(),
       };
       mockPrismaService.user.create.mockResolvedValue(createdUser);
-      mockJwtService.sign.mockReturnValue('new-user-token');
 
       // Simulate a malicious client sending role=ADMIN as extra JSON field
       const maliciousDto = {

@@ -158,6 +158,8 @@ describe('TasksController', () => {
         undefined,
         undefined,
         undefined,
+        false,
+        undefined,
       );
     });
 
@@ -181,6 +183,8 @@ describe('TasksController', () => {
         undefined,
         undefined,
         undefined,
+        false,
+        undefined,
       );
     });
 
@@ -202,6 +206,8 @@ describe('TasksController', () => {
         undefined,
         undefined,
         undefined,
+        false,
+        undefined,
       );
     });
 
@@ -222,6 +228,8 @@ describe('TasksController', () => {
         undefined,
         'user-id-1',
         undefined,
+        undefined,
+        false,
         undefined,
       );
     });
@@ -250,6 +258,8 @@ describe('TasksController', () => {
         'user-id-1',
         undefined,
         undefined,
+        false,
+        undefined,
       );
     });
   });
@@ -276,22 +286,25 @@ describe('TasksController', () => {
   });
 
   describe('getTasksByAssignee', () => {
+    const mockUser = { id: 'user-id-1', role: Role.ADMIN };
+
     it('should return tasks assigned to a user', async () => {
       const userTasks = [mockTask];
       mockTasksService.getTasksByAssignee.mockResolvedValue(userTasks);
 
-      const result = await controller.getTasksByAssignee('user-id-1');
+      const result = await controller.getTasksByAssignee('user-id-1', mockUser);
 
       expect(result).toEqual(userTasks);
       expect(mockTasksService.getTasksByAssignee).toHaveBeenCalledWith(
         'user-id-1',
+        mockUser,
       );
     });
 
     it('should return empty array when user has no tasks', async () => {
       mockTasksService.getTasksByAssignee.mockResolvedValue([]);
 
-      const result = await controller.getTasksByAssignee('user-without-tasks');
+      const result = await controller.getTasksByAssignee('user-without-tasks', mockUser);
 
       expect(result).toEqual([]);
     });
@@ -329,10 +342,11 @@ describe('TasksController', () => {
     };
 
     it('should update a task successfully', async () => {
+      const mockUser = { id: 'user-1', role: Role.ADMIN };
       const updatedTask = { ...mockTask, ...updateTaskDto };
       mockTasksService.update.mockResolvedValue(updatedTask);
 
-      const result = await controller.update('task-id-1', updateTaskDto);
+      const result = await controller.update('task-id-1', updateTaskDto, mockUser);
 
       expect(result).toEqual(updatedTask);
       expect(result.title).toBe('Updated Task Title');
@@ -340,27 +354,31 @@ describe('TasksController', () => {
       expect(mockTasksService.update).toHaveBeenCalledWith(
         'task-id-1',
         updateTaskDto,
+        'user-1',
+        Role.ADMIN,
       );
     });
 
     it('should throw NotFoundException when task not found', async () => {
+      const mockUser = { id: 'user-1', role: Role.ADMIN };
       mockTasksService.update.mockRejectedValue(
         new NotFoundException('Tâche introuvable'),
       );
 
       await expect(
-        controller.update('nonexistent', updateTaskDto),
+        controller.update('nonexistent', updateTaskDto, mockUser),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('should update task to DONE with 100% progress', async () => {
+      const mockUser = { id: 'user-1', role: Role.ADMIN };
       const completedTask = { ...mockTask, status: 'DONE', progress: 100 };
       mockTasksService.update.mockResolvedValue(completedTask);
 
       const result = await controller.update('task-id-1', {
         status: 'DONE',
         progress: 100,
-      });
+      }, mockUser);
 
       expect(result.status).toBe('DONE');
       expect(result.progress).toBe(100);
@@ -368,13 +386,15 @@ describe('TasksController', () => {
   });
 
   describe('remove', () => {
+    const mockUser = { id: 'user-1', role: Role.ADMIN };
+
     it('should delete a task', async () => {
       mockTasksService.remove.mockResolvedValue({ message: 'Tâche supprimée' });
 
-      const result = await controller.remove('task-id-1');
+      const result = await controller.remove('task-id-1', mockUser);
 
       expect(result.message).toBe('Tâche supprimée');
-      expect(mockTasksService.remove).toHaveBeenCalledWith('task-id-1');
+      expect(mockTasksService.remove).toHaveBeenCalledWith('task-id-1', mockUser);
     });
 
     it('should throw NotFoundException when task not found', async () => {
@@ -382,7 +402,7 @@ describe('TasksController', () => {
         new NotFoundException('Tâche introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(
+      await expect(controller.remove('nonexistent', mockUser)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -394,7 +414,7 @@ describe('TasksController', () => {
         ),
       );
 
-      await expect(controller.remove('task-with-dependents')).rejects.toThrow(
+      await expect(controller.remove('task-with-dependents', mockUser)).rejects.toThrow(
         BadRequestException,
       );
     });

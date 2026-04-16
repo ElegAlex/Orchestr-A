@@ -13,6 +13,10 @@ export interface IcsPreviewEvent {
 
 type ParameterValue = string | { val: string; params: Record<string, string> };
 
+function stripHtml(str: string | undefined | null): string {
+  return str?.replace(/<[^>]*>/g, '') ?? '';
+}
+
 function strVal(v: ParameterValue | undefined): string | undefined {
   if (v === undefined) return undefined;
   if (typeof v === 'string') return v;
@@ -146,11 +150,11 @@ export class PlanningExportService {
       }
 
       results.push({
-        title: strVal(vevent.summary) || 'Sans titre',
+        title: stripHtml(strVal(vevent.summary)) || 'Sans titre',
         date,
         startTime,
         endTime,
-        description: strVal(vevent.description),
+        description: stripHtml(strVal(vevent.description)),
       });
     }
 
@@ -199,8 +203,8 @@ export class PlanningExportService {
 
         await this.prisma.event.create({
           data: {
-            title: strVal(vevent.summary) || 'Evenement importe',
-            description: strVal(vevent.description) ?? null,
+            title: stripHtml(strVal(vevent.summary)) || 'Evenement importe',
+            description: stripHtml(strVal(vevent.description)) || null,
             date: start,
             startTime: startTime ?? null,
             endTime: endTime ?? null,

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { api } from "@/lib/api";
 
 interface MilestoneCompletionChartProps {
   dateRange: string;
@@ -42,15 +43,11 @@ export function MilestoneCompletionChart({
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem("access_token");
       const url = projectId
-        ? `/api/milestones?projectId=${projectId}`
-        : "/api/milestones";
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+        ? `/milestones?projectId=${projectId}`
+        : "/milestones";
+      const res = await api.get(url);
+      const data = res.data;
       setMilestones(Array.isArray(data) ? data : data.data || []);
     } catch (err) {
       console.error("Error loading milestones:", err);

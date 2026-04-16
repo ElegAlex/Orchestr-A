@@ -238,13 +238,14 @@ describe('UsersController', () => {
       const updatedUser = { ...mockUser, ...updateUserDto };
       mockUsersService.update.mockResolvedValue(updatedUser);
 
-      const result = await controller.update('user-id-1', updateUserDto);
+      const result = await controller.update('user-id-1', updateUserDto, 'ADMIN');
 
       expect(result).toEqual(updatedUser);
       expect(result.firstName).toBe('Updated');
       expect(mockUsersService.update).toHaveBeenCalledWith(
         'user-id-1',
         updateUserDto,
+        'ADMIN',
       );
     });
 
@@ -254,7 +255,7 @@ describe('UsersController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', updateUserDto),
+        controller.update('nonexistent', updateUserDto, 'ADMIN'),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -264,7 +265,7 @@ describe('UsersController', () => {
       );
 
       await expect(
-        controller.update('user-id-1', { email: 'existing@example.com' }),
+        controller.update('user-id-1', { email: 'existing@example.com' }, 'ADMIN'),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -359,7 +360,7 @@ describe('UsersController', () => {
 
       const result = await controller.resetPassword(
         'user-id-1',
-        'newpassword123',
+        { newPassword: 'newpassword123' } as any,
       );
 
       expect(result.message).toBe('Mot de passe réinitialisé');
@@ -375,7 +376,7 @@ describe('UsersController', () => {
       );
 
       await expect(
-        controller.resetPassword('nonexistent', 'newpassword123'),
+        controller.resetPassword('nonexistent', { newPassword: 'newpassword123' } as any),
       ).rejects.toThrow(NotFoundException);
     });
   });

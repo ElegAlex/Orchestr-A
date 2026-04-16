@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
@@ -82,7 +82,10 @@ export class MilestonesService {
     return milestone;
   }
 
-  async update(id: string, updateMilestoneDto: UpdateMilestoneDto) {
+  async update(id: string, updateMilestoneDto: UpdateMilestoneDto, currentUserId?: string, currentUserRole?: string) {
+    if (currentUserId) {
+      await this.assertProjectMembership(id, currentUserId, currentUserRole);
+    }
     await this.findOne(id);
     const { dueDate, ...data } = updateMilestoneDto;
 
@@ -96,10 +99,36 @@ export class MilestonesService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, currentUserId?: string, currentUserRole?: string) {
+    if (currentUserId) {
+      await this.assertProjectMembership(id, currentUserId, currentUserRole);
+    }
     await this.findOne(id);
     await this.prisma.milestone.delete({ where: { id } });
     return { message: 'Milestone supprimé avec succès' };
+  }
+
+  /**
+   * Verify the current user is a member of the milestone's parent project.
+   * Users with the ADMIN role bypass this check.
+   */
+  private async assertProjectMembership(
+    milestoneId: string,
+    userId: string,
+    userRole?: string,
+  ): Promise<void> {
+    if (userRole === 'ADMIN') return;
+
+    const milestone = await this.prisma.milestone.findUnique({
+      where: { id: milestoneId },
+      include: { project: { include: { members: true } } },
+    });
+    if (!milestone) throw new NotFoundException('Milestone introuvable');
+
+    const isMember = milestone.project.members.some((m) => m.userId === userId);
+    if (!isMember) {
+      throw new ForbiddenException('Not a member of this project');
+    }
   }
 
   async complete(id: string) {

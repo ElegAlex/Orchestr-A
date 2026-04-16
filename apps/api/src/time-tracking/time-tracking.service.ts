@@ -199,23 +199,33 @@ export class TimeTrackingService {
     endDate?: string,
     thirdPartyId?: string,
   ) {
-    if (userId && userId !== currentUser.id) {
-      const permissions =
-        (await this.roleManagementService.getPermissionsForRole(
-          currentUser.role,
-        )) ?? [];
-      if (!permissions.includes(VIEW_ANY_PERMISSION)) {
-        throw new ForbiddenException(
-          "Filtre userId d'un autre utilisateur interdit sans permission time_tracking:view_any",
-        );
-      }
+    const permissions =
+      (await this.roleManagementService.getPermissionsForRole(
+        currentUser.role,
+      )) ?? [];
+    const hasViewAny = permissions.includes(VIEW_ANY_PERMISSION);
+
+    if (userId && userId !== currentUser.id && !hasViewAny) {
+      throw new ForbiddenException(
+        "Filtre userId d'un autre utilisateur interdit sans permission time_tracking:view_any",
+      );
     }
 
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
 
     const where: Prisma.TimeEntryWhereInput = {};
-    if (userId) where.userId = userId;
+
+    // When no userId filter is provided and user lacks view_any, scope to own entries
+    if (userId) {
+      where.userId = userId;
+    } else if (!hasViewAny) {
+      where.OR = [
+        { userId: currentUser.id },
+        { declaredById: currentUser.id },
+      ];
+    }
+
     if (thirdPartyId) where.thirdPartyId = thirdPartyId;
     if (projectId) where.projectId = projectId;
     if (taskId) where.taskId = taskId;
@@ -272,7 +282,7 @@ export class TimeTrackingService {
   /**
    * Récupérer une entrée par ID
    */
-  async findOne(id: string) {
+  async findOne(id: string, currentUser?: { id: string; role: Role }) {
     const entry = await this.prisma.timeEntry.findUnique({
       where: { id },
       include: {
@@ -296,6 +306,24 @@ export class TimeTrackingService {
 
     if (!entry) {
       throw new NotFoundException('Entrée de temps introuvable');
+    }
+
+    // Ownership check: user must own the entry, have declared it, or have view_any permission
+    if (currentUser) {
+      const isOwner =
+        entry.userId === currentUser.id ||
+        entry.declaredById === currentUser.id;
+      if (!isOwner) {
+        const permissions =
+          (await this.roleManagementService.getPermissionsForRole(
+            currentUser.role,
+          )) ?? [];
+        if (!permissions.includes(VIEW_ANY_PERMISSION)) {
+          throw new ForbiddenException(
+            "Vous n'avez pas la permission de consulter cette entrée de temps",
+          );
+        }
+      }
     }
 
     return entry;

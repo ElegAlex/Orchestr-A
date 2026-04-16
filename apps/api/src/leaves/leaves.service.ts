@@ -1178,6 +1178,12 @@ export class LeavesService {
       throw new NotFoundException('Demande de congé introuvable');
     }
 
+    if (leave.userId === validatorId) {
+      throw new ForbiddenException(
+        'Cannot approve your own leave request',
+      );
+    }
+
     if (leave.status !== LeaveStatus.PENDING) {
       throw new BadRequestException(
         'Seules les demandes en attente peuvent être approuvées',
@@ -1241,6 +1247,12 @@ export class LeavesService {
 
     if (!leave) {
       throw new NotFoundException('Demande de congé introuvable');
+    }
+
+    if (leave.userId === validatorId) {
+      throw new ForbiddenException(
+        'Cannot reject your own leave request',
+      );
     }
 
     if (leave.status !== LeaveStatus.PENDING) {

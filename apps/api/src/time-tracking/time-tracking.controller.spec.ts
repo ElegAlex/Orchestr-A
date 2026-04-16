@@ -238,11 +238,12 @@ describe('TimeTrackingController', () => {
     it('should return a time entry by id', async () => {
       mockTimeTrackingService.findOne.mockResolvedValue(mockTimeEntry);
 
-      const result = await controller.findOne('entry-id-1');
+      const result = await controller.findOne('entry-id-1', currentUser);
 
       expect(result).toEqual(mockTimeEntry);
       expect(mockTimeTrackingService.findOne).toHaveBeenCalledWith(
         'entry-id-1',
+        currentUser,
       );
     });
 
@@ -251,7 +252,7 @@ describe('TimeTrackingController', () => {
         new NotFoundException('Entrée de temps introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+      await expect(controller.findOne('nonexistent', currentUser)).rejects.toThrow(
         NotFoundException,
       );
     });

@@ -180,6 +180,8 @@ describe('MilestonesController', () => {
       const result = await controller.update(
         'milestone-id-1',
         updateMilestoneDto,
+        'user-1',
+        'ADMIN',
       );
 
       expect(result.name).toBe('Phase 1 Complete - Updated');
@@ -187,6 +189,8 @@ describe('MilestonesController', () => {
       expect(mockMilestonesService.update).toHaveBeenCalledWith(
         'milestone-id-1',
         updateMilestoneDto,
+        'user-1',
+        'ADMIN',
       );
     });
 
@@ -196,7 +200,7 @@ describe('MilestonesController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', updateMilestoneDto),
+        controller.update('nonexistent', updateMilestoneDto, 'user-1', 'ADMIN'),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -241,11 +245,13 @@ describe('MilestonesController', () => {
         message: 'Milestone supprimé',
       });
 
-      const result = await controller.remove('milestone-id-1');
+      const result = await controller.remove('milestone-id-1', 'user-1', 'ADMIN');
 
       expect(result.message).toBe('Milestone supprimé');
       expect(mockMilestonesService.remove).toHaveBeenCalledWith(
         'milestone-id-1',
+        'user-1',
+        'ADMIN',
       );
     });
 
@@ -254,7 +260,7 @@ describe('MilestonesController', () => {
         new NotFoundException('Milestone introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(
+      await expect(controller.remove('nonexistent', 'user-1', 'ADMIN')).rejects.toThrow(
         NotFoundException,
       );
     });

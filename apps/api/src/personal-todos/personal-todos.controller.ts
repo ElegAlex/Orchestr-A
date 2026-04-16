@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PersonalTodosService } from './personal-todos.service';
@@ -30,14 +31,14 @@ export class PersonalTodosController {
   @Patch(':id')
   update(
     @CurrentUser() user: User,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePersonalTodoDto,
   ) {
     return this.personalTodosService.update(id, user.id, dto);
   }
 
   @Delete(':id')
-  delete(@CurrentUser() user: User, @Param('id') id: string) {
+  delete(@CurrentUser() user: User, @Param('id', ParseUUIDPipe) id: string) {
     return this.personalTodosService.delete(id, user.id);
   }
 }

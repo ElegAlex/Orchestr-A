@@ -27,6 +27,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { AdminResetPasswordDto } from './dto/reset-password.dto';
 import {
   ImportUsersDto,
   UsersValidationPreviewDto,
@@ -284,8 +285,9 @@ export class UsersController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser('role') callerRole: string,
   ) {
-    return this.usersService.update(id, updateUserDto);
+    return this.usersService.update(id, updateUserDto, callerRole);
   }
 
   @Delete(':id')
@@ -366,8 +368,8 @@ export class UsersController {
   })
   resetPassword(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body('newPassword') newPassword: string,
+    @Body() dto: AdminResetPasswordDto,
   ) {
-    return this.usersService.resetPassword(id, newPassword);
+    return this.usersService.resetPassword(id, dto.newPassword);
   }
 }

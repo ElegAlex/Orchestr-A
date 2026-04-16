@@ -198,8 +198,11 @@ export class TimeTrackingController {
     status: 404,
     description: 'Entrée de temps introuvable',
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.timeTrackingService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: { id: string; role: Role },
+  ) {
+    return this.timeTrackingService.findOne(id, currentUser);
   }
 
   @Patch(':id')

@@ -23,6 +23,7 @@ import { EpicsService } from './epics.service';
 import { CreateEpicDto } from './dto/create-epic.dto';
 import { UpdateEpicDto } from './dto/update-epic.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('epics')
 @Controller('epics')
@@ -63,15 +64,21 @@ export class EpicsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateEpicDto: UpdateEpicDto,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
   ) {
-    return this.epicsService.update(id, updateEpicDto);
+    return this.epicsService.update(id, updateEpicDto, currentUserId, currentUserRole);
   }
 
   @Delete(':id')
   @Permissions('epics:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un epic' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.epicsService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    return this.epicsService.remove(id, currentUserId, currentUserRole);
   }
 }

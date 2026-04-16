@@ -33,6 +33,7 @@ describe('RefreshTokenService', () => {
       update: vi.fn(),
       updateMany: vi.fn(),
     },
+    $transaction: vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => cb(mockPrisma)),
   };
 
   const mockConfig = {

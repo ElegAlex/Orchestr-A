@@ -165,16 +165,17 @@ export class AnalyticsService {
     return this.prisma.task.findMany({ where });
   }
 
-  private async getActiveUsers(): Promise<User[]> {
+  private async getActiveUsers(): Promise<Pick<User, 'id' | 'isActive'>[]> {
     return this.prisma.user.findMany({
       where: { isActive: true },
+      select: { id: true, isActive: true },
     });
   }
 
   private calculateMetrics(
     projects: ProjectWithDetails[],
     tasks: Task[],
-    users: User[],
+    users: Pick<User, 'id' | 'isActive'>[],
   ): MetricDto[] {
     const totalProjects = projects.length;
     const activeProjects = projects.filter((p) => p.status === 'ACTIVE').length;

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { LeavesController } from './leaves.controller';
 import { LeavesService } from './leaves.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 import {
   NotFoundException,
   BadRequestException,
@@ -57,6 +58,10 @@ describe('LeavesController', () => {
     deactivateDelegation: vi.fn(),
   };
 
+  const mockRoleManagementService = {
+    getPermissionsForRole: vi.fn().mockResolvedValue([]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [LeavesController],
@@ -64,6 +69,10 @@ describe('LeavesController', () => {
         {
           provide: LeavesService,
           useValue: mockLeavesService,
+        },
+        {
+          provide: RoleManagementService,
+          useValue: mockRoleManagementService,
         },
       ],
     }).compile();
@@ -309,9 +318,16 @@ describe('LeavesController', () => {
         available: 15,
       };
 
+      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        'leaves:validate',
+      ]);
       mockLeavesService.getLeaveBalance.mockResolvedValue(balance);
 
-      const result = await controller.getUserBalance('user-id-2');
+      const result = await controller.getUserBalance(
+        'user-id-2',
+        'admin-user-id',
+        'ADMIN',
+      );
 
       expect(result).toEqual(balance);
       expect(mockLeavesService.getLeaveBalance).toHaveBeenCalledWith(
@@ -547,12 +563,13 @@ describe('LeavesController', () => {
 
       mockLeavesService.createDelegation.mockResolvedValue(delegation);
 
-      const result = await controller.createDelegation(
-        'manager-id-1',
-        'other-manager-id',
-        '2025-01-01',
-        '2025-01-15',
-      );
+      const dto = {
+        delegateId: 'other-manager-id',
+        startDate: '2025-01-01',
+        endDate: '2025-01-15',
+      };
+
+      const result = await controller.createDelegation('manager-id-1', dto);
 
       expect(result).toEqual(delegation);
       expect(mockLeavesService.createDelegation).toHaveBeenCalledWith(
@@ -568,13 +585,14 @@ describe('LeavesController', () => {
         new BadRequestException('Dates invalides'),
       );
 
+      const dto = {
+        delegateId: 'other-manager-id',
+        startDate: '2025-01-15',
+        endDate: '2025-01-01',
+      };
+
       await expect(
-        controller.createDelegation(
-          'manager-id-1',
-          'other-manager-id',
-          '2025-01-15',
-          '2025-01-01',
-        ),
+        controller.createDelegation('manager-id-1', dto),
       ).rejects.toThrow(BadRequestException);
     });
   });

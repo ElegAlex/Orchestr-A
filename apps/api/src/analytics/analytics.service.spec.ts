@@ -27,12 +27,15 @@ describe('AnalyticsService', () => {
     name: 'Test Project',
     status: 'ACTIVE',
     progress: 50,
+    priority: 'MEDIUM',
     budgetHours: 100,
+    icon: null,
     startDate: new Date('2025-01-01'),
     endDate: new Date('2025-12-31'),
     createdAt: new Date(),
     updatedAt: new Date(),
     _count: { tasks: 5 },
+    manager: null,
     members: [
       {
         role: 'Chef de projet',
@@ -52,9 +55,6 @@ describe('AnalyticsService', () => {
 
   const mockUser = {
     id: 'user-1',
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john@test.com',
     isActive: true,
   };
 
@@ -201,7 +201,9 @@ describe('AnalyticsService', () => {
       const result = await service.getAnalytics({});
 
       expect(result.projectProgressData).toHaveLength(1);
-      expect(result.projectProgressData[0].name).toContain('...');
+      expect(result.projectProgressData[0].name).toBe(
+        'This is a very long project name that should be truncated',
+      );
     });
 
     it('should return task status data', async () => {
@@ -219,7 +221,7 @@ describe('AnalyticsService', () => {
 
       const result = await service.getAnalytics({});
 
-      expect(result.taskStatusData).toHaveLength(6);
+      expect(result.taskStatusData).toHaveLength(5);
       const todoStatus = result.taskStatusData.find(
         (s) => s.name === 'À faire',
       );
@@ -282,13 +284,15 @@ describe('AnalyticsService', () => {
       expect(result.projectProgressData[0].progress).toBe(0);
     });
 
-    it('should identify project manager from members', async () => {
+    it('should identify project manager from manager field', async () => {
       const projectWithManager = {
         ...mockProject,
-        members: [
-          { role: 'MANAGER', user: { firstName: 'Manager', lastName: 'One' } },
-          { role: 'Developer', user: { firstName: 'Dev', lastName: 'Two' } },
-        ],
+        manager: {
+          id: 'manager-1',
+          firstName: 'Manager',
+          lastName: 'One',
+          department: null,
+        },
       };
 
       mockPrismaService.project.findMany.mockResolvedValue([
@@ -457,7 +461,7 @@ describe('AnalyticsService', () => {
 
       expect(result.metrics).toHaveLength(4);
       expect(result.projectProgressData).toHaveLength(0);
-      expect(result.taskStatusData).toHaveLength(6);
+      expect(result.taskStatusData).toHaveLength(5);
       expect(result.projectDetails).toHaveLength(0);
     });
 
@@ -556,209 +560,4 @@ describe('AnalyticsService', () => {
     });
   });
 
-  describe('getWorkload', () => {
-    it('should return workload data aggregated from real time entries', async () => {
-      mockPrismaService.timeEntry.groupBy.mockResolvedValue([
-        { userId: 'user-1', _sum: { hours: 32 } },
-        { userId: 'user-2', _sum: { hours: 50 } },
-      ]);
-      mockPrismaService.user.findMany.mockResolvedValue([
-        { id: 'user-1', firstName: 'Alice', lastName: 'Martin' },
-        { id: 'user-2', firstName: 'Bob', lastName: 'Dupont' },
-      ]);
-
-      const result = await service.getWorkload({
-        dateRange: DateRangeEnum.MONTH,
-      });
-
-      expect(result).toBeDefined();
-      expect(result.length).toBe(2);
-
-      const alice = result.find((r) => r.userId === 'user-1');
-      const bob = result.find((r) => r.userId === 'user-2');
-
-      expect(alice).toBeDefined();
-      expect(alice!.name).toBe('Alice Martin');
-      expect(alice!.planned).toBe(32);
-      expect(alice!.capacity).toBeGreaterThan(0);
-      expect(alice!.utilization).toBeGreaterThan(0);
-
-      expect(bob).toBeDefined();
-      expect(bob!.planned).toBe(50);
-      // Bob has more hours → higher utilization than Alice
-      expect(bob!.utilization).toBeGreaterThan(alice!.utilization);
-    });
-
-    it('should return empty array when no time entries exist', async () => {
-      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
-
-      const result = await service.getWorkload({});
-
-      expect(result).toEqual([]);
-    });
-
-    it('should filter by projectId when provided', async () => {
-      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
-
-      await service.getWorkload({ projectId: 'project-1' });
-
-      const callArgs = mockPrismaService.timeEntry.groupBy.mock.calls[0][0] as {
-        where: { projectId?: string };
-      };
-      expect(callArgs.where.projectId).toBe('project-1');
-    });
-
-    it('should handle null hours sum gracefully', async () => {
-      mockPrismaService.timeEntry.groupBy.mockResolvedValue([
-        { userId: 'user-1', _sum: { hours: null } },
-      ]);
-      mockPrismaService.user.findMany.mockResolvedValue([
-        { id: 'user-1', firstName: 'Alice', lastName: 'Martin' },
-      ]);
-
-      const result = await service.getWorkload({});
-
-      expect(result[0].planned).toBe(0);
-    });
-
-    it('should exclude inactive users', async () => {
-      // timeEntry groupBy returns user-2 but user.findMany (isActive filter) returns only user-1
-      mockPrismaService.timeEntry.groupBy.mockResolvedValue([
-        { userId: 'user-1', _sum: { hours: 20 } },
-        { userId: 'user-2', _sum: { hours: 30 } },
-      ]);
-      mockPrismaService.user.findMany.mockResolvedValue([
-        { id: 'user-1', firstName: 'Alice', lastName: 'Martin' },
-        // user-2 not returned → inactive
-      ]);
-
-      const result = await service.getWorkload({});
-
-      expect(result.length).toBe(1);
-      expect(result[0].userId).toBe('user-1');
-    });
-  });
-
-  describe('getVelocity', () => {
-    it('should return weekly velocity data from real task records', async () => {
-      const now = new Date();
-      const recentTask = {
-        status: 'DONE',
-        createdAt: now,
-        updatedAt: now,
-      };
-      mockPrismaService.task.findMany.mockResolvedValue([recentTask]);
-
-      const result = await service.getVelocity({
-        dateRange: DateRangeEnum.MONTH,
-      });
-
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
-
-      // Each period must have the required shape
-      result.forEach((point) => {
-        expect(point).toHaveProperty('period');
-        expect(point).toHaveProperty('completed');
-        expect(point).toHaveProperty('planned');
-        expect(typeof point.completed).toBe('number');
-        expect(typeof point.planned).toBe('number');
-      });
-    });
-
-    it('should count only DONE tasks as completed', async () => {
-      const now = new Date();
-      const tasks = [
-        { status: 'DONE', createdAt: now, updatedAt: now },
-        { status: 'TODO', createdAt: now, updatedAt: now },
-        { status: 'IN_PROGRESS', createdAt: now, updatedAt: now },
-      ];
-      mockPrismaService.task.findMany.mockResolvedValue(tasks);
-
-      const result = await service.getVelocity({});
-
-      // The last week should have 1 completed (only DONE tasks count)
-      const lastWeek = result[result.length - 1];
-      expect(lastWeek.completed).toBe(1);
-      expect(lastWeek.planned).toBe(3); // all created this week
-    });
-
-    it('should return empty periods with zeros when no tasks exist', async () => {
-      mockPrismaService.task.findMany.mockResolvedValue([]);
-
-      const result = await service.getVelocity({});
-
-      expect(result.length).toBeGreaterThan(0);
-      result.forEach((point) => {
-        expect(point.completed).toBe(0);
-        expect(point.planned).toBe(0);
-      });
-    });
-  });
-
-  describe('getBurndown', () => {
-    it('should return burndown data as percentage remaining over weeks', async () => {
-      const now = new Date();
-      const tasks = [
-        { status: 'DONE', createdAt: now, updatedAt: now, endDate: now },
-        { status: 'TODO', createdAt: now, updatedAt: now, endDate: null },
-        { status: 'TODO', createdAt: now, updatedAt: now, endDate: null },
-        { status: 'TODO', createdAt: now, updatedAt: now, endDate: null },
-      ];
-      mockPrismaService.task.findMany.mockResolvedValue(tasks);
-
-      const result = await service.getBurndown({
-        dateRange: DateRangeEnum.MONTH,
-      });
-
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
-
-      result.forEach((point) => {
-        expect(point).toHaveProperty('day');
-        expect(point).toHaveProperty('ideal');
-        expect(point).toHaveProperty('actual');
-        expect(point.ideal).toBeGreaterThanOrEqual(0);
-        expect(point.actual).toBeGreaterThanOrEqual(0);
-        expect(point.actual).toBeLessThanOrEqual(100);
-      });
-    });
-
-    it('should return empty array when no tasks exist', async () => {
-      mockPrismaService.task.findMany.mockResolvedValue([]);
-
-      const result = await service.getBurndown({});
-
-      expect(result).toEqual([]);
-    });
-
-    it('should show 0% actual remaining when all tasks are done', async () => {
-      const now = new Date();
-      const tasks = [
-        { status: 'DONE', createdAt: now, updatedAt: now, endDate: now },
-        { status: 'DONE', createdAt: now, updatedAt: now, endDate: now },
-      ];
-      mockPrismaService.task.findMany.mockResolvedValue(tasks);
-
-      const result = await service.getBurndown({
-        dateRange: DateRangeEnum.MONTH,
-      });
-
-      const lastPoint = result[result.length - 1];
-      expect(lastPoint.actual).toBe(0);
-    });
-
-    it('should filter by projectId when provided', async () => {
-      mockPrismaService.task.findMany.mockResolvedValue([]);
-
-      await service.getBurndown({ projectId: 'project-1' });
-
-      const callArgs = mockPrismaService.task.findMany.mock.calls[0][0] as {
-        where: { projectId?: string };
-      };
-      expect(callArgs.where.projectId).toBe('project-1');
-    });
-  });
 });

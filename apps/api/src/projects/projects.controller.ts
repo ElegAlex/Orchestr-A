@@ -198,6 +198,7 @@ export class ProjectsController {
 
   @Delete(':id/hard')
   @Permissions('projects:delete')
+  @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Supprimer définitivement un projet (Admin/Responsable)',
@@ -216,6 +217,7 @@ export class ProjectsController {
 
   @Post(':id/members')
   @Permissions('projects:manage_members')
+  @OwnershipCheck({ resource: 'project', paramKey: 'id', bypassPermission: 'projects:manage_any' })
   @ApiOperation({
     summary:
       'Ajouter un membre au projet (Admin/Responsable/Manager/Chef de projet)',

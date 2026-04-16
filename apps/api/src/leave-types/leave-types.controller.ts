@@ -21,6 +21,7 @@ import {
 import { LeaveTypesService } from './leave-types.service';
 import { CreateLeaveTypeDto } from './dto/create-leave-type.dto';
 import { UpdateLeaveTypeDto } from './dto/update-leave-type.dto';
+import { ReorderLeaveTypesDto } from './dto/reorder-leave-types.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('Leave Types')
@@ -110,7 +111,7 @@ export class LeaveTypesController {
     summary: 'Réordonner les types de congés (Admin/Responsable)',
   })
   @ApiResponse({ status: 200, description: 'Types de congés réordonnés' })
-  reorder(@Body() body: { orderedIds: string[] }) {
-    return this.leaveTypesService.reorder(body.orderedIds);
+  reorder(@Body() dto: ReorderLeaveTypesDto) {
+    return this.leaveTypesService.reorder(dto.orderedIds);
   }
 }

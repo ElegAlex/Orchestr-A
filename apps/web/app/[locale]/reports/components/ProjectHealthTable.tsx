@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -141,32 +142,26 @@ export function ProjectHealthTable({
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem("access_token");
-      const headers = { Authorization: `Bearer ${token}` };
 
       const projectUrl = projectId
-        ? `/api/projects?projectId=${projectId}`
-        : "/api/projects";
+        ? `/projects?projectId=${projectId}`
+        : "/projects";
       const taskUrl = projectId
-        ? `/api/tasks?projectId=${projectId}`
-        : "/api/tasks";
+        ? `/tasks?projectId=${projectId}`
+        : "/tasks";
       const milestoneUrl = projectId
-        ? `/api/milestones?projectId=${projectId}`
-        : "/api/milestones";
+        ? `/milestones?projectId=${projectId}`
+        : "/milestones";
 
       const [projRes, taskRes, msRes] = await Promise.all([
-        fetch(projectUrl, { headers }),
-        fetch(taskUrl, { headers }),
-        fetch(milestoneUrl, { headers }),
+        api.get(projectUrl),
+        api.get(taskUrl),
+        api.get(milestoneUrl),
       ]);
 
-      if (!projRes.ok) throw new Error(`Projects: HTTP ${projRes.status}`);
-      if (!taskRes.ok) throw new Error(`Tasks: HTTP ${taskRes.status}`);
-      if (!msRes.ok) throw new Error(`Milestones: HTTP ${msRes.status}`);
-
-      const projData = await projRes.json();
-      const taskData = await taskRes.json();
-      const msData = await msRes.json();
+      const projData = projRes.data;
+      const taskData = taskRes.data;
+      const msData = msRes.data;
 
       setProjects(
         Array.isArray(projData) ? projData : projData.data ?? []

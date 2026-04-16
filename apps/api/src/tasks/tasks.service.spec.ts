@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { TaskStatus, RACIRole, Role, Priority } from 'database';
 import { getTaskProgress } from './task-progress.helper';
+import { RoleManagementService } from '../role-management/role-management.service';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -53,6 +54,15 @@ describe('TasksService', () => {
       createMany: vi.fn(),
       findMany: vi.fn(),
     },
+    subtask: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    userService: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    projectMember: {
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
     $transaction: vi.fn(
       async <T>(
         callback: (tx: typeof mockPrismaService) => Promise<T>,
@@ -67,6 +77,12 @@ describe('TasksService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: RoleManagementService,
+          useValue: {
+            getPermissionsForRole: vi.fn().mockResolvedValue(['tasks:create', 'tasks:readAll', 'tasks:manage_any']),
+          },
         },
       ],
     }).compile();
@@ -1292,7 +1308,7 @@ describe('TasksService', () => {
       const firstLine = template.split('\n')[0];
 
       expect(firstLine).toBe(
-        'title;description;status;priority;assigneeEmail;milestoneName;estimatedHours;startDate;endDate',
+        'title;description;status;priority;assigneeEmail;milestoneName;estimatedHours;startDate;endDate;subtasks',
       );
     });
 

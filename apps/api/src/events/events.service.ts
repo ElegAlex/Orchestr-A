@@ -13,16 +13,16 @@ import { Prisma } from 'database';
 
 @Injectable()
 export class EventsService {
-  private readonly MANAGEMENT_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'];
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly roleManagementService: RoleManagementService,
     private readonly ownershipService: OwnershipService,
   ) {}
 
-  private isManagementRole(role: string): boolean {
-    return this.MANAGEMENT_ROLES.includes(role);
+  private async hasManagementAccess(role: string): Promise<boolean> {
+    const permissions =
+      await this.roleManagementService.getPermissionsForRole(role);
+    return permissions.includes('events:readAll');
   }
 
   /**
@@ -335,11 +335,11 @@ export class EventsService {
       throw new NotFoundException('Événement introuvable');
     }
 
-    // IDOR protection: non-management roles can only see events they created or participate in
+    // IDOR protection: users without events:readAll can only see events they created or participate in
     if (
       currentUserId &&
       currentUserRole &&
-      !this.isManagementRole(currentUserRole)
+      !(await this.hasManagementAccess(currentUserRole))
     ) {
       const isCreator = event.createdById === currentUserId;
       const isParticipant = event.participants.some(
@@ -571,7 +571,12 @@ export class EventsService {
   /**
    * Récupérer les événements dans une plage de dates
    */
-  async getEventsByRange(startDate: string, endDate: string) {
+  async getEventsByRange(
+    startDate: string,
+    endDate: string,
+    currentUserId?: string,
+    currentUserRole?: string,
+  ) {
     if (!startDate || !endDate) {
       throw new BadRequestException(
         'Les paramètres start et end sont obligatoires',
@@ -591,13 +596,27 @@ export class EventsService {
       );
     }
 
-    const events = await this.prisma.event.findMany({
-      where: {
-        date: {
-          gte: start,
-          lte: end,
-        },
+    const where: Prisma.EventWhereInput = {
+      date: {
+        gte: start,
+        lte: end,
       },
+    };
+
+    // Scope events for non-management users: only their own or participated
+    if (currentUserId && currentUserRole) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('events:readAll')) {
+        where.OR = [
+          { participants: { some: { userId: currentUserId } } },
+          { createdById: currentUserId },
+        ];
+      }
+    }
+
+    const events = await this.prisma.event.findMany({
+      where,
       include: {
         project: {
           select: {
@@ -692,9 +711,17 @@ export class EventsService {
   /**
    * Arrêter la récurrence d'un événement parent
    */
-  async stopRecurrence(id: string) {
+  async stopRecurrence(
+    id: string,
+    currentUserId?: string,
+    currentUserRole?: string,
+  ) {
     const event = await this.prisma.event.findUnique({ where: { id } });
     if (!event) throw new NotFoundException('Événement introuvable');
+
+    // Defense-in-depth: verify ownership at the service layer
+    await this.ensureCanMutate(id, currentUserId, currentUserRole);
+
     if (!event.isRecurring || event.parentEventId) {
       throw new BadRequestException(
         "Cet événement n'est pas un événement parent récurrent",

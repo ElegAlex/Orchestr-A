@@ -20,6 +20,7 @@ import { ExportService } from "@/services/export.service";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/usePermissions";
+import { api } from "@/lib/api";
 
 export default function ReportsPage() {
   const t = useTranslations("admin.reports");
@@ -46,16 +47,9 @@ export default function ReportsPage() {
 
   const loadProjects = useCallback(async () => {
     try {
-      const response = await fetch("/api/projects", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-      });
-
-      if (response.ok) {
-        const projectsData = await response.json();
-        setProjects(projectsData.data || projectsData);
-      }
+      const response = await api.get("/projects");
+      const projectsData = response.data;
+      setProjects(projectsData.data || projectsData);
     } catch (error) {
       console.error("Error loading projects:", error);
     }
@@ -69,17 +63,8 @@ export default function ReportsPage() {
         params.append("projectId", selectedProject);
       }
 
-      const response = await fetch(`/api/analytics?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch analytics");
-      }
-
-      const analyticsData = await response.json();
+      const response = await api.get(`/analytics?${params.toString()}`);
+      const analyticsData = response.data;
       setData(analyticsData);
 
       // Load projects for filter if not already loaded
@@ -148,20 +133,10 @@ export default function ReportsPage() {
             params.append("projectId", selectedProject);
           }
 
-          const response = await fetch(
-            `/api/analytics/export?${params.toString()}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-              },
-            },
+          const response = await api.get(
+            `/analytics/export?${params.toString()}`,
           );
-
-          if (!response.ok) {
-            throw new Error("Failed to export analytics");
-          }
-
-          const exportData = await response.json();
+          const exportData = response.data;
           const blob = new Blob([JSON.stringify(exportData, null, 2)], {
             type: "application/json",
           });

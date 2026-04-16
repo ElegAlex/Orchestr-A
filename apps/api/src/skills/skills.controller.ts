@@ -23,6 +23,7 @@ import { SkillsService } from './skills.service';
 import { CreateSkillDto } from './dto/create-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
 import { AssignSkillDto } from './dto/assign-skill.dto';
+import { UpdateSkillLevelDto } from './dto/update-skill-level.dto';
 import {
   ImportSkillsDto,
   ImportSkillsResultDto,
@@ -336,11 +337,11 @@ export class SkillsController {
   updateUserSkill(
     @Param('userId', ParseUUIDPipe) userId: string,
     @Param('skillId', ParseUUIDPipe) skillId: string,
-    @Body() data: { level: SkillLevel },
+    @Body() dto: UpdateSkillLevelDto,
   ) {
     return this.skillsService.assignSkillToUser(userId, {
       skillId,
-      level: data.level,
+      level: dto.level,
     });
   }
 }

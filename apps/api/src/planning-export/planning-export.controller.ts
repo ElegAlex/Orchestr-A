@@ -9,6 +9,7 @@ import {
 } from '@nestjs/swagger';
 import type { FastifyReply } from 'fastify';
 import { PlanningExportService } from './planning-export.service';
+import { ImportIcsDto } from './dto/import-ics.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('planning-export')
@@ -48,8 +49,8 @@ export class PlanningExportController {
     },
   })
   @ApiResponse({ status: 200, description: 'Liste des evenements parses' })
-  previewImport(@Body() body: { icsContent: string }) {
-    return this.planningExportService.previewImport(body.icsContent);
+  previewImport(@Body() dto: ImportIcsDto) {
+    return this.planningExportService.previewImport(dto.icsContent);
   }
 
   @Post('ics/import')
@@ -62,9 +63,9 @@ export class PlanningExportController {
   })
   @ApiResponse({ status: 200, description: "Resultat de l'import" })
   importIcs(
-    @Body() body: { icsContent: string },
+    @Body() dto: ImportIcsDto,
     @CurrentUser('id') userId: string,
   ) {
-    return this.planningExportService.importIcs(body.icsContent, userId);
+    return this.planningExportService.importIcs(dto.icsContent, userId);
   }
 }

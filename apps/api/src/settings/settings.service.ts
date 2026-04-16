@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 // Types for settings
@@ -213,7 +213,20 @@ export class SettingsService implements OnModuleInit {
   /**
    * Mettre à jour un paramètre
    */
+  /**
+   * Known setting keys that are allowed to be created/updated
+   */
+  private static readonly ALLOWED_KEYS = Object.keys(DEFAULT_SETTINGS);
+
+  static isKnownKey(key: string): boolean {
+    return SettingsService.ALLOWED_KEYS.includes(key);
+  }
+
   async update(key: string, value: unknown, description?: string) {
+    if (!SettingsService.isKnownKey(key)) {
+      throw new BadRequestException(`Unknown setting key: ${key}`);
+    }
+
     const stringValue =
       typeof value === 'string' ? value : JSON.stringify(value);
 

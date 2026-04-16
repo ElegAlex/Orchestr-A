@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   ParseUUIDPipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,9 +22,11 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { LeavesService } from './leaves.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { UpsertLeaveBalanceDto } from './dto/upsert-leave-balance.dto';
+import { CreateDelegationDto } from './dto/create-delegation.dto';
 import {
   ImportLeavesDto,
   ImportLeavesResultDto,
@@ -37,7 +40,10 @@ import { LeaveStatus, LeaveType } from 'database';
 @Controller('leaves')
 @ApiBearerAuth()
 export class LeavesController {
-  constructor(private readonly leavesService: LeavesService) {}
+  constructor(
+    private readonly leavesService: LeavesService,
+    private readonly roleManagementService: RoleManagementService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Créer une demande de congé' })
@@ -275,7 +281,20 @@ export class LeavesController {
     status: 404,
     description: 'Utilisateur introuvable',
   })
-  getUserBalance(@Param('userId', ParseUUIDPipe) userId: string) {
+  async getUserBalance(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('role') currentUserRole: string,
+  ) {
+    if (userId !== currentUserId) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('leaves:validate')) {
+        throw new ForbiddenException(
+          'Permission leaves:validate requise pour consulter le solde d\'un autre utilisateur',
+        );
+      }
+    }
     return this.leavesService.getLeaveBalance(userId);
   }
 
@@ -570,15 +589,13 @@ export class LeavesController {
   })
   createDelegation(
     @CurrentUser('id') delegatorId: string,
-    @Body('delegateId') delegateId: string,
-    @Body('startDate') startDate: string,
-    @Body('endDate') endDate: string,
+    @Body() dto: CreateDelegationDto,
   ) {
     return this.leavesService.createDelegation(
       delegatorId,
-      delegateId,
-      new Date(startDate),
-      new Date(endDate),
+      dto.delegateId,
+      new Date(dto.startDate),
+      new Date(dto.endDate),
     );
   }
 

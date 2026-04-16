@@ -4,12 +4,16 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 
 @Injectable()
 export class CommentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly roleManagementService: RoleManagementService,
+  ) {}
 
   async create(userId: string, createCommentDto: CreateCommentDto) {
     const task = await this.prisma.task.findUnique({
@@ -121,14 +125,18 @@ export class CommentsService {
   async remove(id: string, userId: string, userRole: string) {
     const comment = await this.findOne(id);
 
-    // Seul l'auteur ou un admin peut supprimer
-    if (
-      comment.authorId !== userId &&
-      !['ADMIN', 'RESPONSABLE'].includes(userRole)
-    ) {
-      throw new ForbiddenException(
-        'Vous ne pouvez supprimer que vos propres commentaires',
+    // Seul l'auteur ou un utilisateur avec la permission comments:delete_any peut supprimer
+    if (comment.authorId !== userId) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(userRole);
+      const canDeleteAny = permissions.some(
+        (p) => p === 'comments:delete_any',
       );
+      if (!canDeleteAny) {
+        throw new ForbiddenException(
+          'Vous ne pouvez supprimer que vos propres commentaires',
+        );
+      }
     }
 
     await this.prisma.comment.delete({ where: { id } });

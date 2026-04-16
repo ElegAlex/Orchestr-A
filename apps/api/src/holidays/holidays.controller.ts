@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -76,7 +77,7 @@ export class HolidaysController {
   @ApiParam({ name: 'id', description: 'ID du jour férié' })
   @ApiResponse({ status: 200, description: 'Détail du jour férié' })
   @ApiResponse({ status: 404, description: 'Jour férié non trouvé' })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.holidaysService.findOne(id);
   }
 
@@ -137,7 +138,7 @@ export class HolidaysController {
     description: 'Un jour férié existe déjà à cette date',
   })
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateHolidayDto: UpdateHolidayDto,
   ) {
     return this.holidaysService.update(id, updateHolidayDto);
@@ -150,7 +151,7 @@ export class HolidaysController {
   @ApiParam({ name: 'id', description: 'ID du jour férié' })
   @ApiResponse({ status: 204, description: 'Jour férié supprimé' })
   @ApiResponse({ status: 404, description: 'Jour férié non trouvé' })
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.holidaysService.remove(id);
   }
 

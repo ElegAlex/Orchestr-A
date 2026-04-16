@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsService } from './comments.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RoleManagementService } from '../role-management/role-management.service';
 
 describe('CommentsService', () => {
   let service: CommentsService;
@@ -30,6 +31,10 @@ describe('CommentsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: RoleManagementService,
+          useValue: { getPermissionsForRole: vi.fn().mockResolvedValue(['comments:delete_any']) },
         },
       ],
     }).compile();
@@ -104,12 +109,12 @@ describe('CommentsService', () => {
 
   describe('remove', () => {
     it('should delete a comment', async () => {
-      const mockComment = { id: '1', content: 'Comment' };
+      const mockComment = { id: '1', content: 'Comment', authorId: 'user-1' };
 
       mockPrismaService.comment.findUnique.mockResolvedValue(mockComment);
       mockPrismaService.comment.delete.mockResolvedValue(mockComment);
 
-      await service.remove('1');
+      await service.remove('1', 'user-1', 'ADMIN');
 
       expect(mockPrismaService.comment.delete).toHaveBeenCalledWith({
         where: { id: '1' },

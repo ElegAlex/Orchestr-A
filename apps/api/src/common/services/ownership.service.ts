@@ -6,7 +6,8 @@ export type OwnedResource =
   | 'telework'
   | 'timeEntry'
   | 'project'
-  | 'event';
+  | 'event'
+  | 'document';
 
 /**
  * ProjectMember.role is a free-form string in the schema (see
@@ -52,6 +53,8 @@ export class OwnershipService {
         return this.isProjectOwner(resourceId, userId);
       case 'event':
         return this.isEventOwner(resourceId, userId);
+      case 'document':
+        return this.isDocumentOwner(resourceId, userId);
       default:
         return false;
     }
@@ -121,5 +124,13 @@ export class OwnershipService {
       select: { createdById: true },
     });
     return !!row && row.createdById === userId;
+  }
+
+  private async isDocumentOwner(id: string, userId: string): Promise<boolean> {
+    const row = await this.prisma.document.findUnique({
+      where: { id },
+      select: { uploadedBy: true },
+    });
+    return !!row && row.uploadedBy === userId;
   }
 }

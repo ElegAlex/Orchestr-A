@@ -517,13 +517,54 @@ export class TasksService {
   /**
    * Mettre à jour une tâche
    */
-  async update(id: string, updateTaskDto: UpdateTaskDto) {
+  async update(
+    id: string,
+    updateTaskDto: UpdateTaskDto,
+    currentUserId?: string,
+    currentUserRole?: string,
+  ) {
     const existingTask = await this.prisma.task.findUnique({
       where: { id },
+      include: {
+        project: { include: { members: true } },
+        assignees: { select: { userId: true } },
+      },
     });
 
     if (!existingTask) {
       throw new NotFoundException('Tâche introuvable');
+    }
+
+    // Ownership / membership check
+    if (currentUserId && currentUserRole) {
+      const userPermissions =
+        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      const canManageAny = userPermissions.includes('tasks:manage_any');
+
+      if (!canManageAny) {
+        const isAssignee =
+          existingTask.assigneeId === currentUserId ||
+          existingTask.assignees.some((a) => a.userId === currentUserId);
+
+        if (existingTask.project) {
+          // Task belongs to a project: user must be assignee or project member
+          const isProjectMember = existingTask.project.members.some(
+            (m) => m.userId === currentUserId,
+          );
+          if (!isAssignee && !isProjectMember) {
+            throw new ForbiddenException(
+              "Vous n'avez pas la permission de modifier cette tâche",
+            );
+          }
+        } else {
+          // Standalone task (no project): user must be assignee
+          if (!isAssignee) {
+            throw new ForbiddenException(
+              "Vous n'avez pas la permission de modifier cette tâche orpheline",
+            );
+          }
+        }
+      }
     }
 
     const {
@@ -927,7 +968,23 @@ export class TasksService {
    * Récupérer toutes les tâches assignées à un utilisateur
    * (soit en tant qu'assigné principal, soit dans la liste des assignés multiples)
    */
-  async getTasksByAssignee(userId: string) {
+  async getTasksByAssignee(
+    userId: string,
+    currentUser?: { id: string; role: Role },
+  ) {
+    // If requesting another user's tasks, require tasks:readAll permission
+    if (currentUser && userId !== currentUser.id) {
+      const permissions =
+        await this.roleManagementService.getPermissionsForRole(
+          currentUser.role,
+        );
+      if (!permissions.includes('tasks:readAll')) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission de consulter les tâches d'un autre utilisateur",
+        );
+      }
+    }
+
     const tasks = await this.prisma.task.findMany({
       where: {
         OR: [{ assigneeId: userId }, { assignees: { some: { userId } } }],

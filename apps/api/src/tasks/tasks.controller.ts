@@ -33,6 +33,7 @@ import {
 } from './dto/import-tasks.dto';
 import { CreateSubtaskDto } from './dto/create-subtask.dto';
 import { UpdateSubtaskDto } from './dto/update-subtask.dto';
+import { ReorderSubtasksDto } from './dto/reorder-subtasks.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role, TaskStatus, RACIRole } from 'database';
@@ -134,8 +135,11 @@ export class TasksController {
     status: 200,
     description: "Liste des tâches assignées à l'utilisateur",
   })
-  getTasksByAssignee(@Param('userId', ParseUUIDPipe) userId: string) {
-    return this.tasksService.getTasksByAssignee(userId);
+  getTasksByAssignee(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() currentUser: { id: string; role: Role },
+  ) {
+    return this.tasksService.getTasksByAssignee(userId, currentUser);
   }
 
   @Get('project/:projectId')
@@ -214,8 +218,9 @@ export class TasksController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTaskDto: UpdateTaskDto,
+    @CurrentUser() user: { id: string; role: Role },
   ) {
-    return this.tasksService.update(id, updateTaskDto);
+    return this.tasksService.update(id, updateTaskDto, user.id, user.role);
   }
 
   @Delete(':id')
@@ -465,8 +470,8 @@ export class TasksController {
   @ApiOperation({ summary: 'Réordonner les sous-tâches' })
   reorderSubtasks(
     @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Body() body: { subtaskIds: string[] },
+    @Body() dto: ReorderSubtasksDto,
   ) {
-    return this.tasksService.reorderSubtasks(taskId, body.subtaskIds);
+    return this.tasksService.reorderSubtasks(taskId, dto.subtaskIds);
   }
 }

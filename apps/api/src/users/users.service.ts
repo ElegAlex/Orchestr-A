@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -22,6 +23,7 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 import type { MultipartFile } from '@fastify/multipart';
 import { assertMagicBytes } from '../common/upload/magic-bytes.validator';
+import { RefreshTokenService } from '../auth/refresh-token.service';
 
 /** Type de dépendance utilisateur */
 export interface UserDependency {
@@ -39,7 +41,24 @@ export interface UserDependenciesResponse {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly ROLE_HIERARCHY: Record<string, number> = {
+    OBSERVATEUR: 0,
+    CONTRIBUTEUR: 1,
+    REFERENT_TECHNIQUE: 2,
+    CHEF_DE_PROJET: 3,
+    MANAGER: 4,
+    RESPONSABLE: 5,
+    ADMIN: 6,
+  };
+
+  private canAssignRole(callerRole: string, targetRole: string): boolean {
+    return this.ROLE_HIERARCHY[callerRole] > this.ROLE_HIERARCHY[targetRole];
+  }
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly refreshTokenService: RefreshTokenService,
+  ) {}
 
   async create(createUserDto: CreateUserDto) {
     // Vérifier si l'utilisateur existe déjà
@@ -283,7 +302,7 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  async update(id: string, updateUserDto: UpdateUserDto, callerRole?: string) {
     // Vérifier que l'utilisateur existe
     const existingUser = await this.prisma.user.findUnique({
       where: { id },
@@ -291,6 +310,20 @@ export class UsersService {
 
     if (!existingUser) {
       throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    // Enforce role hierarchy: caller can only assign roles strictly below their own
+    if (updateUserDto.role && callerRole) {
+      if (updateUserDto.role === 'ADMIN' && callerRole !== 'ADMIN') {
+        throw new ForbiddenException(
+          'Seul un administrateur peut attribuer le rôle ADMIN',
+        );
+      }
+      if (!this.canAssignRole(callerRole, updateUserDto.role)) {
+        throw new ForbiddenException(
+          'Vous ne pouvez attribuer que des rôles inférieurs au vôtre',
+        );
+      }
     }
 
     // Vérifier unicité email/login si modifiés
@@ -346,7 +379,7 @@ export class UsersService {
 
     // Hasher le mot de passe si fourni
     if (password) {
-      updateData.passwordHash = await bcrypt.hash(password, 10);
+      updateData.passwordHash = await bcrypt.hash(password, 12);
     }
 
     // Mettre à jour les services si fournis
@@ -656,6 +689,9 @@ export class UsersService {
       data: { passwordHash: newPasswordHash },
     });
 
+    // Revoke all refresh tokens so existing sessions are invalidated after password change
+    await this.refreshTokenService.revokeAllForUser(userId);
+
     return { message: 'Mot de passe modifié avec succès' };
   }
 
@@ -674,6 +710,9 @@ export class UsersService {
       where: { id: userId },
       data: { passwordHash },
     });
+
+    // Revoke all refresh tokens so existing sessions are invalidated after admin password reset
+    await this.refreshTokenService.revokeAllForUser(userId);
 
     return { message: 'Mot de passe réinitialisé avec succès' };
   }

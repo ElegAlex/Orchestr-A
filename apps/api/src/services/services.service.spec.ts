@@ -24,6 +24,9 @@ describe('ServicesService', () => {
     department: {
       findUnique: vi.fn(),
     },
+    userService: {
+      deleteMany: vi.fn(),
+    },
   };
 
   const mockService = {
@@ -257,7 +260,7 @@ describe('ServicesService', () => {
       );
     });
 
-    it('should throw error when service has users', async () => {
+    it('should detach users and delete service when service has users', async () => {
       const mockServiceWithUsers = {
         ...mockService,
         _count: { userServices: 5 },
@@ -265,10 +268,16 @@ describe('ServicesService', () => {
       mockPrismaService.service.findUnique.mockResolvedValue(
         mockServiceWithUsers,
       );
+      mockPrismaService.userService.deleteMany.mockResolvedValue({ count: 5 });
+      mockPrismaService.service.update.mockResolvedValue(mockServiceWithUsers);
+      mockPrismaService.service.delete.mockResolvedValue(mockServiceWithUsers);
 
-      await expect(service.remove('service-1')).rejects.toThrow(
-        BadRequestException,
-      );
+      const result = await service.remove('service-1');
+
+      expect(mockPrismaService.userService.deleteMany).toHaveBeenCalledWith({
+        where: { serviceId: 'service-1' },
+      });
+      expect(result.message).toBe('Service supprimé avec succès');
     });
   });
 

@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { api } from "@/lib/api";
 
 interface ProgressTrendChartProps {
   dateRange: string;
@@ -99,7 +100,6 @@ export function ProgressTrendChart({
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem("access_token");
       const { from, to } = getDateRange(dateRange);
 
       let projectIds: string[] = [];
@@ -107,11 +107,8 @@ export function ProgressTrendChart({
       if (projectId) {
         projectIds = [projectId];
       } else {
-        const res = await fetch("/api/projects", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const res = await api.get("/projects");
+        const data = res.data;
         const projects: ProjectInfo[] = Array.isArray(data)
           ? data
           : data.data || [];
@@ -130,19 +127,20 @@ export function ProgressTrendChart({
 
       for (const pId of projectIds) {
         try {
-          const res = await fetch(
-            `/api/projects/${pId}/snapshots?from=${from}&to=${to}`,
-            { headers: { Authorization: `Bearer ${token}` } }
+          const res = await api.get(
+            `/projects/${pId}/snapshots?from=${from}&to=${to}`
           );
-          if (!res.ok) continue;
-          const snapshots: SnapshotPoint[] = await res.json();
+          const snapshots: SnapshotPoint[] = res.data;
           if (!Array.isArray(snapshots) || snapshots.length === 0) continue;
 
           // Get project name
-          const projRes = await fetch(`/api/projects/${pId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const projData = projRes.ok ? await projRes.json() : { name: pId };
+          let projData: { name: string };
+          try {
+            const projRes = await api.get(`/projects/${pId}`);
+            projData = projRes.data;
+          } catch {
+            projData = { name: pId };
+          }
 
           snapshotsByProject.set(pId, {
             name: projData.name || pId,

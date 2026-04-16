@@ -22,6 +22,7 @@ describe('EventsController', () => {
     getEventsByRange: vi.fn(),
     addParticipant: vi.fn(),
     removeParticipant: vi.fn(),
+    stopRecurrence: vi.fn(),
   };
 
   const mockEvent = {
@@ -224,12 +225,16 @@ describe('EventsController', () => {
       const result = await controller.getEventsByRange(
         '2025-11-01',
         '2025-11-30',
+        'user-1',
+        'ADMIN',
       );
 
       expect(result).toEqual(events);
       expect(service.getEventsByRange).toHaveBeenCalledWith(
         '2025-11-01',
         '2025-11-30',
+        'user-1',
+        'ADMIN',
       );
     });
   });

@@ -149,13 +149,15 @@ describe('EpicsController', () => {
       const updatedEpic = { ...mockEpic, ...updateEpicDto };
       mockEpicsService.update.mockResolvedValue(updatedEpic);
 
-      const result = await controller.update('epic-id-1', updateEpicDto);
+      const result = await controller.update('epic-id-1', updateEpicDto, 'user-1', 'ADMIN');
 
       expect(result.name).toBe('User Authentication v2');
       expect(result.progress).toBe(75);
       expect(mockEpicsService.update).toHaveBeenCalledWith(
         'epic-id-1',
         updateEpicDto,
+        'user-1',
+        'ADMIN',
       );
     });
 
@@ -165,7 +167,7 @@ describe('EpicsController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', updateEpicDto),
+        controller.update('nonexistent', updateEpicDto, 'user-1', 'ADMIN'),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -174,10 +176,10 @@ describe('EpicsController', () => {
     it('should delete an epic successfully', async () => {
       mockEpicsService.remove.mockResolvedValue({ message: 'Epic supprimé' });
 
-      const result = await controller.remove('epic-id-1');
+      const result = await controller.remove('epic-id-1', 'user-1', 'ADMIN');
 
       expect(result.message).toBe('Epic supprimé');
-      expect(mockEpicsService.remove).toHaveBeenCalledWith('epic-id-1');
+      expect(mockEpicsService.remove).toHaveBeenCalledWith('epic-id-1', 'user-1', 'ADMIN');
     });
 
     it('should throw NotFoundException when epic not found', async () => {
@@ -185,7 +187,7 @@ describe('EpicsController', () => {
         new NotFoundException('Epic introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(
+      await expect(controller.remove('nonexistent', 'user-1', 'ADMIN')).rejects.toThrow(
         NotFoundException,
       );
     });
