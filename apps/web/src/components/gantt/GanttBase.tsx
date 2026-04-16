@@ -198,6 +198,35 @@ export default function GanttBase(props: GanttProps) {
 
   const goToToday = useCallback(() => setCurrentDate(new Date()), []);
 
+  const dataRange = useMemo(() => {
+    if (rows.length === 0) return null;
+    let min = Infinity;
+    let max = -Infinity;
+    for (const row of rows) {
+      const s = row.startDate.getTime();
+      const e = row.endDate.getTime();
+      if (s < min) min = s;
+      if (e > max) max = e;
+    }
+    return { start: new Date(min), end: new Date(max) };
+  }, [rows]);
+
+  const goToStart = useCallback(() => {
+    if (dataRange) setCurrentDate(dataRange.start);
+  }, [dataRange]);
+
+  const fitAll = useCallback(() => {
+    if (!dataRange) return;
+    const diffMs = dataRange.end.getTime() - dataRange.start.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    const mid = new Date(dataRange.start.getTime() + diffMs / 2);
+    if (diffDays <= 60) setView('day');
+    else if (diffDays <= 180) setView('week');
+    else if (diffDays <= 540) setView('month');
+    else setView('quarter');
+    setCurrentDate(mid);
+  }, [dataRange]);
+
   const handleZoom = useCallback(
     (direction: 'in' | 'out') => {
       const idx = VIEW_ORDER.indexOf(view);
@@ -555,6 +584,8 @@ export default function GanttBase(props: GanttProps) {
         groupBy={scope === 'project' ? groupBy : undefined}
         onGroupByChange={scope === 'project' ? handleGroupByChange : undefined}
         todayLeft={todayLeft}
+        onGoToStart={goToStart}
+        onFitAll={fitAll}
       />
 
       {/* Top scrollbar */}

@@ -19,6 +19,8 @@ interface GanttHeaderProps {
   groupBy?: GanttGrouping;
   onGroupByChange?: (groupBy: GanttGrouping) => void;
   todayLeft?: number | null;
+  onGoToStart?: () => void;
+  onFitAll?: () => void;
 }
 
 const VIEW_LABELS: Record<GanttView, string> = {
@@ -147,6 +149,8 @@ export default function GanttHeader({
   groupBy,
   onGroupByChange,
   todayLeft,
+  onGoToStart,
+  onFitAll,
 }: GanttHeaderProps) {
   const handlePrev = useCallback(() => onNavigate('prev'), [onNavigate]);
   const handleNext = useCallback(() => onNavigate('next'), [onNavigate]);
@@ -191,6 +195,28 @@ export default function GanttHeader({
         >
           Aujourd'hui
         </button>
+        {onGoToStart && (
+          <button
+            onClick={onGoToStart}
+            className="rounded px-2 py-0.5 text-xs font-medium transition-colors"
+            style={{ color: '#475569', border: '1px solid #E2E8F0' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+          >
+            Début
+          </button>
+        )}
+        {onFitAll && (
+          <button
+            onClick={onFitAll}
+            className="rounded px-2 py-0.5 text-xs font-medium transition-colors"
+            style={{ color: '#475569', border: '1px solid #E2E8F0' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+          >
+            Tout voir
+          </button>
+        )}
 
         {/* Divider */}
         <div style={{ margin: '0 8px', height: 20, width: 1, backgroundColor: '#CBD5E1' }} />
