@@ -81,7 +81,16 @@ describe('TasksService', () => {
         {
           provide: RoleManagementService,
           useValue: {
-            getPermissionsForRole: vi.fn().mockResolvedValue(['tasks:create', 'tasks:readAll', 'tasks:manage_any']),
+            // Par défaut, les tests supposent un utilisateur ADMIN disposant
+            // du bypass de membership (`projects:manage_any` OR
+            // `tasks:assign_any_user`) — cohérent avec `mockUser.role = ADMIN`.
+            getPermissionsForRole: vi.fn().mockResolvedValue([
+              'tasks:create',
+              'tasks:readAll',
+              'tasks:manage_any',
+              'tasks:assign_any_user',
+              'projects:manage_any',
+            ]),
           },
         },
       ],

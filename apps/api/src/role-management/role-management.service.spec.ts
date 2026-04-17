@@ -44,6 +44,7 @@ describe('RoleManagementService', () => {
     rolePermission: {
       deleteMany: vi.fn(),
       createMany: vi.fn(),
+      count: vi.fn(),
     },
   };
 
@@ -69,6 +70,8 @@ describe('RoleManagementService', () => {
     });
     mockPrismaService.rolePermission.createMany.mockResolvedValue({ count: 0 });
     mockPrismaService.rolePermission.deleteMany.mockResolvedValue({ count: 0 });
+    // Par défaut : seed considère que toutes les perms attendues sont présentes
+    mockPrismaService.rolePermission.count.mockResolvedValue(0);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

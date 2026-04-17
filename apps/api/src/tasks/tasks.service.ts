@@ -95,11 +95,16 @@ export class TasksService {
         throw new NotFoundException('Projet introuvable');
       }
 
-      // Vérifier le membership pour REFERENT_TECHNIQUE et CHEF_DE_PROJET
-      if (
-        user.role === Role.REFERENT_TECHNIQUE ||
-        user.role === Role.CHEF_DE_PROJET
-      ) {
+      // Vérifier le membership pour tout rôle qui n'a pas de bypass global
+      // (projects:manage_any) ni de droit d'assignation cross-périmètre
+      // (tasks:assign_any_user). Avant, seuls REFERENT_TECHNIQUE et
+      // CHEF_DE_PROJET étaient contrôlés, ce qui laissait passer les autres
+      // rôles custom avec `tasks:create_in_project`.
+      const canBypassMembership =
+        userPermissions.includes('projects:manage_any') ||
+        userPermissions.includes('tasks:assign_any_user');
+
+      if (!canBypassMembership) {
         const membership = await this.prisma.projectMember.findUnique({
           where: {
             projectId_userId: {

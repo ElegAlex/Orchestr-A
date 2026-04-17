@@ -147,8 +147,10 @@ describe('LeavesService', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
-    // Restore default mock implementations after clearAllMocks
+    // resetAllMocks vs clearAllMocks: reset supprime aussi les queues
+    // mockResolvedValueOnce résiduelles, évitant la pollution inter-tests.
+    vi.resetAllMocks();
+    // Restore default mock implementations
     mockPrismaService.userService.findMany.mockResolvedValue([]);
     mockPrismaService.userService.findFirst.mockResolvedValue(null);
     mockPrismaService.service.findMany.mockResolvedValue([]);
@@ -158,7 +160,13 @@ describe('LeavesService', () => {
     mockPrismaService.leaveBalance.findUnique.mockResolvedValue(null);
     mockPrismaService.roleConfig.findMany.mockResolvedValue([]);
     mockPrismaService.roleConfig.findFirst.mockResolvedValue(null);
-    // Restore dynamic permissions mock
+    // Default user.findUnique to mockUser : évite les NotFoundException
+    // quand update()/remove()/cancel() déclenchent getLeaveBalance pour un
+    // congé CP mais que le test ne mocke pas explicitement user.findUnique.
+    mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+    // Restore dynamic permissions mock — ADMIN/RESPONSABLE détiennent
+    // `leaves:manage_any` (bypass périmètre), MANAGER conserve uniquement
+    // `leaves:approve` (périmètre services).
     mockGetPermissionsForRole.mockImplementation((role: string) => {
       const base = [
         'leaves:read',
@@ -167,8 +175,24 @@ describe('LeavesService', () => {
         'telework:readAll',
         'events:readAll',
       ];
-      if (role === 'ADMIN' || role === 'RESPONSABLE' || role === 'MANAGER') {
-        return Promise.resolve([...base, 'leaves:delete', 'leaves:approve']);
+      if (role === 'ADMIN') {
+        return Promise.resolve([
+          ...base,
+          'leaves:delete',
+          'leaves:approve',
+          'leaves:manage_any',
+          'leaves:manage_delegations',
+          'leaves:declare_for_others',
+        ]);
+      }
+      if (role === 'RESPONSABLE' || role === 'MANAGER') {
+        return Promise.resolve([
+          ...base,
+          'leaves:delete',
+          'leaves:approve',
+          'leaves:manage_delegations',
+          'leaves:declare_for_others',
+        ]);
       }
       return Promise.resolve(base);
     });
@@ -1001,7 +1025,7 @@ describe('LeavesService', () => {
       expect(result).toEqual(updatedLeave);
     });
 
-    it('should allow RESPONSABLE to update an approved leave', async () => {
+    it('should allow RESPONSABLE to update an approved leave in their perimeter', async () => {
       const approvedLeave = {
         ...mockLeave,
         status: LeaveStatus.APPROVED,
@@ -1011,6 +1035,13 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
       mockPrismaService.leave.findMany.mockResolvedValue([]);
       mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
+      // RESPONSABLE est désormais scoped à son périmètre (comme MANAGER)
+      mockPrismaService.service.findMany.mockResolvedValue([
+        { id: 'service-1' },
+      ]);
+      mockPrismaService.userService.findMany
+        .mockResolvedValueOnce([{ serviceId: 'service-1' }])
+        .mockResolvedValueOnce([{ userId: mockLeave.userId }]);
 
       const result = await service.update(
         'leave-1',
@@ -1130,10 +1161,17 @@ describe('LeavesService', () => {
       expect(result.message).toBe('Demande de congé supprimée avec succès');
     });
 
-    it('should allow RESPONSABLE to delete an approved leave', async () => {
+    it('should allow RESPONSABLE to delete an approved leave in their perimeter', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
       mockPrismaService.leave.delete.mockResolvedValue(approvedLeave);
+      // RESPONSABLE est désormais scoped à son périmètre (comme MANAGER)
+      mockPrismaService.service.findMany.mockResolvedValue([
+        { id: 'service-1' },
+      ]);
+      mockPrismaService.userService.findMany
+        .mockResolvedValueOnce([{ serviceId: 'service-1' }])
+        .mockResolvedValueOnce([{ userId: mockLeave.userId }]);
 
       const result = await service.remove('leave-1', 'resp-user-id', 'RESPONSABLE');
       expect(result.message).toBe('Demande de congé supprimée avec succès');

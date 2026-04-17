@@ -132,6 +132,13 @@ export class RoleManagementService implements OnModuleInit {
       { code: 'leaves:delete', module: 'leaves', action: 'delete' },
       { code: 'leaves:approve', module: 'leaves', action: 'approve' },
       {
+        code: 'leaves:manage_any',
+        module: 'leaves',
+        action: 'manage_any',
+        description:
+          "Gérer (lire/modifier/supprimer/valider) n'importe quelle demande de congé sans restriction de périmètre. Réservé à l'administration centrale.",
+      },
+      {
         code: 'leaves:manage_delegations',
         module: 'leaves',
         action: 'manage_delegations',
@@ -403,12 +410,20 @@ export class RoleManagementService implements OnModuleInit {
       {
         code: 'RESPONSABLE',
         name: 'Responsable',
-        description: 'Gestion complète sauf rôles et settings',
+        description:
+          'Gestion complète sauf rôles, settings et congés hors périmètre',
         isSystem: true,
+        // RESPONSABLE = toutes les permissions sauf :
+        //  - users:manage_roles / settings:update (réservés ADMIN)
+        //  - leaves:manage_any : les RESPONSABLE agissent sur les congés
+        //    uniquement dans leur périmètre services (via leaves:approve),
+        //    pas globalement. Attendu métier confirmé par le DSI.
         permissions: permissionsData
           .filter(
             (p) =>
-              p.code !== 'users:manage_roles' && p.code !== 'settings:update',
+              p.code !== 'users:manage_roles' &&
+              p.code !== 'settings:update' &&
+              p.code !== 'leaves:manage_any',
           )
           .map((p) => p.code),
       },
@@ -1013,20 +1028,22 @@ export class RoleManagementService implements OnModuleInit {
           `[Seed] ${roleData.code}: reset — ${created} permissions assigned, ${notFoundList.length} not found${notFoundList.length > 0 ? `: [${notFoundList.join(', ')}]` : ''}`,
         );
       } else if (existingRole) {
-        // Mode seed (non-force) sur rôle existant : ajouter uniquement les permissions
-        // manquantes sans supprimer les permissions custom ajoutées par l'admin
-        const existingPermIds = new Set(
-          existingRole.permissions.map((rp) => rp.permissionId),
-        );
+        // Mode seed (non-force) sur rôle existant : réconcilier sans toucher
+        // aux permissions ajoutées manuellement via l'UI admin.
+        //
+        // Implémentation : INSERT…ON CONFLICT DO NOTHING (via skipDuplicates)
+        // sur l'ensemble attendu. La DB gère l'idempotence — plus robuste
+        // qu'un pré-filtrage en mémoire qui s'est avéré silencieusement
+        // incomplet par le passé (seed rapportant "0 added" alors que des
+        // permissions manquaient réellement en DB).
         const notFoundList: string[] = [];
-        const toAdd = permissions
+        const permissionAssignments = permissions
           .map((permCode) => {
             const permId = permissionsMap.get(permCode);
             if (!permId) {
               notFoundList.push(permCode);
               return null;
             }
-            if (existingPermIds.has(permId)) return null;
             return { roleConfigId: role.id, permissionId: permId };
           })
           .filter(
@@ -1035,18 +1052,36 @@ export class RoleManagementService implements OnModuleInit {
           );
 
         let added = 0;
-        if (toAdd.length > 0) {
+        if (permissionAssignments.length > 0) {
           const result = await this.prisma.rolePermission.createMany({
-            data: toAdd,
+            data: permissionAssignments,
             skipDuplicates: true,
           });
           added = result.count;
-          await this.invalidateRoleCache(roleData.code);
+          if (added > 0) {
+            await this.invalidateRoleCache(roleData.code);
+          }
         }
 
-        this.logger.log(
-          `[Seed] ${roleData.code}: rôle existant — ${added} nouvelles permissions ajoutées${notFoundList.length > 0 ? `, ${notFoundList.length} not found: [${notFoundList.join(', ')}]` : ''}`,
-        );
+        // Vérification défensive : confirmer que toutes les permissions
+        // attendues sont bien présentes après l'insert. Si un écart persiste,
+        // c'est un bug à remonter immédiatement plutôt que silently ignoré.
+        const finalPerms = await this.prisma.rolePermission.count({
+          where: {
+            roleConfigId: role.id,
+            permissionId: { in: permissionAssignments.map((a) => a.permissionId) },
+          },
+        });
+        const expectedCount = permissionAssignments.length;
+        if (finalPerms < expectedCount) {
+          this.logger.warn(
+            `[Seed] ${roleData.code}: INCOHÉRENCE — ${finalPerms}/${expectedCount} permissions attendues présentes en DB après insert (${added} ajoutées)`,
+          );
+        } else {
+          this.logger.log(
+            `[Seed] ${roleData.code}: rôle existant — ${added} nouvelles permissions ajoutées (total attendu: ${expectedCount})${notFoundList.length > 0 ? `, ${notFoundList.length} not found: [${notFoundList.join(', ')}]` : ''}`,
+          );
+        }
         continue;
       } else {
         // Nouveau rôle : créer toutes les permissions par défaut

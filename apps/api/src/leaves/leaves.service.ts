@@ -13,26 +13,35 @@ import { UpsertLeaveBalanceDto } from './dto/upsert-leave-balance.dto';
 import { LeaveStatus, LeaveType, Role, Prisma } from 'database';
 import { AuditService, AuditAction } from '../audit/audit.service';
 
+/**
+ * Permission bypass donnant un accès complet aux congés sans restriction
+ * de périmètre. Assignée à ADMIN et RESPONSABLE via le seed RBAC.
+ */
+const MANAGE_ANY_LEAVES = 'leaves:manage_any';
+const APPROVE_LEAVES = 'leaves:approve';
+const DELETE_LEAVES = 'leaves:delete';
+const MANAGE_DELEGATIONS = 'leaves:manage_delegations';
+
 @Injectable()
 export class LeavesService {
-  private readonly MANAGEMENT_ROLES: string[] = [
-    Role.ADMIN,
-    Role.RESPONSABLE,
-    Role.MANAGER,
-  ];
-
-  private isManagementRole(role: string): boolean {
-    return this.MANAGEMENT_ROLES.includes(role);
+  /**
+   * Vérifier si un rôle a une permission donnée (via cache Redis + DB).
+   */
+  private async roleHasPermission(
+    role: string | undefined,
+    permissionCode: string,
+  ): Promise<boolean> {
+    if (!role) return false;
+    const permissions =
+      await this.roleManagementService.getPermissionsForRole(role);
+    return permissions.includes(permissionCode);
   }
 
   /**
-   * Vérifier si un manager a le droit d'agir sur le congé d'un utilisateur (périmètre services)
-   * ADMIN et RESPONSABLE : tous périmètres
-   * MANAGER : uniquement les agents de ses services
-   */
-  /**
-   * Vérifier si le user courant peut gérer (edit/delete) le congé d'un autre user.
-   * Basé sur la permission leaves:delete + périmètre services.
+   * Vérifier si le user courant peut gérer (edit/delete/approve) le congé
+   * d'un autre user. Basé sur les permissions dynamiques :
+   *  - `leaves:manage_any` → accès total (pas de restriction de périmètre)
+   *  - `leaves:delete` ou `leaves:approve` → accès limité au périmètre services
    */
   private async canManageLeave(
     leaveUserId: string,
@@ -41,22 +50,44 @@ export class LeavesService {
   ): Promise<boolean> {
     const permissions =
       await this.roleManagementService.getPermissionsForRole(currentUserRole);
-    if (!permissions.includes('leaves:delete')) {
+    if (permissions.includes(MANAGE_ANY_LEAVES)) {
+      return true;
+    }
+    if (
+      !permissions.includes(DELETE_LEAVES) &&
+      !permissions.includes(APPROVE_LEAVES)
+    ) {
       return false;
     }
 
-    const managedUserIds = await this.getManagedUserIds(currentUserId);
+    const managedUserIds = await this.getManagedUserIds(
+      currentUserId,
+      currentUserRole,
+    );
     return managedUserIds === 'all' || managedUserIds.has(leaveUserId);
   }
 
   /**
-   * Récupérer les IDs des utilisateurs dans le périmètre du user courant
-   * Basé sur les services managés (managerId) et l'appartenance (user_services).
-   * Retourne 'all' si le user n'a aucun service (= pas de restriction de périmètre).
+   * Récupérer les IDs des utilisateurs dans le périmètre du user courant.
+   *  - Permission `leaves:manage_any` → 'all' (aucune restriction)
+   *  - Sinon : services managés (managerId) + appartenance (user_services)
+   *
+   * Historiquement, 'all' était retourné si le user n'avait aucun service,
+   * ce qui posait problème pour un ADMIN inscrit dans des services : son
+   * périmètre devenait restreint au lieu de rester global. Corrigé via la
+   * permission `leaves:manage_any`.
    */
   private async getManagedUserIds(
     currentUserId: string,
+    currentUserRole?: string,
   ): Promise<Set<string> | 'all'> {
+    if (
+      currentUserRole &&
+      (await this.roleHasPermission(currentUserRole, MANAGE_ANY_LEAVES))
+    ) {
+      return 'all';
+    }
+
     const managedServices = await this.prisma.service.findMany({
       where: { managerId: currentUserId },
       select: { id: true },
@@ -73,8 +104,7 @@ export class LeavesService {
       ]),
     ];
 
-    // Pas de services = pas de périmètre restreint (ex: admin sans service)
-    if (serviceIds.length === 0) return 'all';
+    if (serviceIds.length === 0) return new Set<string>();
 
     const usersInServices = await this.prisma.userService.findMany({
       where: { serviceId: { in: serviceIds } },
@@ -82,6 +112,25 @@ export class LeavesService {
       distinct: ['userId'],
     });
     return new Set(usersInServices.map((us) => us.userId));
+  }
+
+  /**
+   * Lister les codes des rôles qui possèdent une permission donnée.
+   * Utilisé pour construire des requêtes utilisateurs par périmètre RBAC
+   * sans référencer de rôles en dur.
+   */
+  private async getRoleCodesWithPermission(
+    permissionCode: string,
+  ): Promise<string[]> {
+    const roles = await this.prisma.roleConfig.findMany({
+      where: {
+        permissions: {
+          some: { permission: { code: permissionCode } },
+        },
+      },
+      select: { code: true },
+    });
+    return roles.map((r) => r.code);
   }
 
   /**
@@ -149,32 +198,6 @@ export class LeavesService {
     });
   }
 
-  /**
-   * Vérifier qu'un rôle possède une permission donnée (en DB via RoleConfig)
-   */
-  private async hasPermission(
-    role: string | undefined,
-    permissionCode: string,
-  ): Promise<boolean> {
-    if (!role) return false;
-    // ADMIN a toujours toutes les permissions
-    if (role === Role.ADMIN) return true;
-
-    const roleRecord = await this.prisma.roleConfig.findUnique({
-      where: { code: role },
-      include: {
-        permissions: {
-          include: { permission: true },
-        },
-      },
-    });
-
-    if (!roleRecord) return false;
-    return roleRecord.permissions.some(
-      (rp) => rp.permission.code === permissionCode,
-    );
-  }
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
@@ -208,7 +231,7 @@ export class LeavesService {
 
     if (targetUserId && targetUserId !== requestingUserId) {
       // Check permission leaves:declare_for_others via role permissions in DB
-      const canDeclareForOthers = await this.hasPermission(
+      const canDeclareForOthers = await this.roleHasPermission(
         requestingUserRole,
         'leaves:declare_for_others',
       );
@@ -219,8 +242,12 @@ export class LeavesService {
         );
       }
 
-      // If not ADMIN, verify the target user is in one of the requesting user's services
-      if (requestingUserRole !== Role.ADMIN) {
+      // Sans permission leaves:manage_any, on restreint au périmètre services
+      const hasManageAny = await this.roleHasPermission(
+        requestingUserRole,
+        MANAGE_ANY_LEAVES,
+      );
+      if (!hasManageAny) {
         // Verify target user exists and is active
         const targetUser = await this.prisma.user.findUnique({
           where: { id: targetUserId },
@@ -446,13 +473,15 @@ export class LeavesService {
 
     if (!user) return null;
 
-    // Chercher d'abord un délégué actif
+    // Chercher d'abord un délégué actif créé par un rôle autorisé à déléguer
     const today = new Date();
+    const delegatorRoles =
+      await this.getRoleCodesWithPermission(MANAGE_DELEGATIONS);
     const activeDelegate = await this.prisma.leaveValidationDelegate.findFirst({
       where: {
-        delegator: {
-          OR: [{ role: Role.MANAGER }, { role: Role.RESPONSABLE }],
-        },
+        ...(delegatorRoles.length > 0 && {
+          delegator: { role: { in: delegatorRoles as Role[] } },
+        }),
         isActive: true,
         startDate: { lte: today },
         endDate: { gte: today },
@@ -471,10 +500,13 @@ export class LeavesService {
       return user.department.managerId;
     }
 
-    // En dernier recours, chercher un responsable ou admin
+    // En dernier recours, chercher un user avec accès complet aux congés
+    const fallbackRoles =
+      await this.getRoleCodesWithPermission(MANAGE_ANY_LEAVES);
+    if (fallbackRoles.length === 0) return null;
     const validator = await this.prisma.user.findFirst({
       where: {
-        role: { in: [Role.RESPONSABLE, Role.ADMIN] },
+        role: { in: fallbackRoles as Role[] },
         isActive: true,
         id: { not: userId }, // Ne pas s'auto-valider
       },
@@ -603,8 +635,14 @@ export class LeavesService {
       return [];
     }
 
-    // ADMIN → all pending leaves
-    if (user.role === Role.ADMIN) {
+    const permissions = await this.roleManagementService.getPermissionsForRole(
+      user.role,
+    );
+    const hasManageAny = permissions.includes(MANAGE_ANY_LEAVES);
+    const hasApprove = permissions.includes(APPROVE_LEAVES);
+
+    // Accès global → toutes les demandes en attente
+    if (hasManageAny) {
       return this.prisma.leave.findMany({
         where: {
           status: {
@@ -641,8 +679,8 @@ export class LeavesService {
       });
     }
 
-    // RESPONSABLE or MANAGER → pending leaves from same services + managed services
-    if (user.role === Role.RESPONSABLE || user.role === Role.MANAGER) {
+    // Permission d'approbation → périmètre services
+    if (hasApprove) {
       // 1. Find services the user belongs to via user_services
       const userServices = await this.prisma.userService.findMany({
         where: { userId: validatorId },
@@ -723,8 +761,13 @@ export class LeavesService {
    * Utilise la même logique de périmètre que getPendingForValidator
    */
   async getSubordinates(managerId: string, managerRole: string) {
-    // ADMIN sees all active users
-    if (managerRole === Role.ADMIN) {
+    const permissions =
+      await this.roleManagementService.getPermissionsForRole(managerRole);
+    const hasManageAny = permissions.includes(MANAGE_ANY_LEAVES);
+    const hasApprove = permissions.includes(APPROVE_LEAVES);
+
+    // Accès global → tous les users actifs
+    if (hasManageAny) {
       return this.prisma.user.findMany({
         where: { isActive: true, id: { not: managerId } },
         select: {
@@ -738,8 +781,8 @@ export class LeavesService {
       });
     }
 
-    // RESPONSABLE / MANAGER → users in same services + managed services
-    if (managerRole === Role.RESPONSABLE || managerRole === Role.MANAGER) {
+    // Permission d'approbation → users du même périmètre services
+    if (hasApprove) {
       const userServices = await this.prisma.userService.findMany({
         where: { userId: managerId },
         select: { serviceId: true },
@@ -899,15 +942,22 @@ export class LeavesService {
       throw new NotFoundException('Demande de congé introuvable');
     }
 
-    // Ownership check: non-management roles can only view their own leaves
-    if (
-      currentUserRole &&
-      !this.isManagementRole(currentUserRole) &&
-      leave.userId !== currentUserId
-    ) {
-      throw new ForbiddenException(
-        'Accès non autorisé à cette demande de congé',
-      );
+    // Ownership check : seuls le propriétaire et les rôles avec périmètre
+    // leaves:manage_any / leaves:approve / leaves:delete + scope peuvent lire.
+    if (currentUserRole && leave.userId !== currentUserId) {
+      const canManage =
+        currentUserId && currentUserRole
+          ? await this.canManageLeave(
+              leave.userId,
+              currentUserId,
+              currentUserRole,
+            )
+          : false;
+      if (!canManage) {
+        throw new ForbiddenException(
+          'Accès non autorisé à cette demande de congé',
+        );
+      }
     }
 
     return leave;
@@ -932,10 +982,8 @@ export class LeavesService {
 
     // Check if current user can manage this leave (ownership or perimeter)
     const isOwner = existingLeave.userId === currentUserId;
-    const isManager =
-      currentUserRole && this.isManagementRole(currentUserRole);
     const canManage =
-      isManager && currentUserId && currentUserRole
+      currentUserId && currentUserRole
         ? await this.canManageLeave(
             existingLeave.userId,
             currentUserId,
@@ -1064,10 +1112,8 @@ export class LeavesService {
 
     // Check if current user can manage this leave (ownership or perimeter)
     const isOwner = leave.userId === currentUserId;
-    const isManager =
-      currentUserRole && this.isManagementRole(currentUserRole);
     const canManage =
-      isManager && currentUserId && currentUserRole
+      currentUserId && currentUserRole
         ? await this.canManageLeave(leave.userId, currentUserId, currentUserRole)
         : false;
 
@@ -1113,8 +1159,11 @@ export class LeavesService {
 
     if (!validator) return false;
 
-    // ADMIN et RESPONSABLE peuvent tout valider
-    if (validator.role === Role.ADMIN || validator.role === Role.RESPONSABLE) {
+    const validatorPerms =
+      await this.roleManagementService.getPermissionsForRole(validator.role);
+
+    // Accès global → peut tout valider
+    if (validatorPerms.includes(MANAGE_ANY_LEAVES)) {
       return true;
     }
 
@@ -1123,8 +1172,8 @@ export class LeavesService {
       return true;
     }
 
-    // MANAGER peut valider les congés des agents de ses services
-    if (validator.role === Role.MANAGER) {
+    // Permission d'approbation → uniquement dans le périmètre services
+    if (validatorPerms.includes(APPROVE_LEAVES)) {
       const userServices = await this.prisma.userService.findMany({
         where: { userId: validatorId },
         select: { serviceId: true },
@@ -1480,13 +1529,13 @@ export class LeavesService {
       throw new NotFoundException('Utilisateur délégateur introuvable');
     }
 
-    if (
-      delegator.role !== Role.ADMIN &&
-      delegator.role !== Role.RESPONSABLE &&
-      delegator.role !== Role.MANAGER
-    ) {
+    const canDelegate = await this.roleHasPermission(
+      delegator.role,
+      MANAGE_DELEGATIONS,
+    );
+    if (!canDelegate) {
       throw new ForbiddenException(
-        'Seuls les Admin, Responsables et Managers peuvent déléguer',
+        "Vous n'avez pas la permission de déléguer la validation des congés",
       );
     }
 
@@ -1595,7 +1644,11 @@ export class LeavesService {
       where: { id: userId },
     });
 
-    if (delegation.delegatorId !== userId && user?.role !== Role.ADMIN) {
+    const hasManageAny = await this.roleHasPermission(
+      user?.role,
+      MANAGE_ANY_LEAVES,
+    );
+    if (delegation.delegatorId !== userId && !hasManageAny) {
       throw new ForbiddenException(
         "Vous n'êtes pas autorisé à désactiver cette délégation",
       );
