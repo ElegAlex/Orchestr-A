@@ -18,12 +18,9 @@ import {
   getDaysInMonth,
   getISOWeek,
   getISOWeekYear,
-  format,
   isAfter,
   isBefore,
-  isSameDay,
 } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 import type { GanttView } from './types';
 
@@ -183,10 +180,6 @@ function fractionalUnitsToDate(units: number, view: GanttView, origin: Date): Da
       return addDays(o, Math.round(units * 7));
     }
     case 'month': {
-      // Whole months + fractional remainder
-      const wholeMonths = Math.floor(units);
-      const remainder = units - wholeMonths;
-
       // Start from origin, advance by remaining fraction of origin month first
       const originFrac = fractionOfMonth(o);
       let currentDate: Date;

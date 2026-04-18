@@ -31,11 +31,10 @@ export function ThirdPartySelector({
   disabled = false,
 }: ThirdPartySelectorProps) {
   const [thirdParties, setThirdParties] = useState<ThirdParty[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    setLoading(true);
     thirdPartiesService
       .getAll({ isActive: true, limit: 200 })
       .then((res) => setThirdParties(res.data))

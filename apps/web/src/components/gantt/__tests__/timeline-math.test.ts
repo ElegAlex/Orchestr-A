@@ -3,7 +3,6 @@ import {
   xToDate,
   bucketsForRange,
   getDefaultPixelsPerUnit,
-  type TimelineBucket,
 } from '../timeline-math';
 
 // ===========================

@@ -16,8 +16,6 @@ interface GanttDependencyLayerProps {
   width: number;
   height: number;
   hoveredRowId?: string | null;
-  collapsedGroupKeys?: Set<string>;
-  groupHeaderPositions?: Map<string, { y: number; left: number }>;
 }
 
 export default function GanttDependencyLayer({
@@ -26,8 +24,6 @@ export default function GanttDependencyLayer({
   width,
   height,
   hoveredRowId,
-  collapsedGroupKeys,
-  groupHeaderPositions,
 }: GanttDependencyLayerProps) {
   return (
     <svg

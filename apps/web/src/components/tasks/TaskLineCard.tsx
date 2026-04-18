@@ -60,10 +60,6 @@ export function TaskLineCard({
     return iso.slice(0, 10);
   };
 
-  const currentIndex = statusColumns.indexOf(task.status);
-  const canMoveLeft = currentIndex > 0;
-  const canMoveRight = currentIndex < statusColumns.length - 2; // Don't move to BLOCKED
-
   return (
     <div
       onClick={() => onClick?.(task)}

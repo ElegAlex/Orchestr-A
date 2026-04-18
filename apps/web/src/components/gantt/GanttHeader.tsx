@@ -193,7 +193,7 @@ export default function GanttHeader({
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
         >
-          Aujourd'hui
+          Aujourd&apos;hui
         </button>
         {onGoToStart && (
           <button
@@ -388,7 +388,7 @@ export default function GanttHeader({
                 display: 'block',
               }}
             >
-              AUJOURD'HUI
+              AUJOURD&apos;HUI
             </span>
           </div>
         )}

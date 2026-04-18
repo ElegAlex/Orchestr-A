@@ -173,11 +173,11 @@ describe("authService", () => {
       originalLocation = window.location;
       // @ts-expect-error — replace location wholesale to avoid Cannot redefine
       delete window.location;
-      // @ts-expect-error
+      // @ts-expect-error — stub minimal Location shape (test only reads/writes href)
       window.location = { href: "" };
     });
     afterAll(() => {
-      // @ts-expect-error
+      // @ts-expect-error — restoring original Location instance
       window.location = originalLocation;
     });
 

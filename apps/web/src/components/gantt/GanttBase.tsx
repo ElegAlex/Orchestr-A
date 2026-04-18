@@ -32,7 +32,6 @@ import {
   TASK_STATUS_DEFAULT_COLOR,
   TASK_STATUS_LABELS,
   lightenColor,
-  getBarHeight,
   getRowHeight,
 } from './tokens';
 import { dateToX, bucketsForRange, getDefaultPixelsPerUnit } from './timeline-math';
@@ -69,10 +68,6 @@ function getVisibleRange(currentDate: Date, view: GanttView): { start: Date; end
         end: endOfQuarter(addMonths(currentDate, 6)),
       };
   }
-}
-
-function isTaskRow(row: GanttPortfolioRow | GanttTaskRow): row is GanttTaskRow {
-  return 'isMilestone' in row;
 }
 
 function getBarColor(row: GanttPortfolioRow | GanttTaskRow, scope: 'portfolio' | 'project'): string {
@@ -146,7 +141,6 @@ export default function GanttBase(props: GanttProps) {
     y: number;
   } | null>(null);
 
-  const barHeight = getBarHeight(view);
   const rowHeight = getRowHeight(view);
 
   const pixelsPerUnit = useMemo(() => getDefaultPixelsPerUnit(view), [view]);
@@ -564,8 +558,6 @@ export default function GanttBase(props: GanttProps) {
     return elements;
   };
 
-  const containerRect = containerRef.current?.getBoundingClientRect();
-
   return (
     <div
       ref={containerRef}
@@ -681,13 +673,13 @@ export default function GanttBase(props: GanttProps) {
       <GanttLegend scope={scope} />
 
       {/* Tooltip */}
-      {tooltip && containerRect && (
+      {tooltip && (
         <GanttTooltip
           row={tooltip.row}
           scope={scope}
           x={tooltip.x}
           y={tooltip.y}
-          containerRect={containerRect}
+          containerRef={containerRef}
         />
       )}
     </div>

@@ -6,6 +6,14 @@
  * deduplicates concurrent refresh attempts behind a single promise.
  */
 
+type AxiosConfig = { url: string; headers: Record<string, string>; data?: unknown };
+type AxiosResult = { data: unknown; config?: AxiosConfig };
+type MockAxios = {
+  create: jest.Mock;
+  post: jest.Mock;
+  default: MockAxios;
+};
+
 // Mock localStorage (jsdom provides one, but we want spies)
 let store: Record<string, string> = {};
 const localStorageMock = {
@@ -28,13 +36,13 @@ Object.defineProperty(window, "localStorage", {
 // Silence navigation
 const originalLocation = window.location;
 beforeAll(() => {
-  // @ts-expect-error — overriding location for tests
+  // @ts-expect-error — overriding read-only window.location for test isolation
   delete window.location;
-  // @ts-expect-error
+  // @ts-expect-error — stub minimal Location shape (test only reads/writes href)
   window.location = { href: "" };
 });
 afterAll(() => {
-  // @ts-expect-error
+  // @ts-expect-error — restoring original Location instance
   window.location = originalLocation;
 });
 
@@ -46,21 +54,21 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
   });
 
   function loadApi(opts: {
-    onRequest?: (cfg: any) => Promise<any>;
-    onRefresh?: (body: any) => Promise<any>;
+    onRequest?: (cfg: AxiosConfig) => Promise<AxiosResult>;
+    onRefresh?: (body: unknown) => Promise<AxiosResult>;
   }) {
     jest.isolateModules(() => {});
-    let requestHandler = opts.onRequest ?? (async () => ({ data: "ok" }));
+    const requestHandler = opts.onRequest ?? (async () => ({ data: "ok" }));
     const refreshHandler =
       opts.onRefresh ??
       (async () => ({
         data: { access_token: "new-at", refresh_token: "new-rt" },
       }));
 
-    const instancePost = jest.fn().mockImplementation(async (url: string, body: any) => {
+    const instancePost = jest.fn().mockImplementation(async (url: string, body: unknown) => {
       return requestHandler({ url, data: body, headers: {} });
     });
-    const instanceRequest = jest.fn().mockImplementation(async (cfg: any) => {
+    const instanceRequest = jest.fn().mockImplementation(async (cfg: AxiosConfig) => {
       return requestHandler(cfg);
     });
     const instance = {
@@ -73,11 +81,12 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
     };
 
     jest.doMock("axios", () => {
-      const mockAxios: any = {
+      const mockAxios: MockAxios = {
         create: jest.fn(() => instance),
-        post: jest.fn().mockImplementation(async (url: string, body: any) => {
+        post: jest.fn().mockImplementation(async (_url: string, body: unknown) => {
           return refreshHandler(body);
         }),
+        default: undefined as unknown as MockAxios,
       };
       mockAxios.default = mockAxios;
       return mockAxios;
@@ -117,6 +126,7 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
     // Original retried via instance.request
     expect(instance.request).toHaveBeenCalledTimes(1);
     // axios.post called once for the refresh
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const axios = require("axios");
     expect(axios.post).toHaveBeenCalledTimes(1);
     expect(axios.post.mock.calls[0][0]).toContain("/auth/refresh");
@@ -124,13 +134,13 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
   });
 
   it("deduplicates concurrent 401s into a single refresh call", async () => {
-    let resolveRefresh!: (v: any) => void;
-    const refreshPromise = new Promise((r) => {
+    let resolveRefresh!: (v: AxiosResult) => void;
+    const refreshPromise = new Promise<AxiosResult>((r) => {
       resolveRefresh = r;
     });
     const { responseErrorHandler, instance } = loadApi({
       onRequest: async () => ({ data: "retried" }),
-      onRefresh: () => refreshPromise as any,
+      onRefresh: () => refreshPromise,
     });
     store["refresh_token"] = "rt-1";
 
@@ -148,6 +158,7 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
     });
 
     await Promise.all([p1, p2]);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const axios = require("axios");
     // Only ONE call to /auth/refresh for two concurrent 401s
     expect(axios.post).toHaveBeenCalledTimes(1);
@@ -197,6 +208,7 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
       config: { url: "/auth/refresh", headers: {} },
     };
     await expect(responseErrorHandler(err)).rejects.toBeDefined();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const axios = require("axios");
     // No refresh attempted since the failing request IS /auth/refresh
     expect(axios.post).not.toHaveBeenCalled();

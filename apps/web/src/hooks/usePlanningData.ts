@@ -212,7 +212,6 @@ export const usePlanningData = ({
         if (!silent) setLoading(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [displayDays, queryStartDate, queryEndDate, permissionsLoaded],
   );
 

@@ -56,7 +56,7 @@ const PortfolioGantt = React.forwardRef<HTMLDivElement, PortfolioGanttProps>(
   function PortfolioGantt({ projects }, ref) {
     const router = useRouter();
     const locale = useLocale();
-    const [view, setView] = useState<GanttView>("month");
+    const [view] = useState<GanttView>("month");
 
     const rows = useMemo(() => projectsToPortfolioRows(projects), [projects]);
 

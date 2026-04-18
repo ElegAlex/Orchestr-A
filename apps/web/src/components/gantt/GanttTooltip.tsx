@@ -8,16 +8,16 @@ import {
   HEALTH_COLORS,
   lightenColor,
 } from './tokens';
-import type { TaskStatus } from '@/types';
 import type { HealthStatus } from './types';
 import { format } from 'date-fns';
+import { useLayoutEffect, useRef, type RefObject } from 'react';
 
 interface GanttTooltipProps {
   row: GanttPortfolioRow | GanttTaskRow;
   scope: 'portfolio' | 'project';
   x: number;
   y: number;
-  containerRect: DOMRect;
+  containerRef: RefObject<HTMLDivElement | null>;
 }
 
 const HEALTH_LABELS: Record<HealthStatus, string> = {
@@ -79,20 +79,31 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-export default function GanttTooltip({ row, scope, x, y, containerRect }: GanttTooltipProps) {
+export default function GanttTooltip({ row, scope, x, y, containerRef }: GanttTooltipProps) {
   const tooltipWidth = 240;
-  const tooltipLeft = Math.min(
-    Math.max(x - containerRect.left - tooltipWidth / 2, 8),
-    containerRect.width - tooltipWidth - 8,
-  );
-  const tooltipTop = y - containerRect.top + 16;
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const tooltip = tooltipRef.current;
+    if (!container || !tooltip) return;
+    const rect = container.getBoundingClientRect();
+    const left = Math.min(
+      Math.max(x - rect.left - tooltipWidth / 2, 8),
+      rect.width - tooltipWidth - 8,
+    );
+    const top = y - rect.top + 16;
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.style.visibility = 'visible';
+  }, [containerRef, x, y]);
 
   return (
     <div
+      ref={tooltipRef}
       className="absolute z-50 pointer-events-none"
       style={{
-        left: tooltipLeft,
-        top: tooltipTop,
+        visibility: 'hidden',
         width: tooltipWidth,
         backgroundColor: 'white',
         border: '1px solid #E2E8F0',

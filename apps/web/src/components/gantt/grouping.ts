@@ -45,7 +45,7 @@ export function groupTasks(
   const ungroupedLabel = by === 'milestone' ? 'Sans jalon' : 'Sans épopée';
 
   const groupMap = new Map<string, GanttGroup>();
-  let ungrouped: GanttTaskRow[] = [];
+  const ungrouped: GanttTaskRow[] = [];
 
   for (const task of tasks) {
     // Skip milestone diamond rows that duplicate the group header

@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { HolidaysManager } from "@/components/holidays/HolidaysManager";
 import { SchoolVacationsManager } from "@/components/school-vacations/SchoolVacationsManager";
-import { SchoolVacationZone, SCHOOL_VACATION_ZONE_LABELS } from "@/types";
+import { SCHOOL_VACATION_ZONE_LABELS } from "@/types";
 import { useTranslations, useLocale } from "next-intl";
 
 type CategoryTab = "display" | "planning" | "holidays" | "schoolVacations";
