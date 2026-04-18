@@ -387,7 +387,7 @@ export const PlanningGrid = ({
     <>
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-200px)]">
-          <div className="w-full" style={{ minWidth: `${220 + displayDays.length * 100}px` }}>
+          <div className="w-full" style={{ minWidth: `${220 + displayDays.length * (viewMode === "month" ? 35 : 100)}px` }}>
             {/* Days header — sticky at top */}
             <div
               className="bg-gray-50 border-b border-gray-200 sticky top-0 z-30"
