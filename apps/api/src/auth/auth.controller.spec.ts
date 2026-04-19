@@ -289,7 +289,7 @@ describe('AuthController', () => {
 
       expect(result).toEqual({ permissions });
       expect(mockAuthService.getPermissionsForUser).toHaveBeenCalledWith(
-        'CONTRIBUTEUR',
+        mockUser,
       );
     });
 
@@ -317,7 +317,7 @@ describe('AuthController', () => {
 
       expect(result).toEqual({ permissions: allPermissions });
       expect(mockAuthService.getPermissionsForUser).toHaveBeenCalledWith(
-        'ADMIN',
+        adminUser,
       );
     });
 

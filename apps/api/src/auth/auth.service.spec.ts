@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { AuditService } from '../audit/audit.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { ConfigService } from '@nestjs/config';
@@ -60,8 +60,9 @@ describe('AuthService', () => {
     sign: vi.fn(),
   };
 
-  const mockRoleManagementService = {
+  const mockPermissionsService = {
     getPermissionsForRole: vi.fn(),
+    getPermissionsForUser: vi.fn(),
   };
 
   const mockAuditService = {
@@ -100,8 +101,8 @@ describe('AuthService', () => {
           useValue: mockConfigService,
         },
         {
-          provide: RoleManagementService,
-          useValue: mockRoleManagementService,
+          provide: PermissionsService,
+          useValue: mockPermissionsService,
         },
         {
           provide: AuditService,

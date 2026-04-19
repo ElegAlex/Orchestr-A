@@ -184,7 +184,7 @@ export class AuthController {
   async getMyPermissions(
     @CurrentUser() user: User,
   ): Promise<{ permissions: string[] }> {
-    const permissions = await this.authService.getPermissionsForUser(user.role);
+    const permissions = await this.authService.getPermissionsForUser(user);
     return { permissions };
   }
 

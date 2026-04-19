@@ -12,7 +12,7 @@ import * as crypto from 'crypto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { Role } from 'database';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { AuditService, AuditAction } from '../audit/audit.service';
 import { RefreshTokenService, RefreshTokenMeta } from './refresh-token.service';
 
@@ -22,7 +22,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly roleManagementService: RoleManagementService,
+    private readonly permissionsService: PermissionsService,
     private readonly auditService: AuditService,
     private readonly refreshTokenService: RefreshTokenService,
   ) {}
@@ -272,12 +272,12 @@ export class AuthService {
     return user;
   }
 
-  async getPermissionsForUser(role: string): Promise<string[]> {
-    if (role === 'ADMIN') {
-      const allPermissions = await this.prisma.permission.findMany();
-      return allPermissions.map((p) => p.code);
-    }
-    return this.roleManagementService.getPermissionsForRole(role);
+  async getPermissionsForUser(user: {
+    role?: string | null;
+    roleEntity?: { code: string } | null;
+  }): Promise<string[]> {
+    const perms = await this.permissionsService.getPermissionsForUser(user);
+    return [...perms];
   }
 
   async generateResetToken(
