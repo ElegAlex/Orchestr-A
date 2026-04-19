@@ -1,0 +1,5490 @@
+{
+  "metadata": {
+    "snapshot_date": "2026-04-19",
+    "database": "orchestr_a_v2",
+    "source_tables": [
+      "role_configs",
+      "permissions",
+      "role_permissions"
+    ],
+    "totals": {
+      "roles": 15,
+      "permissions": 119,
+      "modules": 21,
+      "role_permission_links": 770
+    }
+  },
+  "permissions": [
+    {
+      "code": "analytics:export",
+      "module": "analytics",
+      "action": "export",
+      "description": "Exporter les analytics"
+    },
+    {
+      "code": "analytics:read",
+      "module": "analytics",
+      "action": "read",
+      "description": "Voir les analytics"
+    },
+    {
+      "code": "comments:create",
+      "module": "comments",
+      "action": "create",
+      "description": "Écrire un commentaire"
+    },
+    {
+      "code": "comments:delete",
+      "module": "comments",
+      "action": "delete",
+      "description": "Supprimer un commentaire"
+    },
+    {
+      "code": "comments:read",
+      "module": "comments",
+      "action": "read",
+      "description": "Voir les commentaires"
+    },
+    {
+      "code": "comments:update",
+      "module": "comments",
+      "action": "update",
+      "description": "Modifier un commentaire"
+    },
+    {
+      "code": "departments:create",
+      "module": "departments",
+      "action": "create",
+      "description": "Créer un département/service"
+    },
+    {
+      "code": "departments:delete",
+      "module": "departments",
+      "action": "delete",
+      "description": "Supprimer un département/service"
+    },
+    {
+      "code": "departments:edit",
+      "module": "departments",
+      "action": "edit",
+      "description": "Modifier les départements (granularité RBAC)"
+    },
+    {
+      "code": "departments:read",
+      "module": "departments",
+      "action": "read",
+      "description": "Voir les départements/services"
+    },
+    {
+      "code": "departments:update",
+      "module": "departments",
+      "action": "update",
+      "description": "Modifier un département/service"
+    },
+    {
+      "code": "departments:view",
+      "module": "departments",
+      "action": "view",
+      "description": "Voir les départements (granularité RBAC)"
+    },
+    {
+      "code": "documents:create",
+      "module": "documents",
+      "action": "create",
+      "description": "Uploader un document"
+    },
+    {
+      "code": "documents:delete",
+      "module": "documents",
+      "action": "delete",
+      "description": "Supprimer un document"
+    },
+    {
+      "code": "documents:read",
+      "module": "documents",
+      "action": "read",
+      "description": "Voir les documents"
+    },
+    {
+      "code": "documents:update",
+      "module": "documents",
+      "action": "update",
+      "description": "Modifier un document"
+    },
+    {
+      "code": "epics:create",
+      "module": "epics",
+      "action": "create",
+      "description": "Créer un epic"
+    },
+    {
+      "code": "epics:delete",
+      "module": "epics",
+      "action": "delete",
+      "description": "Supprimer un epic"
+    },
+    {
+      "code": "epics:read",
+      "module": "epics",
+      "action": "read",
+      "description": "Voir les epics"
+    },
+    {
+      "code": "epics:update",
+      "module": "epics",
+      "action": "update",
+      "description": "Modifier un epic"
+    },
+    {
+      "code": "events:create",
+      "module": "events",
+      "action": "create",
+      "description": "Créer un événement"
+    },
+    {
+      "code": "events:delete",
+      "module": "events",
+      "action": "delete",
+      "description": "Supprimer un événement"
+    },
+    {
+      "code": "events:manage_any",
+      "module": "events",
+      "action": "manage_any",
+      "description": "Modifier ou supprimer n'importe quel événement, y compris ceux dont on n'est pas créateur (bypass OwnershipGuard)"
+    },
+    {
+      "code": "events:read",
+      "module": "events",
+      "action": "read",
+      "description": "Voir les événements"
+    },
+    {
+      "code": "events:readAll",
+      "module": "events",
+      "action": "readAll",
+      "description": "Voir tous les événements (pas uniquement les siens)"
+    },
+    {
+      "code": "events:update",
+      "module": "events",
+      "action": "update",
+      "description": "Modifier un événement"
+    },
+    {
+      "code": "holidays:create",
+      "module": "holidays",
+      "action": "create",
+      "description": "Créer un jour férié"
+    },
+    {
+      "code": "holidays:delete",
+      "module": "holidays",
+      "action": "delete",
+      "description": "Supprimer un jour férié"
+    },
+    {
+      "code": "holidays:read",
+      "module": "holidays",
+      "action": "read",
+      "description": "Voir les jours fériés"
+    },
+    {
+      "code": "holidays:update",
+      "module": "holidays",
+      "action": "update",
+      "description": "Modifier un jour férié"
+    },
+    {
+      "code": "leaves:approve",
+      "module": "leaves",
+      "action": "approve",
+      "description": "Valider ou rejeter des congés"
+    },
+    {
+      "code": "leaves:create",
+      "module": "leaves",
+      "action": "create",
+      "description": "Poser une demande de congé"
+    },
+    {
+      "code": "leaves:declare_for_others",
+      "module": "leaves",
+      "action": "declare_for_others",
+      "description": "Déclarer des congés au nom d'un autre agent"
+    },
+    {
+      "code": "leaves:delete",
+      "module": "leaves",
+      "action": "delete",
+      "description": "Supprimer une demande de congé"
+    },
+    {
+      "code": "leaves:manage",
+      "module": "leaves",
+      "action": "manage",
+      "description": "Valider ou rejeter des demandes de congés"
+    },
+    {
+      "code": "leaves:manage_any",
+      "module": "leaves",
+      "action": "manage_any",
+      "description": "Gérer (lire/modifier/supprimer/valider) n'importe quelle demande de congé sans restriction de périmètre. Réservé à l'administration centrale."
+    },
+    {
+      "code": "leaves:manage_delegations",
+      "module": "leaves",
+      "action": "manage_delegations",
+      "description": "Gérer les délégations de validation"
+    },
+    {
+      "code": "leaves:read",
+      "module": "leaves",
+      "action": "read",
+      "description": "Voir les congés"
+    },
+    {
+      "code": "leaves:readAll",
+      "module": "leaves",
+      "action": "readAll",
+      "description": "Voir tous les congés (pas uniquement les siens)"
+    },
+    {
+      "code": "leaves:update",
+      "module": "leaves",
+      "action": "update",
+      "description": "Modifier une demande de congé"
+    },
+    {
+      "code": "leaves:view",
+      "module": "leaves",
+      "action": "view",
+      "description": "Voir les congés (granularité RBAC)"
+    },
+    {
+      "code": "milestones:create",
+      "module": "milestones",
+      "action": "create",
+      "description": "Créer un jalon"
+    },
+    {
+      "code": "milestones:delete",
+      "module": "milestones",
+      "action": "delete",
+      "description": "Supprimer un jalon"
+    },
+    {
+      "code": "milestones:read",
+      "module": "milestones",
+      "action": "read",
+      "description": "Voir les jalons"
+    },
+    {
+      "code": "milestones:update",
+      "module": "milestones",
+      "action": "update",
+      "description": "Modifier un jalon"
+    },
+    {
+      "code": "predefined_tasks:assign",
+      "module": "predefined_tasks",
+      "action": "assign",
+      "description": "Assigner une tâche prédéfinie à un agent"
+    },
+    {
+      "code": "predefined_tasks:create",
+      "module": "predefined_tasks",
+      "action": "create",
+      "description": "Créer une tâche prédéfinie"
+    },
+    {
+      "code": "predefined_tasks:delete",
+      "module": "predefined_tasks",
+      "action": "delete",
+      "description": "Supprimer une tâche prédéfinie"
+    },
+    {
+      "code": "predefined_tasks:edit",
+      "module": "predefined_tasks",
+      "action": "edit",
+      "description": "Modifier une tâche prédéfinie"
+    },
+    {
+      "code": "predefined_tasks:view",
+      "module": "predefined_tasks",
+      "action": "view",
+      "description": "Voir les tâches prédéfinies"
+    },
+    {
+      "code": "projects:create",
+      "module": "projects",
+      "action": "create",
+      "description": "Créer un projet"
+    },
+    {
+      "code": "projects:delete",
+      "module": "projects",
+      "action": "delete",
+      "description": "Supprimer un projet"
+    },
+    {
+      "code": "projects:edit",
+      "module": "projects",
+      "action": "edit",
+      "description": "Modifier les projets (granularité RBAC)"
+    },
+    {
+      "code": "projects:manage_any",
+      "module": "projects",
+      "action": "manage_any",
+      "description": "Modifier ou supprimer n'importe quel projet, y compris ceux dont on n'est pas propriétaire (bypass OwnershipGuard)"
+    },
+    {
+      "code": "projects:manage_members",
+      "module": "projects",
+      "action": "manage_members",
+      "description": "Gérer les membres d'un projet"
+    },
+    {
+      "code": "projects:read",
+      "module": "projects",
+      "action": "read",
+      "description": "Voir les projets"
+    },
+    {
+      "code": "projects:update",
+      "module": "projects",
+      "action": "update",
+      "description": "Modifier un projet"
+    },
+    {
+      "code": "projects:view",
+      "module": "projects",
+      "action": "view",
+      "description": "Voir les projets (granularité RBAC)"
+    },
+    {
+      "code": "reports:export",
+      "module": "reports",
+      "action": "export",
+      "description": "Exporter les rapports"
+    },
+    {
+      "code": "reports:view",
+      "module": "reports",
+      "action": "view",
+      "description": "Voir les rapports"
+    },
+    {
+      "code": "school_vacations:create",
+      "module": "school_vacations",
+      "action": "create",
+      "description": "Creer une periode de vacances scolaires"
+    },
+    {
+      "code": "school_vacations:delete",
+      "module": "school_vacations",
+      "action": "delete",
+      "description": "Supprimer une periode de vacances scolaires"
+    },
+    {
+      "code": "school_vacations:read",
+      "module": "school_vacations",
+      "action": "read",
+      "description": "Voir les vacances scolaires"
+    },
+    {
+      "code": "school_vacations:update",
+      "module": "school_vacations",
+      "action": "update",
+      "description": "Modifier une periode de vacances scolaires"
+    },
+    {
+      "code": "services:create",
+      "module": "services",
+      "action": "create",
+      "description": "Créer un service"
+    },
+    {
+      "code": "services:delete",
+      "module": "services",
+      "action": "delete",
+      "description": "Supprimer un service"
+    },
+    {
+      "code": "services:read",
+      "module": "services",
+      "action": "read",
+      "description": "Voir les services"
+    },
+    {
+      "code": "services:update",
+      "module": "services",
+      "action": "update",
+      "description": "Modifier un service"
+    },
+    {
+      "code": "settings:read",
+      "module": "settings",
+      "action": "read",
+      "description": "Voir les paramètres"
+    },
+    {
+      "code": "settings:update",
+      "module": "settings",
+      "action": "update",
+      "description": "Modifier les paramètres"
+    },
+    {
+      "code": "skills:create",
+      "module": "skills",
+      "action": "create",
+      "description": "Ajouter une compétence"
+    },
+    {
+      "code": "skills:delete",
+      "module": "skills",
+      "action": "delete",
+      "description": "Supprimer une compétence"
+    },
+    {
+      "code": "skills:edit",
+      "module": "skills",
+      "action": "edit",
+      "description": "Modifier les compétences (granularité RBAC)"
+    },
+    {
+      "code": "skills:manage_matrix",
+      "module": "skills",
+      "action": "manage_matrix",
+      "description": "Gérer la matrice de compétences"
+    },
+    {
+      "code": "skills:read",
+      "module": "skills",
+      "action": "read",
+      "description": "Voir les compétences"
+    },
+    {
+      "code": "skills:update",
+      "module": "skills",
+      "action": "update",
+      "description": "Modifier une compétence"
+    },
+    {
+      "code": "skills:view",
+      "module": "skills",
+      "action": "view",
+      "description": "Voir les compétences (granularité RBAC)"
+    },
+    {
+      "code": "tasks:assign_any_user",
+      "module": "tasks",
+      "action": "assign_any_user",
+      "description": "Assigner une tâche à n'importe quel utilisateur, sans restriction de périmètre ni de membres du projet"
+    },
+    {
+      "code": "tasks:create",
+      "module": "tasks",
+      "action": "create",
+      "description": "Créer une tâche dans un projet"
+    },
+    {
+      "code": "tasks:create_in_project",
+      "module": "tasks",
+      "action": "create_in_project",
+      "description": "Créer des tâches dans les projets dont on est membre"
+    },
+    {
+      "code": "tasks:create_orphan",
+      "module": "tasks",
+      "action": "create_orphan",
+      "description": "Créer des tâches orphelines (sans projet)"
+    },
+    {
+      "code": "tasks:delete",
+      "module": "tasks",
+      "action": "delete",
+      "description": "Supprimer une tâche"
+    },
+    {
+      "code": "tasks:manage_any",
+      "module": "tasks",
+      "action": "manage_any",
+      "description": "Modifier ou supprimer n'importe quelle tâche, y compris celles dont on n'est ni assignee ni membre du projet (bypass OwnershipGuard)"
+    },
+    {
+      "code": "tasks:read",
+      "module": "tasks",
+      "action": "read",
+      "description": "Voir les tâches"
+    },
+    {
+      "code": "tasks:readAll",
+      "module": "tasks",
+      "action": "readAll",
+      "description": "Voir toutes les tâches (pas uniquement les siennes)"
+    },
+    {
+      "code": "tasks:update",
+      "module": "tasks",
+      "action": "update",
+      "description": "Modifier une tâche"
+    },
+    {
+      "code": "telework:create",
+      "module": "telework",
+      "action": "create",
+      "description": "Déclarer du télétravail"
+    },
+    {
+      "code": "telework:delete",
+      "module": "telework",
+      "action": "delete",
+      "description": "Supprimer une déclaration de télétravail"
+    },
+    {
+      "code": "telework:manage_others",
+      "module": "telework",
+      "action": "manage_others",
+      "description": "Gérer le télétravail des autres agents"
+    },
+    {
+      "code": "telework:manage_recurring",
+      "module": "telework",
+      "action": "manage_recurring",
+      "description": "Gérer les règles de télétravail récurrentes"
+    },
+    {
+      "code": "telework:read",
+      "module": "telework",
+      "action": "read",
+      "description": "Voir le télétravail"
+    },
+    {
+      "code": "telework:readAll",
+      "module": "telework",
+      "action": "readAll",
+      "description": "Voir tous les télétravails (pas uniquement les siens)"
+    },
+    {
+      "code": "telework:read_team",
+      "module": "telework",
+      "action": "read_team",
+      "description": "Voir le télétravail de l'équipe"
+    },
+    {
+      "code": "telework:update",
+      "module": "telework",
+      "action": "update",
+      "description": "Modifier une déclaration de télétravail"
+    },
+    {
+      "code": "telework:view",
+      "module": "telework",
+      "action": "view",
+      "description": "Voir le télétravail (granularité RBAC)"
+    },
+    {
+      "code": "third_parties:assign_to_project",
+      "module": "third_parties",
+      "action": "assign_to_project",
+      "description": "Rattacher un tiers à un projet"
+    },
+    {
+      "code": "third_parties:assign_to_task",
+      "module": "third_parties",
+      "action": "assign_to_task",
+      "description": "Assigner un tiers à une tâche"
+    },
+    {
+      "code": "third_parties:create",
+      "module": "third_parties",
+      "action": "create",
+      "description": "Créer un tiers"
+    },
+    {
+      "code": "third_parties:delete",
+      "module": "third_parties",
+      "action": "delete",
+      "description": "Supprimer un tiers (hard delete en cascade)"
+    },
+    {
+      "code": "third_parties:read",
+      "module": "third_parties",
+      "action": "read",
+      "description": "Voir les tiers"
+    },
+    {
+      "code": "third_parties:update",
+      "module": "third_parties",
+      "action": "update",
+      "description": "Modifier un tiers"
+    },
+    {
+      "code": "time_tracking:create",
+      "module": "time_tracking",
+      "action": "create",
+      "description": "Saisir du temps"
+    },
+    {
+      "code": "time_tracking:declare_for_third_party",
+      "module": "time_tracking",
+      "action": "declare_for_third_party",
+      "description": "Déclarer du temps pour le compte d'un tiers"
+    },
+    {
+      "code": "time_tracking:delete",
+      "module": "time_tracking",
+      "action": "delete",
+      "description": "Supprimer une saisie de temps"
+    },
+    {
+      "code": "time_tracking:manage_any",
+      "module": "time_tracking",
+      "action": "manage_any",
+      "description": "Modifier ou supprimer n'importe quelle entrée de temps, y compris celles dont on n'est pas propriétaire (bypass OwnershipGuard)"
+    },
+    {
+      "code": "time_tracking:read",
+      "module": "time_tracking",
+      "action": "read",
+      "description": "Voir les saisies de temps"
+    },
+    {
+      "code": "time_tracking:read_reports",
+      "module": "time_tracking",
+      "action": "read_reports",
+      "description": "Voir les rapports de temps"
+    },
+    {
+      "code": "time_tracking:update",
+      "module": "time_tracking",
+      "action": "update",
+      "description": "Modifier une saisie de temps"
+    },
+    {
+      "code": "time_tracking:view_any",
+      "module": "time_tracking",
+      "action": "view_any",
+      "description": "Lister les entrées de temps d'autres utilisateurs (filtre userId cross-user)"
+    },
+    {
+      "code": "users:create",
+      "module": "users",
+      "action": "create",
+      "description": "Créer un utilisateur"
+    },
+    {
+      "code": "users:delete",
+      "module": "users",
+      "action": "delete",
+      "description": "Supprimer un utilisateur"
+    },
+    {
+      "code": "users:edit",
+      "module": "users",
+      "action": "edit",
+      "description": "Modifier les utilisateurs (granularité RBAC)"
+    },
+    {
+      "code": "users:import",
+      "module": "users",
+      "action": "import",
+      "description": "Importer des utilisateurs"
+    },
+    {
+      "code": "users:manage",
+      "module": "users",
+      "action": "manage",
+      "description": "Accéder à la page d'administration des utilisateurs"
+    },
+    {
+      "code": "users:manage_roles",
+      "module": "users",
+      "action": "manage_roles",
+      "description": "Gérer les rôles des utilisateurs"
+    },
+    {
+      "code": "users:read",
+      "module": "users",
+      "action": "read",
+      "description": "Voir les utilisateurs"
+    },
+    {
+      "code": "users:reset_password",
+      "module": "users",
+      "action": "reset_password",
+      "description": "Réinitialiser le mot de passe d'un utilisateur"
+    },
+    {
+      "code": "users:update",
+      "module": "users",
+      "action": "update",
+      "description": "Modifier un utilisateur"
+    },
+    {
+      "code": "users:view",
+      "module": "users",
+      "action": "view",
+      "description": "Voir les utilisateurs (granularité RBAC)"
+    }
+  ],
+  "roles": [
+    {
+      "code": "ADMIN",
+      "name": "Administrateur",
+      "description": "Accès complet à toutes les fonctionnalités",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "analytics:export",
+          "module": "analytics",
+          "action": "export",
+          "description": "Exporter les analytics"
+        },
+        {
+          "code": "analytics:read",
+          "module": "analytics",
+          "action": "read",
+          "description": "Voir les analytics"
+        },
+        {
+          "code": "comments:create",
+          "module": "comments",
+          "action": "create",
+          "description": "Écrire un commentaire"
+        },
+        {
+          "code": "comments:delete",
+          "module": "comments",
+          "action": "delete",
+          "description": "Supprimer un commentaire"
+        },
+        {
+          "code": "comments:read",
+          "module": "comments",
+          "action": "read",
+          "description": "Voir les commentaires"
+        },
+        {
+          "code": "comments:update",
+          "module": "comments",
+          "action": "update",
+          "description": "Modifier un commentaire"
+        },
+        {
+          "code": "departments:create",
+          "module": "departments",
+          "action": "create",
+          "description": "Créer un département/service"
+        },
+        {
+          "code": "departments:delete",
+          "module": "departments",
+          "action": "delete",
+          "description": "Supprimer un département/service"
+        },
+        {
+          "code": "departments:edit",
+          "module": "departments",
+          "action": "edit",
+          "description": "Modifier les départements (granularité RBAC)"
+        },
+        {
+          "code": "departments:read",
+          "module": "departments",
+          "action": "read",
+          "description": "Voir les départements/services"
+        },
+        {
+          "code": "departments:update",
+          "module": "departments",
+          "action": "update",
+          "description": "Modifier un département/service"
+        },
+        {
+          "code": "departments:view",
+          "module": "departments",
+          "action": "view",
+          "description": "Voir les départements (granularité RBAC)"
+        },
+        {
+          "code": "documents:create",
+          "module": "documents",
+          "action": "create",
+          "description": "Uploader un document"
+        },
+        {
+          "code": "documents:delete",
+          "module": "documents",
+          "action": "delete",
+          "description": "Supprimer un document"
+        },
+        {
+          "code": "documents:read",
+          "module": "documents",
+          "action": "read",
+          "description": "Voir les documents"
+        },
+        {
+          "code": "documents:update",
+          "module": "documents",
+          "action": "update",
+          "description": "Modifier un document"
+        },
+        {
+          "code": "epics:create",
+          "module": "epics",
+          "action": "create",
+          "description": "Créer un epic"
+        },
+        {
+          "code": "epics:delete",
+          "module": "epics",
+          "action": "delete",
+          "description": "Supprimer un epic"
+        },
+        {
+          "code": "epics:read",
+          "module": "epics",
+          "action": "read",
+          "description": "Voir les epics"
+        },
+        {
+          "code": "epics:update",
+          "module": "epics",
+          "action": "update",
+          "description": "Modifier un epic"
+        },
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:delete",
+          "module": "events",
+          "action": "delete",
+          "description": "Supprimer un événement"
+        },
+        {
+          "code": "events:manage_any",
+          "module": "events",
+          "action": "manage_any",
+          "description": "Modifier ou supprimer n'importe quel événement, y compris ceux dont on n'est pas créateur (bypass OwnershipGuard)"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "holidays:create",
+          "module": "holidays",
+          "action": "create",
+          "description": "Créer un jour férié"
+        },
+        {
+          "code": "holidays:delete",
+          "module": "holidays",
+          "action": "delete",
+          "description": "Supprimer un jour férié"
+        },
+        {
+          "code": "holidays:read",
+          "module": "holidays",
+          "action": "read",
+          "description": "Voir les jours fériés"
+        },
+        {
+          "code": "holidays:update",
+          "module": "holidays",
+          "action": "update",
+          "description": "Modifier un jour férié"
+        },
+        {
+          "code": "leaves:approve",
+          "module": "leaves",
+          "action": "approve",
+          "description": "Valider ou rejeter des congés"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:declare_for_others",
+          "module": "leaves",
+          "action": "declare_for_others",
+          "description": "Déclarer des congés au nom d'un autre agent"
+        },
+        {
+          "code": "leaves:delete",
+          "module": "leaves",
+          "action": "delete",
+          "description": "Supprimer une demande de congé"
+        },
+        {
+          "code": "leaves:manage",
+          "module": "leaves",
+          "action": "manage",
+          "description": "Valider ou rejeter des demandes de congés"
+        },
+        {
+          "code": "leaves:manage_any",
+          "module": "leaves",
+          "action": "manage_any",
+          "description": "Gérer (lire/modifier/supprimer/valider) n'importe quelle demande de congé sans restriction de périmètre. Réservé à l'administration centrale."
+        },
+        {
+          "code": "leaves:manage_delegations",
+          "module": "leaves",
+          "action": "manage_delegations",
+          "description": "Gérer les délégations de validation"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:update",
+          "module": "leaves",
+          "action": "update",
+          "description": "Modifier une demande de congé"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "milestones:create",
+          "module": "milestones",
+          "action": "create",
+          "description": "Créer un jalon"
+        },
+        {
+          "code": "milestones:delete",
+          "module": "milestones",
+          "action": "delete",
+          "description": "Supprimer un jalon"
+        },
+        {
+          "code": "milestones:read",
+          "module": "milestones",
+          "action": "read",
+          "description": "Voir les jalons"
+        },
+        {
+          "code": "milestones:update",
+          "module": "milestones",
+          "action": "update",
+          "description": "Modifier un jalon"
+        },
+        {
+          "code": "predefined_tasks:assign",
+          "module": "predefined_tasks",
+          "action": "assign",
+          "description": "Assigner une tâche prédéfinie à un agent"
+        },
+        {
+          "code": "predefined_tasks:create",
+          "module": "predefined_tasks",
+          "action": "create",
+          "description": "Créer une tâche prédéfinie"
+        },
+        {
+          "code": "predefined_tasks:delete",
+          "module": "predefined_tasks",
+          "action": "delete",
+          "description": "Supprimer une tâche prédéfinie"
+        },
+        {
+          "code": "predefined_tasks:edit",
+          "module": "predefined_tasks",
+          "action": "edit",
+          "description": "Modifier une tâche prédéfinie"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "projects:create",
+          "module": "projects",
+          "action": "create",
+          "description": "Créer un projet"
+        },
+        {
+          "code": "projects:delete",
+          "module": "projects",
+          "action": "delete",
+          "description": "Supprimer un projet"
+        },
+        {
+          "code": "projects:edit",
+          "module": "projects",
+          "action": "edit",
+          "description": "Modifier les projets (granularité RBAC)"
+        },
+        {
+          "code": "projects:manage_any",
+          "module": "projects",
+          "action": "manage_any",
+          "description": "Modifier ou supprimer n'importe quel projet, y compris ceux dont on n'est pas propriétaire (bypass OwnershipGuard)"
+        },
+        {
+          "code": "projects:manage_members",
+          "module": "projects",
+          "action": "manage_members",
+          "description": "Gérer les membres d'un projet"
+        },
+        {
+          "code": "projects:read",
+          "module": "projects",
+          "action": "read",
+          "description": "Voir les projets"
+        },
+        {
+          "code": "projects:update",
+          "module": "projects",
+          "action": "update",
+          "description": "Modifier un projet"
+        },
+        {
+          "code": "projects:view",
+          "module": "projects",
+          "action": "view",
+          "description": "Voir les projets (granularité RBAC)"
+        },
+        {
+          "code": "reports:export",
+          "module": "reports",
+          "action": "export",
+          "description": "Exporter les rapports"
+        },
+        {
+          "code": "reports:view",
+          "module": "reports",
+          "action": "view",
+          "description": "Voir les rapports"
+        },
+        {
+          "code": "school_vacations:create",
+          "module": "school_vacations",
+          "action": "create",
+          "description": "Creer une periode de vacances scolaires"
+        },
+        {
+          "code": "school_vacations:delete",
+          "module": "school_vacations",
+          "action": "delete",
+          "description": "Supprimer une periode de vacances scolaires"
+        },
+        {
+          "code": "school_vacations:read",
+          "module": "school_vacations",
+          "action": "read",
+          "description": "Voir les vacances scolaires"
+        },
+        {
+          "code": "school_vacations:update",
+          "module": "school_vacations",
+          "action": "update",
+          "description": "Modifier une periode de vacances scolaires"
+        },
+        {
+          "code": "services:create",
+          "module": "services",
+          "action": "create",
+          "description": "Créer un service"
+        },
+        {
+          "code": "services:delete",
+          "module": "services",
+          "action": "delete",
+          "description": "Supprimer un service"
+        },
+        {
+          "code": "services:read",
+          "module": "services",
+          "action": "read",
+          "description": "Voir les services"
+        },
+        {
+          "code": "services:update",
+          "module": "services",
+          "action": "update",
+          "description": "Modifier un service"
+        },
+        {
+          "code": "settings:read",
+          "module": "settings",
+          "action": "read",
+          "description": "Voir les paramètres"
+        },
+        {
+          "code": "settings:update",
+          "module": "settings",
+          "action": "update",
+          "description": "Modifier les paramètres"
+        },
+        {
+          "code": "skills:create",
+          "module": "skills",
+          "action": "create",
+          "description": "Ajouter une compétence"
+        },
+        {
+          "code": "skills:delete",
+          "module": "skills",
+          "action": "delete",
+          "description": "Supprimer une compétence"
+        },
+        {
+          "code": "skills:edit",
+          "module": "skills",
+          "action": "edit",
+          "description": "Modifier les compétences (granularité RBAC)"
+        },
+        {
+          "code": "skills:manage_matrix",
+          "module": "skills",
+          "action": "manage_matrix",
+          "description": "Gérer la matrice de compétences"
+        },
+        {
+          "code": "skills:read",
+          "module": "skills",
+          "action": "read",
+          "description": "Voir les compétences"
+        },
+        {
+          "code": "skills:update",
+          "module": "skills",
+          "action": "update",
+          "description": "Modifier une compétence"
+        },
+        {
+          "code": "skills:view",
+          "module": "skills",
+          "action": "view",
+          "description": "Voir les compétences (granularité RBAC)"
+        },
+        {
+          "code": "tasks:assign_any_user",
+          "module": "tasks",
+          "action": "assign_any_user",
+          "description": "Assigner une tâche à n'importe quel utilisateur, sans restriction de périmètre ni de membres du projet"
+        },
+        {
+          "code": "tasks:create",
+          "module": "tasks",
+          "action": "create",
+          "description": "Créer une tâche dans un projet"
+        },
+        {
+          "code": "tasks:create_in_project",
+          "module": "tasks",
+          "action": "create_in_project",
+          "description": "Créer des tâches dans les projets dont on est membre"
+        },
+        {
+          "code": "tasks:create_orphan",
+          "module": "tasks",
+          "action": "create_orphan",
+          "description": "Créer des tâches orphelines (sans projet)"
+        },
+        {
+          "code": "tasks:delete",
+          "module": "tasks",
+          "action": "delete",
+          "description": "Supprimer une tâche"
+        },
+        {
+          "code": "tasks:manage_any",
+          "module": "tasks",
+          "action": "manage_any",
+          "description": "Modifier ou supprimer n'importe quelle tâche, y compris celles dont on n'est ni assignee ni membre du projet (bypass OwnershipGuard)"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:manage_others",
+          "module": "telework",
+          "action": "manage_others",
+          "description": "Gérer le télétravail des autres agents"
+        },
+        {
+          "code": "telework:manage_recurring",
+          "module": "telework",
+          "action": "manage_recurring",
+          "description": "Gérer les règles de télétravail récurrentes"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:read_team",
+          "module": "telework",
+          "action": "read_team",
+          "description": "Voir le télétravail de l'équipe"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "third_parties:assign_to_project",
+          "module": "third_parties",
+          "action": "assign_to_project",
+          "description": "Rattacher un tiers à un projet"
+        },
+        {
+          "code": "third_parties:assign_to_task",
+          "module": "third_parties",
+          "action": "assign_to_task",
+          "description": "Assigner un tiers à une tâche"
+        },
+        {
+          "code": "third_parties:create",
+          "module": "third_parties",
+          "action": "create",
+          "description": "Créer un tiers"
+        },
+        {
+          "code": "third_parties:delete",
+          "module": "third_parties",
+          "action": "delete",
+          "description": "Supprimer un tiers (hard delete en cascade)"
+        },
+        {
+          "code": "third_parties:read",
+          "module": "third_parties",
+          "action": "read",
+          "description": "Voir les tiers"
+        },
+        {
+          "code": "third_parties:update",
+          "module": "third_parties",
+          "action": "update",
+          "description": "Modifier un tiers"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:declare_for_third_party",
+          "module": "time_tracking",
+          "action": "declare_for_third_party",
+          "description": "Déclarer du temps pour le compte d'un tiers"
+        },
+        {
+          "code": "time_tracking:delete",
+          "module": "time_tracking",
+          "action": "delete",
+          "description": "Supprimer une saisie de temps"
+        },
+        {
+          "code": "time_tracking:manage_any",
+          "module": "time_tracking",
+          "action": "manage_any",
+          "description": "Modifier ou supprimer n'importe quelle entrée de temps, y compris celles dont on n'est pas propriétaire (bypass OwnershipGuard)"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "time_tracking:read_reports",
+          "module": "time_tracking",
+          "action": "read_reports",
+          "description": "Voir les rapports de temps"
+        },
+        {
+          "code": "time_tracking:update",
+          "module": "time_tracking",
+          "action": "update",
+          "description": "Modifier une saisie de temps"
+        },
+        {
+          "code": "time_tracking:view_any",
+          "module": "time_tracking",
+          "action": "view_any",
+          "description": "Lister les entrées de temps d'autres utilisateurs (filtre userId cross-user)"
+        },
+        {
+          "code": "users:create",
+          "module": "users",
+          "action": "create",
+          "description": "Créer un utilisateur"
+        },
+        {
+          "code": "users:delete",
+          "module": "users",
+          "action": "delete",
+          "description": "Supprimer un utilisateur"
+        },
+        {
+          "code": "users:edit",
+          "module": "users",
+          "action": "edit",
+          "description": "Modifier les utilisateurs (granularité RBAC)"
+        },
+        {
+          "code": "users:import",
+          "module": "users",
+          "action": "import",
+          "description": "Importer des utilisateurs"
+        },
+        {
+          "code": "users:manage",
+          "module": "users",
+          "action": "manage",
+          "description": "Accéder à la page d'administration des utilisateurs"
+        },
+        {
+          "code": "users:manage_roles",
+          "module": "users",
+          "action": "manage_roles",
+          "description": "Gérer les rôles des utilisateurs"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:reset_password",
+          "module": "users",
+          "action": "reset_password",
+          "description": "Réinitialiser le mot de passe d'un utilisateur"
+        },
+        {
+          "code": "users:update",
+          "module": "users",
+          "action": "update",
+          "description": "Modifier un utilisateur"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "ADMINISTRATEUR_IML",
+      "name": "Administrateur IML",
+      "description": "Administration IML",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "tasks:create_orphan",
+          "module": "tasks",
+          "action": "create_orphan",
+          "description": "Créer des tâches orphelines (sans projet)"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "CHARGE_DE_MISSION",
+      "name": "Chargé de Mission",
+      "description": "Pilotage de missions",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "comments:create",
+          "module": "comments",
+          "action": "create",
+          "description": "Écrire un commentaire"
+        },
+        {
+          "code": "comments:delete",
+          "module": "comments",
+          "action": "delete",
+          "description": "Supprimer un commentaire"
+        },
+        {
+          "code": "comments:read",
+          "module": "comments",
+          "action": "read",
+          "description": "Voir les commentaires"
+        },
+        {
+          "code": "comments:update",
+          "module": "comments",
+          "action": "update",
+          "description": "Modifier un commentaire"
+        },
+        {
+          "code": "documents:create",
+          "module": "documents",
+          "action": "create",
+          "description": "Uploader un document"
+        },
+        {
+          "code": "documents:delete",
+          "module": "documents",
+          "action": "delete",
+          "description": "Supprimer un document"
+        },
+        {
+          "code": "documents:read",
+          "module": "documents",
+          "action": "read",
+          "description": "Voir les documents"
+        },
+        {
+          "code": "documents:update",
+          "module": "documents",
+          "action": "update",
+          "description": "Modifier un document"
+        },
+        {
+          "code": "epics:create",
+          "module": "epics",
+          "action": "create",
+          "description": "Créer un epic"
+        },
+        {
+          "code": "epics:delete",
+          "module": "epics",
+          "action": "delete",
+          "description": "Supprimer un epic"
+        },
+        {
+          "code": "epics:read",
+          "module": "epics",
+          "action": "read",
+          "description": "Voir les epics"
+        },
+        {
+          "code": "epics:update",
+          "module": "epics",
+          "action": "update",
+          "description": "Modifier un epic"
+        },
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:delete",
+          "module": "events",
+          "action": "delete",
+          "description": "Supprimer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "milestones:create",
+          "module": "milestones",
+          "action": "create",
+          "description": "Créer un jalon"
+        },
+        {
+          "code": "milestones:delete",
+          "module": "milestones",
+          "action": "delete",
+          "description": "Supprimer un jalon"
+        },
+        {
+          "code": "milestones:read",
+          "module": "milestones",
+          "action": "read",
+          "description": "Voir les jalons"
+        },
+        {
+          "code": "milestones:update",
+          "module": "milestones",
+          "action": "update",
+          "description": "Modifier un jalon"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "projects:create",
+          "module": "projects",
+          "action": "create",
+          "description": "Créer un projet"
+        },
+        {
+          "code": "projects:delete",
+          "module": "projects",
+          "action": "delete",
+          "description": "Supprimer un projet"
+        },
+        {
+          "code": "projects:edit",
+          "module": "projects",
+          "action": "edit",
+          "description": "Modifier les projets (granularité RBAC)"
+        },
+        {
+          "code": "projects:manage_members",
+          "module": "projects",
+          "action": "manage_members",
+          "description": "Gérer les membres d'un projet"
+        },
+        {
+          "code": "projects:read",
+          "module": "projects",
+          "action": "read",
+          "description": "Voir les projets"
+        },
+        {
+          "code": "projects:update",
+          "module": "projects",
+          "action": "update",
+          "description": "Modifier un projet"
+        },
+        {
+          "code": "projects:view",
+          "module": "projects",
+          "action": "view",
+          "description": "Voir les projets (granularité RBAC)"
+        },
+        {
+          "code": "tasks:create",
+          "module": "tasks",
+          "action": "create",
+          "description": "Créer une tâche dans un projet"
+        },
+        {
+          "code": "tasks:create_in_project",
+          "module": "tasks",
+          "action": "create_in_project",
+          "description": "Créer des tâches dans les projets dont on est membre"
+        },
+        {
+          "code": "tasks:delete",
+          "module": "tasks",
+          "action": "delete",
+          "description": "Supprimer une tâche"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:manage_others",
+          "module": "telework",
+          "action": "manage_others",
+          "description": "Gérer le télétravail des autres agents"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:delete",
+          "module": "time_tracking",
+          "action": "delete",
+          "description": "Supprimer une saisie de temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "time_tracking:update",
+          "module": "time_tracking",
+          "action": "update",
+          "description": "Modifier une saisie de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "CHEF_DE_PROJET",
+      "name": "Chef de Projet",
+      "description": "Gestion de projets et tâches",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "comments:create",
+          "module": "comments",
+          "action": "create",
+          "description": "Écrire un commentaire"
+        },
+        {
+          "code": "comments:delete",
+          "module": "comments",
+          "action": "delete",
+          "description": "Supprimer un commentaire"
+        },
+        {
+          "code": "comments:read",
+          "module": "comments",
+          "action": "read",
+          "description": "Voir les commentaires"
+        },
+        {
+          "code": "comments:update",
+          "module": "comments",
+          "action": "update",
+          "description": "Modifier un commentaire"
+        },
+        {
+          "code": "documents:create",
+          "module": "documents",
+          "action": "create",
+          "description": "Uploader un document"
+        },
+        {
+          "code": "documents:delete",
+          "module": "documents",
+          "action": "delete",
+          "description": "Supprimer un document"
+        },
+        {
+          "code": "documents:read",
+          "module": "documents",
+          "action": "read",
+          "description": "Voir les documents"
+        },
+        {
+          "code": "documents:update",
+          "module": "documents",
+          "action": "update",
+          "description": "Modifier un document"
+        },
+        {
+          "code": "epics:create",
+          "module": "epics",
+          "action": "create",
+          "description": "Créer un epic"
+        },
+        {
+          "code": "epics:delete",
+          "module": "epics",
+          "action": "delete",
+          "description": "Supprimer un epic"
+        },
+        {
+          "code": "epics:read",
+          "module": "epics",
+          "action": "read",
+          "description": "Voir les epics"
+        },
+        {
+          "code": "epics:update",
+          "module": "epics",
+          "action": "update",
+          "description": "Modifier un epic"
+        },
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:delete",
+          "module": "events",
+          "action": "delete",
+          "description": "Supprimer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "milestones:create",
+          "module": "milestones",
+          "action": "create",
+          "description": "Créer un jalon"
+        },
+        {
+          "code": "milestones:delete",
+          "module": "milestones",
+          "action": "delete",
+          "description": "Supprimer un jalon"
+        },
+        {
+          "code": "milestones:read",
+          "module": "milestones",
+          "action": "read",
+          "description": "Voir les jalons"
+        },
+        {
+          "code": "milestones:update",
+          "module": "milestones",
+          "action": "update",
+          "description": "Modifier un jalon"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "projects:create",
+          "module": "projects",
+          "action": "create",
+          "description": "Créer un projet"
+        },
+        {
+          "code": "projects:delete",
+          "module": "projects",
+          "action": "delete",
+          "description": "Supprimer un projet"
+        },
+        {
+          "code": "projects:edit",
+          "module": "projects",
+          "action": "edit",
+          "description": "Modifier les projets (granularité RBAC)"
+        },
+        {
+          "code": "projects:manage_members",
+          "module": "projects",
+          "action": "manage_members",
+          "description": "Gérer les membres d'un projet"
+        },
+        {
+          "code": "projects:read",
+          "module": "projects",
+          "action": "read",
+          "description": "Voir les projets"
+        },
+        {
+          "code": "projects:update",
+          "module": "projects",
+          "action": "update",
+          "description": "Modifier un projet"
+        },
+        {
+          "code": "projects:view",
+          "module": "projects",
+          "action": "view",
+          "description": "Voir les projets (granularité RBAC)"
+        },
+        {
+          "code": "reports:view",
+          "module": "reports",
+          "action": "view",
+          "description": "Voir les rapports"
+        },
+        {
+          "code": "tasks:create",
+          "module": "tasks",
+          "action": "create",
+          "description": "Créer une tâche dans un projet"
+        },
+        {
+          "code": "tasks:create_in_project",
+          "module": "tasks",
+          "action": "create_in_project",
+          "description": "Créer des tâches dans les projets dont on est membre"
+        },
+        {
+          "code": "tasks:delete",
+          "module": "tasks",
+          "action": "delete",
+          "description": "Supprimer une tâche"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:manage_others",
+          "module": "telework",
+          "action": "manage_others",
+          "description": "Gérer le télétravail des autres agents"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "third_parties:assign_to_project",
+          "module": "third_parties",
+          "action": "assign_to_project",
+          "description": "Rattacher un tiers à un projet"
+        },
+        {
+          "code": "third_parties:assign_to_task",
+          "module": "third_parties",
+          "action": "assign_to_task",
+          "description": "Assigner un tiers à une tâche"
+        },
+        {
+          "code": "third_parties:create",
+          "module": "third_parties",
+          "action": "create",
+          "description": "Créer un tiers"
+        },
+        {
+          "code": "third_parties:delete",
+          "module": "third_parties",
+          "action": "delete",
+          "description": "Supprimer un tiers (hard delete en cascade)"
+        },
+        {
+          "code": "third_parties:read",
+          "module": "third_parties",
+          "action": "read",
+          "description": "Voir les tiers"
+        },
+        {
+          "code": "third_parties:update",
+          "module": "third_parties",
+          "action": "update",
+          "description": "Modifier un tiers"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:declare_for_third_party",
+          "module": "time_tracking",
+          "action": "declare_for_third_party",
+          "description": "Déclarer du temps pour le compte d'un tiers"
+        },
+        {
+          "code": "time_tracking:delete",
+          "module": "time_tracking",
+          "action": "delete",
+          "description": "Supprimer une saisie de temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "time_tracking:update",
+          "module": "time_tracking",
+          "action": "update",
+          "description": "Modifier une saisie de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "CONSULTANT_TECHNOLOGIE_SI",
+      "name": "Consultant Technologie SI",
+      "description": "Conseil en technologies SI",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "comments:create",
+          "module": "comments",
+          "action": "create",
+          "description": "Écrire un commentaire"
+        },
+        {
+          "code": "comments:delete",
+          "module": "comments",
+          "action": "delete",
+          "description": "Supprimer un commentaire"
+        },
+        {
+          "code": "comments:read",
+          "module": "comments",
+          "action": "read",
+          "description": "Voir les commentaires"
+        },
+        {
+          "code": "comments:update",
+          "module": "comments",
+          "action": "update",
+          "description": "Modifier un commentaire"
+        },
+        {
+          "code": "documents:create",
+          "module": "documents",
+          "action": "create",
+          "description": "Uploader un document"
+        },
+        {
+          "code": "documents:delete",
+          "module": "documents",
+          "action": "delete",
+          "description": "Supprimer un document"
+        },
+        {
+          "code": "documents:read",
+          "module": "documents",
+          "action": "read",
+          "description": "Voir les documents"
+        },
+        {
+          "code": "documents:update",
+          "module": "documents",
+          "action": "update",
+          "description": "Modifier un document"
+        },
+        {
+          "code": "epics:create",
+          "module": "epics",
+          "action": "create",
+          "description": "Créer un epic"
+        },
+        {
+          "code": "epics:delete",
+          "module": "epics",
+          "action": "delete",
+          "description": "Supprimer un epic"
+        },
+        {
+          "code": "epics:read",
+          "module": "epics",
+          "action": "read",
+          "description": "Voir les epics"
+        },
+        {
+          "code": "epics:update",
+          "module": "epics",
+          "action": "update",
+          "description": "Modifier un epic"
+        },
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:delete",
+          "module": "events",
+          "action": "delete",
+          "description": "Supprimer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "milestones:create",
+          "module": "milestones",
+          "action": "create",
+          "description": "Créer un jalon"
+        },
+        {
+          "code": "milestones:delete",
+          "module": "milestones",
+          "action": "delete",
+          "description": "Supprimer un jalon"
+        },
+        {
+          "code": "milestones:read",
+          "module": "milestones",
+          "action": "read",
+          "description": "Voir les jalons"
+        },
+        {
+          "code": "milestones:update",
+          "module": "milestones",
+          "action": "update",
+          "description": "Modifier un jalon"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "projects:create",
+          "module": "projects",
+          "action": "create",
+          "description": "Créer un projet"
+        },
+        {
+          "code": "projects:delete",
+          "module": "projects",
+          "action": "delete",
+          "description": "Supprimer un projet"
+        },
+        {
+          "code": "projects:edit",
+          "module": "projects",
+          "action": "edit",
+          "description": "Modifier les projets (granularité RBAC)"
+        },
+        {
+          "code": "projects:manage_members",
+          "module": "projects",
+          "action": "manage_members",
+          "description": "Gérer les membres d'un projet"
+        },
+        {
+          "code": "projects:read",
+          "module": "projects",
+          "action": "read",
+          "description": "Voir les projets"
+        },
+        {
+          "code": "projects:update",
+          "module": "projects",
+          "action": "update",
+          "description": "Modifier un projet"
+        },
+        {
+          "code": "projects:view",
+          "module": "projects",
+          "action": "view",
+          "description": "Voir les projets (granularité RBAC)"
+        },
+        {
+          "code": "tasks:create",
+          "module": "tasks",
+          "action": "create",
+          "description": "Créer une tâche dans un projet"
+        },
+        {
+          "code": "tasks:create_in_project",
+          "module": "tasks",
+          "action": "create_in_project",
+          "description": "Créer des tâches dans les projets dont on est membre"
+        },
+        {
+          "code": "tasks:delete",
+          "module": "tasks",
+          "action": "delete",
+          "description": "Supprimer une tâche"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:manage_others",
+          "module": "telework",
+          "action": "manage_others",
+          "description": "Gérer le télétravail des autres agents"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:delete",
+          "module": "time_tracking",
+          "action": "delete",
+          "description": "Supprimer une saisie de temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "time_tracking:update",
+          "module": "time_tracking",
+          "action": "update",
+          "description": "Modifier une saisie de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "CONTRIBUTEUR",
+      "name": "Contributeur",
+      "description": "Création de tâches orphelines et gestion personnelle",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "tasks:create_orphan",
+          "module": "tasks",
+          "action": "create_orphan",
+          "description": "Créer des tâches orphelines (sans projet)"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "CORRESPONDANT_FONCTIONNEL_APPLICATION",
+      "name": "Correspondant Fonctionnel Application",
+      "description": "Référent fonctionnel applicatif",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "comments:create",
+          "module": "comments",
+          "action": "create",
+          "description": "Écrire un commentaire"
+        },
+        {
+          "code": "comments:delete",
+          "module": "comments",
+          "action": "delete",
+          "description": "Supprimer un commentaire"
+        },
+        {
+          "code": "comments:read",
+          "module": "comments",
+          "action": "read",
+          "description": "Voir les commentaires"
+        },
+        {
+          "code": "comments:update",
+          "module": "comments",
+          "action": "update",
+          "description": "Modifier un commentaire"
+        },
+        {
+          "code": "documents:create",
+          "module": "documents",
+          "action": "create",
+          "description": "Uploader un document"
+        },
+        {
+          "code": "documents:delete",
+          "module": "documents",
+          "action": "delete",
+          "description": "Supprimer un document"
+        },
+        {
+          "code": "documents:read",
+          "module": "documents",
+          "action": "read",
+          "description": "Voir les documents"
+        },
+        {
+          "code": "documents:update",
+          "module": "documents",
+          "action": "update",
+          "description": "Modifier un document"
+        },
+        {
+          "code": "epics:create",
+          "module": "epics",
+          "action": "create",
+          "description": "Créer un epic"
+        },
+        {
+          "code": "epics:delete",
+          "module": "epics",
+          "action": "delete",
+          "description": "Supprimer un epic"
+        },
+        {
+          "code": "epics:read",
+          "module": "epics",
+          "action": "read",
+          "description": "Voir les epics"
+        },
+        {
+          "code": "epics:update",
+          "module": "epics",
+          "action": "update",
+          "description": "Modifier un epic"
+        },
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:delete",
+          "module": "events",
+          "action": "delete",
+          "description": "Supprimer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "milestones:create",
+          "module": "milestones",
+          "action": "create",
+          "description": "Créer un jalon"
+        },
+        {
+          "code": "milestones:delete",
+          "module": "milestones",
+          "action": "delete",
+          "description": "Supprimer un jalon"
+        },
+        {
+          "code": "milestones:read",
+          "module": "milestones",
+          "action": "read",
+          "description": "Voir les jalons"
+        },
+        {
+          "code": "milestones:update",
+          "module": "milestones",
+          "action": "update",
+          "description": "Modifier un jalon"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "projects:create",
+          "module": "projects",
+          "action": "create",
+          "description": "Créer un projet"
+        },
+        {
+          "code": "projects:delete",
+          "module": "projects",
+          "action": "delete",
+          "description": "Supprimer un projet"
+        },
+        {
+          "code": "projects:edit",
+          "module": "projects",
+          "action": "edit",
+          "description": "Modifier les projets (granularité RBAC)"
+        },
+        {
+          "code": "projects:manage_members",
+          "module": "projects",
+          "action": "manage_members",
+          "description": "Gérer les membres d'un projet"
+        },
+        {
+          "code": "projects:read",
+          "module": "projects",
+          "action": "read",
+          "description": "Voir les projets"
+        },
+        {
+          "code": "projects:update",
+          "module": "projects",
+          "action": "update",
+          "description": "Modifier un projet"
+        },
+        {
+          "code": "projects:view",
+          "module": "projects",
+          "action": "view",
+          "description": "Voir les projets (granularité RBAC)"
+        },
+        {
+          "code": "tasks:create",
+          "module": "tasks",
+          "action": "create",
+          "description": "Créer une tâche dans un projet"
+        },
+        {
+          "code": "tasks:create_in_project",
+          "module": "tasks",
+          "action": "create_in_project",
+          "description": "Créer des tâches dans les projets dont on est membre"
+        },
+        {
+          "code": "tasks:delete",
+          "module": "tasks",
+          "action": "delete",
+          "description": "Supprimer une tâche"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:manage_others",
+          "module": "telework",
+          "action": "manage_others",
+          "description": "Gérer le télétravail des autres agents"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:delete",
+          "module": "time_tracking",
+          "action": "delete",
+          "description": "Supprimer une saisie de temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "time_tracking:update",
+          "module": "time_tracking",
+          "action": "update",
+          "description": "Modifier une saisie de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "DEVELOPPEUR_CONCEPTEUR",
+      "name": "Développeur Concepteur",
+      "description": "Développement et conception",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "comments:create",
+          "module": "comments",
+          "action": "create",
+          "description": "Écrire un commentaire"
+        },
+        {
+          "code": "comments:delete",
+          "module": "comments",
+          "action": "delete",
+          "description": "Supprimer un commentaire"
+        },
+        {
+          "code": "comments:read",
+          "module": "comments",
+          "action": "read",
+          "description": "Voir les commentaires"
+        },
+        {
+          "code": "comments:update",
+          "module": "comments",
+          "action": "update",
+          "description": "Modifier un commentaire"
+        },
+        {
+          "code": "documents:create",
+          "module": "documents",
+          "action": "create",
+          "description": "Uploader un document"
+        },
+        {
+          "code": "documents:delete",
+          "module": "documents",
+          "action": "delete",
+          "description": "Supprimer un document"
+        },
+        {
+          "code": "documents:read",
+          "module": "documents",
+          "action": "read",
+          "description": "Voir les documents"
+        },
+        {
+          "code": "documents:update",
+          "module": "documents",
+          "action": "update",
+          "description": "Modifier un document"
+        },
+        {
+          "code": "epics:create",
+          "module": "epics",
+          "action": "create",
+          "description": "Créer un epic"
+        },
+        {
+          "code": "epics:delete",
+          "module": "epics",
+          "action": "delete",
+          "description": "Supprimer un epic"
+        },
+        {
+          "code": "epics:read",
+          "module": "epics",
+          "action": "read",
+          "description": "Voir les epics"
+        },
+        {
+          "code": "epics:update",
+          "module": "epics",
+          "action": "update",
+          "description": "Modifier un epic"
+        },
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:delete",
+          "module": "events",
+          "action": "delete",
+          "description": "Supprimer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "milestones:create",
+          "module": "milestones",
+          "action": "create",
+          "description": "Créer un jalon"
+        },
+        {
+          "code": "milestones:delete",
+          "module": "milestones",
+          "action": "delete",
+          "description": "Supprimer un jalon"
+        },
+        {
+          "code": "milestones:read",
+          "module": "milestones",
+          "action": "read",
+          "description": "Voir les jalons"
+        },
+        {
+          "code": "milestones:update",
+          "module": "milestones",
+          "action": "update",
+          "description": "Modifier un jalon"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "projects:create",
+          "module": "projects",
+          "action": "create",
+          "description": "Créer un projet"
+        },
+        {
+          "code": "projects:delete",
+          "module": "projects",
+          "action": "delete",
+          "description": "Supprimer un projet"
+        },
+        {
+          "code": "projects:edit",
+          "module": "projects",
+          "action": "edit",
+          "description": "Modifier les projets (granularité RBAC)"
+        },
+        {
+          "code": "projects:manage_members",
+          "module": "projects",
+          "action": "manage_members",
+          "description": "Gérer les membres d'un projet"
+        },
+        {
+          "code": "projects:read",
+          "module": "projects",
+          "action": "read",
+          "description": "Voir les projets"
+        },
+        {
+          "code": "projects:update",
+          "module": "projects",
+          "action": "update",
+          "description": "Modifier un projet"
+        },
+        {
+          "code": "projects:view",
+          "module": "projects",
+          "action": "view",
+          "description": "Voir les projets (granularité RBAC)"
+        },
+        {
+          "code": "tasks:create",
+          "module": "tasks",
+          "action": "create",
+          "description": "Créer une tâche dans un projet"
+        },
+        {
+          "code": "tasks:create_in_project",
+          "module": "tasks",
+          "action": "create_in_project",
+          "description": "Créer des tâches dans les projets dont on est membre"
+        },
+        {
+          "code": "tasks:delete",
+          "module": "tasks",
+          "action": "delete",
+          "description": "Supprimer une tâche"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:manage_others",
+          "module": "telework",
+          "action": "manage_others",
+          "description": "Gérer le télétravail des autres agents"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:delete",
+          "module": "time_tracking",
+          "action": "delete",
+          "description": "Supprimer une saisie de temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "time_tracking:update",
+          "module": "time_tracking",
+          "action": "update",
+          "description": "Modifier une saisie de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "GESTIONNAIRE_IML",
+      "name": "Gestionnaire IML",
+      "description": "Gestion IML",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "tasks:create_orphan",
+          "module": "tasks",
+          "action": "create_orphan",
+          "description": "Créer des tâches orphelines (sans projet)"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "GESTIONNAIRE_PARC",
+      "name": "Gestionnaire de Parc",
+      "description": "Gestion du parc informatique",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "tasks:create_orphan",
+          "module": "tasks",
+          "action": "create_orphan",
+          "description": "Créer des tâches orphelines (sans projet)"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "MANAGER",
+      "name": "Manager",
+      "description": "Gestion de projets, tâches, congés équipe",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "comments:create",
+          "module": "comments",
+          "action": "create",
+          "description": "Écrire un commentaire"
+        },
+        {
+          "code": "comments:delete",
+          "module": "comments",
+          "action": "delete",
+          "description": "Supprimer un commentaire"
+        },
+        {
+          "code": "comments:read",
+          "module": "comments",
+          "action": "read",
+          "description": "Voir les commentaires"
+        },
+        {
+          "code": "comments:update",
+          "module": "comments",
+          "action": "update",
+          "description": "Modifier un commentaire"
+        },
+        {
+          "code": "departments:read",
+          "module": "departments",
+          "action": "read",
+          "description": "Voir les départements/services"
+        },
+        {
+          "code": "departments:view",
+          "module": "departments",
+          "action": "view",
+          "description": "Voir les départements (granularité RBAC)"
+        },
+        {
+          "code": "documents:create",
+          "module": "documents",
+          "action": "create",
+          "description": "Uploader un document"
+        },
+        {
+          "code": "documents:delete",
+          "module": "documents",
+          "action": "delete",
+          "description": "Supprimer un document"
+        },
+        {
+          "code": "documents:read",
+          "module": "documents",
+          "action": "read",
+          "description": "Voir les documents"
+        },
+        {
+          "code": "documents:update",
+          "module": "documents",
+          "action": "update",
+          "description": "Modifier un document"
+        },
+        {
+          "code": "epics:create",
+          "module": "epics",
+          "action": "create",
+          "description": "Créer un epic"
+        },
+        {
+          "code": "epics:delete",
+          "module": "epics",
+          "action": "delete",
+          "description": "Supprimer un epic"
+        },
+        {
+          "code": "epics:read",
+          "module": "epics",
+          "action": "read",
+          "description": "Voir les epics"
+        },
+        {
+          "code": "epics:update",
+          "module": "epics",
+          "action": "update",
+          "description": "Modifier un epic"
+        },
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:delete",
+          "module": "events",
+          "action": "delete",
+          "description": "Supprimer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:approve",
+          "module": "leaves",
+          "action": "approve",
+          "description": "Valider ou rejeter des congés"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:declare_for_others",
+          "module": "leaves",
+          "action": "declare_for_others",
+          "description": "Déclarer des congés au nom d'un autre agent"
+        },
+        {
+          "code": "leaves:delete",
+          "module": "leaves",
+          "action": "delete",
+          "description": "Supprimer une demande de congé"
+        },
+        {
+          "code": "leaves:manage",
+          "module": "leaves",
+          "action": "manage",
+          "description": "Valider ou rejeter des demandes de congés"
+        },
+        {
+          "code": "leaves:manage_delegations",
+          "module": "leaves",
+          "action": "manage_delegations",
+          "description": "Gérer les délégations de validation"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "milestones:create",
+          "module": "milestones",
+          "action": "create",
+          "description": "Créer un jalon"
+        },
+        {
+          "code": "milestones:delete",
+          "module": "milestones",
+          "action": "delete",
+          "description": "Supprimer un jalon"
+        },
+        {
+          "code": "milestones:read",
+          "module": "milestones",
+          "action": "read",
+          "description": "Voir les jalons"
+        },
+        {
+          "code": "milestones:update",
+          "module": "milestones",
+          "action": "update",
+          "description": "Modifier un jalon"
+        },
+        {
+          "code": "predefined_tasks:assign",
+          "module": "predefined_tasks",
+          "action": "assign",
+          "description": "Assigner une tâche prédéfinie à un agent"
+        },
+        {
+          "code": "predefined_tasks:create",
+          "module": "predefined_tasks",
+          "action": "create",
+          "description": "Créer une tâche prédéfinie"
+        },
+        {
+          "code": "predefined_tasks:delete",
+          "module": "predefined_tasks",
+          "action": "delete",
+          "description": "Supprimer une tâche prédéfinie"
+        },
+        {
+          "code": "predefined_tasks:edit",
+          "module": "predefined_tasks",
+          "action": "edit",
+          "description": "Modifier une tâche prédéfinie"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "projects:create",
+          "module": "projects",
+          "action": "create",
+          "description": "Créer un projet"
+        },
+        {
+          "code": "projects:delete",
+          "module": "projects",
+          "action": "delete",
+          "description": "Supprimer un projet"
+        },
+        {
+          "code": "projects:edit",
+          "module": "projects",
+          "action": "edit",
+          "description": "Modifier les projets (granularité RBAC)"
+        },
+        {
+          "code": "projects:manage_members",
+          "module": "projects",
+          "action": "manage_members",
+          "description": "Gérer les membres d'un projet"
+        },
+        {
+          "code": "projects:read",
+          "module": "projects",
+          "action": "read",
+          "description": "Voir les projets"
+        },
+        {
+          "code": "projects:update",
+          "module": "projects",
+          "action": "update",
+          "description": "Modifier un projet"
+        },
+        {
+          "code": "projects:view",
+          "module": "projects",
+          "action": "view",
+          "description": "Voir les projets (granularité RBAC)"
+        },
+        {
+          "code": "reports:export",
+          "module": "reports",
+          "action": "export",
+          "description": "Exporter les rapports"
+        },
+        {
+          "code": "reports:view",
+          "module": "reports",
+          "action": "view",
+          "description": "Voir les rapports"
+        },
+        {
+          "code": "skills:read",
+          "module": "skills",
+          "action": "read",
+          "description": "Voir les compétences"
+        },
+        {
+          "code": "skills:view",
+          "module": "skills",
+          "action": "view",
+          "description": "Voir les compétences (granularité RBAC)"
+        },
+        {
+          "code": "tasks:assign_any_user",
+          "module": "tasks",
+          "action": "assign_any_user",
+          "description": "Assigner une tâche à n'importe quel utilisateur, sans restriction de périmètre ni de membres du projet"
+        },
+        {
+          "code": "tasks:create",
+          "module": "tasks",
+          "action": "create",
+          "description": "Créer une tâche dans un projet"
+        },
+        {
+          "code": "tasks:create_in_project",
+          "module": "tasks",
+          "action": "create_in_project",
+          "description": "Créer des tâches dans les projets dont on est membre"
+        },
+        {
+          "code": "tasks:delete",
+          "module": "tasks",
+          "action": "delete",
+          "description": "Supprimer une tâche"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:manage_others",
+          "module": "telework",
+          "action": "manage_others",
+          "description": "Gérer le télétravail des autres agents"
+        },
+        {
+          "code": "telework:manage_recurring",
+          "module": "telework",
+          "action": "manage_recurring",
+          "description": "Gérer les règles de télétravail récurrentes"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:read_team",
+          "module": "telework",
+          "action": "read_team",
+          "description": "Voir le télétravail de l'équipe"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "third_parties:assign_to_project",
+          "module": "third_parties",
+          "action": "assign_to_project",
+          "description": "Rattacher un tiers à un projet"
+        },
+        {
+          "code": "third_parties:assign_to_task",
+          "module": "third_parties",
+          "action": "assign_to_task",
+          "description": "Assigner un tiers à une tâche"
+        },
+        {
+          "code": "third_parties:create",
+          "module": "third_parties",
+          "action": "create",
+          "description": "Créer un tiers"
+        },
+        {
+          "code": "third_parties:delete",
+          "module": "third_parties",
+          "action": "delete",
+          "description": "Supprimer un tiers (hard delete en cascade)"
+        },
+        {
+          "code": "third_parties:read",
+          "module": "third_parties",
+          "action": "read",
+          "description": "Voir les tiers"
+        },
+        {
+          "code": "third_parties:update",
+          "module": "third_parties",
+          "action": "update",
+          "description": "Modifier un tiers"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:declare_for_third_party",
+          "module": "time_tracking",
+          "action": "declare_for_third_party",
+          "description": "Déclarer du temps pour le compte d'un tiers"
+        },
+        {
+          "code": "time_tracking:delete",
+          "module": "time_tracking",
+          "action": "delete",
+          "description": "Supprimer une saisie de temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "time_tracking:read_reports",
+          "module": "time_tracking",
+          "action": "read_reports",
+          "description": "Voir les rapports de temps"
+        },
+        {
+          "code": "time_tracking:update",
+          "module": "time_tracking",
+          "action": "update",
+          "description": "Modifier une saisie de temps"
+        },
+        {
+          "code": "time_tracking:view_any",
+          "module": "time_tracking",
+          "action": "view_any",
+          "description": "Lister les entrées de temps d'autres utilisateurs (filtre userId cross-user)"
+        },
+        {
+          "code": "users:manage",
+          "module": "users",
+          "action": "manage",
+          "description": "Accéder à la page d'administration des utilisateurs"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "OBSERVATEUR",
+      "name": "Observateur",
+      "description": "Accès en lecture seule",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "analytics:read",
+          "module": "analytics",
+          "action": "read",
+          "description": "Voir les analytics"
+        },
+        {
+          "code": "comments:read",
+          "module": "comments",
+          "action": "read",
+          "description": "Voir les commentaires"
+        },
+        {
+          "code": "departments:read",
+          "module": "departments",
+          "action": "read",
+          "description": "Voir les départements/services"
+        },
+        {
+          "code": "departments:view",
+          "module": "departments",
+          "action": "view",
+          "description": "Voir les départements (granularité RBAC)"
+        },
+        {
+          "code": "documents:read",
+          "module": "documents",
+          "action": "read",
+          "description": "Voir les documents"
+        },
+        {
+          "code": "epics:read",
+          "module": "epics",
+          "action": "read",
+          "description": "Voir les epics"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "holidays:read",
+          "module": "holidays",
+          "action": "read",
+          "description": "Voir les jours fériés"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "milestones:read",
+          "module": "milestones",
+          "action": "read",
+          "description": "Voir les jalons"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "projects:read",
+          "module": "projects",
+          "action": "read",
+          "description": "Voir les projets"
+        },
+        {
+          "code": "projects:view",
+          "module": "projects",
+          "action": "view",
+          "description": "Voir les projets (granularité RBAC)"
+        },
+        {
+          "code": "reports:view",
+          "module": "reports",
+          "action": "view",
+          "description": "Voir les rapports"
+        },
+        {
+          "code": "school_vacations:read",
+          "module": "school_vacations",
+          "action": "read",
+          "description": "Voir les vacances scolaires"
+        },
+        {
+          "code": "services:read",
+          "module": "services",
+          "action": "read",
+          "description": "Voir les services"
+        },
+        {
+          "code": "settings:read",
+          "module": "settings",
+          "action": "read",
+          "description": "Voir les paramètres"
+        },
+        {
+          "code": "skills:read",
+          "module": "skills",
+          "action": "read",
+          "description": "Voir les compétences"
+        },
+        {
+          "code": "skills:view",
+          "module": "skills",
+          "action": "view",
+          "description": "Voir les compétences (granularité RBAC)"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "third_parties:read",
+          "module": "third_parties",
+          "action": "read",
+          "description": "Voir les tiers"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "REFERENT_TECHNIQUE",
+      "name": "Référent Technique",
+      "description": "Création et modification de tâches dans les projets",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "comments:create",
+          "module": "comments",
+          "action": "create",
+          "description": "Écrire un commentaire"
+        },
+        {
+          "code": "comments:delete",
+          "module": "comments",
+          "action": "delete",
+          "description": "Supprimer un commentaire"
+        },
+        {
+          "code": "comments:read",
+          "module": "comments",
+          "action": "read",
+          "description": "Voir les commentaires"
+        },
+        {
+          "code": "comments:update",
+          "module": "comments",
+          "action": "update",
+          "description": "Modifier un commentaire"
+        },
+        {
+          "code": "documents:create",
+          "module": "documents",
+          "action": "create",
+          "description": "Uploader un document"
+        },
+        {
+          "code": "documents:delete",
+          "module": "documents",
+          "action": "delete",
+          "description": "Supprimer un document"
+        },
+        {
+          "code": "documents:read",
+          "module": "documents",
+          "action": "read",
+          "description": "Voir les documents"
+        },
+        {
+          "code": "documents:update",
+          "module": "documents",
+          "action": "update",
+          "description": "Modifier un document"
+        },
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:delete",
+          "module": "events",
+          "action": "delete",
+          "description": "Supprimer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "skills:create",
+          "module": "skills",
+          "action": "create",
+          "description": "Ajouter une compétence"
+        },
+        {
+          "code": "skills:delete",
+          "module": "skills",
+          "action": "delete",
+          "description": "Supprimer une compétence"
+        },
+        {
+          "code": "skills:edit",
+          "module": "skills",
+          "action": "edit",
+          "description": "Modifier les compétences (granularité RBAC)"
+        },
+        {
+          "code": "skills:manage_matrix",
+          "module": "skills",
+          "action": "manage_matrix",
+          "description": "Gérer la matrice de compétences"
+        },
+        {
+          "code": "skills:read",
+          "module": "skills",
+          "action": "read",
+          "description": "Voir les compétences"
+        },
+        {
+          "code": "skills:update",
+          "module": "skills",
+          "action": "update",
+          "description": "Modifier une compétence"
+        },
+        {
+          "code": "skills:view",
+          "module": "skills",
+          "action": "view",
+          "description": "Voir les compétences (granularité RBAC)"
+        },
+        {
+          "code": "tasks:create_in_project",
+          "module": "tasks",
+          "action": "create_in_project",
+          "description": "Créer des tâches dans les projets dont on est membre"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:delete",
+          "module": "time_tracking",
+          "action": "delete",
+          "description": "Supprimer une saisie de temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "time_tracking:update",
+          "module": "time_tracking",
+          "action": "update",
+          "description": "Modifier une saisie de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "RESPONSABLE",
+      "name": "Responsable",
+      "description": "Gestion complète sauf rôles et settings",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "analytics:export",
+          "module": "analytics",
+          "action": "export",
+          "description": "Exporter les analytics"
+        },
+        {
+          "code": "analytics:read",
+          "module": "analytics",
+          "action": "read",
+          "description": "Voir les analytics"
+        },
+        {
+          "code": "comments:create",
+          "module": "comments",
+          "action": "create",
+          "description": "Écrire un commentaire"
+        },
+        {
+          "code": "comments:delete",
+          "module": "comments",
+          "action": "delete",
+          "description": "Supprimer un commentaire"
+        },
+        {
+          "code": "comments:read",
+          "module": "comments",
+          "action": "read",
+          "description": "Voir les commentaires"
+        },
+        {
+          "code": "comments:update",
+          "module": "comments",
+          "action": "update",
+          "description": "Modifier un commentaire"
+        },
+        {
+          "code": "departments:create",
+          "module": "departments",
+          "action": "create",
+          "description": "Créer un département/service"
+        },
+        {
+          "code": "departments:delete",
+          "module": "departments",
+          "action": "delete",
+          "description": "Supprimer un département/service"
+        },
+        {
+          "code": "departments:edit",
+          "module": "departments",
+          "action": "edit",
+          "description": "Modifier les départements (granularité RBAC)"
+        },
+        {
+          "code": "departments:read",
+          "module": "departments",
+          "action": "read",
+          "description": "Voir les départements/services"
+        },
+        {
+          "code": "departments:update",
+          "module": "departments",
+          "action": "update",
+          "description": "Modifier un département/service"
+        },
+        {
+          "code": "departments:view",
+          "module": "departments",
+          "action": "view",
+          "description": "Voir les départements (granularité RBAC)"
+        },
+        {
+          "code": "documents:create",
+          "module": "documents",
+          "action": "create",
+          "description": "Uploader un document"
+        },
+        {
+          "code": "documents:delete",
+          "module": "documents",
+          "action": "delete",
+          "description": "Supprimer un document"
+        },
+        {
+          "code": "documents:read",
+          "module": "documents",
+          "action": "read",
+          "description": "Voir les documents"
+        },
+        {
+          "code": "documents:update",
+          "module": "documents",
+          "action": "update",
+          "description": "Modifier un document"
+        },
+        {
+          "code": "epics:create",
+          "module": "epics",
+          "action": "create",
+          "description": "Créer un epic"
+        },
+        {
+          "code": "epics:delete",
+          "module": "epics",
+          "action": "delete",
+          "description": "Supprimer un epic"
+        },
+        {
+          "code": "epics:read",
+          "module": "epics",
+          "action": "read",
+          "description": "Voir les epics"
+        },
+        {
+          "code": "epics:update",
+          "module": "epics",
+          "action": "update",
+          "description": "Modifier un epic"
+        },
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:delete",
+          "module": "events",
+          "action": "delete",
+          "description": "Supprimer un événement"
+        },
+        {
+          "code": "events:manage_any",
+          "module": "events",
+          "action": "manage_any",
+          "description": "Modifier ou supprimer n'importe quel événement, y compris ceux dont on n'est pas créateur (bypass OwnershipGuard)"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "holidays:create",
+          "module": "holidays",
+          "action": "create",
+          "description": "Créer un jour férié"
+        },
+        {
+          "code": "holidays:delete",
+          "module": "holidays",
+          "action": "delete",
+          "description": "Supprimer un jour férié"
+        },
+        {
+          "code": "holidays:read",
+          "module": "holidays",
+          "action": "read",
+          "description": "Voir les jours fériés"
+        },
+        {
+          "code": "holidays:update",
+          "module": "holidays",
+          "action": "update",
+          "description": "Modifier un jour férié"
+        },
+        {
+          "code": "leaves:approve",
+          "module": "leaves",
+          "action": "approve",
+          "description": "Valider ou rejeter des congés"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:declare_for_others",
+          "module": "leaves",
+          "action": "declare_for_others",
+          "description": "Déclarer des congés au nom d'un autre agent"
+        },
+        {
+          "code": "leaves:delete",
+          "module": "leaves",
+          "action": "delete",
+          "description": "Supprimer une demande de congé"
+        },
+        {
+          "code": "leaves:manage",
+          "module": "leaves",
+          "action": "manage",
+          "description": "Valider ou rejeter des demandes de congés"
+        },
+        {
+          "code": "leaves:manage_delegations",
+          "module": "leaves",
+          "action": "manage_delegations",
+          "description": "Gérer les délégations de validation"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:update",
+          "module": "leaves",
+          "action": "update",
+          "description": "Modifier une demande de congé"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "milestones:create",
+          "module": "milestones",
+          "action": "create",
+          "description": "Créer un jalon"
+        },
+        {
+          "code": "milestones:delete",
+          "module": "milestones",
+          "action": "delete",
+          "description": "Supprimer un jalon"
+        },
+        {
+          "code": "milestones:read",
+          "module": "milestones",
+          "action": "read",
+          "description": "Voir les jalons"
+        },
+        {
+          "code": "milestones:update",
+          "module": "milestones",
+          "action": "update",
+          "description": "Modifier un jalon"
+        },
+        {
+          "code": "predefined_tasks:assign",
+          "module": "predefined_tasks",
+          "action": "assign",
+          "description": "Assigner une tâche prédéfinie à un agent"
+        },
+        {
+          "code": "predefined_tasks:create",
+          "module": "predefined_tasks",
+          "action": "create",
+          "description": "Créer une tâche prédéfinie"
+        },
+        {
+          "code": "predefined_tasks:delete",
+          "module": "predefined_tasks",
+          "action": "delete",
+          "description": "Supprimer une tâche prédéfinie"
+        },
+        {
+          "code": "predefined_tasks:edit",
+          "module": "predefined_tasks",
+          "action": "edit",
+          "description": "Modifier une tâche prédéfinie"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "projects:create",
+          "module": "projects",
+          "action": "create",
+          "description": "Créer un projet"
+        },
+        {
+          "code": "projects:delete",
+          "module": "projects",
+          "action": "delete",
+          "description": "Supprimer un projet"
+        },
+        {
+          "code": "projects:edit",
+          "module": "projects",
+          "action": "edit",
+          "description": "Modifier les projets (granularité RBAC)"
+        },
+        {
+          "code": "projects:manage_any",
+          "module": "projects",
+          "action": "manage_any",
+          "description": "Modifier ou supprimer n'importe quel projet, y compris ceux dont on n'est pas propriétaire (bypass OwnershipGuard)"
+        },
+        {
+          "code": "projects:manage_members",
+          "module": "projects",
+          "action": "manage_members",
+          "description": "Gérer les membres d'un projet"
+        },
+        {
+          "code": "projects:read",
+          "module": "projects",
+          "action": "read",
+          "description": "Voir les projets"
+        },
+        {
+          "code": "projects:update",
+          "module": "projects",
+          "action": "update",
+          "description": "Modifier un projet"
+        },
+        {
+          "code": "projects:view",
+          "module": "projects",
+          "action": "view",
+          "description": "Voir les projets (granularité RBAC)"
+        },
+        {
+          "code": "reports:export",
+          "module": "reports",
+          "action": "export",
+          "description": "Exporter les rapports"
+        },
+        {
+          "code": "reports:view",
+          "module": "reports",
+          "action": "view",
+          "description": "Voir les rapports"
+        },
+        {
+          "code": "school_vacations:create",
+          "module": "school_vacations",
+          "action": "create",
+          "description": "Creer une periode de vacances scolaires"
+        },
+        {
+          "code": "school_vacations:delete",
+          "module": "school_vacations",
+          "action": "delete",
+          "description": "Supprimer une periode de vacances scolaires"
+        },
+        {
+          "code": "school_vacations:read",
+          "module": "school_vacations",
+          "action": "read",
+          "description": "Voir les vacances scolaires"
+        },
+        {
+          "code": "school_vacations:update",
+          "module": "school_vacations",
+          "action": "update",
+          "description": "Modifier une periode de vacances scolaires"
+        },
+        {
+          "code": "services:create",
+          "module": "services",
+          "action": "create",
+          "description": "Créer un service"
+        },
+        {
+          "code": "services:delete",
+          "module": "services",
+          "action": "delete",
+          "description": "Supprimer un service"
+        },
+        {
+          "code": "services:read",
+          "module": "services",
+          "action": "read",
+          "description": "Voir les services"
+        },
+        {
+          "code": "services:update",
+          "module": "services",
+          "action": "update",
+          "description": "Modifier un service"
+        },
+        {
+          "code": "settings:read",
+          "module": "settings",
+          "action": "read",
+          "description": "Voir les paramètres"
+        },
+        {
+          "code": "skills:create",
+          "module": "skills",
+          "action": "create",
+          "description": "Ajouter une compétence"
+        },
+        {
+          "code": "skills:delete",
+          "module": "skills",
+          "action": "delete",
+          "description": "Supprimer une compétence"
+        },
+        {
+          "code": "skills:edit",
+          "module": "skills",
+          "action": "edit",
+          "description": "Modifier les compétences (granularité RBAC)"
+        },
+        {
+          "code": "skills:manage_matrix",
+          "module": "skills",
+          "action": "manage_matrix",
+          "description": "Gérer la matrice de compétences"
+        },
+        {
+          "code": "skills:read",
+          "module": "skills",
+          "action": "read",
+          "description": "Voir les compétences"
+        },
+        {
+          "code": "skills:update",
+          "module": "skills",
+          "action": "update",
+          "description": "Modifier une compétence"
+        },
+        {
+          "code": "skills:view",
+          "module": "skills",
+          "action": "view",
+          "description": "Voir les compétences (granularité RBAC)"
+        },
+        {
+          "code": "tasks:assign_any_user",
+          "module": "tasks",
+          "action": "assign_any_user",
+          "description": "Assigner une tâche à n'importe quel utilisateur, sans restriction de périmètre ni de membres du projet"
+        },
+        {
+          "code": "tasks:create",
+          "module": "tasks",
+          "action": "create",
+          "description": "Créer une tâche dans un projet"
+        },
+        {
+          "code": "tasks:create_in_project",
+          "module": "tasks",
+          "action": "create_in_project",
+          "description": "Créer des tâches dans les projets dont on est membre"
+        },
+        {
+          "code": "tasks:create_orphan",
+          "module": "tasks",
+          "action": "create_orphan",
+          "description": "Créer des tâches orphelines (sans projet)"
+        },
+        {
+          "code": "tasks:delete",
+          "module": "tasks",
+          "action": "delete",
+          "description": "Supprimer une tâche"
+        },
+        {
+          "code": "tasks:manage_any",
+          "module": "tasks",
+          "action": "manage_any",
+          "description": "Modifier ou supprimer n'importe quelle tâche, y compris celles dont on n'est ni assignee ni membre du projet (bypass OwnershipGuard)"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:manage_others",
+          "module": "telework",
+          "action": "manage_others",
+          "description": "Gérer le télétravail des autres agents"
+        },
+        {
+          "code": "telework:manage_recurring",
+          "module": "telework",
+          "action": "manage_recurring",
+          "description": "Gérer les règles de télétravail récurrentes"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:read_team",
+          "module": "telework",
+          "action": "read_team",
+          "description": "Voir le télétravail de l'équipe"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "third_parties:assign_to_project",
+          "module": "third_parties",
+          "action": "assign_to_project",
+          "description": "Rattacher un tiers à un projet"
+        },
+        {
+          "code": "third_parties:assign_to_task",
+          "module": "third_parties",
+          "action": "assign_to_task",
+          "description": "Assigner un tiers à une tâche"
+        },
+        {
+          "code": "third_parties:create",
+          "module": "third_parties",
+          "action": "create",
+          "description": "Créer un tiers"
+        },
+        {
+          "code": "third_parties:delete",
+          "module": "third_parties",
+          "action": "delete",
+          "description": "Supprimer un tiers (hard delete en cascade)"
+        },
+        {
+          "code": "third_parties:read",
+          "module": "third_parties",
+          "action": "read",
+          "description": "Voir les tiers"
+        },
+        {
+          "code": "third_parties:update",
+          "module": "third_parties",
+          "action": "update",
+          "description": "Modifier un tiers"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:declare_for_third_party",
+          "module": "time_tracking",
+          "action": "declare_for_third_party",
+          "description": "Déclarer du temps pour le compte d'un tiers"
+        },
+        {
+          "code": "time_tracking:delete",
+          "module": "time_tracking",
+          "action": "delete",
+          "description": "Supprimer une saisie de temps"
+        },
+        {
+          "code": "time_tracking:manage_any",
+          "module": "time_tracking",
+          "action": "manage_any",
+          "description": "Modifier ou supprimer n'importe quelle entrée de temps, y compris celles dont on n'est pas propriétaire (bypass OwnershipGuard)"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "time_tracking:read_reports",
+          "module": "time_tracking",
+          "action": "read_reports",
+          "description": "Voir les rapports de temps"
+        },
+        {
+          "code": "time_tracking:update",
+          "module": "time_tracking",
+          "action": "update",
+          "description": "Modifier une saisie de temps"
+        },
+        {
+          "code": "time_tracking:view_any",
+          "module": "time_tracking",
+          "action": "view_any",
+          "description": "Lister les entrées de temps d'autres utilisateurs (filtre userId cross-user)"
+        },
+        {
+          "code": "users:create",
+          "module": "users",
+          "action": "create",
+          "description": "Créer un utilisateur"
+        },
+        {
+          "code": "users:delete",
+          "module": "users",
+          "action": "delete",
+          "description": "Supprimer un utilisateur"
+        },
+        {
+          "code": "users:edit",
+          "module": "users",
+          "action": "edit",
+          "description": "Modifier les utilisateurs (granularité RBAC)"
+        },
+        {
+          "code": "users:import",
+          "module": "users",
+          "action": "import",
+          "description": "Importer des utilisateurs"
+        },
+        {
+          "code": "users:manage",
+          "module": "users",
+          "action": "manage",
+          "description": "Accéder à la page d'administration des utilisateurs"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:reset_password",
+          "module": "users",
+          "action": "reset_password",
+          "description": "Réinitialiser le mot de passe d'un utilisateur"
+        },
+        {
+          "code": "users:update",
+          "module": "users",
+          "action": "update",
+          "description": "Modifier un utilisateur"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    },
+    {
+      "code": "TECHNICIEN_SUPPORT",
+      "name": "Technicien Support",
+      "description": "Support technique",
+      "isSystem": true,
+      "isDefault": false,
+      "permissions": [
+        {
+          "code": "events:create",
+          "module": "events",
+          "action": "create",
+          "description": "Créer un événement"
+        },
+        {
+          "code": "events:read",
+          "module": "events",
+          "action": "read",
+          "description": "Voir les événements"
+        },
+        {
+          "code": "events:readAll",
+          "module": "events",
+          "action": "readAll",
+          "description": "Voir tous les événements (pas uniquement les siens)"
+        },
+        {
+          "code": "events:update",
+          "module": "events",
+          "action": "update",
+          "description": "Modifier un événement"
+        },
+        {
+          "code": "leaves:create",
+          "module": "leaves",
+          "action": "create",
+          "description": "Poser une demande de congé"
+        },
+        {
+          "code": "leaves:read",
+          "module": "leaves",
+          "action": "read",
+          "description": "Voir les congés"
+        },
+        {
+          "code": "leaves:readAll",
+          "module": "leaves",
+          "action": "readAll",
+          "description": "Voir tous les congés (pas uniquement les siens)"
+        },
+        {
+          "code": "leaves:view",
+          "module": "leaves",
+          "action": "view",
+          "description": "Voir les congés (granularité RBAC)"
+        },
+        {
+          "code": "predefined_tasks:view",
+          "module": "predefined_tasks",
+          "action": "view",
+          "description": "Voir les tâches prédéfinies"
+        },
+        {
+          "code": "tasks:create_orphan",
+          "module": "tasks",
+          "action": "create_orphan",
+          "description": "Créer des tâches orphelines (sans projet)"
+        },
+        {
+          "code": "tasks:read",
+          "module": "tasks",
+          "action": "read",
+          "description": "Voir les tâches"
+        },
+        {
+          "code": "tasks:readAll",
+          "module": "tasks",
+          "action": "readAll",
+          "description": "Voir toutes les tâches (pas uniquement les siennes)"
+        },
+        {
+          "code": "tasks:update",
+          "module": "tasks",
+          "action": "update",
+          "description": "Modifier une tâche"
+        },
+        {
+          "code": "telework:create",
+          "module": "telework",
+          "action": "create",
+          "description": "Déclarer du télétravail"
+        },
+        {
+          "code": "telework:delete",
+          "module": "telework",
+          "action": "delete",
+          "description": "Supprimer une déclaration de télétravail"
+        },
+        {
+          "code": "telework:read",
+          "module": "telework",
+          "action": "read",
+          "description": "Voir le télétravail"
+        },
+        {
+          "code": "telework:readAll",
+          "module": "telework",
+          "action": "readAll",
+          "description": "Voir tous les télétravails (pas uniquement les siens)"
+        },
+        {
+          "code": "telework:update",
+          "module": "telework",
+          "action": "update",
+          "description": "Modifier une déclaration de télétravail"
+        },
+        {
+          "code": "telework:view",
+          "module": "telework",
+          "action": "view",
+          "description": "Voir le télétravail (granularité RBAC)"
+        },
+        {
+          "code": "time_tracking:create",
+          "module": "time_tracking",
+          "action": "create",
+          "description": "Saisir du temps"
+        },
+        {
+          "code": "time_tracking:read",
+          "module": "time_tracking",
+          "action": "read",
+          "description": "Voir les saisies de temps"
+        },
+        {
+          "code": "users:read",
+          "module": "users",
+          "action": "read",
+          "description": "Voir les utilisateurs"
+        },
+        {
+          "code": "users:view",
+          "module": "users",
+          "action": "view",
+          "description": "Voir les utilisateurs (granularité RBAC)"
+        }
+      ]
+    }
+  ]
+}

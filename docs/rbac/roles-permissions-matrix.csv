@@ -1,0 +1,120 @@
+permission_code,module,action,description,ADMIN,ADMINISTRATEUR_IML,CHARGE_DE_MISSION,CHEF_DE_PROJET,CONSULTANT_TECHNOLOGIE_SI,CONTRIBUTEUR,CORRESPONDANT_FONCTIONNEL_APPLICATION,DEVELOPPEUR_CONCEPTEUR,GESTIONNAIRE_IML,GESTIONNAIRE_PARC,MANAGER,OBSERVATEUR,REFERENT_TECHNIQUE,RESPONSABLE,TECHNICIEN_SUPPORT
+analytics:export,analytics,export,Exporter les analytics,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+analytics:read,analytics,read,Voir les analytics,1,0,0,0,0,0,0,0,0,0,0,1,0,1,0
+comments:create,comments,create,Écrire un commentaire,1,0,1,1,1,0,1,1,0,0,1,0,1,1,0
+comments:delete,comments,delete,Supprimer un commentaire,1,0,1,1,1,0,1,1,0,0,1,0,1,1,0
+comments:read,comments,read,Voir les commentaires,1,0,1,1,1,0,1,1,0,0,1,1,1,1,0
+comments:update,comments,update,Modifier un commentaire,1,0,1,1,1,0,1,1,0,0,1,0,1,1,0
+departments:create,departments,create,Créer un département/service,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+departments:delete,departments,delete,Supprimer un département/service,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+departments:edit,departments,edit,Modifier les départements (granularité RBAC),1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+departments:read,departments,read,Voir les départements/services,1,0,0,0,0,0,0,0,0,0,1,1,0,1,0
+departments:update,departments,update,Modifier un département/service,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+departments:view,departments,view,Voir les départements (granularité RBAC),1,0,0,0,0,0,0,0,0,0,1,1,0,1,0
+documents:create,documents,create,Uploader un document,1,0,1,1,1,0,1,1,0,0,1,0,1,1,0
+documents:delete,documents,delete,Supprimer un document,1,0,1,1,1,0,1,1,0,0,1,0,1,1,0
+documents:read,documents,read,Voir les documents,1,0,1,1,1,0,1,1,0,0,1,1,1,1,0
+documents:update,documents,update,Modifier un document,1,0,1,1,1,0,1,1,0,0,1,0,1,1,0
+epics:create,epics,create,Créer un epic,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+epics:delete,epics,delete,Supprimer un epic,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+epics:read,epics,read,Voir les epics,1,0,1,1,1,0,1,1,0,0,1,1,0,1,0
+epics:update,epics,update,Modifier un epic,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+events:create,events,create,Créer un événement,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1
+events:delete,events,delete,Supprimer un événement,1,0,1,1,1,0,1,1,0,0,1,0,1,1,0
+events:manage_any,events,manage_any,"Modifier ou supprimer n'importe quel événement, y compris ceux dont on n'est pas créateur (bypass OwnershipGuard)",1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+events:read,events,read,Voir les événements,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+events:readAll,events,readAll,Voir tous les événements (pas uniquement les siens),1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+events:update,events,update,Modifier un événement,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1
+holidays:create,holidays,create,Créer un jour férié,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+holidays:delete,holidays,delete,Supprimer un jour férié,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+holidays:read,holidays,read,Voir les jours fériés,1,0,0,0,0,0,0,0,0,0,0,1,0,1,0
+holidays:update,holidays,update,Modifier un jour férié,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+leaves:approve,leaves,approve,Valider ou rejeter des congés,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+leaves:create,leaves,create,Poser une demande de congé,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1
+leaves:declare_for_others,leaves,declare_for_others,Déclarer des congés au nom d'un autre agent,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+leaves:delete,leaves,delete,Supprimer une demande de congé,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+leaves:manage,leaves,manage,Valider ou rejeter des demandes de congés,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+leaves:manage_any,leaves,manage_any,Gérer (lire/modifier/supprimer/valider) n'importe quelle demande de congé sans restriction de périmètre. Réservé à l'administration centrale.,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+leaves:manage_delegations,leaves,manage_delegations,Gérer les délégations de validation,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+leaves:read,leaves,read,Voir les congés,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+leaves:readAll,leaves,readAll,Voir tous les congés (pas uniquement les siens),1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+leaves:update,leaves,update,Modifier une demande de congé,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+leaves:view,leaves,view,Voir les congés (granularité RBAC),1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+milestones:create,milestones,create,Créer un jalon,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+milestones:delete,milestones,delete,Supprimer un jalon,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+milestones:read,milestones,read,Voir les jalons,1,0,1,1,1,0,1,1,0,0,1,1,0,1,0
+milestones:update,milestones,update,Modifier un jalon,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+predefined_tasks:assign,predefined_tasks,assign,Assigner une tâche prédéfinie à un agent,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+predefined_tasks:create,predefined_tasks,create,Créer une tâche prédéfinie,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+predefined_tasks:delete,predefined_tasks,delete,Supprimer une tâche prédéfinie,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+predefined_tasks:edit,predefined_tasks,edit,Modifier une tâche prédéfinie,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+predefined_tasks:view,predefined_tasks,view,Voir les tâches prédéfinies,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+projects:create,projects,create,Créer un projet,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+projects:delete,projects,delete,Supprimer un projet,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+projects:edit,projects,edit,Modifier les projets (granularité RBAC),1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+projects:manage_any,projects,manage_any,"Modifier ou supprimer n'importe quel projet, y compris ceux dont on n'est pas propriétaire (bypass OwnershipGuard)",1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+projects:manage_members,projects,manage_members,Gérer les membres d'un projet,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+projects:read,projects,read,Voir les projets,1,0,1,1,1,0,1,1,0,0,1,1,0,1,0
+projects:update,projects,update,Modifier un projet,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+projects:view,projects,view,Voir les projets (granularité RBAC),1,0,1,1,1,0,1,1,0,0,1,1,0,1,0
+reports:export,reports,export,Exporter les rapports,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+reports:view,reports,view,Voir les rapports,1,0,0,1,0,0,0,0,0,0,1,1,0,1,0
+school_vacations:create,school_vacations,create,Creer une periode de vacances scolaires,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+school_vacations:delete,school_vacations,delete,Supprimer une periode de vacances scolaires,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+school_vacations:read,school_vacations,read,Voir les vacances scolaires,1,0,0,0,0,0,0,0,0,0,0,1,0,1,0
+school_vacations:update,school_vacations,update,Modifier une periode de vacances scolaires,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+services:create,services,create,Créer un service,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+services:delete,services,delete,Supprimer un service,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+services:read,services,read,Voir les services,1,0,0,0,0,0,0,0,0,0,0,1,0,1,0
+services:update,services,update,Modifier un service,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+settings:read,settings,read,Voir les paramètres,1,0,0,0,0,0,0,0,0,0,0,1,0,1,0
+settings:update,settings,update,Modifier les paramètres,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+skills:create,skills,create,Ajouter une compétence,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0
+skills:delete,skills,delete,Supprimer une compétence,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0
+skills:edit,skills,edit,Modifier les compétences (granularité RBAC),1,0,0,0,0,0,0,0,0,0,0,0,1,1,0
+skills:manage_matrix,skills,manage_matrix,Gérer la matrice de compétences,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0
+skills:read,skills,read,Voir les compétences,1,0,0,0,0,0,0,0,0,0,1,1,1,1,0
+skills:update,skills,update,Modifier une compétence,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0
+skills:view,skills,view,Voir les compétences (granularité RBAC),1,0,0,0,0,0,0,0,0,0,1,1,1,1,0
+tasks:assign_any_user,tasks,assign_any_user,"Assigner une tâche à n'importe quel utilisateur, sans restriction de périmètre ni de membres du projet",1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+tasks:create,tasks,create,Créer une tâche dans un projet,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+tasks:create_in_project,tasks,create_in_project,Créer des tâches dans les projets dont on est membre,1,0,1,1,1,0,1,1,0,0,1,0,1,1,0
+tasks:create_orphan,tasks,create_orphan,Créer des tâches orphelines (sans projet),1,1,0,0,0,1,0,0,1,1,0,0,0,1,1
+tasks:delete,tasks,delete,Supprimer une tâche,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+tasks:manage_any,tasks,manage_any,"Modifier ou supprimer n'importe quelle tâche, y compris celles dont on n'est ni assignee ni membre du projet (bypass OwnershipGuard)",1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+tasks:read,tasks,read,Voir les tâches,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+tasks:readAll,tasks,readAll,Voir toutes les tâches (pas uniquement les siennes),1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+tasks:update,tasks,update,Modifier une tâche,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1
+telework:create,telework,create,Déclarer du télétravail,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1
+telework:delete,telework,delete,Supprimer une déclaration de télétravail,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1
+telework:manage_others,telework,manage_others,Gérer le télétravail des autres agents,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0
+telework:manage_recurring,telework,manage_recurring,Gérer les règles de télétravail récurrentes,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+telework:read,telework,read,Voir le télétravail,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+telework:readAll,telework,readAll,Voir tous les télétravails (pas uniquement les siens),1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+telework:read_team,telework,read_team,Voir le télétravail de l'équipe,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+telework:update,telework,update,Modifier une déclaration de télétravail,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1
+telework:view,telework,view,Voir le télétravail (granularité RBAC),1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+third_parties:assign_to_project,third_parties,assign_to_project,Rattacher un tiers à un projet,1,0,0,1,0,0,0,0,0,0,1,0,0,1,0
+third_parties:assign_to_task,third_parties,assign_to_task,Assigner un tiers à une tâche,1,0,0,1,0,0,0,0,0,0,1,0,0,1,0
+third_parties:create,third_parties,create,Créer un tiers,1,0,0,1,0,0,0,0,0,0,1,0,0,1,0
+third_parties:delete,third_parties,delete,Supprimer un tiers (hard delete en cascade),1,0,0,1,0,0,0,0,0,0,1,0,0,1,0
+third_parties:read,third_parties,read,Voir les tiers,1,0,0,1,0,0,0,0,0,0,1,1,0,1,0
+third_parties:update,third_parties,update,Modifier un tiers,1,0,0,1,0,0,0,0,0,0,1,0,0,1,0
+time_tracking:create,time_tracking,create,Saisir du temps,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1
+time_tracking:declare_for_third_party,time_tracking,declare_for_third_party,Déclarer du temps pour le compte d'un tiers,1,0,0,1,0,0,0,0,0,0,1,0,0,1,0
+time_tracking:delete,time_tracking,delete,Supprimer une saisie de temps,1,0,1,1,1,0,1,1,0,0,1,0,1,1,0
+time_tracking:manage_any,time_tracking,manage_any,"Modifier ou supprimer n'importe quelle entrée de temps, y compris celles dont on n'est pas propriétaire (bypass OwnershipGuard)",1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+time_tracking:read,time_tracking,read,Voir les saisies de temps,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+time_tracking:read_reports,time_tracking,read_reports,Voir les rapports de temps,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+time_tracking:update,time_tracking,update,Modifier une saisie de temps,1,0,1,1,1,0,1,1,0,0,1,0,1,1,0
+time_tracking:view_any,time_tracking,view_any,Lister les entrées de temps d'autres utilisateurs (filtre userId cross-user),1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+users:create,users,create,Créer un utilisateur,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+users:delete,users,delete,Supprimer un utilisateur,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+users:edit,users,edit,Modifier les utilisateurs (granularité RBAC),1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+users:import,users,import,Importer des utilisateurs,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+users:manage,users,manage,Accéder à la page d'administration des utilisateurs,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0
+users:manage_roles,users,manage_roles,Gérer les rôles des utilisateurs,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+users:read,users,read,Voir les utilisateurs,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+users:reset_password,users,reset_password,Réinitialiser le mot de passe d'un utilisateur,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+users:update,users,update,Modifier un utilisateur,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+users:view,users,view,Voir les utilisateurs (granularité RBAC),1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
