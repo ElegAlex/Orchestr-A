@@ -13,6 +13,7 @@ import { skillsService } from "@/services/skills.service";
 import { projectsService } from "@/services/projects.service";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
+import { withAccessControl } from "@/components/withAccessControl";
 import {
   User,
   Task,
@@ -52,7 +53,7 @@ interface TimeStats {
   byTask?: Record<string, number>;
 }
 
-export default function SuiviPage() {
+function SuiviPage() {
   const params = useParams();
   const router = useRouter();
   const locale = useLocale();
@@ -1187,3 +1188,8 @@ export default function SuiviPage() {
     </MainLayout>
   );
 }
+
+// Gate d'entrée RBAC (V1A) : n'importe quelle permission de lecture/gestion
+// des utilisateurs suffit pour charger la page. Le filtrage fin (self / manage
+// scoping via managedServices) reste porté par `checkAccess` dans le composant.
+export default withAccessControl(["users:read", "users:manage"])(SuiviPage);

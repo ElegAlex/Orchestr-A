@@ -98,8 +98,8 @@ export default function LeavesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [pendingLeavesImport, setPendingLeavesImport] = useState<any[]>([]);
 
-  const isAdmin = hasPermission("leaves:read");
-  const canValidate = hasPermission("leaves:approve") || isAdmin;
+  const canReadAllLeaves = hasPermission("leaves:readAll");
+  const canValidate = hasPermission("leaves:approve");
   const canManageBalances = hasPermission("leaves:manage");
   const canDeclareForOthers =
     hasPermission("leaves:declare_for_others") || canManageBalances;
@@ -154,7 +154,7 @@ export default function LeavesPage() {
   };
 
   const fetchAllLeaves = async () => {
-    if (!isAdmin) return;
+    if (!canReadAllLeaves) return;
     try {
       const url = selectedUserId ? selectedUserId : undefined;
       const data = await leavesService.getAll(1, 100, url);
@@ -836,7 +836,7 @@ export default function LeavesPage() {
             )}
           </div>
           <div className="flex items-center space-x-3">
-            {isAdmin && (
+            {canManageBalances && (
               <button
                 onClick={() => setShowImportModal(true)}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center space-x-2"
@@ -885,7 +885,7 @@ export default function LeavesPage() {
                 )}
               </button>
             )}
-            {isAdmin && (
+            {canReadAllLeaves && (
               <button
                 onClick={() => setActiveTab("all-leaves")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -909,7 +909,7 @@ export default function LeavesPage() {
                 {t("delegations.given")}
               </button>
             )}
-            {isAdmin && (
+            {canManageBalances && (
               <button
                 onClick={() => setActiveTab("leave-types")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -979,7 +979,7 @@ export default function LeavesPage() {
           )}
 
           {/* All Leaves Tab */}
-          {activeTab === "all-leaves" && isAdmin && (
+          {activeTab === "all-leaves" && canReadAllLeaves && (
             <>
               <div className="p-4 border-b border-gray-200">
                 <select
@@ -1108,7 +1108,7 @@ export default function LeavesPage() {
           )}
 
           {/* Leave Types Tab */}
-          {activeTab === "leave-types" && isAdmin && (
+          {activeTab === "leave-types" && canManageBalances && (
             <div className="p-6">
               <LeaveTypesManager onTypeChange={fetchAll} />
             </div>
