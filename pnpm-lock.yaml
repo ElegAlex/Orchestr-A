@@ -282,6 +282,9 @@ importers:
       next-intl:
         specifier: ^4.8.2
         version: 4.8.2(next@16.1.1(@babel/core@7.28.5)(@playwright/test@1.56.1)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
+      rbac:
+        specifier: workspace:*
+        version: link:../../packages/rbac
       react:
         specifier: 19.2.3
         version: 19.2.3
