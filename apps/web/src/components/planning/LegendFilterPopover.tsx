@@ -8,13 +8,27 @@ import {
 } from "@/stores/planningView.store";
 import { getStatusIcon } from "@/lib/planning-utils";
 import { TaskStatus } from "@/types";
-import { ReactNode } from "react";
+import {
+  leaveTypesService,
+  LeaveTypeConfig,
+} from "@/services/leave-types.service";
+import { ReactNode, useEffect, useState } from "react";
 
-interface LegendItem {
+type StandardItem = {
+  kind: "standard";
   key: LegendFilterKey;
   label: string;
   visual: ReactNode;
-}
+};
+
+type LeaveTypeItem = {
+  kind: "leaveType";
+  code: string;
+  label: string;
+  visual: ReactNode;
+};
+
+type LegendItem = StandardItem | LeaveTypeItem;
 
 interface LegendSection {
   titleKey: string;
@@ -25,18 +39,62 @@ const Swatch = ({ className }: { className: string }) => (
   <span className={`inline-block w-3 h-3 rounded ${className}`} />
 );
 
+const ColorDot = ({ color }: { color: string }) => (
+  <span
+    className="inline-block w-3 h-3 rounded border"
+    style={{ backgroundColor: color, borderColor: color }}
+    aria-hidden="true"
+  />
+);
+
+const LeaveTypeVisual = ({ type }: { type: LeaveTypeConfig }) => (
+  <span className="inline-flex items-center gap-1">
+    <span className="text-base leading-none">{type.icon}</span>
+    <ColorDot color={type.color} />
+  </span>
+);
+
 export const LegendFilterPopover = () => {
   const t = useTranslations("planning");
   const tCommon = useTranslations("common");
   const legendFilters = usePlanningViewStore((s) => s.legendFilters);
+  const leaveTypeFilters = usePlanningViewStore((s) => s.leaveTypeFilters);
   const toggleLegendFilter = usePlanningViewStore((s) => s.toggleLegendFilter);
+  const toggleLeaveTypeFilter = usePlanningViewStore(
+    (s) => s.toggleLeaveTypeFilter,
+  );
   const resetLegendFilters = usePlanningViewStore((s) => s.resetLegendFilters);
+
+  const [leaveTypes, setLeaveTypes] = useState<LeaveTypeConfig[]>([]);
+
+  // Fetch des types de congés actifs au montage. Pattern existant dans le
+  // projet (useEffect + service) — pas de TanStack Query en place ailleurs.
+  useEffect(() => {
+    let cancelled = false;
+    leaveTypesService
+      .getAll(false)
+      .then((data) => {
+        if (cancelled) return;
+        const active = data
+          .filter((lt) => lt.isActive)
+          .sort((a, b) => a.sortOrder - b.sortOrder);
+        setLeaveTypes(active);
+      })
+      .catch(() => {
+        // Silencieux : si le fetch échoue, on garde la section "statut" seule
+        // et les congés restent visibles (fallback `true` dans le store).
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const sections: LegendSection[] = [
     {
       titleKey: "taskStatuses",
       items: [
         {
+          kind: "standard",
           key: "todo",
           label: tCommon("taskStatus.TODO"),
           visual: (
@@ -46,6 +104,7 @@ export const LegendFilterPopover = () => {
           ),
         },
         {
+          kind: "standard",
           key: "inProgress",
           label: tCommon("taskStatus.IN_PROGRESS"),
           visual: (
@@ -55,6 +114,7 @@ export const LegendFilterPopover = () => {
           ),
         },
         {
+          kind: "standard",
           key: "inReview",
           label: tCommon("taskStatus.IN_REVIEW"),
           visual: (
@@ -64,6 +124,7 @@ export const LegendFilterPopover = () => {
           ),
         },
         {
+          kind: "standard",
           key: "done",
           label: tCommon("taskStatus.DONE"),
           visual: (
@@ -73,6 +134,7 @@ export const LegendFilterPopover = () => {
           ),
         },
         {
+          kind: "standard",
           key: "blocked",
           label: tCommon("taskStatus.BLOCKED"),
           visual: (
@@ -87,11 +149,13 @@ export const LegendFilterPopover = () => {
       titleKey: "taskTypes",
       items: [
         {
+          kind: "standard",
           key: "projectTask",
           label: t("legend.projectTask"),
           visual: <Swatch className="bg-blue-500" />,
         },
         {
+          kind: "standard",
           key: "orphanTask",
           label: t("legend.orphanTask"),
           visual: <Swatch className="bg-slate-400" />,
@@ -102,11 +166,13 @@ export const LegendFilterPopover = () => {
       titleKey: "presence",
       items: [
         {
+          kind: "standard",
           key: "telework",
           label: t("legend.telework"),
           visual: <span className="text-base leading-none">🏠</span>,
         },
         {
+          kind: "standard",
           key: "office",
           label: t("legend.office"),
           visual: <span className="text-base leading-none">🏢</span>,
@@ -117,28 +183,32 @@ export const LegendFilterPopover = () => {
       titleKey: "absences",
       items: [
         {
-          key: "leaveValidated",
-          label: t("legend.leaveValidated"),
-          visual: <span className="text-base leading-none">🌴</span>,
-        },
-        {
+          kind: "standard",
           key: "leavePending",
           label: t("legend.leavePending"),
           visual: (
             <span className="text-base leading-none opacity-60">🌴?</span>
           ),
         },
+        ...leaveTypes.map<LegendItem>((type) => ({
+          kind: "leaveType",
+          code: type.code,
+          label: type.name,
+          visual: <LeaveTypeVisual type={type} />,
+        })),
       ],
     },
     {
       titleKey: "events",
       items: [
         {
+          kind: "standard",
           key: "event",
           label: t("legend.event"),
           visual: <span className="text-base leading-none">📅</span>,
         },
         {
+          kind: "standard",
           key: "externalIntervention",
           label: t("legend.externalIntervention"),
           visual: <Swatch className="bg-red-500" />,
@@ -146,6 +216,19 @@ export const LegendFilterPopover = () => {
       ],
     },
   ];
+
+  const isChecked = (item: LegendItem): boolean =>
+    item.kind === "standard"
+      ? legendFilters[item.key]
+      : (leaveTypeFilters[item.code] ?? true);
+
+  const onToggle = (item: LegendItem) => {
+    if (item.kind === "standard") toggleLegendFilter(item.key);
+    else toggleLeaveTypeFilter(item.code);
+  };
+
+  const itemId = (item: LegendItem) =>
+    item.kind === "standard" ? `std-${item.key}` : `lt-${item.code}`;
 
   return (
     <Popover.Root>
@@ -177,27 +260,24 @@ export const LegendFilterPopover = () => {
                   {t(`legend.sections.${section.titleKey}`)}
                 </h4>
                 <ul className="space-y-0.5">
-                  {section.items.map((item) => {
-                    const checked = legendFilters[item.key];
-                    return (
-                      <li key={item.key}>
-                        <label className="flex items-center px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleLegendFilter(item.key)}
-                            className="mr-3 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                          />
-                          <span className="mr-2 inline-flex items-center justify-center w-5">
-                            {item.visual}
-                          </span>
-                          <span className="text-sm text-gray-800">
-                            {item.label}
-                          </span>
-                        </label>
-                      </li>
-                    );
-                  })}
+                  {section.items.map((item) => (
+                    <li key={itemId(item)}>
+                      <label className="flex items-center px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isChecked(item)}
+                          onChange={() => onToggle(item)}
+                          className="mr-3 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="mr-2 inline-flex items-center justify-center min-w-5">
+                          {item.visual}
+                        </span>
+                        <span className="text-sm text-gray-800">
+                          {item.label}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
                 </ul>
               </div>
             ))}

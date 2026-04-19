@@ -349,8 +349,9 @@ export const usePlanningData = ({
         (a) => a.userId === userId && a.date.slice(0, 10) === dateStr,
       );
       const dayTasks = tasks.filter((t) => {
-        // Exclure les tâches terminées du planning
-        if (t.status === "DONE") return false;
+        // Le filtrage des tâches DONE est délégué au filtre légende côté DayCell
+        // (filtre "Terminé" du popover — décoché par défaut pour préserver
+        // le comportement historique). Cf. planningView.store.ts.
         // Vérifier si la date est dans la plage de la tâche (startDate <= date <= endDate)
         // Si pas de startDate, on utilise endDate comme seul jour
         // Si pas de endDate, la tâche n'apparaît pas dans le planning

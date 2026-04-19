@@ -67,8 +67,8 @@ export const DayCell = ({
   const showOrphanTask = usePlanningViewStore((s) => s.legendFilters.orphanTask);
   const showTelework = usePlanningViewStore((s) => s.legendFilters.telework);
   const showOffice = usePlanningViewStore((s) => s.legendFilters.office);
-  const showLeaveValidated = usePlanningViewStore((s) => s.legendFilters.leaveValidated);
   const showLeavePending = usePlanningViewStore((s) => s.legendFilters.leavePending);
+  const leaveTypeFilters = usePlanningViewStore((s) => s.leaveTypeFilters);
   const showEvent = usePlanningViewStore((s) => s.legendFilters.event);
   const showExternalIntervention = usePlanningViewStore(
     (s) => s.legendFilters.externalIntervention,
@@ -109,7 +109,13 @@ export const DayCell = ({
   // Prendre le premier congé (le plus pertinent)
   const leave = cell.leaves[0];
   const isPending = leave?.status === "PENDING";
-  const leaveVisible = hasLeave && (isPending ? showLeavePending : showLeaveValidated);
+  // Filtre type : visible par défaut si la clé n'est pas (encore) dans le store.
+  // Fallback `leave.type` si le leave n'a pas de LeaveTypeConfig rattaché (legacy).
+  const leaveTypeCode = leave?.leaveType?.code ?? leave?.type ?? null;
+  const leaveTypeVisible =
+    leaveTypeCode === null ? true : (leaveTypeFilters[leaveTypeCode] ?? true);
+  const leaveVisible =
+    hasLeave && leaveTypeVisible && (isPending ? showLeavePending : true);
 
   // Résoudre l'icône et la couleur depuis le leaveType config (custom ou défaut)
   const leaveIcon = leave?.leaveType?.icon ?? "🌴";
