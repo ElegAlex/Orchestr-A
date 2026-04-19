@@ -16,6 +16,8 @@ const SEEDS = [
   "Nadia", "Hugo", "Sarah", "Martin", "Yasmine", "Olivier",
   "Manon", "Romain", "Aïcha", "Gabriel", "Louise", "Maxime",
   "Leïla", "Simon", "Juliette", "Arthur", "Rania", "Alexis",
+  "Emma", "Victor", "Amira", "Raphaël", "Jade", "Benjamin",
+  "Zoé", "Nathan", "Salma", "Adam", "Margaux", "Tristan",
 ];
 
 for (let i = 0; i < SEEDS.length; i++) {

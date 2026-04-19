@@ -15,7 +15,7 @@ import { IcsExportSection } from "@/components/planning-export/IcsExportSection"
 import { IcsImportSection } from "@/components/planning-export/IcsImportSection";
 
 const PERSONA_PRESETS = Array.from(
-  { length: 36 },
+  { length: 48 },
   (_, i) => `persona_${String(i + 1).padStart(2, "0")}`,
 );
 const INITIALS_PRESET = "initials";
