@@ -4,3 +4,4 @@ export { GroupHeader } from "./GroupHeader";
 export { UserRow } from "./UserRow";
 export { DayCell } from "./DayCell";
 export { TaskModal } from "./TaskModal";
+export { LegendFilterPopover } from "./LegendFilterPopover";

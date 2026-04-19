@@ -57,7 +57,16 @@
     "leaveValidated": "Congé validé",
     "leavePending": "Congé en attente",
     "event": "Événement",
-    "externalIntervention": "Intervention ext."
+    "externalIntervention": "Intervention ext.",
+    "triggerAria": "Filtres de la légende",
+    "showAll": "Tout afficher",
+    "sections": {
+      "taskStatuses": "Statuts de tâches",
+      "taskTypes": "Type de tâche",
+      "presence": "Présence",
+      "absences": "Absences",
+      "events": "Événements"
+    }
   },
   "table": {
     "resource": "Ressource"

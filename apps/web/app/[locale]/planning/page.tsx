@@ -10,7 +10,6 @@ export default function PlanningPage() {
         showFilters={true}
         showControls={true}
         showGroupHeaders={true}
-        showLegend={true}
       />
     </MainLayout>
   );

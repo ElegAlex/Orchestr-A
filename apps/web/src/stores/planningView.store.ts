@@ -1,6 +1,39 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export type LegendFilterKey =
+  | "todo"
+  | "inProgress"
+  | "inReview"
+  | "done"
+  | "blocked"
+  | "projectTask"
+  | "orphanTask"
+  | "telework"
+  | "office"
+  | "leaveValidated"
+  | "leavePending"
+  | "event"
+  | "externalIntervention";
+
+export type LegendFiltersState = Record<LegendFilterKey, boolean>;
+
+export const DEFAULT_LEGEND_FILTERS: LegendFiltersState = {
+  todo: true,
+  inProgress: true,
+  inReview: true,
+  done: true,
+  blocked: true,
+  projectTask: true,
+  orphanTask: true,
+  telework: true,
+  office: true,
+  leaveValidated: true,
+  leavePending: true,
+  event: true,
+  externalIntervention: true,
+};
+
 interface PlanningViewState {
   /** Map serviceId -> isCollapsed */
   collapsedServices: Record<string, boolean>;
@@ -10,6 +43,12 @@ interface PlanningViewState {
 
   /** Flag pour distinguer "jamais initialisé" de "explicitement vide" */
   hasInitializedServices: boolean;
+
+  /**
+   * Filtres de visibilité de la légende planning.
+   * Non persistés (exclus de `partialize`) → reset à chaque reload (session-only).
+   */
+  legendFilters: LegendFiltersState;
 
   /** Basculer l'état d'un service */
   toggleService: (serviceId: string) => void;
@@ -39,6 +78,12 @@ interface PlanningViewState {
    * même si selectedServices est vide (respect de l'intention utilisateur).
    */
   initializeServicesIfNeeded: (availableServiceIds: string[]) => void;
+
+  /** Basculer un filtre légende individuel (ON/OFF) */
+  toggleLegendFilter: (key: LegendFilterKey) => void;
+
+  /** Réinitialiser tous les filtres légende à `true` */
+  resetLegendFilters: () => void;
 }
 
 export const usePlanningViewStore = create<PlanningViewState>()(
@@ -47,6 +92,7 @@ export const usePlanningViewStore = create<PlanningViewState>()(
       collapsedServices: {},
       selectedServices: [],
       hasInitializedServices: false,
+      legendFilters: { ...DEFAULT_LEGEND_FILTERS },
 
       setSelectedServices: (serviceIds: string[]) => {
         // Toute action utilisateur explicite marque le store comme initialisé :
@@ -105,6 +151,19 @@ export const usePlanningViewStore = create<PlanningViewState>()(
 
       isCollapsed: (serviceId: string) => {
         return get().collapsedServices[serviceId] ?? false;
+      },
+
+      toggleLegendFilter: (key: LegendFilterKey) => {
+        set((state) => ({
+          legendFilters: {
+            ...state.legendFilters,
+            [key]: !state.legendFilters[key],
+          },
+        }));
+      },
+
+      resetLegendFilters: () => {
+        set({ legendFilters: { ...DEFAULT_LEGEND_FILTERS } });
       },
     }),
     {

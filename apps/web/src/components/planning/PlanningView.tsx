@@ -6,6 +6,7 @@ import { fr, enUS } from "date-fns/locale";
 import { PlanningGrid } from "./PlanningGrid";
 import { TaskCreateModal } from "./TaskCreateModal";
 import { EventCreateModal } from "./EventCreateModal";
+import { LegendFilterPopover } from "./LegendFilterPopover";
 import { usePlanningData, DisplayFilters } from "@/hooks/usePlanningData";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -27,7 +28,6 @@ interface PlanningViewProps {
   showFilters?: boolean; // Afficher les filtres (default: true)
   showControls?: boolean; // Afficher les contrôles (semaine/mois, navigation) (default: true)
   showGroupHeaders?: boolean; // Afficher les headers de groupes (default: true)
-  showLegend?: boolean; // Afficher la légende (default: true)
   initialViewMode?: "week" | "month"; // Mode initial (default: 'week')
 }
 
@@ -37,11 +37,9 @@ export const PlanningView = ({
   showFilters = true,
   showControls = true,
   showGroupHeaders = true,
-  showLegend = true,
   initialViewMode = "week",
 }: PlanningViewProps) => {
   const t = useTranslations("planning");
-  const tCommon = useTranslations("common");
   const locale = useLocale();
   const dateLocale = locale === "en" ? enUS : fr;
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -347,6 +345,7 @@ export const PlanningView = ({
             >
               <span className="text-xl">→</span>
             </button>
+            <LegendFilterPopover />
           </div>
         )}
       </div>
@@ -607,69 +606,6 @@ export const PlanningView = ({
         showGroupHeaders={showGroupHeaders}
         refreshTrigger={refreshTrigger}
       />
-
-      {/* Legend */}
-      {showLegend && (
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">
-            {t("legend.title")}
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs">
-            <div className="flex items-center space-x-2">
-              <span>○</span>
-              <span>{tCommon("taskStatus.TODO")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>◐</span>
-              <span>{tCommon("taskStatus.IN_PROGRESS")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>◕</span>
-              <span>{tCommon("taskStatus.IN_REVIEW")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>●</span>
-              <span>{tCommon("taskStatus.DONE")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>⊗</span>
-              <span>{tCommon("taskStatus.BLOCKED")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="inline-block w-3 h-3 bg-blue-500 rounded"></span>
-              <span>{t("legend.projectTask")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="inline-block w-3 h-3 bg-slate-400 rounded"></span>
-              <span>{t("legend.orphanTask")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>🏠</span>
-              <span>{t("legend.telework")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>🏢</span>
-              <span>{t("legend.office")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>🌴</span>
-              <span>{t("legend.leaveValidated")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="opacity-60">🌴?</span>
-              <span>{t("legend.leavePending")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>📅</span>
-              <span>{t("legend.event")}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="inline-block w-3 h-3 bg-red-500 rounded"></span>
-              <span>{t("legend.externalIntervention")}</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Task Create Modal */}
       <TaskCreateModal

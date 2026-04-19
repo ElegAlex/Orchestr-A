@@ -415,7 +415,6 @@ export default function DashboardPage() {
             title={t("planning.title")}
             showFilters={false}
             showGroupHeaders={false}
-            showLegend={false}
           />
         )}
 

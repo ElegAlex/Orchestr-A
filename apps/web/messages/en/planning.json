@@ -57,7 +57,16 @@
     "leaveValidated": "Approved leave",
     "leavePending": "Pending leave",
     "event": "Event",
-    "externalIntervention": "External intervention"
+    "externalIntervention": "External intervention",
+    "triggerAria": "Legend filters",
+    "showAll": "Show all",
+    "sections": {
+      "taskStatuses": "Task statuses",
+      "taskTypes": "Task type",
+      "presence": "Presence",
+      "absences": "Leaves",
+      "events": "Events"
+    }
   },
   "table": {
     "resource": "Resource"

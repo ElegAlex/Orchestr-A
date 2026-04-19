@@ -1,10 +1,22 @@
-import { Task } from "@/types";
+import { Task, TaskStatus } from "@/types";
 import { Event } from "@/services/events.service";
 import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
 import { DayCell as DayCellData } from "@/hooks/usePlanningData";
 import { getPriorityColor, getStatusIcon, getStatusDotColor } from "@/lib/planning-utils";
+import { usePlanningViewStore } from "@/stores/planningView.store";
 import { isToday, getDay } from "date-fns";
 import { useTranslations } from "next-intl";
+
+const STATUS_FILTER_KEY: Record<
+  TaskStatus,
+  "todo" | "inProgress" | "inReview" | "done" | "blocked"
+> = {
+  [TaskStatus.TODO]: "todo",
+  [TaskStatus.IN_PROGRESS]: "inProgress",
+  [TaskStatus.IN_REVIEW]: "inReview",
+  [TaskStatus.DONE]: "done",
+  [TaskStatus.BLOCKED]: "blocked",
+};
 
 interface DayCellProps {
   cell: DayCellData;
@@ -44,8 +56,52 @@ export const DayCell = ({
 }: DayCellProps) => {
   const t = useTranslations("planning");
   const tCommon = useTranslations("common");
+
+  // Selectors granulaires : un par filtre lu, pour éviter les re-renders globaux au toggle.
+  const showTodo = usePlanningViewStore((s) => s.legendFilters.todo);
+  const showInProgress = usePlanningViewStore((s) => s.legendFilters.inProgress);
+  const showInReview = usePlanningViewStore((s) => s.legendFilters.inReview);
+  const showDone = usePlanningViewStore((s) => s.legendFilters.done);
+  const showBlocked = usePlanningViewStore((s) => s.legendFilters.blocked);
+  const showProjectTask = usePlanningViewStore((s) => s.legendFilters.projectTask);
+  const showOrphanTask = usePlanningViewStore((s) => s.legendFilters.orphanTask);
+  const showTelework = usePlanningViewStore((s) => s.legendFilters.telework);
+  const showOffice = usePlanningViewStore((s) => s.legendFilters.office);
+  const showLeaveValidated = usePlanningViewStore((s) => s.legendFilters.leaveValidated);
+  const showLeavePending = usePlanningViewStore((s) => s.legendFilters.leavePending);
+  const showEvent = usePlanningViewStore((s) => s.legendFilters.event);
+  const showExternalIntervention = usePlanningViewStore(
+    (s) => s.legendFilters.externalIntervention,
+  );
+
+  const statusFilterMap = {
+    todo: showTodo,
+    inProgress: showInProgress,
+    inReview: showInReview,
+    done: showDone,
+    blocked: showBlocked,
+  } as const;
+
+  const isTaskVisible = (task: Task): boolean => {
+    if (!statusFilterMap[STATUS_FILTER_KEY[task.status]]) return false;
+    if (task.isExternalIntervention) {
+      if (!showExternalIntervention) return false;
+    } else if (task.projectId) {
+      if (!showProjectTask) return false;
+    } else {
+      if (!showOrphanTask) return false;
+    }
+    return true;
+  };
+
   const hasLeave = cell.leaves.length > 0;
-  const hasAllDayEvent = cell.events.some((e) => e.isAllDay);
+  // Un event all-day filtré ne doit plus masquer les tâches sous-jacentes
+  // (cohérence avec l'Option A : masquer l'overlay, pas la donnée en dessous).
+  const hasAllDayEvent = cell.events.some(
+    (e) =>
+      e.isAllDay &&
+      (e.isExternalIntervention ? showExternalIntervention : showEvent),
+  );
   const isMonday = getDay(cell.date) === 1;
   const isFirstDay = dayIndex === 0;
   const showWeekSeparator = viewMode === "month" && isMonday && !isFirstDay;
@@ -53,6 +109,7 @@ export const DayCell = ({
   // Prendre le premier congé (le plus pertinent)
   const leave = cell.leaves[0];
   const isPending = leave?.status === "PENDING";
+  const leaveVisible = hasLeave && (isPending ? showLeavePending : showLeaveValidated);
 
   // Résoudre l'icône et la couleur depuis le leaveType config (custom ou défaut)
   const leaveIcon = leave?.leaveType?.icon ?? "🌴";
@@ -78,7 +135,7 @@ export const DayCell = ({
       title={cell.isHoliday ? cell.holidayName : undefined}
     >
       {/* Holiday Overlay - couvre toute la cellule */}
-      {cell.isHoliday && !hasLeave && (
+      {cell.isHoliday && !leaveVisible && (
         <div
           className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-red-100/80 border-2 border-red-300"
           title={cell.holidayName}
@@ -95,7 +152,7 @@ export const DayCell = ({
       )}
 
       {/* Leave Overlay - couvre toute la cellule */}
-      {hasLeave && (
+      {leaveVisible && (
         <div
           className="absolute inset-0 flex flex-col items-center justify-center z-10 border-2"
           style={{
@@ -135,18 +192,20 @@ export const DayCell = ({
       )}
 
       {/* External Intervention Background Overlay */}
-      {cell.isExternalIntervention && !hasLeave && !cell.isHoliday && (
+      {cell.isExternalIntervention && showExternalIntervention && !leaveVisible && !cell.isHoliday && (
         <div
           className="absolute inset-0 z-0 bg-red-100/40 border-2 border-red-400 rounded-sm pointer-events-none"
           aria-hidden="true"
         />
       )}
 
-      {/* Telework Background Overlay - en arrière-plan pour que les tâches restent visibles */}
+      {/* Telework Background Overlay - en arrière-plan pour que les tâches restent visibles.
+          Masqué si le bg Intervention extérieure occupe déjà la cellule, pour préserver l'exclusivité visuelle actuelle. */}
       {cell.isTelework &&
-        !hasLeave &&
+        showTelework &&
+        !leaveVisible &&
         !cell.isHoliday &&
-        !cell.isExternalIntervention && (
+        !(cell.isExternalIntervention && showExternalIntervention) && (
           <div
             className="absolute inset-0 z-0 bg-orange-100/40 border-2 border-orange-300 rounded-sm pointer-events-none"
             aria-hidden="true"
@@ -156,27 +215,30 @@ export const DayCell = ({
       <div
         className={`relative z-10 space-y-1 ${viewMode === "month" ? "min-h-[40px]" : "min-h-[60px]"}`}
       >
-        {/* Telework toggle - visible uniquement si pas de congé, jour férié, ni événement toute la journée */}
-        {!hasLeave && !cell.isHoliday && !hasAllDayEvent && canToggleTelework && (
-          <div className="flex flex-col items-center justify-center">
-            <button
-              onClick={() => onTeleworkToggle(userId, cell.date)}
-              className={`${viewMode === "month" ? "text-[10px]" : "text-lg"} transition ${
-                cell.isTelework ? "opacity-100" : "opacity-30 hover:opacity-60"
-              }`}
-              title={
-                cell.isTelework ? t("telework.label") : t("telework.office")
-              }
-            >
-              {cell.isTelework ? "🏠" : "🏢"}
-            </button>
-            {cell.isTelework && viewMode === "week" && (
-              <span className="text-[9px] text-gray-500 leading-tight">{t("telework.label")}</span>
-            )}
-          </div>
+        {/* Telework toggle - visible uniquement si pas de congé, jour férié, ni événement toute la journée.
+            Le glyphe 🏠 (TT) est gouverné par showTelework, le glyphe 🏢 (bureau) par showOffice. */}
+        {!leaveVisible && !cell.isHoliday && !hasAllDayEvent && canToggleTelework && (
+          (cell.isTelework ? showTelework : showOffice) && (
+            <div className="flex flex-col items-center justify-center">
+              <button
+                onClick={() => onTeleworkToggle(userId, cell.date)}
+                className={`${viewMode === "month" ? "text-[10px]" : "text-lg"} transition ${
+                  cell.isTelework ? "opacity-100" : "opacity-30 hover:opacity-60"
+                }`}
+                title={
+                  cell.isTelework ? t("telework.label") : t("telework.office")
+                }
+              >
+                {cell.isTelework ? "🏠" : "🏢"}
+              </button>
+              {cell.isTelework && viewMode === "week" && (
+                <span className="text-[9px] text-gray-500 leading-tight">{t("telework.label")}</span>
+              )}
+            </div>
+          )
         )}
         {/* Telework indicator (read-only) for users without toggle permission */}
-        {!hasLeave && !cell.isHoliday && !hasAllDayEvent && !canToggleTelework && cell.isTelework && (
+        {!leaveVisible && !cell.isHoliday && !hasAllDayEvent && !canToggleTelework && cell.isTelework && showTelework && (
           <div className="flex flex-col items-center justify-center">
             <span
               className={`${viewMode === "month" ? "text-[10px]" : "text-lg"}`}
@@ -190,9 +252,10 @@ export const DayCell = ({
           </div>
         )}
 
-        {/* Tasks - masquées si congé, jour férié, ou événement toute la journée */}
-        {!hasLeave && !cell.isHoliday && !hasAllDayEvent &&
-          cell.tasks.map((task) => {
+        {/* Tasks - masquées si congé, jour férié, ou événement toute la journée.
+            Chaque tâche est filtrée par son statut, son type (projet/orphan) et son caractère externe. */}
+        {!leaveVisible && !cell.isHoliday && !hasAllDayEvent &&
+          cell.tasks.filter(isTaskVisible).map((task) => {
             // Style spécial pour intervention extérieure
             const isExternal = task.isExternalIntervention;
             // Distinction visuelle : tâche avec projet vs tâche orpheline
@@ -266,9 +329,17 @@ export const DayCell = ({
             );
           })}
 
-        {/* Predefined Task Assignments - masquées si congé, jour férié, ou événement toute la journée */}
-        {!hasLeave && !cell.isHoliday && !hasAllDayEvent &&
-          cell.predefinedTaskAssignments.map((assignment) => {
+        {/* Predefined Task Assignments - masquées si congé, jour férié, ou événement toute la journée.
+            Les assignations externes sont filtrées par showExternalIntervention. */}
+        {!leaveVisible && !cell.isHoliday && !hasAllDayEvent &&
+          cell.predefinedTaskAssignments
+            .filter((assignment) => {
+              const pt = assignment.predefinedTask;
+              if (!pt) return false;
+              if (pt.isExternalIntervention && !showExternalIntervention) return false;
+              return true;
+            })
+            .map((assignment) => {
             const pt = assignment.predefinedTask;
             if (!pt) return null;
             const isExternal = pt.isExternalIntervention;
@@ -311,7 +382,7 @@ export const DayCell = ({
           })}
 
         {/* Bouton ajout tâche prédéfinie */}
-        {!hasLeave && !cell.isHoliday && canAssignPredefinedTask && (
+        {!leaveVisible && !cell.isHoliday && canAssignPredefinedTask && (
           <div className="flex items-center justify-center">
             <button
               onClick={() => onAddPredefinedTask(userId, cell.date)}
@@ -323,9 +394,14 @@ export const DayCell = ({
           </div>
         )}
 
-        {/* Events - visible uniquement si pas de congé ni jour férié */}
-        {!hasLeave && !cell.isHoliday &&
-          cell.events.map((event) => {
+        {/* Events - visible uniquement si pas de congé ni jour férié.
+            Filtrés : événements standards par showEvent, interventions externes par showExternalIntervention. */}
+        {!leaveVisible && !cell.isHoliday &&
+          cell.events
+            .filter((event) =>
+              event.isExternalIntervention ? showExternalIntervention : showEvent,
+            )
+            .map((event) => {
             const isExtEvent = event.isExternalIntervention;
             const eventBorderClass = isExtEvent
               ? "border-red-400 bg-red-100 text-red-900"

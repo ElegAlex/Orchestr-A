@@ -12,7 +12,6 @@ jest.mock("@/components/planning/PlanningView", () => ({
     showFilters: boolean;
     showControls: boolean;
     showGroupHeaders: boolean;
-    showLegend: boolean;
   }) => (
     <div data-testid="planning-view">
       <span data-testid="show-filters">{String(props.showFilters)}</span>
@@ -20,7 +19,6 @@ jest.mock("@/components/planning/PlanningView", () => ({
       <span data-testid="show-group-headers">
         {String(props.showGroupHeaders)}
       </span>
-      <span data-testid="show-legend">{String(props.showLegend)}</span>
     </div>
   ),
 }));
@@ -61,12 +59,6 @@ describe("PlanningPage", () => {
     render(<PlanningPage />);
 
     expect(screen.getByTestId("show-group-headers")).toHaveTextContent("true");
-  });
-
-  it("should pass showLegend=true to PlanningView", () => {
-    render(<PlanningPage />);
-
-    expect(screen.getByTestId("show-legend")).toHaveTextContent("true");
   });
 
   it("should render without crashing", () => {
