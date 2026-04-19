@@ -1,0 +1,36 @@
+import { Global, Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { PrismaModule } from '../prisma/prisma.module';
+import { RoleManagementModule } from '../role-management/role-management.module';
+import { PermissionsService } from './permissions.service';
+import { PermissionsGuardV2 } from './permissions.guard';
+import { RolesController } from './roles.controller';
+import { RolesService } from './roles.service';
+
+/**
+ * RbacModule — V1 C de Spec 2.
+ *
+ * Expose `PermissionsService` (résolution role → permissions via templates).
+ * Annoté `@Global()` pour permettre injection depuis tous les modules sans
+ * import explicite — pattern aligné sur `CommonModule`.
+ *
+ * Dépendances :
+ *  - `PrismaModule` (lecture table `roles`).
+ *  - `RoleManagementModule` (fallback legacy `getPermissionsForRole`).
+ *  - `ConfigModule` (REDIS_*).
+ *
+ * Note V1 : `PermissionsGuardV2` est créé ici mais N'EST PAS enregistré
+ * comme `APP_GUARD`. L'ancien `PermissionsGuard` legacy continue de gérer
+ * les checks RBAC. L'activation globale du guard zero-trust se fait en
+ * V2 (E.a → mode permissive, puis V2 (E.i) → mode enforce).
+ *
+ * Le RolesController/RolesService (V1 D) sont ajoutés ci-dessous.
+ */
+@Global()
+@Module({
+  imports: [ConfigModule, PrismaModule, RoleManagementModule],
+  controllers: [RolesController],
+  providers: [PermissionsService, PermissionsGuardV2, RolesService],
+  exports: [PermissionsService, PermissionsGuardV2, RolesService],
+})
+export class RbacModule {}

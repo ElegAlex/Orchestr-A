@@ -12,7 +12,7 @@ import {
   OwnershipCheckOptions,
 } from '../decorators/ownership-check.decorator';
 import { OwnershipService } from '../services/ownership.service';
-import { RoleManagementService } from '../../role-management/role-management.service';
+import { PermissionsService } from '../../rbac/permissions.service';
 
 /**
  * Opt-in guard that enforces per-resource ownership. Activates only for routes
@@ -31,7 +31,9 @@ export class OwnershipGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly ownershipService: OwnershipService,
-    private readonly roleManagementService: RoleManagementService,
+    // V1 C : bascule sur PermissionsService nouveau (template-based, fallback
+    // legacy intégré). Inclut documents:manage_any (D6 #4).
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -57,11 +59,13 @@ export class OwnershipGuard implements CanActivate {
       );
     }
 
-    if (opts.bypassPermission && user.role) {
-      const permissions =
-        (await this.roleManagementService.getPermissionsForRole(user.role)) ??
-        [];
-      if (permissions.includes(opts.bypassPermission)) {
+    if (opts.bypassPermission) {
+      // PermissionsService accepte soit user.roleEntity.code (post-refactor),
+      // soit user.role (enum legacy). Path nouveau utilisé pour les codes
+      // qui matchent un templateKey (ADMIN, MANAGER, ...) ; fallback legacy
+      // pour les autres (CONTRIBUTEUR, RESPONSABLE, etc.) jusqu'à V2.
+      const permissions = await this.permissionsService.getPermissionsForUser(user);
+      if ((permissions as readonly string[]).includes(opts.bypassPermission)) {
         return true;
       }
     }

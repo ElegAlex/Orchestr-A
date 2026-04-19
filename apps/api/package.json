@@ -47,6 +47,7 @@
     "class-validator": "^0.14.3",
     "database": "workspace:*",
     "date-fns": "^3.6.0",
+    "rbac": "workspace:*",
     "fastify": "^5.7.4",
     "file-type": "19",
     "ical-generator": "^10.0.0",

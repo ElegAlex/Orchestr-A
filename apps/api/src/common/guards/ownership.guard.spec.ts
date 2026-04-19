@@ -9,7 +9,7 @@ import {
 import { OwnershipGuard } from './ownership.guard';
 import { OWNERSHIP_METADATA } from '../decorators/ownership-check.decorator';
 import type { OwnershipService } from '../services/ownership.service';
-import type { RoleManagementService } from '../../role-management/role-management.service';
+import type { PermissionsService } from '../../rbac/permissions.service';
 
 function buildCtx(params: Record<string, any> | undefined, user: any) {
   return {
@@ -24,21 +24,21 @@ function buildCtx(params: Record<string, any> | undefined, user: any) {
 describe('OwnershipGuard', () => {
   let reflector: Reflector;
   let ownershipService: { isOwner: ReturnType<typeof vi.fn> };
-  let roleManagementService: {
-    getPermissionsForRole: ReturnType<typeof vi.fn>;
+  let permissionsService: {
+    getPermissionsForUser: ReturnType<typeof vi.fn>;
   };
   let guard: OwnershipGuard;
 
   beforeEach(() => {
     reflector = new Reflector();
     ownershipService = { isOwner: vi.fn() };
-    roleManagementService = {
-      getPermissionsForRole: vi.fn().mockResolvedValue([]),
+    permissionsService = {
+      getPermissionsForUser: vi.fn().mockResolvedValue([]),
     };
     guard = new OwnershipGuard(
       reflector,
       ownershipService as unknown as OwnershipService,
-      roleManagementService as unknown as RoleManagementService,
+      permissionsService as unknown as PermissionsService,
     );
   });
 
@@ -98,7 +98,7 @@ describe('OwnershipGuard', () => {
       paramKey: 'id',
       bypassPermission: 'projects:manage_any',
     });
-    roleManagementService.getPermissionsForRole.mockResolvedValue([
+    permissionsService.getPermissionsForUser.mockResolvedValue([
       'projects:manage_any',
     ]);
     ownershipService.isOwner.mockResolvedValue(false);
@@ -113,7 +113,7 @@ describe('OwnershipGuard', () => {
       paramKey: 'id',
       bypassPermission: 'projects:manage_any',
     });
-    roleManagementService.getPermissionsForRole.mockResolvedValue([
+    permissionsService.getPermissionsForUser.mockResolvedValue([
       'projects:read',
     ]);
     ownershipService.isOwner.mockResolvedValue(true);
