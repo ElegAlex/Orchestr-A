@@ -6,10 +6,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { GanttView, GanttGrouping } from './types';
 import type { TimelineBucket } from './timeline-math';
-import { LEFT_COLUMN_WIDTH } from './tokens';
 
 interface GanttHeaderProps {
-  buckets: TimelineBucket[];
   view: GanttView;
   currentDate: Date;
   onNavigate: (direction: 'prev' | 'next') => void;
@@ -18,9 +16,14 @@ interface GanttHeaderProps {
   onZoom: (direction: 'in' | 'out') => void;
   groupBy?: GanttGrouping;
   onGroupByChange?: (groupBy: GanttGrouping) => void;
-  todayLeft?: number | null;
   onGoToStart?: () => void;
   onFitAll?: () => void;
+}
+
+interface GanttTimelineHeaderProps {
+  buckets: TimelineBucket[];
+  view: GanttView;
+  todayLeft?: number | null;
 }
 
 const VIEW_LABELS: Record<GanttView, string> = {
@@ -139,7 +142,6 @@ function isWeekendDay(date: Date): boolean {
 }
 
 export default function GanttHeader({
-  buckets,
   view,
   currentDate,
   onNavigate,
@@ -148,20 +150,18 @@ export default function GanttHeader({
   onZoom,
   groupBy,
   onGroupByChange,
-  todayLeft,
   onGoToStart,
   onFitAll,
 }: GanttHeaderProps) {
   const handlePrev = useCallback(() => onNavigate('prev'), [onNavigate]);
   const handleNext = useCallback(() => onNavigate('next'), [onNavigate]);
-  const superBuckets = useMemo(() => computeSuperBuckets(buckets, view), [buckets, view]);
 
   const monthLabel = format(currentDate, 'MMMM yyyy', { locale: fr });
 
   return (
-    <div className="sticky top-0 z-30 bg-white" style={{ borderBottom: '1px solid #E2E8F0' }}>
+    <div className="bg-white" style={{ borderBottom: '1px solid #E2E8F0' }}>
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-1.5" style={{ borderBottom: '1px solid #F1F5F9' }}>
+      <div className="flex items-center gap-2 px-3 py-1.5">
         {/* Navigation group */}
         <button
           onClick={handlePrev}
@@ -294,85 +294,43 @@ export default function GanttHeader({
         )}
       </div>
 
-      {/* Timeline header — upper level (context) */}
-      <div className="flex">
-        <div
-          className="shrink-0"
-          style={{ width: LEFT_COLUMN_WIDTH, minWidth: LEFT_COLUMN_WIDTH, borderRight: '1px solid #E2E8F0' }}
-        />
-        <div className="flex flex-1">
-          {superBuckets.map((sb, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-center"
-              style={{
-                flex: `${sb.totalWidthFraction} 0 0%`,
-                height: 28,
-                borderRight: '1px solid #E2E8F0',
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#0F172A',
-              }}
-            >
-              {sb.label}
-            </div>
-          ))}
-        </div>
-      </div>
+    </div>
+  );
+}
 
-      {/* Timeline header — lower level (granularity) */}
+export function GanttTimelineHeader({ buckets, view, todayLeft }: GanttTimelineHeaderProps) {
+  const superBuckets = useMemo(() => computeSuperBuckets(buckets, view), [buckets, view]);
+
+  return (
+    <div
+      className="bg-white"
+      style={{ borderBottom: '1px solid #E2E8F0' }}
+    >
+      {/* Upper level (context) */}
       <div className="flex relative">
-        <div
-          className="shrink-0"
-          style={{ width: LEFT_COLUMN_WIDTH, minWidth: LEFT_COLUMN_WIDTH, borderRight: '1px solid #E2E8F0' }}
-        />
-        <div className="flex flex-1">
-          {buckets.map((bucket, i) => {
-            const isWe = view === 'day' && isWeekendDay(bucket.start);
-            const sublabel = getLowerSublabel(bucket, view);
-            return (
-              <div
-                key={i}
-                className="flex flex-col items-center justify-center text-center"
-                style={{
-                  flex: `${bucket.widthFraction} 0 0%`,
-                  height: 28,
-                  borderRight: '1px solid #F1F5F9',
-                  backgroundColor: isWe ? '#F8FAFC' : undefined,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 500,
-                    color: isWe ? '#94A3B8' : '#334155',
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {getLowerLabel(bucket, view)}
-                </span>
-                {sublabel && (
-                  <span
-                    style={{
-                      fontSize: 10,
-                      color: isWe ? '#CBD5E1' : '#94A3B8',
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {sublabel}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        {superBuckets.map((sb, i) => (
+          <div
+            key={i}
+            className="flex items-center justify-center"
+            style={{
+              flex: `${sb.totalWidthFraction} 0 0%`,
+              height: 28,
+              borderRight: '1px solid #E2E8F0',
+              fontSize: 14,
+              fontWeight: 600,
+              color: '#0F172A',
+            }}
+          >
+            {sb.label}
+          </div>
+        ))}
         {/* TODAY badge on header */}
         {todayLeft != null && (
           <div
             className="absolute pointer-events-none"
             style={{
-              left: LEFT_COLUMN_WIDTH + todayLeft,
-              top: -30,
+              left: todayLeft,
+              top: 4,
               transform: 'translateX(-50%)',
               zIndex: 10,
             }}
@@ -392,6 +350,48 @@ export default function GanttHeader({
             </span>
           </div>
         )}
+      </div>
+
+      {/* Lower level (granularity) */}
+      <div className="flex">
+        {buckets.map((bucket, i) => {
+          const isWe = view === 'day' && isWeekendDay(bucket.start);
+          const sublabel = getLowerSublabel(bucket, view);
+          return (
+            <div
+              key={i}
+              className="flex flex-col items-center justify-center text-center"
+              style={{
+                flex: `${bucket.widthFraction} 0 0%`,
+                height: 28,
+                borderRight: '1px solid #F1F5F9',
+                backgroundColor: isWe ? '#F8FAFC' : undefined,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: isWe ? '#94A3B8' : '#334155',
+                  lineHeight: 1.2,
+                }}
+              >
+                {getLowerLabel(bucket, view)}
+              </span>
+              {sublabel && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: isWe ? '#CBD5E1' : '#94A3B8',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {sublabel}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
