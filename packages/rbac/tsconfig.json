@@ -15,7 +15,8 @@
     "skipLibCheck": true,
     "noEmit": true,
     "lib": ["ES2022"],
-    "types": []
+    "types": [],
+    "allowImportingTsExtensions": true
   },
   "include": [
     "atomic-permissions.ts",

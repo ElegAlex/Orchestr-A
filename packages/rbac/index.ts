@@ -11,7 +11,7 @@
 
 export type {
   PermissionCode,
-} from './atomic-permissions';
+} from './atomic-permissions.ts';
 
 export {
   CATALOG_PERMISSIONS,
@@ -49,17 +49,17 @@ export {
   USERS_CRUD,
   SYSTEM_ADMIN_WRITE,
   SETTINGS_READ,
-} from './atomic-permissions';
+} from './atomic-permissions.ts';
 
 export type {
   RoleCategoryKey,
   RoleTemplateKey,
   RoleTemplate,
-} from './templates';
+} from './templates.ts';
 
 export {
   ROLE_TEMPLATES,
   ROLE_TEMPLATE_KEYS,
   LEGACY_ROLE_MIGRATION,
   TEMPLATE_TO_LEGACY_LABELS,
-} from './templates';
+} from './templates.ts';

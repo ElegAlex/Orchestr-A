@@ -131,7 +131,7 @@ import {
   SKILLS_ADMIN,
   SETTINGS_READ,
   USERS_PAGE_ACCESS,
-} from './atomic-permissions';
+} from './atomic-permissions.ts';
 
 // ============================================================================
 // 1. Types : catégories, clés, structure d'un template
