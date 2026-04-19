@@ -23,7 +23,7 @@ import {
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OwnershipGuard } from '../common/guards/ownership.guard';
@@ -36,7 +36,7 @@ export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Post()
-  @Permissions('events:create')
+  @RequirePermissions('events:create')
   @ApiOperation({ summary: 'Créer un nouvel événement' })
   @ApiResponse({
     status: 201,
@@ -58,7 +58,7 @@ export class EventsController {
   }
 
   @Get()
-  @Permissions('events:read')
+  @RequirePermissions('events:read')
   @ApiOperation({
     summary: 'Récupérer tous les événements (avec filtres optionnels)',
   })
@@ -89,7 +89,7 @@ export class EventsController {
   }
 
   @Get('range')
-  @Permissions('events:read')
+  @RequirePermissions('events:read')
   @ApiOperation({ summary: 'Récupérer les événements dans une plage de dates' })
   @ApiQuery({ name: 'start', required: true, type: String })
   @ApiQuery({ name: 'end', required: true, type: String })
@@ -116,7 +116,7 @@ export class EventsController {
   }
 
   @Get('user/:userId')
-  @Permissions('events:read')
+  @RequirePermissions('events:read')
   @ApiOperation({ summary: "Récupérer tous les événements d'un utilisateur" })
   @ApiResponse({
     status: 200,
@@ -144,7 +144,7 @@ export class EventsController {
   }
 
   @Get(':id')
-  @Permissions('events:read')
+  @RequirePermissions('events:read')
   @ApiOperation({
     summary: 'Récupérer un événement par ID avec tous les détails',
   })
@@ -167,7 +167,7 @@ export class EventsController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, OwnershipGuard)
   @OwnershipCheck({ resource: 'event', bypassPermission: 'events:manage_any' })
-  @Permissions('events:update')
+  @RequirePermissions('events:update')
   @ApiOperation({ summary: 'Mettre à jour un événement' })
   @ApiResponse({
     status: 200,
@@ -202,7 +202,7 @@ export class EventsController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, OwnershipGuard)
   @OwnershipCheck({ resource: 'event', bypassPermission: 'events:manage_any' })
-  @Permissions('events:delete')
+  @RequirePermissions('events:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un événement' })
   @ApiResponse({
@@ -228,7 +228,7 @@ export class EventsController {
   @Delete(':id/recurrence')
   @UseGuards(JwtAuthGuard, OwnershipGuard)
   @OwnershipCheck({ resource: 'event', bypassPermission: 'events:manage_any' })
-  @Permissions('events:delete')
+  @RequirePermissions('events:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Arrêter la récurrence d'un événement" })
   @ApiResponse({ status: 200, description: 'Récurrence arrêtée' })
@@ -252,7 +252,7 @@ export class EventsController {
   @Post(':id/participants')
   @UseGuards(JwtAuthGuard, OwnershipGuard)
   @OwnershipCheck({ resource: 'event', bypassPermission: 'events:manage_any' })
-  @Permissions('events:update')
+  @RequirePermissions('events:update')
   @ApiOperation({ summary: 'Ajouter un participant à un événement' })
   @ApiResponse({
     status: 201,
@@ -291,7 +291,7 @@ export class EventsController {
     paramKey: 'eventId',
     bypassPermission: 'events:manage_any',
   })
-  @Permissions('events:update')
+  @RequirePermissions('events:update')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Retirer un participant d'un événement" })
   @ApiResponse({

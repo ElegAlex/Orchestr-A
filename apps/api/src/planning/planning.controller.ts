@@ -7,7 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { PlanningService } from './planning.service';
 import { PlanningOverviewQueryDto } from './dto/planning-overview-query.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { User } from '@prisma/client';
 
@@ -18,7 +18,7 @@ export class PlanningController {
   constructor(private readonly planningService: PlanningService) {}
 
   @Get('overview')
-  @Permissions('users:read')
+  @RequirePermissions('users:read')
   @ApiOperation({
     summary:
       'Récupérer en un seul appel toutes les données nécessaires à la vue planning',

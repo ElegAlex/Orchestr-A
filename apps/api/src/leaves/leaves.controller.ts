@@ -32,7 +32,8 @@ import {
   ImportLeavesResultDto,
   LeavesValidationPreviewDto,
 } from './dto/import-leaves.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
+import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { LeaveStatus, LeaveType } from 'database';
 
@@ -46,6 +47,7 @@ export class LeavesController {
   ) {}
 
   @Post()
+  @RequirePermissions('leaves:create')
   @ApiOperation({ summary: 'Créer une demande de congé' })
   @ApiResponse({
     status: 201,
@@ -77,7 +79,7 @@ export class LeavesController {
   // ===========================
 
   @Get('balances')
-  @Permissions('leaves:manage')
+  @RequirePermissions('leaves:manage')
   @ApiOperation({
     summary: 'Lister les soldes de congés (filtrable par year, userId)',
   })
@@ -92,7 +94,7 @@ export class LeavesController {
   }
 
   @Get('balances/defaults')
-  @Permissions('leaves:manage')
+  @RequirePermissions('leaves:manage')
   @ApiOperation({
     summary: 'Lister les soldes globaux par défaut (userId=null)',
   })
@@ -105,7 +107,7 @@ export class LeavesController {
   }
 
   @Post('balances')
-  @Permissions('leaves:manage')
+  @RequirePermissions('leaves:manage')
   @ApiOperation({ summary: 'Créer ou modifier un solde (upsert)' })
   @ApiResponse({ status: 201, description: 'Solde créé ou mis à jour' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
@@ -118,7 +120,7 @@ export class LeavesController {
   }
 
   @Delete('balances/:id')
-  @Permissions('leaves:manage')
+  @RequirePermissions('leaves:manage')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un override de solde individuel' })
   @ApiResponse({ status: 200, description: 'Solde supprimé' })
@@ -128,7 +130,7 @@ export class LeavesController {
   }
 
   @Get()
-  @Permissions('leaves:read')
+  @RequirePermissions('leaves:read')
   @ApiOperation({
     summary:
       'Récupérer toutes les demandes de congé (avec pagination et filtres)',
@@ -179,6 +181,7 @@ export class LeavesController {
   }
 
   @Get('me')
+  @AllowSelfService()
   @ApiOperation({ summary: 'Récupérer mes demandes de congé' })
   @ApiResponse({
     status: 200,
@@ -189,6 +192,7 @@ export class LeavesController {
   }
 
   @Get('me/balance')
+  @AllowSelfService()
   @ApiOperation({ summary: 'Récupérer son solde de congés' })
   @ApiResponse({
     status: 200,
@@ -199,7 +203,7 @@ export class LeavesController {
   }
 
   @Get('pending-validation')
-  @Permissions('leaves:approve')
+  @RequirePermissions('leaves:approve')
   @ApiOperation({
     summary: 'Récupérer les demandes en attente de ma validation',
   })
@@ -212,7 +216,7 @@ export class LeavesController {
   }
 
   @Get('import-template')
-  @Permissions('leaves:read')
+  @RequirePermissions('leaves:read')
   @ApiOperation({ summary: 'Télécharger le modèle CSV pour import de congés' })
   @ApiResponse({
     status: 200,
@@ -229,7 +233,7 @@ export class LeavesController {
   }
 
   @Post('import/validate')
-  @Permissions('leaves:create')
+  @RequirePermissions('leaves:create')
   @ApiOperation({ summary: 'Valider des congés avant import (dry-run)' })
   @ApiResponse({
     status: 200,
@@ -245,7 +249,7 @@ export class LeavesController {
   }
 
   @Post('import')
-  @Permissions('leaves:create')
+  @RequirePermissions('leaves:create')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Importer des congés en masse via CSV' })
   @ApiResponse({
@@ -268,7 +272,7 @@ export class LeavesController {
   }
 
   @Get('balance/:userId')
-  @Permissions('leaves:read')
+  @RequirePermissions('leaves:read')
   @ApiOperation({
     summary:
       "Récupérer le solde de congés d'un utilisateur (Admin/Responsable/Manager)",
@@ -289,9 +293,12 @@ export class LeavesController {
     if (userId !== currentUserId) {
       const permissions =
         await this.roleManagementService.getPermissionsForRole(currentUserRole);
-      if (!permissions.includes('leaves:validate')) {
+      // D6 #2 PO : `leaves:validate` n'existe pas au catalogue ; le check
+      // historique était cassé (toujours faux). La permission métier
+      // équivalente est `leaves:approve`.
+      if (!permissions.includes('leaves:approve')) {
         throw new ForbiddenException(
-          'Permission leaves:validate requise pour consulter le solde d\'un autre utilisateur',
+          'Permission leaves:approve requise pour consulter le solde d\'un autre utilisateur',
         );
       }
     }
@@ -299,7 +306,7 @@ export class LeavesController {
   }
 
   @Get('subordinates')
-  @Permissions('leaves:read')
+  @RequirePermissions('leaves:read')
   @ApiOperation({
     summary:
       'Récupérer les collaborateurs sous la responsabilité du manager (pour déclaration de congés)',
@@ -316,7 +323,7 @@ export class LeavesController {
   }
 
   @Get(':id')
-  @Permissions('leaves:read')
+  @RequirePermissions('leaves:read')
   @ApiOperation({ summary: 'Récupérer une demande de congé par ID' })
   @ApiResponse({
     status: 200,
@@ -335,6 +342,7 @@ export class LeavesController {
   }
 
   @Patch(':id')
+  @RequirePermissions('leaves:update')
   @ApiOperation({
     summary: 'Mettre à jour une demande de congé (en attente uniquement)',
   })
@@ -365,6 +373,7 @@ export class LeavesController {
   }
 
   @Delete(':id')
+  @RequirePermissions('leaves:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
@@ -391,7 +400,7 @@ export class LeavesController {
   }
 
   @Post(':id/approve')
-  @Permissions('leaves:approve')
+  @RequirePermissions('leaves:approve')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
@@ -431,7 +440,7 @@ export class LeavesController {
   }
 
   @Post(':id/reject')
-  @Permissions('leaves:approve')
+  @RequirePermissions('leaves:approve')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
@@ -471,6 +480,7 @@ export class LeavesController {
   }
 
   @Post(':id/request-cancel')
+  @AllowSelfService()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Demander l'annulation d'un congé approuvé (par le demandeur)",
@@ -499,7 +509,7 @@ export class LeavesController {
   }
 
   @Post(':id/cancel')
-  @Permissions('leaves:delete')
+  @RequirePermissions('leaves:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
@@ -526,7 +536,7 @@ export class LeavesController {
   }
 
   @Post(':id/reject-cancellation')
-  @Permissions('leaves:approve')
+  @RequirePermissions('leaves:approve')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Refuser la demande d'annulation — le congé reste approuvé",
@@ -553,7 +563,7 @@ export class LeavesController {
   // ===========================
 
   @Post('delegations')
-  @Permissions('leaves:manage_delegations')
+  @RequirePermissions('leaves:manage_delegations')
   @ApiOperation({
     summary: 'Créer une délégation de validation (Admin/Responsable/Manager)',
   })
@@ -600,6 +610,7 @@ export class LeavesController {
   }
 
   @Get('delegations/me')
+  @AllowSelfService()
   @ApiOperation({
     summary: 'Récupérer mes délégations (données et reçues)',
   })
@@ -612,6 +623,7 @@ export class LeavesController {
   }
 
   @Delete('delegations/:id')
+  @RequirePermissions('leaves:manage_delegations')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Désactiver une délégation',

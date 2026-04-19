@@ -23,7 +23,8 @@ import {
 import { TimeTrackingService } from './time-tracking.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
+import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OwnershipGuard } from '../common/guards/ownership.guard';
@@ -37,7 +38,7 @@ export class TimeTrackingController {
   constructor(private readonly timeTrackingService: TimeTrackingService) {}
 
   @Post()
-  @Permissions('time_tracking:create')
+  @RequirePermissions('time_tracking:create')
   @ApiOperation({ summary: 'Créer une entrée de temps' })
   @ApiResponse({
     status: 201,
@@ -59,6 +60,7 @@ export class TimeTrackingController {
   }
 
   @Get()
+  @AllowSelfService()
   @ApiOperation({
     summary:
       'Récupérer toutes les entrées de temps (avec pagination et filtres)',
@@ -105,6 +107,7 @@ export class TimeTrackingController {
   }
 
   @Get('me')
+  @AllowSelfService()
   @ApiOperation({ summary: 'Récupérer mes entrées de temps' })
   @ApiQuery({ name: 'startDate', required: false, type: String })
   @ApiQuery({ name: 'endDate', required: false, type: String })
@@ -121,6 +124,7 @@ export class TimeTrackingController {
   }
 
   @Get('me/report')
+  @AllowSelfService()
   @ApiOperation({ summary: 'Récupérer mon rapport de temps pour une période' })
   @ApiQuery({ name: 'startDate', required: true, type: String })
   @ApiQuery({ name: 'endDate', required: true, type: String })
@@ -137,7 +141,7 @@ export class TimeTrackingController {
   }
 
   @Get('user/:userId/report')
-  @Permissions('time_tracking:read_reports')
+  @RequirePermissions('time_tracking:read_reports')
   @ApiOperation({
     summary:
       "Récupérer le rapport de temps d'un utilisateur (Admin/Responsable/Manager)",
@@ -161,7 +165,7 @@ export class TimeTrackingController {
   }
 
   @Get('project/:projectId/report')
-  @Permissions('time_tracking:read_reports')
+  @RequirePermissions('time_tracking:read_reports')
   @ApiOperation({
     summary:
       "Récupérer le rapport de temps d'un projet (Admin/Responsable/Manager)",
@@ -189,6 +193,7 @@ export class TimeTrackingController {
   }
 
   @Get(':id')
+  @AllowSelfService()
   @ApiOperation({ summary: 'Récupérer une entrée de temps par ID' })
   @ApiResponse({
     status: 200,
@@ -211,7 +216,7 @@ export class TimeTrackingController {
     resource: 'timeEntry',
     bypassPermission: 'time_tracking:manage_any',
   })
-  @Permissions('time_tracking:update')
+  @RequirePermissions('time_tracking:update')
   @ApiOperation({ summary: 'Mettre à jour une entrée de temps' })
   @ApiResponse({
     status: 200,
@@ -240,7 +245,7 @@ export class TimeTrackingController {
     resource: 'timeEntry',
     bypassPermission: 'time_tracking:manage_any',
   })
-  @Permissions('time_tracking:delete')
+  @RequirePermissions('time_tracking:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer une entrée de temps' })
   @ApiResponse({

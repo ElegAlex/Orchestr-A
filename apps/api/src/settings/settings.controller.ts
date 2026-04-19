@@ -13,7 +13,7 @@ import {
   UpdateSettingDto,
   BulkUpdateSettingsDto,
 } from './dto/update-setting.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 
 @ApiTags('Settings')
 @Controller('settings')
@@ -21,6 +21,7 @@ export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
   @Get()
+  @RequirePermissions('settings:read')
   @ApiOperation({ summary: 'Récupérer tous les paramètres' })
   @ApiBearerAuth()
   async findAll() {
@@ -28,6 +29,7 @@ export class SettingsController {
   }
 
   @Get('category/:category')
+  @RequirePermissions('settings:read')
   @ApiOperation({ summary: 'Récupérer les paramètres par catégorie' })
   @ApiBearerAuth()
   async findByCategory(@Param('category') category: string) {
@@ -35,6 +37,7 @@ export class SettingsController {
   }
 
   @Get(':key')
+  @RequirePermissions('settings:read')
   @ApiOperation({ summary: 'Récupérer un paramètre par sa clé' })
   @ApiBearerAuth()
   async findOne(@Param('key') key: string) {
@@ -42,7 +45,7 @@ export class SettingsController {
   }
 
   @Put(':key')
-  @Permissions('settings:update')
+  @RequirePermissions('settings:update')
   @ApiOperation({ summary: 'Mettre à jour un paramètre (Admin uniquement)' })
   @ApiBearerAuth()
   async update(
@@ -65,7 +68,7 @@ export class SettingsController {
   }
 
   @Post('bulk')
-  @Permissions('settings:update')
+  @RequirePermissions('settings:update')
   @ApiOperation({
     summary: 'Mettre à jour plusieurs paramètres (Admin uniquement)',
   })
@@ -75,7 +78,7 @@ export class SettingsController {
   }
 
   @Post(':key/reset')
-  @Permissions('settings:update')
+  @RequirePermissions('settings:update')
   @ApiOperation({
     summary:
       'Réinitialiser un paramètre à sa valeur par défaut (Admin uniquement)',
@@ -86,7 +89,7 @@ export class SettingsController {
   }
 
   @Post('reset-all')
-  @Permissions('settings:update')
+  @RequirePermissions('settings:update')
   @ApiOperation({
     summary: 'Réinitialiser tous les paramètres (Admin uniquement)',
   })
@@ -96,7 +99,7 @@ export class SettingsController {
   }
 
   @Delete(':key')
-  @Permissions('settings:update')
+  @RequirePermissions('settings:update')
   @ApiOperation({
     summary: 'Supprimer un paramètre personnalisé (Admin uniquement)',
   })

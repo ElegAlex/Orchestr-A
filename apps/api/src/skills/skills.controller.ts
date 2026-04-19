@@ -29,7 +29,8 @@ import {
   ImportSkillsResultDto,
   SkillsValidationPreviewDto,
 } from './dto/import-skills.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
+import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SkillCategory, SkillLevel } from 'database';
 
@@ -40,7 +41,7 @@ export class SkillsController {
   constructor(private readonly skillsService: SkillsService) {}
 
   @Post()
-  @Permissions('skills:create')
+  @RequirePermissions('skills:create')
   @ApiOperation({
     summary: 'Créer une nouvelle compétence (Admin/Responsable uniquement)',
   })
@@ -57,7 +58,7 @@ export class SkillsController {
   }
 
   @Get()
-  @Permissions('skills:read')
+  @RequirePermissions('skills:read')
   @ApiOperation({
     summary: 'Récupérer toutes les compétences (avec pagination)',
   })
@@ -77,7 +78,7 @@ export class SkillsController {
   }
 
   @Get('matrix')
-  @Permissions('skills:manage_matrix')
+  @RequirePermissions('skills:manage_matrix')
   @ApiOperation({
     summary: 'Récupérer la matrice de compétences (Admin/Responsable/Manager)',
   })
@@ -95,7 +96,7 @@ export class SkillsController {
   }
 
   @Get('search/:skillId')
-  @Permissions('skills:read')
+  @RequirePermissions('skills:read')
   @ApiOperation({
     summary:
       'Rechercher des utilisateurs par compétence (Admin/Responsable/Manager)',
@@ -117,7 +118,7 @@ export class SkillsController {
   }
 
   @Get('import-template')
-  @Permissions('skills:read')
+  @RequirePermissions('skills:read')
   @ApiOperation({
     summary: "Télécharger le template CSV pour l'import de compétences",
   })
@@ -130,7 +131,7 @@ export class SkillsController {
   }
 
   @Post('import/validate')
-  @Permissions('skills:create')
+  @RequirePermissions('skills:create')
   @ApiOperation({ summary: 'Valider des compétences avant import (dry-run)' })
   @ApiResponse({
     status: 200,
@@ -142,7 +143,7 @@ export class SkillsController {
   }
 
   @Post('import')
-  @Permissions('skills:create')
+  @RequirePermissions('skills:create')
   @ApiOperation({ summary: 'Importer des compétences en masse via CSV' })
   @ApiResponse({
     status: 201,
@@ -154,7 +155,7 @@ export class SkillsController {
   }
 
   @Get(':id')
-  @Permissions('skills:read')
+  @RequirePermissions('skills:read')
   @ApiOperation({
     summary: 'Récupérer une compétence par ID avec ses utilisateurs',
   })
@@ -171,7 +172,7 @@ export class SkillsController {
   }
 
   @Patch(':id')
-  @Permissions('skills:update')
+  @RequirePermissions('skills:update')
   @ApiOperation({
     summary: 'Mettre à jour une compétence (Admin/Responsable)',
   })
@@ -195,7 +196,7 @@ export class SkillsController {
   }
 
   @Delete(':id')
-  @Permissions('skills:delete')
+  @RequirePermissions('skills:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Supprimer une compétence (Admin uniquement)',
@@ -217,6 +218,7 @@ export class SkillsController {
   }
 
   @Post('me/assign')
+  @AllowSelfService()
   @ApiOperation({ summary: 'Assigner une compétence à soi-même' })
   @ApiResponse({
     status: 201,
@@ -234,7 +236,7 @@ export class SkillsController {
   }
 
   @Post('user/:userId/assign')
-  @Permissions('skills:manage_matrix')
+  @RequirePermissions('skills:manage_matrix')
   @ApiOperation({
     summary:
       'Assigner une compétence à un utilisateur (Admin/Responsable/Manager)',
@@ -255,6 +257,7 @@ export class SkillsController {
   }
 
   @Delete('me/remove/:skillId')
+  @AllowSelfService()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Retirer une compétence de soi-même' })
   @ApiResponse({
@@ -273,7 +276,7 @@ export class SkillsController {
   }
 
   @Delete('user/:userId/remove/:skillId')
-  @Permissions('skills:manage_matrix')
+  @RequirePermissions('skills:manage_matrix')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
@@ -295,7 +298,7 @@ export class SkillsController {
   }
 
   @Get('user/:userId')
-  @Permissions('skills:read')
+  @RequirePermissions('skills:read')
   @ApiOperation({ summary: "Récupérer les compétences d'un utilisateur" })
   @ApiResponse({
     status: 200,
@@ -311,6 +314,7 @@ export class SkillsController {
   }
 
   @Get('me/my-skills')
+  @AllowSelfService()
   @ApiOperation({ summary: 'Récupérer mes compétences' })
   @ApiResponse({
     status: 200,
@@ -321,7 +325,7 @@ export class SkillsController {
   }
 
   @Patch('user/:userId/skill/:skillId')
-  @Permissions('skills:manage_matrix')
+  @RequirePermissions('skills:manage_matrix')
   @ApiOperation({
     summary:
       "Mettre à jour le niveau d'une compétence d'un utilisateur (Admin/Responsable/Manager)",

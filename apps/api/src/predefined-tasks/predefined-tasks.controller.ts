@@ -29,7 +29,7 @@ import {
   GenerateFromRulesDto,
 } from './dto/create-recurring-rule.dto';
 import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('predefined-tasks')
@@ -45,7 +45,7 @@ export class PredefinedTasksController {
   // ===========================
 
   @Get()
-  @Permissions('predefined_tasks:view')
+  @RequirePermissions('predefined_tasks:view')
   @ApiOperation({ summary: 'Lister les tâches prédéfinies actives' })
   @ApiResponse({
     status: 200,
@@ -56,7 +56,7 @@ export class PredefinedTasksController {
   }
 
   @Post()
-  @Permissions('predefined_tasks:create')
+  @RequirePermissions('predefined_tasks:create')
   @ApiOperation({ summary: 'Créer une tâche prédéfinie' })
   @ApiResponse({ status: 201, description: 'Tâche prédéfinie créée' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
@@ -68,7 +68,7 @@ export class PredefinedTasksController {
   }
 
   @Patch(':id')
-  @Permissions('predefined_tasks:edit')
+  @RequirePermissions('predefined_tasks:edit')
   @ApiOperation({ summary: 'Modifier une tâche prédéfinie' })
   @ApiResponse({ status: 200, description: 'Tâche prédéfinie mise à jour' })
   @ApiResponse({ status: 404, description: 'Tâche prédéfinie introuvable' })
@@ -80,7 +80,7 @@ export class PredefinedTasksController {
   }
 
   @Delete(':id')
-  @Permissions('predefined_tasks:delete')
+  @RequirePermissions('predefined_tasks:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Désactiver (soft delete) une tâche prédéfinie' })
   @ApiResponse({ status: 200, description: 'Tâche prédéfinie désactivée' })
@@ -94,7 +94,7 @@ export class PredefinedTasksController {
   // ===========================
 
   @Get('assignments')
-  @Permissions('predefined_tasks:view')
+  @RequirePermissions('predefined_tasks:view')
   @ApiOperation({
     summary: 'Lister les assignations (avec filtres optionnels)',
   })
@@ -128,7 +128,7 @@ export class PredefinedTasksController {
   }
 
   @Post('assignments')
-  @Permissions('predefined_tasks:assign')
+  @RequirePermissions('predefined_tasks:assign')
   @ApiOperation({ summary: 'Assigner une tâche prédéfinie à un utilisateur' })
   @ApiResponse({ status: 201, description: 'Assignation créée' })
   @ApiResponse({ status: 404, description: 'Tâche prédéfinie introuvable' })
@@ -144,7 +144,7 @@ export class PredefinedTasksController {
   }
 
   @Post('assignments/bulk')
-  @Permissions('predefined_tasks:assign')
+  @RequirePermissions('predefined_tasks:assign')
   @ApiOperation({
     summary: 'Assigner en masse (plusieurs utilisateurs × plusieurs dates)',
   })
@@ -164,7 +164,7 @@ export class PredefinedTasksController {
   }
 
   @Delete('assignments/:id')
-  @Permissions('predefined_tasks:assign')
+  @RequirePermissions('predefined_tasks:assign')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer une assignation' })
   @ApiResponse({ status: 200, description: 'Assignation supprimée' })
@@ -178,7 +178,7 @@ export class PredefinedTasksController {
   // ===========================
 
   @Get('recurring-rules')
-  @Permissions('predefined_tasks:assign')
+  @RequirePermissions('predefined_tasks:assign')
   @ApiOperation({ summary: 'Lister les règles récurrentes actives' })
   @ApiQuery({ name: 'userId', required: false, type: String })
   @ApiQuery({ name: 'predefinedTaskId', required: false, type: String })
@@ -194,7 +194,7 @@ export class PredefinedTasksController {
   }
 
   @Post('recurring-rules')
-  @Permissions('predefined_tasks:assign')
+  @RequirePermissions('predefined_tasks:assign')
   @ApiOperation({ summary: 'Créer une règle récurrente' })
   @ApiResponse({ status: 201, description: 'Règle récurrente créée' })
   @ApiResponse({ status: 404, description: 'Tâche prédéfinie introuvable' })
@@ -209,7 +209,7 @@ export class PredefinedTasksController {
   }
 
   @Post('recurring-rules/bulk')
-  @Permissions('predefined_tasks:assign')
+  @RequirePermissions('predefined_tasks:assign')
   @ApiOperation({
     summary:
       'Créer des règles récurrentes en masse (multi-utilisateurs x multi-jours)',
@@ -224,7 +224,7 @@ export class PredefinedTasksController {
   }
 
   @Patch('recurring-rules/:id')
-  @Permissions('predefined_tasks:assign')
+  @RequirePermissions('predefined_tasks:assign')
   @ApiOperation({ summary: 'Modifier une règle récurrente' })
   @ApiResponse({ status: 200, description: 'Règle récurrente mise à jour' })
   @ApiResponse({ status: 404, description: 'Règle récurrente introuvable' })
@@ -239,7 +239,7 @@ export class PredefinedTasksController {
   }
 
   @Delete('recurring-rules/:id')
-  @Permissions('predefined_tasks:assign')
+  @RequirePermissions('predefined_tasks:assign')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer une règle récurrente' })
   @ApiResponse({ status: 200, description: 'Règle récurrente supprimée' })
@@ -249,7 +249,7 @@ export class PredefinedTasksController {
   }
 
   @Post('recurring-rules/generate')
-  @Permissions('predefined_tasks:assign')
+  @RequirePermissions('predefined_tasks:assign')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:

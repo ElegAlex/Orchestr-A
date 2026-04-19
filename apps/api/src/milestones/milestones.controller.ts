@@ -29,7 +29,7 @@ import {
   ImportMilestonesResultDto,
   MilestonesValidationPreviewDto,
 } from './dto/import-milestones.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { MilestoneStatus } from 'database';
 
@@ -40,7 +40,7 @@ export class MilestonesController {
   constructor(private readonly milestonesService: MilestonesService) {}
 
   @Post()
-  @Permissions('milestones:create')
+  @RequirePermissions('milestones:create')
   @ApiOperation({ summary: 'Créer un milestone' })
   @ApiResponse({ status: 201, description: 'Milestone créé' })
   create(@Body() createMilestoneDto: CreateMilestoneDto) {
@@ -48,6 +48,7 @@ export class MilestonesController {
   }
 
   @Get()
+  @RequirePermissions('milestones:read')
   @ApiOperation({ summary: 'Liste des milestones' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -63,13 +64,14 @@ export class MilestonesController {
   }
 
   @Get(':id')
+  @RequirePermissions('milestones:read')
   @ApiOperation({ summary: "Détails d'un milestone" })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.milestonesService.findOne(id);
   }
 
   @Patch(':id')
-  @Permissions('milestones:update')
+  @RequirePermissions('milestones:update')
   @ApiOperation({ summary: 'Modifier un milestone' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -81,7 +83,7 @@ export class MilestonesController {
   }
 
   @Post(':id/complete')
-  @Permissions('milestones:update')
+  @RequirePermissions('milestones:update')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Marquer un milestone comme complété' })
   complete(@Param('id', ParseUUIDPipe) id: string) {
@@ -89,7 +91,7 @@ export class MilestonesController {
   }
 
   @Delete(':id')
-  @Permissions('milestones:delete')
+  @RequirePermissions('milestones:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un milestone' })
   remove(
@@ -101,7 +103,7 @@ export class MilestonesController {
   }
 
   @Post('project/:projectId/import/validate')
-  @Permissions('milestones:create')
+  @RequirePermissions('milestones:create')
   @ApiOperation({ summary: 'Valider des jalons avant import (dry-run)' })
   @ApiResponse({
     status: 200,
@@ -123,7 +125,7 @@ export class MilestonesController {
   }
 
   @Post('project/:projectId/import')
-  @Permissions('milestones:create')
+  @RequirePermissions('milestones:create')
   @ApiOperation({ summary: 'Importer des jalons en masse via CSV' })
   @ApiResponse({
     status: 201,
@@ -145,6 +147,7 @@ export class MilestonesController {
   }
 
   @Get('project/:projectId/export')
+  @RequirePermissions('milestones:read')
   @ApiOperation({ summary: "Exporter les jalons d'un projet en CSV" })
   @ApiResponse({ status: 200, description: 'Fichier CSV des jalons' })
   @ApiResponse({ status: 404, description: 'Projet introuvable' })
@@ -161,6 +164,7 @@ export class MilestonesController {
   }
 
   @Get('project/:projectId/import-template')
+  @RequirePermissions('milestones:read')
   @ApiOperation({
     summary: "Télécharger le template CSV pour l'import de jalons",
   })

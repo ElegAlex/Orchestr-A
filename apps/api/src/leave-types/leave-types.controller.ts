@@ -22,7 +22,7 @@ import { LeaveTypesService } from './leave-types.service';
 import { CreateLeaveTypeDto } from './dto/create-leave-type.dto';
 import { UpdateLeaveTypeDto } from './dto/update-leave-type.dto';
 import { ReorderLeaveTypesDto } from './dto/reorder-leave-types.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 
 @ApiTags('Leave Types')
 @ApiBearerAuth()
@@ -31,7 +31,7 @@ export class LeaveTypesController {
   constructor(private readonly leaveTypesService: LeaveTypesService) {}
 
   @Post()
-  @Permissions('leaves:update')
+  @RequirePermissions('leaves:update')
   @ApiOperation({
     summary: 'Créer un nouveau type de congé (Admin/Responsable)',
   })
@@ -42,6 +42,7 @@ export class LeaveTypesController {
   }
 
   @Get()
+  @RequirePermissions('leaves:read')
   @ApiOperation({ summary: 'Récupérer tous les types de congés' })
   @ApiQuery({
     name: 'includeInactive',
@@ -55,6 +56,7 @@ export class LeaveTypesController {
   }
 
   @Get(':id')
+  @RequirePermissions('leaves:read')
   @ApiOperation({ summary: 'Récupérer un type de congé par ID' })
   @ApiResponse({ status: 200, description: 'Type de congé trouvé' })
   @ApiResponse({ status: 404, description: 'Type de congé introuvable' })
@@ -63,6 +65,7 @@ export class LeaveTypesController {
   }
 
   @Get('code/:code')
+  @RequirePermissions('leaves:read')
   @ApiOperation({ summary: 'Récupérer un type de congé par code' })
   @ApiResponse({ status: 200, description: 'Type de congé trouvé' })
   @ApiResponse({ status: 404, description: 'Type de congé introuvable' })
@@ -71,7 +74,7 @@ export class LeaveTypesController {
   }
 
   @Patch(':id')
-  @Permissions('leaves:update')
+  @RequirePermissions('leaves:update')
   @ApiOperation({
     summary: 'Mettre à jour un type de congé (Admin/Responsable)',
   })
@@ -89,7 +92,7 @@ export class LeaveTypesController {
   }
 
   @Delete(':id')
-  @Permissions('leaves:delete')
+  @RequirePermissions('leaves:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un type de congé (Admin/Responsable)' })
   @ApiResponse({
@@ -106,7 +109,7 @@ export class LeaveTypesController {
   }
 
   @Post('reorder')
-  @Permissions('leaves:update')
+  @RequirePermissions('leaves:update')
   @ApiOperation({
     summary: 'Réordonner les types de congés (Admin/Responsable)',
   })

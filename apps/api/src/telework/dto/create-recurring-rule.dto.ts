@@ -13,7 +13,7 @@ import {
 export class CreateRecurringRuleDto {
   @ApiProperty({
     description:
-      "ID de l'utilisateur (optionnel, self si absent, requiert telework:manage_others si différent du courant)",
+      "ID de l'utilisateur (optionnel, self si absent, requiert telework:manage_any si différent du courant)",
     required: false,
   })
   @IsOptional()

@@ -22,7 +22,7 @@ import {
 import { EpicsService } from './epics.service';
 import { CreateEpicDto } from './dto/create-epic.dto';
 import { UpdateEpicDto } from './dto/update-epic.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('epics')
@@ -32,7 +32,7 @@ export class EpicsController {
   constructor(private readonly epicsService: EpicsService) {}
 
   @Post()
-  @Permissions('epics:create')
+  @RequirePermissions('epics:create')
   @ApiOperation({ summary: 'Créer un epic' })
   @ApiResponse({ status: 201, description: 'Epic créé' })
   create(@Body() createEpicDto: CreateEpicDto) {
@@ -40,6 +40,7 @@ export class EpicsController {
   }
 
   @Get()
+  @RequirePermissions('epics:read')
   @ApiOperation({ summary: 'Liste des epics' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -53,13 +54,14 @@ export class EpicsController {
   }
 
   @Get(':id')
+  @RequirePermissions('epics:read')
   @ApiOperation({ summary: "Détails d'un epic" })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.epicsService.findOne(id);
   }
 
   @Patch(':id')
-  @Permissions('epics:update')
+  @RequirePermissions('epics:update')
   @ApiOperation({ summary: 'Modifier un epic' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -71,7 +73,7 @@ export class EpicsController {
   }
 
   @Delete(':id')
-  @Permissions('epics:delete')
+  @RequirePermissions('epics:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un epic' })
   remove(

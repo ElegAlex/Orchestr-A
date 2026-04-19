@@ -97,7 +97,7 @@ describe('TeleworkService', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('should create telework for different user when having telework:manage_others permission', async () => {
+    it('should create telework for different user when having telework:manage_any permission', async () => {
       const createDto = {
         date: '2025-11-20',
         isTelework: true,
@@ -105,7 +105,7 @@ describe('TeleworkService', () => {
       };
 
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
-        'telework:manage_others',
+        'telework:manage_any',
         'telework:create',
       ]);
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-2' });
@@ -123,7 +123,7 @@ describe('TeleworkService', () => {
       ).toHaveBeenCalledWith('ADMIN');
     });
 
-    it('should throw ForbiddenException when creating for others without telework:manage_others', async () => {
+    it('should throw ForbiddenException when creating for others without telework:manage_any', async () => {
       const createDto = {
         date: '2025-11-20',
         isTelework: true,
@@ -144,7 +144,7 @@ describe('TeleworkService', () => {
     });
 
     it('un CONTRIBUTEUR ne peut pas déclarer du télétravail pour un autre userId', async () => {
-      // Un CONTRIBUTEUR n'a pas la permission telework:manage_others
+      // Un CONTRIBUTEUR n'a pas la permission telework:manage_any
       // → toute tentative de déclarer pour un autre userId doit lever ForbiddenException
       const createDto = {
         date: '2025-12-05',
@@ -342,14 +342,14 @@ describe('TeleworkService', () => {
       ).toHaveBeenCalledWith('CONTRIBUTEUR');
     });
 
-    it("should allow ADMIN to read another user's telework via telework:manage_others", async () => {
+    it("should allow ADMIN to read another user's telework via telework:manage_any", async () => {
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue({
         ...mockTelework,
         userId: 'other-user',
       });
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'telework:read',
-        'telework:manage_others',
+        'telework:manage_any',
       ]);
 
       const result = await service.findOne('telework-1', 'admin-1', 'ADMIN');
@@ -487,7 +487,7 @@ describe('TeleworkService', () => {
       ).toHaveBeenCalledWith('CONTRIBUTEUR');
     });
 
-    it("should update other's telework when having telework:manage_others permission", async () => {
+    it("should update other's telework when having telework:manage_any permission", async () => {
       const updateDto = { isTelework: false };
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue({
         ...mockTelework,
@@ -496,7 +496,7 @@ describe('TeleworkService', () => {
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
-        'telework:manage_others',
+        'telework:manage_any',
       ]);
       mockPrismaService.teleworkSchedule.update.mockResolvedValue({
         ...mockTelework,
@@ -623,7 +623,7 @@ describe('TeleworkService', () => {
       ).toHaveBeenCalledWith('CONTRIBUTEUR');
     });
 
-    it("should delete other's telework when having telework:manage_others permission", async () => {
+    it("should delete other's telework when having telework:manage_any permission", async () => {
       mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue({
         ...mockTelework,
         userId: 'other-user',
@@ -631,7 +631,7 @@ describe('TeleworkService', () => {
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
-        'telework:manage_others',
+        'telework:manage_any',
       ]);
       mockPrismaService.teleworkSchedule.delete.mockResolvedValue(mockTelework);
 
@@ -734,7 +734,7 @@ describe('TeleworkService', () => {
       expect(mockPrismaService.teleworkRecurringRule.create).toHaveBeenCalled();
     });
 
-    it('should throw ForbiddenException when creating for others without telework:manage_others', async () => {
+    it('should throw ForbiddenException when creating for others without telework:manage_any', async () => {
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
@@ -749,10 +749,10 @@ describe('TeleworkService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should allow creating for others with telework:manage_others', async () => {
+    it('should allow creating for others with telework:manage_any', async () => {
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
-        'telework:manage_others',
+        'telework:manage_any',
       ]);
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-2' });
       mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue(
@@ -913,7 +913,7 @@ describe('TeleworkService', () => {
 
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
-        'telework:manage_others',
+        'telework:manage_any',
       ]);
       mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([
         tuesdayRule,
@@ -949,7 +949,7 @@ describe('TeleworkService', () => {
 
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
-        'telework:manage_others',
+        'telework:manage_any',
       ]);
       mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([
         tuesdayRule,
@@ -983,7 +983,7 @@ describe('TeleworkService', () => {
 
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
-        'telework:manage_others',
+        'telework:manage_any',
       ]);
       // The DB filter should already exclude it, but simulate empty result
       mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([]);

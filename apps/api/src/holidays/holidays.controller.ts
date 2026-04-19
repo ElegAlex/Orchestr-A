@@ -21,7 +21,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { HolidaysService } from './holidays.service';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
@@ -35,6 +35,7 @@ export class HolidaysController {
   constructor(private readonly holidaysService: HolidaysService) {}
 
   @Get()
+  @RequirePermissions('holidays:read')
   @ApiOperation({ summary: 'Récupérer tous les jours fériés' })
   @ApiResponse({ status: 200, description: 'Liste des jours fériés' })
   async findAll() {
@@ -42,6 +43,7 @@ export class HolidaysController {
   }
 
   @Get('year/:year')
+  @RequirePermissions('holidays:read')
   @ApiOperation({ summary: "Récupérer les jours fériés d'une année" })
   @ApiParam({ name: 'year', description: 'Année', example: 2025 })
   @ApiResponse({
@@ -53,6 +55,7 @@ export class HolidaysController {
   }
 
   @Get('range')
+  @RequirePermissions('holidays:read')
   @ApiOperation({ summary: 'Récupérer les jours fériés sur une période' })
   @ApiQuery({
     name: 'startDate',
@@ -73,6 +76,7 @@ export class HolidaysController {
   }
 
   @Get(':id')
+  @RequirePermissions('holidays:read')
   @ApiOperation({ summary: 'Récupérer un jour férié par ID' })
   @ApiParam({ name: 'id', description: 'ID du jour férié' })
   @ApiResponse({ status: 200, description: 'Détail du jour férié' })
@@ -82,7 +86,7 @@ export class HolidaysController {
   }
 
   @Post()
-  @Permissions('holidays:create')
+  @RequirePermissions('holidays:create')
   @ApiOperation({ summary: 'Créer un nouveau jour férié (Admin uniquement)' })
   @ApiResponse({ status: 201, description: 'Jour férié créé' })
   @ApiResponse({
@@ -97,7 +101,7 @@ export class HolidaysController {
   }
 
   @Post('import-french')
-  @Permissions('holidays:create')
+  @RequirePermissions('holidays:create')
   @ApiOperation({
     summary: 'Importer les jours fériés français (Admin uniquement)',
   })
@@ -128,7 +132,7 @@ export class HolidaysController {
   }
 
   @Patch(':id')
-  @Permissions('holidays:update')
+  @RequirePermissions('holidays:update')
   @ApiOperation({ summary: 'Modifier un jour férié (Admin uniquement)' })
   @ApiParam({ name: 'id', description: 'ID du jour férié' })
   @ApiResponse({ status: 200, description: 'Jour férié mis à jour' })
@@ -145,7 +149,7 @@ export class HolidaysController {
   }
 
   @Delete(':id')
-  @Permissions('holidays:delete')
+  @RequirePermissions('holidays:delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Supprimer un jour férié (Admin uniquement)' })
   @ApiParam({ name: 'id', description: 'ID du jour férié' })
@@ -156,6 +160,7 @@ export class HolidaysController {
   }
 
   @Get('working-days/count')
+  @RequirePermissions('holidays:read')
   @ApiOperation({ summary: 'Compter les jours ouvrés entre deux dates' })
   @ApiQuery({
     name: 'startDate',

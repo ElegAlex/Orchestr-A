@@ -23,7 +23,7 @@ import {
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OwnershipGuard } from '../common/guards/ownership.guard';
@@ -36,7 +36,7 @@ export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
   @Post()
-  @Permissions('documents:create')
+  @RequirePermissions('documents:create')
   @ApiOperation({ summary: 'Uploader un document' })
   @ApiResponse({ status: 201, description: 'Document créé' })
   create(
@@ -47,7 +47,7 @@ export class DocumentsController {
   }
 
   @Get()
-  @Permissions('documents:read')
+  @RequirePermissions('documents:read')
   @ApiOperation({ summary: 'Liste des documents' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -61,14 +61,14 @@ export class DocumentsController {
   }
 
   @Get(':id')
-  @Permissions('documents:read')
+  @RequirePermissions('documents:read')
   @ApiOperation({ summary: "Détails d'un document" })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.documentsService.findOne(id);
   }
 
   @Patch(':id')
-  @Permissions('documents:update')
+  @RequirePermissions('documents:update')
   @UseGuards(JwtAuthGuard, OwnershipGuard)
   @OwnershipCheck({ resource: 'document', bypassPermission: 'documents:manage_any' })
   @ApiOperation({ summary: 'Modifier un document' })
@@ -80,7 +80,7 @@ export class DocumentsController {
   }
 
   @Delete(':id')
-  @Permissions('documents:delete')
+  @RequirePermissions('documents:delete')
   @UseGuards(JwtAuthGuard, OwnershipGuard)
   @OwnershipCheck({ resource: 'document', bypassPermission: 'documents:manage_any' })
   @HttpCode(HttpStatus.OK)

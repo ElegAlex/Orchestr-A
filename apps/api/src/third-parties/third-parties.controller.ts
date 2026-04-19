@@ -18,7 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CreateThirdPartyDto } from './dto/create-third-party.dto';
 import { QueryThirdPartyDto } from './dto/query-third-party.dto';
 import { UpdateThirdPartyDto } from './dto/update-third-party.dto';
@@ -31,7 +31,7 @@ export class ThirdPartiesController {
   constructor(private readonly thirdPartiesService: ThirdPartiesService) {}
 
   @Post()
-  @Permissions('third_parties:create')
+  @RequirePermissions('third_parties:create')
   @ApiOperation({ summary: 'Créer un tiers' })
   @ApiResponse({ status: 201, description: 'Tiers créé' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
@@ -43,14 +43,14 @@ export class ThirdPartiesController {
   }
 
   @Get()
-  @Permissions('third_parties:read')
+  @RequirePermissions('third_parties:read')
   @ApiOperation({ summary: 'Lister les tiers (paginé)' })
   findAll(@Query() query: QueryThirdPartyDto) {
     return this.thirdPartiesService.findAll(query);
   }
 
   @Get(':id')
-  @Permissions('third_parties:read')
+  @RequirePermissions('third_parties:read')
   @ApiOperation({ summary: "Détail d'un tiers" })
   @ApiResponse({ status: 404, description: 'Tiers introuvable' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -58,7 +58,7 @@ export class ThirdPartiesController {
   }
 
   @Get(':id/deletion-impact')
-  @Permissions('third_parties:delete')
+  @RequirePermissions('third_parties:delete')
   @ApiOperation({
     summary:
       "Compter les éléments qui seront supprimés en cascade si on hard delete ce tiers",
@@ -68,7 +68,7 @@ export class ThirdPartiesController {
   }
 
   @Patch(':id')
-  @Permissions('third_parties:update')
+  @RequirePermissions('third_parties:update')
   @ApiOperation({ summary: 'Modifier un tiers' })
   @ApiResponse({ status: 404, description: 'Tiers introuvable' })
   update(
@@ -79,7 +79,7 @@ export class ThirdPartiesController {
   }
 
   @Delete(':id')
-  @Permissions('third_parties:delete')
+  @RequirePermissions('third_parties:delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary:

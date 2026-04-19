@@ -24,7 +24,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 import { ProjectStatus } from 'database';
@@ -36,7 +36,7 @@ export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
-  @Permissions('projects:create')
+  @RequirePermissions('projects:create')
   @ApiOperation({
     summary:
       'Créer un nouveau projet (Admin/Responsable/Manager/Chef de projet/Référent Technique)',
@@ -65,7 +65,7 @@ export class ProjectsController {
   }
 
   @Get()
-  @Permissions('projects:read')
+  @RequirePermissions('projects:read')
   @ApiOperation({ summary: 'Récupérer tous les projets (avec pagination)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -85,14 +85,14 @@ export class ProjectsController {
   }
 
   @Post('snapshots/capture')
-  @Permissions('admin:access')
+  @RequirePermissions('reports:export')
   @ApiOperation({ summary: 'Capture progress snapshot for all active projects' })
   async captureSnapshots() {
     return this.projectsService.captureSnapshots();
   }
 
   @Get('user/:userId')
-  @Permissions('projects:read')
+  @RequirePermissions('projects:read')
   @ApiOperation({ summary: "Récupérer les projets d'un utilisateur" })
   @ApiResponse({
     status: 200,
@@ -107,7 +107,7 @@ export class ProjectsController {
   }
 
   @Get(':id')
-  @Permissions('projects:read')
+  @RequirePermissions('projects:read')
   @ApiOperation({ summary: 'Récupérer un projet par ID avec tous les détails' })
   @ApiResponse({
     status: 200,
@@ -122,7 +122,7 @@ export class ProjectsController {
   }
 
   @Get(':id/stats')
-  @Permissions('projects:read')
+  @RequirePermissions('projects:read')
   @ApiOperation({ summary: "Récupérer les statistiques d'un projet" })
   @ApiResponse({
     status: 200,
@@ -137,7 +137,7 @@ export class ProjectsController {
   }
 
   @Get(':id/snapshots')
-  @Permissions('reports:view')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Get progress snapshots for a project' })
   async getSnapshots(
     @Param('id') id: string,
@@ -148,7 +148,7 @@ export class ProjectsController {
   }
 
   @Patch(':id')
-  @Permissions('projects:update')
+  @RequirePermissions('projects:update')
   @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
   @ApiOperation({
     summary:
@@ -175,7 +175,7 @@ export class ProjectsController {
   }
 
   @Delete(':id')
-  @Permissions('projects:delete')
+  @RequirePermissions('projects:delete')
   @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -197,7 +197,7 @@ export class ProjectsController {
   }
 
   @Delete(':id/hard')
-  @Permissions('projects:delete')
+  @RequirePermissions('projects:delete')
   @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -216,7 +216,7 @@ export class ProjectsController {
   }
 
   @Post(':id/members')
-  @Permissions('projects:manage_members')
+  @RequirePermissions('projects:manage_members')
   @OwnershipCheck({ resource: 'project', paramKey: 'id', bypassPermission: 'projects:manage_any' })
   @ApiOperation({
     summary:
@@ -242,7 +242,7 @@ export class ProjectsController {
   }
 
   @Patch(':projectId/members/:userId')
-  @Permissions('projects:manage_members')
+  @RequirePermissions('projects:manage_members')
   @OwnershipCheck({
     resource: 'project',
     paramKey: 'projectId',
@@ -263,7 +263,7 @@ export class ProjectsController {
   }
 
   @Delete(':projectId/members/:userId')
-  @Permissions('projects:manage_members')
+  @RequirePermissions('projects:manage_members')
   @OwnershipCheck({
     resource: 'project',
     paramKey: 'projectId',

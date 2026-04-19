@@ -22,7 +22,7 @@ import {
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('comments')
@@ -32,7 +32,7 @@ export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Post()
-  @Permissions('comments:create')
+  @RequirePermissions('comments:create')
   @ApiOperation({ summary: 'Créer un commentaire' })
   @ApiResponse({ status: 201, description: 'Commentaire créé' })
   create(
@@ -43,6 +43,7 @@ export class CommentsController {
   }
 
   @Get()
+  @RequirePermissions('comments:read')
   @ApiOperation({ summary: 'Liste des commentaires' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -56,13 +57,14 @@ export class CommentsController {
   }
 
   @Get(':id')
+  @RequirePermissions('comments:read')
   @ApiOperation({ summary: "Détails d'un commentaire" })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.commentsService.findOne(id);
   }
 
   @Patch(':id')
-  @Permissions('comments:update')
+  @RequirePermissions('comments:update')
   @ApiOperation({ summary: 'Modifier son commentaire' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -73,7 +75,7 @@ export class CommentsController {
   }
 
   @Delete(':id')
-  @Permissions('comments:delete')
+  @RequirePermissions('comments:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un commentaire (auteur ou admin)' })
   remove(

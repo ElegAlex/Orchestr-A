@@ -21,8 +21,8 @@ import { RoleManagementService } from './role-management.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { AssignPermissionDto } from './dto/assign-permission.dto';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
+
 import { Role } from 'database';
 
 @ApiTags('role-management')
@@ -32,7 +32,7 @@ export class RoleManagementController {
   constructor(private readonly roleManagementService: RoleManagementService) {}
 
   @Get('roles')
-  @Roles(Role.ADMIN)
+  @RequirePermissions('users:manage_roles')
   @ApiOperation({ summary: 'Liste tous les rôles avec leurs permissions' })
   @ApiResponse({
     status: 200,
@@ -43,7 +43,7 @@ export class RoleManagementController {
   }
 
   @Post('roles')
-  @Roles(Role.ADMIN)
+  @RequirePermissions('users:manage_roles')
   @ApiOperation({ summary: 'Créer un rôle custom' })
   @ApiResponse({
     status: 201,
@@ -58,7 +58,7 @@ export class RoleManagementController {
   }
 
   @Get('roles/:id')
-  @Roles(Role.ADMIN)
+  @RequirePermissions('users:manage_roles')
   @ApiOperation({ summary: 'Détail rôle + permissions' })
   @ApiResponse({
     status: 200,
@@ -73,7 +73,7 @@ export class RoleManagementController {
   }
 
   @Patch('roles/:id')
-  @Roles(Role.ADMIN)
+  @RequirePermissions('users:manage_roles')
   @ApiOperation({ summary: 'Modifier nom/description' })
   @ApiResponse({
     status: 200,
@@ -91,7 +91,7 @@ export class RoleManagementController {
   }
 
   @Delete('roles/:id')
-  @Roles(Role.ADMIN)
+  @RequirePermissions('users:manage_roles')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer (interdit si isSystem: true)' })
   @ApiResponse({
@@ -111,7 +111,7 @@ export class RoleManagementController {
   }
 
   @Get('permissions')
-  @Roles(Role.ADMIN)
+  @RequirePermissions('users:manage_roles')
   @ApiOperation({
     summary: 'Liste toutes les permissions (groupées par module)',
   })
@@ -124,7 +124,7 @@ export class RoleManagementController {
   }
 
   @Put('roles/:id/permissions')
-  @Roles(Role.ADMIN)
+  @RequirePermissions('users:manage_roles')
   @ApiOperation({ summary: "Remplacer les permissions d'un rôle" })
   @ApiResponse({
     status: 200,
@@ -149,7 +149,7 @@ export class RoleManagementController {
   }
 
   @Post('seed')
-  @Roles(Role.ADMIN)
+  @RequirePermissions('users:manage_roles')
   @ApiOperation({
     summary:
       'Seeder les permissions et rôles initiaux (admin only, idempotent)',
@@ -163,7 +163,7 @@ export class RoleManagementController {
   }
 
   @Post('reset-to-defaults')
-  @Permissions('users:manage_roles')
+  @RequirePermissions('users:manage_roles')
   @ApiOperation({
     summary:
       'Réinitialiser les permissions des rôles système à leurs valeurs par défaut',

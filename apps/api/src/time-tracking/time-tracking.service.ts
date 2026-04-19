@@ -182,11 +182,10 @@ export class TimeTrackingService {
   /**
    * Récupérer toutes les entrées avec pagination et filtres.
    *
-   * Contrôle d'accès : si l'appelant filtre par `userId` autre que le sien et
-   * n'a pas `time_tracking:view_any`, on renvoie 403 (choix explicite, aligné
-   * sur le pattern défensif des autres modules — events, projects — qui
-   * préfèrent rejeter un filtre cross-user plutôt que de le coercer
-   * silencieusement, ce qui masquerait une tentative d'IDOR côté logs).
+   * Contrôle d'accès (D8 PO 2026-04-19) : coercion silencieuse — un appelant
+   * sans `time_tracking:view_any` qui filtre par `userId` autre que le sien
+   * voit son filtre **coercé** vers son propre userId. Aucun 403 surprise.
+   * Aligné sur le pattern coercion des modules tasks/leaves/telework/events.
    */
   async findAll(
     currentUser: { id: string; role: Role },
@@ -205,10 +204,11 @@ export class TimeTrackingService {
       )) ?? [];
     const hasViewAny = permissions.includes(VIEW_ANY_PERMISSION);
 
+    // D8 : coercion silencieuse au lieu de 403. Si l'appelant veut filtrer un
+    // userId tiers sans la perm view_any, on le redirige vers ses propres
+    // entries (cohérent avec readAll pattern des autres modules).
     if (userId && userId !== currentUser.id && !hasViewAny) {
-      throw new ForbiddenException(
-        "Filtre userId d'un autre utilisateur interdit sans permission time_tracking:view_any",
-      );
+      userId = currentUser.id;
     }
 
     const safeLimit = Math.min(limit || 1000, 1000);

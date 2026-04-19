@@ -34,7 +34,7 @@ import {
 import { CreateSubtaskDto } from './dto/create-subtask.dto';
 import { UpdateSubtaskDto } from './dto/update-subtask.dto';
 import { ReorderSubtasksDto } from './dto/reorder-subtasks.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role, TaskStatus, RACIRole } from 'database';
 
@@ -45,6 +45,7 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Post()
+  @RequirePermissions('tasks:create')
   @ApiOperation({ summary: 'Créer une nouvelle tâche' })
   @ApiResponse({
     status: 201,
@@ -70,7 +71,7 @@ export class TasksController {
   }
 
   @Get()
-  @Permissions('tasks:read')
+  @RequirePermissions('tasks:read')
   @ApiOperation({
     summary: 'Récupérer toutes les tâches (avec pagination et filtres)',
   })
@@ -127,7 +128,7 @@ export class TasksController {
   }
 
   @Get('assignee/:userId')
-  @Permissions('tasks:read')
+  @RequirePermissions('tasks:read')
   @ApiOperation({
     summary: 'Récupérer toutes les tâches assignées à un utilisateur',
   })
@@ -143,7 +144,7 @@ export class TasksController {
   }
 
   @Get('project/:projectId')
-  @Permissions('tasks:read')
+  @RequirePermissions('tasks:read')
   @ApiOperation({ summary: "Récupérer toutes les tâches d'un projet" })
   @ApiResponse({
     status: 200,
@@ -158,7 +159,7 @@ export class TasksController {
   }
 
   @Get('project/:projectId/export')
-  @Permissions('tasks:read')
+  @RequirePermissions('tasks:read')
   @ApiOperation({ summary: "Exporter les tâches d'un projet en CSV" })
   @ApiResponse({ status: 200, description: 'Fichier CSV des tâches' })
   @ApiResponse({ status: 404, description: 'Projet introuvable' })
@@ -175,7 +176,7 @@ export class TasksController {
   }
 
   @Get('orphans')
-  @Permissions('tasks:read')
+  @RequirePermissions('tasks:read')
   @ApiOperation({ summary: 'Récupérer les tâches orphelines (sans projet)' })
   @ApiResponse({
     status: 200,
@@ -186,7 +187,7 @@ export class TasksController {
   }
 
   @Get(':id')
-  @Permissions('tasks:read')
+  @RequirePermissions('tasks:read')
   @ApiOperation({ summary: 'Récupérer une tâche par ID avec tous les détails' })
   @ApiResponse({
     status: 200,
@@ -201,7 +202,7 @@ export class TasksController {
   }
 
   @Patch(':id')
-  @Permissions('tasks:update')
+  @RequirePermissions('tasks:update')
   @ApiOperation({ summary: 'Mettre à jour une tâche' })
   @ApiResponse({
     status: 200,
@@ -224,6 +225,7 @@ export class TasksController {
   }
 
   @Delete(':id')
+  @RequirePermissions('tasks:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer une tâche' })
   @ApiResponse({
@@ -250,7 +252,7 @@ export class TasksController {
   }
 
   @Post(':id/dependencies')
-  @Permissions('tasks:update')
+  @RequirePermissions('tasks:update')
   @ApiOperation({ summary: 'Ajouter une dépendance à une tâche' })
   @ApiResponse({
     status: 201,
@@ -276,7 +278,7 @@ export class TasksController {
   }
 
   @Delete(':taskId/dependencies/:dependsOnId')
-  @Permissions('tasks:update')
+  @RequirePermissions('tasks:update')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Retirer une dépendance' })
   @ApiResponse({
@@ -295,7 +297,7 @@ export class TasksController {
   }
 
   @Post(':id/raci')
-  @Permissions('tasks:update')
+  @RequirePermissions('tasks:update')
   @ApiOperation({
     summary: 'Assigner un rôle RACI à un utilisateur pour une tâche',
   })
@@ -319,7 +321,7 @@ export class TasksController {
   }
 
   @Delete(':taskId/raci/:userId/:role')
-  @Permissions('tasks:update')
+  @RequirePermissions('tasks:update')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Retirer une assignation RACI' })
   @ApiResponse({
@@ -339,7 +341,7 @@ export class TasksController {
   }
 
   @Post('project/:projectId/import/validate')
-  @Permissions('tasks:create')
+  @RequirePermissions('tasks:create')
   @ApiOperation({ summary: 'Valider des tâches avant import (dry-run)' })
   @ApiResponse({
     status: 200,
@@ -358,7 +360,7 @@ export class TasksController {
   }
 
   @Post('project/:projectId/import')
-  @Permissions('tasks:create')
+  @RequirePermissions('tasks:create')
   @ApiOperation({ summary: 'Importer des tâches en masse via CSV' })
   @ApiResponse({
     status: 201,
@@ -377,7 +379,7 @@ export class TasksController {
   }
 
   @Get('project/:projectId/import-template')
-  @Permissions('tasks:read')
+  @RequirePermissions('tasks:read')
   @ApiOperation({
     summary: "Télécharger le template CSV pour l'import de tâches",
   })
@@ -390,7 +392,7 @@ export class TasksController {
   }
 
   @Post(':id/attach-project')
-  @Permissions('tasks:update')
+  @RequirePermissions('tasks:update')
   @ApiOperation({ summary: 'Rattacher une tâche orpheline à un projet' })
   @ApiResponse({
     status: 200,
@@ -408,7 +410,7 @@ export class TasksController {
   }
 
   @Post(':id/detach-project')
-  @Permissions('tasks:update')
+  @RequirePermissions('tasks:update')
   @ApiOperation({
     summary: 'Détacher une tâche de son projet (rend la tâche orpheline)',
   })
@@ -427,7 +429,7 @@ export class TasksController {
   // ========== SUBTASKS ==========
 
   @Post(':taskId/subtasks')
-  @Permissions('tasks:update')
+  @RequirePermissions('tasks:update')
   @ApiOperation({ summary: 'Ajouter une sous-tâche (checklist item)' })
   @ApiResponse({ status: 201, description: 'Sous-tâche créée' })
   createSubtask(
@@ -438,14 +440,14 @@ export class TasksController {
   }
 
   @Get(':taskId/subtasks')
-  @Permissions('tasks:read')
+  @RequirePermissions('tasks:read')
   @ApiOperation({ summary: 'Lister les sous-tâches' })
   getSubtasks(@Param('taskId', ParseUUIDPipe) taskId: string) {
     return this.tasksService.getSubtasks(taskId);
   }
 
   @Patch(':taskId/subtasks/:subtaskId')
-  @Permissions('tasks:update')
+  @RequirePermissions('tasks:update')
   @ApiOperation({ summary: 'Modifier une sous-tâche (cocher/décocher, renommer)' })
   updateSubtask(
     @Param('taskId', ParseUUIDPipe) taskId: string,
@@ -456,7 +458,7 @@ export class TasksController {
   }
 
   @Delete(':taskId/subtasks/:subtaskId')
-  @Permissions('tasks:update')
+  @RequirePermissions('tasks:update')
   @ApiOperation({ summary: 'Supprimer une sous-tâche' })
   deleteSubtask(
     @Param('taskId', ParseUUIDPipe) taskId: string,
@@ -466,7 +468,7 @@ export class TasksController {
   }
 
   @Post(':taskId/subtasks/reorder')
-  @Permissions('tasks:update')
+  @RequirePermissions('tasks:update')
   @ApiOperation({ summary: 'Réordonner les sous-tâches' })
   reorderSubtasks(
     @Param('taskId', ParseUUIDPipe) taskId: string,

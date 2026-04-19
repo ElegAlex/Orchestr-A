@@ -11,6 +11,8 @@ import type { FastifyReply } from 'fastify';
 import { PlanningExportService } from './planning-export.service';
 import { ImportIcsDto } from './dto/import-ics.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
+import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 
 @ApiTags('planning-export')
 @Controller('planning-export')
@@ -19,6 +21,7 @@ export class PlanningExportController {
   constructor(private readonly planningExportService: PlanningExportService) {}
 
   @Get('ics')
+  @AllowSelfService()
   @ApiOperation({ summary: 'Exporter le planning au format ICS' })
   @ApiQuery({ name: 'start', required: false, type: String })
   @ApiQuery({ name: 'end', required: false, type: String })
@@ -41,6 +44,7 @@ export class PlanningExportController {
   }
 
   @Post('ics/import/preview')
+  @RequirePermissions('leaves:create')
   @ApiOperation({ summary: "Previsualiser l'import ICS" })
   @ApiBody({
     schema: {
@@ -54,6 +58,7 @@ export class PlanningExportController {
   }
 
   @Post('ics/import')
+  @RequirePermissions('leaves:create')
   @ApiOperation({ summary: 'Importer des evenements depuis un fichier ICS' })
   @ApiBody({
     schema: {

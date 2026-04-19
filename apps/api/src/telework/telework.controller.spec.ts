@@ -483,7 +483,7 @@ describe('TeleworkController', () => {
       expect(metadata).toEqual({
         paramKey: 'id',
         resource: 'telework',
-        bypassPermission: 'telework:manage_others',
+        bypassPermission: 'telework:manage_any',
       });
     });
 
@@ -495,7 +495,7 @@ describe('TeleworkController', () => {
       expect(metadata).toEqual({
         paramKey: 'id',
         resource: 'telework',
-        bypassPermission: 'telework:manage_others',
+        bypassPermission: 'telework:manage_any',
       });
     });
 
@@ -507,7 +507,7 @@ describe('TeleworkController', () => {
       expect(metadata).toEqual({
         paramKey: 'id',
         resource: 'telework',
-        bypassPermission: 'telework:manage_others',
+        bypassPermission: 'telework:manage_any',
       });
     });
   });

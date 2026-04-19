@@ -318,8 +318,10 @@ describe('LeavesController', () => {
         available: 15,
       };
 
+      // D6 #2 PO 2026-04-19 : `leaves:validate` n'existe pas au catalogue ;
+      // le check runtime utilise désormais `leaves:approve` (typo corrigée).
       mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
-        'leaves:validate',
+        'leaves:approve',
       ]);
       mockLeavesService.getLeaveBalance.mockResolvedValue(balance);
 

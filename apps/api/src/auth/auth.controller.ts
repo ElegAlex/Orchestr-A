@@ -23,7 +23,8 @@ import { ResetPasswordTokenDto } from './dto/reset-password-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto, LogoutDto } from './dto/refresh-token.dto';
 import { Public } from './decorators/public.decorator';
-import { Permissions } from './decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
+import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { User } from '@prisma/client';
 
@@ -101,6 +102,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @AllowSelfService()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Déconnexion — blacklist du JWT et révocation du refresh token' })
@@ -141,6 +143,7 @@ export class AuthController {
   }
 
   @Get('profile')
+  @AllowSelfService()
   @ApiBearerAuth()
   @ApiOperation({ summary: "Récupérer le profil de l'utilisateur connecté" })
   @ApiResponse({
@@ -156,6 +159,7 @@ export class AuthController {
   }
 
   @Get('me')
+  @AllowSelfService()
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Informations utilisateur connecté (version courte)',
@@ -169,6 +173,7 @@ export class AuthController {
   }
 
   @Get('me/permissions')
+  @AllowSelfService()
   @ApiBearerAuth()
   @ApiOperation({ summary: "Permissions de l'utilisateur connecté" })
   @ApiResponse({
@@ -183,7 +188,7 @@ export class AuthController {
     return { permissions };
   }
 
-  @Permissions('users:reset_password')
+  @RequirePermissions('users:reset_password')
   @Post('reset-password-token')
   @ApiBearerAuth()
   @ApiOperation({

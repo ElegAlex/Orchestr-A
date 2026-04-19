@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RoleManagementModule } from '../role-management/role-management.module';
@@ -30,7 +31,20 @@ import { RolesService } from './roles.service';
 @Module({
   imports: [ConfigModule, PrismaModule, RoleManagementModule],
   controllers: [RolesController],
-  providers: [PermissionsService, PermissionsGuardV2, RolesService],
+  providers: [
+    PermissionsService,
+    PermissionsGuardV2,
+    RolesService,
+    // V2 E (a) : activation globale du guard zero-trust en mode `permissive`
+    // par défaut (env RBAC_GUARD_MODE=permissive). Le guard logue les routes
+    // qui SERAIENT refusées sans bloquer. La bascule en `enforce` se fait
+    // via env RBAC_GUARD_MODE=enforce après validation de l'absence de
+    // route oubliée (logs propres en V3).
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuardV2,
+    },
+  ],
   exports: [PermissionsService, PermissionsGuardV2, RolesService],
 })
 export class RbacModule {}

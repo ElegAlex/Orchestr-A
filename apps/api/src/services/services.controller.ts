@@ -22,7 +22,7 @@ import {
 import { ServicesService } from './services.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 
 @ApiTags('services')
 @Controller('services')
@@ -31,7 +31,7 @@ export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}
 
   @Post()
-  @Permissions('services:create')
+  @RequirePermissions('services:create')
   @ApiOperation({
     summary: 'Créer un nouveau service (Admin/Responsable uniquement)',
   })
@@ -57,6 +57,7 @@ export class ServicesController {
   }
 
   @Get()
+  @RequirePermissions('services:read')
   @ApiOperation({ summary: 'Récupérer tous les services (avec pagination)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -74,6 +75,7 @@ export class ServicesController {
   }
 
   @Get('department/:departmentId')
+  @RequirePermissions('services:read')
   @ApiOperation({ summary: "Récupérer les services d'un département" })
   @ApiResponse({
     status: 200,
@@ -90,6 +92,7 @@ export class ServicesController {
   }
 
   @Get(':id')
+  @RequirePermissions('services:read')
   @ApiOperation({
     summary: 'Récupérer un service par ID avec tous les détails',
   })
@@ -106,6 +109,7 @@ export class ServicesController {
   }
 
   @Get(':id/stats')
+  @RequirePermissions('services:read')
   @ApiOperation({ summary: "Récupérer les statistiques d'un service" })
   @ApiResponse({
     status: 200,
@@ -120,7 +124,7 @@ export class ServicesController {
   }
 
   @Patch(':id')
-  @Permissions('services:update')
+  @RequirePermissions('services:update')
   @ApiOperation({
     summary: 'Mettre à jour un service (Admin/Responsable)',
   })
@@ -145,7 +149,7 @@ export class ServicesController {
   }
 
   @Delete(':id')
-  @Permissions('services:delete')
+  @RequirePermissions('services:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Supprimer un service (Admin uniquement)',

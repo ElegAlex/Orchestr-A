@@ -21,7 +21,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { SchoolVacationsService } from './school-vacations.service';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateSchoolVacationDto } from './dto/create-school-vacation.dto';
 import { UpdateSchoolVacationDto } from './dto/update-school-vacation.dto';
@@ -41,6 +41,7 @@ export class SchoolVacationsController {
   ) {}
 
   @Get()
+  @RequirePermissions('school_vacations:read')
   @ApiOperation({ summary: 'Récupérer toutes les vacances scolaires' })
   @ApiQuery({
     name: 'year',
@@ -54,6 +55,7 @@ export class SchoolVacationsController {
   }
 
   @Get('range')
+  @RequirePermissions('school_vacations:read')
   @ApiOperation({ summary: 'Récupérer les vacances scolaires sur une période' })
   @ApiResponse({
     status: 200,
@@ -67,6 +69,7 @@ export class SchoolVacationsController {
   }
 
   @Get(':id')
+  @RequirePermissions('school_vacations:read')
   @ApiOperation({ summary: 'Récupérer des vacances scolaires par ID' })
   @ApiParam({ name: 'id', description: 'ID des vacances scolaires' })
   @ApiResponse({ status: 200, description: 'Détail des vacances scolaires' })
@@ -76,7 +79,7 @@ export class SchoolVacationsController {
   }
 
   @Post()
-  @Permissions('school_vacations:create')
+  @RequirePermissions('school_vacations:create')
   @ApiOperation({ summary: 'Créer des vacances scolaires (Admin uniquement)' })
   @ApiResponse({ status: 201, description: 'Vacances scolaires créées' })
   @ApiResponse({
@@ -91,7 +94,7 @@ export class SchoolVacationsController {
   }
 
   @Post('import')
-  @Permissions('school_vacations:create')
+  @RequirePermissions('school_vacations:create')
   @ApiOperation({
     summary:
       "Importer les vacances scolaires depuis l'Open Data Éducation Nationale (Admin uniquement)",
@@ -126,7 +129,7 @@ export class SchoolVacationsController {
   }
 
   @Patch(':id')
-  @Permissions('school_vacations:update')
+  @RequirePermissions('school_vacations:update')
   @ApiOperation({
     summary: 'Modifier des vacances scolaires (Admin uniquement)',
   })
@@ -141,7 +144,7 @@ export class SchoolVacationsController {
   }
 
   @Delete(':id')
-  @Permissions('school_vacations:delete')
+  @RequirePermissions('school_vacations:delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Supprimer des vacances scolaires (Admin uniquement)',

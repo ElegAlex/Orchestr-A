@@ -5,7 +5,7 @@ import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import {
   AnalyticsResponseDto,
 } from './dto/analytics-response.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 
 @ApiTags('analytics')
 @Controller('analytics')
@@ -14,7 +14,7 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get()
-  @Permissions('reports:view')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Get analytics data with filters' })
   async getAnalytics(
     @Query() query: AnalyticsQueryDto,
@@ -23,7 +23,7 @@ export class AnalyticsController {
   }
 
   @Get('export')
-  @Permissions('reports:export')
+  @RequirePermissions('reports:export')
   @ApiOperation({ summary: 'Export analytics data as JSON' })
   async exportAnalytics(@Query() query: AnalyticsQueryDto) {
     return this.analyticsService.exportAnalytics(query);

@@ -33,7 +33,8 @@ import {
   UsersValidationPreviewDto,
 } from './dto/import-users.dto';
 import { AvatarPresetDto } from './dto/avatar-preset.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
+import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role } from 'database';
 
@@ -44,7 +45,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @Permissions('users:create')
+  @RequirePermissions('users:create')
   @ApiOperation({
     summary: 'Créer un nouvel utilisateur (Admin/Responsable uniquement)',
   })
@@ -65,7 +66,7 @@ export class UsersController {
   }
 
   @Post('import/validate')
-  @Permissions('users:import')
+  @RequirePermissions('users:import')
   @ApiOperation({
     summary: 'Valider des utilisateurs avant import (dry-run)',
   })
@@ -87,7 +88,7 @@ export class UsersController {
   }
 
   @Post('import')
-  @Permissions('users:import')
+  @RequirePermissions('users:import')
   @ApiOperation({
     summary: 'Importer des utilisateurs depuis un CSV (Admin/Responsable)',
   })
@@ -108,7 +109,7 @@ export class UsersController {
   }
 
   @Get()
-  @Permissions('users:read')
+  @RequirePermissions('users:read')
   @ApiOperation({
     summary: 'Récupérer tous les utilisateurs (avec pagination)',
   })
@@ -128,7 +129,7 @@ export class UsersController {
   }
 
   @Get('import/template')
-  @Permissions('users:import')
+  @RequirePermissions('users:import')
   @ApiOperation({
     summary: "Télécharger le template CSV pour l'import (Admin/Responsable)",
   })
@@ -141,7 +142,7 @@ export class UsersController {
   }
 
   @Get('presence')
-  @Permissions('users:read')
+  @RequirePermissions('users:read')
   @ApiOperation({
     summary: 'Récupérer les statuts de présence des utilisateurs pour une date',
   })
@@ -160,7 +161,7 @@ export class UsersController {
   }
 
   @Get('department/:departmentId')
-  @Permissions('users:read')
+  @RequirePermissions('users:read')
   @ApiOperation({ summary: "Récupérer les utilisateurs d'un département" })
   @ApiResponse({
     status: 200,
@@ -173,7 +174,7 @@ export class UsersController {
   }
 
   @Get('service/:serviceId')
-  @Permissions('users:read')
+  @RequirePermissions('users:read')
   @ApiOperation({ summary: "Récupérer les utilisateurs d'un service" })
   @ApiResponse({
     status: 200,
@@ -184,7 +185,7 @@ export class UsersController {
   }
 
   @Get('role/:role')
-  @Permissions('users:read')
+  @RequirePermissions('users:read')
   @ApiOperation({ summary: 'Récupérer les utilisateurs par rôle' })
   @ApiResponse({
     status: 200,
@@ -195,7 +196,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Permissions('users:read')
+  @RequirePermissions('users:read')
   @ApiOperation({ summary: 'Récupérer un utilisateur par ID' })
   @ApiResponse({
     status: 200,
@@ -210,6 +211,7 @@ export class UsersController {
   }
 
   @Post('me/avatar')
+  @AllowSelfService()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Uploader un avatar (jpg, png, webp, max 2MB)' })
   @ApiConsumes('multipart/form-data')
@@ -229,6 +231,7 @@ export class UsersController {
   }
 
   @Patch('me/avatar/preset')
+  @AllowSelfService()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Choisir un avatar prédéfini' })
   @ApiResponse({ status: 200, description: 'Preset avatar mis à jour' })
@@ -240,6 +243,7 @@ export class UsersController {
   }
 
   @Delete('me/avatar')
+  @AllowSelfService()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Supprimer l'avatar" })
   @ApiResponse({ status: 200, description: 'Avatar supprimé' })
@@ -248,6 +252,7 @@ export class UsersController {
   }
 
   @Patch('me/change-password')
+  @AllowSelfService()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Changer son propre mot de passe' })
   @ApiResponse({
@@ -266,7 +271,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @Permissions('users:update')
+  @RequirePermissions('users:update')
   @ApiOperation({
     summary: 'Mettre à jour un utilisateur (Admin/Responsable/Manager)',
   })
@@ -291,7 +296,7 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @Permissions('users:delete')
+  @RequirePermissions('users:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Désactiver un utilisateur (soft delete, Admin/Responsable)',
@@ -309,7 +314,7 @@ export class UsersController {
   }
 
   @Get(':id/dependencies')
-  @Permissions('users:delete')
+  @RequirePermissions('users:delete')
   @ApiOperation({
     summary:
       "Vérifier les dépendances d'un utilisateur avant suppression (Admin uniquement)",
@@ -327,7 +332,7 @@ export class UsersController {
   }
 
   @Delete(':id/hard')
-  @Permissions('users:delete')
+  @RequirePermissions('users:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Supprimer définitivement un utilisateur (Admin uniquement)',
@@ -352,7 +357,7 @@ export class UsersController {
   }
 
   @Post(':id/reset-password')
-  @Permissions('users:manage_roles')
+  @RequirePermissions('users:manage_roles')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:

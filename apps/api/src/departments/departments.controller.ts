@@ -22,7 +22,7 @@ import {
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 
 @ApiTags('departments')
 @Controller('departments')
@@ -31,7 +31,7 @@ export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
 
   @Post()
-  @Permissions('departments:create')
+  @RequirePermissions('departments:create')
   @ApiOperation({
     summary: 'Créer un nouveau département (Admin/Responsable uniquement)',
   })
@@ -52,7 +52,7 @@ export class DepartmentsController {
   }
 
   @Get()
-  @Permissions('departments:read')
+  @RequirePermissions('departments:read')
   @ApiOperation({
     summary: 'Récupérer tous les départements (avec pagination)',
   })
@@ -70,7 +70,7 @@ export class DepartmentsController {
   }
 
   @Get(':id')
-  @Permissions('departments:read')
+  @RequirePermissions('departments:read')
   @ApiOperation({
     summary: 'Récupérer un département par ID avec tous les détails',
   })
@@ -87,7 +87,7 @@ export class DepartmentsController {
   }
 
   @Get(':id/stats')
-  @Permissions('departments:read')
+  @RequirePermissions('departments:read')
   @ApiOperation({ summary: "Récupérer les statistiques d'un département" })
   @ApiResponse({
     status: 200,
@@ -103,7 +103,7 @@ export class DepartmentsController {
   }
 
   @Patch(':id')
-  @Permissions('departments:update')
+  @RequirePermissions('departments:update')
   @ApiOperation({
     summary: 'Mettre à jour un département (Admin/Responsable)',
   })
@@ -127,7 +127,7 @@ export class DepartmentsController {
   }
 
   @Delete(':id')
-  @Permissions('departments:delete')
+  @RequirePermissions('departments:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Supprimer un département (Admin uniquement)',

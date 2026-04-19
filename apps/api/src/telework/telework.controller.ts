@@ -25,7 +25,8 @@ import { UpdateTeleworkDto } from './dto/update-telework.dto';
 import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
 import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
 import { GenerateSchedulesDto } from './dto/generate-schedules.dto';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
+import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 
@@ -36,7 +37,7 @@ export class TeleworkController {
   constructor(private readonly teleworkService: TeleworkService) {}
 
   @Post()
-  @Permissions('telework:create')
+  @RequirePermissions('telework:create')
   @ApiOperation({ summary: 'Déclarer une journée de télétravail' })
   @ApiResponse({
     status: 201,
@@ -59,7 +60,7 @@ export class TeleworkController {
   }
 
   @Get()
-  @Permissions('telework:read')
+  @RequirePermissions('telework:read')
   @ApiOperation({
     summary: 'Récupérer tous les télétravails (avec pagination et filtres)',
   })
@@ -93,6 +94,7 @@ export class TeleworkController {
   }
 
   @Get('me/week')
+  @AllowSelfService()
   @ApiOperation({
     summary: 'Récupérer mon planning de télétravail pour une semaine',
   })
@@ -109,6 +111,7 @@ export class TeleworkController {
   }
 
   @Get('me/stats')
+  @AllowSelfService()
   @ApiOperation({ summary: 'Récupérer mes statistiques de télétravail' })
   @ApiQuery({ name: 'year', required: false, type: Number })
   @ApiResponse({
@@ -124,7 +127,7 @@ export class TeleworkController {
   }
 
   @Get('team/:date')
-  @Permissions('telework:read_team')
+  @RequirePermissions('telework:read_team')
   @ApiOperation({
     summary:
       'Voir qui est en télétravail pour une date (Admin/Responsable/Manager)',
@@ -142,7 +145,7 @@ export class TeleworkController {
   }
 
   @Get('user/:userId/week')
-  @Permissions('telework:read_team')
+  @RequirePermissions('telework:read_team')
   @ApiOperation({
     summary:
       "Récupérer le planning de télétravail d'un utilisateur (Admin/Responsable/Manager)",
@@ -164,7 +167,7 @@ export class TeleworkController {
   }
 
   @Get('user/:userId/stats')
-  @Permissions('telework:read_team')
+  @RequirePermissions('telework:read_team')
   @ApiOperation({
     summary:
       "Récupérer les statistiques de télétravail d'un utilisateur (Admin/Responsable/Manager)",
@@ -186,8 +189,8 @@ export class TeleworkController {
   }
 
   @Get(':id')
-  @Permissions('telework:read')
-  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_others' })
+  @RequirePermissions('telework:read')
+  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_any' })
   @ApiOperation({ summary: 'Récupérer un télétravail par ID' })
   @ApiResponse({
     status: 200,
@@ -206,8 +209,8 @@ export class TeleworkController {
   }
 
   @Patch(':id')
-  @Permissions('telework:update')
-  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_others' })
+  @RequirePermissions('telework:update')
+  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_any' })
   @ApiOperation({ summary: 'Mettre à jour un télétravail' })
   @ApiResponse({
     status: 200,
@@ -231,8 +234,8 @@ export class TeleworkController {
   }
 
   @Delete(':id')
-  @Permissions('telework:delete')
-  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_others' })
+  @RequirePermissions('telework:delete')
+  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_any' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un télétravail' })
   @ApiResponse({
@@ -256,7 +259,7 @@ export class TeleworkController {
   // ─────────────────────────────────────────────
 
   @Get('recurring-rules')
-  @Permissions('telework:read')
+  @RequirePermissions('telework:read')
   @ApiOperation({
     summary:
       'Lister les règles de télétravail récurrent (filtrable par userId)',
@@ -276,7 +279,7 @@ export class TeleworkController {
   }
 
   @Post('recurring-rules')
-  @Permissions('telework:create')
+  @RequirePermissions('telework:create')
   @ApiOperation({ summary: 'Créer une règle de télétravail récurrent' })
   @ApiResponse({ status: 201, description: 'Règle créée avec succès' })
   @ApiResponse({
@@ -293,7 +296,7 @@ export class TeleworkController {
   }
 
   @Patch('recurring-rules/:id')
-  @Permissions('telework:update')
+  @RequirePermissions('telework:update')
   @ApiOperation({ summary: 'Modifier une règle de télétravail récurrent' })
   @ApiResponse({ status: 200, description: 'Règle mise à jour' })
   @ApiResponse({ status: 404, description: 'Règle introuvable' })
@@ -307,7 +310,7 @@ export class TeleworkController {
   }
 
   @Delete('recurring-rules/:id')
-  @Permissions('telework:delete')
+  @RequirePermissions('telework:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer une règle de télétravail récurrent' })
   @ApiResponse({ status: 200, description: 'Règle supprimée' })
@@ -321,7 +324,7 @@ export class TeleworkController {
   }
 
   @Post('recurring-rules/generate')
-  @Permissions('telework:create')
+  @RequirePermissions('telework:create')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
