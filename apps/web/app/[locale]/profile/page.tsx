@@ -382,20 +382,22 @@ export default function ProfilePage() {
                     {/* Initials preset */}
                     <div>
                       <p className="text-sm text-gray-600 mb-3">
-                        Utiliser mes initiales :
+                        Utiliser mes initiales (dégradé unique) :
                       </p>
                       <button
                         onClick={() => handleAvatarPreset(INITIALS_PRESET)}
                         disabled={avatarLoading}
-                        className={`w-14 h-14 rounded-full bg-[var(--primary)] text-white flex items-center justify-center text-base font-semibold border-2 transition hover:scale-105 disabled:opacity-50 ${
+                        className={`rounded-full border-2 transition hover:scale-105 disabled:opacity-50 ${
                           user.avatarPreset === INITIALS_PRESET && !user.avatarUrl
                             ? "border-blue-500 ring-2 ring-blue-300"
                             : "border-transparent hover:border-gray-300"
                         }`}
                         title="Initiales"
                       >
-                        {user.firstName[0]}
-                        {user.lastName[0]}
+                        <UserAvatar
+                          user={{ ...user, avatarUrl: null, avatarPreset: "initials" }}
+                          size="md"
+                        />
                       </button>
                     </div>
 
