@@ -303,7 +303,7 @@ export function GanttTimelineHeader({ buckets, view, todayLeft }: GanttTimelineH
 
   return (
     <div
-      className="bg-white"
+      className="sticky top-0 z-20 bg-white"
       style={{ borderBottom: '1px solid #E2E8F0' }}
     >
       {/* Upper level (context) */}

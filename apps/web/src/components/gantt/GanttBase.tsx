@@ -126,7 +126,6 @@ export default function GanttBase(props: GanttProps) {
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const topScrollRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
-  const headerSyncRef = useRef<HTMLDivElement>(null);
   const isSyncingScroll = useRef(false);
 
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -352,9 +351,6 @@ export default function GanttBase(props: GanttProps) {
     if (mainScrollRef.current && mainScrollRef.current !== sourceEl) {
       mainScrollRef.current.scrollLeft = left;
     }
-    if (headerSyncRef.current && headerSyncRef.current !== sourceEl) {
-      headerSyncRef.current.scrollLeft = left;
-    }
     requestAnimationFrame(() => {
       isSyncingScroll.current = false;
     });
@@ -366,10 +362,6 @@ export default function GanttBase(props: GanttProps) {
 
   const handleMainScroll = useCallback(() => {
     syncScrollFrom(mainScrollRef.current);
-  }, [syncScrollFrom]);
-
-  const handleHeaderScroll = useCallback(() => {
-    syncScrollFrom(headerSyncRef.current);
   }, [syncScrollFrom]);
 
   if (rows.length === 0) {
@@ -578,82 +570,33 @@ export default function GanttBase(props: GanttProps) {
       ref={containerRef}
       role="grid"
       aria-label="Diagramme de Gantt"
-      className="relative flex flex-col border rounded-lg bg-white"
-      style={{ overflow: 'clip' }}
+      className="relative flex flex-col border rounded-lg bg-white overflow-hidden"
+      style={{ maxHeight: 'calc(100dvh - 180px)', minHeight: 400 }}
     >
-      {/* Sticky top block (visible during page scroll) */}
-      <div className="sticky top-0 z-40 bg-white">
-        <GanttHeader
-          view={view}
-          currentDate={currentDate}
-          onNavigate={navigateTime}
-          onToday={goToToday}
-          onViewChange={handleViewChange}
-          onZoom={handleZoom}
-          groupBy={scope === 'project' ? groupBy : undefined}
-          onGroupByChange={scope === 'project' ? handleGroupByChange : undefined}
-          onGoToStart={goToStart}
-          onFitAll={fitAll}
-        />
+      <GanttHeader
+        view={view}
+        currentDate={currentDate}
+        onNavigate={navigateTime}
+        onToday={goToToday}
+        onViewChange={handleViewChange}
+        onZoom={handleZoom}
+        groupBy={scope === 'project' ? groupBy : undefined}
+        onGroupByChange={scope === 'project' ? handleGroupByChange : undefined}
+        onGoToStart={goToStart}
+        onFitAll={fitAll}
+      />
 
-        {/* Top scrollbar */}
-        <div
-          ref={topScrollRef}
-          onScroll={handleTopScroll}
-          className="overflow-x-auto overflow-y-hidden"
-          style={{ height: 12, borderBottom: '1px solid #F1F5F9' }}
-        >
-          <div style={{ width: LEFT_COLUMN_WIDTH + totalTimelineWidth, height: 1 }} />
-        </div>
-
-        {/* Synced timeline header */}
-        <div
-          ref={headerSyncRef}
-          onScroll={handleHeaderScroll}
-          className="overflow-x-hidden overflow-y-visible"
-        >
-          <div className="flex" style={{ minWidth: LEFT_COLUMN_WIDTH + totalTimelineWidth }}>
-            {/* Left column spacer (column labels row for project scope) */}
-            <div
-              className="shrink-0 sticky left-0 z-10 bg-white"
-              style={{
-                width: LEFT_COLUMN_WIDTH,
-                minWidth: LEFT_COLUMN_WIDTH,
-                borderRight: '1px solid #E2E8F0',
-              }}
-            >
-              <div style={{ height: 28, borderBottom: '1px solid #F1F5F9' }} />
-              {scope === 'project' ? (
-                <div
-                  className="flex items-center"
-                  style={{
-                    height: 28,
-                    backgroundColor: '#F8FAFC',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: '#64748B',
-                    textTransform: 'uppercase' as const,
-                    letterSpacing: '0.05em',
-                    borderBottom: '1px solid #E2E8F0',
-                  }}
-                >
-                  <span className="flex-1 truncate" style={{ paddingLeft: 12 }}>Tâche</span>
-                  <span className="text-center" style={{ width: 56, flexShrink: 0 }}>Resp.</span>
-                  <span className="text-center" style={{ width: 100, flexShrink: 0, paddingRight: 8 }}>Statut</span>
-                </div>
-              ) : (
-                <div style={{ height: 28, borderBottom: '1px solid #E2E8F0' }} />
-              )}
-            </div>
-            {/* Timeline header (buckets) */}
-            <div className="flex-1" style={{ minWidth: totalTimelineWidth }}>
-              <GanttTimelineHeader buckets={buckets} view={view} todayLeft={todayLeft} />
-            </div>
-          </div>
-        </div>
+      {/* Top scrollbar */}
+      <div
+        ref={topScrollRef}
+        onScroll={handleTopScroll}
+        className="overflow-x-auto overflow-y-hidden"
+        style={{ height: 12, borderBottom: '1px solid #F1F5F9' }}
+      >
+        <div style={{ width: LEFT_COLUMN_WIDTH + totalTimelineWidth, height: 1 }} />
       </div>
 
-      <div ref={mainScrollRef} onScroll={handleMainScroll} className="flex flex-1 overflow-x-auto overflow-y-visible">
+      <div ref={mainScrollRef} onScroll={handleMainScroll} className="flex flex-1 overflow-auto">
         {/* Left labels column */}
         <div
           className="shrink-0 sticky left-0 z-10 bg-white"
@@ -664,6 +607,33 @@ export default function GanttBase(props: GanttProps) {
             cursor: 'default',
           }}
         >
+          {/* Sticky top header area aligned with timeline header (28 + 28 = 56px) */}
+          <div
+            className="sticky top-0 z-20 bg-white"
+            style={{ borderBottom: '1px solid #E2E8F0' }}
+          >
+            <div style={{ height: 28, borderBottom: '1px solid #F1F5F9' }} />
+            {scope === 'project' ? (
+              <div
+                className="flex items-center"
+                style={{
+                  height: 28,
+                  backgroundColor: '#F8FAFC',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: '#64748B',
+                  textTransform: 'uppercase' as const,
+                  letterSpacing: '0.05em',
+                }}
+              >
+                <span className="flex-1 truncate" style={{ paddingLeft: 12 }}>Tâche</span>
+                <span className="text-center" style={{ width: 56, flexShrink: 0 }}>Resp.</span>
+                <span className="text-center" style={{ width: 100, flexShrink: 0, paddingRight: 8 }}>Statut</span>
+              </div>
+            ) : (
+              <div style={{ height: 28 }} />
+            )}
+          </div>
           {renderLeftColumn()}
           {/* Resize handle */}
           <div
@@ -674,6 +644,9 @@ export default function GanttBase(props: GanttProps) {
 
         {/* Timeline grid area */}
         <div className="relative flex-1" style={{ minWidth: totalTimelineWidth }}>
+          {/* Timeline header (sticky top, scrolls horizontally with body) */}
+          <GanttTimelineHeader buckets={buckets} view={view} todayLeft={todayLeft} />
+
           {/* Body: grid lines + bars + dependency arrows + today line */}
           <div className="relative" style={{ height: computeGridHeight }}>
             {/* Vertical grid lines + weekend shading */}
