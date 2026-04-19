@@ -13,6 +13,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/database/package.json ./packages/database/
 COPY packages/database/prisma ./packages/database/prisma
+COPY packages/rbac/package.json ./packages/rbac/
 
 # Installation des dépendances
 RUN pnpm install --frozen-lockfile
@@ -39,6 +40,7 @@ COPY --from=deps /app/packages/database/node_modules ./packages/database/node_mo
 # Copie des fichiers sources
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/database ./packages/database
+COPY packages/rbac ./packages/rbac
 COPY apps/web ./apps/web
 
 # Génération du client Prisma depuis le stage deps (évite download pendant build)

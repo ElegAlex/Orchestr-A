@@ -14,6 +14,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 
 # Copie des packages nécessaires
 COPY packages/database ./packages/database
+COPY packages/rbac ./packages/rbac
 COPY apps/api ./apps/api
 
 # Installation des dépendances
