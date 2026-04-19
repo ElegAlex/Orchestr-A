@@ -1464,8 +1464,93 @@ if (redisUrl) {
   );
 }
 }
+// ============================================================
+// V0 RBAC refactor — Seed des 26 rôles templates système
+// ============================================================
+// Idempotent (upsert sur `code`). Ne touche jamais aux rôles custom
+// (isSystem=false) ni aux users existants. Cf. contract-02 / contract-03 §9.
+//
+// Note : la migration `20260419192835_rbac_v0_add_roles_table` insère
+// déjà les 26 rôles via SQL pur. Cette fonction est le filet idempotent
+// au cas où le seed serait lancé seul (dev fresh DB) ou où on aurait
+// besoin de re-synchroniser les labels par défaut après un éventuel
+// drift manuel en DB.
+//
+// L'admin peut éditer le `label` d'un rôle système via l'UI ; le seed
+// NE LE RÉÉCRASE PAS (priorité label DB > label par défaut).
+
+const SYSTEM_ROLE_TEMPLATES: Array<{
+  code: string;
+  label: string;
+  templateKey: string;
+  isDefault: boolean;
+}> = [
+  { code: "ADMIN", label: "Administrateur", templateKey: "ADMIN", isDefault: false },
+  { code: "ADMIN_DELEGATED", label: "Directeur adjoint", templateKey: "ADMIN_DELEGATED", isDefault: false },
+  { code: "PORTFOLIO_MANAGER", label: "Manager de portefeuille", templateKey: "PORTFOLIO_MANAGER", isDefault: false },
+  { code: "MANAGER", label: "Manager", templateKey: "MANAGER", isDefault: false },
+  { code: "MANAGER_PROJECT_FOCUS", label: "Manager projet", templateKey: "MANAGER_PROJECT_FOCUS", isDefault: false },
+  { code: "MANAGER_HR_FOCUS", label: "Chef de service", templateKey: "MANAGER_HR_FOCUS", isDefault: false },
+  { code: "PROJECT_LEAD", label: "Chef de projet", templateKey: "PROJECT_LEAD", isDefault: false },
+  { code: "PROJECT_LEAD_JUNIOR", label: "Chef de projet junior", templateKey: "PROJECT_LEAD_JUNIOR", isDefault: false },
+  { code: "TECHNICAL_LEAD", label: "Référent technique", templateKey: "TECHNICAL_LEAD", isDefault: false },
+  { code: "PROJECT_CONTRIBUTOR", label: "Contributeur projet", templateKey: "PROJECT_CONTRIBUTOR", isDefault: false },
+  { code: "PROJECT_CONTRIBUTOR_LIGHT", label: "Contributeur projet junior", templateKey: "PROJECT_CONTRIBUTOR_LIGHT", isDefault: false },
+  { code: "FUNCTIONAL_REFERENT", label: "Référent fonctionnel", templateKey: "FUNCTIONAL_REFERENT", isDefault: false },
+  { code: "HR_OFFICER", label: "Gestionnaire RH", templateKey: "HR_OFFICER", isDefault: false },
+  { code: "HR_OFFICER_LIGHT", label: "Assistant RH", templateKey: "HR_OFFICER_LIGHT", isDefault: false },
+  { code: "THIRD_PARTY_MANAGER", label: "Gestionnaire prestataires", templateKey: "THIRD_PARTY_MANAGER", isDefault: false },
+  { code: "CONTROLLER", label: "Contrôleur de gestion", templateKey: "CONTROLLER", isDefault: false },
+  { code: "BUDGET_ANALYST", label: "Analyste budgétaire", templateKey: "BUDGET_ANALYST", isDefault: false },
+  { code: "DATA_ANALYST", label: "Analyste données", templateKey: "DATA_ANALYST", isDefault: false },
+  { code: "IT_SUPPORT", label: "Technicien support", templateKey: "IT_SUPPORT", isDefault: false },
+  { code: "IT_INFRASTRUCTURE", label: "Équipe infrastructure", templateKey: "IT_INFRASTRUCTURE", isDefault: false },
+  { code: "OBSERVER_FULL", label: "Observateur global", templateKey: "OBSERVER_FULL", isDefault: false },
+  { code: "OBSERVER_PROJECTS_ONLY", label: "Sponsor projet", templateKey: "OBSERVER_PROJECTS_ONLY", isDefault: false },
+  { code: "OBSERVER_HR_ONLY", label: "Audit social", templateKey: "OBSERVER_HR_ONLY", isDefault: false },
+  { code: "BASIC_USER", label: "Utilisateur standard", templateKey: "BASIC_USER", isDefault: true },
+  { code: "EXTERNAL_PRESTATAIRE", label: "Prestataire externe", templateKey: "EXTERNAL_PRESTATAIRE", isDefault: false },
+  { code: "STAGIAIRE_ALTERNANT", label: "Stagiaire / alternant", templateKey: "STAGIAIRE_ALTERNANT", isDefault: false },
+];
+
+export async function seedSystemRoleTemplates(prisma: PrismaClient): Promise<void> {
+  let created = 0;
+  let preserved = 0;
+  for (const tpl of SYSTEM_ROLE_TEMPLATES) {
+    const existing = await prisma.roleEntity.findUnique({ where: { code: tpl.code } });
+    if (existing) {
+      // Préserve label custom + isDefault DB. Réaligne uniquement templateKey
+      // si drift (cas re-seed après changement contrat).
+      if (existing.templateKey !== tpl.templateKey) {
+        await prisma.roleEntity.update({
+          where: { code: tpl.code },
+          data: { templateKey: tpl.templateKey, isSystem: true },
+        });
+      }
+      preserved++;
+    } else {
+      await prisma.roleEntity.create({
+        data: {
+          code: tpl.code,
+          label: tpl.label,
+          templateKey: tpl.templateKey,
+          isSystem: true,
+          isDefault: tpl.isDefault,
+        },
+      });
+      created++;
+    }
+  }
+  console.log(
+    `[SEED RBAC V0] system roles : ${created} créés, ${preserved} préservés (total attendu : 26)`,
+  );
+}
+
 async function main() {
   console.log("🌱 Seeding database...");
+
+  // V0 RBAC : assurer la présence des 26 rôles templates système.
+  await seedSystemRoleTemplates(prisma);
 
   // Create or get admin user — SEC-02: env-gated, no hardcoded default password
   const envAdminPassword = process.env.SEED_ADMIN_PASSWORD;

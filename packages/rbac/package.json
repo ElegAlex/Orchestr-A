@@ -1,0 +1,15 @@
+{
+  "name": "rbac",
+  "version": "2.0.0",
+  "description": "ORCHESTR'A V2 — RBAC catalogue (107 permissions atomiques + 26 templates)",
+  "main": "index.ts",
+  "types": "index.ts",
+  "private": true,
+  "scripts": {
+    "test": "vitest run --config ./vitest.config.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
+  }
+}

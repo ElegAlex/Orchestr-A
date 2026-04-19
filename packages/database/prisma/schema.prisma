@@ -22,6 +22,11 @@ model User {
   firstName    String
   lastName     String
   role         Role     @default(CONTRIBUTEUR)
+  // V0 RBAC refactor : FK vers RoleEntity (table `roles`). Nullable pendant
+  // la transition V0→V4 ; passera NOT NULL après backfill stable et drop de
+  // la colonne enum `role`. Cf. contract-03 §9.
+  roleId       String?
+  roleEntity   RoleEntity? @relation(name: "UserRoleEntity", fields: [roleId], references: [id])
   departmentId String?
   isActive     Boolean  @default(true)
   avatarUrl    String?
@@ -1051,4 +1056,48 @@ model RolePermission {
 
   @@id([roleConfigId, permissionId])
   @@map("role_permissions")
+}
+
+// ===========================
+// V0 RBAC REFACTOR — Templates unifiés (cf. contract-03 §2.1 + §9)
+// ===========================
+
+// TRANSITOIRE V0→V4 : nommé RoleEntity car enum `Role` cohabite jusqu'à V4
+// (cf. backlog/rbac-refactor/contract/contract-03-type-model.md §9).
+// Sera renommé `Role` quand l'enum legacy sera dropé.
+//
+// Chaque rôle pointe sur un template hardcodé (cf. packages/rbac
+// ROLE_TEMPLATES) qui détermine entièrement ses permissions. Plusieurs
+// rôles peuvent partager un même templateKey.
+model RoleEntity {
+  id          String   @id @default(uuid())
+
+  /// Identifiant stable, unique. Sert de clé à PermissionsService.
+  /// Ex: "ADMIN", "CHEF_DE_PROJET_SENIOR".
+  code        String   @unique
+
+  /// Libellé affiché dans l'UI (éditable par l'admin).
+  label       String
+
+  /// Rattachement au template hardcodé. NOT NULL — détermine les permissions.
+  /// String stocké pour conserver le typage côté code (RoleTemplateKey).
+  templateKey String
+
+  description String?
+
+  /// Rôle système non modifiable et non supprimable (cf. D9 po-decisions).
+  isSystem    Boolean  @default(false)
+
+  /// Rôle par défaut pour un nouvel utilisateur (remplace l'actuel
+  /// @default(CONTRIBUTEUR) sur User.role lors de la transition V4).
+  isDefault   Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]   @relation(name: "UserRoleEntity")
+
+  @@map("roles")
+  @@index([templateKey])
+  @@index([isDefault])
 }
