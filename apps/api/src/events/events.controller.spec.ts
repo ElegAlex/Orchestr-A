@@ -4,7 +4,7 @@ import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { OwnershipService } from '../common/services/ownership.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OwnershipGuard } from '../common/guards/ownership.guard';
 
@@ -60,7 +60,7 @@ describe('EventsController', () => {
           useValue: { isOwner: vi.fn().mockResolvedValue(true) },
         },
         {
-          provide: RoleManagementService,
+          provide: PermissionsService,
           useValue: {
             getPermissionsForRole: vi.fn().mockResolvedValue([]),
           },

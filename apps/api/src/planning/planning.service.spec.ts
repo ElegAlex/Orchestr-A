@@ -10,7 +10,7 @@ import { TeleworkService } from '../telework/telework.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { SchoolVacationsService } from '../school-vacations/school-vacations.service';
 import { PredefinedTasksService } from '../predefined-tasks/predefined-tasks.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 
 describe('PlanningService', () => {
   let service: PlanningService;
@@ -29,7 +29,7 @@ describe('PlanningService', () => {
   const mockHolidaysService = { findByRange: vi.fn() };
   const mockSchoolVacationsService = { findByRange: vi.fn() };
   const mockPredefinedTasksService = { findAssignments: vi.fn() };
-  const mockRoleManagementService = { getPermissionsForRole: vi.fn() };
+  const mockPermissionsService = { getPermissionsForRole: vi.fn() };
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -61,7 +61,7 @@ describe('PlanningService', () => {
           useValue: mockSchoolVacationsService,
         },
         { provide: PredefinedTasksService, useValue: mockPredefinedTasksService },
-        { provide: RoleManagementService, useValue: mockRoleManagementService },
+        { provide: PermissionsService, useValue: mockPermissionsService },
       ],
     }).compile();
 
@@ -73,7 +73,7 @@ describe('PlanningService', () => {
   const USER = { id: 'user-1', role: 'MANAGER' };
 
   it('retourne le payload agrégé avec les 9 datasets', async () => {
-    mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+    mockPermissionsService.getPermissionsForRole.mockResolvedValue([
       'predefined_tasks:view',
       'tasks:readAll',
     ]);
@@ -94,7 +94,7 @@ describe('PlanningService', () => {
   });
 
   it("n'appelle pas findAssignments si le user n'a pas predefined_tasks:view", async () => {
-    mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+    mockPermissionsService.getPermissionsForRole.mockResolvedValue([
       'tasks:readAll',
     ]);
 
@@ -105,7 +105,7 @@ describe('PlanningService', () => {
   });
 
   it('propage currentUser aux sous-services scopés par RBAC', async () => {
-    mockRoleManagementService.getPermissionsForRole.mockResolvedValue([]);
+    mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
 
     await service.getOverview(START, END, USER);
 
@@ -149,7 +149,7 @@ describe('PlanningService', () => {
   });
 
   it('passe les dates tronquées aux endpoints qui attendent YYYY-MM-DD', async () => {
-    mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+    mockPermissionsService.getPermissionsForRole.mockResolvedValue([
       'predefined_tasks:view',
     ]);
 

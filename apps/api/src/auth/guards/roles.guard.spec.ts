@@ -4,7 +4,7 @@ import { Role, User } from '@prisma/client';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RolesGuard } from './roles.guard';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
+import { REQUIRE_PERMISSIONS_KEY as PERMISSIONS_KEY } from '../../rbac/decorators/require-permissions.decorator';
 
 /**
  * SEC-03 defense-in-depth contract test.

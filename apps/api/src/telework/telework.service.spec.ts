@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeleworkService } from './telework.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import {
   NotFoundException,
   ConflictException,
@@ -33,7 +33,7 @@ describe('TeleworkService', () => {
     },
   };
 
-  const mockRoleManagementService = {
+  const mockPermissionsService = {
     getPermissionsForRole: vi.fn(),
   };
 
@@ -63,8 +63,8 @@ describe('TeleworkService', () => {
           useValue: mockPrismaService,
         },
         {
-          provide: RoleManagementService,
-          useValue: mockRoleManagementService,
+          provide: PermissionsService,
+          useValue: mockPermissionsService,
         },
       ],
     }).compile();
@@ -93,7 +93,7 @@ describe('TeleworkService', () => {
       expect(result.userId).toBe('user-1');
       expect(mockPrismaService.teleworkSchedule.create).toHaveBeenCalled();
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).not.toHaveBeenCalled();
     });
 
@@ -104,7 +104,7 @@ describe('TeleworkService', () => {
         userId: 'user-2',
       };
 
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:manage_any',
         'telework:create',
       ]);
@@ -119,7 +119,7 @@ describe('TeleworkService', () => {
 
       expect(result.userId).toBe('user-2');
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).toHaveBeenCalledWith('ADMIN');
     });
 
@@ -130,7 +130,7 @@ describe('TeleworkService', () => {
         userId: 'user-2',
       };
 
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
       ]);
@@ -139,7 +139,7 @@ describe('TeleworkService', () => {
         service.create('user-1', 'CONTRIBUTEUR', createDto),
       ).rejects.toThrow(ForbiddenException);
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).toHaveBeenCalledWith('CONTRIBUTEUR');
     });
 
@@ -152,7 +152,7 @@ describe('TeleworkService', () => {
         userId: 'other-user-id',
       };
 
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
         'telework:update',
@@ -165,7 +165,7 @@ describe('TeleworkService', () => {
 
       // Le service doit interroger les permissions du rôle CONTRIBUTEUR
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).toHaveBeenCalledWith('CONTRIBUTEUR');
 
       // Aucun accès BDD ne doit avoir été effectué après le contrôle de permission
@@ -327,7 +327,7 @@ describe('TeleworkService', () => {
         ...mockTelework,
         userId: 'other-user',
       });
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
         'telework:update',
@@ -338,7 +338,7 @@ describe('TeleworkService', () => {
         service.findOne('telework-1', 'user-1', 'CONTRIBUTEUR'),
       ).rejects.toThrow(ForbiddenException);
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).toHaveBeenCalledWith('CONTRIBUTEUR');
     });
 
@@ -347,7 +347,7 @@ describe('TeleworkService', () => {
         ...mockTelework,
         userId: 'other-user',
       });
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:read',
         'telework:manage_any',
       ]);
@@ -356,7 +356,7 @@ describe('TeleworkService', () => {
 
       expect(result).toBeDefined();
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).toHaveBeenCalledWith('ADMIN');
     });
   });
@@ -456,7 +456,7 @@ describe('TeleworkService', () => {
 
       expect(result.isTelework).toBe(false);
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).not.toHaveBeenCalled();
     });
 
@@ -474,7 +474,7 @@ describe('TeleworkService', () => {
         ...mockTelework,
         userId: 'other-user',
       });
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
       ]);
@@ -483,7 +483,7 @@ describe('TeleworkService', () => {
         service.update('telework-1', 'user-1', 'CONTRIBUTEUR', updateDto),
       ).rejects.toThrow(ForbiddenException);
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).toHaveBeenCalledWith('CONTRIBUTEUR');
     });
 
@@ -493,7 +493,7 @@ describe('TeleworkService', () => {
         ...mockTelework,
         userId: 'other-user',
       });
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
         'telework:manage_any',
@@ -513,7 +513,7 @@ describe('TeleworkService', () => {
 
       expect(result.isTelework).toBe(false);
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).toHaveBeenCalledWith('ADMIN');
     });
 
@@ -593,7 +593,7 @@ describe('TeleworkService', () => {
         where: { id: 'telework-1' },
       });
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).not.toHaveBeenCalled();
     });
 
@@ -610,7 +610,7 @@ describe('TeleworkService', () => {
         ...mockTelework,
         userId: 'other-user',
       });
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
       ]);
@@ -619,7 +619,7 @@ describe('TeleworkService', () => {
         service.remove('telework-1', 'user-1', 'CONTRIBUTEUR'),
       ).rejects.toThrow(ForbiddenException);
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).toHaveBeenCalledWith('CONTRIBUTEUR');
     });
 
@@ -628,7 +628,7 @@ describe('TeleworkService', () => {
         ...mockTelework,
         userId: 'other-user',
       });
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
         'telework:manage_any',
@@ -639,7 +639,7 @@ describe('TeleworkService', () => {
 
       expect(result.message).toBe('Télétravail supprimé avec succès');
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).toHaveBeenCalledWith('ADMIN');
     });
   });
@@ -708,7 +708,7 @@ describe('TeleworkService', () => {
 
   describe('createRecurringRule', () => {
     it('should create a recurring rule for self', async () => {
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
       ]);
@@ -735,7 +735,7 @@ describe('TeleworkService', () => {
     });
 
     it('should throw ForbiddenException when creating for others without telework:manage_any', async () => {
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
       ]);
@@ -750,7 +750,7 @@ describe('TeleworkService', () => {
     });
 
     it('should allow creating for others with telework:manage_any', async () => {
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:manage_any',
       ]);
@@ -773,7 +773,7 @@ describe('TeleworkService', () => {
     });
 
     it('should throw ConflictException when rule already exists', async () => {
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
       ]);
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
@@ -790,7 +790,7 @@ describe('TeleworkService', () => {
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
       ]);
       mockPrismaService.user.findUnique.mockResolvedValue(null);
@@ -823,7 +823,7 @@ describe('TeleworkService', () => {
 
       expect(result.endDate).toBeDefined();
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).not.toHaveBeenCalled();
     });
 
@@ -832,7 +832,7 @@ describe('TeleworkService', () => {
         ...mockRule,
         userId: 'other-user',
       });
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:update',
       ]);
 
@@ -871,7 +871,7 @@ describe('TeleworkService', () => {
 
       expect(result.message).toBe('Règle récurrente supprimée avec succès');
       expect(
-        mockRoleManagementService.getPermissionsForRole,
+        mockPermissionsService.getPermissionsForRole,
       ).not.toHaveBeenCalled();
     });
 
@@ -890,7 +890,7 @@ describe('TeleworkService', () => {
         ...mockRule,
         userId: 'other-user',
       });
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:delete',
       ]);
 
@@ -911,7 +911,7 @@ describe('TeleworkService', () => {
         endDate: null,
       };
 
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:manage_any',
       ]);
@@ -947,7 +947,7 @@ describe('TeleworkService', () => {
         endDate: null,
       };
 
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:manage_any',
       ]);
@@ -981,7 +981,7 @@ describe('TeleworkService', () => {
       // expiredRule would have dayOfWeek: 1, endDate: 2026-03-31 (before our range)
       // The DB filter already excludes it, so we simulate empty result
 
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:manage_any',
       ]);
@@ -1002,7 +1002,7 @@ describe('TeleworkService', () => {
     });
 
     it('should restrict non-managers to their own rules only', async () => {
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:create',
         'telework:read',
       ]);

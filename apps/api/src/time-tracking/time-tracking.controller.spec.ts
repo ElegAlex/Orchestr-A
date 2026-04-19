@@ -3,9 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TimeTrackingController } from './time-tracking.controller';
 import { TimeTrackingService } from './time-tracking.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { PERMISSIONS_KEY } from '../auth/decorators/permissions.decorator';
+import { REQUIRE_PERMISSIONS_KEY as PERMISSIONS_KEY } from '../rbac/decorators/require-permissions.decorator';
 import { OwnershipService } from '../common/services/ownership.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OwnershipGuard } from '../common/guards/ownership.guard';
 
@@ -63,7 +63,7 @@ describe('TimeTrackingController', () => {
           useValue: { isOwner: vi.fn().mockResolvedValue(true) },
         },
         {
-          provide: RoleManagementService,
+          provide: PermissionsService,
           useValue: {
             getPermissionsForRole: vi.fn().mockResolvedValue([]),
           },

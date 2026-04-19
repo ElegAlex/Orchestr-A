@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsController } from './comments.controller';
 import { CommentsService } from './comments.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
-import { PERMISSIONS_KEY } from '../auth/decorators/permissions.decorator';
+import { REQUIRE_PERMISSIONS_KEY as PERMISSIONS_KEY } from '../rbac/decorators/require-permissions.decorator';
 
 describe('CommentsController', () => {
   let controller: CommentsController;

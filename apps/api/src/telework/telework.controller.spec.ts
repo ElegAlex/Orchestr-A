@@ -7,7 +7,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import { PERMISSIONS_KEY } from '../auth/decorators/permissions.decorator';
+import { REQUIRE_PERMISSIONS_KEY as PERMISSIONS_KEY } from '../rbac/decorators/require-permissions.decorator';
 import { OWNERSHIP_METADATA } from '../common/decorators/ownership-check.decorator';
 
 describe('TeleworkController', () => {

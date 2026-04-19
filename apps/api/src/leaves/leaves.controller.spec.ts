@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { LeavesController } from './leaves.controller';
 import { LeavesService } from './leaves.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import {
   NotFoundException,
   BadRequestException,
@@ -58,7 +58,7 @@ describe('LeavesController', () => {
     deactivateDelegation: vi.fn(),
   };
 
-  const mockRoleManagementService = {
+  const mockPermissionsService = {
     getPermissionsForRole: vi.fn().mockResolvedValue([]),
   };
 
@@ -71,8 +71,8 @@ describe('LeavesController', () => {
           useValue: mockLeavesService,
         },
         {
-          provide: RoleManagementService,
-          useValue: mockRoleManagementService,
+          provide: PermissionsService,
+          useValue: mockPermissionsService,
         },
       ],
     }).compile();
@@ -320,7 +320,7 @@ describe('LeavesController', () => {
 
       // D6 #2 PO 2026-04-19 : `leaves:validate` n'existe pas au catalogue ;
       // le check runtime utilise désormais `leaves:approve` (typo corrigée).
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'leaves:approve',
       ]);
       mockLeavesService.getLeaveBalance.mockResolvedValue(balance);

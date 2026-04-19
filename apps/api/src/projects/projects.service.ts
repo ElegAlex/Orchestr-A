@@ -10,7 +10,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { OwnershipService } from '../common/services/ownership.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { ProjectStatus, TaskStatus } from 'database';
 
 /**
@@ -33,7 +33,7 @@ export class ProjectsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ownershipService: OwnershipService,
-    private readonly roleManagementService: RoleManagementService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   /**
@@ -62,8 +62,7 @@ export class ProjectsService {
 
     if (user.role) {
       const permissions =
-        (await this.roleManagementService.getPermissionsForRole(user.role)) ??
-        [];
+        await this.permissionsService.getPermissionsForRole(user.role);
       if (permissions.includes('projects:manage_any')) {
         return;
       }

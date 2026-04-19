@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectsService } from './projects.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { OwnershipService } from '../common/services/ownership.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import {
   NotFoundException,
   BadRequestException,
@@ -70,7 +70,7 @@ describe('ProjectsService', () => {
     isOwner: vi.fn(),
   };
 
-  const mockRoleManagementService = {
+  const mockPermissionsService = {
     getPermissionsForRole: vi.fn(),
   };
 
@@ -87,8 +87,8 @@ describe('ProjectsService', () => {
           useValue: mockOwnershipService,
         },
         {
-          provide: RoleManagementService,
-          useValue: mockRoleManagementService,
+          provide: PermissionsService,
+          useValue: mockPermissionsService,
         },
       ],
     }).compile();
@@ -600,7 +600,7 @@ describe('ProjectsService', () => {
     describe('update', () => {
       it('throws ForbiddenException for non-owner without projects:manage_any', async () => {
         mockOwnershipService.isOwner.mockResolvedValue(false);
-        mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        mockPermissionsService.getPermissionsForRole.mockResolvedValue([
           'projects:update',
         ]);
 
@@ -633,13 +633,13 @@ describe('ProjectsService', () => {
 
         expect(result.name).toBe('Updated');
         expect(
-          mockRoleManagementService.getPermissionsForRole,
+          mockPermissionsService.getPermissionsForRole,
         ).not.toHaveBeenCalled();
       });
 
       it('allows update for non-owner holding projects:manage_any', async () => {
         mockOwnershipService.isOwner.mockResolvedValue(false);
-        mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        mockPermissionsService.getPermissionsForRole.mockResolvedValue([
           'projects:update',
           'projects:manage_any',
         ]);
@@ -663,7 +663,7 @@ describe('ProjectsService', () => {
     describe('remove', () => {
       it('throws ForbiddenException for non-owner without projects:manage_any', async () => {
         mockOwnershipService.isOwner.mockResolvedValue(false);
-        mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        mockPermissionsService.getPermissionsForRole.mockResolvedValue([
           'projects:delete',
         ]);
 
@@ -688,7 +688,7 @@ describe('ProjectsService', () => {
 
       it('allows remove for non-owner holding projects:manage_any', async () => {
         mockOwnershipService.isOwner.mockResolvedValue(false);
-        mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+        mockPermissionsService.getPermissionsForRole.mockResolvedValue([
           'projects:manage_any',
         ]);
         mockPrismaService.project.findUnique.mockResolvedValue(mockProject);

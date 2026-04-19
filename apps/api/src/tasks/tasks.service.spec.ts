@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { TaskStatus, RACIRole, Role, Priority } from 'database';
 import { getTaskProgress } from './task-progress.helper';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -79,7 +79,7 @@ describe('TasksService', () => {
           useValue: mockPrismaService,
         },
         {
-          provide: RoleManagementService,
+          provide: PermissionsService,
           useValue: {
             // Par défaut, les tests supposent un utilisateur ADMIN disposant
             // du bypass de membership (`projects:manage_any` OR

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsService } from './comments.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 
 describe('CommentsService', () => {
   let service: CommentsService;
@@ -33,7 +33,7 @@ describe('CommentsService', () => {
           useValue: mockPrismaService,
         },
         {
-          provide: RoleManagementService,
+          provide: PermissionsService,
           useValue: { getPermissionsForRole: vi.fn().mockResolvedValue(['comments:delete_any']) },
         },
       ],

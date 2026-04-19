@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { UpsertLeaveBalanceDto } from './dto/upsert-leave-balance.dto';
@@ -32,8 +32,9 @@ export class LeavesService {
     permissionCode: string,
   ): Promise<boolean> {
     if (!role) return false;
-    const permissions =
-      await this.roleManagementService.getPermissionsForRole(role);
+    const permissions = (await this.permissionsService.getPermissionsForRole(
+      role,
+    )) as readonly string[];
     return permissions.includes(permissionCode);
   }
 
@@ -49,7 +50,7 @@ export class LeavesService {
     currentUserRole: string,
   ): Promise<boolean> {
     const permissions =
-      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      await this.permissionsService.getPermissionsForRole(currentUserRole);
     if (permissions.includes(MANAGE_ANY_LEAVES)) {
       return true;
     }
@@ -149,7 +150,7 @@ export class LeavesService {
 
     // Permissions dynamiques depuis le RBAC
     const permissions =
-      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      await this.permissionsService.getPermissionsForRole(currentUserRole);
     const hasDeletePerm = permissions.includes('leaves:delete');
     const hasApprovePerm = permissions.includes('leaves:approve');
 
@@ -201,7 +202,7 @@ export class LeavesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
-    private readonly roleManagementService: RoleManagementService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   /**
@@ -532,7 +533,7 @@ export class LeavesService {
     // Lecture globale : vérifier la permission dynamique leaves:readAll
     if (currentUserRole) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
       if (!permissions.includes('leaves:readAll')) {
         userId = currentUserId;
       }
@@ -635,7 +636,7 @@ export class LeavesService {
       return [];
     }
 
-    const permissions = await this.roleManagementService.getPermissionsForRole(
+    const permissions = await this.permissionsService.getPermissionsForRole(
       user.role,
     );
     const hasManageAny = permissions.includes(MANAGE_ANY_LEAVES);
@@ -762,7 +763,7 @@ export class LeavesService {
    */
   async getSubordinates(managerId: string, managerRole: string) {
     const permissions =
-      await this.roleManagementService.getPermissionsForRole(managerRole);
+      await this.permissionsService.getPermissionsForRole(managerRole);
     const hasManageAny = permissions.includes(MANAGE_ANY_LEAVES);
     const hasApprove = permissions.includes(APPROVE_LEAVES);
 
@@ -1160,7 +1161,7 @@ export class LeavesService {
     if (!validator) return false;
 
     const validatorPerms =
-      await this.roleManagementService.getPermissionsForRole(validator.role);
+      await this.permissionsService.getPermissionsForRole(validator.role);
 
     // Accès global → peut tout valider
     if (validatorPerms.includes(MANAGE_ANY_LEAVES)) {

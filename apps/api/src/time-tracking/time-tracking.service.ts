@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Role } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { ThirdPartiesService } from '../third-parties/third-parties.service';
 import { OwnershipService } from '../common/services/ownership.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
@@ -26,7 +26,7 @@ export class TimeTrackingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly thirdPartiesService: ThirdPartiesService,
-    private readonly roleManagementService: RoleManagementService,
+    private readonly permissionsService: PermissionsService,
     private readonly ownershipService: OwnershipService,
   ) {}
 
@@ -51,7 +51,7 @@ export class TimeTrackingService {
     );
     if (isOwner) return;
     const permissions =
-      (await this.roleManagementService.getPermissionsForRole(user.role)) ?? [];
+      await this.permissionsService.getPermissionsForRole(user.role);
     if (permissions.includes(MANAGE_ANY_PERMISSION)) return;
     throw new ForbiddenException('Time entry ownership violation');
   }
@@ -163,7 +163,7 @@ export class TimeTrackingService {
     }
 
     const permissions =
-      await this.roleManagementService.getPermissionsForRole(currentUser.role);
+      await this.permissionsService.getPermissionsForRole(currentUser.role);
     if (!permissions.includes(DECLARE_FOR_THIRD_PARTY_PERMISSION)) {
       throw new ForbiddenException(
         'Permission time_tracking:declare_for_third_party requise pour déclarer pour un tiers',
@@ -198,10 +198,9 @@ export class TimeTrackingService {
     endDate?: string,
     thirdPartyId?: string,
   ) {
-    const permissions =
-      (await this.roleManagementService.getPermissionsForRole(
-        currentUser.role,
-      )) ?? [];
+    const permissions = await this.permissionsService.getPermissionsForRole(
+      currentUser.role,
+    );
     const hasViewAny = permissions.includes(VIEW_ANY_PERMISSION);
 
     // D8 : coercion silencieuse au lieu de 403. Si l'appelant veut filtrer un
@@ -315,9 +314,9 @@ export class TimeTrackingService {
         entry.declaredById === currentUser.id;
       if (!isOwner) {
         const permissions =
-          (await this.roleManagementService.getPermissionsForRole(
+          await this.permissionsService.getPermissionsForRole(
             currentUser.role,
-          )) ?? [];
+          );
         if (!permissions.includes(VIEW_ANY_PERMISSION)) {
           throw new ForbiddenException(
             "Vous n'avez pas la permission de consulter cette entrée de temps",

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventsService } from './events.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { OwnershipService } from '../common/services/ownership.service';
 import {
   NotFoundException,
@@ -15,7 +15,7 @@ describe('EventsService', () => {
   let service: EventsService;
   let prisma: PrismaService;
   let ownershipService: { isOwner: ReturnType<typeof vi.fn> };
-  let roleManagementService: {
+  let permissionsService: {
     getPermissionsForRole: ReturnType<typeof vi.fn>;
   };
 
@@ -62,7 +62,7 @@ describe('EventsService', () => {
     ownershipService = {
       isOwner: vi.fn().mockResolvedValue(false),
     };
-    roleManagementService = {
+    permissionsService = {
       getPermissionsForRole: vi.fn().mockResolvedValue([
         'events:read',
         'events:readAll',
@@ -79,8 +79,8 @@ describe('EventsService', () => {
           useValue: mockPrismaService,
         },
         {
-          provide: RoleManagementService,
-          useValue: roleManagementService,
+          provide: PermissionsService,
+          useValue: permissionsService,
         },
         {
           provide: OwnershipService,
@@ -384,7 +384,7 @@ describe('EventsService', () => {
       it('rejects non-creator CONTRIBUTEUR with 403', async () => {
         mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
         ownershipService.isOwner.mockResolvedValue(false);
-        roleManagementService.getPermissionsForRole.mockResolvedValue([
+        permissionsService.getPermissionsForRole.mockResolvedValue([
           'events:update',
         ]);
 
@@ -421,7 +421,7 @@ describe('EventsService', () => {
       it('allows non-creator holding events:manage_any', async () => {
         mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
         ownershipService.isOwner.mockResolvedValue(false);
-        roleManagementService.getPermissionsForRole.mockResolvedValue([
+        permissionsService.getPermissionsForRole.mockResolvedValue([
           'events:update',
           'events:manage_any',
         ]);
@@ -447,7 +447,7 @@ describe('EventsService', () => {
       it('rejects non-creator CONTRIBUTEUR with 403', async () => {
         mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
         ownershipService.isOwner.mockResolvedValue(false);
-        roleManagementService.getPermissionsForRole.mockResolvedValue([
+        permissionsService.getPermissionsForRole.mockResolvedValue([
           'events:delete',
         ]);
 
@@ -468,7 +468,7 @@ describe('EventsService', () => {
       it('allows non-creator holding events:manage_any', async () => {
         mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
         ownershipService.isOwner.mockResolvedValue(false);
-        roleManagementService.getPermissionsForRole.mockResolvedValue([
+        permissionsService.getPermissionsForRole.mockResolvedValue([
           'events:delete',
           'events:manage_any',
         ]);
@@ -483,7 +483,7 @@ describe('EventsService', () => {
       it('rejects non-creator without bypass with 403', async () => {
         mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
         ownershipService.isOwner.mockResolvedValue(false);
-        roleManagementService.getPermissionsForRole.mockResolvedValue([
+        permissionsService.getPermissionsForRole.mockResolvedValue([
           'events:update',
         ]);
 

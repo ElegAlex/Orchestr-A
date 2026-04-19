@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { OwnershipService } from '../common/services/ownership.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -15,13 +15,13 @@ import { Prisma } from 'database';
 export class EventsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly roleManagementService: RoleManagementService,
+    private readonly permissionsService: PermissionsService,
     private readonly ownershipService: OwnershipService,
   ) {}
 
   private async hasManagementAccess(role: string): Promise<boolean> {
     const permissions =
-      await this.roleManagementService.getPermissionsForRole(role);
+      await this.permissionsService.getPermissionsForRole(role);
     return permissions.includes('events:readAll');
   }
 
@@ -44,7 +44,7 @@ export class EventsService {
     if (isOwner) return;
     if (role) {
       const permissions =
-        (await this.roleManagementService.getPermissionsForRole(role)) ?? [];
+        await this.permissionsService.getPermissionsForRole(role);
       if (permissions.includes('events:manage_any')) return;
     }
     throw new ForbiddenException('Event ownership violation');
@@ -234,7 +234,7 @@ export class EventsService {
 
     // Lecture globale : vérifier la permission dynamique events:readAll
     const permissions =
-      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      await this.permissionsService.getPermissionsForRole(currentUserRole);
     if (!permissions.includes('events:readAll')) {
       where.OR = [
         { participants: { some: { userId: currentUserId } } },
@@ -606,7 +606,7 @@ export class EventsService {
     // Scope events for non-management users: only their own or participated
     if (currentUserId && currentUserRole) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
       if (!permissions.includes('events:readAll')) {
         where.OR = [
           { participants: { some: { userId: currentUserId } } },

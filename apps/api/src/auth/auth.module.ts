@@ -8,7 +8,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
-import { PermissionsGuard } from './guards/permissions.guard';
 import { ThrottlerBehindProxyGuard } from './guards/throttler-behind-proxy.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { RoleManagementModule } from '../role-management/role-management.module';
@@ -53,10 +52,6 @@ import { JwtBlacklistService } from './jwt-blacklist.service';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: PermissionsGuard,
     },
   ],
   exports: [AuthService, RefreshTokenService, JwtBlacklistService],

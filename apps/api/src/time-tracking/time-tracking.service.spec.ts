@@ -7,7 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Role } from 'database';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { ThirdPartiesService } from '../third-parties/third-parties.service';
 import { OwnershipService } from '../common/services/ownership.service';
 import { TimeTrackingService } from './time-tracking.service';
@@ -34,7 +34,7 @@ describe('TimeTrackingService', () => {
     assertAssignedToTaskOrProject: vi.fn(),
   };
 
-  const mockRoleManagementService = {
+  const mockPermissionsService = {
     getPermissionsForRole: vi.fn(),
   };
 
@@ -51,8 +51,8 @@ describe('TimeTrackingService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: ThirdPartiesService, useValue: mockThirdPartiesService },
         {
-          provide: RoleManagementService,
-          useValue: mockRoleManagementService,
+          provide: PermissionsService,
+          useValue: mockPermissionsService,
         },
         { provide: OwnershipService, useValue: mockOwnershipService },
       ],
@@ -189,7 +189,7 @@ describe('TimeTrackingService', () => {
     });
 
     it('throws ForbiddenException when declarer lacks permission', async () => {
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:create',
       ]);
       await expect(service.create(currentUser, baseDto)).rejects.toThrow(
@@ -199,7 +199,7 @@ describe('TimeTrackingService', () => {
     });
 
     it('throws when third party does not exist or is archived', async () => {
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:declare_for_third_party',
       ]);
       mockThirdPartiesService.assertExistsAndActive.mockRejectedValue(
@@ -211,7 +211,7 @@ describe('TimeTrackingService', () => {
     });
 
     it('throws ForbiddenException when third party is not assigned to task/project', async () => {
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:declare_for_third_party',
       ]);
       mockThirdPartiesService.assertExistsAndActive.mockResolvedValue(
@@ -226,7 +226,7 @@ describe('TimeTrackingService', () => {
     });
 
     it('creates a third party entry with userId null and declaredById = currentUser.id', async () => {
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:declare_for_third_party',
       ]);
       mockThirdPartiesService.assertExistsAndActive.mockResolvedValue(
@@ -264,7 +264,7 @@ describe('TimeTrackingService', () => {
         ...baseDto,
         projectId: undefined,
       };
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:declare_for_third_party',
       ]);
       mockThirdPartiesService.assertExistsAndActive.mockResolvedValue(
@@ -322,7 +322,7 @@ describe('TimeTrackingService', () => {
     it('coerces userId to currentUser.id when filtering by another user without time_tracking:view_any (D8 PO 2026-04-19)', async () => {
       // D8 PO : remplacement du 403 historique par coercion silencieuse —
       // alignement avec tasks/leaves/telework/events qui coercent eux aussi.
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:read',
       ]);
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
@@ -337,7 +337,7 @@ describe('TimeTrackingService', () => {
     });
 
     it('allows filtering by another user when time_tracking:view_any is granted', async () => {
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:view_any',
       ]);
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
@@ -407,7 +407,7 @@ describe('TimeTrackingService', () => {
         declaredById: 'user-other',
       });
       mockOwnershipService.isOwner.mockResolvedValue(false);
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:update',
       ]);
       await expect(
@@ -424,7 +424,7 @@ describe('TimeTrackingService', () => {
         declaredById: 'user-other',
       });
       mockOwnershipService.isOwner.mockResolvedValue(false);
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:manage_any',
       ]);
       mockPrismaService.timeEntry.update.mockResolvedValue({
@@ -539,7 +539,7 @@ describe('TimeTrackingService', () => {
         declaredById: 'user-other',
       });
       mockOwnershipService.isOwner.mockResolvedValue(false);
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:delete',
       ]);
       await expect(service.remove('1', currentUser)).rejects.toThrow(
@@ -555,7 +555,7 @@ describe('TimeTrackingService', () => {
         declaredById: 'user-other',
       });
       mockOwnershipService.isOwner.mockResolvedValue(false);
-      mockRoleManagementService.getPermissionsForRole.mockResolvedValue([
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:manage_any',
       ]);
       mockPrismaService.timeEntry.delete.mockResolvedValue({ id: '1' });

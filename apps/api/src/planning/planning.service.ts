@@ -8,7 +8,7 @@ import { TeleworkService } from '../telework/telework.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { SchoolVacationsService } from '../school-vacations/school-vacations.service';
 import { PredefinedTasksService } from '../predefined-tasks/predefined-tasks.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 
 export interface PlanningOverview {
   users: unknown[];
@@ -36,7 +36,7 @@ export class PlanningService {
     private readonly holidaysService: HolidaysService,
     private readonly schoolVacationsService: SchoolVacationsService,
     private readonly predefinedTasksService: PredefinedTasksService,
-    private readonly roleManagementService: RoleManagementService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   /**
@@ -54,7 +54,7 @@ export class PlanningService {
     currentUser: { id: string; role: string },
   ): Promise<PlanningOverview> {
     const permissions =
-      await this.roleManagementService.getPermissionsForRole(currentUser.role);
+      await this.permissionsService.getPermissionsForRole(currentUser.role);
     const canViewPredefinedTasks = permissions.includes(
       'predefined_tasks:view',
     );

@@ -22,7 +22,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { LeavesService } from './leaves.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { UpsertLeaveBalanceDto } from './dto/upsert-leave-balance.dto';
@@ -43,7 +43,7 @@ import { LeaveStatus, LeaveType } from 'database';
 export class LeavesController {
   constructor(
     private readonly leavesService: LeavesService,
-    private readonly roleManagementService: RoleManagementService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   @Post()
@@ -292,7 +292,7 @@ export class LeavesController {
   ) {
     if (userId !== currentUserId) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
       // D6 #2 PO : `leaves:validate` n'existe pas au catalogue ; le check
       // historique était cassé (toujours faux). La permission métier
       // équivalente est `leaves:approve`.

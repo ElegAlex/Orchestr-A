@@ -4,8 +4,6 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import { User } from '@prisma/client';
-import { PermissionsGuard } from './guards/permissions.guard';
-import { RoleManagementService } from '../role-management/role-management.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { JwtBlacklistService } from './jwt-blacklist.service';
 
@@ -34,10 +32,6 @@ describe('AuthController', () => {
     resetPassword: vi.fn(),
   };
 
-  const mockRoleManagementService = {
-    getPermissionsForRole: vi.fn(),
-  };
-
   const mockRefreshTokenService = {
     issue: vi.fn(),
     rotate: vi.fn(),
@@ -61,10 +55,6 @@ describe('AuthController', () => {
           useValue: mockAuthService,
         },
         {
-          provide: RoleManagementService,
-          useValue: mockRoleManagementService,
-        },
-        {
           provide: RefreshTokenService,
           useValue: mockRefreshTokenService,
         },
@@ -72,7 +62,6 @@ describe('AuthController', () => {
           provide: JwtBlacklistService,
           useValue: mockBlacklist,
         },
-        PermissionsGuard,
       ],
     }).compile();
 

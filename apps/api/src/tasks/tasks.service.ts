@@ -19,7 +19,7 @@ import {
 } from './dto/import-tasks.dto';
 import { TaskStatus, Priority, RACIRole, Role } from 'database';
 import { Prisma } from 'database';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { getTaskProgress } from './task-progress.helper';
 import { CreateSubtaskDto } from './dto/create-subtask.dto';
 import { UpdateSubtaskDto } from './dto/update-subtask.dto';
@@ -28,7 +28,7 @@ import { UpdateSubtaskDto } from './dto/update-subtask.dto';
 export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly roleManagementService: RoleManagementService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   /**
@@ -62,7 +62,7 @@ export class TasksService {
 
     // Vérification dynamique des permissions de création
     const userPermissions =
-      await this.roleManagementService.getPermissionsForRole(user.role);
+      await this.permissionsService.getPermissionsForRole(user.role);
     const canCreate = userPermissions.includes('tasks:create');
     const canCreateOrphan = userPermissions.includes('tasks:create_orphan');
     const canCreateInProject = userPermissions.includes('tasks:create_in_project');
@@ -290,7 +290,7 @@ export class TasksService {
     // RBAC: filtrer par utilisateur si pas la permission tasks:readAll
     if (currentUser) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(
+        await this.permissionsService.getPermissionsForRole(
           currentUser.role,
         );
       if (!permissions.includes('tasks:readAll')) {
@@ -543,7 +543,7 @@ export class TasksService {
     // Ownership / membership check
     if (currentUserId && currentUserRole) {
       const userPermissions =
-        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
       const canManageAny = userPermissions.includes('tasks:manage_any');
 
       if (!canManageAny) {
@@ -746,7 +746,7 @@ export class TasksService {
     // Vérification dynamique des permissions de suppression
     if (user) {
       const userPermissions =
-        await this.roleManagementService.getPermissionsForRole(user.role);
+        await this.permissionsService.getPermissionsForRole(user.role);
       const canDeleteAll = userPermissions.includes('tasks:delete');
 
       if (!canDeleteAll) {
@@ -980,7 +980,7 @@ export class TasksService {
     // If requesting another user's tasks, require tasks:readAll permission
     if (currentUser && userId !== currentUser.id) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(
+        await this.permissionsService.getPermissionsForRole(
           currentUser.role,
         );
       if (!permissions.includes('tasks:readAll')) {

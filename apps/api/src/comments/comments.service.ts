@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 
@@ -12,7 +12,7 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 export class CommentsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly roleManagementService: RoleManagementService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   async create(userId: string, createCommentDto: CreateCommentDto) {
@@ -127,8 +127,9 @@ export class CommentsService {
 
     // Seul l'auteur ou un utilisateur avec la permission comments:delete_any peut supprimer
     if (comment.authorId !== userId) {
-      const permissions =
-        await this.roleManagementService.getPermissionsForRole(userRole);
+      const permissions = (await this.permissionsService.getPermissionsForRole(
+        userRole,
+      )) as readonly string[];
       const canDeleteAny = permissions.some(
         (p) => p === 'comments:delete_any',
       );

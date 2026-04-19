@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { LeaveStatus, LeaveType, Role } from '../__mocks__/database';
 import { AuditService } from '../audit/audit.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 
 const mockGetPermissionsForRole = vi.fn().mockImplementation((role: string) => {
   const base = [
@@ -135,7 +135,7 @@ describe('LeavesService', () => {
           useValue: { log: vi.fn() },
         },
         {
-          provide: RoleManagementService,
+          provide: PermissionsService,
           useValue: {
             getPermissionsForRole: mockGetPermissionsForRole,
           },

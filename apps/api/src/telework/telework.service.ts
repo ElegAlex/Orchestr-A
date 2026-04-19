@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RoleManagementService } from '../role-management/role-management.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { CreateTeleworkDto } from './dto/create-telework.dto';
 import { UpdateTeleworkDto } from './dto/update-telework.dto';
 import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
@@ -19,7 +19,7 @@ export class TeleworkService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly roleManagementService: RoleManagementService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   private isManagementRole(role: string): boolean {
@@ -44,7 +44,7 @@ export class TeleworkService {
     // Si le userId du DTO est différent de l'utilisateur connecté, vérifier la permission
     if (targetUserId && targetUserId !== currentUserId) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
       if (!permissions.includes('telework:manage_any')) {
         throw new ForbiddenException(
           "Vous n'avez pas la permission de saisir le télétravail pour autrui",
@@ -122,7 +122,7 @@ export class TeleworkService {
 
     // Lecture globale : vérifier la permission dynamique telework:readAll
     const permissions =
-      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      await this.permissionsService.getPermissionsForRole(currentUserRole);
     if (!permissions.includes('telework:readAll')) {
       where.userId = currentUserId;
     } else if (userId) {
@@ -287,7 +287,7 @@ export class TeleworkService {
     // IDOR protection: check telework:manage_any permission to view others' telework
     if (currentUserId && currentUserRole && telework.userId !== currentUserId) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
       if (!permissions.includes('telework:manage_any')) {
         throw new ForbiddenException(
           "Vous n'avez pas la permission de consulter le télétravail d'autrui",
@@ -418,7 +418,7 @@ export class TeleworkService {
     // Check permission if modifying someone else's telework
     if (existingTelework.userId !== currentUserId) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
       if (!permissions.includes('telework:manage_any')) {
         throw new ForbiddenException(
           "Vous n'avez pas la permission de modifier le télétravail d'autrui",
@@ -495,7 +495,7 @@ export class TeleworkService {
     // Check permission if deleting someone else's telework
     if (telework.userId !== currentUserId) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
       if (!permissions.includes('telework:manage_any')) {
         throw new ForbiddenException(
           "Vous n'avez pas la permission de supprimer le télétravail d'autrui",
@@ -523,7 +523,7 @@ export class TeleworkService {
     userId?: string,
   ) {
     const permissions =
-      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      await this.permissionsService.getPermissionsForRole(currentUserRole);
     const canManageOthers = permissions.includes('telework:manage_any');
 
     let targetUserId: string;
@@ -594,7 +594,7 @@ export class TeleworkService {
 
     if (resolvedUserId !== currentUserId) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
       if (!permissions.includes('telework:manage_any')) {
         throw new ForbiddenException(
           "Vous n'avez pas la permission de créer des règles récurrentes pour autrui",
@@ -670,7 +670,7 @@ export class TeleworkService {
 
     if (rule.userId !== currentUserId) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
       if (!permissions.includes('telework:manage_any')) {
         throw new ForbiddenException(
           "Vous n'avez pas la permission de modifier les règles récurrentes d'autrui",
@@ -721,7 +721,7 @@ export class TeleworkService {
 
     if (rule.userId !== currentUserId) {
       const permissions =
-        await this.roleManagementService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
       if (!permissions.includes('telework:manage_any')) {
         throw new ForbiddenException(
           "Vous n'avez pas la permission de supprimer les règles récurrentes d'autrui",
@@ -744,7 +744,7 @@ export class TeleworkService {
     dto: GenerateSchedulesDto,
   ) {
     const permissions =
-      await this.roleManagementService.getPermissionsForRole(currentUserRole);
+      await this.permissionsService.getPermissionsForRole(currentUserRole);
     const canManageOthers = permissions.includes('telework:manage_any');
 
     const start = new Date(dto.startDate);
