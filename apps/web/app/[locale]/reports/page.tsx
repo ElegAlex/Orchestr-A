@@ -5,11 +5,10 @@ import { MainLayout } from "@/components/MainLayout";
 import { MetricCard } from "./components/MetricCard";
 import { ProjectProgressChart } from "./components/ProjectProgressChart";
 import { TaskStatusCards } from "./components/TaskStatusCards";
-import { ProjectsTable } from "./components/ProjectsTable";
+import { ProjectsDetailTable } from "./components/ProjectsDetailTable";
 import PortfolioGantt from "./components/PortfolioGantt";
 import { ProjectProgressionChart } from "./components/ProjectProgressionChart";
 import { CollaboratorWorkloadChart } from "./components/CollaboratorWorkloadChart";
-import { ProjectHealthTable } from "./components/ProjectHealthTable";
 import { ProgressTrendChart } from "./components/ProgressTrendChart";
 import { MilestoneCompletionChart } from "./components/MilestoneCompletionChart";
 import { PriorityDistributionChart } from "./components/PriorityDistributionChart";
@@ -330,8 +329,12 @@ export default function ReportsPage() {
               <ProjectProgressChart data={data.projectProgressData} />
             </div>
 
-            {/* Projects Table */}
-            <ProjectsTable projects={data.projectDetails} />
+            {/* Projects Detail Table (fusion santé + détail) */}
+            <ProjectsDetailTable
+              projects={data.projectDetails}
+              dateRange={dateRange}
+              projectId={projectIdFilter}
+            />
 
             {/* Alerts */}
             {overdueTasks > 0 && (
@@ -362,13 +365,7 @@ export default function ReportsPage() {
               />
             </div>
 
-            {/* Row 2: Tableau de santé — pleine largeur */}
-            <ProjectHealthTable
-              dateRange={dateRange}
-              projectId={projectIdFilter}
-            />
-
-            {/* Row 3: Tendance + Jalons */}
+            {/* Row 2: Tendance + Jalons */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ProgressTrendChart
                 dateRange={dateRange}
@@ -380,7 +377,7 @@ export default function ReportsPage() {
               />
             </div>
 
-            {/* Row 4: Priorités + Activité */}
+            {/* Row 3: Priorités + Activité */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <PriorityDistributionChart
                 dateRange={dateRange}

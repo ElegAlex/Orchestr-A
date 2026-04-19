@@ -2,32 +2,18 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { api } from "@/lib/api";
 import { ProjectIcon } from "@/components/ProjectIcon";
+import { ProjectDetail } from "../types";
 
-interface ProjectHealthTableProps {
+interface ProjectsDetailTableProps {
+  projects: ProjectDetail[];
   dateRange: string;
   projectId?: string;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  icon?: string | null;
-  progress: number;
-  startDate: string | null;
-  endDate: string | null;
-  status: string;
-  manager?: { id: string; firstName: string; lastName: string } | null;
-  members?: Array<{
-    userId: string;
-    role: string;
-    user?: { firstName: string; lastName: string };
-  }>;
 }
 
 interface Task {
@@ -48,11 +34,12 @@ interface Milestone {
 type SortKey =
   | "rag"
   | "name"
+  | "status"
   | "progress"
-  | "remaining"
-  | "overdue"
+  | "tasks"
   | "milestone"
-  | "endDate"
+  | "dueDate"
+  | "hours"
   | "manager";
 type SortDir = "asc" | "desc";
 
@@ -74,38 +61,44 @@ const RAG_DOT_CLASSES: Record<RagColor, string> = {
   grey: "bg-[#9ca3af]",
 };
 
-interface ProjectRow {
+const STATUS_COLORS: Record<string, string> = {
+  ACTIVE: "bg-blue-100 text-blue-800",
+  COMPLETED: "bg-green-100 text-green-800",
+  ON_HOLD: "bg-yellow-100 text-yellow-800",
+  CANCELLED: "bg-red-100 text-red-800",
+};
+
+interface Row {
   id: string;
   name: string;
   icon?: string | null;
+  status: string;
   progress: number;
-  remaining: number;
-  overdue: number;
+  totalTasks: number;
+  completedTasks: number;
+  overdueTasks: number;
   nextMilestone: { name: string; date: string | null } | null;
-  endDate: string | null;
+  dueDate: string | null;
+  isOverdue: boolean;
+  loggedHours: number;
+  budgetHours: number;
   manager: string;
   rag: RagColor;
 }
 
-function computeRag(project: Project): RagColor {
-  if (
-    project.status === "COMPLETED" ||
-    project.status === "CANCELLED"
-  ) {
+function computeRag(
+  project: ProjectDetail,
+): RagColor {
+  if (project.status === "COMPLETED" || project.status === "CANCELLED") {
     return "grey";
   }
 
   const now = new Date();
   const start = project.startDate ? new Date(project.startDate) : null;
-  const end = project.endDate ? new Date(project.endDate) : null;
+  const end = project.dueDate ? new Date(project.dueDate) : null;
 
-  if (start && start > now) {
-    return "blue";
-  }
-
-  if (!start || !end) {
-    return "green"; // no dates, assume OK
-  }
+  if (start && start > now) return "blue";
+  if (!start || !end) return "green";
 
   const totalMs = end.getTime() - start.getTime();
   if (totalMs <= 0) return "green";
@@ -119,118 +112,85 @@ function computeRag(project: Project): RagColor {
   return "red";
 }
 
-export function ProjectHealthTable({
+export function ProjectsDetailTable({
+  projects,
   dateRange,
   projectId,
-}: ProjectHealthTableProps) {
+}: ProjectsDetailTableProps) {
   const t = useTranslations("admin.reports.analytics");
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("rag");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   useEffect(() => {
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const load = async () => {
+      try {
+        const taskUrl = projectId ? `/tasks?projectId=${projectId}` : "/tasks";
+        const milestoneUrl = projectId
+          ? `/milestones?projectId=${projectId}`
+          : "/milestones";
+        const [taskRes, msRes] = await Promise.all([
+          api.get(taskUrl),
+          api.get(milestoneUrl),
+        ]);
+        const taskData = taskRes.data;
+        const msData = msRes.data;
+        setTasks(Array.isArray(taskData) ? taskData : taskData.data ?? []);
+        setMilestones(Array.isArray(msData) ? msData : msData.data ?? []);
+      } catch (err) {
+        console.error("Error loading projects detail data:", err);
+      }
+    };
+    load();
   }, [dateRange, projectId]);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const projectUrl = projectId
-        ? `/projects?projectId=${projectId}`
-        : "/projects";
-      const taskUrl = projectId
-        ? `/tasks?projectId=${projectId}`
-        : "/tasks";
-      const milestoneUrl = projectId
-        ? `/milestones?projectId=${projectId}`
-        : "/milestones";
-
-      const [projRes, taskRes, msRes] = await Promise.all([
-        api.get(projectUrl),
-        api.get(taskUrl),
-        api.get(milestoneUrl),
-      ]);
-
-      const projData = projRes.data;
-      const taskData = taskRes.data;
-      const msData = msRes.data;
-
-      setProjects(
-        Array.isArray(projData) ? projData : projData.data ?? []
-      );
-      setTasks(Array.isArray(taskData) ? taskData : taskData.data ?? []);
-      setMilestones(Array.isArray(msData) ? msData : msData.data ?? []);
-    } catch (err) {
-      console.error("Error loading project health data:", err);
-      setError("Impossible de charger les donnees de sante projet.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const rows: ProjectRow[] = useMemo(() => {
+  const rows: Row[] = useMemo(() => {
     const now = new Date();
+    return projects.map((project) => {
+      const projectTasks = tasks.filter((tk) => tk.projectId === project.id);
+      const overdueTasks = projectTasks.filter(
+        (tk) =>
+          tk.status !== "DONE" && tk.endDate && new Date(tk.endDate) < now,
+      ).length;
 
-    return projects
-      .filter((p) => (projectId ? p.id === projectId : true))
-      .map((project) => {
-        const projectTasks = tasks.filter(
-          (t) => t.projectId === project.id
-        );
-        const remaining = projectTasks.filter(
-          (t) => t.status !== "DONE"
-        ).length;
-        const overdue = projectTasks.filter(
-          (t) =>
-            t.status !== "DONE" &&
-            t.endDate &&
-            new Date(t.endDate) < now
-        ).length;
-
-        const projectMilestones = milestones
+      const nextMs =
+        milestones
           .filter(
             (m) =>
               m.projectId === project.id &&
               m.dueDate &&
-              new Date(m.dueDate) >= now
+              new Date(m.dueDate) >= now,
           )
           .sort(
             (a, b) =>
-              new Date(a.dueDate!).getTime() -
-              new Date(b.dueDate!).getTime()
-          );
+              new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime(),
+          )[0] ?? null;
 
-        const nextMs = projectMilestones[0] ?? null;
-
-        // Find project manager
-        const manager = project.manager
+      return {
+        id: project.id,
+        name: project.name,
+        icon: project.icon,
+        status: project.status,
+        progress: project.progress ?? 0,
+        totalTasks: project.totalTasks,
+        completedTasks: project.completedTasks,
+        overdueTasks,
+        nextMilestone: nextMs
+          ? { name: nextMs.name, date: nextMs.dueDate }
+          : null,
+        dueDate: project.dueDate ?? null,
+        isOverdue: project.isOverdue,
+        loggedHours: project.loggedHours,
+        budgetHours: project.budgetHours,
+        manager: project.manager
           ? `${project.manager.firstName} ${project.manager.lastName}`
-          : "-";
-
-        return {
-          id: project.id,
-          name: project.name,
-          icon: project.icon,
-          progress: project.progress ?? 0,
-          remaining,
-          overdue,
-          nextMilestone: nextMs
-            ? { name: nextMs.name, date: nextMs.dueDate }
-            : null,
-          endDate: project.endDate,
-          manager,
-          rag: computeRag(project),
-        };
-      });
-  }, [projects, tasks, milestones, projectId]);
+          : "-",
+        rag: computeRag(project),
+      };
+    });
+  }, [projects, tasks, milestones]);
 
   const sortedRows = useMemo(() => {
     const sorted = [...rows].sort((a, b) => {
@@ -242,14 +202,14 @@ export function ProjectHealthTable({
         case "name":
           cmp = a.name.localeCompare(b.name);
           break;
+        case "status":
+          cmp = a.status.localeCompare(b.status);
+          break;
         case "progress":
           cmp = a.progress - b.progress;
           break;
-        case "remaining":
-          cmp = a.remaining - b.remaining;
-          break;
-        case "overdue":
-          cmp = a.overdue - b.overdue;
+        case "tasks":
+          cmp = a.completedTasks - b.completedTasks;
           break;
         case "milestone": {
           const aDate = a.nextMilestone?.date
@@ -261,12 +221,15 @@ export function ProjectHealthTable({
           cmp = aDate - bDate;
           break;
         }
-        case "endDate": {
-          const aEnd = a.endDate ? new Date(a.endDate).getTime() : Infinity;
-          const bEnd = b.endDate ? new Date(b.endDate).getTime() : Infinity;
+        case "dueDate": {
+          const aEnd = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+          const bEnd = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
           cmp = aEnd - bEnd;
           break;
         }
+        case "hours":
+          cmp = a.loggedHours - b.loggedHours;
+          break;
         case "manager":
           cmp = a.manager.localeCompare(b.manager);
           break;
@@ -289,13 +252,15 @@ export function ProjectHealthTable({
     label,
     sortKeyName,
     className = "",
+    align = "left",
   }: {
     label: string;
     sortKeyName: SortKey;
     className?: string;
+    align?: "left" | "center" | "right";
   }) => (
     <th
-      className={`px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 ${className}`}
+      className={`px-4 py-3 text-${align} text-xs font-semibold text-gray-900 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 ${className}`}
       onClick={() => handleSort(sortKeyName)}
     >
       <span className="inline-flex items-center gap-1">
@@ -309,37 +274,10 @@ export function ProjectHealthTable({
     </th>
   );
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-center h-[300px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">
-          <span className="mr-2">&#127973;</span>
-          {t("projectHealth")}
-        </h3>
-        <div className="border-l-4 border-red-500 bg-red-50 p-4">
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
   if (sortedRows.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">
-          <span className="mr-2">&#127973;</span>
-          {t("projectHealth")}
-        </h3>
+        <h3 className="text-lg font-semibold mb-4">Détail des projets</h3>
         <p className="text-sm text-gray-500 text-center py-8">{t("noData")}</p>
       </div>
     );
@@ -347,10 +285,7 @@ export function ProjectHealthTable({
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">
-        <span className="mr-2">&#127973;</span>
-        {t("projectHealth")}
-      </h3>
+      <h3 className="text-lg font-semibold mb-4">Détail des projets</h3>
 
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
@@ -358,30 +293,26 @@ export function ProjectHealthTable({
             <tr>
               <SortHeader label="RAG" sortKeyName="rag" className="w-16" />
               <SortHeader label="Projet" sortKeyName="name" />
+              <SortHeader label="Statut" sortKeyName="status" />
               <SortHeader label="Progression" sortKeyName="progress" />
               <SortHeader
-                label="Taches restantes"
-                sortKeyName="remaining"
+                label="Tâches"
+                sortKeyName="tasks"
+                align="center"
               />
+              <SortHeader label="Prochain jalon" sortKeyName="milestone" />
+              <SortHeader label="Échéance" sortKeyName="dueDate" />
               <SortHeader
-                label="Taches en retard"
-                sortKeyName="overdue"
+                label="Heures"
+                sortKeyName="hours"
+                align="right"
               />
-              <SortHeader
-                label="Jalons a venir"
-                sortKeyName="milestone"
-              />
-              <SortHeader label="Date de fin" sortKeyName="endDate" />
-              <SortHeader
-                label="Chef de projet"
-                sortKeyName="manager"
-              />
+              <SortHeader label="Chef de projet" sortKeyName="manager" />
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedRows.map((row, idx) => (
               <tr key={row.id} className={idx % 2 === 1 ? "bg-gray-50" : ""}>
-                {/* RAG dot */}
                 <td className="px-4 py-3">
                   <span
                     className={`inline-block w-3 h-3 rounded-full ${RAG_DOT_CLASSES[row.rag]}`}
@@ -389,7 +320,6 @@ export function ProjectHealthTable({
                   />
                 </td>
 
-                {/* Project name */}
                 <td className="px-4 py-3 whitespace-nowrap">
                   <Link
                     href={`/projects/${row.id}`}
@@ -400,7 +330,16 @@ export function ProjectHealthTable({
                   </Link>
                 </td>
 
-                {/* Progress bar */}
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <span
+                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      STATUS_COLORS[row.status] || "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {row.status.replace("_", " ").toUpperCase()}
+                  </span>
+                </td>
+
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <div className="flex-1 bg-gray-200 rounded-full h-2 w-24">
@@ -423,28 +362,25 @@ export function ProjectHealthTable({
                   </div>
                 </td>
 
-                {/* Remaining tasks */}
-                <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                  {row.remaining}
-                </td>
-
-                {/* Overdue tasks */}
-                <td className="px-4 py-3 text-center">
-                  {row.overdue > 0 ? (
-                    <button
-                      onClick={() =>
-                        router.push(`/tasks?projectId=${row.id}`)
-                      }
-                      className="text-sm font-semibold text-red-600 hover:text-red-800 hover:underline"
-                    >
-                      {row.overdue}
-                    </button>
-                  ) : (
-                    <span className="text-sm text-gray-900">0</span>
+                <td className="px-4 py-3 text-sm text-gray-900 text-center whitespace-nowrap">
+                  <span>
+                    {row.completedTasks}/{row.totalTasks}
+                  </span>
+                  {row.overdueTasks > 0 && (
+                    <>
+                      <span className="text-gray-400"> · </span>
+                      <button
+                        onClick={() =>
+                          router.push(`/tasks?projectId=${row.id}&overdue=true`)
+                        }
+                        className="font-semibold text-red-600 hover:text-red-800 hover:underline"
+                      >
+                        {row.overdueTasks} en retard
+                      </button>
+                    </>
                   )}
                 </td>
 
-                {/* Next milestone */}
                 <td className="px-4 py-3 text-sm text-gray-900">
                   {row.nextMilestone ? (
                     <div>
@@ -457,7 +393,7 @@ export function ProjectHealthTable({
                           {format(
                             new Date(row.nextMilestone.date),
                             "dd/MM/yyyy",
-                            { locale: fr }
+                            { locale: fr },
                           )}
                           )
                         </span>
@@ -470,17 +406,42 @@ export function ProjectHealthTable({
                   )}
                 </td>
 
-                {/* End date */}
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {row.endDate
-                    ? format(new Date(row.endDate), "dd/MM/yyyy", {
-                        locale: fr,
-                      })
-                    : "-"}
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <div className="flex items-center gap-2">
+                    {row.dueDate ? (
+                      <span
+                        className={
+                          row.isOverdue
+                            ? "text-red-600 font-semibold"
+                            : "text-gray-900"
+                        }
+                      >
+                        {format(new Date(row.dueDate), "dd/MM/yyyy", {
+                          locale: fr,
+                        })}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 italic">Non définie</span>
+                    )}
+                    {row.isOverdue && (
+                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                        Retard
+                      </span>
+                    )}
+                  </div>
                 </td>
 
-                {/* Project manager */}
-                <td className="px-4 py-3 text-sm text-gray-900">
+                <td
+                  className={`px-4 py-3 whitespace-nowrap text-right text-sm ${
+                    row.loggedHours > row.budgetHours
+                      ? "text-red-600 font-semibold"
+                      : "text-gray-900"
+                  }`}
+                >
+                  {row.loggedHours}h / {row.budgetHours}h
+                </td>
+
+                <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                   {row.manager}
                 </td>
               </tr>
