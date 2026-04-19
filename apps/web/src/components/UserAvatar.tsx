@@ -51,7 +51,7 @@ export function UserAvatar({
     );
   }
 
-  if (user.avatarPreset) {
+  if (user.avatarPreset && user.avatarPreset !== "initials") {
     return (
       <div
         className={`rounded-full overflow-hidden flex-shrink-0 ${className}`}
@@ -67,7 +67,7 @@ export function UserAvatar({
     );
   }
 
-  // Fallback: initials
+  // Initials preset (explicit choice) or implicit fallback
   return (
     <div
       className={`rounded-full bg-[var(--primary)] text-white flex items-center justify-center flex-shrink-0 ${text} ${className}`}

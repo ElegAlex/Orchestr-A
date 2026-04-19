@@ -19,7 +19,8 @@
     "lint": "eslint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "generate:avatars": "node scripts/generate-avatars.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -52,6 +53,8 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@dicebear/collection": "^9.4.2",
+    "@dicebear/core": "^9.4.2",
     "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",

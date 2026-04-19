@@ -14,18 +14,11 @@ import { useRouter, usePathname } from "next/navigation";
 import { IcsExportSection } from "@/components/planning-export/IcsExportSection";
 import { IcsImportSection } from "@/components/planning-export/IcsImportSection";
 
-const AVATAR_PRESETS = [
-  "avatar_01",
-  "avatar_02",
-  "avatar_03",
-  "avatar_04",
-  "avatar_05",
-  "avatar_06",
-  "avatar_07",
-  "avatar_08",
-  "avatar_09",
-  "avatar_10",
-] as const;
+const PERSONA_PRESETS = Array.from(
+  { length: 24 },
+  (_, i) => `persona_${String(i + 1).padStart(2, "0")}`,
+);
+const INITIALS_PRESET = "initials";
 
 type TabType = "personal" | "security" | "preferences" | "import-export";
 
@@ -386,19 +379,39 @@ export default function ProfilePage() {
                     <UserAvatar user={user} size="lg" />
                   </div>
                   <div className="flex-1 space-y-4">
+                    {/* Initials preset */}
+                    <div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Utiliser mes initiales :
+                      </p>
+                      <button
+                        onClick={() => handleAvatarPreset(INITIALS_PRESET)}
+                        disabled={avatarLoading}
+                        className={`w-14 h-14 rounded-full bg-[var(--primary)] text-white flex items-center justify-center text-base font-semibold border-2 transition hover:scale-105 disabled:opacity-50 ${
+                          user.avatarPreset === INITIALS_PRESET && !user.avatarUrl
+                            ? "border-blue-500 ring-2 ring-blue-300"
+                            : "border-transparent hover:border-gray-300"
+                        }`}
+                        title="Initiales"
+                      >
+                        {user.firstName[0]}
+                        {user.lastName[0]}
+                      </button>
+                    </div>
+
                     {/* Preset grid */}
                     <div>
                       <p className="text-sm text-gray-600 mb-3">
-                        Choisir un avatar prédéfini :
+                        Choisir une illustration :
                       </p>
-                      <div className="grid grid-cols-5 gap-2">
-                        {AVATAR_PRESETS.map((preset) => (
+                      <div className="grid grid-cols-8 gap-2">
+                        {PERSONA_PRESETS.map((preset) => (
                           <button
                             key={preset}
                             onClick={() => handleAvatarPreset(preset)}
                             disabled={avatarLoading}
-                            className={`w-14 h-14 rounded-full overflow-hidden border-2 transition hover:scale-105 disabled:opacity-50 ${
-                              user.avatarPreset === preset
+                            className={`w-12 h-12 rounded-full overflow-hidden border-2 transition hover:scale-105 disabled:opacity-50 bg-gray-50 ${
+                              user.avatarPreset === preset && !user.avatarUrl
                                 ? "border-blue-500 ring-2 ring-blue-300"
                                 : "border-transparent hover:border-gray-300"
                             }`}
