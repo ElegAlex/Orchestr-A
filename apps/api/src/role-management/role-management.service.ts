@@ -422,16 +422,15 @@ export class RoleManagementService implements OnModuleInit {
         isSystem: true,
         // RESPONSABLE = toutes les permissions sauf :
         //  - users:manage_roles / settings:update (réservés ADMIN)
-        //  - leaves:manage_any / tasks:manage_any : les RESPONSABLE agissent
-        //    uniquement dans leur périmètre services (via leaves:approve
-        //    ou membership projet), pas globalement. Attendu métier DSI.
+        //  - leaves:manage_any : les RESPONSABLE agissent sur les congés
+        //    uniquement dans leur périmètre services (via leaves:approve),
+        //    pas globalement. Attendu métier confirmé par le DSI.
         permissions: permissionsData
           .filter(
             (p) =>
               p.code !== 'users:manage_roles' &&
               p.code !== 'settings:update' &&
-              p.code !== 'leaves:manage_any' &&
-              p.code !== 'tasks:manage_any',
+              p.code !== 'leaves:manage_any',
           )
           .map((p) => p.code),
       },
