@@ -6,11 +6,11 @@
     "activeProjects": "Projets actifs",
     "tasksInProgress": "Tâches en cours",
     "tasksCompleted": "Tâches terminées",
-    "tasksBlocked": "Tâches bloquées",
+    "tasksOverdue": "Tâches en retard",
     "onProjects": "sur {total} projets",
     "onTasks": "sur {total} tâches",
     "percentCompleted": "{percent}% complétées",
-    "needAttention": "Nécessitent attention"
+    "overdueDeadline": "Échéance dépassée"
   },
   "planning": {
     "title": "Mon planning"

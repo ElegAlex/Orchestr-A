@@ -6,11 +6,11 @@
     "activeProjects": "Active projects",
     "tasksInProgress": "Tasks in progress",
     "tasksCompleted": "Completed tasks",
-    "tasksBlocked": "Blocked tasks",
+    "tasksOverdue": "Overdue tasks",
     "onProjects": "of {total} projects",
     "onTasks": "of {total} tasks",
     "percentCompleted": "{percent}% completed",
-    "needAttention": "Need attention"
+    "overdueDeadline": "Past deadline"
   },
   "planning": {
     "title": "My planning"

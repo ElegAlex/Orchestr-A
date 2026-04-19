@@ -39,8 +39,13 @@ export default function DashboardPage() {
     totalTasks: 0,
     tasksInProgress: 0,
     tasksDone: 0,
-    tasksBlocked: 0,
+    tasksOverdue: 0,
   });
+
+  const isTaskOverdue = (task: Task) =>
+    !!task.endDate &&
+    new Date(task.endDate) < new Date() &&
+    task.status !== "DONE";
 
   // Personal To-Do state
   const [todos, setTodos] = useState<PersonalTodo[]>([]);
@@ -123,8 +128,7 @@ export default function DashboardPage() {
           tasksInProgress: tasks.filter((t: Task) => t.status === "IN_PROGRESS")
             .length,
           tasksDone: tasks.filter((t: Task) => t.status === "DONE").length,
-          tasksBlocked: tasks.filter((t: Task) => t.status === "BLOCKED")
-            .length,
+          tasksOverdue: tasks.filter(isTaskOverdue).length,
         }));
       }
     } catch (err) {
@@ -269,7 +273,7 @@ export default function DashboardPage() {
             tasksInProgress: tasks.filter((t) => t.status === "IN_PROGRESS")
               .length,
             tasksDone: tasks.filter((t) => t.status === "DONE").length,
-            tasksBlocked: tasks.filter((t) => t.status === "BLOCKED").length,
+            tasksOverdue: tasks.filter(isTaskOverdue).length,
           });
         }
       } catch (err) {
@@ -384,22 +388,22 @@ export default function DashboardPage() {
           </Link>
 
           <Link
-            href={`/${locale}/tasks?status=BLOCKED&assignee=me`}
+            href={`/${locale}/tasks?overdue=true&assignee=me`}
             className="block bg-[var(--card)] p-6 rounded-lg shadow-sm border border-[var(--border)] hover:shadow-md hover:border-[var(--primary)] transition"
           >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                  {t("stats.tasksBlocked")}
+                  {t("stats.tasksOverdue")}
                 </p>
                 <p className="text-3xl font-bold text-[var(--foreground)] mt-2">
-                  {stats.tasksBlocked}
+                  {stats.tasksOverdue}
                 </p>
               </div>
-              <div className="text-4xl">🚫</div>
+              <div className="text-4xl">⏰</div>
             </div>
             <p className="text-xs text-[var(--muted-foreground)] mt-2">
-              {t("stats.needAttention")}
+              {t("stats.overdueDeadline")}
             </p>
           </Link>
         </div>
