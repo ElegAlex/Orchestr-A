@@ -44,6 +44,9 @@ const CATEGORIES: Category[] = [
       { char: "💾", keywords: "sauvegarde disquette data" },
       { char: "⚙️", keywords: "paramètres configuration engrenage" },
       { char: "🧩", keywords: "module extension plugin" },
+      { char: "🤖", keywords: "ia intelligence artificielle chatbot robot" },
+      { char: "🧠", keywords: "ia intelligence artificielle cerveau machine learning" },
+      { char: "🪄", keywords: "ia générative automatisation copilot assistant" },
     ],
   },
   {
@@ -152,6 +155,21 @@ const CATEGORIES: Category[] = [
       { char: "🖋️", keywords: "signature acte officiel" },
       { char: "📰", keywords: "communication presse publication" },
       { char: "🕊️", keywords: "paix citoyenneté valeurs" },
+    ],
+  },
+  {
+    key: "symbols",
+    emojis: [
+      { char: "🚀", keywords: "lancement projet démarrage fusée" },
+      { char: "💡", keywords: "idée innovation proposition ampoule" },
+      { char: "🌟", keywords: "qualité valeur étoile mise en avant" },
+      { char: "🏆", keywords: "trophée succès réussite distinction" },
+      { char: "💼", keywords: "mallette professionnel dossier affaire" },
+      { char: "📁", keywords: "dossier classique archive" },
+      { char: "🔧", keywords: "clé molette maintenance technique outil" },
+      { char: "🛠️", keywords: "outils bricolage intervention technique" },
+      { char: "🧰", keywords: "boîte outils intervention équipe" },
+      { char: "🔬", keywords: "microscope recherche étude analyse" },
     ],
   },
 ];

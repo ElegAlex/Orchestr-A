@@ -69,7 +69,8 @@
         "culture": "Culture & Education",
         "security": "Security",
         "environment": "Environment",
-        "legal": "Legal"
+        "legal": "Legal",
+        "symbols": "Symbols"
       },
       "sponsorLabel": "Sponsor",
       "sponsorPlaceholder": "Select sponsor",
@@ -293,7 +294,8 @@
       "culture": "Culture & Education",
       "security": "Security",
       "environment": "Environment",
-      "legal": "Legal"
+      "legal": "Legal",
+      "symbols": "Symbols"
     },
     "managerLabel": "Project manager",
     "managerPlaceholder": "Select project manager",
