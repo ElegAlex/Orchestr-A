@@ -51,6 +51,14 @@ COPY --chown=nestjs:nodejs packages/database/prisma ./packages/database/prisma
 COPY --chown=nestjs:nodejs packages/database/index.ts ./packages/database/
 COPY --chown=nestjs:nodejs packages/database/tsconfig.json ./packages/database/
 
+# Copie du package rbac (sources TS consommées au runtime via workspace symlink).
+# Le package n'a pas de build step — les .ts sont résolus comme pour `database`.
+COPY --chown=nestjs:nodejs packages/rbac/package.json ./packages/rbac/
+COPY --chown=nestjs:nodejs packages/rbac/index.ts ./packages/rbac/
+COPY --chown=nestjs:nodejs packages/rbac/atomic-permissions.ts ./packages/rbac/
+COPY --chown=nestjs:nodejs packages/rbac/templates.ts ./packages/rbac/
+COPY --chown=nestjs:nodejs packages/rbac/tsconfig.json ./packages/rbac/
+
 # Installation des dépendances de production uniquement (ignore scripts Husky)
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
