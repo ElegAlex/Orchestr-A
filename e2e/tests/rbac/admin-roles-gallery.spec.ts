@@ -1,5 +1,4 @@
-/** TODO V1D: galerie not yet built, tests passeront après V1D
- *
+/**
  * Tests RBAC — Galerie d'admin des rôles (route /fr/admin/roles-v2)
  *
  * Cible la NOUVELLE UI V1D qui remplacera l'actuelle /fr/admin/roles (V2).
@@ -10,10 +9,6 @@
  *   - Formulaire de création de rôle custom :
  *       code (SCREAMING_SNAKE_CASE), label, templateKey (dropdown)
  *   - Route protégée : ADMIN uniquement (users:manage_roles)
- *
- * Les tests sont marqués `test.fixme()` tant que V1D n'est pas livré.
- * Playwright rapporte les `fixme` comme "skipped" → 0 test réellement exécuté.
- * Quand V1D sera mergé, supprimer les `test.fixme()` pour activer les tests.
  */
 
 import { test, expect, type Page } from "../../fixtures/test-fixtures";
@@ -26,7 +21,7 @@ async function gotoRolesGallery(page: Page) {
 }
 
 test.describe("UI — Galerie rôles V1D (/fr/admin/roles-v2)", () => {
-  test.fixme(
+  test(
     "ADMIN : voit 26 templates affichés, groupés par 9 catégories",
     async ({ asRole }) => {
       const page = await asRole("admin");
@@ -42,7 +37,7 @@ test.describe("UI — Galerie rôles V1D (/fr/admin/roles-v2)", () => {
     },
   );
 
-  test.fixme(
+  test(
     "ADMIN : cliquer sur une chip catégorie filtre les cards affichées",
     async ({ asRole }) => {
       const page = await asRole("admin");
@@ -66,7 +61,7 @@ test.describe("UI — Galerie rôles V1D (/fr/admin/roles-v2)", () => {
     },
   );
 
-  test.fixme(
+  test(
     "ADMIN : click sur une card template ouvre une modale avec permissions groupées par module",
     async ({ asRole }) => {
       const page = await asRole("admin");
@@ -89,7 +84,7 @@ test.describe("UI — Galerie rôles V1D (/fr/admin/roles-v2)", () => {
     },
   );
 
-  test.fixme(
+  test(
     "ADMIN : peut créer un rôle custom via formulaire (code, label, templateKey)",
     async ({ asRole }) => {
       const page = await asRole("admin");
@@ -98,12 +93,12 @@ test.describe("UI — Galerie rôles V1D (/fr/admin/roles-v2)", () => {
       // Ouvrir le formulaire de création
       await page.getByRole("button", { name: /Nouveau rôle|Créer un rôle/i }).click();
 
-      // Remplir le formulaire
-      await page.locator("input[name='code']").fill("CUSTOM_TEST_ROLE");
+      // Remplir le formulaire — code suffixé pour idempotence (éviter 409 aux
+      // runs répétés sur la même DB).
+      const uniqueCode = `CUSTOM_TEST_ROLE_${Date.now()}`;
+      await page.locator("input[name='code']").fill(uniqueCode);
       await page.locator("input[name='label']").fill("Rôle de test custom");
-      await page.locator("select[name='templateKey']").selectOption({
-        label: /BASIC_USER/i,
-      });
+      await page.locator("select[name='templateKey']").selectOption("BASIC_USER");
 
       // Soumettre
       await page.getByRole("button", { name: /Enregistrer|Créer/i }).click();
@@ -114,7 +109,7 @@ test.describe("UI — Galerie rôles V1D (/fr/admin/roles-v2)", () => {
     },
   );
 
-  test.fixme(
+  test(
     "BASIC_USER (contributeur) : navigation vers /admin/roles-v2 → 403 ou redirect dashboard",
     async ({ asRole }) => {
       const page = await asRole("contributeur");
