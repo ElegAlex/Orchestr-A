@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
+import type { PermissionCode } from "rbac";
 import { Logo, LogoIcon } from "@/components/Logo";
 import { UserAvatar } from "@/components/UserAvatar";
 
@@ -24,7 +25,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const { hasPermission } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const navigation: (NavItem & { permission?: string })[] = [
+  const navigation: (NavItem & { permission?: PermissionCode })[] = [
     { key: "dashboard", href: `/${locale}/dashboard`, icon: "🎯" },
     {
       key: "projects",
@@ -40,7 +41,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     { key: "telework", href: `/${locale}/telework`, icon: "🏠", permission: "telework:read" },
   ];
 
-  const adminNavigation: (NavItem & { permission?: string })[] = [
+  const adminNavigation: (NavItem & { permission?: PermissionCode })[] = [
     {
       key: "reports",
       href: `/${locale}/reports`,
@@ -194,7 +195,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                   {user?.firstName} {user?.lastName}
                 </p>
                 <p className="text-xs text-[var(--muted-foreground)]">
-                  {user?.role}
+                  {user?.roleEntity?.label ?? user?.role}
                 </p>
               </div>
             )}

@@ -603,10 +603,10 @@ export default function UsersPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
-                        user.role,
+                        (user.roleEntity?.code ?? user.role) as Role,
                       )}`}
                     >
-                      {getRoleLabel(user.role)}
+                      {user.roleEntity?.label ?? getRoleLabel(user.role)}
                     </span>
                   </td>
                   <td className="px-6 py-4">

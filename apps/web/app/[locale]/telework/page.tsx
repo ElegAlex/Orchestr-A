@@ -377,7 +377,7 @@ export default function TeleworkPage() {
     [],
   );
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const canManageOthers = hasPermission("telework:manage_others");
+  const canManageOthers = hasPermission("telework:manage_any");
   const [selectedUserId, setSelectedUserId] = useState<string>(user?.id || "");
   const [allUsers, setAllUsers] = useState<User[]>([]);
 

@@ -169,10 +169,10 @@ export default function ProfilePage() {
               <div className="flex items-center space-x-3 mt-3">
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(
-                    user.role,
+                    user.roleEntity?.code ?? user.role,
                   )}`}
                 >
-                  {getRoleLabel(user.role)}
+                  {user.roleEntity?.label ?? getRoleLabel(user.role)}
                 </span>
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${

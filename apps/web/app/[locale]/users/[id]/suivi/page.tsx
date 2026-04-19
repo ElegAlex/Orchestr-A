@@ -12,9 +12,9 @@ import { timeTrackingService } from "@/services/time-tracking.service";
 import { skillsService } from "@/services/skills.service";
 import { projectsService } from "@/services/projects.service";
 import { useAuthStore } from "@/stores/auth.store";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   User,
-  Role,
   Task,
   Leave,
   TeleworkSchedule,
@@ -59,6 +59,7 @@ export default function SuiviPage() {
   const t = useTranslations("suivi");
   const tCommon = useTranslations("common");
   const currentUser = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
   const userId = params.id as string;
 
   // Data states
@@ -81,33 +82,22 @@ export default function SuiviPage() {
   const [userSearch, setUserSearch] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
-  // Access control:
-  // - ADMIN: all users
-  // - RESPONSABLE/MANAGER: users in their managed services only
-  // - Other: only themselves
+  // Access control (RBAC V0 — permission-based):
+  // - Self : always allowed
+  // - `users:manage_roles` (ADMIN-only via catalogue) : tous les users
+  // - `users:manage` (RESPONSABLE + MANAGER + ADMIN) : users dont un service
+  //   est dans leurs managedServices. Note : la branche dept-wide historique
+  //   réservée à RESPONSABLE a été retirée car non-distinguable purement par
+  //   permission en V0 ; la couverture départementale reste assurée via les
+  //   managedServices (un responsable pilote les services de son dept).
   const checkAccess = (targetUser: User): boolean => {
     if (!currentUser) return false;
-    // Self access always allowed
     if (currentUser.id === userId) return true;
-    // Admin sees everyone
-    if (currentUser.role === Role.ADMIN) return true;
-    // Responsable/Manager: check managed services overlap
-    if (
-      currentUser.role === Role.RESPONSABLE ||
-      currentUser.role === Role.MANAGER
-    ) {
+    if (hasPermission("users:manage_roles")) return true;
+    if (hasPermission("users:manage")) {
       const managedServiceIds = (currentUser.managedServices || []).map(
         (ms) => ms.id,
       );
-      // Also check same department for Responsable
-      if (
-        currentUser.role === Role.RESPONSABLE &&
-        currentUser.departmentId &&
-        targetUser.departmentId === currentUser.departmentId
-      ) {
-        return true;
-      }
-      // Check if target user belongs to one of the managed services
       const targetServiceIds = (targetUser.userServices || []).map(
         (us) => us.service?.id,
       );
@@ -436,8 +426,8 @@ export default function SuiviPage() {
                       {user.firstName} {user.lastName}
                     </h1>
                     <p className="text-sm text-gray-500">
-                      {tCommon(`roles.${user.role}`, {
-                        defaultValue: user.role,
+                      {tCommon(`roles.${user.roleEntity?.code ?? user.role}`, {
+                        defaultValue: user.roleEntity?.label ?? user.role,
                       })}
                       {user.department && ` — ${user.department.name}`}
                     </p>
@@ -484,8 +474,8 @@ export default function SuiviPage() {
                             {u.firstName} {u.lastName}
                           </p>
                           <p className="text-xs text-gray-500 truncate">
-                            {tCommon(`roles.${u.role}`, {
-                              defaultValue: u.role,
+                            {tCommon(`roles.${u.roleEntity?.code ?? u.role}`, {
+                              defaultValue: u.roleEntity?.label ?? u.role,
                             })}
                           </p>
                         </div>
@@ -617,8 +607,9 @@ export default function SuiviPage() {
                           {t("overview.role")}
                         </dt>
                         <dd className="text-sm font-medium">
-                          {tCommon(`roles.${user?.role}`, {
-                            defaultValue: user?.role || "",
+                          {tCommon(`roles.${user?.roleEntity?.code ?? user?.role}`, {
+                            defaultValue:
+                              user?.roleEntity?.label ?? user?.role ?? "",
                           })}
                         </dd>
                       </div>

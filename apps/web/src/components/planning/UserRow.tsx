@@ -72,7 +72,7 @@ export const UserRow = ({
               {user.firstName} {user.lastName}
             </div>
             <div className="text-[10px] text-gray-500 truncate">
-              {tCommon(`roles.${user.role}`)}
+              {tCommon(`roles.${user.roleEntity?.code ?? user.role}`)}
             </div>
           </div>
         </div>

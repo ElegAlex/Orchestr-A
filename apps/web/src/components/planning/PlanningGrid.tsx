@@ -204,7 +204,7 @@ export const PlanningGrid = ({
   const currentUser = useAuthStore((state) => state.user);
   const { hasPermission } = usePermissions();
   const currentUserId = currentUser?.id || "";
-  const canManageOthersTelework = hasPermission("telework:manage_others");
+  const canManageOthersTelework = hasPermission("telework:manage_any");
   const canAssignPredefinedTask = hasPermission("predefined_tasks:assign");
 
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);

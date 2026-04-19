@@ -489,7 +489,9 @@ export default function SkillsPage() {
                     <div className="font-medium text-gray-900">
                       {user.firstName} {user.lastName}
                     </div>
-                    <div className="text-sm text-gray-600">{user.role}</div>
+                    <div className="text-sm text-gray-600">
+                      {user.roleEntity?.label ?? user.role}
+                    </div>
                   </button>
                 ))}
               </div>

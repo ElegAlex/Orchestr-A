@@ -23,7 +23,9 @@ describe("usePermissions", () => {
     expect(hasPermission("users:delete")).toBe(false);
   });
 
-  it("should grant all permissions for ADMIN role", () => {
+  it("should resolve solely from the permissions array (no role bypass)", () => {
+    // Spec 3 V0 : plus de bypass isAdmin côté front. Les 107 permissions du
+    // template ADMIN sont injectées via /api/auth/me/permissions.
     mockUseAuthStore.mockReturnValue({
       permissions: [],
       permissionsLoaded: true,
@@ -32,9 +34,21 @@ describe("usePermissions", () => {
 
     const { hasPermission } = usePermissions();
 
+    expect(hasPermission("projects:create")).toBe(false);
+    expect(hasPermission("users:delete")).toBe(false);
+  });
+
+  it("grants every catalog code when permissions list contains them", () => {
+    mockUseAuthStore.mockReturnValue({
+      permissions: ["projects:create", "users:delete"],
+      permissionsLoaded: true,
+      user: { role: "ADMIN" },
+    });
+
+    const { hasPermission } = usePermissions();
+
     expect(hasPermission("projects:create")).toBe(true);
     expect(hasPermission("users:delete")).toBe(true);
-    expect(hasPermission("anything:at_all")).toBe(true);
   });
 
   it("should support hasAnyPermission", () => {

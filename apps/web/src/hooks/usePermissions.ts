@@ -2,7 +2,11 @@
  * RÈGLE RBAC FRONTEND — NE JAMAIS VÉRIFIER user.role DIRECTEMENT
  *
  * Tout check d'autorisation dans le frontend passe par ce hook.
- * Seule exception : Role.ADMIN comme bypass de sécurité (géré ici).
+ *
+ * La résolution se base UNIQUEMENT sur le tableau `permissions` du store,
+ * peuplé par `/api/auth/me/permissions`. Pour ADMIN, le template contient déjà
+ * l'ensemble des 107 codes du catalogue — il n'y a donc plus de bypass par
+ * rôle côté frontend (Spec 3 V0).
  *
  * Exemples :
  *   const { hasPermission } = usePermissions();
@@ -10,32 +14,28 @@
  *   if (hasAnyPermission(['leaves:read', 'leaves:approve'])) { ... }
  */
 
+import type { PermissionCode } from "rbac";
 import { useAuthStore } from "@/stores/auth.store";
-import { Role } from "@/types";
 
 export function usePermissions() {
   const { permissions, permissionsLoaded, user } = useAuthStore();
 
-  const isAdmin = user?.role === Role.ADMIN;
-
-  const hasPermission = (code: string): boolean => {
-    if (isAdmin) return true;
+  const hasPermission = (code: PermissionCode): boolean => {
     return permissions.includes(code);
   };
 
-  const hasAnyPermission = (codes: string[]): boolean => {
-    if (isAdmin) return true;
+  const hasAnyPermission = (codes: readonly PermissionCode[]): boolean => {
     return codes.some((code) => permissions.includes(code));
   };
 
-  const hasAllPermissions = (codes: string[]): boolean => {
-    if (isAdmin) return true;
+  const hasAllPermissions = (codes: readonly PermissionCode[]): boolean => {
     return codes.every((code) => permissions.includes(code));
   };
 
   return {
     permissions,
     permissionsLoaded,
+    user,
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,

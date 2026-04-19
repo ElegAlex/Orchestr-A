@@ -2,6 +2,8 @@
 // ENUMS
 // ===========================
 
+import type { RoleTemplateKey } from "rbac";
+
 export enum Role {
   ADMIN = "ADMIN",
   RESPONSABLE = "RESPONSABLE",
@@ -122,13 +124,34 @@ export interface ManagedService {
   name: string;
 }
 
+/**
+ * RBAC V0 role entity as returned by `/auth/me`.
+ * Source of truth for role identification on the frontend.
+ */
+export interface UserRoleEntity {
+  id: string;
+  code: string;
+  label: string;
+  templateKey: RoleTemplateKey;
+  isSystem: boolean;
+}
+
 export interface User {
   id: string;
   email: string;
   login: string;
   firstName: string;
   lastName: string;
+  /**
+   * @deprecated Use user.roleEntity.code instead. This field will be dropped in RBAC V4.
+   */
   role: Role;
+  /**
+   * V0 RBAC canonical role. Optional because some API responses project only a
+   * `Pick<User, ...>` subset (e.g. relations) and may not include it.
+   */
+  roleEntity?: UserRoleEntity;
+  roleId?: string | null;
   departmentId?: string;
   isActive: boolean;
   avatarUrl?: string | null;

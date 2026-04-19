@@ -247,7 +247,7 @@ export function AssignmentModal({
                 <p className="text-sm text-gray-500 italic mb-3">
                   Aucune tâche prédéfinie configurée
                 </p>
-                {hasPermission("predefined_tasks:manage") && (
+                {hasPermission("predefined_tasks:edit") && (
                   <Link
                     href="/admin/predefined-tasks"
                     className="text-sm text-blue-600 hover:text-blue-800 underline"

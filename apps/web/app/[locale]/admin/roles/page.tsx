@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MainLayout } from "@/components/MainLayout";
-import { useAuthStore } from "@/stores/auth.store";
-import { Role } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   roleManagementService,
   PermissionsGroupedByModule,
@@ -160,7 +159,7 @@ function PermissionGroup({
 export default function RolesPage() {
   const t = useTranslations("admin.roles");
   const tCommon = useTranslations("common");
-  const currentUser = useAuthStore((state) => state.user);
+  const { hasPermission } = usePermissions();
 
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState<RoleConfigWithPermissions[]>([]);
@@ -186,8 +185,8 @@ export default function RolesPage() {
     new Set(),
   );
 
-  // Check permissions - ADMIN only
-  const isAdmin = currentUser?.role === Role.ADMIN;
+  // Check permissions - gestion des rôles (ADMIN-only via catalogue)
+  const isAdmin = hasPermission("users:manage_roles");
 
   useEffect(() => {
     if (!isAdmin) {
