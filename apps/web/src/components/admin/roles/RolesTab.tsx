@@ -8,7 +8,7 @@ import {
   type RoleTemplateView,
   type RoleWithStats,
 } from "@/services/roles.service";
-import { CATEGORY_CONFIG } from "./category-config";
+import { CATEGORY_CONFIG, CATEGORY_ORDER } from "./category-config";
 
 type TemplateFilter = RoleTemplateKey | "ALL";
 
@@ -65,10 +65,38 @@ export function RolesTab({
     return userRoles.filter((r) => r.templateKey === templateFilter);
   }, [userRoles, templateFilter]);
 
-  const sortedRoles = useMemo(
-    () => [...visibleRoles].sort((a, b) => a.label.localeCompare(b.label)),
-    [visibleRoles],
-  );
+  /**
+   * Grouping par templateKey, uniquement pour les templates qui portent au
+   * moins un rôle institutionnel visible. Ordre : categorie (A → I) puis
+   * position du template dans ROLE_TEMPLATE_KEYS. Rôles triés par libellé
+   * au sein d'un template.
+   */
+  const templateSections = useMemo(() => {
+    const groups = new Map<RoleTemplateKey, RoleWithStats[]>();
+    for (const r of visibleRoles) {
+      const bucket = groups.get(r.templateKey) ?? [];
+      bucket.push(r);
+      groups.set(r.templateKey, bucket);
+    }
+    const sections = Array.from(groups.entries()).map(([key, roles]) => ({
+      key,
+      template: templateByKey[key] ?? null,
+      roles: [...roles].sort((a, b) => a.label.localeCompare(b.label)),
+    }));
+    sections.sort((a, b) => {
+      const catA = a.template
+        ? CATEGORY_ORDER.indexOf(a.template.category)
+        : Number.MAX_SAFE_INTEGER;
+      const catB = b.template
+        ? CATEGORY_ORDER.indexOf(b.template.category)
+        : Number.MAX_SAFE_INTEGER;
+      if (catA !== catB) return catA - catB;
+      return (
+        ROLE_TEMPLATE_KEYS.indexOf(a.key) - ROLE_TEMPLATE_KEYS.indexOf(b.key)
+      );
+    });
+    return sections;
+  }, [visibleRoles, templateByKey]);
 
   const startEdit = (role: RoleWithStats) => {
     setEditingId(role.id);
@@ -181,8 +209,8 @@ export function RolesTab({
         </button>
       </div>
 
-      {/* Liste */}
-      {sortedRoles.length === 0 ? (
+      {/* Sections groupées par template (seulement les templates utilisés) */}
+      {templateSections.length === 0 ? (
         <div
           data-testid="roles-empty-state"
           className="py-12 text-center text-sm text-gray-500 bg-white border border-gray-200 border-dashed rounded-lg"
@@ -190,23 +218,55 @@ export function RolesTab({
           {emptyStateMessage}
         </div>
       ) : (
-        <ul className="divide-y divide-gray-100 bg-white border border-gray-200 rounded-lg overflow-hidden">
-          {sortedRoles.map((role) => (
-            <RoleRow
-              key={role.id}
-              role={role}
-              template={templateByKey[role.templateKey] ?? null}
-              isEditing={editingId === role.id}
-              editLabel={editLabel}
-              setEditLabel={setEditLabel}
-              onStartEdit={() => startEdit(role)}
-              onCancelEdit={cancelEdit}
-              onSaveEdit={() => saveEdit(role)}
-              onDelete={() => handleDelete(role)}
-              deleting={deletingId === role.id}
-            />
-          ))}
-        </ul>
+        <div className="space-y-6">
+          {templateSections.map((section) => {
+            const categoryCfg = section.template
+              ? CATEGORY_CONFIG[section.template.category]
+              : null;
+            return (
+              <section
+                key={section.key}
+                data-testid="roles-template-section"
+                data-template-key={section.key}
+              >
+                <header className="mb-2 flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {section.template?.defaultLabel ?? section.key}
+                  </h3>
+                  {categoryCfg && (
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${categoryCfg.badgeClass}`}
+                    >
+                      {categoryCfg.label}
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-500">
+                    {section.roles.length} rôle{section.roles.length > 1 ? "s" : ""}
+                  </span>
+                  <span className="text-[11px] font-mono text-gray-400 ml-auto">
+                    {section.key}
+                  </span>
+                </header>
+                <ul className="divide-y divide-gray-100 bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  {section.roles.map((role) => (
+                    <RoleRow
+                      key={role.id}
+                      role={role}
+                      isEditing={editingId === role.id}
+                      editLabel={editLabel}
+                      setEditLabel={setEditLabel}
+                      onStartEdit={() => startEdit(role)}
+                      onCancelEdit={cancelEdit}
+                      onSaveEdit={() => saveEdit(role)}
+                      onDelete={() => handleDelete(role)}
+                      deleting={deletingId === role.id}
+                    />
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
       )}
     </div>
   );
@@ -214,7 +274,6 @@ export function RolesTab({
 
 interface RoleRowProps {
   role: RoleWithStats;
-  template: RoleTemplateView | null;
   isEditing: boolean;
   editLabel: string;
   setEditLabel: (v: string) => void;
@@ -227,7 +286,6 @@ interface RoleRowProps {
 
 function RoleRow({
   role,
-  template,
   isEditing,
   editLabel,
   setEditLabel,
@@ -237,8 +295,6 @@ function RoleRow({
   onDelete,
   deleting,
 }: RoleRowProps) {
-  const categoryCfg = template ? CATEGORY_CONFIG[template.category] : null;
-
   return (
     <li
       data-testid="role-row"
@@ -265,14 +321,6 @@ function RoleRow({
               {role.label}
             </span>
           )}
-          <span
-            data-testid="role-template-badge"
-            data-template-key={role.templateKey}
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${categoryCfg?.badgeClass ?? "bg-gray-100 text-gray-700 border-gray-200"}`}
-            title={template ? `Template : ${template.defaultLabel}` : undefined}
-          >
-            {role.templateKey}
-          </span>
           {role.isDefault && (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">
               Défaut

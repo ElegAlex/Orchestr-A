@@ -115,26 +115,33 @@ test.describe("UI — Administration des rôles (/fr/admin/roles)", () => {
   );
 
   test(
-    "Onglet Rôles : aucun rôle système exposé (liste user-created only)",
+    "Onglet Rôles : aucun rôle système exposé + grouping par template utilisé",
     async ({ asRole }) => {
       const page = await asRole("admin");
       await gotoRolesAdmin(page);
 
-      // Les rôles système (26 seedés) ne doivent PAS apparaître dans cet onglet.
-      const roleRows = page.locator(
+      const sections = page.locator(
+        "[data-testid='panel-roles'] [data-testid='roles-template-section']",
+      );
+      const rows = page.locator(
         "[data-testid='panel-roles'] [data-testid='role-row']",
       );
-      const count = await roleRows.count();
+      const sectionCount = await sections.count();
+      const rowCount = await rows.count();
 
-      for (let i = 0; i < count; i++) {
-        // Chaque ligne doit avoir un templateKey (badge visible) mais
-        // correspondre à un rôle user-created (aucun rôle système n'est rendu).
-        await expect(
-          roleRows.nth(i).locator("[data-testid='role-template-badge']"),
-        ).toBeVisible();
+      // Si au moins 1 rôle institutionnel existe : au moins 1 section, et la
+      // segmentation est restreinte aux templates utilisés (chaque section
+      // porte au moins une row).
+      if (rowCount > 0) {
+        expect(sectionCount).toBeGreaterThan(0);
+        for (let i = 0; i < sectionCount; i++) {
+          await expect(
+            sections.nth(i).locator("[data-testid='role-row']").first(),
+          ).toBeVisible();
+        }
       }
 
-      // La checkbox "Afficher rôles système" a été supprimée.
+      // La checkbox "Afficher rôles système" a été supprimée définitivement.
       await expect(
         page.locator("[data-testid='roles-show-system']"),
       ).toHaveCount(0);
