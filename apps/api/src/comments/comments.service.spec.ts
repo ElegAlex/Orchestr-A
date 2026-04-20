@@ -34,7 +34,7 @@ describe('CommentsService', () => {
         },
         {
           provide: PermissionsService,
-          useValue: { getPermissionsForRole: vi.fn().mockResolvedValue(['comments:manage_any']) },
+          useValue: { getPermissionsForRole: vi.fn().mockResolvedValue(['comments:delete_any']) },
         },
       ],
     }).compile();
@@ -101,7 +101,7 @@ describe('CommentsService', () => {
       mockPrismaService.comment.findUnique.mockResolvedValue(existing);
       mockPrismaService.comment.update.mockResolvedValue(updated);
 
-      const result = await service.update('1', 'user-1', 'ADMIN', updateDto);
+      const result = await service.update('1', 'user-1', updateDto);
 
       expect(result.content).toBe('Updated comment');
     });

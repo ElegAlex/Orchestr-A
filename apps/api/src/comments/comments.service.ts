@@ -96,24 +96,14 @@ export class CommentsService {
     return comment;
   }
 
-  async update(
-    id: string,
-    userId: string,
-    userRole: string,
-    updateCommentDto: UpdateCommentDto,
-  ) {
+  async update(id: string, userId: string, updateCommentDto: UpdateCommentDto) {
     const comment = await this.findOne(id);
 
-    // Seul l'auteur ou un détenteur de `comments:manage_any` peut modifier
+    // Seul l'auteur peut modifier son commentaire
     if (comment.authorId !== userId) {
-      const permissions = (await this.permissionsService.getPermissionsForRole(
-        userRole,
-      )) as readonly string[];
-      if (!permissions.includes('comments:manage_any')) {
-        throw new ForbiddenException(
-          'Vous ne pouvez modifier que vos propres commentaires',
-        );
-      }
+      throw new ForbiddenException(
+        'Vous ne pouvez modifier que vos propres commentaires',
+      );
     }
 
     return this.prisma.comment.update({
@@ -135,12 +125,15 @@ export class CommentsService {
   async remove(id: string, userId: string, userRole: string) {
     const comment = await this.findOne(id);
 
-    // Seul l'auteur ou un détenteur de `comments:manage_any` peut supprimer
+    // Seul l'auteur ou un utilisateur avec la permission comments:delete_any peut supprimer
     if (comment.authorId !== userId) {
       const permissions = (await this.permissionsService.getPermissionsForRole(
         userRole,
       )) as readonly string[];
-      if (!permissions.includes('comments:manage_any')) {
+      const canDeleteAny = permissions.some(
+        (p) => p === 'comments:delete_any',
+      );
+      if (!canDeleteAny) {
         throw new ForbiddenException(
           'Vous ne pouvez supprimer que vos propres commentaires',
         );

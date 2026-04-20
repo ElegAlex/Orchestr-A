@@ -287,8 +287,8 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
   // ==========================================================================
 
   /**
-   * Cluster 1 actuel (ADMIN) — 108 permissions (= catalogue complet).
-   * Inclut `documents:manage_any` (D6 #4) et `comments:manage_any` (T3 hygiene 2026-04-20).
+   * Cluster 1 actuel (ADMIN) — 107 permissions (= catalogue complet).
+   * Inclut `documents:manage_any` (D6 #4).
    */
   ADMIN: {
     key: 'ADMIN',
@@ -311,7 +311,7 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Ne possède PAS `leaves:manage_any` (scope périmètre préservé — cf. memory
    * project_responsable_scope_perimeter : seul ADMIN a l'accès global congés).
    *
-   * Total : 105 permissions (= 108 catalogue moins `users:manage_roles`,
+   * Total : 104 permissions (= 107 catalogue moins `users:manage_roles`,
    * `settings:update`, `leaves:manage_any`).
    */
   ADMIN_DELEGATED: {
