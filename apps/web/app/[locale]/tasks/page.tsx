@@ -31,7 +31,7 @@ export default function TasksPage() {
   const t = useTranslations("tasks");
   const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
-  const { hasPermission } = usePermissions();
+  const { hasPermission, hasAnyPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -110,8 +110,9 @@ export default function TasksPage() {
       }
       setTasks(tasksData);
 
-      // Fetch orphan tasks
-      if (hasPermission("tasks:create")) {
+      // Fetch orphan tasks — détenteurs de tasks:create OU tasks:create_orphan
+      // (tasks:create_in_project exclu : scope projet, pas concerné par les orphelines)
+      if (hasAnyPermission(["tasks:create", "tasks:create_orphan"])) {
         try {
           const orphans = await tasksService.getOrphans();
           setOrphanTasks(Array.isArray(orphans) ? orphans : []);
