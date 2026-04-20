@@ -1,4 +1,4 @@
-import { Priority, TaskStatus, Role, LeaveType } from "@/types";
+import { Priority, TaskStatus, LeaveType } from "@/types";
 
 export const getServiceStyle = (
   serviceName: string,
@@ -166,27 +166,9 @@ export const getStatusDotColor = (status: TaskStatus): string => {
   }
 };
 
-// Note: getRoleLabel and getLeaveTypeLabel are kept for backward compatibility
-// with other pages (leaves, users, profile). Planning components use i18n directly.
-export const getRoleLabel = (role: Role): string => {
-  switch (role) {
-    case Role.ADMIN:
-      return "Admin";
-    case Role.RESPONSABLE:
-      return "Responsable";
-    case Role.MANAGER:
-      return "Manager";
-    case Role.REFERENT_TECHNIQUE:
-      return "Réf. Tech.";
-    case Role.CONTRIBUTEUR:
-      return "Contributeur";
-    case Role.OBSERVATEUR:
-      return "Observateur";
-    default:
-      return role;
-  }
-};
-
+// Note: getLeaveTypeLabel is kept for backward compatibility
+// with other pages (leaves). Planning components use i18n directly.
+// getRoleLabel was removed in RBAC V4 — role label is served by the API (user.role.label).
 export const getLeaveTypeLabel = (type: LeaveType): string => {
   switch (type) {
     case LeaveType.CP:

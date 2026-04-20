@@ -7,7 +7,6 @@ import Link from "next/link";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
 import { api } from "@/lib/api";
-import { DEFAULT_USER_ROLE } from "@/types";
 import toast from "react-hot-toast";
 
 export default function RegisterPage() {
@@ -23,7 +22,6 @@ export default function RegisterPage() {
     confirmPassword: "",
     firstName: "",
     lastName: "",
-    role: DEFAULT_USER_ROLE,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

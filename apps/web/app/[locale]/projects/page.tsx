@@ -620,7 +620,7 @@ export default function ProjectsPage() {
                     </option>
                     {managers.map((manager) => (
                       <option key={manager.id} value={manager.id}>
-                        {manager.firstName} {manager.lastName} ({manager.role})
+                        {manager.firstName} {manager.lastName} ({manager.role?.label ?? ""})
                       </option>
                     ))}
                   </select>
@@ -642,7 +642,7 @@ export default function ProjectsPage() {
                     </option>
                     {managers.map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.firstName} {u.lastName} ({u.role})
+                        {u.firstName} {u.lastName} ({u.role?.label ?? ""})
                       </option>
                     ))}
                   </select>

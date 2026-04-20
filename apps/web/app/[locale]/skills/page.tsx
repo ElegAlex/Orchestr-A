@@ -490,7 +490,7 @@ export default function SkillsPage() {
                       {user.firstName} {user.lastName}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {user.roleEntity?.label ?? user.role}
+                      {user.role?.label ?? "—"}
                     </div>
                   </button>
                 ))}

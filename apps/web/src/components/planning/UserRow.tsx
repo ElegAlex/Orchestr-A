@@ -5,7 +5,6 @@ import { ServiceGroup, DayCell as DayCellData } from "@/hooks/usePlanningData";
 import { DayCell } from "./DayCell";
 import { getGroupColors } from "@/lib/planning-utils";
 import { UserAvatar } from "@/components/UserAvatar";
-import { useTranslations } from "next-intl";
 
 interface UserRowProps {
   user: User;
@@ -49,7 +48,6 @@ export const UserRow = ({
   onPredefinedTaskClick,
   onAddPredefinedTask,
 }: UserRowProps) => {
-  const tCommon = useTranslations("common");
   const colors = getGroupColors(group.color, group.isManagement);
 
   return (
@@ -72,7 +70,7 @@ export const UserRow = ({
               {user.firstName} {user.lastName}
             </div>
             <div className="text-[10px] text-gray-500 truncate">
-              {tCommon(`roles.${user.roleEntity?.code ?? user.role}`)}
+              {user.role?.label ?? "—"}
             </div>
           </div>
         </div>

@@ -4,7 +4,6 @@ import {
   AUTH_USER_DISPLAY_KEY,
 } from "@/services/auth.service";
 import type { User } from "@/types";
-import { Role } from "@/types";
 
 jest.mock("@/lib/api", () => ({
   api: { post: jest.fn(), get: jest.fn() },
@@ -35,7 +34,13 @@ const mockUser: User = {
   login: "u1",
   firstName: "Alice",
   lastName: "Doe",
-  role: Role.ADMIN, // the interesting field — must NOT be persisted
+  role: {
+    id: "role-admin",
+    code: "ADMIN",
+    label: "Administrateur",
+    templateKey: "ADMIN" as const,
+    isSystem: true,
+  }, // the interesting field — must NOT be persisted
   isActive: true,
   avatarUrl: null,
   avatarPreset: null,

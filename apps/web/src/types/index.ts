@@ -4,27 +4,6 @@
 
 import type { RoleTemplateKey } from "rbac";
 
-export enum Role {
-  ADMIN = "ADMIN",
-  RESPONSABLE = "RESPONSABLE",
-  MANAGER = "MANAGER",
-  CHEF_DE_PROJET = "CHEF_DE_PROJET",
-  REFERENT_TECHNIQUE = "REFERENT_TECHNIQUE",
-  CONTRIBUTEUR = "CONTRIBUTEUR",
-  OBSERVATEUR = "OBSERVATEUR",
-  TECHNICIEN_SUPPORT = "TECHNICIEN_SUPPORT",
-  GESTIONNAIRE_PARC = "GESTIONNAIRE_PARC",
-  ADMINISTRATEUR_IML = "ADMINISTRATEUR_IML",
-  DEVELOPPEUR_CONCEPTEUR = "DEVELOPPEUR_CONCEPTEUR",
-  CORRESPONDANT_FONCTIONNEL_APPLICATION = "CORRESPONDANT_FONCTIONNEL_APPLICATION",
-  CHARGE_DE_MISSION = "CHARGE_DE_MISSION",
-  GESTIONNAIRE_IML = "GESTIONNAIRE_IML",
-  CONSULTANT_TECHNOLOGIE_SI = "CONSULTANT_TECHNOLOGIE_SI",
-}
-
-/** Default role for new users (used in forms/imports) */
-export const DEFAULT_USER_ROLE = Role.CONTRIBUTEUR;
-
 export enum ProjectStatus {
   DRAFT = "DRAFT",
   ACTIVE = "ACTIVE",
@@ -143,14 +122,10 @@ export interface User {
   firstName: string;
   lastName: string;
   /**
-   * @deprecated Use user.roleEntity.code instead. This field will be dropped in RBAC V4.
+   * RBAC V4 canonical role as returned by the API. `null` when the user has no
+   * role assigned (edge case; seeded users always have one).
    */
-  role: Role;
-  /**
-   * V0 RBAC canonical role. Optional because some API responses project only a
-   * `Pick<User, ...>` subset (e.g. relations) and may not include it.
-   */
-  roleEntity?: UserRoleEntity;
+  role: UserRoleEntity | null;
   roleId?: string | null;
   departmentId?: string;
   isActive: boolean;
@@ -180,7 +155,6 @@ export interface RegisterDto {
   password: string;
   firstName: string;
   lastName: string;
-  role?: Role;
   departmentId?: string;
   serviceIds?: string[];
 }

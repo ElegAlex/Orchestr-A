@@ -427,9 +427,7 @@ function SuiviPage() {
                       {user.firstName} {user.lastName}
                     </h1>
                     <p className="text-sm text-gray-500">
-                      {tCommon(`roles.${user.roleEntity?.code ?? user.role}`, {
-                        defaultValue: user.roleEntity?.label ?? user.role,
-                      })}
+                      {user.role?.label ?? "—"}
                       {user.department && ` — ${user.department.name}`}
                     </p>
                   </div>
@@ -475,9 +473,7 @@ function SuiviPage() {
                             {u.firstName} {u.lastName}
                           </p>
                           <p className="text-xs text-gray-500 truncate">
-                            {tCommon(`roles.${u.roleEntity?.code ?? u.role}`, {
-                              defaultValue: u.roleEntity?.label ?? u.role,
-                            })}
+                            {u.role?.label ?? "—"}
                           </p>
                         </div>
                       </button>
@@ -608,10 +604,7 @@ function SuiviPage() {
                           {t("overview.role")}
                         </dt>
                         <dd className="text-sm font-medium">
-                          {tCommon(`roles.${user?.roleEntity?.code ?? user?.role}`, {
-                            defaultValue:
-                              user?.roleEntity?.label ?? user?.role ?? "",
-                          })}
+                          {user?.role?.label ?? "—"}
                         </dd>
                       </div>
                       <div className="flex justify-between">

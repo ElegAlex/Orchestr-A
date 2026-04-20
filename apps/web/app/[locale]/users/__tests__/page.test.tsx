@@ -76,7 +76,13 @@ const mockCurrentUser = {
   login: "admin",
   firstName: "Admin",
   lastName: "User",
-  role: "ADMIN",
+  role: {
+    id: "role-admin",
+    code: "ADMIN",
+    label: "Administrateur",
+    templateKey: "ADMIN",
+    isSystem: true,
+  },
 };
 
 const mockAuthState = {
@@ -97,7 +103,13 @@ const mockUsers = [
     login: "user1",
     firstName: "John",
     lastName: "Doe",
-    role: "CONTRIBUTEUR",
+    role: {
+      id: "role-contrib",
+      code: "CONTRIBUTEUR",
+      label: "Contributeur",
+      templateKey: "CONTRIBUTOR",
+      isSystem: true,
+    },
     isActive: true,
     departmentId: "dept-1",
     department: { id: "dept-1", name: "IT" },
@@ -109,7 +121,13 @@ const mockUsers = [
     login: "user2",
     firstName: "Jane",
     lastName: "Smith",
-    role: "MANAGER",
+    role: {
+      id: "role-manager",
+      code: "MANAGER",
+      label: "Manager",
+      templateKey: "MANAGER",
+      isSystem: true,
+    },
     isActive: true,
     departmentId: "dept-1",
     department: { id: "dept-1", name: "IT" },
@@ -127,13 +145,44 @@ const mockServices = [
   { id: "service-2", name: "QA", departmentId: "dept-1" },
 ];
 
+const mockRoles = [
+  {
+    id: "role-contrib",
+    code: "CONTRIBUTEUR",
+    label: "Contributeur",
+    templateKey: "CONTRIBUTOR",
+    category: "STANDARD_USER",
+    description: "",
+    isSystem: true,
+    isDefault: true,
+    userCount: 1,
+    permissionsCount: 10,
+    createdAt: "",
+    updatedAt: "",
+  },
+  {
+    id: "role-manager",
+    code: "MANAGER",
+    label: "Manager",
+    templateKey: "MANAGER",
+    category: "MANAGEMENT",
+    description: "",
+    isSystem: true,
+    isDefault: false,
+    userCount: 1,
+    permissionsCount: 20,
+    createdAt: "",
+    updatedAt: "",
+  },
+];
+
 // Mock des services
 jest.mock("@/services/users.service", () => ({
   usersService: {
     getAll: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    remove: jest.fn(),
+    delete: jest.fn(),
   },
 }));
 
@@ -146,6 +195,12 @@ jest.mock("@/services/departments.service", () => ({
 jest.mock("@/services/services.service", () => ({
   servicesService: {
     getAll: jest.fn(),
+  },
+}));
+
+jest.mock("@/services/roles.service", () => ({
+  rolesService: {
+    listRoles: jest.fn(),
   },
 }));
 
@@ -169,6 +224,7 @@ import UsersPage from "../page";
 import { usersService } from "@/services/users.service";
 import { departmentsService } from "@/services/departments.service";
 import { servicesService } from "@/services/services.service";
+import { rolesService } from "@/services/roles.service";
 import toast from "react-hot-toast";
 
 describe("UsersPage", () => {
@@ -177,9 +233,10 @@ describe("UsersPage", () => {
     (usersService.getAll as jest.Mock).mockResolvedValue(mockUsers);
     (usersService.create as jest.Mock).mockResolvedValue({ id: "new-user" });
     (usersService.update as jest.Mock).mockResolvedValue({});
-    (usersService.remove as jest.Mock).mockResolvedValue({});
+    (usersService.delete as jest.Mock).mockResolvedValue({});
     (departmentsService.getAll as jest.Mock).mockResolvedValue(mockDepartments);
     (servicesService.getAll as jest.Mock).mockResolvedValue(mockServices);
+    (rolesService.listRoles as jest.Mock).mockResolvedValue(mockRoles);
   });
 
   it("should render the page title", async () => {
@@ -481,7 +538,16 @@ describe("UsersPage - Permissions", () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const authStore = require("@/stores/auth.store");
     const nonAdminState = {
-      user: { ...mockCurrentUser, role: "CONTRIBUTEUR" },
+      user: {
+        ...mockCurrentUser,
+        role: {
+          id: "role-contrib",
+          code: "CONTRIBUTEUR",
+          label: "Contributeur",
+          templateKey: "CONTRIBUTOR",
+          isSystem: true,
+        },
+      },
       permissions: [],
       permissionsLoaded: true,
     };

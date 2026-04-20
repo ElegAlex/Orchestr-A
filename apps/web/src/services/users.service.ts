@@ -1,16 +1,16 @@
 import { api } from "@/lib/api";
-import { User, PaginatedResponse, Role } from "@/types";
+import { User, PaginatedResponse } from "@/types";
 
 export const usersService = {
   async getAll(
     page?: number,
     limit?: number,
-    role?: Role,
+    roleCode?: string,
   ): Promise<User[] | PaginatedResponse<User>> {
     const params = new URLSearchParams();
     params.append("limit", (limit ?? 1000).toString());
     if (page !== undefined) params.append("page", page.toString());
-    if (role) params.append("role", role);
+    if (roleCode) params.append("role", roleCode);
 
     const response = await api.get<PaginatedResponse<User> | User[]>(
       `/users?${params.toString()}`,
@@ -42,17 +42,20 @@ export const usersService = {
     return response.data;
   },
 
-  async getByRole(role: Role): Promise<User[]> {
-    const response = await api.get<User[]>(`/users/role/${role}`);
+  async getByRole(roleCode: string): Promise<User[]> {
+    const response = await api.get<User[]>(`/users/role/${roleCode}`);
     return response.data;
   },
 
-  async create(data: Partial<User>): Promise<User> {
+  async create(data: Partial<User> & { roleCode?: string }): Promise<User> {
     const response = await api.post<User>("/users", data);
     return response.data;
   },
 
-  async update(id: string, data: Partial<User>): Promise<User> {
+  async update(
+    id: string,
+    data: Partial<User> & { roleCode?: string; password?: string },
+  ): Promise<User> {
     const response = await api.patch<User>(`/users/${id}`, data);
     return response.data;
   },
@@ -146,7 +149,7 @@ export interface ImportUserData {
   password: string;
   firstName: string;
   lastName: string;
-  role: string;
+  roleCode: string;
   departmentName?: string;
   serviceNames?: string;
   [key: string]: string | undefined;

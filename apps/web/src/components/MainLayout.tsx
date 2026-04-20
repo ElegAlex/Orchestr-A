@@ -195,7 +195,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                   {user?.firstName} {user?.lastName}
                 </p>
                 <p className="text-xs text-[var(--muted-foreground)]">
-                  {user?.roleEntity?.label ?? user?.role}
+                  {user?.role?.label ?? "—"}
                 </p>
               </div>
             )}

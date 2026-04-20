@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
 import {
@@ -13,20 +13,26 @@ import {
 import { ImportPreviewModal } from "@/components/ImportPreviewModal";
 import { departmentsService } from "@/services/departments.service";
 import { servicesService } from "@/services/services.service";
+import { User, Department, Service } from "@/types";
 import {
-  User,
-  Role,
-  Department,
-  Service,
-  RoleConfigWithPermissions,
-  DEFAULT_USER_ROLE,
-} from "@/types";
-import { roleManagementService } from "@/services/role-management.service";
+  rolesService,
+  type RoleWithStats,
+} from "@/services/roles.service";
+import {
+  CATEGORY_CONFIG,
+  CATEGORY_ORDER,
+} from "@/components/admin/roles/category-config";
 import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { parseCSV as parseCSVRaw } from "@/lib/csv-parser";
+
+/**
+ * Fallback role code quand aucun rôle `isDefault: true` n'est trouvé côté DB.
+ * Simple constante string — PAS un membre d'un enum hardcodé (RBAC V4).
+ */
+const FALLBACK_DEFAULT_ROLE_CODE = "CONTRIBUTEUR";
 
 export default function UsersPage() {
   const t = useTranslations("admin.users");
@@ -37,12 +43,11 @@ export default function UsersPage() {
   const currentUser = useAuthStore((state) => state.user);
   const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
-  const [availableRoles, setAvailableRoles] = useState<
-    RoleConfigWithPermissions[]
-  >([]);
+  const [availableRoles, setAvailableRoles] = useState<RoleWithStats[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [roleFilter, setRoleFilter] = useState<string>("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -80,22 +85,57 @@ export default function UsersPage() {
     password: "",
     firstName: "",
     lastName: "",
-    role: DEFAULT_USER_ROLE,
+    roleCode: "",
     departmentId: "",
     serviceIds: [] as string[],
   });
+
+  /**
+   * Rôle par défaut pour un nouvel utilisateur — pris depuis les rôles DB
+   * (un rôle `isDefault: true` si présent), sinon fallback "CONTRIBUTEUR".
+   */
+  const defaultRoleCode = useMemo(() => {
+    const defaultRole = availableRoles.find((r) => r.isDefault);
+    return defaultRole?.code ?? FALLBACK_DEFAULT_ROLE_CODE;
+  }, [availableRoles]);
+
+  /**
+   * Rôles groupés par catégorie pour affichage dans le dropdown
+   * (ordre : A ADMINISTRATION → I EXTERNAL).
+   */
+  const rolesByCategory = useMemo(() => {
+    const grouped = new Map<string, RoleWithStats[]>();
+    for (const role of availableRoles) {
+      const bucket = grouped.get(role.category) ?? [];
+      bucket.push(role);
+      grouped.set(role.category, bucket);
+    }
+    return CATEGORY_ORDER.filter((cat) => grouped.has(cat)).map((cat) => ({
+      category: cat,
+      label: CATEGORY_CONFIG[cat].label,
+      roles: (grouped.get(cat) ?? []).sort((a, b) =>
+        a.label.localeCompare(b.label),
+      ),
+    }));
+  }, [availableRoles]);
+
+  const getRoleBadgeClass = (role: User["role"]): string => {
+    const category = availableRoles.find((r) => r.id === role?.id)?.category;
+    if (!category) return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    return CATEGORY_CONFIG[category].badgeClass;
+  };
 
   // Check permissions
   const canManageUsers = hasPermission("users:create");
   const canEditUsers = hasPermission("users:update");
   const canResetPassword = hasPermission("users:reset_password");
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (roleCodeFilter?: string) => {
     try {
       setLoading(true);
       const [response, roles] = await Promise.all([
-        usersService.getAll(),
-        roleManagementService.getAllRoles().catch(() => []),
+        usersService.getAll(undefined, undefined, roleCodeFilter || undefined),
+        rolesService.listRoles().catch(() => []),
       ]);
       const usersList = Array.isArray(response) ? response : response.data;
       setUsers(usersList);
@@ -133,7 +173,15 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
     fetchDepartmentsAndServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // Re-fetch when the role filter changes (skip very first mount — handled above).
+    if (availableRoles.length === 0) return;
+    fetchUsers(roleFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roleFilter]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,6 +191,10 @@ export default function UsersPage() {
       );
       return;
     }
+    if (!formData.roleCode) {
+      toast.error("Veuillez sélectionner un rôle");
+      return;
+    }
     try {
       const createData: {
         email: string;
@@ -150,11 +202,16 @@ export default function UsersPage() {
         password: string;
         firstName: string;
         lastName: string;
-        role: Role;
+        roleCode: string;
         departmentId?: string;
         serviceIds?: string[];
       } = {
-        ...formData,
+        email: formData.email,
+        login: formData.login,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        roleCode: formData.roleCode,
         departmentId: formData.departmentId || undefined,
         serviceIds:
           formData.serviceIds.length > 0 ? formData.serviceIds : undefined,
@@ -169,11 +226,11 @@ export default function UsersPage() {
         password: "",
         firstName: "",
         lastName: "",
-        role: DEFAULT_USER_ROLE,
+        roleCode: defaultRoleCode,
         departmentId: "",
         serviceIds: [],
       });
-      fetchUsers();
+      fetchUsers(roleFilter);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
@@ -190,7 +247,7 @@ export default function UsersPage() {
       password: "",
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role,
+      roleCode: user.role?.code ?? "",
       departmentId: user.departmentId || "",
       serviceIds: user.userServices?.map((us) => us.service.id) || [],
     });
@@ -200,6 +257,10 @@ export default function UsersPage() {
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+    if (!formData.roleCode) {
+      toast.error("Veuillez sélectionner un rôle");
+      return;
+    }
 
     try {
       const updateData: {
@@ -207,7 +268,7 @@ export default function UsersPage() {
         login: string;
         firstName: string;
         lastName: string;
-        role: Role;
+        roleCode: string;
         serviceIds: string[];
         departmentId?: string;
         password?: string;
@@ -216,7 +277,7 @@ export default function UsersPage() {
         login: formData.login,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        role: formData.role,
+        roleCode: formData.roleCode,
         serviceIds: formData.serviceIds.length > 0 ? formData.serviceIds : [],
       };
 
@@ -242,11 +303,11 @@ export default function UsersPage() {
         password: "",
         firstName: "",
         lastName: "",
-        role: DEFAULT_USER_ROLE,
+        roleCode: defaultRoleCode,
         departmentId: "",
         serviceIds: [],
       });
-      fetchUsers();
+      fetchUsers(roleFilter);
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(
@@ -369,23 +430,8 @@ export default function UsersPage() {
     }));
   };
 
-  const ROLE_BADGE_COLORS: Record<string, string> = {
-    ADMIN: "bg-red-100 text-red-800",
-    RESPONSABLE: "bg-purple-100 text-purple-800",
-    MANAGER: "bg-blue-100 text-blue-800",
-    REFERENT_TECHNIQUE: "bg-green-100 text-green-800",
-    CONTRIBUTEUR: "bg-gray-100 text-gray-800",
-  };
-
-  const getRoleBadgeColor = (role: Role) => {
-    return ROLE_BADGE_COLORS[role] || "bg-yellow-100 text-yellow-800";
-  };
-
-  const getRoleLabel = (role: Role) => {
-    // Use role config name if available, otherwise use translations
-    const roleConfig = availableRoles.find((r) => r.code === role);
-    if (roleConfig) return roleConfig.name;
-    return tCommon(`roles.${role}`, { defaultValue: role });
+  const getRoleLabel = (user: User): string => {
+    return user.role?.label ?? "—";
   };
 
   const parseCSV = (text: string): ImportUserData[] => {
@@ -399,13 +445,19 @@ export default function UsersPage() {
         normalizedRow[key.toLowerCase()] = row[key];
       });
 
+      // Accepte historiquement `role` (ancien format) ou `rolecode` (nouveau).
+      const roleCode =
+        normalizedRow.rolecode ||
+        normalizedRow.role ||
+        defaultRoleCode;
+
       const user: ImportUserData = {
         email: normalizedRow.email || "",
         login: normalizedRow.login || "",
         password: normalizedRow.password || "",
         firstName: normalizedRow.firstname || "",
         lastName: normalizedRow.lastname || "",
-        role: normalizedRow.role || DEFAULT_USER_ROLE,
+        roleCode,
         departmentName: normalizedRow.departmentname || undefined,
         serviceNames: normalizedRow.servicenames || undefined,
       };
@@ -495,9 +547,14 @@ export default function UsersPage() {
   };
 
   const downloadTemplate = () => {
-    // Template without fake data - just headers and explanatory comments
+    // Liste dynamique des codes de rôle disponibles côté DB (fallback si non chargé).
+    const roleCodes =
+      availableRoles.length > 0
+        ? availableRoles.map((r) => r.code).join("|")
+        : "CONTRIBUTEUR|MANAGER|ADMIN";
     const template =
-      "email;login;password;firstName;lastName;role;departmentName;serviceNames\n# email@domaine.com;# prenom.nom;# motdepasse (min 6 car.);# Prenom;# Nom;# ADMIN|RESPONSABLE|MANAGER|CHEF_DE_PROJET|REFERENT_TECHNIQUE|CONTRIBUTEUR|OBSERVATEUR|TECHNICIEN_SUPPORT|GESTIONNAIRE_PARC|ADMINISTRATEUR_IML|DEVELOPPEUR_CONCEPTEUR|CORRESPONDANT_FONCTIONNEL_APPLICATION|CHARGE_DE_MISSION|GESTIONNAIRE_IML|CONSULTANT_TECHNOLOGIE_SI;# Nom departement existant;# Service1, Service2";
+      `email;login;password;firstName;lastName;roleCode;departmentName;serviceNames\n` +
+      `# email@domaine.com;# prenom.nom;# motdepasse (min 8 car., majuscule, chiffre, special);# Prenom;# Nom;# ${roleCodes};# Nom departement existant;# Service1, Service2`;
     const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -546,12 +603,60 @@ export default function UsersPage() {
                 {t("importButton")}
               </button>
               <button
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => {
+                  setFormData({
+                    email: "",
+                    login: "",
+                    password: "",
+                    firstName: "",
+                    lastName: "",
+                    roleCode: defaultRoleCode,
+                    departmentId: "",
+                    serviceIds: [],
+                  });
+                  setShowCreateModal(true);
+                }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
               >
                 + {t("createButton")}
               </button>
             </div>
+          )}
+        </div>
+
+        {/* Filtres */}
+        <div className="flex items-center gap-3">
+          <label
+            htmlFor="role-filter"
+            className="text-sm font-medium text-gray-700"
+          >
+            Filtrer par rôle :
+          </label>
+          <select
+            id="role-filter"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Tous les rôles</option>
+            {rolesByCategory.map((group) => (
+              <optgroup key={group.category} label={group.label}>
+                {group.roles.map((role) => (
+                  <option key={role.id} value={role.code}>
+                    {role.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          {roleFilter && (
+            <button
+              type="button"
+              onClick={() => setRoleFilter("")}
+              className="text-sm text-gray-500 hover:text-gray-700 underline"
+            >
+              Effacer
+            </button>
           )}
         </div>
 
@@ -602,11 +707,16 @@ export default function UsersPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
-                        (user.roleEntity?.code ?? user.role) as Role,
+                      className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getRoleBadgeClass(
+                        user.role,
                       )}`}
+                      title={
+                        user.role?.templateKey
+                          ? `Template : ${user.role.templateKey}`
+                          : undefined
+                      }
                     >
-                      {user.roleEntity?.label ?? getRoleLabel(user.role)}
+                      {getRoleLabel(user)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -817,16 +927,24 @@ export default function UsersPage() {
                   {t("createModal.role")}
                 </label>
                 <select
-                  value={formData.role}
+                  value={formData.roleCode}
                   onChange={(e) =>
-                    setFormData({ ...formData, role: e.target.value as Role })
+                    setFormData({ ...formData, roleCode: e.target.value })
                   }
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  {availableRoles.map((role) => (
-                    <option key={role.code} value={role.code}>
-                      {role.name}
-                    </option>
+                  <option value="" disabled>
+                    — Sélectionner un rôle —
+                  </option>
+                  {rolesByCategory.map((group) => (
+                    <optgroup key={group.category} label={group.label}>
+                      {group.roles.map((role) => (
+                        <option key={role.id} value={role.code}>
+                          {role.label} (Template : {role.templateKey})
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
@@ -1024,7 +1142,7 @@ export default function UsersPage() {
                               {user.firstName} {user.lastName}
                             </td>
                             <td className="px-3 py-2 text-gray-900">
-                              {user.role}
+                              {user.roleCode}
                             </td>
                             <td className="px-3 py-2 text-gray-500">
                               {user.departmentName || "-"}
@@ -1212,16 +1330,24 @@ export default function UsersPage() {
                   {t("createModal.role")}
                 </label>
                 <select
-                  value={formData.role}
+                  value={formData.roleCode}
                   onChange={(e) =>
-                    setFormData({ ...formData, role: e.target.value as Role })
+                    setFormData({ ...formData, roleCode: e.target.value })
                   }
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  {availableRoles.map((role) => (
-                    <option key={role.code} value={role.code}>
-                      {role.name}
-                    </option>
+                  <option value="" disabled>
+                    — Sélectionner un rôle —
+                  </option>
+                  {rolesByCategory.map((group) => (
+                    <optgroup key={group.category} label={group.label}>
+                      {group.roles.map((role) => (
+                        <option key={role.id} value={role.code}>
+                          {role.label} (Template : {role.templateKey})
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>

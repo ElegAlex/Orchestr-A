@@ -3,7 +3,6 @@ import { useAuthBootstrap } from "../useAuthBootstrap";
 import { useAuthStore } from "@/stores/auth.store";
 import { api } from "@/lib/api";
 import { AUTH_TOKEN_KEY } from "@/services/auth.service";
-import { Role } from "@/types";
 
 jest.mock("@/lib/api", () => ({
   api: { get: jest.fn(), post: jest.fn() },
@@ -32,7 +31,13 @@ const mockUser = {
   login: "u1",
   firstName: "A",
   lastName: "B",
-  role: Role.MANAGER,
+  role: {
+    id: "role-manager",
+    code: "MANAGER",
+    label: "Manager",
+    templateKey: "MANAGER" as const,
+    isSystem: true,
+  },
   isActive: true,
   avatarUrl: null,
   avatarPreset: null,

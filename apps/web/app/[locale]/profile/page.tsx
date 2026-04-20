@@ -93,12 +93,8 @@ export default function ProfilePage() {
     REFERENT_TECHNIQUE: "bg-green-100 text-green-800",
     CONTRIBUTEUR: "bg-gray-100 text-gray-800",
   };
-  const getRoleBadgeColor = (role: string) =>
-    ROLE_BADGE_COLORS[role] || "bg-yellow-100 text-yellow-800";
-
-  const getRoleLabel = (role: string) => {
-    return tCommon(`roles.${role}`);
-  };
+  const getRoleBadgeColor = (role: string | undefined) =>
+    (role && ROLE_BADGE_COLORS[role]) || "bg-yellow-100 text-yellow-800";
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,10 +165,10 @@ export default function ProfilePage() {
               <div className="flex items-center space-x-3 mt-3">
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(
-                    user.roleEntity?.code ?? user.role,
+                    user.role?.code,
                   )}`}
                 >
-                  {user.roleEntity?.label ?? getRoleLabel(user.role)}
+                  {user.role?.label ?? "—"}
                 </span>
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${

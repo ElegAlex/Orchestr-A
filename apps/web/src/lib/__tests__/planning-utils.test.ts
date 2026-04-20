@@ -3,10 +3,9 @@ import {
   getGroupColors,
   getPriorityColor,
   getStatusIcon,
-  getRoleLabel,
   getLeaveTypeLabel,
 } from "../planning-utils";
-import { Priority, TaskStatus, Role, LeaveType } from "@/types";
+import { Priority, TaskStatus, LeaveType } from "@/types";
 
 describe("planning-utils", () => {
   describe("getServiceStyle", () => {
@@ -221,36 +220,6 @@ describe("planning-utils", () => {
 
     it("should return crossed circle for BLOCKED status", () => {
       expect(getStatusIcon(TaskStatus.BLOCKED)).toBe("⊗");
-    });
-  });
-
-  describe("getRoleLabel", () => {
-    it('should return "Admin" for ADMIN role', () => {
-      expect(getRoleLabel(Role.ADMIN)).toBe("Admin");
-    });
-
-    it('should return "Responsable" for RESPONSABLE role', () => {
-      expect(getRoleLabel(Role.RESPONSABLE)).toBe("Responsable");
-    });
-
-    it('should return "Manager" for MANAGER role', () => {
-      expect(getRoleLabel(Role.MANAGER)).toBe("Manager");
-    });
-
-    it('should return "Réf. Tech." for REFERENT_TECHNIQUE role', () => {
-      expect(getRoleLabel(Role.REFERENT_TECHNIQUE)).toBe("Réf. Tech.");
-    });
-
-    it('should return "Contributeur" for CONTRIBUTEUR role', () => {
-      expect(getRoleLabel(Role.CONTRIBUTEUR)).toBe("Contributeur");
-    });
-
-    it('should return "Observateur" for OBSERVATEUR role', () => {
-      expect(getRoleLabel(Role.OBSERVATEUR)).toBe("Observateur");
-    });
-
-    it("should return the role itself for unknown role", () => {
-      expect(getRoleLabel("UNKNOWN_ROLE" as Role)).toBe("UNKNOWN_ROLE");
     });
   });
 

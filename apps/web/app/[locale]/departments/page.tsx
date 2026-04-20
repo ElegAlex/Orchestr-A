@@ -558,7 +558,7 @@ export default function DepartmentsPage() {
                   <option value="">{t("departmentModal.noManager")}</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.firstName} {u.lastName} ({u.role})
+                      {u.firstName} {u.lastName} ({u.role?.label ?? ""})
                     </option>
                   ))}
                 </select>
@@ -751,7 +751,7 @@ export default function DepartmentsPage() {
                   <option value="">{t("serviceModal.noManager")}</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.firstName} {u.lastName} ({u.role})
+                      {u.firstName} {u.lastName} ({u.role?.label ?? ""})
                     </option>
                   ))}
                 </select>

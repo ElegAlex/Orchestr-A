@@ -7,7 +7,22 @@ import { teleworkService } from "@/services/telework.service";
 import { servicesService } from "@/services/services.service";
 import { holidaysService } from "@/services/holidays.service";
 import { eventsService } from "@/services/events.service";
-import { Role, TaskStatus, Priority, LeaveStatus, LeaveType } from "@/types";
+import { TaskStatus, Priority, LeaveStatus, LeaveType } from "@/types";
+
+const roleContributor = {
+  id: "role-contrib",
+  code: "CONTRIBUTEUR",
+  label: "Contributeur",
+  templateKey: "CONTRIBUTOR" as const,
+  isSystem: true,
+};
+const roleManager = {
+  id: "role-manager",
+  code: "MANAGER",
+  label: "Manager",
+  templateKey: "MANAGER" as const,
+  isSystem: true,
+};
 
 // Mock all services
 jest.mock("@/services/tasks.service", () => ({
@@ -94,7 +109,7 @@ describe("usePlanningData", () => {
       login: "dev",
       firstName: "John",
       lastName: "Dev",
-      role: Role.CONTRIBUTEUR,
+      role: roleContributor,
       isActive: true,
       createdAt: "2025-01-01",
       updatedAt: "2025-01-01",
@@ -106,7 +121,7 @@ describe("usePlanningData", () => {
       login: "manager",
       firstName: "Jane",
       lastName: "Manager",
-      role: Role.MANAGER,
+      role: roleManager,
       isActive: true,
       createdAt: "2025-01-01",
       updatedAt: "2025-01-01",
@@ -120,7 +135,7 @@ describe("usePlanningData", () => {
       login: "inactive",
       firstName: "Bob",
       lastName: "Inactive",
-      role: Role.CONTRIBUTEUR,
+      role: roleContributor,
       isActive: false,
       createdAt: "2025-01-01",
       updatedAt: "2025-01-01",

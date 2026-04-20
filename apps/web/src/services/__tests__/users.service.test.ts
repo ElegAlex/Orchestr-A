@@ -1,6 +1,5 @@
 import { usersService } from "../users.service";
 import { api } from "@/lib/api";
-import { Role } from "@/types";
 
 jest.mock("@/lib/api", () => ({
   api: {
@@ -18,7 +17,13 @@ describe("usersService", () => {
     login: "testuser",
     firstName: "Test",
     lastName: "User",
-    role: Role.CONTRIBUTEUR,
+    role: {
+      id: "role-1",
+      code: "CONTRIBUTEUR",
+      label: "Contributeur",
+      templateKey: "CONTRIBUTOR",
+      isSystem: true,
+    },
     isActive: true,
     createdAt: "2025-01-01",
     updatedAt: "2025-01-01",
@@ -39,7 +44,7 @@ describe("usersService", () => {
 
       const result = await usersService.getAll();
 
-      expect(api.get).toHaveBeenCalledWith("/users?");
+      expect(api.get).toHaveBeenCalledWith("/users?limit=1000");
       expect(result).toEqual(mockUsers);
     });
 
@@ -55,16 +60,16 @@ describe("usersService", () => {
 
       const result = await usersService.getAll(1, 10);
 
-      expect(api.get).toHaveBeenCalledWith("/users?page=1&limit=10");
+      expect(api.get).toHaveBeenCalledWith("/users?limit=10&page=1");
       expect(result).toEqual(paginatedResponse);
     });
 
     it("should filter by role", async () => {
       (api.get as jest.Mock).mockResolvedValue({ data: { data: mockUsers } });
 
-      await usersService.getAll(undefined, undefined, Role.ADMIN);
+      await usersService.getAll(undefined, undefined, "ADMIN");
 
-      expect(api.get).toHaveBeenCalledWith("/users?role=ADMIN");
+      expect(api.get).toHaveBeenCalledWith("/users?limit=1000&role=ADMIN");
     });
 
     it("should handle direct array response", async () => {
@@ -118,10 +123,10 @@ describe("usersService", () => {
   });
 
   describe("getByRole", () => {
-    it("should fetch users by role", async () => {
+    it("should fetch users by role code", async () => {
       (api.get as jest.Mock).mockResolvedValue({ data: mockUsers });
 
-      const result = await usersService.getByRole(Role.MANAGER);
+      const result = await usersService.getByRole("MANAGER");
 
       expect(api.get).toHaveBeenCalledWith("/users/role/MANAGER");
       expect(result).toEqual(mockUsers);
