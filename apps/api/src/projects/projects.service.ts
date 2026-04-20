@@ -16,10 +16,15 @@ import { ProjectStatus, TaskStatus } from 'database';
 /**
  * Caller shape accepted by mutation methods for ownership enforcement.
  * Mirrors what JwtStrategy puts on req.user.
+ *
+ * RBAC V4: `role` can be either a plain string code (from controllers that
+ * already extract `user.role?.code`) or the raw Role object (from controllers
+ * that pass `AuthenticatedUser` directly).  `assertProjectOwnershipOrBypass`
+ * normalises the value before forwarding it to `PermissionsService`.
  */
 export interface ProjectMutationUser {
   id: string;
-  role?: string;
+  role?: string | { code: string } | null;
 }
 
 /**
@@ -61,8 +66,10 @@ export class ProjectsService {
     if (isOwner) return;
 
     if (user.role) {
+      const roleCode =
+        typeof user.role === 'string' ? user.role : user.role.code;
       const permissions =
-        await this.permissionsService.getPermissionsForRole(user.role);
+        await this.permissionsService.getPermissionsForRole(roleCode);
       if (permissions.includes('projects:manage_any')) {
         return;
       }

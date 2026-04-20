@@ -33,7 +33,7 @@ export class EventsService {
   private async ensureCanMutate(
     eventId: string,
     userId?: string,
-    role?: string,
+    role?: string | null,
   ): Promise<void> {
     if (!userId) return;
     const isOwner = await this.ownershipService.isOwner(
@@ -293,7 +293,7 @@ export class EventsService {
   /**
    * Récupérer un événement par ID
    */
-  async findOne(id: string, currentUserId?: string, currentUserRole?: string) {
+  async findOne(id: string, currentUserId?: string, currentUserRole?: string | null) {
     const event = await this.prisma.event.findUnique({
       where: { id },
       include: {
@@ -362,7 +362,7 @@ export class EventsService {
     id: string,
     updateEventDto: UpdateEventDto,
     currentUserId?: string,
-    currentUserRole?: string,
+    currentUserRole?: string | null,
   ) {
     const existingEvent = await this.prisma.event.findUnique({
       where: { id },
@@ -495,7 +495,7 @@ export class EventsService {
   /**
    * Supprimer un événement
    */
-  async remove(id: string, currentUserId?: string, currentUserRole?: string) {
+  async remove(id: string, currentUserId?: string, currentUserRole?: string | null) {
     const event = await this.prisma.event.findUnique({
       where: { id },
     });
@@ -575,7 +575,7 @@ export class EventsService {
     startDate: string,
     endDate: string,
     currentUserId?: string,
-    currentUserRole?: string,
+    currentUserRole?: string | null,
   ) {
     if (!startDate || !endDate) {
       throw new BadRequestException(
@@ -659,7 +659,7 @@ export class EventsService {
     eventId: string,
     userId: string,
     currentUserId?: string,
-    currentUserRole?: string,
+    currentUserRole?: string | null,
   ) {
     // Vérifier que l'événement existe
     const event = await this.prisma.event.findUnique({
@@ -714,7 +714,7 @@ export class EventsService {
   async stopRecurrence(
     id: string,
     currentUserId?: string,
-    currentUserRole?: string,
+    currentUserRole?: string | null,
   ) {
     const event = await this.prisma.event.findUnique({ where: { id } });
     if (!event) throw new NotFoundException('Événement introuvable');
@@ -753,7 +753,7 @@ export class EventsService {
     eventId: string,
     userId: string,
     currentUserId?: string,
-    currentUserRole?: string,
+    currentUserRole?: string | null,
   ) {
     await this.ensureCanMutate(eventId, currentUserId, currentUserRole);
 

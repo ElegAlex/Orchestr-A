@@ -61,7 +61,7 @@ export class EpicsService {
     return epic;
   }
 
-  async update(id: string, updateEpicDto: UpdateEpicDto, currentUserId?: string, currentUserRole?: string) {
+  async update(id: string, updateEpicDto: UpdateEpicDto, currentUserId?: string, currentUserRole?: string | null) {
     if (currentUserId) {
       await this.assertProjectMembership(id, currentUserId, currentUserRole);
     }
@@ -73,7 +73,7 @@ export class EpicsService {
     });
   }
 
-  async remove(id: string, currentUserId?: string, currentUserRole?: string) {
+  async remove(id: string, currentUserId?: string, currentUserRole?: string | null) {
     if (currentUserId) {
       await this.assertProjectMembership(id, currentUserId, currentUserRole);
     }
@@ -89,7 +89,7 @@ export class EpicsService {
   private async assertProjectMembership(
     epicId: string,
     userId: string,
-    userRole?: string,
+    userRole?: string | null,
   ): Promise<void> {
     if (userRole === 'ADMIN') return;
 

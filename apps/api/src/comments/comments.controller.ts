@@ -23,7 +23,10 @@ import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserRoleCode,
+} from '../auth/decorators/current-user.decorator';
 
 @ApiTags('comments')
 @Controller('comments')
@@ -81,7 +84,7 @@ export class CommentsController {
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
+    @CurrentUserRoleCode() userRole: string | null,
   ) {
     return this.commentsService.remove(id, userId, userRole);
   }

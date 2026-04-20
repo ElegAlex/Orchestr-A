@@ -30,7 +30,10 @@ import {
   MilestonesValidationPreviewDto,
 } from './dto/import-milestones.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserRoleCode,
+} from '../auth/decorators/current-user.decorator';
 import { MilestoneStatus } from 'database';
 
 @ApiTags('milestones')
@@ -77,7 +80,7 @@ export class MilestonesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateMilestoneDto: UpdateMilestoneDto,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.milestonesService.update(id, updateMilestoneDto, currentUserId, currentUserRole);
   }
@@ -97,7 +100,7 @@ export class MilestonesController {
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.milestonesService.remove(id, currentUserId, currentUserRole);
   }

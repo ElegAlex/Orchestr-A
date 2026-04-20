@@ -33,3 +33,19 @@ export const CurrentUser = createParamDecorator(
     return data ? user?.[data] : user;
   },
 );
+
+/**
+ * Décorateur spécialisé : extrait directement `user.role?.code` sous forme
+ * `string | null`. Utile pour les controllers qui veulent passer un code de
+ * rôle à un service (signature string) sans avoir à manipuler l'objet Role
+ * complet.
+ *
+ * Post-V4 : remplace l'ancien `@CurrentUser('role') userRole: string` qui
+ * renvoyait en réalité l'objet Role (breaking silencieux sur les services).
+ */
+export const CurrentUserRoleCode = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext): string | null => {
+    const request = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
+    return request.user?.role?.code ?? null;
+  },
+);

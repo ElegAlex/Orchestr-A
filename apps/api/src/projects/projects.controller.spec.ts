@@ -271,7 +271,10 @@ describe('ProjectsController', () => {
       description: 'Updated description',
     };
 
-    const caller = { id: 'admin-1', role: 'ADMIN' };
+    const caller = {
+      id: 'admin-1',
+      role: { id: 'role-1', code: 'ADMIN', label: 'Administrateur', templateKey: 'ADMIN', isSystem: true },
+    } as any;
 
     it('should update a project successfully', async () => {
       const updatedProject = { ...mockProject, ...updateProjectDto };
@@ -288,7 +291,7 @@ describe('ProjectsController', () => {
       expect(mockProjectsService.update).toHaveBeenCalledWith(
         'project-id-1',
         updateProjectDto,
-        caller,
+        { id: 'admin-1', role: 'ADMIN' },
       );
     });
 
@@ -318,7 +321,10 @@ describe('ProjectsController', () => {
   });
 
   describe('remove', () => {
-    const caller = { id: 'admin-1', role: 'ADMIN' };
+    const caller = {
+      id: 'admin-1',
+      role: { id: 'role-1', code: 'ADMIN', label: 'Administrateur', templateKey: 'ADMIN', isSystem: true },
+    } as any;
 
     it('should soft delete a project (set status to CANCELLED)', async () => {
       const cancelledProject = { ...mockProject, status: 'CANCELLED' };
@@ -329,7 +335,7 @@ describe('ProjectsController', () => {
       expect(result.status).toBe('CANCELLED');
       expect(mockProjectsService.remove).toHaveBeenCalledWith(
         'project-id-1',
-        caller,
+        { id: 'admin-1', role: 'ADMIN' },
       );
     });
 
@@ -429,7 +435,10 @@ describe('ProjectsController', () => {
   });
 
   describe('removeMember', () => {
-    const caller = { id: 'admin-1', role: 'ADMIN' };
+    const caller = {
+      id: 'admin-1',
+      role: { id: 'role-1', code: 'ADMIN', label: 'Administrateur', templateKey: 'ADMIN', isSystem: true },
+    } as any;
 
     it('should remove a member from project', async () => {
       mockProjectsService.removeMember.mockResolvedValue({
@@ -446,7 +455,7 @@ describe('ProjectsController', () => {
       expect(mockProjectsService.removeMember).toHaveBeenCalledWith(
         'project-id-1',
         'user-id-1',
-        caller,
+        { id: 'admin-1', role: 'ADMIN' },
       );
     });
 

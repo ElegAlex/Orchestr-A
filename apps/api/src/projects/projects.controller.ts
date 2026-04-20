@@ -25,7 +25,8 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CurrentUser, CurrentUserRoleCode } from '../auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 import { ProjectStatus } from 'database';
 
@@ -79,9 +80,9 @@ export class ProjectsController {
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('status') status?: ProjectStatus,
     @CurrentUser('id') userId?: string,
-    @CurrentUser('role') userRole?: string,
+    @CurrentUserRoleCode() userRole?: string | null,
   ) {
-    return this.projectsService.findAll(page, limit, status, userId, userRole);
+    return this.projectsService.findAll(page, limit, status, userId, userRole ?? undefined);
   }
 
   @Post('snapshots/capture')
@@ -169,9 +170,9 @@ export class ProjectsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateProjectDto: UpdateProjectDto,
-    @CurrentUser() user: { id: string; role?: string },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.update(id, updateProjectDto, user);
+    return this.projectsService.update(id, updateProjectDto, { id: user.id, role: user.role?.code ?? undefined });
   }
 
   @Delete(':id')
@@ -191,9 +192,9 @@ export class ProjectsController {
   })
   remove(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: { id: string; role?: string },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.remove(id, user);
+    return this.projectsService.remove(id, { id: user.id, role: user.role?.code ?? undefined });
   }
 
   @Delete(':id/hard')
@@ -257,9 +258,9 @@ export class ProjectsController {
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body() dto: UpdateMemberDto,
-    @CurrentUser() user: { id: string; role?: string },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.updateMember(projectId, userId, dto, user);
+    return this.projectsService.updateMember(projectId, userId, dto, { id: user.id, role: user.role?.code ?? undefined });
   }
 
   @Delete(':projectId/members/:userId')
@@ -285,8 +286,8 @@ export class ProjectsController {
   removeMember(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Param('userId', ParseUUIDPipe) userId: string,
-    @CurrentUser() user: { id: string; role?: string },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.removeMember(projectId, userId, user);
+    return this.projectsService.removeMember(projectId, userId, { id: user.id, role: user.role?.code ?? undefined });
   }
 }

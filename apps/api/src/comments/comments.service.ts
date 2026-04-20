@@ -122,7 +122,7 @@ export class CommentsService {
     });
   }
 
-  async remove(id: string, userId: string, userRole: string) {
+  async remove(id: string, userId: string, userRole: string | null) {
     const comment = await this.findOne(id);
 
     // Seul l'auteur ou un utilisateur avec la permission comments:delete_any peut supprimer

@@ -23,7 +23,10 @@ import { EpicsService } from './epics.service';
 import { CreateEpicDto } from './dto/create-epic.dto';
 import { UpdateEpicDto } from './dto/update-epic.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserRoleCode,
+} from '../auth/decorators/current-user.decorator';
 
 @ApiTags('epics')
 @Controller('epics')
@@ -67,7 +70,7 @@ export class EpicsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateEpicDto: UpdateEpicDto,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.epicsService.update(id, updateEpicDto, currentUserId, currentUserRole);
   }
@@ -79,7 +82,7 @@ export class EpicsController {
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.epicsService.remove(id, currentUserId, currentUserRole);
   }

@@ -24,7 +24,10 @@ import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserRoleCode,
+} from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OwnershipGuard } from '../common/guards/ownership.guard';
 import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
@@ -72,7 +75,7 @@ export class EventsController {
   })
   findAll(
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('userId') userId?: string,
@@ -105,7 +108,7 @@ export class EventsController {
     @Query('start') start: string,
     @Query('end') end: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.eventsService.getEventsByRange(
       start,
@@ -129,11 +132,11 @@ export class EventsController {
   getEventsByUser(
     @Param('userId', ParseUUIDPipe) userId: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     const MANAGEMENT_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'];
     if (
-      !MANAGEMENT_ROLES.includes(currentUserRole) &&
+      !(currentUserRole && MANAGEMENT_ROLES.includes(currentUserRole)) &&
       userId !== currentUserId
     ) {
       throw new ForbiddenException(
@@ -159,7 +162,7 @@ export class EventsController {
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.eventsService.findOne(id, currentUserId, currentUserRole);
   }
@@ -189,7 +192,7 @@ export class EventsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateEventDto: UpdateEventDto,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.eventsService.update(
       id,
@@ -220,7 +223,7 @@ export class EventsController {
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.eventsService.remove(id, currentUserId, currentUserRole);
   }
@@ -244,7 +247,7 @@ export class EventsController {
   stopRecurrence(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.eventsService.stopRecurrence(id, currentUserId, currentUserRole);
   }
@@ -274,7 +277,7 @@ export class EventsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body('userId', ParseUUIDPipe) userId: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.eventsService.addParticipant(
       id,
@@ -310,7 +313,7 @@ export class EventsController {
     @Param('eventId', ParseUUIDPipe) eventId: string,
     @Param('userId', ParseUUIDPipe) userId: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.eventsService.removeParticipant(
       eventId,

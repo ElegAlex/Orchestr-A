@@ -27,7 +27,10 @@ import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
 import { GenerateSchedulesDto } from './dto/generate-schedules.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserRoleCode,
+} from '../auth/decorators/current-user.decorator';
 import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 
 @ApiTags('telework')
@@ -53,7 +56,7 @@ export class TeleworkController {
   })
   create(
     @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
+    @CurrentUserRoleCode() userRole: string | null,
     @Body() createTeleworkDto: CreateTeleworkDto,
   ) {
     return this.teleworkService.create(userId, userRole, createTeleworkDto);
@@ -75,7 +78,7 @@ export class TeleworkController {
   })
   findAll(
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('userId') userId?: string,
@@ -203,7 +206,7 @@ export class TeleworkController {
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.teleworkService.findOne(id, currentUserId, currentUserRole);
   }
@@ -227,7 +230,7 @@ export class TeleworkController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
+    @CurrentUserRoleCode() userRole: string | null,
     @Body() updateTeleworkDto: UpdateTeleworkDto,
   ) {
     return this.teleworkService.update(id, userId, userRole, updateTeleworkDto);
@@ -249,7 +252,7 @@ export class TeleworkController {
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
+    @CurrentUserRoleCode() userRole: string | null,
   ) {
     return this.teleworkService.remove(id, userId, userRole);
   }
@@ -268,7 +271,7 @@ export class TeleworkController {
   @ApiResponse({ status: 200, description: 'Liste des règles récurrentes' })
   findAllRecurringRules(
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
     @Query('userId') userId?: string,
   ) {
     return this.teleworkService.findAllRecurringRules(
@@ -289,7 +292,7 @@ export class TeleworkController {
   })
   createRecurringRule(
     @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
+    @CurrentUserRoleCode() userRole: string | null,
     @Body() dto: CreateRecurringRuleDto,
   ) {
     return this.teleworkService.createRecurringRule(userId, userRole, dto);
@@ -303,7 +306,7 @@ export class TeleworkController {
   updateRecurringRule(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
+    @CurrentUserRoleCode() userRole: string | null,
     @Body() dto: UpdateRecurringRuleDto,
   ) {
     return this.teleworkService.updateRecurringRule(id, userId, userRole, dto);
@@ -318,7 +321,7 @@ export class TeleworkController {
   removeRecurringRule(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
+    @CurrentUserRoleCode() userRole: string | null,
   ) {
     return this.teleworkService.removeRecurringRule(id, userId, userRole);
   }
@@ -336,7 +339,7 @@ export class TeleworkController {
   })
   generateSchedules(
     @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
+    @CurrentUserRoleCode() userRole: string | null,
     @Body() dto: GenerateSchedulesDto,
   ) {
     return this.teleworkService.generateSchedulesFromRules(

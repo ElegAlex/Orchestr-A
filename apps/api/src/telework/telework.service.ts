@@ -31,7 +31,7 @@ export class TeleworkService {
    */
   async create(
     currentUserId: string,
-    currentUserRole: string,
+    currentUserRole: string | null,
     createTeleworkDto: CreateTeleworkDto,
   ) {
     const {
@@ -264,7 +264,7 @@ export class TeleworkService {
   /**
    * Récupérer un télétravail par ID
    */
-  async findOne(id: string, currentUserId?: string, currentUserRole?: string) {
+  async findOne(id: string, currentUserId?: string, currentUserRole?: string | null) {
     const telework = await this.prisma.teleworkSchedule.findUnique({
       where: { id },
       include: {
@@ -404,7 +404,7 @@ export class TeleworkService {
   async update(
     id: string,
     currentUserId: string,
-    currentUserRole: string,
+    currentUserRole: string | null,
     updateTeleworkDto: UpdateTeleworkDto,
   ) {
     const existingTelework = await this.prisma.teleworkSchedule.findUnique({
@@ -483,7 +483,7 @@ export class TeleworkService {
   /**
    * Supprimer un télétravail
    */
-  async remove(id: string, currentUserId: string, currentUserRole: string) {
+  async remove(id: string, currentUserId: string, currentUserRole: string | null) {
     const telework = await this.prisma.teleworkSchedule.findUnique({
       where: { id },
     });
@@ -519,7 +519,7 @@ export class TeleworkService {
    */
   async findAllRecurringRules(
     currentUserId: string,
-    currentUserRole: string,
+    currentUserRole: string | null,
     userId?: string,
   ) {
     const permissions =
@@ -579,7 +579,7 @@ export class TeleworkService {
    */
   async createRecurringRule(
     currentUserId: string,
-    currentUserRole: string,
+    currentUserRole: string | null,
     dto: CreateRecurringRuleDto,
   ) {
     const {
@@ -658,7 +658,7 @@ export class TeleworkService {
   async updateRecurringRule(
     id: string,
     currentUserId: string,
-    currentUserRole: string,
+    currentUserRole: string | null,
     dto: UpdateRecurringRuleDto,
   ) {
     const rule = await this.prisma.teleworkRecurringRule.findUnique({
@@ -710,7 +710,7 @@ export class TeleworkService {
   async removeRecurringRule(
     id: string,
     currentUserId: string,
-    currentUserRole: string,
+    currentUserRole: string | null,
   ) {
     const rule = await this.prisma.teleworkRecurringRule.findUnique({
       where: { id },
@@ -740,7 +740,7 @@ export class TeleworkService {
    */
   async generateSchedulesFromRules(
     currentUserId: string,
-    currentUserRole: string,
+    currentUserRole: string | null,
     dto: GenerateSchedulesDto,
   ) {
     const permissions =

@@ -34,7 +34,7 @@ import {
 } from './dto/import-leaves.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CurrentUser, CurrentUserRoleCode } from '../auth/decorators/current-user.decorator';
 import { LeaveStatus, LeaveType } from 'database';
 
 @ApiTags('leaves')
@@ -68,10 +68,10 @@ export class LeavesController {
   })
   create(
     @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
+    @CurrentUserRoleCode() userRole: string | null,
     @Body() createLeaveDto: CreateLeaveDto,
   ) {
-    return this.leavesService.create(userId, createLeaveDto, userRole);
+    return this.leavesService.create(userId, createLeaveDto, userRole ?? undefined);
   }
 
   // ===========================
@@ -158,7 +158,7 @@ export class LeavesController {
   })
   findAll(
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('userId') userId?: string,
@@ -176,7 +176,7 @@ export class LeavesController {
       startDate,
       endDate,
       currentUserId,
-      currentUserRole,
+      currentUserRole ?? undefined,
     );
   }
 
@@ -288,11 +288,11 @@ export class LeavesController {
   async getUserBalance(
     @Param('userId', ParseUUIDPipe) userId: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     if (userId !== currentUserId) {
       const permissions =
-        await this.permissionsService.getPermissionsForRole(currentUserRole);
+        await this.permissionsService.getPermissionsForRole(currentUserRole ?? '');
       // D6 #2 PO : `leaves:validate` n'existe pas au catalogue ; le check
       // historique était cassé (toujours faux). La permission métier
       // équivalente est `leaves:approve`.
@@ -317,7 +317,7 @@ export class LeavesController {
   })
   getSubordinates(
     @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
+    @CurrentUserRoleCode() userRole: string | null,
   ) {
     return this.leavesService.getSubordinates(userId, userRole);
   }
@@ -336,9 +336,9 @@ export class LeavesController {
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
-    return this.leavesService.findOne(id, currentUserId, currentUserRole);
+    return this.leavesService.findOne(id, currentUserId, currentUserRole ?? undefined);
   }
 
   @Patch(':id')
@@ -362,13 +362,13 @@ export class LeavesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateLeaveDto: UpdateLeaveDto,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.leavesService.update(
       id,
       updateLeaveDto,
       currentUserId,
-      currentUserRole,
+      currentUserRole ?? undefined,
     );
   }
 
@@ -394,9 +394,9 @@ export class LeavesController {
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
-    return this.leavesService.remove(id, currentUserId, currentUserRole);
+    return this.leavesService.remove(id, currentUserId, currentUserRole ?? undefined);
   }
 
   @Post(':id/approve')
@@ -530,9 +530,9 @@ export class LeavesController {
   cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
-    return this.leavesService.cancel(id, currentUserId, currentUserRole);
+    return this.leavesService.cancel(id, currentUserId, currentUserRole ?? undefined);
   }
 
   @Post(':id/reject-cancellation')
@@ -549,12 +549,12 @@ export class LeavesController {
   rejectCancellation(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') currentUserId: string,
-    @CurrentUser('role') currentUserRole: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.leavesService.rejectCancellation(
       id,
       currentUserId,
-      currentUserRole,
+      currentUserRole ?? undefined,
     );
   }
 

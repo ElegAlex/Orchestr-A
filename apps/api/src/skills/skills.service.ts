@@ -377,7 +377,9 @@ export class SkillsService {
           firstName: true,
           lastName: true,
           email: true,
-          role: true,
+          role: {
+            select: { code: true },
+          },
           departmentId: true,
           department: {
             select: {

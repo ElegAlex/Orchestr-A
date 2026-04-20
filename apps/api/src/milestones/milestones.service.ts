@@ -82,7 +82,7 @@ export class MilestonesService {
     return milestone;
   }
 
-  async update(id: string, updateMilestoneDto: UpdateMilestoneDto, currentUserId?: string, currentUserRole?: string) {
+  async update(id: string, updateMilestoneDto: UpdateMilestoneDto, currentUserId?: string, currentUserRole?: string | null) {
     if (currentUserId) {
       await this.assertProjectMembership(id, currentUserId, currentUserRole);
     }
@@ -99,7 +99,7 @@ export class MilestonesService {
     });
   }
 
-  async remove(id: string, currentUserId?: string, currentUserRole?: string) {
+  async remove(id: string, currentUserId?: string, currentUserRole?: string | null) {
     if (currentUserId) {
       await this.assertProjectMembership(id, currentUserId, currentUserRole);
     }
@@ -115,7 +115,7 @@ export class MilestonesService {
   private async assertProjectMembership(
     milestoneId: string,
     userId: string,
-    userRole?: string,
+    userRole?: string | null,
   ): Promise<void> {
     if (userRole === 'ADMIN') return;
 

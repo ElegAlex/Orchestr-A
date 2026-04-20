@@ -772,7 +772,7 @@ export class LeavesService {
    * Récupérer les collaborateurs sous la responsabilité d'un manager/responsable
    * Utilise la même logique de périmètre que getPendingForValidator
    */
-  async getSubordinates(managerId: string, managerRole: string) {
+  async getSubordinates(managerId: string, managerRole: string | null) {
     const permissions =
       await this.permissionsService.getPermissionsForRole(managerRole);
     const hasManageAny = permissions.includes(MANAGE_ANY_LEAVES);
