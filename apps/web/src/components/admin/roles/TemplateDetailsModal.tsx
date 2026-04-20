@@ -106,6 +106,15 @@ export function TemplateDetailsModal({
           </button>
         </div>
 
+        {/* Bannière read-only */}
+        <div
+          className="px-6 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-900"
+          data-testid="readonly-banner"
+        >
+          Permissions définies par le code. Non modifiables depuis
+          l&apos;interface.
+        </div>
+
         {/* Body — scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="mb-3 text-xs text-gray-500">

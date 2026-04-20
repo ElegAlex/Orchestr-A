@@ -1,24 +1,37 @@
 "use client";
 
 /**
- * Route admin Spec 3 V1D — nouvelle galerie des rôles RBAC.
+ * Route admin RBAC — 2 onglets séparés :
  *
- * Remplacera `/admin/roles` en V2 (cette route est temporaire, nommée `-v2`
- * pour cohabiter avec l'ancienne). Sert aussi de cible aux E2E dans
- * `e2e/tests/rbac/admin-roles-gallery.spec.ts`.
+ *   1. "Templates RBAC" : galerie des 26 templates constants du code, strictement
+ *      read-only. Aucune édition, aucun bouton "Éditer". Click sur une card →
+ *      modale détail permissions. Click sur le compteur de rôles rattachés →
+ *      bascule sur l'onglet "Rôles" avec filtre appliqué (deeplink cross-tab).
  *
- * - Gate ADMIN-only via `users:manage_roles` (route-level, pas HOC — les
- *   E2E attendent un 403 visible ou redirect pour non-admins).
- * - Fetch parallèle `/api/roles/templates` + `/api/roles` au mount.
- * - Filtrage : chips catégorie (9) + recherche libre (label / description /
- *   templateKey).
+ *   2. "Rôles" : liste des entrées DB (table `roles`) groupées par `templateKey`.
+ *      CRUD uniquement pour les rôles `isSystem=false` — les rôles système sont
+ *      affichés en lecture seule, AUCUNE action.
+ *
+ * Onglet par défaut : "Rôles" — load-bearing pour l'UX (l'action principale
+ * de l'admin est de gérer les rôles, pas de consulter les templates). Ne
+ * pas inverser sans arbitrage.
+ *
+ * Sémantique du filtre par template (onglet Rôles) :
+ *   - Click deeplink depuis un compteur de l'onglet Templates → filtre posé
+ *     sur ce templateKey puis bascule onglet.
+ *   - Click direct sur l'onglet Rôles (via la nav tabs) depuis Templates →
+ *     reset du filtre à "ALL" (intention "je veux voir la liste des rôles").
+ *   - Reste des interactions (click sur le même onglet actif) → filtre
+ *     inchangé.
+ *
+ * Gate : `users:manage_roles` (redirect dashboard sinon).
  */
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import toast from "react-hot-toast";
-import type { RoleCategoryKey } from "rbac";
+import type { RoleTemplateKey } from "rbac";
 import { MainLayout } from "@/components/MainLayout";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
@@ -26,18 +39,15 @@ import {
   type RoleTemplateView,
   type RoleWithStats,
 } from "@/services/roles.service";
-import { TemplateCard } from "@/components/admin/roles/TemplateCard";
 import { TemplateDetailsModal } from "@/components/admin/roles/TemplateDetailsModal";
 import { CreateRoleForm } from "@/components/admin/roles/CreateRoleForm";
-import { RolesList } from "@/components/admin/roles/RolesList";
-import {
-  CATEGORY_CONFIG,
-  CATEGORY_ORDER,
-} from "@/components/admin/roles/category-config";
+import { TemplatesTab } from "@/components/admin/roles/TemplatesTab";
+import { RolesTab } from "@/components/admin/roles/RolesTab";
 
-type CategoryFilter = RoleCategoryKey | "ALL";
+type ActiveTab = "templates" | "roles";
+type TemplateFilter = RoleTemplateKey | "ALL";
 
-export default function RolesGalleryV2Page() {
+export default function RolesAdminPage() {
   const router = useRouter();
   const locale = useLocale();
   const { hasPermission, permissionsLoaded } = usePermissions();
@@ -47,16 +57,18 @@ export default function RolesGalleryV2Page() {
   const [templates, setTemplates] = useState<RoleTemplateView[]>([]);
   const [roles, setRoles] = useState<RoleWithStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] =
-    useState<CategoryFilter>("ALL");
-  const [searchTerm, setSearchTerm] = useState("");
+
+  // Onglet actif — "roles" par défaut (action principale de l'admin).
+  const [activeTab, setActiveTab] = useState<ActiveTab>("roles");
+  const [rolesTemplateFilter, setRolesTemplateFilter] =
+    useState<TemplateFilter>("ALL");
 
   const [detailsTemplate, setDetailsTemplate] =
     useState<RoleTemplateView | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   // Gate route-level : redirection dashboard si perm manquante (après chargement
-  // des perms, éviter flash).
+  // des perms pour éviter flash).
   useEffect(() => {
     if (!permissionsLoaded) return;
     if (!canManage) {
@@ -74,7 +86,7 @@ export default function RolesGalleryV2Page() {
       setTemplates(tpls);
       setRoles(rls);
     } catch {
-      toast.error("Erreur lors du chargement de la galerie.");
+      toast.error("Erreur lors du chargement des rôles.");
     } finally {
       setLoading(false);
     }
@@ -85,40 +97,22 @@ export default function RolesGalleryV2Page() {
     void loadData();
   }, [permissionsLoaded, canManage]);
 
-  // Index rôles → nombre par templateKey.
+  // Index rôles → nombre par templateKey (pour les compteurs sur les cards).
   const roleCountByTemplate = useMemo(() => {
-    const out: Partial<Record<string, number>> = {};
+    const out: Partial<Record<RoleTemplateKey, number>> = {};
     for (const r of roles) {
       out[r.templateKey] = (out[r.templateKey] ?? 0) + 1;
     }
     return out;
   }, [roles]);
 
-  // Templates filtrés (catégorie + recherche).
-  const filteredTemplates = useMemo(() => {
-    const needle = searchTerm.trim().toLowerCase();
-    return templates.filter((tpl) => {
-      if (selectedCategory !== "ALL" && tpl.category !== selectedCategory) {
-        return false;
-      }
-      if (!needle) return true;
-      return (
-        tpl.defaultLabel.toLowerCase().includes(needle) ||
-        tpl.description.toLowerCase().includes(needle) ||
-        tpl.key.toLowerCase().includes(needle)
-      );
-    });
-  }, [templates, selectedCategory, searchTerm]);
-
-  // Grouper les templates filtrés par catégorie (ordre fixe A→I).
-  const templatesByCategory = useMemo(() => {
-    const groups: Record<string, RoleTemplateView[]> = {};
-    for (const tpl of filteredTemplates) {
-      if (!groups[tpl.category]) groups[tpl.category] = [];
-      groups[tpl.category].push(tpl);
-    }
-    return groups;
-  }, [filteredTemplates]);
+  // Cross-nav depuis Templates → Rôles : on mémorise le filtre et bascule
+  // d'onglet. Le filtre est conservé quand l'admin revient manuellement sur
+  // l'onglet Rôles plus tard ; un reset manuel est possible via le dropdown.
+  const handleTemplateRoleCountClick = (templateKey: RoleTemplateKey) => {
+    setRolesTemplateFilter(templateKey);
+    setActiveTab("roles");
+  };
 
   // ────────────────────────────────────────────────────────────────────
   // Guards
@@ -135,9 +129,6 @@ export default function RolesGalleryV2Page() {
   }
 
   if (!canManage) {
-    // Fallback visible pendant que le router.replace s'effectue — garantit
-    // que les tests E2E voient bien un texte "Accès refusé" si la redirection
-    // est asynchrone.
     return (
       <MainLayout>
         <div className="p-8 max-w-xl mx-auto text-center">
@@ -145,8 +136,8 @@ export default function RolesGalleryV2Page() {
             Accès refusé
           </h1>
           <p className="text-sm text-gray-600">
-            Vous n&apos;avez pas la permission d&apos;accéder à la galerie
-            des rôles (<code>users:manage_roles</code>).
+            Vous n&apos;avez pas la permission d&apos;accéder à
+            l&apos;administration des rôles (<code>users:manage_roles</code>).
           </p>
         </div>
       </MainLayout>
@@ -161,139 +152,85 @@ export default function RolesGalleryV2Page() {
     <MainLayout>
       <div className="p-6 max-w-7xl mx-auto">
         {/* Header */}
-        <header className="mb-6">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                Galerie des rôles
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">
-                {templates.length} templates RBAC · {roles.length} rôles en
-                base
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-            >
-              + Nouveau rôle
-            </button>
-          </div>
+        <header className="mb-4">
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Administration des rôles
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            {templates.length} templates RBAC · {roles.length} rôle
+            {roles.length > 1 ? "s" : ""} en base
+          </p>
         </header>
 
-        {/* Filtres */}
-        <section className="mb-6 space-y-3">
-          {/* Chips catégories — 9 chips, une par catégorie (ordre A→I). */}
-          <div
-            className="flex flex-wrap gap-2"
-            role="toolbar"
-            aria-label="Filtrer par catégorie"
-          >
+        {/* Onglets */}
+        <nav
+          className="mb-6 border-b border-gray-200"
+          role="tablist"
+          aria-label="Administration des rôles"
+        >
+          <div className="flex gap-1">
             <button
               type="button"
-              data-testid="category-filter-all"
-              onClick={() => setSelectedCategory("ALL")}
-              className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
-                selectedCategory === "ALL"
-                  ? "bg-gray-900 text-white border-gray-900"
-                  : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
+              role="tab"
+              aria-selected={activeTab === "roles"}
+              data-testid="tab-roles"
+              onClick={() => {
+                if (activeTab !== "roles") {
+                  setRolesTemplateFilter("ALL");
+                }
+                setActiveTab("roles");
+              }}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
+                activeTab === "roles"
+                  ? "border-blue-600 text-blue-700"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
               }`}
             >
-              Toutes ({templates.length})
+              Rôles
             </button>
-            {CATEGORY_ORDER.map((cat) => {
-              const cfg = CATEGORY_CONFIG[cat];
-              const count = templates.filter((t) => t.category === cat).length;
-              const active = selectedCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  data-testid="category-chip"
-                  data-category={cat}
-                  data-active={active ? "true" : "false"}
-                  onClick={() =>
-                    setSelectedCategory(active ? "ALL" : cat)
-                  }
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
-                    active ? cfg.activeChipClass : cfg.badgeClass
-                  }`}
-                >
-                  {cfg.label} ({count})
-                </button>
-              );
-            })}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "templates"}
+              data-testid="tab-templates"
+              onClick={() => setActiveTab("templates")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
+                activeTab === "templates"
+                  ? "border-blue-600 text-blue-700"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Templates RBAC
+            </button>
           </div>
+        </nav>
 
-          {/* Recherche */}
-          <div>
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Rechercher (libellé, description, clé…)"
-              className="w-full max-w-md px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        {/* Contenu de l'onglet */}
+        {loading ? (
+          <div className="py-12 text-center text-sm text-gray-500">
+            Chargement…
+          </div>
+        ) : activeTab === "roles" ? (
+          <section role="tabpanel" data-testid="panel-roles">
+            <RolesTab
+              roles={roles}
+              templates={templates}
+              templateFilter={rolesTemplateFilter}
+              onTemplateFilterChange={setRolesTemplateFilter}
+              onCreateRole={() => setCreateOpen(true)}
+              onChanged={() => void loadData()}
             />
-          </div>
-        </section>
-
-        {/* Galerie */}
-        <section className="mb-10">
-          {loading ? (
-            <div className="py-12 text-center text-sm text-gray-500">
-              Chargement des templates…
-            </div>
-          ) : filteredTemplates.length === 0 ? (
-            <div className="py-12 text-center text-sm text-gray-500">
-              Aucun template ne correspond aux filtres.
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {CATEGORY_ORDER.filter(
-                (cat) => templatesByCategory[cat]?.length,
-              ).map((cat) => {
-                const cfg = CATEGORY_CONFIG[cat];
-                const group = templatesByCategory[cat] ?? [];
-                return (
-                  <div key={cat} data-testid="category-section" data-category={cat}>
-                    <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.badgeClass}`}
-                      >
-                        {cfg.label}
-                      </span>
-                      <span className="text-xs font-normal text-gray-500">
-                        {group.length} template{group.length > 1 ? "s" : ""}
-                      </span>
-                    </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                      {group.map((tpl) => (
-                        <TemplateCard
-                          key={tpl.key}
-                          template={tpl}
-                          roleCount={roleCountByTemplate[tpl.key] ?? 0}
-                          onClick={() => setDetailsTemplate(tpl)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* Liste des rôles DB */}
-        <section>
-          {loading ? (
-            <div className="py-6 text-center text-sm text-gray-500">
-              Chargement des rôles…
-            </div>
-          ) : (
-            <RolesList roles={roles} onChanged={() => void loadData()} />
-          )}
-        </section>
+          </section>
+        ) : (
+          <section role="tabpanel" data-testid="panel-templates">
+            <TemplatesTab
+              templates={templates}
+              roleCountByTemplate={roleCountByTemplate}
+              onOpenDetails={(tpl) => setDetailsTemplate(tpl)}
+              onRoleCountClick={handleTemplateRoleCountClick}
+            />
+          </section>
+        )}
       </div>
 
       {/* Modales */}

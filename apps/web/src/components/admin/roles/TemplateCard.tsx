@@ -7,21 +7,27 @@ interface TemplateCardProps {
   template: RoleTemplateView;
   /** Nombre de rôles DB rattachés à ce template (système + éditables). */
   roleCount: number;
+  /** Click sur la carte (ouvre la modale read-only des permissions). */
   onClick: () => void;
+  /**
+   * Click sur le compteur "X rôle(s)" — bascule sur l'onglet Rôles filtré
+   * sur ce templateKey. Si non fourni, le compteur n'est pas cliquable.
+   */
+  onRoleCountClick?: () => void;
 }
 
 /**
- * Card d'un des 26 templates RBAC (galerie admin Spec 3 V1D).
+ * Card d'un des 26 templates RBAC (galerie admin, onglet "Templates RBAC").
  *
- * - Badge catégorie coloré en haut (cf. `CATEGORY_CONFIG`).
- * - Titre = `defaultLabel` (ex: "Administrateur").
- * - Description (2-3 lignes max, truncate).
- * - Footer : count permissions + count rôles rattachés.
+ * Read-only stricte : aucune action d'édition. Click sur la carte ouvre la
+ * modale détaillée des permissions. Click sur le compteur de rôles rattachés
+ * renvoie à l'onglet "Rôles" avec filtre appliqué.
  */
 export function TemplateCard({
   template,
   roleCount,
   onClick,
+  onRoleCountClick,
 }: TemplateCardProps) {
   const categoryCfg = CATEGORY_CONFIG[template.category];
 
@@ -61,10 +67,35 @@ export function TemplateCard({
           </span>{" "}
           {template.permissions.length > 1 ? "permissions" : "permission"}
         </span>
-        <span>
-          <span className="font-semibold text-gray-700">{roleCount}</span>{" "}
-          {roleCount > 1 ? "rôles" : "rôle"}
-        </span>
+        {onRoleCountClick && roleCount > 0 ? (
+          <span
+            role="button"
+            tabIndex={0}
+            data-testid="template-role-count"
+            data-template-key={template.key}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRoleCountClick();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.stopPropagation();
+                e.preventDefault();
+                onRoleCountClick();
+              }
+            }}
+            className="text-blue-700 hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+            title={`Voir les ${roleCount} rôle(s) rattaché(s)`}
+          >
+            <span className="font-semibold">{roleCount}</span>{" "}
+            {roleCount > 1 ? "rôles rattachés" : "rôle rattaché"}
+          </span>
+        ) : (
+          <span data-testid="template-role-count" data-template-key={template.key}>
+            <span className="font-semibold text-gray-700">{roleCount}</span>{" "}
+            {roleCount > 1 ? "rôles" : "rôle"}
+          </span>
+        )}
       </div>
     </button>
   );
