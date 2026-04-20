@@ -21,12 +21,10 @@ model User {
   passwordHash String
   firstName    String
   lastName     String
-  role         Role     @default(CONTRIBUTEUR)
-  // V0 RBAC refactor : FK vers RoleEntity (table `roles`). Nullable pendant
-  // la transition V0→V4 ; passera NOT NULL après backfill stable et drop de
-  // la colonne enum `role`. Cf. contract-03 §9.
+  // RBAC V4 : FK vers Role (table `roles`). Nullable pendant la transition ;
+  // passera NOT NULL après backfill stable. Cf. contract-03 §9.
   roleId       String?
-  roleEntity   RoleEntity? @relation(name: "UserRoleEntity", fields: [roleId], references: [id])
+  role         Role? @relation(name: "UserRoleEntity", fields: [roleId], references: [id])
   departmentId String?
   isActive     Boolean  @default(true)
   avatarUrl    String?
@@ -77,24 +75,6 @@ model User {
   sponsoredProjects                Project[]                     @relation("ProjectSponsor")
 
   @@map("users")
-}
-
-enum Role {
-  ADMIN
-  RESPONSABLE
-  MANAGER
-  CHEF_DE_PROJET
-  REFERENT_TECHNIQUE
-  CONTRIBUTEUR
-  OBSERVATEUR
-  TECHNICIEN_SUPPORT
-  GESTIONNAIRE_PARC
-  ADMINISTRATEUR_IML
-  DEVELOPPEUR_CONCEPTEUR
-  CORRESPONDANT_FONCTIONNEL_APPLICATION
-  CHARGE_DE_MISSION
-  GESTIONNAIRE_IML
-  CONSULTANT_TECHNOLOGIE_SI
 }
 
 // ===========================
@@ -1018,58 +998,13 @@ model RefreshToken {
 }
 
 // ===========================
-// RBAC - DYNAMIC PERMISSIONS
+// RBAC V4 — Rôles + templates hardcodés (cf. contract-03 §2.1 + §9)
 // ===========================
 
-model Permission {
-  id              String           @id @default(uuid())
-  code            String           @unique
-  module          String
-  action          String
-  description     String?
-  rolePermissions RolePermission[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  @@map("permissions")
-}
-
-model RoleConfig {
-  id          String           @id @default(uuid())
-  code        String           @unique
-  name        String
-  description String?
-  isSystem    Boolean          @default(false)
-  isDefault   Boolean          @default(false)
-  permissions RolePermission[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  @@map("role_configs")
-}
-
-model RolePermission {
-  roleConfigId String
-  roleConfig   RoleConfig @relation(fields: [roleConfigId], references: [id], onDelete: Cascade)
-  permissionId String
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@id([roleConfigId, permissionId])
-  @@map("role_permissions")
-}
-
-// ===========================
-// V0 RBAC REFACTOR — Templates unifiés (cf. contract-03 §2.1 + §9)
-// ===========================
-
-// TRANSITOIRE V0→V4 : nommé RoleEntity car enum `Role` cohabite jusqu'à V4
-// (cf. backlog/rbac-refactor/contract/contract-03-type-model.md §9).
-// Sera renommé `Role` quand l'enum legacy sera dropé.
-//
 // Chaque rôle pointe sur un template hardcodé (cf. packages/rbac
 // ROLE_TEMPLATES) qui détermine entièrement ses permissions. Plusieurs
 // rôles peuvent partager un même templateKey.
-model RoleEntity {
+model Role {
   id          String   @id @default(uuid())
 
   /// Identifiant stable, unique. Sert de clé à PermissionsService.
@@ -1088,8 +1023,7 @@ model RoleEntity {
   /// Rôle système non modifiable et non supprimable (cf. D9 po-decisions).
   isSystem    Boolean  @default(false)
 
-  /// Rôle par défaut pour un nouvel utilisateur (remplace l'actuel
-  /// @default(CONTRIBUTEUR) sur User.role lors de la transition V4).
+  /// Rôle par défaut pour un nouvel utilisateur.
   isDefault   Boolean  @default(false)
 
   createdAt   DateTime @default(now())

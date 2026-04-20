@@ -86,7 +86,7 @@ DB_PASS=$(echo "$DATABASE_URL" | sed -n 's|postgresql://[^:]*:\([^@]*\)@.*|\1|p'
 DB_NAME=$(echo "$DATABASE_URL" | sed -n 's|.*/\([^?]*\).*|\1|p')
 
 ADMIN_COUNT=$(PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -tAc \
-    "SELECT COUNT(*) FROM users WHERE role = 'ADMIN' AND \"isActive\" = true;" 2>/dev/null || echo "0")
+    "SELECT COUNT(*) FROM users u JOIN roles r ON u.\"roleId\" = r.id WHERE r.code = 'ADMIN' AND u.\"isActive\" = true;" 2>/dev/null || echo "0")
 
 if [ "$ADMIN_COUNT" = "0" ]; then
     echo "      [SECURITY WARNING] No active ADMIN user found."
