@@ -1,4 +1,3 @@
-import { renderHook } from "@testing-library/react";
 import { usePermissions } from "./usePermissions";
 import { useAuthStore } from "@/stores/auth.store";
 
@@ -18,14 +17,14 @@ describe("usePermissions", () => {
       user: { role: "CONTRIBUTEUR" },
     });
 
-    const { result } = renderHook(() => usePermissions());
+    const { hasPermission } = usePermissions();
 
-    expect(result.current.hasPermission("projects:create")).toBe(true);
-    expect(result.current.hasPermission("users:delete")).toBe(false);
+    expect(hasPermission("projects:create")).toBe(true);
+    expect(hasPermission("users:delete")).toBe(false);
   });
 
   it("should resolve solely from the permissions array (no role bypass)", () => {
-    // Spec 3 V0 : plus de bypass isAdmin côté front. Les 108 permissions du
+    // Spec 3 V0 : plus de bypass isAdmin côté front. Les 107 permissions du
     // template ADMIN sont injectées via /api/auth/me/permissions.
     mockUseAuthStore.mockReturnValue({
       permissions: [],
@@ -33,10 +32,10 @@ describe("usePermissions", () => {
       user: { role: "ADMIN" },
     });
 
-    const { result } = renderHook(() => usePermissions());
+    const { hasPermission } = usePermissions();
 
-    expect(result.current.hasPermission("projects:create")).toBe(false);
-    expect(result.current.hasPermission("users:delete")).toBe(false);
+    expect(hasPermission("projects:create")).toBe(false);
+    expect(hasPermission("users:delete")).toBe(false);
   });
 
   it("grants every catalog code when permissions list contains them", () => {
@@ -46,10 +45,10 @@ describe("usePermissions", () => {
       user: { role: "ADMIN" },
     });
 
-    const { result } = renderHook(() => usePermissions());
+    const { hasPermission } = usePermissions();
 
-    expect(result.current.hasPermission("projects:create")).toBe(true);
-    expect(result.current.hasPermission("users:delete")).toBe(true);
+    expect(hasPermission("projects:create")).toBe(true);
+    expect(hasPermission("users:delete")).toBe(true);
   });
 
   it("should support hasAnyPermission", () => {
@@ -59,10 +58,10 @@ describe("usePermissions", () => {
       user: { role: "CONTRIBUTEUR" },
     });
 
-    const { result } = renderHook(() => usePermissions());
+    const { hasAnyPermission } = usePermissions();
 
-    expect(result.current.hasAnyPermission(["tasks:read", "tasks:create"])).toBe(true);
-    expect(result.current.hasAnyPermission(["users:delete", "users:create"])).toBe(false);
+    expect(hasAnyPermission(["tasks:read", "tasks:create"])).toBe(true);
+    expect(hasAnyPermission(["users:delete", "users:create"])).toBe(false);
   });
 
   it("should support hasAllPermissions", () => {
@@ -72,10 +71,10 @@ describe("usePermissions", () => {
       user: { role: "CONTRIBUTEUR" },
     });
 
-    const { result } = renderHook(() => usePermissions());
+    const { hasAllPermissions } = usePermissions();
 
-    expect(result.current.hasAllPermissions(["tasks:read", "tasks:create"])).toBe(true);
-    expect(result.current.hasAllPermissions(["tasks:read", "users:delete"])).toBe(false);
+    expect(hasAllPermissions(["tasks:read", "tasks:create"])).toBe(true);
+    expect(hasAllPermissions(["tasks:read", "users:delete"])).toBe(false);
   });
 
   it("should return permissionsLoaded state", () => {
@@ -85,9 +84,9 @@ describe("usePermissions", () => {
       user: { role: "CONTRIBUTEUR" },
     });
 
-    const { result } = renderHook(() => usePermissions());
+    const { permissionsLoaded } = usePermissions();
 
-    expect(result.current.permissionsLoaded).toBe(false);
+    expect(permissionsLoaded).toBe(false);
   });
 
   it("should handle missing user gracefully", () => {
@@ -97,9 +96,9 @@ describe("usePermissions", () => {
       user: null,
     });
 
-    const { result } = renderHook(() => usePermissions());
+    const { hasPermission } = usePermissions();
 
-    expect(result.current.hasPermission("tasks:read")).toBe(true);
-    expect(result.current.hasPermission("users:delete")).toBe(false);
+    expect(hasPermission("tasks:read")).toBe(true);
+    expect(hasPermission("users:delete")).toBe(false);
   });
 });
