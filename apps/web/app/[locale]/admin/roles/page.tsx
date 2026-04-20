@@ -97,14 +97,10 @@ export default function RolesAdminPage() {
     void loadData();
   }, [permissionsLoaded, canManage]);
 
-  // Compteurs affichés sur les cards Templates : uniquement les rôles créés
-  // par l'admin (isSystem=false). Les 26 rôles système seedés ne sont pas
-  // comptés, car l'onglet "Rôles" vers lequel pointe le deeplink ne les
-  // affiche plus (ils appartiennent à l'onglet "Templates RBAC").
+  // Index rôles → nombre par templateKey (pour les compteurs sur les cards).
   const roleCountByTemplate = useMemo(() => {
     const out: Partial<Record<RoleTemplateKey, number>> = {};
     for (const r of roles) {
-      if (r.isSystem) continue;
       out[r.templateKey] = (out[r.templateKey] ?? 0) + 1;
     }
     return out;
