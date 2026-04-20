@@ -65,13 +65,14 @@ export class CommentsController {
 
   @Patch(':id')
   @RequirePermissions('comments:update')
-  @ApiOperation({ summary: 'Modifier son commentaire' })
+  @ApiOperation({ summary: 'Modifier un commentaire (auteur ou détenteur de comments:manage_any)' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
     @Body() updateCommentDto: UpdateCommentDto,
   ) {
-    return this.commentsService.update(id, userId, updateCommentDto);
+    return this.commentsService.update(id, userId, userRole, updateCommentDto);
   }
 
   @Delete(':id')

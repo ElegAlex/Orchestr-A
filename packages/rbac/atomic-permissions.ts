@@ -4,12 +4,14 @@
  * Catalogue atomique des permissions RBAC d'Orchestr'A — Phase 1 de la refonte.
  *
  * Portée : ce fichier définit :
- *   (1) le type `PermissionCode` = union stricte des 107 permissions canoniques
+ *   (1) le type `PermissionCode` = union stricte des 108 permissions canoniques
  *       du système post-refactor (à rapprocher des 119 actuelles — 10 doublons
  *       :view/:edit supprimés (D4 A), 2 permissions analytics:* supprimées
  *       (D5), 1 permission telework:manage_recurring supprimée (D4 C), 1
  *       permission documents:manage_any ajoutée (D6 #4), 1 permission
- *       telework:manage_others renommée en telework:manage_any (D7)).
+ *       telework:manage_others renommée en telework:manage_any (D7), 1
+ *       permission comments:manage_any ajoutée (T3 hygiene 2026-04-20 —
+ *       remplace le check fantôme `comments:delete_any` absent du catalogue)).
  *   (2) des constantes atomiques `readonly` groupant les permissions par
  *       capacité métier cohérente. Ces atomiques sont les briques utilisées
  *       en `contract-02-templates.ts` pour composer les 26 templates.
@@ -31,13 +33,14 @@
  */
 
 // ============================================================================
-// 1. PermissionCode — type union strict (107 entrées)
+// 1. PermissionCode — type union strict (108 entrées)
 // ============================================================================
 
 export type PermissionCode =
-  // comments (4)
+  // comments (5 — :manage_any ajouté T3 hygiene 2026-04-20)
   | 'comments:create'
   | 'comments:delete'
+  | 'comments:manage_any'
   | 'comments:read'
   | 'comments:update'
   // departments (4 — :edit et :view supprimés D4 A)
@@ -390,6 +393,7 @@ export const OWNERSHIP_BYPASS_ALL = [
   'time_tracking:manage_any',
   'telework:manage_any',
   'documents:manage_any',
+  'comments:manage_any',
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -564,7 +568,7 @@ export const SETTINGS_READ = [
 // ============================================================================
 
 /**
- * Liste exhaustive des 107 permissions canoniques, triée alphabétiquement par
+ * Liste exhaustive des 108 permissions canoniques, triée alphabétiquement par
  * `module:action`. Sert de source unique pour :
  *   - le seed DB (Spec 2 Vague 0) ;
  *   - la génération de migrations (drop permissions mortes, rename
@@ -578,6 +582,7 @@ export const CATALOG_PERMISSIONS = [
   // comments
   'comments:create',
   'comments:delete',
+  'comments:manage_any',
   'comments:read',
   'comments:update',
   // departments

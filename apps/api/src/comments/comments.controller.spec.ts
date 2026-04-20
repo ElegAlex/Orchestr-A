@@ -160,6 +160,7 @@ describe('CommentsController', () => {
       const result = await controller.update(
         'comment-id-1',
         'user-id-1',
+        'BASIC_USER',
         updateCommentDto,
       );
 
@@ -167,6 +168,7 @@ describe('CommentsController', () => {
       expect(mockCommentsService.update).toHaveBeenCalledWith(
         'comment-id-1',
         'user-id-1',
+        'BASIC_USER',
         updateCommentDto,
       );
     });
@@ -179,7 +181,12 @@ describe('CommentsController', () => {
       );
 
       await expect(
-        controller.update('comment-id-1', 'other-user-id', updateCommentDto),
+        controller.update(
+          'comment-id-1',
+          'other-user-id',
+          'BASIC_USER',
+          updateCommentDto,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -189,7 +196,12 @@ describe('CommentsController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', 'user-id-1', updateCommentDto),
+        controller.update(
+          'nonexistent',
+          'user-id-1',
+          'BASIC_USER',
+          updateCommentDto,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });

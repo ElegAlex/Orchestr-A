@@ -20,8 +20,8 @@ import {
 
 // Counts normatifs §9 de contract-05-spec2-spec3-inputs.md
 const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
-  ADMIN: 107,
-  ADMIN_DELEGATED: 104,
+  ADMIN: 108,
+  ADMIN_DELEGATED: 105,
   PORTFOLIO_MANAGER: 73,
   MANAGER: 79,
   MANAGER_PROJECT_FOCUS: 72,
@@ -49,8 +49,8 @@ const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
 };
 
 describe('rbac — conformité contrats Phase 1', () => {
-  it('CATALOG_PERMISSIONS contient exactement 107 permissions', () => {
-    expect(CATALOG_PERMISSIONS.length).toBe(107);
+  it('CATALOG_PERMISSIONS contient exactement 108 permissions', () => {
+    expect(CATALOG_PERMISSIONS.length).toBe(108);
   });
 
   it('CATALOG_PERMISSIONS sans doublon', () => {
