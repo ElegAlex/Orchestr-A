@@ -5,7 +5,7 @@
  *
  * La résolution se base UNIQUEMENT sur le tableau `permissions` du store,
  * peuplé par `/api/auth/me/permissions`. Pour ADMIN, le template contient déjà
- * l'ensemble des 107 codes du catalogue — il n'y a donc plus de bypass par
+ * l'ensemble des 108 codes du catalogue — il n'y a donc plus de bypass par
  * rôle côté frontend (Spec 3 V0).
  *
  * Exemples :
@@ -14,23 +14,31 @@
  *   if (hasAnyPermission(['leaves:read', 'leaves:approve'])) { ... }
  */
 
+import { useCallback } from "react";
 import type { PermissionCode } from "rbac";
 import { useAuthStore } from "@/stores/auth.store";
 
 export function usePermissions() {
   const { permissions, permissionsLoaded, user } = useAuthStore();
 
-  const hasPermission = (code: PermissionCode): boolean => {
-    return permissions.includes(code);
-  };
+  // Références stables : évite les boucles `Maximum update depth` quand
+  // ces fonctions sont en dépendance de useEffect (PlanningView, etc.).
+  const hasPermission = useCallback(
+    (code: PermissionCode): boolean => permissions.includes(code),
+    [permissions],
+  );
 
-  const hasAnyPermission = (codes: readonly PermissionCode[]): boolean => {
-    return codes.some((code) => permissions.includes(code));
-  };
+  const hasAnyPermission = useCallback(
+    (codes: readonly PermissionCode[]): boolean =>
+      codes.some((code) => permissions.includes(code)),
+    [permissions],
+  );
 
-  const hasAllPermissions = (codes: readonly PermissionCode[]): boolean => {
-    return codes.every((code) => permissions.includes(code));
-  };
+  const hasAllPermissions = useCallback(
+    (codes: readonly PermissionCode[]): boolean =>
+      codes.every((code) => permissions.includes(code)),
+    [permissions],
+  );
 
   return {
     permissions,
