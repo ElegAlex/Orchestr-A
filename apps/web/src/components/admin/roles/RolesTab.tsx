@@ -25,21 +25,15 @@ interface RolesTabProps {
 }
 
 /**
- * Onglet "Rôles" — CRUD sur les entrées DB de la table `roles`.
+ * Onglet "Rôles" — liste UNIQUEMENT les rôles créés par l'admin (isSystem=false).
  *
- * Règles d'édition :
- *   - Rôles `isSystem=true` : affichés en lecture seule, AUCUNE action
- *     disponible (pas de bouton Renommer, pas de bouton Supprimer).
- *   - Rôles `isSystem=false` : boutons "Renommer" (label + description) et
- *     "Supprimer" (409 si users rattachés). `templateKey` immuable après
- *     création, n'est donc jamais modifiable depuis cet onglet.
+ * Les 26 rôles système seedés au déploiement sont exposés dans l'onglet
+ * "Templates RBAC" et ne doivent PAS apparaître ici. Chaque rôle affiché est
+ * éditable (Renommer) et supprimable (409 si users rattachés).
  *
- * Filtres :
- *   - Dropdown "Filtrer par template" (26 entrées + Tous).
- *   - Checkbox "Afficher aussi les rôles système" (default off).
- *
- * Grouping : les rôles visibles sont groupés par `templateKey` avec un titre
- * de section = `defaultLabel` du template + badge catégorie.
+ * État vide :
+ *   - Aucun rôle créé → message d'amorçage ("Utilisez '+ Nouveau rôle'").
+ *   - Rôles existants mais filtre restrictif → message "aucun résultat".
  */
 export function RolesTab({
   roles,
@@ -49,50 +43,31 @@ export function RolesTab({
   onCreateRole,
   onChanged,
 }: RolesTabProps) {
-  const [showSystem, setShowSystem] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Index templateKey → RoleTemplateView (pour les titres de section).
   const templateByKey = useMemo(() => {
     const out: Partial<Record<RoleTemplateKey, RoleTemplateView>> = {};
     for (const t of templates) out[t.key] = t;
     return out;
   }, [templates]);
 
-  // Filtrage : template + system toggle.
+  // Rôles créés par l'admin uniquement (le seeding prod/dev pose les 26 rôles
+  // système en DB ; ils sont déjà visibles dans l'onglet "Templates RBAC").
+  const userRoles = useMemo(
+    () => roles.filter((r) => !r.isSystem),
+    [roles],
+  );
+
   const visibleRoles = useMemo(() => {
-    return roles.filter((r) => {
-      if (r.isSystem && !showSystem) return false;
-      if (templateFilter !== "ALL" && r.templateKey !== templateFilter) {
-        return false;
-      }
-      return true;
-    });
-  }, [roles, templateFilter, showSystem]);
+    if (templateFilter === "ALL") return userRoles;
+    return userRoles.filter((r) => r.templateKey === templateFilter);
+  }, [userRoles, templateFilter]);
 
-  // Grouping par templateKey (clés préservées dans l'ordre ROLE_TEMPLATE_KEYS).
-  const rolesByTemplate = useMemo(() => {
-    const out: Partial<Record<RoleTemplateKey, RoleWithStats[]>> = {};
-    for (const r of visibleRoles) {
-      const k = r.templateKey;
-      if (!out[k]) out[k] = [];
-      out[k]!.push(r);
-    }
-    // Tri interne par label pour stabilité.
-    for (const k of Object.keys(out) as RoleTemplateKey[]) {
-      out[k]!.sort((a, b) => a.label.localeCompare(b.label));
-    }
-    return out;
-  }, [visibleRoles]);
-
-  const orderedTemplateKeys = useMemo(
-    () =>
-      ROLE_TEMPLATE_KEYS.filter(
-        (k) => rolesByTemplate[k] && rolesByTemplate[k]!.length > 0,
-      ),
-    [rolesByTemplate],
+  const sortedRoles = useMemo(
+    () => [...visibleRoles].sort((a, b) => a.label.localeCompare(b.label)),
+    [visibleRoles],
   );
 
   const startEdit = (role: RoleWithStats) => {
@@ -161,48 +136,41 @@ export function RolesTab({
     }
   };
 
+  const emptyStateMessage =
+    userRoles.length === 0
+      ? "Aucun rôle créé pour le moment. Utilisez le bouton « + Nouveau rôle » pour en créer un."
+      : "Aucun rôle ne correspond au filtre sélectionné.";
+
   return (
     <div className="space-y-4">
       {/* Barre d'actions */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-end gap-3 flex-wrap">
-          <div>
-            <label
-              htmlFor="roles-tab-template-filter"
-              className="block text-xs font-medium text-gray-600 mb-1"
-            >
-              Filtrer par template
-            </label>
-            <select
-              id="roles-tab-template-filter"
-              data-testid="roles-template-filter"
-              value={templateFilter}
-              onChange={(e) =>
-                onTemplateFilterChange(e.target.value as TemplateFilter)
-              }
-              className="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white min-w-[260px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">Tous les templates</option>
-              {ROLE_TEMPLATE_KEYS.map((k) => {
-                const tpl = templateByKey[k];
-                return (
-                  <option key={k} value={k}>
-                    {tpl ? `${k} — ${tpl.defaultLabel}` : k}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 pb-2">
-            <input
-              type="checkbox"
-              data-testid="roles-show-system"
-              checked={showSystem}
-              onChange={(e) => setShowSystem(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            Afficher aussi les rôles système
+        <div>
+          <label
+            htmlFor="roles-tab-template-filter"
+            className="block text-xs font-medium text-gray-600 mb-1"
+          >
+            Filtrer par template
           </label>
+          <select
+            id="roles-tab-template-filter"
+            data-testid="roles-template-filter"
+            value={templateFilter}
+            onChange={(e) =>
+              onTemplateFilterChange(e.target.value as TemplateFilter)
+            }
+            className="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white min-w-[260px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ALL">Tous les templates</option>
+            {ROLE_TEMPLATE_KEYS.map((k) => {
+              const tpl = templateByKey[k];
+              return (
+                <option key={k} value={k}>
+                  {tpl ? `${k} — ${tpl.defaultLabel}` : k}
+                </option>
+              );
+            })}
+          </select>
         </div>
         <button
           type="button"
@@ -213,56 +181,32 @@ export function RolesTab({
         </button>
       </div>
 
-      {/* Listing groupé par templateKey */}
-      {orderedTemplateKeys.length === 0 ? (
-        <div className="py-12 text-center text-sm text-gray-500 bg-white border border-gray-200 rounded-lg">
-          Aucun rôle ne correspond aux filtres.
+      {/* Liste */}
+      {sortedRoles.length === 0 ? (
+        <div
+          data-testid="roles-empty-state"
+          className="py-12 text-center text-sm text-gray-500 bg-white border border-gray-200 border-dashed rounded-lg"
+        >
+          {emptyStateMessage}
         </div>
       ) : (
-        <div className="space-y-6">
-          {orderedTemplateKeys.map((tplKey) => {
-            const tpl = templateByKey[tplKey];
-            const group = rolesByTemplate[tplKey] ?? [];
-            const categoryCfg = tpl ? CATEGORY_CONFIG[tpl.category] : null;
-            return (
-              <section
-                key={tplKey}
-                data-testid="roles-group"
-                data-template-key={tplKey}
-              >
-                <h2 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2 flex-wrap">
-                  <span>{tpl?.defaultLabel ?? tplKey}</span>
-                  {categoryCfg && (
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${categoryCfg.badgeClass}`}
-                    >
-                      {categoryCfg.label}
-                    </span>
-                  )}
-                  <span className="text-xs font-normal text-gray-500">
-                    {group.length} rôle{group.length > 1 ? "s" : ""}
-                  </span>
-                </h2>
-                <ul className="divide-y divide-gray-100 bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  {group.map((role) => (
-                    <RoleRow
-                      key={role.id}
-                      role={role}
-                      isEditing={editingId === role.id}
-                      editLabel={editLabel}
-                      setEditLabel={setEditLabel}
-                      onStartEdit={() => startEdit(role)}
-                      onCancelEdit={cancelEdit}
-                      onSaveEdit={() => saveEdit(role)}
-                      onDelete={() => handleDelete(role)}
-                      deleting={deletingId === role.id}
-                    />
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
-        </div>
+        <ul className="divide-y divide-gray-100 bg-white border border-gray-200 rounded-lg overflow-hidden">
+          {sortedRoles.map((role) => (
+            <RoleRow
+              key={role.id}
+              role={role}
+              template={templateByKey[role.templateKey] ?? null}
+              isEditing={editingId === role.id}
+              editLabel={editLabel}
+              setEditLabel={setEditLabel}
+              onStartEdit={() => startEdit(role)}
+              onCancelEdit={cancelEdit}
+              onSaveEdit={() => saveEdit(role)}
+              onDelete={() => handleDelete(role)}
+              deleting={deletingId === role.id}
+            />
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -270,6 +214,7 @@ export function RolesTab({
 
 interface RoleRowProps {
   role: RoleWithStats;
+  template: RoleTemplateView | null;
   isEditing: boolean;
   editLabel: string;
   setEditLabel: (v: string) => void;
@@ -282,6 +227,7 @@ interface RoleRowProps {
 
 function RoleRow({
   role,
+  template,
   isEditing,
   editLabel,
   setEditLabel,
@@ -291,15 +237,17 @@ function RoleRow({
   onDelete,
   deleting,
 }: RoleRowProps) {
+  const categoryCfg = template ? CATEGORY_CONFIG[template.category] : null;
+
   return (
     <li
       data-testid="role-row"
       data-role-id={role.id}
-      data-is-system={role.isSystem ? "true" : "false"}
+      data-template-key={role.templateKey}
       className="px-4 py-3 flex items-center gap-3"
     >
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
+        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           {isEditing ? (
             <input
               type="text"
@@ -317,11 +265,14 @@ function RoleRow({
               {role.label}
             </span>
           )}
-          {role.isSystem && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
-              Système
-            </span>
-          )}
+          <span
+            data-testid="role-template-badge"
+            data-template-key={role.templateKey}
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${categoryCfg?.badgeClass ?? "bg-gray-100 text-gray-700 border-gray-200"}`}
+            title={template ? `Template : ${template.defaultLabel}` : undefined}
+          >
+            {role.templateKey}
+          </span>
           {role.isDefault && (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">
               Défaut
@@ -335,49 +286,46 @@ function RoleRow({
         </div>
       </div>
 
-      {/* Actions — aucune pour rôles système (règle PO : read-only strict). */}
-      {!role.isSystem && (
-        <div className="flex items-center gap-2 shrink-0">
-          {isEditing ? (
-            <>
-              <button
-                type="button"
-                onClick={onSaveEdit}
-                className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
-              >
-                Enregistrer
-              </button>
-              <button
-                type="button"
-                onClick={onCancelEdit}
-                className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Annuler
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                data-testid="role-rename"
-                onClick={onStartEdit}
-                className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Renommer
-              </button>
-              <button
-                type="button"
-                data-testid="role-delete"
-                onClick={onDelete}
-                disabled={deleting}
-                className="px-3 py-1 text-xs font-medium text-red-700 bg-white border border-red-300 rounded hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {deleting ? "…" : "Supprimer"}
-              </button>
-            </>
-          )}
-        </div>
-      )}
+      <div className="flex items-center gap-2 shrink-0">
+        {isEditing ? (
+          <>
+            <button
+              type="button"
+              onClick={onSaveEdit}
+              className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
+            >
+              Enregistrer
+            </button>
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+              Annuler
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              data-testid="role-rename"
+              onClick={onStartEdit}
+              className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+              Renommer
+            </button>
+            <button
+              type="button"
+              data-testid="role-delete"
+              onClick={onDelete}
+              disabled={deleting}
+              className="px-3 py-1 text-xs font-medium text-red-700 bg-white border border-red-300 rounded hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {deleting ? "…" : "Supprimer"}
+            </button>
+          </>
+        )}
+      </div>
     </li>
   );
 }
