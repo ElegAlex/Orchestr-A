@@ -5,7 +5,7 @@ import { CATEGORY_CONFIG } from "./category-config";
 
 interface TemplateCardProps {
   template: RoleTemplateView;
-  /** Nombre de rôles DB rattachés à ce template (custom + système). */
+  /** Nombre de rôles DB rattachés à ce template (système + éditables). */
   roleCount: number;
   onClick: () => void;
 }

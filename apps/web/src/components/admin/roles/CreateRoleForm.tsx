@@ -14,7 +14,10 @@ interface CreateRoleFormProps {
 const CODE_PATTERN = /^[A-Z][A-Z0-9_]*$/;
 
 /**
- * Formulaire de création de rôle custom (modale).
+ * Formulaire de création de rôle (modale).
+ *
+ * Un rôle = un libellé + un pointeur vers un template. Les permissions
+ * sont strictement celles du template choisi, zéro personnalisation possible.
  *
  * Champs :
  *   - `code`    : SCREAMING_SNAKE_CASE, 2-64 chars.
@@ -120,10 +123,11 @@ export function CreateRoleForm({
               id="create-role-title"
               className="text-lg font-semibold text-gray-900"
             >
-              Créer un rôle custom
+              Créer un rôle
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Dérivé d&apos;un template RBAC existant.
+              Associe un libellé à un template RBAC. Les permissions sont
+              strictement celles du template choisi, non modifiables.
             </p>
           </div>
 
@@ -141,15 +145,14 @@ export function CreateRoleForm({
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="MON_ROLE_CUSTOM"
+                placeholder="MON_ROLE"
                 maxLength={64}
                 required
                 disabled={submitting}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="mt-1 text-xs text-gray-500">
-                SCREAMING_SNAKE_CASE. Ne peut pas entrer en conflit avec un
-                code existant.
+                Identifiant technique en SCREAMING_SNAKE_CASE, unique.
               </p>
             </div>
 
@@ -179,7 +182,7 @@ export function CreateRoleForm({
                 htmlFor="create-role-template"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Template source <span className="text-red-600">*</span>
+                Template <span className="text-red-600">*</span>
               </label>
               <select
                 id="create-role-template"
@@ -202,8 +205,8 @@ export function CreateRoleForm({
                 })}
               </select>
               <p className="mt-1 text-xs text-gray-500">
-                Les permissions effectives du rôle seront héritées de ce
-                template.
+                Détermine les permissions effectives du rôle. Non modifiable
+                après création.
               </p>
             </div>
 

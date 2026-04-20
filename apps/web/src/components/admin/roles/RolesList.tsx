@@ -14,12 +14,12 @@ interface RolesListProps {
 }
 
 /**
- * Liste complète des rôles DB — système (verrouillés) + custom (CRUD).
+ * Liste complète des rôles DB — système (verrouillés) + éditables (CRUD).
  *
  * Actions :
- *   - Rôles system (isSystem=true) : affichage read-only, badge "Système".
- *   - Rôles custom : bouton "Éditer" (rename label), bouton "Supprimer"
- *     avec gestion 409 si utilisateurs rattachés.
+ *   - Rôles système (isSystem=true) : affichage read-only, badge "Système".
+ *   - Rôles éditables (isSystem=false) : bouton "Éditer" (rename label),
+ *     bouton "Supprimer" avec gestion 409 si utilisateurs rattachés.
  */
 export function RolesList({ roles, onChanged }: RolesListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -100,7 +100,7 @@ export function RolesList({ roles, onChanged }: RolesListProps) {
       {customRoles.length > 0 && (
         <section>
           <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
-            Rôles custom ({customRoles.length})
+            Rôles éditables ({customRoles.length})
           </h2>
           <ul className="divide-y divide-gray-100 bg-white border border-gray-200 rounded-lg overflow-hidden">
             {customRoles.map((role) => (

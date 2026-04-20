@@ -55,7 +55,7 @@ export class RolesController {
   @Get()
   @RequirePermissions('users:manage_roles')
   @ApiOperation({
-    summary: 'Liste tous les rôles existants en DB (système + custom).',
+    summary: 'Liste tous les rôles existants en DB (système + éditables).',
   })
   @ApiResponse({ status: 200, description: 'Liste des rôles avec stats' })
   list() {
@@ -74,7 +74,7 @@ export class RolesController {
   @Post()
   @RequirePermissions('users:manage_roles')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Crée un rôle custom (isSystem forcé à false)' })
+  @ApiOperation({ summary: 'Crée un rôle (isSystem forcé à false). Les permissions sont strictement celles du template choisi.' })
   @ApiResponse({ status: 201, description: 'Rôle créé' })
   @ApiResponse({ status: 409, description: 'Code déjà existant' })
   create(@Body() dto: CreateRoleDto) {
@@ -85,7 +85,7 @@ export class RolesController {
   @RequirePermissions('users:manage_roles')
   @ApiOperation({
     summary:
-      'Édite un rôle custom. Refus 403 si rôle système (D9 PO).',
+      'Édite un rôle (label, templateKey, description). Refus 403 si rôle système (D9 PO).',
   })
   @ApiResponse({ status: 200, description: 'Rôle mis à jour' })
   @ApiResponse({ status: 403, description: 'Rôle système non modifiable' })
@@ -102,7 +102,7 @@ export class RolesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary:
-      'Supprime un rôle custom. Refus 403 si système (D9), 409 si users rattachés.',
+      'Supprime un rôle. Refus 403 si système (D9 PO), 409 si users rattachés.',
   })
   @ApiResponse({ status: 204, description: 'Rôle supprimé' })
   @ApiResponse({ status: 403, description: 'Rôle système non supprimable' })
