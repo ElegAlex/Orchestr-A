@@ -27,12 +27,6 @@ export interface ProjectMutationUser {
   role?: string | { code: string } | null;
 }
 
-/**
- * Rôles qui voient tous les projets sans filtre de membership.
- * CONTRIBUTEUR et OBSERVATEUR sont filtrés par membership.
- */
-const FULL_VISIBILITY_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'] as const;
-
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -182,11 +176,13 @@ export class ProjectsService {
     // Filtre de base sur le statut
     const baseFilter = status ? { status } : {};
 
-    // Les rôles à visibilité totale voient tous les projets.
-    // Les autres rôles sont filtrés par membership si un userId est fourni.
-    const hasFullVisibility =
-      userRole &&
-      (FULL_VISIBILITY_ROLES as readonly string[]).includes(userRole);
+    // Visibilité totale sur la permission projects:manage_any (post-V4 :
+    // plus de hardcode sur les codes de rôles, la règle passe par la
+    // permission résolue dynamiquement via template).
+    const permissions = userRole
+      ? await this.permissionsService.getPermissionsForRole(userRole)
+      : [];
+    const hasFullVisibility = permissions.includes('projects:manage_any');
 
     const membershipFilter =
       !hasFullVisibility && userId ? { members: { some: { userId } } } : {};

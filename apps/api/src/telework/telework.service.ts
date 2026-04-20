@@ -15,16 +15,10 @@ import { Prisma } from 'database';
 
 @Injectable()
 export class TeleworkService {
-  private readonly MANAGEMENT_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'];
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissionsService: PermissionsService,
   ) {}
-
-  private isManagementRole(role: string): boolean {
-    return this.MANAGEMENT_ROLES.includes(role);
-  }
 
   /**
    * Créer une journée de télétravail

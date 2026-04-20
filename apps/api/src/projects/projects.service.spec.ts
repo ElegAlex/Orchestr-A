@@ -269,7 +269,15 @@ describe('ProjectsService', () => {
         tasks: [],
       };
 
+      const withManageAny = () =>
+        mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+          'projects:manage_any',
+        ]);
+      const withoutManageAny = () =>
+        mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+
       it('should return ALL projects for ADMIN regardless of membership', async () => {
+        withManageAny();
         mockPrismaService.project.findMany.mockResolvedValue([
           projectA,
           projectB,
@@ -297,6 +305,7 @@ describe('ProjectsService', () => {
       });
 
       it('should return ALL projects for RESPONSABLE regardless of membership', async () => {
+        withManageAny();
         mockPrismaService.project.findMany.mockResolvedValue([
           projectA,
           projectB,
@@ -313,6 +322,7 @@ describe('ProjectsService', () => {
       });
 
       it('should return ALL projects for MANAGER regardless of membership', async () => {
+        withManageAny();
         mockPrismaService.project.findMany.mockResolvedValue([
           projectA,
           projectB,
@@ -329,6 +339,7 @@ describe('ProjectsService', () => {
       });
 
       it('should filter projects by membership for CONTRIBUTEUR', async () => {
+        withoutManageAny();
         mockPrismaService.project.findMany.mockResolvedValue([projectA]);
         mockPrismaService.project.count.mockResolvedValue(1);
 
@@ -344,6 +355,7 @@ describe('ProjectsService', () => {
       });
 
       it('should filter projects by membership for OBSERVATEUR', async () => {
+        withoutManageAny();
         mockPrismaService.project.findMany.mockResolvedValue([projectA]);
         mockPrismaService.project.count.mockResolvedValue(1);
 
@@ -359,6 +371,7 @@ describe('ProjectsService', () => {
       });
 
       it('should filter projects by membership for REFERENT_TECHNIQUE', async () => {
+        withoutManageAny();
         mockPrismaService.project.findMany.mockResolvedValue([projectA]);
         mockPrismaService.project.count.mockResolvedValue(1);
 
@@ -374,6 +387,7 @@ describe('ProjectsService', () => {
       });
 
       it('should combine status filter with full visibility for ADMIN', async () => {
+        withManageAny();
         mockPrismaService.project.findMany.mockResolvedValue([projectA]);
         mockPrismaService.project.count.mockResolvedValue(1);
 
@@ -387,6 +401,7 @@ describe('ProjectsService', () => {
       });
 
       it('should combine status filter with membership filter for CONTRIBUTEUR', async () => {
+        withoutManageAny();
         mockPrismaService.project.findMany.mockResolvedValue([projectA]);
         mockPrismaService.project.count.mockResolvedValue(1);
 

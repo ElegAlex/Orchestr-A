@@ -21,6 +21,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { EventsService } from './events.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
@@ -36,7 +37,10 @@ import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 @Controller('events')
 @ApiBearerAuth()
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    private readonly eventsService: EventsService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
 
   @Post()
   @RequirePermissions('events:create')
@@ -129,19 +133,19 @@ export class EventsController {
     status: 404,
     description: 'Utilisateur introuvable',
   })
-  getEventsByUser(
+  async getEventsByUser(
     @Param('userId', ParseUUIDPipe) userId: string,
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
-    const MANAGEMENT_ROLES = ['ADMIN', 'RESPONSABLE', 'MANAGER'];
-    if (
-      !(currentUserRole && MANAGEMENT_ROLES.includes(currentUserRole)) &&
-      userId !== currentUserId
-    ) {
-      throw new ForbiddenException(
-        "Vous n'avez pas la permission de consulter les événements d'autrui",
-      );
+    if (userId !== currentUserId) {
+      const permissions =
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('events:readAll')) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission de consulter les événements d'autrui",
+        );
+      }
     }
     return this.eventsService.getEventsByUser(userId);
   }
