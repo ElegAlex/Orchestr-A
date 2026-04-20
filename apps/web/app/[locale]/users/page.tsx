@@ -95,17 +95,29 @@ export default function UsersPage() {
    * (un rôle `isDefault: true` si présent), sinon fallback "CONTRIBUTEUR".
    */
   const defaultRoleCode = useMemo(() => {
-    const defaultRole = availableRoles.find((r) => r.isDefault);
+    const defaultRole = availableRoles.find((r) => r.isDefault && !r.isSystem);
     return defaultRole?.code ?? FALLBACK_DEFAULT_ROLE_CODE;
   }, [availableRoles]);
 
   /**
-   * Rôles groupés par catégorie pour affichage dans le dropdown
+   * Rôles institutionnels assignables aux users (isSystem=false uniquement).
+   * Les rôles système (seedés au déploiement) sont des blueprints bound aux
+   * templates — ils ne doivent JAMAIS être affectés directement à un humain.
+   * L'admin doit créer des rôles institutionnels dans /admin/roles avant de
+   * pouvoir affecter des users si la liste est vide.
+   */
+  const assignableRoles = useMemo(
+    () => availableRoles.filter((r) => !r.isSystem),
+    [availableRoles],
+  );
+
+  /**
+   * Rôles assignables groupés par catégorie pour affichage dans le dropdown
    * (ordre : A ADMINISTRATION → I EXTERNAL).
    */
   const rolesByCategory = useMemo(() => {
     const grouped = new Map<string, RoleWithStats[]>();
-    for (const role of availableRoles) {
+    for (const role of assignableRoles) {
       const bucket = grouped.get(role.category) ?? [];
       bucket.push(role);
       grouped.set(role.category, bucket);
@@ -117,7 +129,7 @@ export default function UsersPage() {
         a.label.localeCompare(b.label),
       ),
     }));
-  }, [availableRoles]);
+  }, [assignableRoles]);
 
   const getRoleBadgeClass = (role: User["role"]): string => {
     const category = availableRoles.find((r) => r.id === role?.id)?.category;
@@ -941,7 +953,7 @@ export default function UsersPage() {
                     <optgroup key={group.category} label={group.label}>
                       {group.roles.map((role) => (
                         <option key={role.id} value={role.code}>
-                          {role.label} (Template : {role.templateKey})
+                          {role.label}
                         </option>
                       ))}
                     </optgroup>
@@ -1344,7 +1356,7 @@ export default function UsersPage() {
                     <optgroup key={group.category} label={group.label}>
                       {group.roles.map((role) => (
                         <option key={role.id} value={role.code}>
-                          {role.label} (Template : {role.templateKey})
+                          {role.label}
                         </option>
                       ))}
                     </optgroup>

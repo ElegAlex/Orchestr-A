@@ -74,13 +74,25 @@ export class UsersService {
     private readonly refreshTokenService: RefreshTokenService,
   ) {}
 
-  private async resolveRoleIdByCode(code: string): Promise<string> {
+  /**
+   * Résout un rôle par code et garantit qu'il est assignable à un humain.
+   * Un rôle `isSystem=true` est un blueprint bound à un template (seedé au
+   * déploiement) — il ne doit jamais être affecté directement à un user.
+   * L'admin doit créer un rôle institutionnel dans /admin/roles et s'en
+   * servir à la place.
+   */
+  private async resolveAssignableRoleIdByCode(code: string): Promise<string> {
     const role = await this.prisma.role.findUnique({
       where: { code },
-      select: { id: true },
+      select: { id: true, isSystem: true },
     });
     if (!role) {
       throw new BadRequestException(`Rôle "${code}" introuvable`);
+    }
+    if (role.isSystem) {
+      throw new BadRequestException(
+        `Rôle système "${code}" non assignable. Créez un rôle institutionnel dans /admin/roles rattaché au template correspondant.`,
+      );
     }
     return role.id;
   }
@@ -119,7 +131,9 @@ export class UsersService {
       }
     }
 
-    const roleId = await this.resolveRoleIdByCode(createUserDto.roleCode);
+    const roleId = await this.resolveAssignableRoleIdByCode(
+      createUserDto.roleCode,
+    );
 
     const passwordHash = await bcrypt.hash(createUserDto.password, 12);
 
@@ -425,7 +439,7 @@ export class UsersService {
     const updateData: Record<string, unknown> = { ...restDto };
 
     if (roleCode) {
-      updateData.roleId = await this.resolveRoleIdByCode(roleCode);
+      updateData.roleId = await this.resolveAssignableRoleIdByCode(roleCode);
     }
 
     if (password) {
@@ -829,6 +843,7 @@ export class UsersService {
         select: { id: true, name: true, departmentId: true },
       }),
       this.prisma.role.findMany({
+        where: { isSystem: false },
         select: { id: true, code: true },
       }),
     ]);
@@ -839,6 +854,9 @@ export class UsersService {
     const serviceMap = new Map(
       services.map((s) => [s.name.toLowerCase().trim(), s]),
     );
+    // roleMap ne contient que des rôles institutionnels (isSystem=false).
+    // L'import refuse l'assignation vers un rôle système — l'admin doit créer
+    // un rôle institutionnel au wording cible dans /admin/roles avant import.
     const roleMap = new Map(roles.map((r) => [r.code, r.id]));
 
     for (let i = 0; i < users.length; i++) {
@@ -991,6 +1009,7 @@ export class UsersService {
         select: { email: true, login: true },
       }),
       this.prisma.role.findMany({
+        where: { isSystem: false },
         select: { code: true },
       }),
     ]);
