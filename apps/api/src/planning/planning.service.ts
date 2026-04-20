@@ -51,7 +51,7 @@ export class PlanningService {
   async getOverview(
     startDate: string,
     endDate: string,
-    currentUser: { id: string; role: string },
+    currentUser: { id: string; role: string | null },
   ): Promise<PlanningOverview> {
     const permissions =
       await this.permissionsService.getPermissionsForRole(currentUser.role);
@@ -95,7 +95,7 @@ export class PlanningService {
         startDate,
         endDate,
         currentUser.id,
-        currentUser.role,
+        currentUser.role ?? undefined,
       ),
       this.eventsService.findAll(
         currentUser.id,

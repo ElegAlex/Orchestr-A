@@ -24,7 +24,7 @@ import type { PermissionsService } from '../permissions.service';
 describe('RolesService — V3 F', () => {
   let service: RolesService;
   let prisma: {
-    roleEntity: {
+    role: {
       findMany: ReturnType<typeof vi.fn>;
       findUnique: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
@@ -37,7 +37,7 @@ describe('RolesService — V3 F', () => {
 
   beforeEach(() => {
     prisma = {
-      roleEntity: {
+      role: {
         findMany: vi.fn().mockResolvedValue([]),
         findUnique: vi.fn().mockResolvedValue(null),
         create: vi.fn(),
@@ -65,8 +65,8 @@ describe('RolesService — V3 F', () => {
 
   describe('createRole', () => {
     it('crée un rôle custom avec isSystem=false forcé', async () => {
-      prisma.roleEntity.findUnique.mockResolvedValue(null);
-      prisma.roleEntity.create.mockResolvedValue({
+      prisma.role.findUnique.mockResolvedValue(null);
+      prisma.role.create.mockResolvedValue({
         id: 'r-1',
         code: 'CUSTOM_LEAD',
         label: 'Custom Lead',
@@ -85,7 +85,7 @@ describe('RolesService — V3 F', () => {
         templateKey: 'PROJECT_LEAD',
       });
 
-      expect(prisma.roleEntity.create).toHaveBeenCalledWith(
+      expect(prisma.role.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             isSystem: false, // forcé
@@ -96,7 +96,7 @@ describe('RolesService — V3 F', () => {
     });
 
     it('rejette avec ConflictException si code déjà pris', async () => {
-      prisma.roleEntity.findUnique.mockResolvedValue({ id: 'r-existing' });
+      prisma.role.findUnique.mockResolvedValue({ id: 'r-existing' });
       await expect(
         service.createRole({
           code: 'ADMIN',
@@ -107,8 +107,8 @@ describe('RolesService — V3 F', () => {
     });
 
     it('si isDefault=true, désactive l\'ancien default', async () => {
-      prisma.roleEntity.findUnique.mockResolvedValue(null);
-      prisma.roleEntity.create.mockResolvedValue({
+      prisma.role.findUnique.mockResolvedValue(null);
+      prisma.role.create.mockResolvedValue({
         id: 'r-new',
         code: 'CUSTOM',
         label: 'New default',
@@ -126,7 +126,7 @@ describe('RolesService — V3 F', () => {
         templateKey: 'BASIC_USER',
         isDefault: true,
       });
-      expect(prisma.roleEntity.updateMany).toHaveBeenCalledWith({
+      expect(prisma.role.updateMany).toHaveBeenCalledWith({
         where: { isDefault: true },
         data: { isDefault: false },
       });
@@ -135,7 +135,7 @@ describe('RolesService — V3 F', () => {
 
   describe('updateRole — D9 (blocage isSystem)', () => {
     it('refuse update sur rôle système (403)', async () => {
-      prisma.roleEntity.findUnique.mockResolvedValue({
+      prisma.role.findUnique.mockResolvedValue({
         id: 'r-1',
         code: 'ADMIN',
         isSystem: true,
@@ -148,14 +148,14 @@ describe('RolesService — V3 F', () => {
     });
 
     it('NotFound si rôle inexistant', async () => {
-      prisma.roleEntity.findUnique.mockResolvedValue(null);
+      prisma.role.findUnique.mockResolvedValue(null);
       await expect(
         service.updateRole('r-x', { label: 'X' }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('met à jour label/description/isDefault sans toucher à templateKey (immuable)', async () => {
-      prisma.roleEntity.findUnique.mockResolvedValue({
+      prisma.role.findUnique.mockResolvedValue({
         id: 'r-1',
         code: 'CUSTOM',
         isSystem: false,
@@ -164,7 +164,7 @@ describe('RolesService — V3 F', () => {
         description: null,
         isDefault: false,
       });
-      prisma.roleEntity.update.mockResolvedValue({
+      prisma.role.update.mockResolvedValue({
         id: 'r-1',
         code: 'CUSTOM',
         label: 'New',
@@ -181,7 +181,7 @@ describe('RolesService — V3 F', () => {
       // templateKey ne doit JAMAIS être présent dans le payload `data` envoyé
       // à Prisma, même si existing.templateKey est consulté pour d'autres
       // champs. Un rôle créé sur BASIC_USER y reste à vie.
-      const updateCall = prisma.roleEntity.update.mock.calls[0][0];
+      const updateCall = prisma.role.update.mock.calls[0][0];
       expect(updateCall.data).not.toHaveProperty('templateKey');
 
       // templateKey étant immuable, updateRole n'invalide jamais le cache
@@ -195,7 +195,7 @@ describe('RolesService — V3 F', () => {
       // Ce test vérifie que même si un appelant interne bypass la DTO
       // et passe templateKey, le service le rejette implicitement en
       // n'assignant jamais ce champ à Prisma.
-      prisma.roleEntity.findUnique.mockResolvedValue({
+      prisma.role.findUnique.mockResolvedValue({
         id: 'r-1',
         code: 'CUSTOM',
         isSystem: false,
@@ -204,7 +204,7 @@ describe('RolesService — V3 F', () => {
         description: null,
         isDefault: false,
       });
-      prisma.roleEntity.update.mockResolvedValue({
+      prisma.role.update.mockResolvedValue({
         id: 'r-1',
         code: 'CUSTOM',
         label: 'Old',
@@ -222,7 +222,7 @@ describe('RolesService — V3 F', () => {
         templateKey: 'PROJECT_CONTRIBUTOR',
       } as unknown as Parameters<typeof service.updateRole>[1]);
 
-      const updateCall = prisma.roleEntity.update.mock.calls[0][0];
+      const updateCall = prisma.role.update.mock.calls[0][0];
       expect(updateCall.data).not.toHaveProperty('templateKey');
       expect(perms.invalidateRoleCache).not.toHaveBeenCalled();
     });
@@ -230,7 +230,7 @@ describe('RolesService — V3 F', () => {
 
   describe('deleteRole — D9 + 409 users rattachés', () => {
     it('refuse delete sur rôle système (403)', async () => {
-      prisma.roleEntity.findUnique.mockResolvedValue({
+      prisma.role.findUnique.mockResolvedValue({
         id: 'r-1',
         code: 'ADMIN',
         isSystem: true,
@@ -242,7 +242,7 @@ describe('RolesService — V3 F', () => {
     });
 
     it('refuse delete avec ConflictException + liste des users si rattachés', async () => {
-      prisma.roleEntity.findUnique.mockResolvedValue({
+      prisma.role.findUnique.mockResolvedValue({
         id: 'r-1',
         code: 'CUSTOM',
         isSystem: false,
@@ -264,21 +264,21 @@ describe('RolesService — V3 F', () => {
     });
 
     it('supprime un rôle custom sans users + invalide cache', async () => {
-      prisma.roleEntity.findUnique.mockResolvedValue({
+      prisma.role.findUnique.mockResolvedValue({
         id: 'r-1',
         code: 'CUSTOM',
         isSystem: false,
         users: [],
       });
       await service.deleteRole('r-1');
-      expect(prisma.roleEntity.delete).toHaveBeenCalledWith({
+      expect(prisma.role.delete).toHaveBeenCalledWith({
         where: { id: 'r-1' },
       });
       expect(perms.invalidateRoleCache).toHaveBeenCalledWith('CUSTOM');
     });
 
     it('NotFound si rôle inexistant', async () => {
-      prisma.roleEntity.findUnique.mockResolvedValue(null);
+      prisma.role.findUnique.mockResolvedValue(null);
       await expect(service.deleteRole('r-x')).rejects.toBeInstanceOf(
         NotFoundException,
       );

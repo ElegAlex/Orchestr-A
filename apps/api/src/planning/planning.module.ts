@@ -10,7 +10,6 @@ import { TeleworkModule } from '../telework/telework.module';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { SchoolVacationsModule } from '../school-vacations/school-vacations.module';
 import { PredefinedTasksModule } from '../predefined-tasks/predefined-tasks.module';
-import { RoleManagementModule } from '../role-management/role-management.module';
 
 @Module({
   imports: [
@@ -23,7 +22,6 @@ import { RoleManagementModule } from '../role-management/role-management.module'
     HolidaysModule,
     SchoolVacationsModule,
     PredefinedTasksModule,
-    RoleManagementModule,
   ],
   controllers: [PlanningController],
   providers: [PlanningService],

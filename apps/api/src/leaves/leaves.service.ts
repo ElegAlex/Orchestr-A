@@ -10,7 +10,12 @@ import { PermissionsService } from '../rbac/permissions.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { UpsertLeaveBalanceDto } from './dto/upsert-leave-balance.dto';
-import { LeaveStatus, LeaveType, Role, Prisma } from 'database';
+import { LeaveStatus, LeaveType, Prisma } from 'database';
+import {
+  ROLE_TEMPLATES,
+  type PermissionCode,
+  type RoleTemplateKey,
+} from 'rbac';
 import { AuditService, AuditAction } from '../audit/audit.service';
 
 /**
@@ -121,14 +126,19 @@ export class LeavesService {
    * sans référencer de rôles en dur.
    */
   private async getRoleCodesWithPermission(
-    permissionCode: string,
+    permissionCode: PermissionCode | string,
   ): Promise<string[]> {
-    const roles = await this.prisma.roleConfig.findMany({
-      where: {
-        permissions: {
-          some: { permission: { code: permissionCode } },
-        },
-      },
+    // Identifier les templateKeys qui incluent la permission demandée
+    // (source de vérité : ROLE_TEMPLATES in-memory du package `rbac`).
+    const matchingTemplateKeys: RoleTemplateKey[] = [];
+    for (const [key, tpl] of Object.entries(ROLE_TEMPLATES)) {
+      if ((tpl.permissions as readonly string[]).includes(permissionCode)) {
+        matchingTemplateKeys.push(key as RoleTemplateKey);
+      }
+    }
+    if (matchingTemplateKeys.length === 0) return [];
+    const roles = await this.prisma.role.findMany({
+      where: { templateKey: { in: matchingTemplateKeys } },
       select: { code: true },
     });
     return roles.map((r) => r.code);
@@ -481,7 +491,7 @@ export class LeavesService {
     const activeDelegate = await this.prisma.leaveValidationDelegate.findFirst({
       where: {
         ...(delegatorRoles.length > 0 && {
-          delegator: { role: { in: delegatorRoles as Role[] } },
+          delegator: { role: { code: { in: delegatorRoles } } },
         }),
         isActive: true,
         startDate: { lte: today },
@@ -507,7 +517,7 @@ export class LeavesService {
     if (fallbackRoles.length === 0) return null;
     const validator = await this.prisma.user.findFirst({
       where: {
-        role: { in: fallbackRoles as Role[] },
+        role: { code: { in: fallbackRoles } },
         isActive: true,
         id: { not: userId }, // Ne pas s'auto-valider
       },
@@ -630,6 +640,7 @@ export class LeavesService {
   async getPendingForValidator(validatorId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: validatorId },
+      include: { role: { select: { code: true } } },
     });
 
     if (!user) {
@@ -637,7 +648,7 @@ export class LeavesService {
     }
 
     const permissions = await this.permissionsService.getPermissionsForRole(
-      user.role,
+      user.role?.code ?? null,
     );
     const hasManageAny = permissions.includes(MANAGE_ANY_LEAVES);
     const hasApprove = permissions.includes(APPROVE_LEAVES);
@@ -1156,12 +1167,15 @@ export class LeavesService {
 
     const validator = await this.prisma.user.findUnique({
       where: { id: validatorId },
+      include: { role: { select: { code: true } } },
     });
 
     if (!validator) return false;
 
     const validatorPerms =
-      await this.permissionsService.getPermissionsForRole(validator.role);
+      await this.permissionsService.getPermissionsForRole(
+        validator.role?.code ?? null,
+      );
 
     // Accès global → peut tout valider
     if (validatorPerms.includes(MANAGE_ANY_LEAVES)) {
@@ -1524,6 +1538,7 @@ export class LeavesService {
     // Vérifier que le délégateur a le droit de déléguer
     const delegator = await this.prisma.user.findUnique({
       where: { id: delegatorId },
+      include: { role: { select: { code: true } } },
     });
 
     if (!delegator) {
@@ -1531,7 +1546,7 @@ export class LeavesService {
     }
 
     const canDelegate = await this.roleHasPermission(
-      delegator.role,
+      delegator.role?.code ?? undefined,
       MANAGE_DELEGATIONS,
     );
     if (!canDelegate) {
@@ -1643,10 +1658,11 @@ export class LeavesService {
     // Seul le délégateur ou un admin peut désactiver
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: { role: { select: { code: true } } },
     });
 
     const hasManageAny = await this.roleHasPermission(
-      user?.role,
+      user?.role?.code,
       MANAGE_ANY_LEAVES,
     );
     if (delegation.delegatorId !== userId && !hasManageAny) {

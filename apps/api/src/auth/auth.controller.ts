@@ -26,7 +26,7 @@ import { Public } from './decorators/public.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
-import type { User } from '@prisma/client';
+import type { AuthenticatedUser } from './decorators/current-user.decorator';
 
 type RequestMeta = { userAgent?: string; ip?: string };
 
@@ -110,7 +110,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Non autorisé' })
   async logout(
     @Body() body: LogoutDto,
-    @CurrentUser() user: User & { jti?: string; exp?: number },
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<void> {
     if (user.jti && user.exp) {
       const remaining = user.exp - Math.floor(Date.now() / 1000);
@@ -168,7 +168,7 @@ export class AuthController {
     status: 200,
     description: 'Utilisateur connecté',
   })
-  getCurrentUser(@CurrentUser() user: User): User {
+  getCurrentUser(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
     return user;
   }
 
@@ -182,7 +182,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Non autorisé' })
   async getMyPermissions(
-    @CurrentUser() user: User,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<{ permissions: string[] }> {
     const permissions = await this.authService.getPermissionsForUser(user);
     return { permissions };
@@ -209,7 +209,7 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'Utilisateur introuvable' })
   async generateResetToken(
     @Body() dto: ResetPasswordTokenDto,
-    @CurrentUser() currentUser: User,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.authService.generateResetToken(dto.userId, currentUser.id);
   }

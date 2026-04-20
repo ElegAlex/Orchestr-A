@@ -70,7 +70,8 @@ describe('TasksController', () => {
   });
 
   describe('create', () => {
-    const mockUser = { id: 'user-1', role: Role.ADMIN };
+    const mockUser = { id: 'user-1', role: { code: Role.ADMIN } };
+    const normalizedUser = { id: 'user-1', role: Role.ADMIN };
     const createTaskDto = {
       title: 'New Task',
       description: 'A new task',
@@ -89,7 +90,7 @@ describe('TasksController', () => {
       expect(result).toEqual(expectedTask);
       expect(mockTasksService.create).toHaveBeenCalledWith(
         createTaskDto,
-        mockUser,
+        normalizedUser,
       );
       expect(mockTasksService.create).toHaveBeenCalledTimes(1);
     });
@@ -286,7 +287,8 @@ describe('TasksController', () => {
   });
 
   describe('getTasksByAssignee', () => {
-    const mockUser = { id: 'user-id-1', role: Role.ADMIN };
+    const mockUser = { id: 'user-id-1', role: { code: Role.ADMIN } };
+    const normalizedUser = { id: 'user-id-1', role: Role.ADMIN };
 
     it('should return tasks assigned to a user', async () => {
       const userTasks = [mockTask];
@@ -297,7 +299,7 @@ describe('TasksController', () => {
       expect(result).toEqual(userTasks);
       expect(mockTasksService.getTasksByAssignee).toHaveBeenCalledWith(
         'user-id-1',
-        mockUser,
+        normalizedUser,
       );
     });
 
@@ -342,7 +344,7 @@ describe('TasksController', () => {
     };
 
     it('should update a task successfully', async () => {
-      const mockUser = { id: 'user-1', role: Role.ADMIN };
+      const mockUser = { id: 'user-1', role: { code: Role.ADMIN } };
       const updatedTask = { ...mockTask, ...updateTaskDto };
       mockTasksService.update.mockResolvedValue(updatedTask);
 
@@ -360,7 +362,7 @@ describe('TasksController', () => {
     });
 
     it('should throw NotFoundException when task not found', async () => {
-      const mockUser = { id: 'user-1', role: Role.ADMIN };
+      const mockUser = { id: 'user-1', role: { code: Role.ADMIN } };
       mockTasksService.update.mockRejectedValue(
         new NotFoundException('Tâche introuvable'),
       );
@@ -371,7 +373,7 @@ describe('TasksController', () => {
     });
 
     it('should update task to DONE with 100% progress', async () => {
-      const mockUser = { id: 'user-1', role: Role.ADMIN };
+      const mockUser = { id: 'user-1', role: { code: Role.ADMIN } };
       const completedTask = { ...mockTask, status: 'DONE', progress: 100 };
       mockTasksService.update.mockResolvedValue(completedTask);
 
@@ -386,7 +388,8 @@ describe('TasksController', () => {
   });
 
   describe('remove', () => {
-    const mockUser = { id: 'user-1', role: Role.ADMIN };
+    const mockUser = { id: 'user-1', role: { code: Role.ADMIN } };
+    const normalizedUser = { id: 'user-1', role: Role.ADMIN };
 
     it('should delete a task', async () => {
       mockTasksService.remove.mockResolvedValue({ message: 'Tâche supprimée' });
@@ -394,7 +397,7 @@ describe('TasksController', () => {
       const result = await controller.remove('task-id-1', mockUser);
 
       expect(result.message).toBe('Tâche supprimée');
-      expect(mockTasksService.remove).toHaveBeenCalledWith('task-id-1', mockUser);
+      expect(mockTasksService.remove).toHaveBeenCalledWith('task-id-1', normalizedUser);
     });
 
     it('should throw NotFoundException when task not found', async () => {

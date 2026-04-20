@@ -184,7 +184,7 @@ describe('PermissionsGuardV2 — V3 F', () => {
       await expect(guard.canActivate(buildCtx(undefined))).resolves.toBe(false);
     });
 
-    it('refuse si user sans role ni roleEntity', async () => {
+    it('refuse si user sans role', async () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
         key === REQUIRE_PERMISSIONS_KEY ? ['tasks:read'] : undefined,
       );
@@ -194,7 +194,7 @@ describe('PermissionsGuardV2 — V3 F', () => {
       ).resolves.toBe(false);
     });
 
-    it('utilise roleEntity.code en priorité sur role', async () => {
+    it('utilise user.role.code (objet Role Prisma V4)', async () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
         key === REQUIRE_PERMISSIONS_KEY ? ['tasks:read'] : undefined,
       );
@@ -203,13 +203,12 @@ describe('PermissionsGuardV2 — V3 F', () => {
       await guard.canActivate(
         buildCtx({
           id: 'u-1',
-          role: 'CONTRIBUTEUR',
-          roleEntity: { code: 'BASIC_USER', templateKey: 'BASIC_USER' },
+          role: { code: 'BASIC_USER', templateKey: 'BASIC_USER' },
         }),
       );
       expect(permissions.getPermissionsForUser).toHaveBeenCalledWith(
         expect.objectContaining({
-          roleEntity: { code: 'BASIC_USER', templateKey: 'BASIC_USER' },
+          role: { code: 'BASIC_USER', templateKey: 'BASIC_USER' },
         }),
       );
     });

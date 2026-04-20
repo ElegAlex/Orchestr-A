@@ -8,8 +8,10 @@ import {
 import { PlanningService } from './planning.service';
 import { PlanningOverviewQueryDto } from './dto/planning-overview-query.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import type { User } from '@prisma/client';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Planning')
 @ApiBearerAuth()
@@ -31,11 +33,11 @@ export class PlanningController {
   })
   async getOverview(
     @Query() query: PlanningOverviewQueryDto,
-    @CurrentUser() user: User,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.planningService.getOverview(query.startDate, query.endDate, {
       id: user.id,
-      role: user.role,
+      role: user.role?.code ?? null,
     });
   }
 }

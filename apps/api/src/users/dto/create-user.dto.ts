@@ -4,12 +4,10 @@ import {
   IsEmail,
   MinLength,
   Matches,
-  IsEnum,
   IsOptional,
   IsBoolean,
   IsArray,
 } from 'class-validator';
-import { Role } from 'database';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -57,13 +55,12 @@ export class CreateUserDto {
   lastName: string;
 
   @ApiProperty({
-    description: "Rôle de l'utilisateur",
-    enum: Role,
-    example: Role.CONTRIBUTEUR,
-    default: Role.CONTRIBUTEUR,
+    description: "Code du rôle de l'utilisateur (cf. table roles)",
+    example: 'CONTRIBUTEUR',
+    default: 'CONTRIBUTEUR',
   })
-  @IsEnum(Role)
-  role: Role;
+  @IsString()
+  roleCode: string;
 
   @ApiProperty({
     description: 'ID du département',

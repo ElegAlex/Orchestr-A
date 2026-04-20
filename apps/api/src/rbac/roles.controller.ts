@@ -32,8 +32,8 @@ import { RequirePermissions } from './decorators/require-permissions.decorator';
  * sans accès DB. Si un usage public de `GET /roles` apparaît côté front,
  * un assouplissement (ex: `users:read`) sera arbitré.
  *
- * Note : ce controller coexiste avec `role-management.controller.ts` legacy
- * jusqu'à V4. Le nouveau préfixe est `/api/roles` (vs `/api/role-management/*`).
+ * Note (V4) : seul controller RBAC restant. L'ancien `role-management` a été
+ * supprimé et l'URL `/api/role-management/*` n'existe plus.
  */
 @ApiTags('roles')
 @ApiBearerAuth()

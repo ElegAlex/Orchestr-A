@@ -73,6 +73,9 @@ describe('LeavesService', () => {
     service: {
       findMany: vi.fn().mockResolvedValue([]),
     },
+    role: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
   };
 
   const mockUser = {
@@ -160,6 +163,7 @@ describe('LeavesService', () => {
     mockPrismaService.leaveBalance.findUnique.mockResolvedValue(null);
     mockPrismaService.roleConfig.findMany.mockResolvedValue([]);
     mockPrismaService.roleConfig.findFirst.mockResolvedValue(null);
+    mockPrismaService.role.findMany.mockResolvedValue([]);
     // Default user.findUnique to mockUser : évite les NotFoundException
     // quand update()/remove()/cancel() déclenchent getLeaveBalance pour un
     // congé CP mais que le test ne mocke pas explicitement user.findUnique.
@@ -696,7 +700,7 @@ describe('LeavesService', () => {
   // ============================================
   describe('getPendingForValidator', () => {
     it('should return all pending leaves for ADMIN', async () => {
-      const adminUser = { ...mockUser, role: Role.ADMIN };
+      const adminUser = { ...mockUser, role: { code: Role.ADMIN } };
       mockPrismaService.user.findUnique.mockResolvedValue(adminUser);
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
 
@@ -715,7 +719,7 @@ describe('LeavesService', () => {
     });
 
     it('should return pending leaves from same services for RESPONSABLE', async () => {
-      const responsableUser = { ...mockUser, role: Role.RESPONSABLE };
+      const responsableUser = { ...mockUser, role: { code: Role.RESPONSABLE } };
       const userServices = [{ serviceId: 'service-1' }];
       const managedServices = [{ id: 'service-2' }];
       const usersInServices = [{ userId: 'user-1' }, { userId: 'user-2' }];
@@ -751,7 +755,7 @@ describe('LeavesService', () => {
     });
 
     it('should return pending leaves from managed services for MANAGER', async () => {
-      const managerUser = { ...mockUser, role: Role.MANAGER };
+      const managerUser = { ...mockUser, role: { code: Role.MANAGER } };
       const userServices = []; // Manager not in any service as user
       const managedServices = [{ id: 'service-1' }]; // But manages service-1
       const usersInServices = [{ userId: 'user-3' }];
@@ -1571,7 +1575,11 @@ describe('LeavesService', () => {
     const endDate = new Date('2025-06-15');
 
     it('should create a delegation successfully', async () => {
-      const delegator = { ...mockUser, id: 'manager-1', role: Role.MANAGER };
+      const delegator = {
+        ...mockUser,
+        id: 'manager-1',
+        role: { code: Role.MANAGER },
+      };
       const delegate = { ...mockUser, id: 'delegate-1', isActive: true };
       const delegation = {
         id: 'delegation-1',
@@ -1625,7 +1633,7 @@ describe('LeavesService', () => {
     });
 
     it('should throw NotFoundException when delegate not found', async () => {
-      const manager = { ...mockUser, role: Role.MANAGER };
+      const manager = { ...mockUser, role: { code: Role.MANAGER } };
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(manager)
         .mockResolvedValueOnce(null);
@@ -1641,7 +1649,7 @@ describe('LeavesService', () => {
     });
 
     it('should throw BadRequestException when delegate is inactive', async () => {
-      const manager = { ...mockUser, role: Role.MANAGER };
+      const manager = { ...mockUser, role: { code: Role.MANAGER } };
       const inactiveDelegate = { ...mockUser, isActive: false };
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(manager)
@@ -1658,7 +1666,7 @@ describe('LeavesService', () => {
     });
 
     it('should throw BadRequestException when end date is before start date', async () => {
-      const manager = { ...mockUser, role: Role.MANAGER };
+      const manager = { ...mockUser, role: { code: Role.MANAGER } };
       const delegate = { ...mockUser, isActive: true };
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(manager)
@@ -1670,7 +1678,7 @@ describe('LeavesService', () => {
     });
 
     it('should allow ADMIN to create delegation', async () => {
-      const admin = { ...mockUser, role: Role.ADMIN };
+      const admin = { ...mockUser, role: { code: Role.ADMIN } };
       const delegate = { ...mockUser, isActive: true };
       const delegation = {
         id: 'delegation-1',
@@ -1696,7 +1704,7 @@ describe('LeavesService', () => {
     });
 
     it('should allow RESPONSABLE to create delegation', async () => {
-      const responsable = { ...mockUser, role: Role.RESPONSABLE };
+      const responsable = { ...mockUser, role: { code: Role.RESPONSABLE } };
       const delegate = { ...mockUser, isActive: true };
       const delegation = {
         id: 'delegation-1',
@@ -1785,7 +1793,7 @@ describe('LeavesService', () => {
       );
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        role: { code: Role.ADMIN },
       });
       mockPrismaService.leaveValidationDelegate.update.mockResolvedValue(
         deactivatedDelegation,

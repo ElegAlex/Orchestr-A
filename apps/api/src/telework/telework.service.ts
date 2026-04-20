@@ -108,7 +108,7 @@ export class TeleworkService {
    */
   async findAll(
     currentUserId: string,
-    currentUserRole: string,
+    currentUserRole: string | null,
     page = 1,
     limit = 50,
     userId?: string,

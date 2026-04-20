@@ -8,7 +8,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { Role } from 'database';
 import { RefreshTokenService } from '../auth/refresh-token.service';
 
 describe('UsersService', () => {
@@ -32,6 +31,10 @@ describe('UsersService', () => {
     service: {
       findMany: vi.fn(),
       count: vi.fn(),
+    },
+    role: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
     },
     userService: {
       createMany: vi.fn(),
@@ -96,10 +99,10 @@ describe('UsersService', () => {
     const createUserDto = {
       email: 'newuser@example.com',
       login: 'newuser',
-      password: 'password123',
+      password: 'Password1!',
       firstName: 'New',
       lastName: 'User',
-      role: 'CONTRIBUTEUR' as const,
+      roleCode: 'CONTRIBUTEUR',
       departmentId: 'dept-1',
       serviceIds: ['service-1'],
     };
@@ -113,7 +116,14 @@ describe('UsersService', () => {
         login: createUserDto.login,
         firstName: createUserDto.firstName,
         lastName: createUserDto.lastName,
-        role: createUserDto.role,
+        role: {
+          id: 'role-contrib',
+          code: 'CONTRIBUTEUR',
+          label: 'Contributeur',
+          templateKey: 'CONTRIBUTOR',
+          isSystem: true,
+        },
+        roleId: 'role-contrib',
         departmentId: createUserDto.departmentId,
         avatarUrl: null,
         isActive: true,
@@ -125,6 +135,9 @@ describe('UsersService', () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
       mockPrismaService.department.findUnique.mockResolvedValue(mockDepartment);
       mockPrismaService.service.findMany.mockResolvedValue(mockServices);
+      mockPrismaService.role.findUnique.mockResolvedValue({
+        id: 'role-contrib',
+      });
       mockPrismaService.user.create.mockResolvedValue(mockCreatedUser);
       mockPrismaService.userService.createMany.mockResolvedValue({ count: 1 });
 
@@ -228,7 +241,13 @@ describe('UsersService', () => {
           login: 'admin',
           firstName: 'Admin',
           lastName: 'User',
-          role: 'ADMIN',
+          role: {
+            id: 'role-admin',
+            code: 'ADMIN',
+            label: 'Administrateur',
+            templateKey: 'ADMIN',
+            isSystem: true,
+          },
           isActive: true,
         },
       ];
@@ -236,11 +255,11 @@ describe('UsersService', () => {
       mockPrismaService.user.findMany.mockResolvedValue(mockAdmins);
       mockPrismaService.user.count.mockResolvedValue(1);
 
-      await service.findAll(1, 50, Role.ADMIN);
+      await service.findAll(1, 50, 'ADMIN');
 
       expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { role: 'ADMIN' },
+          where: { role: { code: 'ADMIN' } },
         }),
       );
     });
@@ -707,14 +726,14 @@ describe('UsersService', () => {
 
       mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
 
-      const result = await service.getUsersByRole(Role.ADMIN);
+      const result = await service.getUsersByRole('ADMIN');
 
       expect(result).toHaveLength(1);
       expect(result[0].email).toBe('admin@example.com');
       expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            role: Role.ADMIN,
+            role: { code: 'ADMIN' },
             isActive: true,
           },
         }),
@@ -723,15 +742,20 @@ describe('UsersService', () => {
   });
 
   describe('importUsers', () => {
+    const mockRoles = [
+      { id: 'role-contrib', code: 'CONTRIBUTEUR' },
+      { id: 'role-admin', code: 'ADMIN' },
+    ];
+
     it('should import users successfully', async () => {
       const importData = [
         {
           email: 'new@example.com',
           login: 'new.user',
-          password: 'password123',
+          password: 'Password1!',
           firstName: 'New',
           lastName: 'User',
-          role: Role.CONTRIBUTEUR,
+          roleCode: 'CONTRIBUTEUR',
           departmentName: 'Informatique',
         },
       ];
@@ -740,6 +764,7 @@ describe('UsersService', () => {
         { id: 'dept-1', name: 'Informatique' },
       ]);
       mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.role.findMany.mockResolvedValue(mockRoles);
       mockPrismaService.user.findFirst.mockResolvedValue(null);
       mockPrismaService.user.create.mockResolvedValue({
         id: 'new-1',
@@ -747,7 +772,13 @@ describe('UsersService', () => {
         login: 'new.user',
         firstName: 'New',
         lastName: 'User',
-        role: Role.CONTRIBUTEUR,
+        roleId: 'role-contrib',
+        role: {
+          id: 'role-contrib',
+          code: 'CONTRIBUTEUR',
+          label: 'Contributeur',
+          templateKey: 'CONTRIBUTOR',
+        },
         departmentId: 'dept-1',
       });
 
@@ -764,15 +795,16 @@ describe('UsersService', () => {
         {
           email: 'existing@example.com',
           login: 'existing.user',
-          password: 'password123',
+          password: 'Password1!',
           firstName: 'Existing',
           lastName: 'User',
-          role: Role.CONTRIBUTEUR,
+          roleCode: 'CONTRIBUTEUR',
         },
       ];
 
       mockPrismaService.department.findMany.mockResolvedValue([]);
       mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.role.findMany.mockResolvedValue(mockRoles);
       mockPrismaService.user.findFirst.mockResolvedValue({
         id: 'existing-1',
         email: 'existing@example.com',
@@ -791,16 +823,17 @@ describe('UsersService', () => {
         {
           email: 'new@example.com',
           login: 'new.user',
-          password: 'password123',
+          password: 'Password1!',
           firstName: 'New',
           lastName: 'User',
-          role: Role.CONTRIBUTEUR,
+          roleCode: 'CONTRIBUTEUR',
           departmentName: 'Unknown Dept',
         },
       ];
 
       mockPrismaService.department.findMany.mockResolvedValue([]);
       mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.role.findMany.mockResolvedValue(mockRoles);
       mockPrismaService.user.findFirst.mockResolvedValue(null);
 
       const result = await service.importUsers(importData);
@@ -821,7 +854,7 @@ describe('UsersService', () => {
       expect(template).toContain('password');
       expect(template).toContain('firstName');
       expect(template).toContain('lastName');
-      expect(template).toContain('role');
+      expect(template).toContain('roleCode');
       expect(template).toContain('departmentName');
       expect(template).toContain('serviceNames');
       // Verify it has at least header line and example line

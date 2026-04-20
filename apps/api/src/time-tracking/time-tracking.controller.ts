@@ -25,11 +25,17 @@ import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OwnershipGuard } from '../common/guards/ownership.guard';
 import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
-import { Role } from 'database';
+
+function toActor(user: AuthenticatedUser): { id: string; role: string | null } {
+  return { id: user.id, role: user.role?.code ?? null };
+}
 
 @ApiTags('time-tracking')
 @Controller('time-tracking')
@@ -53,10 +59,10 @@ export class TimeTrackingController {
     description: 'Tâche ou projet introuvable',
   })
   create(
-    @CurrentUser() user: { id: string; role: Role },
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createTimeEntryDto: CreateTimeEntryDto,
   ) {
-    return this.timeTrackingService.create(user, createTimeEntryDto);
+    return this.timeTrackingService.create(toActor(user), createTimeEntryDto);
   }
 
   @Get()
@@ -83,7 +89,7 @@ export class TimeTrackingController {
       "Filtre userId d'un autre utilisateur sans permission time_tracking:view_any",
   })
   findAll(
-    @CurrentUser() currentUser: { id: string; role: Role },
+    @CurrentUser() currentUser: AuthenticatedUser,
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('userId') userId?: string,
@@ -94,7 +100,7 @@ export class TimeTrackingController {
     @Query('thirdPartyId') thirdPartyId?: string,
   ) {
     return this.timeTrackingService.findAll(
-      currentUser,
+      toActor(currentUser),
       page,
       limit,
       userId,
@@ -205,9 +211,9 @@ export class TimeTrackingController {
   })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() currentUser: { id: string; role: Role },
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.timeTrackingService.findOne(id, currentUser);
+    return this.timeTrackingService.findOne(id, toActor(currentUser));
   }
 
   @Patch(':id')
@@ -234,9 +240,13 @@ export class TimeTrackingController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTimeEntryDto: UpdateTimeEntryDto,
-    @CurrentUser() currentUser: { id: string; role: Role },
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.timeTrackingService.update(id, updateTimeEntryDto, currentUser);
+    return this.timeTrackingService.update(
+      id,
+      updateTimeEntryDto,
+      toActor(currentUser),
+    );
   }
 
   @Delete(':id')
@@ -263,8 +273,8 @@ export class TimeTrackingController {
   })
   remove(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() currentUser: { id: string; role: Role },
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.timeTrackingService.remove(id, currentUser);
+    return this.timeTrackingService.remove(id, toActor(currentUser));
   }
 }

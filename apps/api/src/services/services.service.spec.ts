@@ -308,10 +308,10 @@ describe('ServicesService', () => {
       const mockServiceWithUsers = {
         ...mockService,
         userServices: [
-          { user: { role: 'CONTRIBUTEUR', isActive: true } },
-          { user: { role: 'CONTRIBUTEUR', isActive: true } },
-          { user: { role: 'MANAGER', isActive: true } },
-          { user: { role: 'CONTRIBUTEUR', isActive: false } },
+          { user: { role: { code: 'CONTRIBUTEUR' }, isActive: true } },
+          { user: { role: { code: 'CONTRIBUTEUR' }, isActive: true } },
+          { user: { role: { code: 'MANAGER' }, isActive: true } },
+          { user: { role: { code: 'CONTRIBUTEUR' }, isActive: false } },
         ],
       };
 

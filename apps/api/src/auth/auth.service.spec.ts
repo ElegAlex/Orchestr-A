@@ -51,8 +51,9 @@ describe('AuthService', () => {
       findUnique: vi.fn(),
       update: vi.fn(),
     },
-    permission: {
-      findMany: vi.fn(),
+    role: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
     },
   };
 
@@ -188,6 +189,12 @@ describe('AuthService', () => {
 
     it('should create a new user with hashed password (inactive, pending admin approval)', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
+      mockPrismaService.role.findFirst.mockResolvedValue({
+        id: 'default-role-id',
+      });
+      mockPrismaService.role.findUnique.mockResolvedValue({
+        id: 'default-role-id',
+      });
       vi.mocked(bcrypt.hash).mockResolvedValue(
         '$2b$12$hashedpassword' as never,
       );
@@ -198,7 +205,13 @@ describe('AuthService', () => {
         login: registerDto.login,
         firstName: registerDto.firstName,
         lastName: registerDto.lastName,
-        role: 'CONTRIBUTEUR',
+        roleId: 'default-role-id',
+        role: {
+          id: 'default-role-id',
+          code: 'CONTRIBUTEUR',
+          label: 'Contributeur',
+          templateKey: 'CONTRIBUTEUR',
+        },
         departmentId: null,
         createdAt: new Date(),
       };
@@ -229,8 +242,14 @@ describe('AuthService', () => {
       );
     });
 
-    it('should always assign CONTRIBUTEUR role regardless of input', async () => {
+    it('should always assign the default role regardless of input', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
+      mockPrismaService.role.findFirst.mockResolvedValue({
+        id: 'default-role-id',
+      });
+      mockPrismaService.role.findUnique.mockResolvedValue({
+        id: 'default-role-id',
+      });
       vi.mocked(bcrypt.hash).mockResolvedValue(
         '$2b$12$hashedpassword' as never,
       );
@@ -240,7 +259,13 @@ describe('AuthService', () => {
         login: registerDto.login,
         firstName: registerDto.firstName,
         lastName: registerDto.lastName,
-        role: 'CONTRIBUTEUR',
+        roleId: 'default-role-id',
+        role: {
+          id: 'default-role-id',
+          code: 'CONTRIBUTEUR',
+          label: 'Contributeur',
+          templateKey: 'CONTRIBUTEUR',
+        },
         departmentId: null,
         createdAt: new Date(),
       };
@@ -248,16 +273,22 @@ describe('AuthService', () => {
 
       const result = await service.register(registerDto);
 
-      expect(result.user.role).toBe('CONTRIBUTEUR');
+      expect(result.user.role?.code).toBe('CONTRIBUTEUR');
       expect(mockPrismaService.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ role: 'CONTRIBUTEUR' }),
+          data: expect.objectContaining({ roleId: 'default-role-id' }),
         }),
       );
     });
 
-    it('should ignore role=ADMIN in body and create user as CONTRIBUTEUR (role injection prevention)', async () => {
+    it('should ignore role=ADMIN in body and create user with default role (role injection prevention)', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
+      mockPrismaService.role.findFirst.mockResolvedValue({
+        id: 'default-role-id',
+      });
+      mockPrismaService.role.findUnique.mockResolvedValue({
+        id: 'default-role-id',
+      });
       vi.mocked(bcrypt.hash).mockResolvedValue(
         '$2b$12$hashedpassword' as never,
       );
@@ -267,7 +298,13 @@ describe('AuthService', () => {
         login: registerDto.login,
         firstName: registerDto.firstName,
         lastName: registerDto.lastName,
-        role: 'CONTRIBUTEUR',
+        roleId: 'default-role-id',
+        role: {
+          id: 'default-role-id',
+          code: 'CONTRIBUTEUR',
+          label: 'Contributeur',
+          templateKey: 'CONTRIBUTEUR',
+        },
         departmentId: null,
         createdAt: new Date(),
       };
@@ -282,18 +319,17 @@ describe('AuthService', () => {
       const result = await service.register(maliciousDto);
 
       // The returned user must be CONTRIBUTEUR, never ADMIN
-      expect(result.user.role).toBe('CONTRIBUTEUR');
-      // Prisma create must have been called with role: 'CONTRIBUTEUR', NOT 'ADMIN'
+      expect(result.user.role?.code).toBe('CONTRIBUTEUR');
+      // Prisma create must have been called with the default roleId only
       expect(mockPrismaService.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ role: 'CONTRIBUTEUR' }),
+          data: expect.objectContaining({ roleId: 'default-role-id' }),
         }),
       );
-      expect(mockPrismaService.user.create).not.toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ role: 'ADMIN' }),
-        }),
-      );
+      // The raw string "role" field from the body must NEVER be forwarded to Prisma
+      const createCallData = mockPrismaService.user.create.mock.calls[0][0]
+        .data as Record<string, unknown>;
+      expect(createCallData.role).toBeUndefined();
     });
   });
 

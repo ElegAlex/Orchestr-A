@@ -24,7 +24,6 @@ import { PersonalTodosModule } from './personal-todos/personal-todos.module';
 import { SettingsModule } from './settings/settings.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { EventsModule } from './events/events.module';
-import { RoleManagementModule } from './role-management/role-management.module';
 import { PlanningExportModule } from './planning-export/planning-export.module';
 import { AuditModule } from './audit/audit.module';
 import { PredefinedTasksModule } from './predefined-tasks/predefined-tasks.module';
@@ -73,7 +72,6 @@ import { CommonModule } from './common/common.module';
     SettingsModule,
     HolidaysModule,
     EventsModule,
-    RoleManagementModule,
     PlanningExportModule,
     PredefinedTasksModule,
     SchoolVacationsModule,

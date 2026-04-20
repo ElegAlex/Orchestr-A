@@ -7,7 +7,9 @@ import {
   ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Role } from 'database';
+
+// Caller passé au controller.update() — forme RBAC V4 (objet role avec code).
+const ADMIN_CALLER = { role: { code: 'ADMIN' } };
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -18,7 +20,14 @@ describe('UsersController', () => {
     login: 'testuser',
     firstName: 'Test',
     lastName: 'User',
-    role: 'CONTRIBUTEUR',
+    roleId: 'role-contrib',
+    role: {
+      id: 'role-contrib',
+      code: 'CONTRIBUTEUR',
+      label: 'Contributeur',
+      templateKey: 'CONTRIBUTOR',
+      isSystem: true,
+    },
     isActive: true,
     departmentId: 'dept-1',
     avatarUrl: null,
@@ -67,7 +76,7 @@ describe('UsersController', () => {
       password: 'password123',
       firstName: 'New',
       lastName: 'User',
-      role: 'CONTRIBUTEUR' as const,
+      roleCode: 'CONTRIBUTEUR',
       departmentId: 'dept-1',
       serviceIds: ['service-1'],
     };
@@ -135,7 +144,18 @@ describe('UsersController', () => {
     });
 
     it('should filter users by role', async () => {
-      const admins = [{ ...mockUser, role: 'ADMIN' }];
+      const admins = [
+        {
+          ...mockUser,
+          role: {
+            id: 'role-admin',
+            code: 'ADMIN',
+            label: 'Administrateur',
+            templateKey: 'ADMIN',
+            isSystem: true,
+          },
+        },
+      ];
       const paginatedResult = {
         data: admins,
         meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
@@ -143,9 +163,9 @@ describe('UsersController', () => {
 
       mockUsersService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10, Role.ADMIN);
+      const result = await controller.findAll(1, 10, 'ADMIN');
 
-      expect(result.data[0].role).toBe('ADMIN');
+      expect(result.data[0].role?.code).toBe('ADMIN');
       expect(mockUsersService.findAll).toHaveBeenCalledWith(1, 10, 'ADMIN');
     });
 
@@ -218,10 +238,21 @@ describe('UsersController', () => {
 
   describe('getUsersByRole', () => {
     it('should return users by role', async () => {
-      const adminUsers = [{ ...mockUser, role: 'ADMIN' }];
+      const adminUsers = [
+        {
+          ...mockUser,
+          role: {
+            id: 'role-admin',
+            code: 'ADMIN',
+            label: 'Administrateur',
+            templateKey: 'ADMIN',
+            isSystem: true,
+          },
+        },
+      ];
       mockUsersService.getUsersByRole.mockResolvedValue(adminUsers);
 
-      const result = await controller.getUsersByRole(Role.ADMIN);
+      const result = await controller.getUsersByRole('ADMIN');
 
       expect(result).toEqual(adminUsers);
       expect(mockUsersService.getUsersByRole).toHaveBeenCalledWith('ADMIN');
@@ -238,7 +269,11 @@ describe('UsersController', () => {
       const updatedUser = { ...mockUser, ...updateUserDto };
       mockUsersService.update.mockResolvedValue(updatedUser);
 
-      const result = await controller.update('user-id-1', updateUserDto, 'ADMIN');
+      const result = await controller.update(
+        'user-id-1',
+        updateUserDto,
+        ADMIN_CALLER,
+      );
 
       expect(result).toEqual(updatedUser);
       expect(result.firstName).toBe('Updated');
@@ -255,7 +290,7 @@ describe('UsersController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', updateUserDto, 'ADMIN'),
+        controller.update('nonexistent', updateUserDto, ADMIN_CALLER),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -265,19 +300,26 @@ describe('UsersController', () => {
       );
 
       await expect(
-        controller.update('user-id-1', { email: 'existing@example.com' }, 'ADMIN'),
+        controller.update(
+          'user-id-1',
+          { email: 'existing@example.com' },
+          ADMIN_CALLER,
+        ),
       ).rejects.toThrow(ConflictException);
     });
   });
 
   describe('remove', () => {
     it('should soft delete a user (deactivate)', async () => {
-      const deactivatedUser = { ...mockUser, isActive: false };
-      mockUsersService.remove.mockResolvedValue(deactivatedUser);
+      mockUsersService.remove.mockResolvedValue({
+        message: 'Utilisateur désactivé avec succès',
+      });
 
       const result = await controller.remove('user-id-1');
 
-      expect(result.isActive).toBe(false);
+      expect(result).toEqual({
+        message: 'Utilisateur désactivé avec succès',
+      });
       expect(mockUsersService.remove).toHaveBeenCalledWith('user-id-1');
     });
 

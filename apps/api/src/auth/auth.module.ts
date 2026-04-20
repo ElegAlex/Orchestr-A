@@ -7,17 +7,14 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
 import { ThrottlerBehindProxyGuard } from './guards/throttler-behind-proxy.guard';
 import { APP_GUARD } from '@nestjs/core';
-import { RoleManagementModule } from '../role-management/role-management.module';
 import { RefreshTokenService } from './refresh-token.service';
 import { JwtBlacklistService } from './jwt-blacklist.service';
 
 @Module({
   imports: [
     PassportModule,
-    RoleManagementModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
@@ -48,10 +45,6 @@ import { JwtBlacklistService } from './jwt-blacklist.service';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
     },
   ],
   exports: [AuthService, RefreshTokenService, JwtBlacklistService],

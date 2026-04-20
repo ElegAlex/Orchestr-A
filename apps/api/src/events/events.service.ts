@@ -212,7 +212,7 @@ export class EventsService {
    */
   async findAll(
     currentUserId: string,
-    currentUserRole: string,
+    currentUserRole: string | null,
     startDate?: string,
     endDate?: string,
     userId?: string,

@@ -36,7 +36,6 @@ import { AvatarPresetDto } from './dto/avatar-preset.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Role } from 'database';
 
 @ApiTags('users')
 @Controller('users')
@@ -115,7 +114,12 @@ export class UsersController {
   })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'role', required: false, enum: Role })
+  @ApiQuery({
+    name: 'role',
+    required: false,
+    type: String,
+    description: 'Code du rôle (ex: ADMIN, CONTRIBUTEUR)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Liste des utilisateurs',
@@ -123,7 +127,7 @@ export class UsersController {
   findAll(
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
-    @Query('role') role?: Role,
+    @Query('role') role?: string,
   ) {
     return this.usersService.findAll(page, limit, role);
   }
@@ -191,7 +195,7 @@ export class UsersController {
     status: 200,
     description: 'Liste des utilisateurs avec ce rôle',
   })
-  getUsersByRole(@Param('role') role: Role) {
+  getUsersByRole(@Param('role') role: string) {
     return this.usersService.getUsersByRole(role);
   }
 
@@ -290,9 +294,9 @@ export class UsersController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
-    @CurrentUser('role') callerRole: string,
+    @CurrentUser() caller: { role?: { code: string } | null },
   ) {
-    return this.usersService.update(id, updateUserDto, callerRole);
+    return this.usersService.update(id, updateUserDto, caller?.role?.code);
   }
 
   @Delete(':id')

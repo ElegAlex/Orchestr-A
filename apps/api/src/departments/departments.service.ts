@@ -254,7 +254,7 @@ export class DepartmentsService {
       include: {
         users: {
           select: {
-            role: true,
+            role: { select: { code: true } },
             isActive: true,
           },
         },
@@ -287,7 +287,8 @@ export class DepartmentsService {
       .filter((u) => u.isActive)
       .reduce(
         (acc, user) => {
-          acc[user.role] = (acc[user.role] || 0) + 1;
+          const code = user.role?.code ?? 'UNASSIGNED';
+          acc[code] = (acc[code] || 0) + 1;
           return acc;
         },
         {} as Record<string, number>,

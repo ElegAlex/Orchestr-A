@@ -18,7 +18,6 @@ import {
 } from './dto/import-users.dto';
 import { VALID_PRESETS } from './dto/avatar-preset.dto';
 import * as bcrypt from 'bcrypt';
-import { Role } from 'database';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import type { MultipartFile } from '@fastify/multipart';
@@ -41,6 +40,12 @@ export interface UserDependenciesResponse {
 
 @Injectable()
 export class UsersService {
+  /**
+   * Hiérarchie par code de rôle — utilisée pour restreindre l'assignation
+   * (un appelant ne peut attribuer qu'un rôle strictement inférieur au sien).
+   * Les rôles custom (hors templates système) reçoivent implicitement le
+   * rang 0.
+   */
   private readonly ROLE_HIERARCHY: Record<string, number> = {
     OBSERVATEUR: 0,
     CONTRIBUTEUR: 1,
@@ -51,8 +56,17 @@ export class UsersService {
     ADMIN: 6,
   };
 
-  private canAssignRole(callerRole: string, targetRole: string): boolean {
-    return this.ROLE_HIERARCHY[callerRole] > this.ROLE_HIERARCHY[targetRole];
+  private canAssignRole(
+    callerRoleCode: string | null | undefined,
+    targetRoleCode: string | null | undefined,
+  ): boolean {
+    const callerRank = callerRoleCode
+      ? (this.ROLE_HIERARCHY[callerRoleCode] ?? 0)
+      : 0;
+    const targetRank = targetRoleCode
+      ? (this.ROLE_HIERARCHY[targetRoleCode] ?? 0)
+      : 0;
+    return callerRank > targetRank;
   }
 
   constructor(
@@ -60,8 +74,18 @@ export class UsersService {
     private readonly refreshTokenService: RefreshTokenService,
   ) {}
 
+  private async resolveRoleIdByCode(code: string): Promise<string> {
+    const role = await this.prisma.role.findUnique({
+      where: { code },
+      select: { id: true },
+    });
+    if (!role) {
+      throw new BadRequestException(`Rôle "${code}" introuvable`);
+    }
+    return role.id;
+  }
+
   async create(createUserDto: CreateUserDto) {
-    // Vérifier si l'utilisateur existe déjà
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [{ email: createUserDto.email }, { login: createUserDto.login }],
@@ -77,7 +101,6 @@ export class UsersService {
       }
     }
 
-    // Vérifier département si fourni
     if (createUserDto.departmentId) {
       const department = await this.prisma.department.findUnique({
         where: { id: createUserDto.departmentId },
@@ -87,7 +110,6 @@ export class UsersService {
       }
     }
 
-    // Vérifier services si fournis
     if (createUserDto.serviceIds && createUserDto.serviceIds.length > 0) {
       const services = await this.prisma.service.findMany({
         where: { id: { in: createUserDto.serviceIds } },
@@ -97,10 +119,10 @@ export class UsersService {
       }
     }
 
-    // Hasher le mot de passe
+    const roleId = await this.resolveRoleIdByCode(createUserDto.roleCode);
+
     const passwordHash = await bcrypt.hash(createUserDto.password, 12);
 
-    // Vérification immédiate que le hash correspond au mot de passe
     const hashValid = await bcrypt.compare(
       createUserDto.password,
       passwordHash,
@@ -112,7 +134,6 @@ export class UsersService {
       throw new Error('Password hash verification failed');
     }
 
-    // Créer l'utilisateur
     const user = await this.prisma.user.create({
       data: {
         email: createUserDto.email,
@@ -120,7 +141,7 @@ export class UsersService {
         passwordHash,
         firstName: createUserDto.firstName,
         lastName: createUserDto.lastName,
-        role: createUserDto.role,
+        roleId,
         departmentId: createUserDto.departmentId,
         avatarUrl: createUserDto.avatarUrl,
         isActive: createUserDto.isActive ?? true,
@@ -131,7 +152,16 @@ export class UsersService {
         login: true,
         firstName: true,
         lastName: true,
-        role: true,
+        roleId: true,
+        role: {
+          select: {
+            id: true,
+            code: true,
+            label: true,
+            templateKey: true,
+            isSystem: true,
+          },
+        },
         departmentId: true,
         avatarUrl: true,
         isActive: true,
@@ -155,7 +185,6 @@ export class UsersService {
       },
     });
 
-    // Créer les associations de services
     if (createUserDto.serviceIds && createUserDto.serviceIds.length > 0) {
       await this.prisma.userService.createMany({
         data: createUserDto.serviceIds.map((serviceId) => ({
@@ -168,11 +197,11 @@ export class UsersService {
     return user;
   }
 
-  async findAll(page: number = 1, limit: number = 20, role?: Role) {
+  async findAll(page: number = 1, limit: number = 20, roleCode?: string) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
 
-    const where = role ? { role } : {};
+    const where = roleCode ? { role: { code: roleCode } } : {};
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -185,7 +214,16 @@ export class UsersService {
           login: true,
           firstName: true,
           lastName: true,
-          role: true,
+          roleId: true,
+          role: {
+            select: {
+              id: true,
+              code: true,
+              label: true,
+              templateKey: true,
+              isSystem: true,
+            },
+          },
           departmentId: true,
           avatarUrl: true,
           avatarPreset: true,
@@ -242,7 +280,16 @@ export class UsersService {
         login: true,
         firstName: true,
         lastName: true,
-        role: true,
+        roleId: true,
+        role: {
+          select: {
+            id: true,
+            code: true,
+            label: true,
+            templateKey: true,
+            isSystem: true,
+          },
+        },
         departmentId: true,
         avatarUrl: true,
         isActive: true,
@@ -302,8 +349,11 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto, callerRole?: string) {
-    // Vérifier que l'utilisateur existe
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+    callerRoleCode?: string,
+  ) {
     const existingUser = await this.prisma.user.findUnique({
       where: { id },
     });
@@ -312,21 +362,21 @@ export class UsersService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    // Enforce role hierarchy: caller can only assign roles strictly below their own
-    if (updateUserDto.role && callerRole) {
-      if (updateUserDto.role === 'ADMIN' && callerRole !== 'ADMIN') {
+    // Hiérarchie : l'appelant ne peut attribuer qu'un rôle strictement
+    // inférieur au sien.
+    if (updateUserDto.roleCode && callerRoleCode) {
+      if (updateUserDto.roleCode === 'ADMIN' && callerRoleCode !== 'ADMIN') {
         throw new ForbiddenException(
           'Seul un administrateur peut attribuer le rôle ADMIN',
         );
       }
-      if (!this.canAssignRole(callerRole, updateUserDto.role)) {
+      if (!this.canAssignRole(callerRoleCode, updateUserDto.roleCode)) {
         throw new ForbiddenException(
           'Vous ne pouvez attribuer que des rôles inférieurs au vôtre',
         );
       }
     }
 
-    // Vérifier unicité email/login si modifiés
     if (updateUserDto.email || updateUserDto.login) {
       const duplicate = await this.prisma.user.findFirst({
         where: {
@@ -352,7 +402,6 @@ export class UsersService {
       }
     }
 
-    // Vérifier département si fourni
     if (updateUserDto.departmentId) {
       const department = await this.prisma.department.findUnique({
         where: { id: updateUserDto.departmentId },
@@ -362,7 +411,6 @@ export class UsersService {
       }
     }
 
-    // Vérifier services si fournis
     if (updateUserDto.serviceIds && updateUserDto.serviceIds.length > 0) {
       const services = await this.prisma.service.findMany({
         where: { id: { in: updateUserDto.serviceIds } },
@@ -372,24 +420,23 @@ export class UsersService {
       }
     }
 
-    // Préparer les données de mise à jour
-    const { serviceIds: _, password, ...restDto } = updateUserDto;
-    void _; // Intentionally unused - handled separately below
+    const { serviceIds: _, password, roleCode, ...restDto } = updateUserDto;
+    void _;
     const updateData: Record<string, unknown> = { ...restDto };
 
-    // Hasher le mot de passe si fourni
+    if (roleCode) {
+      updateData.roleId = await this.resolveRoleIdByCode(roleCode);
+    }
+
     if (password) {
       updateData.passwordHash = await bcrypt.hash(password, 12);
     }
 
-    // Mettre à jour les services si fournis
     if (updateUserDto.serviceIds !== undefined) {
-      // Supprimer toutes les associations existantes
       await this.prisma.userService.deleteMany({
         where: { userId: id },
       });
 
-      // Créer les nouvelles associations
       if (updateUserDto.serviceIds.length > 0) {
         await this.prisma.userService.createMany({
           data: updateUserDto.serviceIds.map((serviceId) => ({
@@ -409,7 +456,16 @@ export class UsersService {
         login: true,
         firstName: true,
         lastName: true,
-        role: true,
+        roleId: true,
+        role: {
+          select: {
+            id: true,
+            code: true,
+            label: true,
+            templateKey: true,
+            isSystem: true,
+          },
+        },
         departmentId: true,
         avatarUrl: true,
         isActive: true,
@@ -445,7 +501,6 @@ export class UsersService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    // Soft delete : désactiver l'utilisateur
     await this.prisma.user.update({
       where: { id },
       data: { isActive: false },
@@ -468,7 +523,6 @@ export class UsersService {
 
     const dependencies: UserDependency[] = [];
 
-    // Vérifier les tâches assignées non terminées (DONE est le seul statut "terminé")
     const assignedTasks = await this.prisma.task.count({
       where: {
         assigneeId: userId,
@@ -483,7 +537,6 @@ export class UsersService {
       });
     }
 
-    // Vérifier les projets où l'utilisateur est membre actif
     const projectMemberships = await this.prisma.projectMember.count({
       where: {
         userId,
@@ -500,7 +553,6 @@ export class UsersService {
       });
     }
 
-    // Vérifier les demandes de congés en attente (PENDING uniquement)
     const pendingLeaves = await this.prisma.leave.count({
       where: {
         userId,
@@ -515,7 +567,6 @@ export class UsersService {
       });
     }
 
-    // Vérifier les congés en attente de validation par cet utilisateur
     const leavesToValidate = await this.prisma.leave.count({
       where: {
         validatorId: userId,
@@ -530,7 +581,6 @@ export class UsersService {
       });
     }
 
-    // Vérifier si manager de département
     const managedDepartments = await this.prisma.department.count({
       where: { managerId: userId },
     });
@@ -542,7 +592,6 @@ export class UsersService {
       });
     }
 
-    // Vérifier si manager de service
     const managedServices = await this.prisma.service.count({
       where: { managerId: userId },
     });
@@ -570,14 +619,12 @@ export class UsersService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    // Empêcher l'auto-suppression si requestingUserId est fourni
     if (requestingUserId && id === requestingUserId) {
       throw new BadRequestException(
         'Vous ne pouvez pas supprimer votre propre compte',
       );
     }
 
-    // Vérifier les dépendances
     const { canDelete, dependencies } = await this.checkDependencies(id);
 
     if (!canDelete) {
@@ -588,53 +635,41 @@ export class UsersService {
       });
     }
 
-    // Supprimer dans une transaction
     await this.prisma.$transaction(async (tx) => {
-      // Supprimer les données liées qui peuvent l'être
-
-      // Supprimer les todos personnels
       await tx.personalTodo.deleteMany({
         where: { userId: id },
       });
 
-      // Supprimer les entrées de temps (historique)
       await tx.timeEntry.deleteMany({
         where: { userId: id },
       });
 
-      // Supprimer les commentaires
       await tx.comment.deleteMany({
         where: { authorId: id },
       });
 
-      // Supprimer les compétences utilisateur
       await tx.userSkill.deleteMany({
         where: { userId: id },
       });
 
-      // Supprimer les télétravails
       await tx.teleworkSchedule.deleteMany({
         where: { userId: id },
       });
 
-      // Supprimer les délégations de validation
       await tx.leaveValidationDelegate.deleteMany({
         where: {
           OR: [{ delegatorId: id }, { delegateId: id }],
         },
       });
 
-      // Supprimer les associations projet
       await tx.projectMember.deleteMany({
         where: { userId: id },
       });
 
-      // Supprimer les associations service
       await tx.userService.deleteMany({
         where: { userId: id },
       });
 
-      // Supprimer les congés terminés
       await tx.leave.deleteMany({
         where: {
           userId: id,
@@ -642,7 +677,6 @@ export class UsersService {
         },
       });
 
-      // Supprimer les tâches terminées uniquement
       await tx.task.deleteMany({
         where: {
           assigneeId: id,
@@ -650,7 +684,6 @@ export class UsersService {
         },
       });
 
-      // Finalement, supprimer l'utilisateur
       await tx.user.delete({
         where: { id },
       });
@@ -668,7 +701,6 @@ export class UsersService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    // Vérifier le mot de passe actuel
     const isPasswordValid = await bcrypt.compare(
       changePasswordDto.currentPassword,
       user.passwordHash,
@@ -678,7 +710,6 @@ export class UsersService {
       throw new BadRequestException('Ancien mot de passe incorrect');
     }
 
-    // Hasher le nouveau mot de passe
     const newPasswordHash = await bcrypt.hash(
       changePasswordDto.newPassword,
       12,
@@ -689,7 +720,6 @@ export class UsersService {
       data: { passwordHash: newPasswordHash },
     });
 
-    // Revoke all refresh tokens so existing sessions are invalidated after password change
     await this.refreshTokenService.revokeAllForUser(userId);
 
     return { message: 'Mot de passe modifié avec succès' };
@@ -711,7 +741,6 @@ export class UsersService {
       data: { passwordHash },
     });
 
-    // Revoke all refresh tokens so existing sessions are invalidated after admin password reset
     await this.refreshTokenService.revokeAllForUser(userId);
 
     return { message: 'Mot de passe réinitialisé avec succès' };
@@ -728,7 +757,9 @@ export class UsersService {
         firstName: true,
         lastName: true,
         email: true,
-        role: true,
+        role: {
+          select: { id: true, code: true, label: true, templateKey: true },
+        },
         userServices: {
           select: {
             service: {
@@ -758,15 +789,17 @@ export class UsersService {
         firstName: true,
         lastName: true,
         email: true,
-        role: true,
+        role: {
+          select: { id: true, code: true, label: true, templateKey: true },
+        },
       },
     });
   }
 
-  async getUsersByRole(role: Role) {
+  async getUsersByRole(roleCode: string) {
     return this.prisma.user.findMany({
       where: {
-        role,
+        role: { code: roleCode },
         isActive: true,
       },
       select: {
@@ -788,13 +821,15 @@ export class UsersService {
       createdUsers: [],
     };
 
-    // Charger tous les départements et services pour la résolution des noms
-    const [departments, services] = await Promise.all([
+    const [departments, services, roles] = await Promise.all([
       this.prisma.department.findMany({
         select: { id: true, name: true },
       }),
       this.prisma.service.findMany({
         select: { id: true, name: true, departmentId: true },
+      }),
+      this.prisma.role.findMany({
+        select: { id: true, code: true },
       }),
     ]);
 
@@ -804,13 +839,13 @@ export class UsersService {
     const serviceMap = new Map(
       services.map((s) => [s.name.toLowerCase().trim(), s]),
     );
+    const roleMap = new Map(roles.map((r) => [r.code, r.id]));
 
     for (let i = 0; i < users.length; i++) {
       const userData = users[i];
-      const rowNum = i + 2; // +2 car ligne 1 = entêtes, et indexation 0
+      const rowNum = i + 2;
 
       try {
-        // Vérifier si l'utilisateur existe déjà
         const existingUser = await this.prisma.user.findFirst({
           where: {
             OR: [{ email: userData.email }, { login: userData.login }],
@@ -825,7 +860,6 @@ export class UsersService {
           continue;
         }
 
-        // Résoudre le département par nom si fourni
         let departmentId: string | undefined;
         if (userData.departmentName) {
           departmentId = departmentMap.get(
@@ -840,7 +874,6 @@ export class UsersService {
           }
         }
 
-        // Résoudre les services par noms si fournis
         const serviceIds: string[] = [];
         if (userData.serviceNames) {
           const serviceNamesList = userData.serviceNames
@@ -857,7 +890,6 @@ export class UsersService {
               );
               continue;
             }
-            // Vérifier que le service appartient au département si département spécifié
             if (departmentId && service.departmentId !== departmentId) {
               result.errorDetails.push(
                 `Ligne ${rowNum}: Le service "${serviceName}" n'appartient pas au département spécifié (ignoré)`,
@@ -868,10 +900,17 @@ export class UsersService {
           }
         }
 
-        // Hasher le mot de passe
+        const roleId = roleMap.get(userData.roleCode);
+        if (!roleId) {
+          result.errors++;
+          result.errorDetails.push(
+            `Ligne ${rowNum}: Rôle "${userData.roleCode}" introuvable`,
+          );
+          continue;
+        }
+
         const passwordHash = await bcrypt.hash(userData.password, 12);
 
-        // Créer l'utilisateur
         const user = await this.prisma.user.create({
           data: {
             email: userData.email,
@@ -879,7 +918,7 @@ export class UsersService {
             passwordHash,
             firstName: userData.firstName,
             lastName: userData.lastName,
-            role: userData.role,
+            roleId,
             departmentId,
             isActive: true,
           },
@@ -889,12 +928,14 @@ export class UsersService {
             login: true,
             firstName: true,
             lastName: true,
-            role: true,
+            roleId: true,
+            role: {
+              select: { id: true, code: true, label: true, templateKey: true },
+            },
             departmentId: true,
           },
         });
 
-        // Créer les associations de services
         if (serviceIds.length > 0) {
           await this.prisma.userService.createMany({
             data: serviceIds.map((serviceId) => ({
@@ -939,8 +980,7 @@ export class UsersService {
       },
     };
 
-    // Charger tous les départements et services pour la résolution des noms
-    const [departments, services, existingUsers] = await Promise.all([
+    const [departments, services, existingUsers, roles] = await Promise.all([
       this.prisma.department.findMany({
         select: { id: true, name: true },
       }),
@@ -949,6 +989,9 @@ export class UsersService {
       }),
       this.prisma.user.findMany({
         select: { email: true, login: true },
+      }),
+      this.prisma.role.findMany({
+        select: { code: true },
       }),
     ]);
 
@@ -970,10 +1013,11 @@ export class UsersService {
     const existingLogins = new Set(
       existingUsers.map((u) => u.login.toLowerCase()),
     );
+    const validRoleCodes = new Set(roles.map((r) => r.code));
 
     for (let i = 0; i < users.length; i++) {
       const userData = users[i];
-      const lineNum = i + 2; // +2 car ligne 1 = header, index commence à 0
+      const lineNum = i + 2;
 
       const previewItem: UserPreviewItemDto = {
         lineNumber: lineNum,
@@ -982,7 +1026,6 @@ export class UsersService {
         messages: [],
       };
 
-      // Vérifier les champs obligatoires
       if (!userData.email || userData.email.trim() === '') {
         previewItem.status = 'error';
         previewItem.messages.push("L'email est obligatoire");
@@ -1025,7 +1068,6 @@ export class UsersService {
         continue;
       }
 
-      // Vérifier les doublons
       if (existingEmails.has(userData.email.toLowerCase())) {
         previewItem.status = 'duplicate';
         previewItem.messages.push(`L'email "${userData.email}" existe déjà`);
@@ -1042,18 +1084,17 @@ export class UsersService {
         continue;
       }
 
-      // Valider le rôle
-      if (userData.role && !Object.values(Role).includes(userData.role)) {
+      if (userData.roleCode && !validRoleCodes.has(userData.roleCode)) {
         previewItem.status = 'error';
+        const available = Array.from(validRoleCodes).join(', ');
         previewItem.messages.push(
-          `Rôle "${userData.role}" non reconnu. Valeurs possibles: ${Object.values(Role).join(', ')}`,
+          `Rôle "${userData.roleCode}" non reconnu. Valeurs possibles: ${available}`,
         );
         result.errors.push(previewItem);
         result.summary.errors++;
         continue;
       }
 
-      // Résoudre le département par nom si fourni
       if (userData.departmentName) {
         const department = departmentMap.get(
           userData.departmentName.toLowerCase().trim(),
@@ -1070,7 +1111,6 @@ export class UsersService {
         previewItem.resolvedDepartment = department;
       }
 
-      // Résoudre les services par noms si fournis
       if (userData.serviceNames) {
         const serviceNamesList = userData.serviceNames
           .split(',')
@@ -1104,7 +1144,6 @@ export class UsersService {
         }
       }
 
-      // Ajouter aux résultats selon le statut
       if (previewItem.status === 'warning') {
         result.warnings.push(previewItem);
         result.summary.warnings++;
@@ -1114,7 +1153,6 @@ export class UsersService {
         result.summary.valid++;
       }
 
-      // Ajouter pour éviter les doublons dans le même fichier
       existingEmails.add(userData.email.toLowerCase());
       existingLogins.add(userData.login.toLowerCase());
     }
@@ -1126,14 +1164,12 @@ export class UsersService {
    * Récupère les statuts de présence des utilisateurs pour une date donnée
    */
   async getUsersPresence(dateStr?: string) {
-    // Utiliser la date fournie ou aujourd'hui
     const targetDate = dateStr ? new Date(dateStr) : new Date();
     const startOfDay = new Date(targetDate);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Récupérer tous les utilisateurs actifs
     const users = await this.prisma.user.findMany({
       where: {
         isActive: true,
@@ -1162,7 +1198,6 @@ export class UsersService {
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });
 
-    // Récupérer les télétravails du jour
     const teleworkSchedules = await this.prisma.teleworkSchedule.findMany({
       where: {
         date: {
@@ -1175,7 +1210,6 @@ export class UsersService {
     });
     const remoteUserIds = new Set(teleworkSchedules.map((t) => t.userId));
 
-    // Récupérer les congés approuvés couvrant ce jour
     const leaves = await this.prisma.leave.findMany({
       where: {
         startDate: { lte: endOfDay },
@@ -1186,7 +1220,6 @@ export class UsersService {
     });
     const absentUserIds = new Set(leaves.map((l) => l.userId));
 
-    // Récupérer les tâches en intervention extérieure couvrant ce jour
     const externalTasks = await this.prisma.task.findMany({
       where: {
         isExternalIntervention: true,
@@ -1204,7 +1237,6 @@ export class UsersService {
       externalTasks.flatMap((t) => t.assignees.map((a) => a.userId)),
     );
 
-    // Récupérer les événements en intervention extérieure couvrant ce jour
     const externalEvents = await this.prisma.event.findMany({
       where: {
         isExternalIntervention: true,
@@ -1225,7 +1257,6 @@ export class UsersService {
       }
     }
 
-    // Classifier les utilisateurs
     const onSite: Array<{
       id: string;
       firstName: string;
@@ -1281,7 +1312,16 @@ export class UsersService {
     login: true,
     firstName: true,
     lastName: true,
-    role: true,
+    roleId: true,
+    role: {
+      select: {
+        id: true,
+        code: true,
+        label: true,
+        templateKey: true,
+        isSystem: true,
+      },
+    },
     departmentId: true,
     avatarUrl: true,
     avatarPreset: true,
@@ -1306,10 +1346,8 @@ export class UsersService {
     const filename = `${userId}${ext}`;
     const uploadsDir = join(process.cwd(), 'uploads', 'avatars');
 
-    // Create dir if needed
     await fs.mkdir(uploadsDir, { recursive: true });
 
-    // Remove old avatar files for this user
     try {
       const existing = await fs.readdir(uploadsDir);
       for (const f of existing) {
@@ -1321,10 +1359,8 @@ export class UsersService {
       // ignore
     }
 
-    // Read and save the buffer
     const buffer = await file.toBuffer();
 
-    // Validate actual file content (magic bytes) — SEC-07 / VULN-008
     await assertMagicBytes(buffer, 'image');
 
     await fs.writeFile(join(uploadsDir, filename), buffer);
@@ -1371,25 +1407,23 @@ export class UsersService {
   }
 
   getImportTemplate(): string {
-    // Générer un template CSV avec les en-têtes et des commentaires d'exemple
     const headers = [
       'email',
       'login',
       'password',
       'firstName',
       'lastName',
-      'role',
+      'roleCode',
       'departmentName',
       'serviceNames',
     ];
-    // Template sans faux emails - juste des commentaires explicatifs
     const exampleComment = [
       '# email@domaine.com',
       '# prenom.nom',
-      '# motdepasse (min 6 car.)',
+      '# motdepasse (min 8 car.)',
       '# Prénom',
       '# Nom',
-      '# ADMIN|RESPONSABLE|MANAGER|CONTRIBUTEUR|OBSERVATEUR',
+      '# Code de rôle (ex: CONTRIBUTEUR, MANAGER, ADMIN)',
       '# Nom département existant',
       '# Service1, Service2',
     ];

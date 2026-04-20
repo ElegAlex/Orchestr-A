@@ -35,8 +35,11 @@ import { CreateSubtaskDto } from './dto/create-subtask.dto';
 import { UpdateSubtaskDto } from './dto/update-subtask.dto';
 import { ReorderSubtasksDto } from './dto/reorder-subtasks.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Role, TaskStatus, RACIRole } from 'database';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../auth/decorators/current-user.decorator';
+import { TaskStatus, RACIRole } from 'database';
 
 @ApiTags('tasks')
 @Controller('tasks')
@@ -65,9 +68,12 @@ export class TasksController {
   })
   create(
     @Body() createTaskDto: CreateTaskDto,
-    @CurrentUser() user: { id: string; role: Role },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.tasksService.create(createTaskDto, user);
+    return this.tasksService.create(createTaskDto, {
+      id: user.id,
+      role: user.role?.code ?? null,
+    });
   }
 
   @Get()
@@ -112,7 +118,7 @@ export class TasksController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('overdue') overdue?: string,
-    @CurrentUser() currentUser?: { id: string; role: Role },
+    @CurrentUser() currentUser?: AuthenticatedUser,
   ) {
     return this.tasksService.findAll(
       page,
@@ -123,7 +129,9 @@ export class TasksController {
       startDate,
       endDate,
       overdue === 'true',
-      currentUser,
+      currentUser
+        ? { id: currentUser.id, role: currentUser.role?.code ?? null }
+        : undefined,
     );
   }
 
@@ -138,9 +146,12 @@ export class TasksController {
   })
   getTasksByAssignee(
     @Param('userId', ParseUUIDPipe) userId: string,
-    @CurrentUser() currentUser: { id: string; role: Role },
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.getTasksByAssignee(userId, currentUser);
+    return this.tasksService.getTasksByAssignee(userId, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get('project/:projectId')
@@ -219,9 +230,14 @@ export class TasksController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTaskDto: UpdateTaskDto,
-    @CurrentUser() user: { id: string; role: Role },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.tasksService.update(id, updateTaskDto, user.id, user.role);
+    return this.tasksService.update(
+      id,
+      updateTaskDto,
+      user.id,
+      user.role?.code ?? undefined,
+    );
   }
 
   @Delete(':id')
@@ -246,9 +262,12 @@ export class TasksController {
   })
   remove(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: { id: string; role: Role },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.tasksService.remove(id, user);
+    return this.tasksService.remove(id, {
+      id: user.id,
+      role: user.role?.code ?? null,
+    });
   }
 
   @Post(':id/dependencies')

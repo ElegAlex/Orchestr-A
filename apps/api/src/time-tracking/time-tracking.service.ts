@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Role } from 'database';
+import { Prisma } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { ThirdPartiesService } from '../third-parties/third-parties.service';
@@ -42,7 +42,7 @@ export class TimeTrackingService {
    */
   private async ensureCanMutate(
     entryId: string,
-    user: { id: string; role: Role },
+    user: { id: string; role: string | null },
   ): Promise<void> {
     const isOwner = await this.ownershipService.isOwner(
       'timeEntry',
@@ -66,7 +66,7 @@ export class TimeTrackingService {
    *   rattaché à la tâche ou au projet cible.
    */
   async create(
-    currentUser: { id: string; role: Role },
+    currentUser: { id: string; role: string | null },
     createTimeEntryDto: CreateTimeEntryDto,
   ) {
     const {
@@ -154,7 +154,7 @@ export class TimeTrackingService {
   }
 
   private async resolveActor(
-    currentUser: { id: string; role: Role },
+    currentUser: { id: string; role: string | null },
     thirdPartyId: string | undefined,
     ctx: { taskId?: string; projectId?: string },
   ): Promise<TimeEntryActor> {
@@ -188,7 +188,7 @@ export class TimeTrackingService {
    * Aligné sur le pattern coercion des modules tasks/leaves/telework/events.
    */
   async findAll(
-    currentUser: { id: string; role: Role },
+    currentUser: { id: string; role: string | null },
     page = 1,
     limit = 10,
     userId?: string,
@@ -281,7 +281,7 @@ export class TimeTrackingService {
   /**
    * Récupérer une entrée par ID
    */
-  async findOne(id: string, currentUser?: { id: string; role: Role }) {
+  async findOne(id: string, currentUser?: { id: string; role: string | null }) {
     const entry = await this.prisma.timeEntry.findUnique({
       where: { id },
       include: {
@@ -338,7 +338,7 @@ export class TimeTrackingService {
   async update(
     id: string,
     updateTimeEntryDto: UpdateTimeEntryDto,
-    currentUser: { id: string; role: Role },
+    currentUser: { id: string; role: string | null },
   ) {
     const existing = await this.prisma.timeEntry.findUnique({
       where: { id },
@@ -420,7 +420,7 @@ export class TimeTrackingService {
   /**
    * Supprimer une entrée
    */
-  async remove(id: string, currentUser: { id: string; role: Role }) {
+  async remove(id: string, currentUser: { id: string; role: string | null }) {
     const entry = await this.prisma.timeEntry.findUnique({
       where: { id },
     });

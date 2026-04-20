@@ -2,7 +2,6 @@ import { Global, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from '../prisma/prisma.module';
-import { RoleManagementModule } from '../role-management/role-management.module';
 import { PermissionsService } from './permissions.service';
 import { PermissionsGuardV2 } from './permissions.guard';
 import { RolesController } from './roles.controller';
@@ -17,7 +16,6 @@ import { RolesService } from './roles.service';
  *
  * Dépendances :
  *  - `PrismaModule` (lecture table `roles`).
- *  - `RoleManagementModule` (fallback legacy `getPermissionsForRole`).
  *  - `ConfigModule` (REDIS_*).
  *
  * Note V1 : `PermissionsGuardV2` est créé ici mais N'EST PAS enregistré
@@ -29,7 +27,7 @@ import { RolesService } from './roles.service';
  */
 @Global()
 @Module({
-  imports: [ConfigModule, PrismaModule, RoleManagementModule],
+  imports: [ConfigModule, PrismaModule],
   controllers: [RolesController],
   providers: [
     PermissionsService,

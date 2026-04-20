@@ -45,13 +45,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         login: true,
         firstName: true,
         lastName: true,
-        role: true,
-        // V0 RBAC : nouvelle FK vers table `roles`. Charge la relation pour
-        // que les guards/services consomment user.roleEntity.code +
-        // user.roleEntity.templateKey. user.role (enum legacy) reste exposé
-        // jusqu'à V4 (cf. contract-03 §9). Additif — pas de breaking change.
+        // RBAC V4 : relation vers table `roles`. Les guards/services
+        // consomment user.role.code + user.role.templateKey.
         roleId: true,
-        roleEntity: {
+        role: {
           select: {
             id: true,
             code: true,

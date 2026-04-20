@@ -4,7 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { Role } from 'database';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
@@ -42,7 +41,10 @@ describe('TimeTrackingService', () => {
     isOwner: vi.fn(),
   };
 
-  const currentUser = { id: 'user-1', role: 'MANAGER' as Role };
+  const currentUser: { id: string; role: string | null } = {
+    id: 'user-1',
+    role: 'MANAGER',
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({

@@ -11,7 +11,20 @@ import { OwnershipGuard } from '../common/guards/ownership.guard';
 
 describe('TimeTrackingController', () => {
   let controller: TimeTrackingController;
-  const currentUser = { id: 'user-id-1', role: 'MANAGER' as const };
+  // Minimal AuthenticatedUser-like shape; only id + role.code are exercised
+  // in controller → service call paths.
+  const currentUser = {
+    id: 'user-id-1',
+    role: {
+      id: 'role-manager',
+      code: 'MANAGER',
+      label: 'Manager',
+      templateKey: 'MANAGER',
+      isSystem: true,
+    },
+  } as unknown as import('../auth/decorators/current-user.decorator').AuthenticatedUser;
+  // Shape produced by controller's toActor(user) helper before calling the service.
+  const currentActor = { id: 'user-id-1', role: 'MANAGER' };
 
   const mockTimeEntry = {
     id: 'entry-id-1',
@@ -100,7 +113,7 @@ describe('TimeTrackingController', () => {
 
       expect(result).toEqual(mockTimeEntry);
       expect(mockTimeTrackingService.create).toHaveBeenCalledWith(
-        currentUser,
+        currentActor,
         createTimeEntryDto,
       );
       expect(mockTimeTrackingService.create).toHaveBeenCalledTimes(1);
@@ -149,7 +162,7 @@ describe('TimeTrackingController', () => {
 
       expect(result).toEqual(paginatedResult);
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
-        currentUser,
+        currentActor,
         1,
         10,
         undefined,
@@ -170,7 +183,7 @@ describe('TimeTrackingController', () => {
       await controller.findAll(currentUser, 1, 10, 'user-id-1');
 
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
-        currentUser,
+        currentActor,
         1,
         10,
         'user-id-1',
@@ -191,7 +204,7 @@ describe('TimeTrackingController', () => {
       await controller.findAll(currentUser, 1, 10, undefined, 'project-id-1');
 
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
-        currentUser,
+        currentActor,
         1,
         10,
         undefined,
@@ -221,7 +234,7 @@ describe('TimeTrackingController', () => {
       );
 
       expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
-        currentUser,
+        currentActor,
         1,
         10,
         undefined,
@@ -243,7 +256,7 @@ describe('TimeTrackingController', () => {
       expect(result).toEqual(mockTimeEntry);
       expect(mockTimeTrackingService.findOne).toHaveBeenCalledWith(
         'entry-id-1',
-        currentUser,
+        currentActor,
       );
     });
 
@@ -413,7 +426,7 @@ describe('TimeTrackingController', () => {
       expect(mockTimeTrackingService.update).toHaveBeenCalledWith(
         'entry-id-1',
         updateTimeEntryDto,
-        currentUser,
+        currentActor,
       );
     });
 
@@ -439,7 +452,7 @@ describe('TimeTrackingController', () => {
       expect(result.message).toBe('Entrée de temps supprimée');
       expect(mockTimeTrackingService.remove).toHaveBeenCalledWith(
         'entry-id-1',
-        currentUser,
+        currentActor,
       );
     });
 

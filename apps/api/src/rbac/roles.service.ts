@@ -75,7 +75,7 @@ export class RolesService {
    * `userCount`, `permissionsCount`, `category` (résolus depuis le template).
    */
   async listRoles(): Promise<RoleWithStats[]> {
-    const rows = await this.prisma.roleEntity.findMany({
+    const rows = await this.prisma.role.findMany({
       orderBy: [{ isSystem: 'desc' }, { templateKey: 'asc' }, { label: 'asc' }],
       include: { _count: { select: { users: true } } },
     });
@@ -100,7 +100,7 @@ export class RolesService {
   }
 
   async getRoleById(id: string): Promise<RoleWithStats> {
-    const row = await this.prisma.roleEntity.findUnique({
+    const row = await this.prisma.role.findUnique({
       where: { id },
       include: { _count: { select: { users: true } } },
     });
@@ -111,7 +111,7 @@ export class RolesService {
   async createRole(dto: CreateRoleDto): Promise<RoleWithStats> {
     // Garde-fou : un code identique à un templateKey système → conflit avec
     // l'un des 26 rôles seedés (qui ont code = templateKey).
-    const existing = await this.prisma.roleEntity.findUnique({
+    const existing = await this.prisma.role.findUnique({
       where: { code: dto.code },
     });
     if (existing) {
@@ -122,7 +122,7 @@ export class RolesService {
       await this.unsetCurrentDefault();
     }
 
-    const created = await this.prisma.roleEntity.create({
+    const created = await this.prisma.role.create({
       data: {
         code: dto.code,
         label: dto.label,
@@ -138,7 +138,7 @@ export class RolesService {
   }
 
   async updateRole(id: string, dto: UpdateRoleDto): Promise<RoleWithStats> {
-    const existing = await this.prisma.roleEntity.findUnique({ where: { id } });
+    const existing = await this.prisma.role.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`Role ${id} introuvable`);
     if (existing.isSystem) {
       throw new ForbiddenException(
@@ -153,7 +153,7 @@ export class RolesService {
     // templateKey est immuable après création (cf. TSDoc classe) — on ne
     // le touche jamais, même si le DTO en contenait un (validation DTO le
     // refuse déjà, ce chemin est purement défensif).
-    const updated = await this.prisma.roleEntity.update({
+    const updated = await this.prisma.role.update({
       where: { id },
       data: {
         label: dto.label ?? existing.label,
@@ -167,7 +167,7 @@ export class RolesService {
   }
 
   async deleteRole(id: string): Promise<void> {
-    const existing = await this.prisma.roleEntity.findUnique({
+    const existing = await this.prisma.role.findUnique({
       where: { id },
       include: { users: { select: { id: true, email: true, firstName: true, lastName: true }, take: 50 } },
     });
@@ -189,14 +189,14 @@ export class RolesService {
         users: dependents,
       });
     }
-    await this.prisma.roleEntity.delete({ where: { id } });
+    await this.prisma.role.delete({ where: { id } });
     await this.permissionsService.invalidateRoleCache(existing.code);
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────
 
   private async unsetCurrentDefault(): Promise<void> {
-    await this.prisma.roleEntity.updateMany({
+    await this.prisma.role.updateMany({
       where: { isDefault: true },
       data: { isDefault: false },
     });

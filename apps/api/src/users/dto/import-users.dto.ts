@@ -4,13 +4,11 @@ import {
   IsEmail,
   MinLength,
   Matches,
-  IsEnum,
   IsOptional,
   IsArray,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Role } from 'database';
 
 export class ImportUserDto {
   @ApiProperty({
@@ -58,13 +56,12 @@ export class ImportUserDto {
   lastName: string;
 
   @ApiProperty({
-    description: "Rôle de l'utilisateur",
-    enum: Role,
-    example: Role.CONTRIBUTEUR,
-    default: Role.CONTRIBUTEUR,
+    description: "Code du rôle de l'utilisateur (cf. table roles)",
+    example: 'CONTRIBUTEUR',
+    default: 'CONTRIBUTEUR',
   })
-  @IsEnum(Role)
-  role: Role;
+  @IsString()
+  roleCode: string;
 
   @ApiProperty({
     description: 'Nom du département (sera résolu en ID)',

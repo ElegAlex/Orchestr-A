@@ -17,7 +17,7 @@ import {
   TaskPreviewItemDto,
   TaskPreviewStatus,
 } from './dto/import-tasks.dto';
-import { TaskStatus, Priority, RACIRole, Role } from 'database';
+import { TaskStatus, Priority, RACIRole } from 'database';
 import { Prisma } from 'database';
 import { PermissionsService } from '../rbac/permissions.service';
 import { getTaskProgress } from './task-progress.helper';
@@ -35,7 +35,10 @@ export class TasksService {
    * Créer une nouvelle tâche
    * Le projectId est optionnel pour permettre les tâches orphelines (réunions, tâches transverses)
    */
-  async create(createTaskDto: CreateTaskDto, user: { id: string; role: Role }) {
+  async create(
+    createTaskDto: CreateTaskDto,
+    user: { id: string; role: string | null },
+  ) {
     const {
       projectId,
       epicId,
@@ -277,7 +280,7 @@ export class TasksService {
     startDate?: string,
     endDate?: string,
     overdue?: boolean,
-    currentUser?: { id: string; role: string },
+    currentUser?: { id: string; role: string | null },
   ) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
@@ -730,7 +733,7 @@ export class TasksService {
   /**
    * Supprimer une tâche
    */
-  async remove(id: string, user?: { id: string; role: Role }) {
+  async remove(id: string, user?: { id: string; role: string | null }) {
     const task = await this.prisma.task.findUnique({
       where: { id },
       include: {
@@ -975,7 +978,7 @@ export class TasksService {
    */
   async getTasksByAssignee(
     userId: string,
-    currentUser?: { id: string; role: Role },
+    currentUser?: { id: string; role: string | null },
   ) {
     // If requesting another user's tasks, require tasks:readAll permission
     if (currentUser && userId !== currentUser.id) {

@@ -11,7 +11,6 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { Role } from 'database';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AuditService, AuditAction } from '../audit/audit.service';
 import { RefreshTokenService, RefreshTokenMeta } from './refresh-token.service';
@@ -38,7 +37,11 @@ export class AuthService {
   /**
    * Sign a new access token including a jti claim so it can be revoked via blacklist.
    */
-  signAccessToken(payload: { sub: string; login: string; role: string }): string {
+  signAccessToken(payload: {
+    sub: string;
+    login: string;
+    role: string | null;
+  }): string {
     const jti = crypto.randomUUID();
     return this.jwtService.sign(
       { ...payload, jti },
@@ -98,7 +101,16 @@ export class AuthService {
         login: true,
         firstName: true,
         lastName: true,
-        role: true,
+        roleId: true,
+        role: {
+          select: {
+            id: true,
+            code: true,
+            label: true,
+            templateKey: true,
+            isSystem: true,
+          },
+        },
         departmentId: true,
         avatarUrl: true,
         avatarPreset: true,
@@ -133,7 +145,7 @@ export class AuthService {
     const payload = {
       sub: user.id,
       login: user.login,
-      role: user.role,
+      role: fullUser?.role?.code ?? null,
     };
 
     this.auditService.log({
@@ -173,6 +185,23 @@ export class AuthService {
     // Hasher le mot de passe
     const passwordHash = await bcrypt.hash(registerDto.password, 12);
 
+    // Résoudre le rôle par défaut depuis la table `roles`. On prend d'abord
+    // `isDefault=true`, sinon le code "CONTRIBUTEUR" (template système).
+    const defaultRole =
+      (await this.prisma.role.findFirst({
+        where: { isDefault: true },
+        select: { id: true },
+      })) ??
+      (await this.prisma.role.findUnique({
+        where: { code: 'CONTRIBUTEUR' },
+        select: { id: true },
+      }));
+    if (!defaultRole) {
+      throw new ConflictException(
+        'Aucun rôle par défaut configuré — seed manquant',
+      );
+    }
+
     // Créer l'utilisateur
     const user = await this.prisma.user.create({
       data: {
@@ -181,7 +210,7 @@ export class AuthService {
         passwordHash,
         firstName: registerDto.firstName,
         lastName: registerDto.lastName,
-        role: Role.CONTRIBUTEUR,
+        roleId: defaultRole.id,
         // New registrations require admin activation for security
         isActive: false,
       },
@@ -191,7 +220,15 @@ export class AuthService {
         login: true,
         firstName: true,
         lastName: true,
-        role: true,
+        roleId: true,
+        role: {
+          select: {
+            id: true,
+            code: true,
+            label: true,
+            templateKey: true,
+          },
+        },
         departmentId: true,
         createdAt: true,
       },
@@ -218,7 +255,12 @@ export class AuthService {
   async issueAccessTokenForUser(userId: string): Promise<string> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, login: true, role: true, isActive: true },
+      select: {
+        id: true,
+        login: true,
+        isActive: true,
+        role: { select: { code: true } },
+      },
     });
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Utilisateur non autorisé');
@@ -226,7 +268,7 @@ export class AuthService {
     return this.signAccessToken({
       sub: user.id,
       login: user.login,
-      role: user.role,
+      role: user.role?.code ?? null,
     });
   }
 
@@ -239,7 +281,16 @@ export class AuthService {
         login: true,
         firstName: true,
         lastName: true,
-        role: true,
+        roleId: true,
+        role: {
+          select: {
+            id: true,
+            code: true,
+            label: true,
+            templateKey: true,
+            isSystem: true,
+          },
+        },
         departmentId: true,
         avatarUrl: true,
         avatarPreset: true,
@@ -273,8 +324,7 @@ export class AuthService {
   }
 
   async getPermissionsForUser(user: {
-    role?: string | null;
-    roleEntity?: { code: string } | null;
+    role?: { code: string } | null;
   }): Promise<string[]> {
     const perms = await this.permissionsService.getPermissionsForUser(user);
     return [...perms];

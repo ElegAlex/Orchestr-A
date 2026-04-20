@@ -31,8 +31,7 @@ export type RbacGuardMode = 'permissive' | 'enforce';
 
 interface RequestUser {
   id?: string;
-  role?: string | null;
-  roleEntity?: { code: string; templateKey: string } | null;
+  role?: { code: string; templateKey: string } | null;
 }
 
 /**
@@ -49,8 +48,8 @@ interface RequestUser {
  *      et autorise.
  *
  * Préserve les contrats SEC-03 (S1-S5) et P1-P8 du contract-04 §1 :
- *   - Source unique de rôle : `request.user.roleEntity.code` ou
- *     `request.user.role` (jamais body/headers).
+ *   - Source unique de rôle : `request.user.role.code` (relation Prisma,
+ *     jamais body/headers).
  *   - User absent / role absent → false.
  *   - `@RequirePermissions([])` (vide) → allow (P2).
  *   - Cache Redis transparent (délégué à PermissionsService) (P6).
@@ -121,7 +120,7 @@ export class PermissionsGuardV2 implements CanActivate {
 
     const request = context.switchToHttp().getRequest<{ user?: RequestUser }>();
     const user = request?.user;
-    if (!user || (!user.role && !user.roleEntity)) {
+    if (!user || !user.role) {
       return false;
     }
 

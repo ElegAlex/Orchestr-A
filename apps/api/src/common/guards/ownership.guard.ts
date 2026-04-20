@@ -60,10 +60,8 @@ export class OwnershipGuard implements CanActivate {
     }
 
     if (opts.bypassPermission) {
-      // PermissionsService accepte soit user.roleEntity.code (post-refactor),
-      // soit user.role (enum legacy). Path nouveau utilisé pour les codes
-      // qui matchent un templateKey (ADMIN, MANAGER, ...) ; fallback legacy
-      // pour les autres (CONTRIBUTEUR, RESPONSABLE, etc.) jusqu'à V2.
+      // Post-V4 RBAC : `user.role` est l'objet Role Prisma ; PermissionsService
+      // résout roleCode → templateKey → ROLE_TEMPLATES[key].permissions.
       const permissions = await this.permissionsService.getPermissionsForUser(user);
       if ((permissions as readonly string[]).includes(opts.bypassPermission)) {
         return true;
