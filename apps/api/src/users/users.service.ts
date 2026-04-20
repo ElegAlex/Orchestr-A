@@ -41,30 +41,71 @@ export interface UserDependenciesResponse {
 @Injectable()
 export class UsersService {
   /**
-   * Hiérarchie par code de rôle — utilisée pour restreindre l'assignation
-   * (un appelant ne peut attribuer qu'un rôle strictement inférieur au sien).
-   * Les rôles custom (hors templates système) reçoivent implicitement le
-   * rang 0.
+   * Hiérarchie par templateKey — utilisée pour restreindre l'assignation
+   * (un appelant ne peut attribuer qu'un rôle dont le template est
+   * strictement inférieur au sien). Les templates hors hiérarchie (observers,
+   * external, etc.) reçoivent le rang 0 par défaut.
+   *
+   * Post-V4 : les codes de rôles (institutionnels) varient d'une collectivité
+   * à l'autre (ex. ADMIN_DSI, MANAGER_CFA_FLUX), seule la templateKey est
+   * stable. La hiérarchie se raisonne donc sur le templateKey.
    */
-  private readonly ROLE_HIERARCHY: Record<string, number> = {
-    OBSERVATEUR: 0,
-    CONTRIBUTEUR: 1,
-    REFERENT_TECHNIQUE: 2,
-    CHEF_DE_PROJET: 3,
+  private readonly TEMPLATE_HIERARCHY: Record<string, number> = {
+    BASIC_USER: 1,
+    STAGIAIRE_ALTERNANT: 1,
+    EXTERNAL_PRESTATAIRE: 1,
+    PROJECT_CONTRIBUTOR_LIGHT: 2,
+    PROJECT_CONTRIBUTOR: 2,
+    IT_SUPPORT: 2,
+    FUNCTIONAL_REFERENT: 2,
+    DATA_ANALYST: 2,
+    HR_OFFICER_LIGHT: 2,
+    PROJECT_LEAD_JUNIOR: 3,
+    PROJECT_LEAD: 3,
+    TECHNICAL_LEAD: 3,
+    IT_INFRASTRUCTURE: 3,
+    HR_OFFICER: 3,
+    CONTROLLER: 3,
+    BUDGET_ANALYST: 3,
+    THIRD_PARTY_MANAGER: 3,
+    OBSERVER_FULL: 3,
+    OBSERVER_HR_ONLY: 3,
+    OBSERVER_PROJECTS_ONLY: 3,
+    MANAGER_PROJECT_FOCUS: 4,
+    MANAGER_HR_FOCUS: 4,
     MANAGER: 4,
-    RESPONSABLE: 5,
+    PORTFOLIO_MANAGER: 5,
+    ADMIN_DELEGATED: 5,
     ADMIN: 6,
   };
 
-  private canAssignRole(
+  /**
+   * Résout le templateKey d'un rôle par son code. Null si rôle introuvable.
+   */
+  private async resolveTemplateKey(
+    code: string | null | undefined,
+  ): Promise<string | null> {
+    if (!code) return null;
+    const role = await this.prisma.role.findUnique({
+      where: { code },
+      select: { templateKey: true },
+    });
+    return role?.templateKey ?? null;
+  }
+
+  private async canAssignRole(
     callerRoleCode: string | null | undefined,
     targetRoleCode: string | null | undefined,
-  ): boolean {
-    const callerRank = callerRoleCode
-      ? (this.ROLE_HIERARCHY[callerRoleCode] ?? 0)
+  ): Promise<boolean> {
+    const [callerTpl, targetTpl] = await Promise.all([
+      this.resolveTemplateKey(callerRoleCode),
+      this.resolveTemplateKey(targetRoleCode),
+    ]);
+    const callerRank = callerTpl
+      ? (this.TEMPLATE_HIERARCHY[callerTpl] ?? 0)
       : 0;
-    const targetRank = targetRoleCode
-      ? (this.ROLE_HIERARCHY[targetRoleCode] ?? 0)
+    const targetRank = targetTpl
+      ? (this.TEMPLATE_HIERARCHY[targetTpl] ?? 0)
       : 0;
     return callerRank > targetRank;
   }
@@ -376,15 +417,20 @@ export class UsersService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    // Hiérarchie : l'appelant ne peut attribuer qu'un rôle strictement
-    // inférieur au sien.
+    // Hiérarchie : l'appelant ne peut attribuer qu'un rôle dont le template
+    // est strictement inférieur au sien. Les templates ADMIN et ADMIN_DELEGATED
+    // ne sont assignables que par un ADMIN (pas par un ADMIN_DELEGATED).
     if (updateUserDto.roleCode && callerRoleCode) {
-      if (updateUserDto.roleCode === 'ADMIN' && callerRoleCode !== 'ADMIN') {
+      const targetTemplateKey = await this.resolveTemplateKey(
+        updateUserDto.roleCode,
+      );
+      const callerTemplateKey = await this.resolveTemplateKey(callerRoleCode);
+      if (targetTemplateKey === 'ADMIN' && callerTemplateKey !== 'ADMIN') {
         throw new ForbiddenException(
-          'Seul un administrateur peut attribuer le rôle ADMIN',
+          'Seul un administrateur peut attribuer un rôle rattaché au template ADMIN',
         );
       }
-      if (!this.canAssignRole(callerRoleCode, updateUserDto.roleCode)) {
+      if (!(await this.canAssignRole(callerRoleCode, updateUserDto.roleCode))) {
         throw new ForbiddenException(
           'Vous ne pouvez attribuer que des rôles inférieurs au vôtre',
         );
