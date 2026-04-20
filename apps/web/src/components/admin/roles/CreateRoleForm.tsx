@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { ROLE_TEMPLATE_KEYS, ROLE_TEMPLATES, type RoleTemplateKey } from "rbac";
-import { rolesV2Service } from "@/services/roles-v2.service";
+import { rolesService } from "@/services/roles.service";
 
 interface CreateRoleFormProps {
   isOpen: boolean;
@@ -74,7 +74,7 @@ export function CreateRoleForm({
 
     setSubmitting(true);
     try {
-      await rolesV2Service.createRole({
+      await rolesService.createRole({
         code: trimmedCode,
         label: trimmedLabel,
         templateKey,

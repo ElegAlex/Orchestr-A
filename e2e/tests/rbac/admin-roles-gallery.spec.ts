@@ -1,5 +1,5 @@
 /**
- * Tests RBAC — Galerie d'admin des rôles (route /fr/admin/roles-v2)
+ * Tests RBAC — Galerie d'admin des rôles (route /fr/admin/roles)
  *
  * Cible la NOUVELLE UI V1D qui remplacera l'actuelle /fr/admin/roles (V2).
  * Structure attendue :
@@ -16,11 +16,11 @@ import { test, expect, type Page } from "../../fixtures/test-fixtures";
 const BASE = process.env.CI ? "http://localhost:3000" : "http://localhost:4001";
 
 async function gotoRolesGallery(page: Page) {
-  await page.goto(`${BASE}/fr/admin/roles-v2`);
+  await page.goto(`${BASE}/fr/admin/roles`);
   await page.waitForLoadState("networkidle", { timeout: 20000 });
 }
 
-test.describe("UI — Galerie rôles V1D (/fr/admin/roles-v2)", () => {
+test.describe("UI — Galerie rôles V1D (/fr/admin/roles)", () => {
   test(
     "ADMIN : voit 26 templates affichés, groupés par 9 catégories",
     async ({ asRole }) => {
@@ -110,7 +110,7 @@ test.describe("UI — Galerie rôles V1D (/fr/admin/roles-v2)", () => {
   );
 
   test(
-    "BASIC_USER (contributeur) : navigation vers /admin/roles-v2 → 403 ou redirect dashboard",
+    "BASIC_USER (contributeur) : navigation vers /admin/roles → 403 ou redirect dashboard",
     async ({ asRole }) => {
       const page = await asRole("contributeur");
       await gotoRolesGallery(page);
@@ -119,7 +119,7 @@ test.describe("UI — Galerie rôles V1D (/fr/admin/roles-v2)", () => {
       const url = page.url();
       const isRedirected =
         /\/dashboard|\/unauthorized|\/403|\/login/.test(url) ||
-        !url.includes("/admin/roles-v2");
+        !url.includes("/admin/roles");
       const has403 = await page
         .locator("text=/Accès refusé|Forbidden|Non autorisé|403/i")
         .first()
@@ -128,7 +128,7 @@ test.describe("UI — Galerie rôles V1D (/fr/admin/roles-v2)", () => {
 
       expect(
         isRedirected || has403,
-        `BASIC_USER ne devrait pas accéder à /admin/roles-v2. URL: ${url}`,
+        `BASIC_USER ne devrait pas accéder à /admin/roles. URL: ${url}`,
       ).toBeTruthy();
     },
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import type { PermissionCode } from "rbac";
-import type { RoleTemplateView } from "@/services/roles-v2.service";
+import type { RoleTemplateView } from "@/services/roles.service";
 import { CATEGORY_CONFIG, getModuleLabel } from "./category-config";
 
 interface TemplateDetailsModalProps {

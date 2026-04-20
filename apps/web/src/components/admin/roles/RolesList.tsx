@@ -3,9 +3,9 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import {
-  rolesV2Service,
+  rolesService,
   type RoleWithStats,
-} from "@/services/roles-v2.service";
+} from "@/services/roles.service";
 import { CATEGORY_CONFIG } from "./category-config";
 
 interface RolesListProps {
@@ -46,7 +46,7 @@ export function RolesList({ roles, onChanged }: RolesListProps) {
       return;
     }
     try {
-      await rolesV2Service.updateRole(role.id, { label: trimmed });
+      await rolesService.updateRole(role.id, { label: trimmed });
       toast.success("Rôle mis à jour.");
       cancelEdit();
       onChanged();
@@ -72,7 +72,7 @@ export function RolesList({ roles, onChanged }: RolesListProps) {
 
     setDeletingId(role.id);
     try {
-      await rolesV2Service.deleteRole(role.id);
+      await rolesService.deleteRole(role.id);
       toast.success("Rôle supprimé.");
       onChanged();
     } catch (err) {

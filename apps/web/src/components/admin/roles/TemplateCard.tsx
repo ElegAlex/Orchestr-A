@@ -1,6 +1,6 @@
 "use client";
 
-import type { RoleTemplateView } from "@/services/roles-v2.service";
+import type { RoleTemplateView } from "@/services/roles.service";
 import { CATEGORY_CONFIG } from "./category-config";
 
 interface TemplateCardProps {

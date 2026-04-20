@@ -1,5 +1,5 @@
 /**
- * roles-v2.service.ts — Service client de la galerie admin Spec 3 V1D.
+ * roles.service.ts — Service client de la galerie admin Spec 3 V1D.
  *
  * Consomme les endpoints `/api/roles/*` (nouveau controller RBAC, cf.
  * `apps/api/src/rbac/roles.controller.ts`). Coexiste avec l'ancien
@@ -59,7 +59,7 @@ export interface UpdateRoleV2Dto {
   isDefault?: boolean;
 }
 
-export const rolesV2Service = {
+export const rolesService = {
   async getTemplates(): Promise<RoleTemplateView[]> {
     const response = await api.get<RoleTemplateView[]>("/roles/templates");
     return response.data;
