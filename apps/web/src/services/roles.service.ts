@@ -52,9 +52,13 @@ export interface CreateRoleV2Dto {
   isDefault?: boolean;
 }
 
+/**
+ * Payload d'édition d'un rôle. `templateKey` n'y figure pas : un rôle créé
+ * sur un template y reste à vie (ValidationPipe back rejette 400 si passé).
+ * Pour changer le template d'un rôle : supprimer + recréer.
+ */
 export interface UpdateRoleV2Dto {
   label?: string;
-  templateKey?: RoleTemplateKey;
   description?: string;
   isDefault?: boolean;
 }

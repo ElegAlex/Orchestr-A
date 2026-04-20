@@ -52,9 +52,10 @@ export interface DependentUser {
  *
  * CRUD des rôles applicatifs (table `roles`). Les rôles `isSystem=true`
  * (les 26 templates seedés en V0) sont **verrouillés** sur les mutations
- * (D9 PO) : tentative d'update/delete renvoie 403. Les rôles custom
- * (`isSystem=false`) sont éditables (label, templateKey, description,
- * isDefault).
+ * (D9 PO) : tentative d'update/delete renvoie 403. Les rôles
+ * `isSystem=false` sont éditables sur `label`, `description`, `isDefault`
+ * uniquement — le `templateKey` d'un rôle est **immuable** après création
+ * (un rôle créé sur un template y reste à vie).
  *
  * Le set de permissions effectif d'un rôle est **toujours** calculé via
  * `ROLE_TEMPLATES[templateKey].permissions` — aucune modification de
@@ -149,21 +150,18 @@ export class RolesService {
       await this.unsetCurrentDefault();
     }
 
+    // templateKey est immuable après création (cf. TSDoc classe) — on ne
+    // le touche jamais, même si le DTO en contenait un (validation DTO le
+    // refuse déjà, ce chemin est purement défensif).
     const updated = await this.prisma.roleEntity.update({
       where: { id },
       data: {
         label: dto.label ?? existing.label,
-        templateKey: dto.templateKey ?? existing.templateKey,
         description: dto.description ?? existing.description,
         isDefault: dto.isDefault ?? existing.isDefault,
       },
       include: { _count: { select: { users: true } } },
     });
-
-    // Invalider cache si templateKey changé (les permissions effectives changent).
-    if (dto.templateKey && dto.templateKey !== existing.templateKey) {
-      await this.permissionsService.invalidateRoleCache(updated.code);
-    }
 
     return this.toRoleWithStats(updated);
   }

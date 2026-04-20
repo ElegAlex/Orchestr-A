@@ -14,8 +14,9 @@ import type { PermissionsService } from '../permissions.service';
  * Couvre :
  *  - listRoles, listTemplates (26 templates).
  *  - createRole : conflict 409 sur code dupliqué, force isSystem=false.
- *  - updateRole : 403 si isSystem=true (D9 PO), invalidation cache si
- *    templateKey changé.
+ *  - updateRole : 403 si isSystem=true (D9 PO). templateKey immuable après
+ *    création (un rôle créé sur un template y reste à vie) → jamais
+ *    d'invalidation de cache côté updateRole.
  *  - deleteRole : 403 si isSystem=true, 409 si users rattachés (avec liste).
  *  - isDefault exclusif (un seul rôle par défaut à la fois).
  */
@@ -153,34 +154,7 @@ describe('RolesService — V3 F', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('met à jour un rôle custom et invalide cache si templateKey change', async () => {
-      prisma.roleEntity.findUnique.mockResolvedValue({
-        id: 'r-1',
-        code: 'CUSTOM',
-        isSystem: false,
-        templateKey: 'BASIC_USER',
-        label: 'Old',
-        description: null,
-        isDefault: false,
-      });
-      prisma.roleEntity.update.mockResolvedValue({
-        id: 'r-1',
-        code: 'CUSTOM',
-        label: 'Old',
-        templateKey: 'PROJECT_CONTRIBUTOR',
-        description: null,
-        isSystem: false,
-        isDefault: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        _count: { users: 5 },
-      });
-
-      await service.updateRole('r-1', { templateKey: 'PROJECT_CONTRIBUTOR' });
-      expect(perms.invalidateRoleCache).toHaveBeenCalledWith('CUSTOM');
-    });
-
-    it('n\'invalide pas le cache si templateKey inchangé', async () => {
+    it('met à jour label/description/isDefault sans toucher à templateKey (immuable)', async () => {
       prisma.roleEntity.findUnique.mockResolvedValue({
         id: 'r-1',
         code: 'CUSTOM',
@@ -195,6 +169,46 @@ describe('RolesService — V3 F', () => {
         code: 'CUSTOM',
         label: 'New',
         templateKey: 'BASIC_USER',
+        description: 'desc',
+        isSystem: false,
+        isDefault: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        _count: { users: 0 },
+      });
+      await service.updateRole('r-1', { label: 'New', description: 'desc' });
+
+      // templateKey ne doit JAMAIS être présent dans le payload `data` envoyé
+      // à Prisma, même si existing.templateKey est consulté pour d'autres
+      // champs. Un rôle créé sur BASIC_USER y reste à vie.
+      const updateCall = prisma.roleEntity.update.mock.calls[0][0];
+      expect(updateCall.data).not.toHaveProperty('templateKey');
+
+      // templateKey étant immuable, updateRole n'invalide jamais le cache
+      // permissions (aucun recalcul possible depuis ce endpoint).
+      expect(perms.invalidateRoleCache).not.toHaveBeenCalled();
+    });
+
+    it('ignore silencieusement un templateKey passé au service (défense en profondeur)', async () => {
+      // Le DTO UpdateRoleDto n'expose plus templateKey (ValidationPipe
+      // whitelist=true + forbidNonWhitelisted=true rejette 400 en amont).
+      // Ce test vérifie que même si un appelant interne bypass la DTO
+      // et passe templateKey, le service le rejette implicitement en
+      // n'assignant jamais ce champ à Prisma.
+      prisma.roleEntity.findUnique.mockResolvedValue({
+        id: 'r-1',
+        code: 'CUSTOM',
+        isSystem: false,
+        templateKey: 'BASIC_USER',
+        label: 'Old',
+        description: null,
+        isDefault: false,
+      });
+      prisma.roleEntity.update.mockResolvedValue({
+        id: 'r-1',
+        code: 'CUSTOM',
+        label: 'Old',
+        templateKey: 'BASIC_USER',
         description: null,
         isSystem: false,
         isDefault: false,
@@ -202,7 +216,14 @@ describe('RolesService — V3 F', () => {
         updatedAt: new Date(),
         _count: { users: 0 },
       });
-      await service.updateRole('r-1', { label: 'New' });
+
+      // Cast pour forcer un input invalide au niveau service.
+      await service.updateRole('r-1', {
+        templateKey: 'PROJECT_CONTRIBUTOR',
+      } as unknown as Parameters<typeof service.updateRole>[1]);
+
+      const updateCall = prisma.roleEntity.update.mock.calls[0][0];
+      expect(updateCall.data).not.toHaveProperty('templateKey');
       expect(perms.invalidateRoleCache).not.toHaveBeenCalled();
     });
   });
