@@ -81,6 +81,18 @@ export const timeTrackingService = {
     return response.data;
   },
 
+  async createDismissal(taskId: string): Promise<TimeEntry> {
+    const today = new Date().toISOString().split("T")[0];
+    const response = await api.post<TimeEntry>("/time-tracking", {
+      taskId,
+      hours: 0,
+      isDismissal: true,
+      activityType: "OTHER",
+      date: today,
+    });
+    return response.data;
+  },
+
   async update(
     id: string,
     data: Partial<CreateTimeEntryDto>,

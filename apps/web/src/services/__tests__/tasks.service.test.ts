@@ -117,6 +117,17 @@ describe("tasksService", () => {
     });
   });
 
+  describe("getMyDoneUndeclared", () => {
+    it("should fetch tasks done but without declared time", async () => {
+      (api.get as jest.Mock).mockResolvedValue({ data: mockTasks });
+
+      const result = await tasksService.getMyDoneUndeclared();
+
+      expect(api.get).toHaveBeenCalledWith("/tasks/my/done-undeclared");
+      expect(result).toEqual(mockTasks);
+    });
+  });
+
   describe("getByEpic", () => {
     it("should fetch tasks by epic", async () => {
       (api.get as jest.Mock).mockResolvedValue({ data: mockTasks });

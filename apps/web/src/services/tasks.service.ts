@@ -45,6 +45,11 @@ export const tasksService = {
     return response.data;
   },
 
+  async getMyDoneUndeclared(): Promise<Task[]> {
+    const response = await api.get<Task[]>("/tasks/my/done-undeclared");
+    return response.data;
+  },
+
   async getByEpic(epicId: string): Promise<Task[]> {
     const response = await api.get<Task[]>(`/tasks/epic/${epicId}`);
     return response.data;

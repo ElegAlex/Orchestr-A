@@ -182,6 +182,33 @@ describe("timeTrackingService", () => {
     });
   });
 
+  describe("createDismissal", () => {
+    it("should POST a dismissal entry with isDismissal=true, hours=0, activityType=OTHER", async () => {
+      const dismissalEntry = {
+        ...mockTimeEntry,
+        hours: 0,
+        isDismissal: true,
+        activityType: ActivityType.OTHER,
+      };
+      (api.post as jest.Mock).mockResolvedValue({ data: dismissalEntry });
+
+      const result = await timeTrackingService.createDismissal("task-1");
+
+      expect(api.post).toHaveBeenCalledWith(
+        "/time-tracking",
+        expect.objectContaining({
+          taskId: "task-1",
+          hours: 0,
+          isDismissal: true,
+          activityType: "OTHER",
+        }),
+      );
+      const callPayload = (api.post as jest.Mock).mock.calls[0][1];
+      expect(callPayload.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(result).toEqual(dismissalEntry);
+    });
+  });
+
   describe("update", () => {
     it("should update a time entry", async () => {
       const updatedEntry = { ...mockTimeEntry, hours: 6 };

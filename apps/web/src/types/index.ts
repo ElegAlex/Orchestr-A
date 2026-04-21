@@ -404,6 +404,7 @@ export interface Task {
   subtasks?: Subtask[];
   dependencies?: TaskDependency[];
   thirdPartyAssignees?: TaskThirdPartyAssignee[];
+  totalLoggedHours?: number;
 }
 
 export interface TaskRACI {
@@ -485,6 +486,7 @@ export interface TimeEntry {
   declaredBy?: User;
   project?: Project;
   task?: Task;
+  isDismissal?: boolean;
 }
 
 export interface CreateTimeEntryDto {
@@ -499,6 +501,10 @@ export interface CreateTimeEntryDto {
    * Requires `time_tracking:declare_for_third_party` permission.
    */
   thirdPartyId?: string;
+  /**
+   * Optional — marks this entry as "done without time declared" (hours = 0 allowed).
+   */
+  isDismissal?: boolean;
 }
 
 // ===========================
