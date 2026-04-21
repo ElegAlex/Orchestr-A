@@ -477,6 +477,7 @@ export class TasksService {
           },
         },
         timeEntries: {
+          where: { isDismissal: false },
           select: {
             id: true,
             hours: true,
@@ -1038,7 +1039,48 @@ export class TasksService {
       },
     });
 
-    return tasks;
+    const taskIds = tasks.map((t) => t.id);
+    const sums = taskIds.length
+      ? await this.prisma.timeEntry.groupBy({
+          by: ['taskId'],
+          where: { taskId: { in: taskIds }, isDismissal: false },
+          _sum: { hours: true },
+        })
+      : [];
+    const sumByTaskId = new Map<string, number>(
+      sums.map((s) => [s.taskId!, s._sum.hours ?? 0]),
+    );
+    return tasks.map((t) => ({
+      ...t,
+      totalLoggedHours: sumByTaskId.get(t.id) ?? 0,
+    }));
+  }
+
+  /**
+   * Récupérer les tâches DONE assignées au user courant sans TimeEntry de sa part
+   */
+  async getMyDoneUndeclaredTasks(userId: string) {
+    return this.prisma.task.findMany({
+      where: {
+        AND: [
+          { status: 'DONE' },
+          { OR: [{ assigneeId: userId }, { assignees: { some: { userId } } }] },
+          { NOT: { timeEntries: { some: { userId } } } },
+        ],
+      },
+      include: {
+        project: { select: { id: true, name: true } },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: { endDate: 'desc' },
+    });
   }
 
   /**

@@ -197,6 +197,19 @@ export class TasksController {
     return this.tasksService.findOrphans();
   }
 
+  @Get('my/done-undeclared')
+  @RequirePermissions('tasks:read')
+  @ApiOperation({
+    summary: 'Tâches DONE assignées au user courant sans TimeEntry de sa part',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des tâches DONE non déclarées par le user courant',
+  })
+  getMyDoneUndeclared(@CurrentUser() user: AuthenticatedUser) {
+    return this.tasksService.getMyDoneUndeclaredTasks(user.id);
+  }
+
   @Get(':id')
   @RequirePermissions('tasks:read')
   @ApiOperation({ summary: 'Récupérer une tâche par ID avec tous les détails' })

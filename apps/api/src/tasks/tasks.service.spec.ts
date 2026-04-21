@@ -57,6 +57,9 @@ describe('TasksService', () => {
     subtask: {
       count: vi.fn().mockResolvedValue(0),
     },
+    timeEntry: {
+      groupBy: vi.fn().mockResolvedValue([]),
+    },
     userService: {
       findMany: vi.fn().mockResolvedValue([]),
     },
@@ -733,17 +736,20 @@ describe('TasksService', () => {
   });
 
   describe('getTasksByAssignee', () => {
-    it('should return tasks assigned to user', async () => {
+    it('should return tasks assigned to user with totalLoggedHours=0 when no entries', async () => {
       const mockTasks = [
         { id: 'task-1', title: 'Task 1', assigneeId: 'user-1' },
         { id: 'task-2', title: 'Task 2', assigneeId: 'user-1' },
       ];
 
       mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
 
       const result = await service.getTasksByAssignee('user-1');
 
       expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({ id: 'task-1', totalLoggedHours: 0 });
+      expect(result[1]).toMatchObject({ id: 'task-2', totalLoggedHours: 0 });
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
@@ -754,6 +760,85 @@ describe('TasksService', () => {
           },
         }),
       );
+    });
+
+    it('should aggregate hours per task and exclude dismissals', async () => {
+      const mockTasks = [
+        { id: 'task-1', title: 'Task 1' },
+        { id: 'task-2', title: 'Task 2' },
+      ];
+
+      mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([
+        { taskId: 'task-1', _sum: { hours: 3.5 } },
+      ]);
+
+      const result = await service.getTasksByAssignee('user-1');
+
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'task-1', totalLoggedHours: 3.5 }),
+        expect.objectContaining({ id: 'task-2', totalLoggedHours: 0 }),
+      ]);
+      expect(mockPrismaService.timeEntry.groupBy).toHaveBeenCalledWith({
+        by: ['taskId'],
+        where: { taskId: { in: ['task-1', 'task-2'] }, isDismissal: false },
+        _sum: { hours: true },
+      });
+    });
+
+    it('should skip groupBy call when no tasks returned', async () => {
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockClear();
+
+      const result = await service.getTasksByAssignee('user-1');
+
+      expect(result).toEqual([]);
+      expect(mockPrismaService.timeEntry.groupBy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getMyDoneUndeclaredTasks', () => {
+    it('should query DONE tasks assigned to user without TimeEntry of this user', async () => {
+      const mockTasks = [{ id: 'task-1', title: 'Task 1', status: 'DONE' }];
+      mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
+
+      const result = await service.getMyDoneUndeclaredTasks('user-1');
+
+      expect(result).toEqual(mockTasks);
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith({
+        where: {
+          AND: [
+            { status: 'DONE' },
+            {
+              OR: [
+                { assigneeId: 'user-1' },
+                { assignees: { some: { userId: 'user-1' } } },
+              ],
+            },
+            { NOT: { timeEntries: { some: { userId: 'user-1' } } } },
+          ],
+        },
+        include: {
+          project: { select: { id: true, name: true } },
+          assignee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+            },
+          },
+        },
+        orderBy: { endDate: 'desc' },
+      });
+    });
+
+    it('should return an empty array when no tasks match', async () => {
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+
+      const result = await service.getMyDoneUndeclaredTasks('user-1');
+
+      expect(result).toEqual([]);
     });
   });
 

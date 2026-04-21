@@ -45,6 +45,7 @@ describe('TasksController', () => {
     remove: vi.fn(),
     getTasksByAssignee: vi.fn(),
     getTasksByProject: vi.fn(),
+    getMyDoneUndeclaredTasks: vi.fn(),
     addDependency: vi.fn(),
     removeDependency: vi.fn(),
     assignRACI: vi.fn(),
@@ -309,6 +310,21 @@ describe('TasksController', () => {
       const result = await controller.getTasksByAssignee('user-without-tasks', mockUser);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('getMyDoneUndeclared', () => {
+    it('should delegate to service.getMyDoneUndeclaredTasks with current user id', async () => {
+      const mockUser = { id: 'user-id-1', role: { code: Role.CONTRIBUTEUR } };
+      const undeclared = [{ id: 'task-1', status: 'DONE' }];
+      mockTasksService.getMyDoneUndeclaredTasks.mockResolvedValue(undeclared);
+
+      const result = await controller.getMyDoneUndeclared(mockUser as any);
+
+      expect(result).toEqual(undeclared);
+      expect(mockTasksService.getMyDoneUndeclaredTasks).toHaveBeenCalledWith(
+        'user-id-1',
+      );
     });
   });
 
