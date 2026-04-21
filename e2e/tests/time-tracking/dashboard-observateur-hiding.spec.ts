@@ -31,15 +31,14 @@ function screenshotPath(name: string) {
 }
 
 test.describe("Dashboard - OBSERVATEUR hiding", () => {
-  // Limite au project observateur (tests/ est scanné par les 6 projects).
-  test.skip(
-    ({}, testInfo) => testInfo.project.name !== "observateur",
-    "Test négatif spécifique au rôle OBSERVATEUR",
-  );
-
   test("OBSERVATEUR voit le dashboard mais PAS l'input inline ni la section non déclarées (D8)", async ({
     page,
-  }) => {
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "observateur",
+      "Test négatif spécifique au rôle OBSERVATEUR",
+    );
+
     await page.goto("/fr/dashboard");
 
     // ── Accès au dashboard OK : H2 "Mes tâches" visible ──────────────────────

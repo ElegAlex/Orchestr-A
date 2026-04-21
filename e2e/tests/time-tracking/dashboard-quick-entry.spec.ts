@@ -159,19 +159,17 @@ function screenshotPath(name: string) {
 // ─── Spec ─────────────────────────────────────────────────────────────────────
 
 test.describe("@smoke Dashboard - Quick time entry", () => {
-  // Ne cibler que le project "contributeur" — sinon tests dupliqués sur 6 rôles.
-  test.skip(
-    ({}, testInfo) => testInfo.project.name !== "contributeur",
-    "Spec V6-A spécifique au rôle CONTRIBUTEUR",
-  );
-
   const stamp = Date.now();
 
   test("CONTRIBUTEUR saisit 2.5h inline → toast succès + cumul optimiste", async ({
     page,
     request,
     baseURL,
-  }) => {
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "contributeur",
+      "Spec V6-A spécifique au rôle CONTRIBUTEUR",
+    );
     const url = baseURL ?? "http://localhost:4001";
     const adminToken = getToken("admin");
     const contribUserId = getUserId("contributeur");
@@ -199,6 +197,10 @@ test.describe("@smoke Dashboard - Quick time entry", () => {
       await page.goto("/fr/dashboard");
 
       // Le H2 "Mes tâches" apparaît une fois le loading terminé.
+      // NOTE: en dev mode Next.js 16, le dashboard CONTRIBUTEUR peut être
+      // bloqué par un bug pré-existant master (usePlanningData.ts:119 —
+      // "getSnapshot should be cached"). Ce test doit être exécuté contre un
+      // build production ou après fix du bug usePlanningData.
       const segmentTitle = page.getByRole("heading", {
         name: /^mes tâches$/i,
         level: 2,

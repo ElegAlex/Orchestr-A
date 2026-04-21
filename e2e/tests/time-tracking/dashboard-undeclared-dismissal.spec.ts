@@ -158,18 +158,17 @@ function screenshotPath(name: string) {
 // ─── Spec ─────────────────────────────────────────────────────────────────────
 
 test.describe("@smoke Dashboard - Dismissal checkbox", () => {
-  test.skip(
-    ({}, testInfo) => testInfo.project.name !== "contributeur",
-    "Spec V6-A spécifique au rôle CONTRIBUTEUR",
-  );
-
   const stamp = Date.now();
 
   test("CONTRIBUTEUR coche dismissal → toast + retrait optimiste + API isDismissal=true", async ({
     page,
     request,
     baseURL,
-  }) => {
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "contributeur",
+      "Spec V6-A spécifique au rôle CONTRIBUTEUR",
+    );
     const url = baseURL ?? "http://localhost:4001";
     const adminToken = getToken("admin");
     const contribToken = getToken("contributeur");
@@ -197,6 +196,10 @@ test.describe("@smoke Dashboard - Dismissal checkbox", () => {
       // ── Navigation dashboard ────────────────────────────────────────────────
       await page.goto("/fr/dashboard");
 
+      // NOTE: en dev mode Next.js 16, le dashboard CONTRIBUTEUR peut être
+      // bloqué par un bug pré-existant master (usePlanningData.ts:119 —
+      // "getSnapshot should be cached"). Exécuter ce test contre un build
+      // production ou après fix du bug usePlanningData.
       await expect(
         page.getByRole("heading", { name: /^mes tâches$/i, level: 2 }),
       ).toBeVisible({ timeout: 15_000 });
