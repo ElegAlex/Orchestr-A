@@ -47,8 +47,11 @@ export default function ProfilePage() {
       const updated = await usersService.setAvatarPreset(preset);
       setUser({ ...user!, ...updated });
       toast.success("Avatar mis à jour");
-    } catch {
-      toast.error("Erreur lors de la mise à jour de l'avatar");
+    } catch (err) {
+      console.error("Avatar preset error:", err);
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      const msg = axiosErr?.response?.data?.message || "Erreur inconnue";
+      toast.error(`Erreur avatar: ${msg}`);
     } finally {
       setAvatarLoading(false);
     }

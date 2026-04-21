@@ -16,10 +16,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // (role-gated features) before /auth/me resolves.
   const ready = useAuthBootstrap();
 
-  // Settings still fetched after successful auth
+  // Settings still fetched after successful auth — only when user has the perm.
+  // Templates excluded from settings:read by RBAC v4 §NOTE 3 (IT_SUPPORT,
+  // BASIC_USER, etc.) would otherwise hit a guaranteed 403 at every login.
   useEffect(() => {
-    if (isAuthenticated && ready) {
+    if (!isAuthenticated || !ready) return;
+    const canReadSettings = useAuthStore
+      .getState()
+      .permissions.includes("settings:read");
+    if (canReadSettings) {
       useSettingsStore.getState().fetchSettings();
+    } else {
+      useSettingsStore.setState({ isLoaded: true });
     }
   }, [isAuthenticated, ready]);
 

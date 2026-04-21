@@ -1,18 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum } from 'class-validator';
+import { IsIn } from 'class-validator';
 
-export const VALID_PRESETS = [
-  'avatar_01',
-  'avatar_02',
-  'avatar_03',
-  'avatar_04',
-  'avatar_05',
-  'avatar_06',
-  'avatar_07',
-  'avatar_08',
-  'avatar_09',
-  'avatar_10',
-] as const;
+const PERSONA_PRESETS = Array.from(
+  { length: 48 },
+  (_, i) => `persona_${String(i + 1).padStart(2, '0')}`,
+);
+
+export const VALID_PRESETS: readonly string[] = [
+  'initials',
+  ...PERSONA_PRESETS,
+];
 
 export type AvatarPreset = (typeof VALID_PRESETS)[number];
 
@@ -20,8 +17,8 @@ export class AvatarPresetDto {
   @ApiProperty({
     description: 'Identifiant du preset avatar',
     enum: VALID_PRESETS,
-    example: 'avatar_01',
+    example: 'persona_01',
   })
-  @IsEnum(VALID_PRESETS)
+  @IsIn(VALID_PRESETS as string[])
   preset: AvatarPreset;
 }
