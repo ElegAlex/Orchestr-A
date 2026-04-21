@@ -16,6 +16,15 @@ type Props = {
    * tâche ne nécessitait pas de déclaration. Le parent retire la ligne.
    */
   onDismissalSuccess: (taskId: string) => void;
+  /** Ouverture de la modal « Saisir du temps » (bouton …). */
+  onOpenModal?: (taskId: string, projectId: string | null) => void;
+  /**
+   * Callback appelé après une saisie inline réussie. Sur une tâche DONE non
+   * déclarée, toute TimeEntry user crée un conflit avec le filtre
+   * `NOT: { timeEntries: { some: { userId } } }` : le parent doit donc aussi
+   * retirer la ligne.
+   */
+  onQuickEntrySuccess?: (taskId: string, hours: number) => void;
 };
 
 /**
@@ -26,7 +35,12 @@ type Props = {
  * `timeTrackingService.createDismissal(taskId)`. Le parent gère l'état
  * optimiste (retrait de la liste) via `onDismissalSuccess`.
  */
-export function MyTasksUndeclaredList({ tasks, onDismissalSuccess }: Props) {
+export function MyTasksUndeclaredList({
+  tasks,
+  onDismissalSuccess,
+  onOpenModal,
+  onQuickEntrySuccess,
+}: Props) {
   const t = useTranslations("dashboard");
   const [submittingIds, setSubmittingIds] = useState<Set<string>>(new Set());
 
@@ -66,6 +80,8 @@ export function MyTasksUndeclaredList({ tasks, onDismissalSuccess }: Props) {
           mode="undeclared"
           onDismissalClick={handleDismiss}
           dismissalDisabled={submittingIds.has(task.id)}
+          onOpenModal={onOpenModal}
+          onQuickEntrySuccess={onQuickEntrySuccess}
         />
       ))}
     </div>

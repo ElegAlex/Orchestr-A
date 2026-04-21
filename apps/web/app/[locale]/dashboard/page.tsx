@@ -156,6 +156,9 @@ export default function DashboardPage() {
           : task,
       ),
     );
+    // Si la tâche vivait dans la liste "non déclarées", elle en sort : toute
+    // TimeEntry user casse le filtre `NOT: { timeEntries: { some: { userId } } }`.
+    setDoneUndeclaredTasks((prev) => prev.filter((task) => task.id !== taskId));
   };
 
   const handleDismissalSuccess = (taskId: string) => {

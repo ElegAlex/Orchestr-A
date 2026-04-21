@@ -203,46 +203,47 @@ export function TaskCard({
           </div>
         </div>
 
-        {mode === "upcoming" && (
-          <div
-            className="ml-auto flex items-start gap-3 shrink-0"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Colonne 1 : saisie inline + bouton modal */}
-            <div className="flex items-center gap-2">
-              {canLogTime ? (
-                <QuickTimeEntryInput
-                  taskId={task.id}
-                  projectId={projectId}
-                  initialCumul={totalLogged}
-                  onSuccess={(taskId, hours) =>
-                    onQuickEntrySuccess?.(taskId, hours)
-                  }
-                />
-              ) : (
-                <span
-                  className="text-xs text-[var(--muted-foreground)] whitespace-nowrap"
-                  title={t("tasks.quickEntry.loggedTooltip")}
-                  aria-label={t("tasks.quickEntry.loggedTooltip")}
-                >
-                  {totalLogged.toFixed(2)} h
-                </span>
-              )}
+        <div
+          className="ml-auto flex items-start gap-3 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Colonne 1 : saisie inline + bouton modal — les 2 modes. */}
+          <div className="flex items-center gap-2">
+            {canLogTime ? (
+              <QuickTimeEntryInput
+                taskId={task.id}
+                projectId={projectId}
+                initialCumul={totalLogged}
+                onSuccess={(taskId, hours) =>
+                  onQuickEntrySuccess?.(taskId, hours)
+                }
+              />
+            ) : (
+              <span
+                className="text-xs text-[var(--muted-foreground)] whitespace-nowrap"
+                title={t("tasks.quickEntry.loggedTooltip")}
+                aria-label={t("tasks.quickEntry.loggedTooltip")}
+              >
+                {totalLogged.toFixed(2)} h
+              </span>
+            )}
 
-              {canLogTime && (
-                <button
-                  type="button"
-                  onClick={handleOpenModalClick}
-                  aria-label={t("tasks.openModalLabel")}
-                  title={t("tasks.openModalLabel")}
-                  className="p-1.5 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+            {canLogTime && (
+              <button
+                type="button"
+                onClick={handleOpenModalClick}
+                aria-label={t("tasks.openModalLabel")}
+                title={t("tasks.openModalLabel")}
+                className="p-1.5 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            )}
+          </div>
 
-            {/* Colonne 2 : statut + priorité (V5 — restauré depuis page.tsx pré-V4) */}
+          {/* Colonne 2 : statut + priorité — upcoming uniquement (une
+              tâche DONE non déclarée n'a pas de sélecteur de statut utile). */}
+          {mode === "upcoming" && (
             <div className="flex flex-col items-end gap-2">
               {onStatusChange && (
                 <select
@@ -290,8 +291,8 @@ export function TaskCard({
                 </span>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

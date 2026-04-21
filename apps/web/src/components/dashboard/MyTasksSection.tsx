@@ -138,6 +138,8 @@ export function MyTasksSection({
                 <MyTasksUndeclaredList
                   tasks={doneUndeclaredTasks}
                   onDismissalSuccess={onDismissalSuccess}
+                  onOpenModal={onOpenModal}
+                  onQuickEntrySuccess={onQuickEntrySuccess}
                 />
               </div>
             )}
