@@ -526,6 +526,26 @@ describe('AnalyticsService', () => {
 
       expect(result.projectDetails[0].loggedHours).toBe(0);
     });
+
+    it('should filter dismissed time entries from both user and third-party groupBy (D3)', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([mockProject]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+
+      await service.getAnalytics({});
+
+      const groupByCalls = mockPrismaService.timeEntry.groupBy.mock.calls;
+      // Two calls expected: one for users, one for third parties
+      expect(groupByCalls.length).toBeGreaterThanOrEqual(2);
+      for (const [args] of groupByCalls) {
+        expect(args).toEqual(
+          expect.objectContaining({
+            where: expect.objectContaining({ isDismissal: false }),
+          }),
+        );
+      }
+    });
   });
 
   describe('exportAnalytics', () => {

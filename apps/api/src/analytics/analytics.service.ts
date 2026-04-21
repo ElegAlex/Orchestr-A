@@ -288,6 +288,7 @@ export class AnalyticsService {
         where: {
           projectId: { in: projectIds },
           userId: { not: null },
+          isDismissal: false,
         },
         _sum: { hours: true },
       }),
@@ -296,6 +297,7 @@ export class AnalyticsService {
         where: {
           projectId: { in: projectIds },
           thirdPartyId: { not: null },
+          isDismissal: false,
         },
         _sum: { hours: true },
       }),

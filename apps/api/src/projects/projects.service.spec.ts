@@ -1102,5 +1102,23 @@ describe('ProjectsService', () => {
 
       expect(result.hours.remaining).toBe(0);
     });
+
+    it('should filter dismissed time entries from user and third-party findMany (D3)', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(projectWithData);
+      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+
+      await service.getProjectStats('project-1');
+
+      const findManyCalls = mockPrismaService.timeEntry.findMany.mock.calls;
+      // Two calls expected: user TE and third-party TE
+      expect(findManyCalls.length).toBeGreaterThanOrEqual(2);
+      for (const [args] of findManyCalls) {
+        expect(args).toEqual(
+          expect.objectContaining({
+            where: expect.objectContaining({ isDismissal: false }),
+          }),
+        );
+      }
+    });
   });
 });

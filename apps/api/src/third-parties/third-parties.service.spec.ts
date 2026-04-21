@@ -210,6 +210,63 @@ describe('ThirdPartiesService', () => {
         NotFoundException,
       );
     });
+
+    it('filters dismissed time entries from pre-delete count (D3)', async () => {
+      mockPrismaService.thirdParty.findUnique.mockResolvedValue({ id: 'tp-1' });
+      mockPrismaService.timeEntry.count.mockResolvedValue(0);
+      mockPrismaService.taskThirdPartyAssignee.count.mockResolvedValue(0);
+      mockPrismaService.projectThirdPartyMember.count.mockResolvedValue(0);
+
+      await service.getDeletionImpact('tp-1');
+
+      expect(mockPrismaService.timeEntry.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            thirdPartyId: 'tp-1',
+            isDismissal: false,
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('findAll / findOne _count filter (D3)', () => {
+    it('findAll filters dismissed time entries from _count.timeEntries', async () => {
+      mockPrismaService.thirdParty.findMany.mockResolvedValue([]);
+      mockPrismaService.thirdParty.count.mockResolvedValue(0);
+
+      await service.findAll({});
+
+      expect(mockPrismaService.thirdParty.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            _count: {
+              select: expect.objectContaining({
+                timeEntries: { where: { isDismissal: false } },
+              }),
+            },
+          }),
+        }),
+      );
+    });
+
+    it('findOne filters dismissed time entries from _count.timeEntries', async () => {
+      mockPrismaService.thirdParty.findUnique.mockResolvedValue({ id: 'tp-1' });
+
+      await service.findOne('tp-1');
+
+      expect(mockPrismaService.thirdParty.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            _count: {
+              select: expect.objectContaining({
+                timeEntries: { where: { isDismissal: false } },
+              }),
+            },
+          }),
+        }),
+      );
+    });
   });
 
   describe('hardDelete', () => {

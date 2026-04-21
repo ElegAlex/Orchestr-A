@@ -780,11 +780,19 @@ export class ProjectsService {
     const taskIds = project.tasks.map((t) => t.id);
     const [userTimeEntries, thirdPartyTimeEntries] = await Promise.all([
       this.prisma.timeEntry.findMany({
-        where: { taskId: { in: taskIds }, userId: { not: null } },
+        where: {
+          taskId: { in: taskIds },
+          userId: { not: null },
+          isDismissal: false,
+        },
         select: { hours: true },
       }),
       this.prisma.timeEntry.findMany({
-        where: { taskId: { in: taskIds }, thirdPartyId: { not: null } },
+        where: {
+          taskId: { in: taskIds },
+          thirdPartyId: { not: null },
+          isDismissal: false,
+        },
         select: { hours: true },
       }),
     ]);

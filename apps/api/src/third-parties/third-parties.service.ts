@@ -71,7 +71,7 @@ export class ThirdPartiesService {
             select: {
               taskAssignments: true,
               projectMemberships: true,
-              timeEntries: true,
+              timeEntries: { where: { isDismissal: false } },
             },
           },
         },
@@ -101,7 +101,7 @@ export class ThirdPartiesService {
           select: {
             taskAssignments: true,
             projectMemberships: true,
-            timeEntries: true,
+            timeEntries: { where: { isDismissal: false } },
           },
         },
       },
@@ -162,7 +162,9 @@ export class ThirdPartiesService {
 
     const [timeEntriesCount, taskAssignmentsCount, projectMembershipsCount] =
       await this.prisma.$transaction([
-        this.prisma.timeEntry.count({ where: { thirdPartyId: id } }),
+        this.prisma.timeEntry.count({
+          where: { thirdPartyId: id, isDismissal: false },
+        }),
         this.prisma.taskThirdPartyAssignee.count({
           where: { thirdPartyId: id },
         }),
