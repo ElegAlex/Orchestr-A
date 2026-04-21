@@ -79,6 +79,7 @@ export class TimeTrackingController {
   @ApiQuery({ name: 'taskId', required: false, type: String })
   @ApiQuery({ name: 'startDate', required: false, type: String })
   @ApiQuery({ name: 'endDate', required: false, type: String })
+  @ApiQuery({ name: 'includeDismissals', required: false, type: Boolean })
   @ApiResponse({
     status: 200,
     description: 'Liste des entrées de temps',
@@ -98,6 +99,7 @@ export class TimeTrackingController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('thirdPartyId') thirdPartyId?: string,
+    @Query('includeDismissals') includeDismissals?: string,
   ) {
     return this.timeTrackingService.findAll(
       toActor(currentUser),
@@ -109,6 +111,7 @@ export class TimeTrackingController {
       startDate,
       endDate,
       thirdPartyId,
+      includeDismissals === 'true',
     );
   }
 

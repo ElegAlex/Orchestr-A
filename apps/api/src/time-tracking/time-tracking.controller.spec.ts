@@ -171,6 +171,7 @@ describe('TimeTrackingController', () => {
         undefined,
         undefined,
         undefined,
+        false,
       );
     });
 
@@ -192,6 +193,7 @@ describe('TimeTrackingController', () => {
         undefined,
         undefined,
         undefined,
+        false,
       );
     });
 
@@ -213,6 +215,7 @@ describe('TimeTrackingController', () => {
         undefined,
         undefined,
         undefined,
+        false,
       );
     });
 
@@ -243,6 +246,73 @@ describe('TimeTrackingController', () => {
         '2025-01-01',
         '2025-01-31',
         undefined,
+        false,
+      );
+    });
+
+    it('propagates includeDismissals=true to the service when query param is "true"', async () => {
+      mockTimeTrackingService.findAll.mockResolvedValue({
+        data: [mockTimeEntry],
+        meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
+      });
+
+      await controller.findAll(
+        currentUser,
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'true',
+      );
+
+      expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
+        currentActor,
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        true,
+      );
+    });
+
+    it('propagates includeDismissals=false when query param is any non-"true" value', async () => {
+      mockTimeTrackingService.findAll.mockResolvedValue({
+        data: [mockTimeEntry],
+        meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
+      });
+
+      await controller.findAll(
+        currentUser,
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        '1',
+      );
+
+      expect(mockTimeTrackingService.findAll).toHaveBeenCalledWith(
+        currentActor,
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        false,
       );
     });
   });

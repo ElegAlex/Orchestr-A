@@ -86,6 +86,13 @@ export class TimeTrackingService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
+    if (createTimeEntryDto.isDismissal) {
+      if (!createTimeEntryDto.taskId) {
+        throw new BadRequestException('taskId requis pour un dismissal');
+      }
+      return this.upsertDismissal(currentUser.id, createTimeEntryDto.taskId);
+    }
+
     if (taskId) {
       const task = await this.prisma.task.findUnique({
         where: { id: taskId },
@@ -180,6 +187,49 @@ export class TimeTrackingService {
   }
 
   /**
+   * Upsert idempotent d'un dismissal pour la clé logique
+   * (userId, taskId, isDismissal=true). Prisma ne supporte pas d'upsert sur
+   * clé composite non-unique : on passe par findFirst + update/create dans
+   * une transaction courte (D9).
+   */
+  private async upsertDismissal(userId: string, taskId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.timeEntry.findFirst({
+        where: { userId, taskId, isDismissal: true },
+        select: { id: true },
+      });
+      if (existing) {
+        return tx.timeEntry.update({
+          where: { id: existing.id },
+          data: { updatedAt: new Date() },
+          include: { task: true, project: true },
+        });
+      }
+      const task = await tx.task.findUnique({
+        where: { id: taskId },
+        select: { id: true, projectId: true },
+      });
+      if (!task) {
+        throw new NotFoundException('Tâche introuvable');
+      }
+      return tx.timeEntry.create({
+        data: {
+          userId,
+          declaredById: userId,
+          taskId,
+          projectId: task.projectId,
+          date: new Date(),
+          hours: 0,
+          activityType: 'OTHER',
+          description: null,
+          isDismissal: true,
+        },
+        include: { task: true, project: true },
+      });
+    });
+  }
+
+  /**
    * Récupérer toutes les entrées avec pagination et filtres.
    *
    * Contrôle d'accès (D8 PO 2026-04-19) : coercion silencieuse — un appelant
@@ -197,6 +247,7 @@ export class TimeTrackingService {
     startDate?: string,
     endDate?: string,
     thirdPartyId?: string,
+    includeDismissals = false,
   ) {
     const permissions = await this.permissionsService.getPermissionsForRole(
       currentUser.role,
@@ -228,6 +279,10 @@ export class TimeTrackingService {
     if (thirdPartyId) where.thirdPartyId = thirdPartyId;
     if (projectId) where.projectId = projectId;
     if (taskId) where.taskId = taskId;
+
+    if (!includeDismissals) {
+      where.isDismissal = false;
+    }
 
     if (startDate && endDate) {
       where.date = {
@@ -491,6 +546,7 @@ export class TimeTrackingService {
     const entries = await this.prisma.timeEntry.findMany({
       where: {
         userId,
+        isDismissal: false,
         date: {
           gte: new Date(startDate),
           lte: new Date(endDate),
@@ -590,7 +646,12 @@ export class TimeTrackingService {
 
     const [userEntries, thirdPartyEntries] = await Promise.all([
       this.prisma.timeEntry.findMany({
-        where: { projectId, userId: { not: null }, ...dateFilter },
+        where: {
+          projectId,
+          userId: { not: null },
+          isDismissal: false,
+          ...dateFilter,
+        },
         include: {
           user: {
             select: { id: true, firstName: true, lastName: true },
@@ -603,7 +664,12 @@ export class TimeTrackingService {
         orderBy: { date: 'asc' },
       }),
       this.prisma.timeEntry.findMany({
-        where: { projectId, thirdPartyId: { not: null }, ...dateFilter },
+        where: {
+          projectId,
+          thirdPartyId: { not: null },
+          isDismissal: false,
+          ...dateFilter,
+        },
         include: {
           thirdParty: {
             select: {

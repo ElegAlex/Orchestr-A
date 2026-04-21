@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsNotEmpty,
   IsDateString,
   IsNumber,
@@ -9,6 +10,7 @@ import {
   IsEnum,
   Min,
   Max,
+  ValidateIf,
 } from 'class-validator';
 import { ActivityType } from 'database';
 
@@ -28,6 +30,7 @@ export class CreateTimeEntryDto {
     maximum: 24,
   })
   @IsNumber()
+  @ValidateIf((dto) => !dto.isDismissal)
   @IsNotEmpty()
   @Min(0.25)
   @Max(24)
@@ -76,4 +79,13 @@ export class CreateTimeEntryDto {
   @IsOptional()
   @IsUUID()
   thirdPartyId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Marqueur "validée sans temps déclaré" (hours = 0 autorisé)',
+    type: Boolean,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  isDismissal?: boolean;
 }

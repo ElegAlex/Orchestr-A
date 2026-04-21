@@ -4,11 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { ThirdPartiesService } from '../third-parties/third-parties.service';
 import { OwnershipService } from '../common/services/ownership.service';
+import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { TimeTrackingService } from './time-tracking.service';
 
 describe('TimeTrackingService', () => {
@@ -18,6 +21,7 @@ describe('TimeTrackingService', () => {
     timeEntry: {
       create: vi.fn(),
       findMany: vi.fn(),
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
       count: vi.fn(),
       update: vi.fn(),
@@ -26,6 +30,7 @@ describe('TimeTrackingService', () => {
     user: { findUnique: vi.fn() },
     task: { findUnique: vi.fn() },
     project: { findUnique: vi.fn() },
+    $transaction: vi.fn(),
   };
 
   const mockThirdPartiesService = {
@@ -679,6 +684,255 @@ describe('TimeTrackingService', () => {
           where: expect.objectContaining({
             projectId: 'project-1',
             thirdPartyId: { not: null },
+          }),
+        }),
+      );
+    });
+  });
+
+  // =====================================================================
+  // V1-A : dismissal marker
+  // =====================================================================
+
+  describe('CreateTimeEntryDto — @ValidateIf hours vs isDismissal (D1)', () => {
+    const baseDto = {
+      date: '2025-01-01T00:00:00Z',
+      activityType: 'DEVELOPMENT',
+      taskId: '11111111-1111-1111-1111-111111111111',
+    };
+
+    it('rejects hours=0 when isDismissal absent', async () => {
+      const dto = plainToInstance(CreateTimeEntryDto, {
+        ...baseDto,
+        hours: 0,
+      });
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.property === 'hours')).toBe(true);
+    });
+
+    it('rejects hours=0 when isDismissal=false', async () => {
+      const dto = plainToInstance(CreateTimeEntryDto, {
+        ...baseDto,
+        hours: 0,
+        isDismissal: false,
+      });
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.property === 'hours')).toBe(true);
+    });
+
+    it('accepts hours=0 when isDismissal=true', async () => {
+      const dto = plainToInstance(CreateTimeEntryDto, {
+        ...baseDto,
+        hours: 0,
+        isDismissal: true,
+      });
+      const errors = await validate(dto);
+      expect(errors.filter((e) => e.property === 'hours')).toHaveLength(0);
+    });
+
+    it('still accepts hours=4 when isDismissal=false (regular entry)', async () => {
+      const dto = plainToInstance(CreateTimeEntryDto, {
+        ...baseDto,
+        hours: 4,
+        isDismissal: false,
+      });
+      const errors = await validate(dto);
+      expect(errors.filter((e) => e.property === 'hours')).toHaveLength(0);
+    });
+  });
+
+  describe('create (dismissal mode)', () => {
+    const dismissalDto = {
+      date: '2025-01-01',
+      hours: 0,
+      activityType: 'OTHER' as const,
+      taskId: 'task-1',
+      isDismissal: true,
+    };
+
+    beforeEach(() => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.$transaction.mockImplementation(
+        async (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          cb(mockPrismaService),
+      );
+    });
+
+    it('throws BadRequestException when dismissal has no taskId', async () => {
+      const bad = { ...dismissalDto, taskId: undefined };
+      await expect(service.create(currentUser, bad)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('creates a new dismissal when none exists, forcing hours=0/OTHER/description=null', async () => {
+      mockPrismaService.timeEntry.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: 'project-1',
+      });
+      mockPrismaService.timeEntry.create.mockResolvedValue({
+        id: 'new-dismissal',
+        isDismissal: true,
+      });
+
+      await service.create(currentUser, dismissalDto);
+
+      expect(mockPrismaService.timeEntry.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'user-1', taskId: 'task-1', isDismissal: true },
+        select: { id: true },
+      });
+      expect(mockPrismaService.timeEntry.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'user-1',
+            declaredById: 'user-1',
+            taskId: 'task-1',
+            projectId: 'project-1',
+            hours: 0,
+            activityType: 'OTHER',
+            description: null,
+            isDismissal: true,
+          }),
+        }),
+      );
+    });
+
+    it('updates the existing dismissal (idempotent) instead of creating a new one', async () => {
+      mockPrismaService.timeEntry.findFirst.mockResolvedValue({
+        id: 'existing-dismissal',
+      });
+      mockPrismaService.timeEntry.update.mockResolvedValue({
+        id: 'existing-dismissal',
+        isDismissal: true,
+      });
+
+      await service.create(currentUser, dismissalDto);
+
+      expect(mockPrismaService.timeEntry.create).not.toHaveBeenCalled();
+      expect(mockPrismaService.timeEntry.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'existing-dismissal' },
+          data: expect.objectContaining({ updatedAt: expect.any(Date) }),
+        }),
+      );
+    });
+
+    it('throws NotFoundException when task missing during dismissal creation', async () => {
+      mockPrismaService.timeEntry.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findUnique.mockResolvedValue(null);
+
+      await expect(service.create(currentUser, dismissalDto)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockPrismaService.timeEntry.create).not.toHaveBeenCalled();
+    });
+
+    it('bypasses resolveActor (no thirdParties call even if thirdPartyId in DTO)', async () => {
+      mockPrismaService.timeEntry.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: 'project-1',
+      });
+      mockPrismaService.timeEntry.create.mockResolvedValue({ id: 'd1' });
+
+      const withTp = { ...dismissalDto, thirdPartyId: 'tp-1' };
+      await service.create(currentUser, withTp);
+
+      expect(
+        mockThirdPartiesService.assertExistsAndActive,
+      ).not.toHaveBeenCalled();
+      // Ensure the row is still user-anchored and the tp is ignored.
+      expect(mockPrismaService.timeEntry.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'user-1',
+            declaredById: 'user-1',
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('findAll — includeDismissals filter (D3)', () => {
+    beforeEach(() => {
+      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.count.mockResolvedValue(0);
+    });
+
+    it('injects isDismissal=false in where by default', async () => {
+      await service.findAll(currentUser, 1, 10, 'user-1');
+      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ isDismissal: false }),
+        }),
+      );
+    });
+
+    it('omits the isDismissal filter when includeDismissals=true', async () => {
+      await service.findAll(
+        currentUser,
+        1,
+        10,
+        'user-1',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        true,
+      );
+      const callArg = mockPrismaService.timeEntry.findMany.mock.calls[0][0];
+      expect(callArg.where).not.toHaveProperty('isDismissal');
+    });
+  });
+
+  describe('report dismissal filter (D3)', () => {
+    it('getUserReport filters out dismissals', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+
+      await service.getUserReport('user-1', '2025-01-01', '2025-01-31');
+
+      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user-1',
+            isDismissal: false,
+          }),
+        }),
+      );
+    });
+
+    it('getProjectReport filters out dismissals on both queries', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'Project',
+      });
+      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+
+      await service.getProjectReport('project-1');
+
+      expect(mockPrismaService.timeEntry.findMany).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            projectId: 'project-1',
+            userId: { not: null },
+            isDismissal: false,
+          }),
+        }),
+      );
+      expect(mockPrismaService.timeEntry.findMany).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            projectId: 'project-1',
+            thirdPartyId: { not: null },
+            isDismissal: false,
           }),
         }),
       );
