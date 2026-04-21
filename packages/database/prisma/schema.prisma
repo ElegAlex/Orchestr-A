@@ -395,6 +395,7 @@ model TimeEntry {
   date         DateTime     @db.Date
   hours        Float
   description  String?
+  isDismissal  Boolean      @default(false)
   activityType ActivityType
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -411,6 +412,7 @@ model TimeEntry {
   @@index([declaredById])
   @@index([projectId, date])
   @@index([taskId])
+  @@index([taskId, userId])
   @@map("time_entries")
 }
 
