@@ -37,13 +37,28 @@
     }
   },
   "tasks": {
-    "title": "My upcoming tasks",
+    "segmentTitle": "My tasks",
+    "upcomingTitle": "Upcoming tasks",
+    "undeclaredTitle": "Tasks awaiting declaration",
+    "undeclaredEmpty": "No task awaiting declaration",
+    "undeclaredCheckboxLabel": "Validate without declaration",
+    "undeclaredCheckboxSuccess": "Task validated without declaration",
+    "undeclaredCheckboxError": "Error while validating",
+    "overdueBadge": "Overdue",
+    "openModalLabel": "Open time entry",
     "empty": "No assigned tasks",
     "noProject": "No project",
     "startDate": "Start:",
     "endDate": "End:",
     "estimated": "Estimated:",
     "hours": "{hours}h",
+    "quickEntry": {
+      "placeholder": "h",
+      "ariaLabel": "Enter hours for this task",
+      "loggedTooltip": "Already logged (all contributors)",
+      "submitError": "Error while saving",
+      "submitSuccess": "Time saved"
+    },
     "success": {
       "statusUpdated": "Status updated"
     },

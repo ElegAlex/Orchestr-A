@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 import { usePermissions } from "@/hooks/usePermissions";
 import { ProjectIcon } from "@/components/ProjectIcon";
-import type { Task } from "@/types";
+import { type Task, TaskStatus } from "@/types";
 
 import { QuickTimeEntryInput } from "./QuickTimeEntryInput";
 
@@ -22,6 +22,11 @@ type Props = {
   onOpenModal?: (taskId: string, projectId: string | null) => void;
   /** Appelé après succès de QuickTimeEntryInput (optimistic update côté parent). */
   onQuickEntrySuccess?: (taskId: string, hours: number) => void;
+  /**
+   * Callback optionnel (mode `upcoming`) pour changer le statut de la tâche
+   * depuis le dashboard. Si absent, le select n'est pas affiché.
+   */
+  onStatusChange?: (taskId: string, status: TaskStatus) => void;
   /** Click sur la checkbox "déjà traité sans déclaration". */
   onDismissalClick?: (taskId: string) => void;
   /**
@@ -37,19 +42,6 @@ function isTaskOverdue(task: Task): boolean {
     new Date(task.endDate) < new Date() &&
     task.status !== "DONE"
   );
-}
-
-function formatDate(dateString?: string): string {
-  if (!dateString) {
-    // TODO V5 : clé common.common.notDefined
-    return "Non défini";
-  }
-  try {
-    return format(new Date(dateString), "dd MMM yyyy", { locale: fr });
-  } catch {
-    // TODO V5 : clé common.common.invalidDate
-    return "Date invalide";
-  }
 }
 
 const CalendarIcon = () => (
@@ -79,11 +71,14 @@ export function TaskCard({
   mode,
   onOpenModal,
   onQuickEntrySuccess,
+  onStatusChange,
   onDismissalClick,
   dismissalDisabled = false,
 }: Props) {
   const router = useRouter();
   const locale = useLocale();
+  const t = useTranslations("dashboard");
+  const tCommon = useTranslations("common");
   const { hasPermission } = usePermissions();
 
   const canLogTime = hasPermission("time_tracking:create");
@@ -91,17 +86,15 @@ export function TaskCard({
   const totalLogged = task.totalLoggedHours ?? 0;
   const projectId = task.projectId ?? null;
 
-  // TODO V5 : clés i18n (fallbacks FR temporaires pour cette vague)
-  const labels = {
-    noProject: "Sans projet",
-    startDate: "Début :",
-    endDate: "Fin :",
-    estimated: "Estimé :",
-    hours: (value: number) => `${value} h`,
-    overdue: "En retard",
-    openModal: "Ouvrir la saisie de temps",
-    dismiss: "Marquer comme traité sans déclaration",
-    loggedTooltip: "Déjà déclaré (tous contributeurs)",
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) {
+      return tCommon("common.notDefined");
+    }
+    try {
+      return format(new Date(dateString), "dd MMM yyyy", { locale: fr });
+    } catch {
+      return tCommon("common.invalidDate");
+    }
   };
 
   const handleCardClick = () => {
@@ -118,6 +111,13 @@ export function TaskCard({
     if (e.target.checked) {
       onDismissalClick?.(task.id);
     }
+  };
+
+  const handleStatusSelectChange = (
+    e: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    e.stopPropagation();
+    onStatusChange?.(task.id, e.target.value as TaskStatus);
   };
 
   return (
@@ -139,7 +139,7 @@ export function TaskCard({
               className="h-4 w-4 rounded border-[var(--input-border)] text-[var(--primary)] focus:ring-[var(--ring)] cursor-pointer"
               disabled={dismissalDisabled}
               onChange={handleDismissChange}
-              aria-label={labels.dismiss}
+              aria-label={t("tasks.undeclaredCheckboxLabel")}
             />
           </label>
         )}
@@ -151,7 +151,7 @@ export function TaskCard({
             </h3>
             {overdue && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                {labels.overdue}
+                {t("tasks.overdueBadge")}
               </span>
             )}
           </div>
@@ -168,7 +168,7 @@ export function TaskCard({
               </Link>
             ) : (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
-                {labels.noProject}
+                {t("tasks.noProject")}
               </span>
             )}
           </div>
@@ -183,19 +183,21 @@ export function TaskCard({
           <div className="flex items-center gap-4 mt-3 text-xs text-[var(--muted-foreground)] flex-wrap">
             <div className="flex items-center gap-1.5">
               <CalendarIcon />
-              <span className="font-medium">{labels.startDate}</span>
+              <span className="font-medium">{t("tasks.startDate")}</span>
               <span>{formatDate(task.startDate)}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CalendarIcon />
-              <span className="font-medium">{labels.endDate}</span>
+              <span className="font-medium">{t("tasks.endDate")}</span>
               <span>{formatDate(task.endDate)}</span>
             </div>
             {task.estimatedHours != null && (
               <div className="flex items-center gap-1.5">
                 <ClockIcon />
-                <span className="font-medium">{labels.estimated}</span>
-                <span>{labels.hours(task.estimatedHours)}</span>
+                <span className="font-medium">{t("tasks.estimated")}</span>
+                <span>
+                  {t("tasks.hours", { hours: task.estimatedHours })}
+                </span>
               </div>
             )}
           </div>
@@ -203,37 +205,91 @@ export function TaskCard({
 
         {mode === "upcoming" && (
           <div
-            className="ml-auto flex items-center gap-2 shrink-0"
+            className="ml-auto flex items-start gap-3 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
-            {canLogTime ? (
-              <QuickTimeEntryInput
-                taskId={task.id}
-                projectId={projectId}
-                initialCumul={totalLogged}
-                onSuccess={(taskId, hours) => onQuickEntrySuccess?.(taskId, hours)}
-              />
-            ) : (
-              <span
-                className="text-xs text-[var(--muted-foreground)] whitespace-nowrap"
-                title={labels.loggedTooltip}
-                aria-label={labels.loggedTooltip}
-              >
-                {totalLogged.toFixed(2)} h
-              </span>
-            )}
+            {/* Colonne 1 : saisie inline + bouton modal */}
+            <div className="flex items-center gap-2">
+              {canLogTime ? (
+                <QuickTimeEntryInput
+                  taskId={task.id}
+                  projectId={projectId}
+                  initialCumul={totalLogged}
+                  onSuccess={(taskId, hours) =>
+                    onQuickEntrySuccess?.(taskId, hours)
+                  }
+                />
+              ) : (
+                <span
+                  className="text-xs text-[var(--muted-foreground)] whitespace-nowrap"
+                  title={t("tasks.quickEntry.loggedTooltip")}
+                  aria-label={t("tasks.quickEntry.loggedTooltip")}
+                >
+                  {totalLogged.toFixed(2)} h
+                </span>
+              )}
 
-            {canLogTime && (
-              <button
-                type="button"
-                onClick={handleOpenModalClick}
-                aria-label={labels.openModal}
-                title={labels.openModal}
-                className="p-1.5 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
-            )}
+              {canLogTime && (
+                <button
+                  type="button"
+                  onClick={handleOpenModalClick}
+                  aria-label={t("tasks.openModalLabel")}
+                  title={t("tasks.openModalLabel")}
+                  className="p-1.5 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Colonne 2 : statut + priorité (V5 — restauré depuis page.tsx pré-V4) */}
+            <div className="flex flex-col items-end gap-2">
+              {onStatusChange && (
+                <select
+                  value={task.status}
+                  onChange={handleStatusSelectChange}
+                  onClick={(e) => e.stopPropagation()}
+                  className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap border-0 cursor-pointer transition ${
+                    task.status === "TODO"
+                      ? "bg-gray-200 text-gray-800"
+                      : task.status === "IN_PROGRESS"
+                        ? "bg-blue-100 text-blue-800"
+                        : task.status === "IN_REVIEW"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : task.status === "DONE"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  <option value="TODO">{tCommon("taskStatus.TODO")}</option>
+                  <option value="IN_PROGRESS">
+                    {tCommon("taskStatus.IN_PROGRESS")}
+                  </option>
+                  <option value="IN_REVIEW">
+                    {tCommon("taskStatus.IN_REVIEW")}
+                  </option>
+                  <option value="DONE">{tCommon("taskStatus.DONE")}</option>
+                  <option value="BLOCKED">
+                    {tCommon("taskStatus.BLOCKED")}
+                  </option>
+                </select>
+              )}
+              {task.priority && (
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                    task.priority === "CRITICAL"
+                      ? "bg-red-100 text-red-800"
+                      : task.priority === "HIGH"
+                        ? "bg-orange-100 text-orange-800"
+                        : task.priority === "NORMAL"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  {tCommon(`priority.${task.priority}`)}
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>

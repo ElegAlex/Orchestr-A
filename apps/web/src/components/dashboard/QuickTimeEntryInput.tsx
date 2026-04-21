@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, type FormEvent, type KeyboardEvent } from "react";
+import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import { timeTrackingService } from "@/services/time-tracking.service";
 import { ActivityType } from "@/types";
@@ -51,6 +52,7 @@ export function QuickTimeEntryInput({
   initialCumul,
   onSuccess,
 }: Props) {
+  const t = useTranslations("dashboard");
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -60,16 +62,11 @@ export function QuickTimeEntryInput({
   const hasValue = value.trim().length > 0;
   const isInvalid = touched && hasValue && parsed === null;
 
-  // TODO V5 : clé dashboard.tasks.quickEntry.loggedTooltip
-  const loggedTooltip = "Déjà déclaré (tous contributeurs)";
-  // TODO V5 : clé dashboard.tasks.quickEntry.placeholder
-  const placeholder = "h";
-  // TODO V5 : clé dashboard.tasks.quickEntry.ariaLabel
-  const ariaLabel = "Saisir des heures pour cette tâche";
-  // TODO V5 : clé dashboard.tasks.quickEntry.success
-  const successMessage = "Heures enregistrées";
-  // TODO V5 : clé dashboard.tasks.quickEntry.error
-  const errorMessage = "Impossible d'enregistrer les heures";
+  const loggedTooltip = t("tasks.quickEntry.loggedTooltip");
+  const placeholder = t("tasks.quickEntry.placeholder");
+  const ariaLabel = t("tasks.quickEntry.ariaLabel");
+  const successMessage = t("tasks.quickEntry.submitSuccess");
+  const errorMessage = t("tasks.quickEntry.submitError");
 
   const submit = async () => {
     if (submitting) return;

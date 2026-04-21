@@ -1,12 +1,15 @@
 "use client";
 
-import type { Task } from "@/types";
+import { useTranslations } from "next-intl";
+
+import type { Task, TaskStatus } from "@/types";
 import { TaskCard } from "./TaskCard";
 
 type Props = {
   tasks: Task[];
   onOpenModal: (taskId: string, projectId: string | null) => void;
   onQuickEntrySuccess: (taskId: string, hours: number) => void;
+  onStatusChange?: (taskId: string, status: TaskStatus) => void;
 };
 
 /**
@@ -20,12 +23,14 @@ export function MyTasksUpcomingList({
   tasks,
   onOpenModal,
   onQuickEntrySuccess,
+  onStatusChange,
 }: Props) {
+  const t = useTranslations("dashboard");
+
   if (tasks.length === 0) {
-    // TODO V5 : clé dashboard.tasks.empty
     return (
       <p className="text-[var(--muted-foreground)] text-center py-8">
-        Aucune tâche à venir
+        {t("tasks.empty")}
       </p>
     );
   }
@@ -39,6 +44,7 @@ export function MyTasksUpcomingList({
           mode="upcoming"
           onOpenModal={onOpenModal}
           onQuickEntrySuccess={onQuickEntrySuccess}
+          onStatusChange={onStatusChange}
         />
       ))}
     </div>

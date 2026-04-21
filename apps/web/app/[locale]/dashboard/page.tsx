@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
+import Link from "next/link";
 import { MainLayout } from "@/components/MainLayout";
 import { PlanningView } from "@/components/planning/PlanningView";
 import { useAuthStore } from "@/stores/auth.store";
@@ -17,9 +17,9 @@ import {
 import { Project, Task, TaskStatus, ProjectStatus, Priority } from "@/types";
 import { ProjectIcon } from "@/components/ProjectIcon";
 import { PresenceDialog } from "@/components/PresenceDialog";
+import { MyTasksSection } from "@/components/dashboard/MyTasksSection";
+import { TimeEntryModal } from "@/components/time-tracking/TimeEntryModal";
 import toast from "react-hot-toast";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 
 const MAX_TODOS = 20;
 
@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [myProjects, setMyProjects] = useState<Project[]>([]);
   const [myTasks, setMyTasks] = useState<Task[]>([]);
+  const [doneUndeclaredTasks, setDoneUndeclaredTasks] = useState<Task[]>([]);
   const [stats, setStats] = useState({
     totalProjects: 0,
     activeProjects: 0,
@@ -55,15 +56,12 @@ export default function DashboardPage() {
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
   const [editTodoText, setEditTodoText] = useState("");
 
-  // Fonction pour formater les dates
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return tCommon("common.notDefined");
-    try {
-      return format(new Date(dateString), "dd MMM yyyy", { locale: fr });
-    } catch {
-      return tCommon("common.invalidDate");
-    }
-  };
+  // V5 — modal "Saisir du temps" partagée déclenchée depuis les cartes de tâches.
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalPrefill, setModalPrefill] = useState<{
+    taskId?: string;
+    projectId?: string | null;
+  }>({});
 
   // Helper functions for project badges
   const getStatusBadgeColor = (status: ProjectStatus) => {
@@ -135,6 +133,33 @@ export default function DashboardPage() {
       toast.error(t("tasks.errors.statusUpdate"));
       console.error(err);
     }
+  };
+
+  // V5 callbacks pour MyTasksSection / TimeEntryModal
+  const handleOpenTimeEntryModal = (
+    taskId: string,
+    projectId: string | null,
+  ) => {
+    setModalPrefill({ taskId, projectId });
+    setModalOpen(true);
+  };
+
+  const handleQuickEntrySuccess = (taskId: string, hours: number) => {
+    // Optimistic update — pas de refetch global.
+    setMyTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              totalLoggedHours: (task.totalLoggedHours ?? 0) + hours,
+            }
+          : task,
+      ),
+    );
+  };
+
+  const handleDismissalSuccess = (taskId: string) => {
+    setDoneUndeclaredTasks((prev) => prev.filter((task) => task.id !== taskId));
   };
 
   // Fonction pour fetch les todos
@@ -262,6 +287,28 @@ export default function DashboardPage() {
             if (axiosError.response?.status !== 404) {
               console.error("Error fetching tasks:", err);
             }
+          }
+
+          // Fetch DONE tasks awaiting declaration (D8 — gated by time_tracking:create).
+          // Isolated try/catch so a 403/404 never tanks the whole dashboard.
+          if (hasPermission("time_tracking:create")) {
+            try {
+              const undeclared = await tasksService.getMyDoneUndeclared();
+              setDoneUndeclaredTasks(
+                Array.isArray(undeclared) ? undeclared : [],
+              );
+            } catch (err) {
+              setDoneUndeclaredTasks([]);
+              const axiosError = err as { response?: { status?: number } };
+              if (
+                axiosError.response?.status !== 404 &&
+                axiosError.response?.status !== 403
+              ) {
+                console.error("Error fetching undeclared tasks:", err);
+              }
+            }
+          } else {
+            setDoneUndeclaredTasks([]);
           }
 
           // Calculate stats
@@ -556,182 +603,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Upcoming tasks */}
-        <div className="bg-[var(--card)] rounded-lg shadow-sm border border-[var(--border)]">
-          <div className="px-6 py-4 border-b border-[var(--border)]">
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">
-              {t("tasks.title")}
-            </h2>
-          </div>
-          <div className="p-6">
-            {myTasks.length === 0 ? (
-              <p className="text-[var(--muted-foreground)] text-center py-8">
-                {t("tasks.empty")}
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {myTasks.slice(0, 5).map((task) => (
-                  <div
-                    key={task.id}
-                    className="p-4 bg-[var(--muted)] rounded-lg hover:bg-[var(--accent)] transition cursor-pointer"
-                    onClick={() => router.push(`/${locale}/tasks/${task.id}`)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-[var(--foreground)] hover:text-blue-600 transition">
-                          {task.title}
-                        </h3>
-                        <div className="mt-1">
-                          {task.project ? (
-                            <Link
-                              href={`/${locale}/projects/${task.project.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition"
-                            >
-                              <ProjectIcon icon={task.project.icon} size={14} />
-                              {task.project.name}
-                            </Link>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
-                              {t("tasks.noProject")}
-                            </span>
-                          )}
-                        </div>
-                        {task.description && (
-                          <p className="text-sm text-[var(--muted-foreground)] mt-1">
-                            {task.description.slice(0, 100)}
-                            {task.description.length > 100 && "..."}
-                          </p>
-                        )}
-
-                        {/* Dates */}
-                        <div className="flex items-center gap-4 mt-3 text-xs text-[var(--muted-foreground)]">
-                          <div className="flex items-center gap-1.5">
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                            <span className="font-medium">
-                              {t("tasks.startDate")}
-                            </span>
-                            <span>{formatDate(task.startDate)}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                            <span className="font-medium">
-                              {t("tasks.endDate")}
-                            </span>
-                            <span>{formatDate(task.endDate)}</span>
-                          </div>
-                          {task.estimatedHours && (
-                            <div className="flex items-center gap-1.5">
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              </svg>
-                              <span className="font-medium">
-                                {t("tasks.estimated")}
-                              </span>
-                              <span>
-                                {t("tasks.hours", {
-                                  hours: task.estimatedHours,
-                                })}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="ml-4 flex flex-col items-end gap-2">
-                        <select
-                          value={task.status}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            handleStatusChange(
-                              task.id,
-                              e.target.value as TaskStatus,
-                            );
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap border-0 cursor-pointer transition ${
-                            task.status === "TODO"
-                              ? "bg-gray-200 text-gray-800"
-                              : task.status === "IN_PROGRESS"
-                                ? "bg-blue-100 text-blue-800"
-                                : task.status === "IN_REVIEW"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : task.status === "DONE"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          <option value="TODO">
-                            {tCommon("taskStatus.TODO")}
-                          </option>
-                          <option value="IN_PROGRESS">
-                            {tCommon("taskStatus.IN_PROGRESS")}
-                          </option>
-                          <option value="IN_REVIEW">
-                            {tCommon("taskStatus.IN_REVIEW")}
-                          </option>
-                          <option value="DONE">
-                            {tCommon("taskStatus.DONE")}
-                          </option>
-                          <option value="BLOCKED">
-                            {tCommon("taskStatus.BLOCKED")}
-                          </option>
-                        </select>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                            task.priority === "CRITICAL"
-                              ? "bg-red-100 text-red-800"
-                              : task.priority === "HIGH"
-                                ? "bg-orange-100 text-orange-800"
-                                : task.priority === "NORMAL"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {tCommon(`priority.${task.priority}`)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        {/* "Mes tâches" segment (V5) — à venir + non déclarées. */}
+        <MyTasksSection
+          upcomingTasks={myTasks.slice(0, 5)}
+          doneUndeclaredTasks={doneUndeclaredTasks}
+          onOpenModal={handleOpenTimeEntryModal}
+          onQuickEntrySuccess={handleQuickEntrySuccess}
+          onDismissalSuccess={handleDismissalSuccess}
+          onStatusChange={handleStatusChange}
+        />
 
         {/* My projects */}
         <div className="bg-[var(--card)] rounded-lg shadow-sm border border-[var(--border)]">
@@ -819,6 +699,31 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* V5 — modal partagée "Saisir du temps" (D3). */}
+      <TimeEntryModal
+        open={modalOpen}
+        mode="create"
+        prefill={modalPrefill}
+        onClose={() => setModalOpen(false)}
+        onSuccess={(entry) => {
+          // Quand l'entrée concerne une tâche de la liste upcoming,
+          // on incrémente localement son cumul (pas de refetch global).
+          if (entry.taskId) {
+            setMyTasks((prev) =>
+              prev.map((task) =>
+                task.id === entry.taskId
+                  ? {
+                      ...task,
+                      totalLoggedHours:
+                        (task.totalLoggedHours ?? 0) + entry.hours,
+                    }
+                  : task,
+              ),
+            );
+          }
+        }}
+      />
     </MainLayout>
   );
 }

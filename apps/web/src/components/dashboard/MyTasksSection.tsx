@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
-import type { Task } from "@/types";
+import type { Task, TaskStatus } from "@/types";
 import { usePermissions } from "@/hooks/usePermissions";
 
 import { MyTasksUpcomingList } from "./MyTasksUpcomingList";
@@ -24,6 +25,8 @@ type Props = {
   onOpenModal: (taskId: string, projectId: string | null) => void;
   onQuickEntrySuccess: (taskId: string, hours: number) => void;
   onDismissalSuccess: (taskId: string) => void;
+  /** Forwarded to upcoming TaskCards to let them mutate task.status. */
+  onStatusChange?: (taskId: string, status: TaskStatus) => void;
 };
 
 /**
@@ -43,7 +46,9 @@ export function MyTasksSection({
   onOpenModal,
   onQuickEntrySuccess,
   onDismissalSuccess,
+  onStatusChange,
 }: Props) {
+  const t = useTranslations("dashboard");
   const { hasPermission } = usePermissions();
   const canLogTime = hasPermission("time_tracking:create");
 
@@ -79,20 +84,14 @@ export function MyTasksSection({
     });
   };
 
-  // TODO V5 : clés i18n (fallbacks FR temporaires).
-  const labels = {
-    segmentTitle: "Mes tâches",
-    upcomingHeader: "À venir",
-    undeclaredHeader: "En attente de déclaration",
-    undeclaredCount: (count: number) =>
-      count === 0 ? "" : ` (${count})`,
-  };
+  const undeclaredCountSuffix =
+    doneUndeclaredTasks.length === 0 ? "" : ` (${doneUndeclaredTasks.length})`;
 
   return (
     <div className="bg-[var(--card)] rounded-lg shadow-sm border border-[var(--border)]">
       <div className="px-6 py-4 border-b border-[var(--border)]">
         <h2 className="text-lg font-semibold text-[var(--foreground)]">
-          {labels.segmentTitle}
+          {t("tasks.segmentTitle")}
         </h2>
       </div>
 
@@ -103,12 +102,13 @@ export function MyTasksSection({
             id="dashboard-upcoming-tasks"
             className="text-sm font-semibold text-[var(--foreground)] mb-3"
           >
-            {labels.upcomingHeader}
+            {t("tasks.upcomingTitle")}
           </h3>
           <MyTasksUpcomingList
             tasks={upcomingTasks}
             onOpenModal={onOpenModal}
             onQuickEntrySuccess={onQuickEntrySuccess}
+            onStatusChange={onStatusChange}
           />
         </section>
 
@@ -128,8 +128,8 @@ export function MyTasksSection({
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
               )}
               <span id="dashboard-undeclared-tasks">
-                {labels.undeclaredHeader}
-                {labels.undeclaredCount(doneUndeclaredTasks.length)}
+                {t("tasks.undeclaredTitle")}
+                {undeclaredCountSuffix}
               </span>
             </button>
 

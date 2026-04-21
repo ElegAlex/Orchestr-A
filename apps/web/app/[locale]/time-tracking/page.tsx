@@ -7,45 +7,22 @@ import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import { timeTrackingService } from "@/services/time-tracking.service";
 import { projectsService } from "@/services/projects.service";
-import { tasksService } from "@/services/tasks.service";
-import {
-  TimeEntry,
-  ActivityType,
-  CreateTimeEntryDto,
-  Project,
-  Task,
-} from "@/types";
+import { TimeEntry, ActivityType, Project } from "@/types";
 import { ProjectIcon } from "@/components/ProjectIcon";
-import { ThirdPartySelector } from "@/components/third-parties/ThirdPartySelector";
+import { TimeEntryModal } from "@/components/time-tracking/TimeEntryModal";
 import toast from "react-hot-toast";
 
 export default function TimeTrackingPage() {
   const t = useTranslations("hr.timeTracking");
-  const tc = useTranslations("common");
   const user = useAuthStore((state) => state.user);
   const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedProject, setSelectedProject] = useState<string>("ALL");
-
-  const [formData, setFormData] = useState<CreateTimeEntryDto>({
-    projectId: "",
-    taskId: "",
-    date: new Date().toISOString().split("T")[0],
-    hours: 0,
-    description: "",
-    activityType: ActivityType.DEVELOPMENT,
-  });
-  const [declareForThirdParty, setDeclareForThirdParty] = useState(false);
-  const [thirdPartyId, setThirdPartyId] = useState<string | null>(null);
-  const canDeclareForThirdParty = hasPermission(
-    "time_tracking:declare_for_third_party",
-  );
 
   const fetchData = useCallback(async () => {
     try {
@@ -67,19 +44,6 @@ export default function TimeTrackingPage() {
             console.error("Error fetching projects:", err);
         }
       }
-
-      // Fetch tasks
-      if (user?.id) {
-        try {
-          const tasksData = await tasksService.getByAssignee(user.id);
-          setTasks(Array.isArray(tasksData) ? tasksData : []);
-        } catch (err) {
-          setTasks([]);
-          const axiosError = err as { response?: { status?: number } };
-          if (axiosError.response?.status !== 404)
-            console.error("Error fetching tasks:", err);
-        }
-      }
     } catch (err) {
       const axiosError = err as { response?: { status?: number } };
       if (axiosError.response?.status !== 404) {
@@ -95,30 +59,6 @@ export default function TimeTrackingPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (declareForThirdParty && !thirdPartyId) {
-      toast.error("Sélectionnez un tiers pour déclarer en son nom");
-      return;
-    }
-    try {
-      const payload: CreateTimeEntryDto = {
-        ...formData,
-        thirdPartyId: declareForThirdParty ? (thirdPartyId ?? undefined) : undefined,
-      };
-      await timeTrackingService.create(payload);
-      toast.success(t("messages.created"));
-      setShowCreateModal(false);
-      resetForm();
-      fetchData();
-    } catch (err) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        axiosError.response?.data?.message || t("messages.saveError"),
-      );
-    }
-  };
-
   const handleDelete = async (id: string) => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer cette entrée ?")) return;
 
@@ -129,19 +69,6 @@ export default function TimeTrackingPage() {
     } catch {
       toast.error(t("messages.deleteError"));
     }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      projectId: "",
-      taskId: "",
-      date: new Date().toISOString().split("T")[0],
-      hours: 0,
-      description: "",
-      activityType: ActivityType.DEVELOPMENT,
-    });
-    setDeclareForThirdParty(false);
-    setThirdPartyId(null);
   };
 
   const getFilteredEntries = () => {
@@ -206,11 +133,6 @@ export default function TimeTrackingPage() {
 
   const getTotalHours = () => {
     return getFilteredEntries().reduce((sum, entry) => sum + entry.hours, 0);
-  };
-
-  const getAvailableTasksForProject = () => {
-    if (!formData.projectId) return [];
-    return tasks.filter((t) => t.projectId === formData.projectId);
   };
 
   if (loading) {
@@ -413,187 +335,15 @@ export default function TimeTrackingPage() {
         </div>
       </div>
 
-      {/* Create Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-lg w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Saisir du temps
-            </h2>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date *
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.date}
-                  onChange={(e) =>
-                    setFormData({ ...formData, date: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Durée (heures) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0.25"
-                  step="0.25"
-                  value={formData.hours || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      hours: parseFloat(e.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t("fields.hoursPlaceholder")}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Type d&apos;activité *
-                </label>
-                <select
-                  required
-                  value={formData.activityType}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      activityType: e.target.value as ActivityType,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value={ActivityType.DEVELOPMENT}>
-                    Développement
-                  </option>
-                  <option value={ActivityType.MEETING}>Réunion</option>
-                  <option value={ActivityType.SUPPORT}>Support</option>
-                  <option value={ActivityType.TRAINING}>Formation</option>
-                  <option value={ActivityType.OTHER}>Autre</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Projet (optionnel)
-                </label>
-                <select
-                  value={formData.projectId}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      projectId: e.target.value,
-                      taskId: "", // Reset task when project changes
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">{t("fields.noProject")}</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {formData.projectId && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tâche (optionnel)
-                  </label>
-                  <select
-                    value={formData.taskId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, taskId: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">{t("fields.noTask")}</option>
-                    {getAvailableTasksForProject().map((task) => (
-                      <option key={task.id} value={task.id}>
-                        {task.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {canDeclareForThirdParty && (
-                <div className="border-t border-gray-200 pt-4">
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <input
-                      type="checkbox"
-                      checked={declareForThirdParty}
-                      onChange={(e) => {
-                        setDeclareForThirdParty(e.target.checked);
-                        if (!e.target.checked) setThirdPartyId(null);
-                      }}
-                      className="h-4 w-4"
-                    />
-                    Déclarer pour le compte d&apos;un tiers
-                  </label>
-                  {declareForThirdParty && (
-                    <div className="mt-2">
-                      <ThirdPartySelector
-                        value={thirdPartyId}
-                        onChange={setThirdPartyId}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Le tiers doit être rattaché au projet ou à la tâche
-                        sélectionnée.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optionnel)
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={t("fields.descriptionPlaceholder")}
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    resetForm();
-                  }}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                >
-                  {tc("actions.cancel")}
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                >
-                  {tc("actions.save")}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Create Modal (composant partagé — cf. V5 / D3) */}
+      <TimeEntryModal
+        open={showCreateModal}
+        mode="create"
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          fetchData();
+        }}
+      />
     </MainLayout>
   );
 }

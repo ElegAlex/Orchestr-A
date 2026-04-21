@@ -37,13 +37,28 @@
     }
   },
   "tasks": {
-    "title": "Mes tâches à venir",
+    "segmentTitle": "Mes tâches",
+    "upcomingTitle": "Mes tâches à venir",
+    "undeclaredTitle": "Mes tâches non déclarées",
+    "undeclaredEmpty": "Aucune tâche en attente de validation",
+    "undeclaredCheckboxLabel": "Valider sans déclaration",
+    "undeclaredCheckboxSuccess": "Tâche validée sans déclaration",
+    "undeclaredCheckboxError": "Erreur lors de la validation",
+    "overdueBadge": "En retard",
+    "openModalLabel": "Ouvrir la saisie de temps",
     "empty": "Aucune tâche assignée",
     "noProject": "Sans projet",
     "startDate": "Début:",
     "endDate": "Fin:",
     "estimated": "Estimé:",
     "hours": "{hours}h",
+    "quickEntry": {
+      "placeholder": "h",
+      "ariaLabel": "Saisir des heures pour cette tâche",
+      "loggedTooltip": "Déjà déclaré (tous contributeurs)",
+      "submitError": "Erreur lors de la saisie",
+      "submitSuccess": "Temps enregistré"
+    },
     "success": {
       "statusUpdated": "Statut mis à jour"
     },

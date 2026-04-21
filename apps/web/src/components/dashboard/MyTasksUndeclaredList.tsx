@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 
 import type { Task } from "@/types";
@@ -26,14 +27,8 @@ type Props = {
  * optimiste (retrait de la liste) via `onDismissalSuccess`.
  */
 export function MyTasksUndeclaredList({ tasks, onDismissalSuccess }: Props) {
+  const t = useTranslations("dashboard");
   const [submittingIds, setSubmittingIds] = useState<Set<string>>(new Set());
-
-  // TODO V5 : clés i18n (fallbacks FR temporaires).
-  const labels = {
-    empty: "Aucune tâche en attente de validation",
-    success: "Tâche marquée comme traitée",
-    error: "Impossible d'enregistrer",
-  };
 
   const handleDismiss = async (taskId: string) => {
     if (submittingIds.has(taskId)) return;
@@ -42,9 +37,9 @@ export function MyTasksUndeclaredList({ tasks, onDismissalSuccess }: Props) {
     try {
       await timeTrackingService.createDismissal(taskId);
       onDismissalSuccess(taskId);
-      toast.success(labels.success);
+      toast.success(t("tasks.undeclaredCheckboxSuccess"));
     } catch {
-      toast.error(labels.error);
+      toast.error(t("tasks.undeclaredCheckboxError"));
     } finally {
       setSubmittingIds((prev) => {
         const next = new Set(prev);
@@ -57,7 +52,7 @@ export function MyTasksUndeclaredList({ tasks, onDismissalSuccess }: Props) {
   if (tasks.length === 0) {
     return (
       <p className="text-[var(--muted-foreground)] text-center py-8">
-        {labels.empty}
+        {t("tasks.undeclaredEmpty")}
       </p>
     );
   }
