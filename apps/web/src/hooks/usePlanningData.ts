@@ -20,6 +20,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 
 const DEFAULT_VISIBLE_DAYS: number[] = [1, 2, 3, 4, 5];
+const EMPTY_SPECIAL_DAYS: number[] = [];
 
 export type ViewFilter = "all" | "availability" | "activity";
 
@@ -118,7 +119,8 @@ export const usePlanningData = ({
   // Lire les jours spéciaux depuis les paramètres (ISO: 1=Lun, 7=Dim)
   const specialDays = useSettingsStore(
     (state) =>
-      (state.settings["planning.specialDays"] as number[] | undefined) ?? [],
+      (state.settings["planning.specialDays"] as number[] | undefined) ??
+      EMPTY_SPECIAL_DAYS,
   );
 
   // Calculer les jours à afficher et la plage de requête complète
