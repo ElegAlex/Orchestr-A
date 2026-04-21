@@ -50,6 +50,7 @@ coverage/
 *.lcov
 .nyc_output/
 junit.xml
+.claude-screenshots/
 
 # ===========================
 # IDE & EDITORS
