@@ -373,7 +373,7 @@ describe('TimeTrackingController', () => {
     it('should return time report for current user', async () => {
       const report = {
         totalHours: 40,
-        byActivityType: {
+        byType: {
           DEVELOPMENT: 30,
           MEETING: 10,
         },
@@ -428,7 +428,7 @@ describe('TimeTrackingController', () => {
           { userId: 'user-id-1', name: 'John Doe', hours: 100 },
           { userId: 'user-id-2', name: 'Jane Smith', hours: 100 },
         ],
-        byActivityType: {
+        byType: {
           DEVELOPMENT: 150,
           MEETING: 50,
         },
