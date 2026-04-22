@@ -138,6 +138,14 @@ export interface User {
   managedServices?: ManagedService[];
 }
 
+export interface UserSummary {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string | null;
+  avatarPreset?: string | null;
+}
+
 export interface AuthResponse {
   access_token: string;
   refresh_token?: string;
