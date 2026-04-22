@@ -14,6 +14,7 @@ import { ImportPreviewModal } from "@/components/ImportPreviewModal";
 import { departmentsService } from "@/services/departments.service";
 import { servicesService } from "@/services/services.service";
 import { User, Department, Service } from "@/types";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   rolesService,
   type RoleWithStats,
@@ -702,10 +703,7 @@ export default function UsersPage() {
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
-                        {user.firstName[0]}
-                        {user.lastName[0]}
-                      </div>
+                      <UserAvatar user={user} size="md" />
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
                           {user.firstName} {user.lastName}
