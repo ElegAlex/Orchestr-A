@@ -123,19 +123,10 @@ function ProjectTooltip({ row }: { row: GanttTaskRow }) {
       <Row label="Statut">
         <StatusBadge color={color} label={label} />
       </Row>
-      {row.assigneeName && (
+      {(row.assignee || row.assigneeName) && (
         <Row label="Assigné">
-          <UserAvatar
-            user={{
-              id: row.id,
-              firstName: row.assigneeName.split(' ')[0] ?? row.assigneeName,
-              lastName: row.assigneeName.split(' ').slice(1).join(' '),
-              avatarUrl: null,
-              avatarPreset: null,
-            }}
-            size="xs"
-          />
-          <span style={{ fontSize: 12, color: '#334155' }}>{row.assigneeName}</span>
+          {row.assignee && <UserAvatar user={row.assignee} size="xs" />}
+          {row.assigneeName && <span style={{ fontSize: 12, color: '#334155' }}>{row.assigneeName}</span>}
         </Row>
       )}
       <Row label="Dates">
@@ -168,19 +159,10 @@ function PortfolioTooltip({ row }: { row: GanttPortfolioRow }) {
       <Row label="Santé">
         <StatusBadge color={color} label={label} />
       </Row>
-      {row.managerName && (
+      {(row.manager || row.managerName) && (
         <Row label="Chef de projet">
-          <UserAvatar
-            user={{
-              id: row.id,
-              firstName: row.managerName.split(' ')[0] ?? row.managerName,
-              lastName: row.managerName.split(' ').slice(1).join(' '),
-              avatarUrl: null,
-              avatarPreset: null,
-            }}
-            size="xs"
-          />
-          <span style={{ fontSize: 12, color: '#334155' }}>{row.managerName}</span>
+          {row.manager && <UserAvatar user={row.manager} size="xs" />}
+          {row.managerName && <span style={{ fontSize: 12, color: '#334155' }}>{row.managerName}</span>}
         </Row>
       )}
       <Row label="Dates">

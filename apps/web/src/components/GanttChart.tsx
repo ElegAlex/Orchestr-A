@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Gantt } from "./gantt";
 import type { GanttTaskRow, GanttDependency } from "./gantt/types";
-import type { Task as FullTask, TaskStatus } from "@/types";
+import type { Task as FullTask, TaskStatus, UserSummary } from "@/types";
 import { TaskDependencyInfo } from "./TaskDependencyInfo";
 import { TaskDependencyModal } from "./TaskDependencyModal";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,7 @@ interface GanttTask {
   progress?: number;
   milestoneId?: string;
   dependencies?: { dependsOnTaskId: string }[];
+  assignee?: UserSummary | null;
 }
 
 interface GanttMilestone {
@@ -66,6 +67,7 @@ function tasksToGanttRows(
       milestoneId: task.milestoneId,
       milestoneName: milestone?.name,
       isMilestone: false,
+      assignee: task.assignee ?? null,
     });
   }
 

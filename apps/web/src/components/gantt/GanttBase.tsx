@@ -528,17 +528,8 @@ export default function GanttBase(props: GanttProps) {
               </span>
               {/* Avatar */}
               <div className="flex items-center justify-center" style={{ width: 56, flexShrink: 0 }}>
-                {!row.isMilestone && row.assigneeName && (
-                  <UserAvatar
-                    user={{
-                      id: row.id,
-                      firstName: row.assigneeName.split(' ')[0] ?? row.assigneeName,
-                      lastName: row.assigneeName.split(' ').slice(1).join(' '),
-                      avatarUrl: null,
-                      avatarPreset: null,
-                    }}
-                    size="sm"
-                  />
+                {!row.isMilestone && row.assignee && (
+                  <UserAvatar user={row.assignee} size="sm" />
                 )}
               </div>
               {/* Status badge */}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import { Gantt, type GanttPortfolioRow, type GanttView } from "@/components/gantt";
 import { classify } from "@/components/gantt/status-classifier";
+import type { UserSummary } from "@/types";
 
 interface Project {
   id: string;
@@ -16,6 +17,7 @@ interface Project {
   startDate: string;
   dueDate?: string | null;
   projectManager?: string;
+  manager?: UserSummary | null;
   managerDepartment?: string;
   priority?: string;
 }
@@ -46,6 +48,7 @@ function projectsToPortfolioRows(projects: Project[]): GanttPortfolioRow[] {
         health,
         departmentName: p.managerDepartment,
         managerName: p.projectManager,
+        manager: p.manager ?? null,
         code: p.code,
         priority: p.priority,
       };
