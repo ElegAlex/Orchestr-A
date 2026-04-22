@@ -13,11 +13,8 @@ import { useTranslations, useLocale } from "next-intl";
 import { useRouter, usePathname } from "next/navigation";
 import { IcsExportSection } from "@/components/planning-export/IcsExportSection";
 import { IcsImportSection } from "@/components/planning-export/IcsImportSection";
+import { PERSONA_PRESETS } from "@/constants/avatar-presets";
 
-const PERSONA_PRESETS = Array.from(
-  { length: 48 },
-  (_, i) => `persona_${String(i + 1).padStart(2, "0")}`,
-);
 const INITIALS_PRESET = "initials";
 
 type TabType = "personal" | "security" | "preferences" | "import-export";
