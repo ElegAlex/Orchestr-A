@@ -10,10 +10,6 @@ export const metadata: Metadata = {
   ),
   title: "Orchestr'A",
   description: "Gestion de projets et RH pour collectivités territoriales",
-  icons: {
-    icon: [{ url: "/favicon.png", type: "image/png", sizes: "32x32" }],
-    apple: "/apple-touch-icon.png",
-  },
   openGraph: {
     title: "Orchestr'A",
     description: "Gestion de projets et RH pour collectivités territoriales",
