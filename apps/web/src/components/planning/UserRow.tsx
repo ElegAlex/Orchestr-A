@@ -58,12 +58,17 @@ export const UserRow = ({
       <div className="sticky left-0 bg-white z-10 px-3 py-3 border-r border-gray-200">
         <div className="flex items-center space-x-2 pl-1 min-w-0">
           <div className="relative shrink-0">
-            <UserAvatar user={user} size="sm" />
-            {group.isManagement && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center">
-                <span className="text-[8px]">⭐</span>
-              </div>
-            )}
+            <UserAvatar
+              user={user}
+              size="md"
+              badge={
+                group.isManagement ? (
+                  <span className="w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center">
+                    <span className="text-[8px]">⭐</span>
+                  </span>
+                ) : undefined
+              }
+            />
           </div>
           <div className="min-w-0">
             <div className="text-xs font-medium text-gray-900 truncate">

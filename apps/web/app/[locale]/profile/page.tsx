@@ -156,7 +156,7 @@ export default function ProfilePage() {
           <div className="flex items-start space-x-6">
             {/* Avatar */}
             <div className="flex-shrink-0">
-              <UserAvatar user={user} size="lg" />
+              <UserAvatar user={user} size="xl" />
             </div>
 
             {/* Info */}
@@ -375,7 +375,7 @@ export default function ProfilePage() {
                 <div className="flex items-start gap-6">
                   {/* Current avatar preview */}
                   <div className="flex-shrink-0">
-                    <UserAvatar user={user} size="lg" />
+                    <UserAvatar user={user} size="xl" />
                   </div>
                   <div className="flex-1 space-y-4">
                     {/* Initials preset */}
@@ -395,7 +395,7 @@ export default function ProfilePage() {
                       >
                         <UserAvatar
                           user={{ ...user, avatarUrl: null, avatarPreset: "initials" }}
-                          size="md"
+                          size="lg"
                         />
                       </button>
                     </div>

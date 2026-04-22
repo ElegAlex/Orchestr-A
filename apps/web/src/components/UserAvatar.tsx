@@ -1,115 +1,93 @@
 "use client";
 
 import Image from "next/image";
+import { useState, type ReactNode } from "react";
+import { getGradient, getInitials } from "@/lib/avatar";
+import type { UserSummary } from "@/types";
 
 interface UserAvatarProps {
-  user: {
-    firstName: string;
-    lastName: string;
-    avatarUrl?: string | null;
-    avatarPreset?: string | null;
-  };
-  size?: "sm" | "md" | "lg";
+  user: UserSummary;
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  badge?: ReactNode;
   className?: string;
 }
 
 const sizeMap = {
-  sm: { px: 40, text: "text-sm font-semibold tracking-tight" },
-  md: { px: 48, text: "text-base font-semibold tracking-tight" },
-  lg: { px: 96, text: "text-3xl font-bold tracking-tight" },
-};
-
-const GRADIENTS: Array<[string, string]> = [
-  ["#6366f1", "#8b5cf6"], // indigo → violet
-  ["#3b82f6", "#06b6d4"], // blue → cyan
-  ["#0ea5e9", "#6366f1"], // sky → indigo
-  ["#14b8a6", "#10b981"], // teal → emerald
-  ["#10b981", "#65a30d"], // emerald → lime
-  ["#f59e0b", "#f97316"], // amber → orange
-  ["#f97316", "#e11d48"], // orange → rose
-  ["#f43f5e", "#ec4899"], // rose → pink
-  ["#8b5cf6", "#d946ef"], // violet → fuchsia
-  ["#475569", "#0f172a"], // slate → deep-slate
-];
-
-function hashString(input: string): number {
-  let h = 0;
-  for (let i = 0; i < input.length; i++) {
-    h = (h * 31 + input.charCodeAt(i)) >>> 0;
-  }
-  return h;
-}
-
-function getGradient(user: { firstName: string; lastName: string }) {
-  const key = `${user.firstName.toLowerCase()}:${user.lastName.toLowerCase()}`;
-  const idx = hashString(key) % GRADIENTS.length;
-  const [from, to] = GRADIENTS[idx];
-  return { from, to, angle: (hashString(key) >> 8) % 360 };
-}
+  xs: { dim: 20, text: "text-[10px] font-semibold" },
+  sm: { dim: 28, text: "text-xs font-semibold" },
+  md: { dim: 40, text: "text-sm font-semibold tracking-tight" },
+  lg: { dim: 48, text: "text-base font-semibold tracking-tight" },
+  xl: { dim: 96, text: "text-3xl font-bold tracking-tight" },
+} as const;
 
 function getAvatarSrc(avatarUrl: string): string {
-  if (avatarUrl.startsWith("http") || avatarUrl.startsWith("/"))
-    return avatarUrl;
+  if (avatarUrl.startsWith("http") || avatarUrl.startsWith("/")) return avatarUrl;
   return `/${avatarUrl}`;
 }
 
-export function UserAvatar({
-  user,
-  size = "md",
-  className = "",
-}: UserAvatarProps) {
-  const { px, text } = sizeMap[size];
-  const dim = { width: px, height: px };
+export function UserAvatar({ user, size = "md", badge, className = "" }: UserAvatarProps) {
+  const { dim, text } = sizeMap[size];
+  const style = { width: dim, height: dim };
+  const fullName = `${user.firstName} ${user.lastName}`.trim();
+  const [imageFailed, setImageFailed] = useState(false);
 
-  if (user.avatarUrl) {
-    return (
-      <div
-        className={`rounded-full overflow-hidden flex-shrink-0 ${className}`}
-        style={dim}
-      >
+  const wrapper = (inner: ReactNode) => (
+    <div
+      className={`relative flex-shrink-0 ${className}`}
+      style={style}
+      title={fullName}
+    >
+      {inner}
+      {badge && (
+        <span className="absolute -top-0.5 -right-0.5 z-10 pointer-events-none">
+          {badge}
+        </span>
+      )}
+    </div>
+  );
+
+  if (user.avatarUrl && !imageFailed) {
+    return wrapper(
+      <span className="rounded-full overflow-hidden block w-full h-full">
         <Image
           src={getAvatarSrc(user.avatarUrl)}
-          alt={`${user.firstName} ${user.lastName}`}
-          width={px}
-          height={px}
+          alt={fullName}
+          width={dim}
+          height={dim}
           className="w-full h-full object-cover"
           unoptimized
+          onError={() => setImageFailed(true)}
         />
-      </div>
+      </span>
     );
   }
 
-  if (user.avatarPreset && user.avatarPreset !== "initials") {
-    return (
-      <div
-        className={`rounded-full overflow-hidden flex-shrink-0 ${className}`}
-        style={dim}
-      >
+  if (user.avatarPreset && user.avatarPreset !== "initials" && !imageFailed) {
+    return wrapper(
+      <span className="rounded-full overflow-hidden block w-full h-full">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`/avatars/${user.avatarPreset}.svg`}
-          alt={`${user.firstName} ${user.lastName}`}
+          alt={fullName}
           className="w-full h-full object-cover"
+          onError={() => setImageFailed(true)}
         />
-      </div>
+      </span>
     );
   }
 
-  // Premium initials monogram: unique gradient per user
   const { from, to, angle } = getGradient(user);
-  const initials = `${user.firstName[0] ?? ""}${user.lastName[0] ?? ""}`.toUpperCase();
+  const initials = getInitials(user);
 
-  return (
-    <div
-      className={`relative rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden text-white ${text} ${className}`}
+  return wrapper(
+    <span
+      className={`relative rounded-full flex items-center justify-center overflow-hidden text-white w-full h-full ${text}`}
       style={{
-        ...dim,
         background: `linear-gradient(${angle}deg, ${from} 0%, ${to} 100%)`,
         boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
       }}
-      aria-label={`${user.firstName} ${user.lastName}`}
+      aria-label={fullName}
     >
-      {/* subtle highlight */}
       <span
         aria-hidden
         className="pointer-events-none absolute inset-0 rounded-full"
@@ -119,6 +97,6 @@ export function UserAvatar({
         }}
       />
       <span className="relative drop-shadow-sm">{initials}</span>
-    </div>
+    </span>
   );
 }
