@@ -42,7 +42,20 @@
     "noTasks": "No tasks",
     "assignees": "{count} assignees",
     "estimatedHours": "⏱️ {hours}h estimated",
-    "progress": "Progress"
+    "progress": "Progress",
+    "orphanTask": "Independent task",
+    "overdue": "Overdue",
+    "columns": {
+      "TODO": "To Do",
+      "IN_PROGRESS": "In Progress",
+      "IN_REVIEW": "In Review",
+      "DONE": "Done",
+      "BLOCKED": "Blocked"
+    },
+    "messages": {
+      "statusUpdateSuccess": "Status updated",
+      "statusUpdateError": "Error updating status"
+    }
   },
 
   "modal": {
