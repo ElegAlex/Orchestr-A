@@ -45,6 +45,7 @@ import GanttLegend from './GanttLegend';
 import GanttEmptyState from './GanttEmptyState';
 import GanttDependencyLayer from './GanttDependencyLayer';
 import GanttTooltip from './GanttTooltip';
+import { UserAvatar } from '@/components/UserAvatar';
 
 const VIEW_ORDER: GanttView[] = ['day', 'week', 'month', 'quarter'];
 
@@ -78,26 +79,6 @@ function getBarColor(row: GanttPortfolioRow | GanttTaskRow, scope: 'portfolio' |
 function isWeekendDate(date: Date): boolean {
   const d = date.getDay();
   return d === 0 || d === 6;
-}
-
-function AvatarCircle({ name, color }: { name?: string; color: string }) {
-  if (!name) return null;
-  const initials = name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-  return (
-    <span
-      className="inline-flex items-center justify-center shrink-0 rounded-full"
-      style={{
-        width: 28,
-        height: 28,
-        fontSize: 11,
-        fontWeight: 600,
-        backgroundColor: lightenColor(color),
-        color: color,
-      }}
-    >
-      {initials}
-    </span>
-  );
 }
 
 function StatusBadge({ status, color }: { status: string; color: string }) {
@@ -547,8 +528,17 @@ export default function GanttBase(props: GanttProps) {
               </span>
               {/* Avatar */}
               <div className="flex items-center justify-center" style={{ width: 56, flexShrink: 0 }}>
-                {!row.isMilestone && (
-                  <AvatarCircle name={row.assigneeName} color={color} />
+                {!row.isMilestone && row.assigneeName && (
+                  <UserAvatar
+                    user={{
+                      id: row.id,
+                      firstName: row.assigneeName.split(' ')[0] ?? row.assigneeName,
+                      lastName: row.assigneeName.split(' ').slice(1).join(' '),
+                      avatarUrl: null,
+                      avatarPreset: null,
+                    }}
+                    size="sm"
+                  />
                 )}
               </div>
               {/* Status badge */}
