@@ -21,13 +21,15 @@ export function hashString(input: string): number {
   return h;
 }
 
-export function getGradient(user: Pick<UserSummary, 'firstName' | 'lastName'>): { from: string; to: string; angle: number } {
-  const key = `${(user.firstName ?? '').toLowerCase()}:${(user.lastName ?? '').toLowerCase()}`;
+export type GradientResult = { from: string; to: string; angle: number };
+
+export function getGradient(user: Pick<UserSummary, 'firstName' | 'lastName'>): GradientResult {
+  const key = `${user.firstName.toLowerCase()}:${user.lastName.toLowerCase()}`;
   const idx = hashString(key) % GRADIENTS.length;
   const [from, to] = GRADIENTS[idx];
   return { from, to, angle: (hashString(key) >>> 8) % 360 };
 }
 
 export function getInitials(user: Pick<UserSummary, 'firstName' | 'lastName'>): string {
-  return `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase();
+  return `${user.firstName[0] ?? ''}${user.lastName[0] ?? ''}`.toUpperCase();
 }
