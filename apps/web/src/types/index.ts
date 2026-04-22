@@ -241,22 +241,9 @@ export interface Project {
   createdById?: string;
   managerId?: string | null;
   sponsorId?: string | null;
-  createdBy?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    login: string;
-  } | null;
-  manager?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  } | null;
-  sponsor?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  } | null;
+  createdBy?: (UserSummary & { login: string }) | null;
+  manager?: UserSummary | null;
+  sponsor?: UserSummary | null;
   members?: ProjectMember[];
   epics?: Epic[];
   milestones?: Milestone[];
@@ -537,12 +524,7 @@ export interface ThirdParty {
   createdById: string;
   createdAt: string;
   updatedAt: string;
-  createdBy?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email?: string;
-  };
+  createdBy?: UserSummary & { email?: string };
   _count?: {
     taskAssignments: number;
     projectMemberships: number;
@@ -641,18 +623,8 @@ export interface Leave {
   // Relations
   user?: User;
   leaveType?: LeaveTypeConfig;
-  validator?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email?: string;
-  };
-  validatedBy?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email?: string;
-  };
+  validator?: UserSummary & { email?: string };
+  validatedBy?: UserSummary & { email?: string };
 }
 
 export interface CreateLeaveDto {
@@ -695,8 +667,8 @@ export interface TeleworkRecurringRule {
   createdById: string;
   createdAt: string;
   updatedAt: string;
-  user?: Pick<User, "id" | "firstName" | "lastName" | "email" | "role">;
-  createdBy?: Pick<User, "id" | "firstName" | "lastName">;
+  user?: UserSummary & { email: string; role: UserRoleEntity | null };
+  createdBy?: UserSummary;
 }
 
 export interface CreateRecurringRuleDto {
@@ -810,11 +782,7 @@ export interface Holiday {
   recurring: boolean;
   createdAt: string;
   updatedAt: string;
-  createdBy?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  };
+  createdBy?: UserSummary;
 }
 
 export interface CreateHolidayDto {
@@ -879,11 +847,7 @@ export interface SchoolVacation {
   source: SchoolVacationSource;
   createdAt: string;
   updatedAt: string;
-  createdBy?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  };
+  createdBy?: UserSummary;
 }
 
 export interface CreateSchoolVacationDto {
