@@ -36,8 +36,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
 import { parseCSV } from "@/lib/csv-parser";
+import TaskKanban from "@/components/tasks/TaskKanban";
 import { TaskListView } from "@/components/tasks/TaskListView";
-import { getTaskProgress } from "@/lib/task-progress";
 import api from "@/lib/api";
 import { ProjectIcon } from "@/components/ProjectIcon";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -80,9 +80,6 @@ export default function ProjectDetailPage() {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [memberRole, setMemberRole] = useState("");
   const [memberAllocation, setMemberAllocation] = useState(100);
-  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
-  const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(
     null,
@@ -238,57 +235,6 @@ export default function ProjectDetailPage() {
     return t(`priority.${priority}`, { defaultValue: priority });
   };
 
-  // Drag and Drop handlers
-  const handleDragStart = (e: React.DragEvent, task: Task) => {
-    setDraggedTask(task);
-    setIsDragging(true);
-    e.dataTransfer.effectAllowed = "move";
-    (e.currentTarget as HTMLElement).style.opacity = "0.4";
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    setDraggedTask(null);
-    setDragOverColumn(null);
-    setIsDragging(false);
-    (e.currentTarget as HTMLElement).style.opacity = "1";
-  };
-
-  const handleDragOver = (e: React.DragEvent, status: TaskStatus) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverColumn(status);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverColumn(null);
-  };
-
-  const handleDrop = async (e: React.DragEvent, newStatus: TaskStatus) => {
-    e.preventDefault();
-    setDragOverColumn(null);
-
-    if (draggedTask && draggedTask.status !== newStatus) {
-      try {
-        await tasksService.update(draggedTask.id, { status: newStatus });
-        toast.success(t("messages.statusUpdateSuccess"));
-        // Refresh tasks
-        const tasksData = await tasksService.getByProject(projectId);
-        setTasks(Array.isArray(tasksData) ? tasksData : []);
-      } catch {
-        toast.error(t("messages.statusUpdateError"));
-      }
-    }
-
-    setDraggedTask(null);
-    setIsDragging(false);
-  };
-
-  const handleTaskClick = (task: Task) => {
-    if (!isDragging) {
-      router.push(`/${locale}/tasks/${task.id}`);
-    }
-  };
-
   const filteredTasks = tasks.filter((task) => {
     if (!taskSearchQuery) return true;
     const query = taskSearchQuery.toLowerCase();
@@ -297,10 +243,6 @@ export default function ProjectDetailPage() {
       task.description?.toLowerCase().includes(query)
     );
   });
-
-  const getTasksByStatus = (status: TaskStatus) => {
-    return filteredTasks.filter((t) => t.status === status);
-  };
 
   const handleTaskStatusChange = async (
     taskId: string,
@@ -1394,206 +1336,20 @@ export default function ProjectDetailPage() {
               <TaskListView
                 tasks={filteredTasks}
                 onStatusChange={handleTaskStatusChange}
-                onTaskClick={handleTaskClick}
+                onTaskClick={(task) => router.push(`/${locale}/tasks/${task.id}`)}
                 onDelete={handleDeleteTask}
                 onDateChange={handleTaskDateChange}
               />
             ) : (
-              <div className="pb-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {[
-                    {
-                      status: TaskStatus.TODO,
-                      title: tTasks("status.TODO"),
-                      color: "bg-gray-100",
-                    },
-                    {
-                      status: TaskStatus.IN_PROGRESS,
-                      title: tTasks("status.IN_PROGRESS"),
-                      color: "bg-blue-100",
-                    },
-                    {
-                      status: TaskStatus.IN_REVIEW,
-                      title: tTasks("status.IN_REVIEW"),
-                      color: "bg-yellow-100",
-                    },
-                    {
-                      status: TaskStatus.DONE,
-                      title: tTasks("status.DONE"),
-                      color: "bg-green-100",
-                    },
-                    {
-                      status: TaskStatus.BLOCKED,
-                      title: tTasks("status.BLOCKED"),
-                      color: "bg-red-100",
-                    },
-                  ]
-                    .filter((column) => !hiddenStatuses.includes(column.status))
-                    .map((column) => {
-                      const columnTasks = getTasksByStatus(column.status);
-                      const isDropTarget = dragOverColumn === column.status;
-
-                      return (
-                        <div
-                          key={column.status}
-                          className="min-w-0 bg-white rounded-lg shadow-sm border border-gray-200"
-                        >
-                          {/* Column Header */}
-                          <div
-                            className={`${column.color} px-4 py-3 rounded-t-lg border-b border-gray-200`}
-                          >
-                            <h3 className="font-semibold text-gray-900 flex items-center justify-between">
-                              <span>{column.title}</span>
-                              <span className="bg-white text-gray-700 px-2 py-1 rounded-full text-xs">
-                                {columnTasks.length}
-                              </span>
-                            </h3>
-                          </div>
-
-                          {/* Tasks - Drop Zone */}
-                          <div
-                            className={`p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-400px)] overflow-y-auto transition-colors ${
-                              isDropTarget
-                                ? "bg-blue-50 border-2 border-dashed border-blue-400"
-                                : ""
-                            }`}
-                            onDragOver={(e) => handleDragOver(e, column.status)}
-                            onDragLeave={handleDragLeave}
-                            onDrop={(e) => handleDrop(e, column.status)}
-                          >
-                            {columnTasks.length === 0 ? (
-                              <p className="text-gray-400 text-sm text-center py-8">
-                                {tTasks("kanban.noTasks")}
-                              </p>
-                            ) : (
-                              columnTasks.map((task) => (
-                                <div
-                                  key={task.id}
-                                  draggable
-                                  onDragStart={(e) => handleDragStart(e, task)}
-                                  onDragEnd={handleDragEnd}
-                                  onClick={() => handleTaskClick(task)}
-                                  className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer"
-                                >
-                                  <div className="flex items-start space-x-2">
-                                    {/* Drag Handle */}
-                                    <div className="flex flex-col space-y-0.5 mt-1 text-gray-400 cursor-move">
-                                      <div className="flex space-x-0.5">
-                                        <div className="w-1 h-1 bg-current rounded-full"></div>
-                                        <div className="w-1 h-1 bg-current rounded-full"></div>
-                                      </div>
-                                      <div className="flex space-x-0.5">
-                                        <div className="w-1 h-1 bg-current rounded-full"></div>
-                                        <div className="w-1 h-1 bg-current rounded-full"></div>
-                                      </div>
-                                      <div className="flex space-x-0.5">
-                                        <div className="w-1 h-1 bg-current rounded-full"></div>
-                                        <div className="w-1 h-1 bg-current rounded-full"></div>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex-1">
-                                      <div className="flex items-start justify-between mb-2">
-                                        <h4 className="font-semibold text-gray-900 text-sm flex-1">
-                                          {task.title}
-                                        </h4>
-                                        <span
-                                          className={`px-2 py-1 rounded text-xs font-medium ${getPriorityBadgeColor(
-                                            task.priority,
-                                          )}`}
-                                        >
-                                          {getPriorityLabel(task.priority)}
-                                        </span>
-                                      </div>
-
-                                      {task.description && (
-                                        <p className="text-xs text-gray-600 mb-3 line-clamp-2">
-                                          {task.description}
-                                        </p>
-                                      )}
-
-                                      {/* Affichage des assignés multiples */}
-                                      {task.assignees &&
-                                      task.assignees.length > 0 ? (
-                                        <div className="flex items-center space-x-1 text-xs text-gray-500 mb-2">
-                                          <div className="flex -space-x-1">
-                                            {task.assignees
-                                              .slice(0, 3)
-                                              .map((assignment, idx) =>
-                                                assignment.user ? (
-                                                  <UserAvatar
-                                                    key={assignment.userId || idx}
-                                                    user={assignment.user}
-                                                    size="xs"
-                                                  />
-                                                ) : null
-                                              )}
-                                            {task.assignees.length > 3 && (
-                                              <div className="w-5 h-5 rounded-full bg-gray-400 text-white flex items-center justify-center text-[10px] border border-white">
-                                                +{task.assignees.length - 3}
-                                              </div>
-                                            )}
-                                          </div>
-                                          <span className="ml-1">
-                                            {task.assignees.length === 1
-                                              ? `${task.assignees[0].user?.firstName} ${task.assignees[0].user?.lastName}`
-                                              : tTasks("kanban.assignees", {
-                                                  count: task.assignees.length,
-                                                })}
-                                          </span>
-                                        </div>
-                                      ) : (
-                                        task.assignee && (
-                                          <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
-                                            <UserAvatar user={task.assignee} size="xs" />
-                                            <span>
-                                              {task.assignee.firstName}{" "}
-                                              {task.assignee.lastName}
-                                            </span>
-                                          </div>
-                                        )
-                                      )}
-
-                                      {task.estimatedHours && (
-                                        <div className="text-xs text-gray-500">
-                                          ⏱️{" "}
-                                          {tTasks("kanban.estimatedHours", {
-                                            hours: task.estimatedHours,
-                                          })}
-                                        </div>
-                                      )}
-
-                                      {getTaskProgress(task.status) > 0 && (
-                                        <div className="mt-3">
-                                          <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                                            <span>
-                                              {tTasks("kanban.progress")}
-                                            </span>
-                                            <span>
-                                              {getTaskProgress(task.status)}%
-                                            </span>
-                                          </div>
-                                          <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                            <div
-                                              className="bg-blue-600 h-1.5 rounded-full transition-all"
-                                              style={{
-                                                width: `${getTaskProgress(task.status)}%`,
-                                              }}
-                                            ></div>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
+              <TaskKanban
+                tasks={filteredTasks}
+                onTaskClick={(task) => router.push(`/${locale}/tasks/${task.id}`)}
+                onAfterStatusChange={async () => {
+                  const tasksData = await tasksService.getByProject(projectId);
+                  setTasks(Array.isArray(tasksData) ? tasksData : []);
+                }}
+                hiddenStatuses={hiddenStatuses}
+              />
             )}
           </div>
         )}
