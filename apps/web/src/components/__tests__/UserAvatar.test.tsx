@@ -32,8 +32,8 @@ describe('UserAvatar', () => {
   });
 
   it('does not render badge when absent', () => {
-    render(<UserAvatar user={user} />);
-    expect(screen.queryByTestId('b')).toBeNull();
+    const { container } = render(<UserAvatar user={user} />);
+    expect(container.querySelector('[class*="absolute"][class*="-top"]')).toBeNull();
   });
 
   it('falls back to monogram on image error', () => {
@@ -44,7 +44,7 @@ describe('UserAvatar', () => {
   });
 
   it('renders title attribute with full name', () => {
-    const { container } = render(<UserAvatar user={user} />);
-    expect(container.querySelector('[title="Alice Martin"]')).toBeInTheDocument();
+    render(<UserAvatar user={user} />);
+    expect(screen.getByTitle('Alice Martin')).toBeInTheDocument();
   });
 });

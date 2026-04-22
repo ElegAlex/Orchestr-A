@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type ReactNode } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import { getGradient, getInitials } from "@/lib/avatar";
 import type { UserSummary } from "@/types";
 
@@ -31,7 +31,13 @@ export function UserAvatar({ user, size = "md", badge, className = "" }: UserAva
   const fullName = `${user.firstName} ${user.lastName}`.trim();
   const [imageFailed, setImageFailed] = useState(false);
 
-  const wrapper = (inner: ReactNode) => (
+  const prevUserIdRef = useRef(user.id);
+  if (prevUserIdRef.current !== user.id) {
+    prevUserIdRef.current = user.id;
+    setImageFailed(false);
+  }
+
+  const renderShell = (inner: ReactNode) => (
     <div
       className={`relative flex-shrink-0 ${className}`}
       style={style}
@@ -47,7 +53,7 @@ export function UserAvatar({ user, size = "md", badge, className = "" }: UserAva
   );
 
   if (user.avatarUrl && !imageFailed) {
-    return wrapper(
+    return renderShell(
       <span className="rounded-full overflow-hidden block w-full h-full">
         <Image
           src={getAvatarSrc(user.avatarUrl)}
@@ -63,7 +69,7 @@ export function UserAvatar({ user, size = "md", badge, className = "" }: UserAva
   }
 
   if (user.avatarPreset && user.avatarPreset !== "initials" && !imageFailed) {
-    return wrapper(
+    return renderShell(
       <span className="rounded-full overflow-hidden block w-full h-full">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -79,7 +85,7 @@ export function UserAvatar({ user, size = "md", badge, className = "" }: UserAva
   const { from, to, angle } = getGradient(user);
   const initials = getInitials(user);
 
-  return wrapper(
+  return renderShell(
     <span
       className={`relative rounded-full flex items-center justify-center overflow-hidden text-white w-full h-full ${text}`}
       style={{
