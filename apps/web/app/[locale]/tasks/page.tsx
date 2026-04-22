@@ -16,6 +16,7 @@ import {
   Service,
 } from "@/types";
 import { usePermissions } from "@/hooks/usePermissions";
+import { UserAvatar } from "@/components/UserAvatar";
 import { usersService } from "@/services/users.service";
 import { servicesService } from "@/services/services.service";
 import { TaskForm } from "@/components/tasks/TaskForm";
@@ -610,18 +611,15 @@ export default function TasksPage() {
                                     <div className="flex -space-x-1">
                                       {task.assignees
                                         .slice(0, 3)
-                                        .map((assignment, idx) => (
-                                          <div
-                                            key={assignment.userId || idx}
-                                            className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] border border-white"
-                                            title={`${assignment.user?.firstName || ""} ${assignment.user?.lastName || ""}`}
-                                          >
-                                            {assignment.user?.firstName?.[0] ||
-                                              "?"}
-                                            {assignment.user?.lastName?.[0] ||
-                                              ""}
-                                          </div>
-                                        ))}
+                                        .map((assignment, idx) =>
+                                          assignment.user ? (
+                                            <UserAvatar
+                                              key={assignment.userId || idx}
+                                              user={assignment.user}
+                                              size="xs"
+                                            />
+                                          ) : null
+                                        )}
                                       {task.assignees.length > 3 && (
                                         <div className="w-5 h-5 rounded-full bg-gray-400 text-white flex items-center justify-center text-[10px] border border-white">
                                           +{task.assignees.length - 3}
@@ -639,10 +637,10 @@ export default function TasksPage() {
                                 ) : (
                                   task.assignee && (
                                     <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
-                                      <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">
-                                        {task.assignee.firstName[0]}
-                                        {task.assignee.lastName[0]}
-                                      </div>
+                                      <UserAvatar
+                                        user={task.assignee}
+                                        size="xs"
+                                      />
                                       <span>
                                         {task.assignee.firstName}{" "}
                                         {task.assignee.lastName}
