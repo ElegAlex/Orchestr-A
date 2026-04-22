@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import {
   usersService,
@@ -9,36 +8,7 @@ import {
   PresenceData,
 } from "@/services/users.service";
 import { usePermissions } from "@/hooks/usePermissions";
-
-function UserPresenceCard({ user }: { user: UserPresenceItem }) {
-  const initials = `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-
-  return (
-    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-      <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium overflow-hidden">
-        {user.avatarUrl ? (
-          <Image
-            src={user.avatarUrl}
-            alt={`${user.firstName} ${user.lastName}`}
-            width={36}
-            height={36}
-            className="rounded-full object-cover"
-          />
-        ) : (
-          initials
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">
-          {user.firstName} {user.lastName}
-        </p>
-        {user.serviceName && (
-          <p className="text-xs text-gray-500 truncate">{user.serviceName}</p>
-        )}
-      </div>
-    </div>
-  );
-}
+import { UserAvatar } from "@/components/UserAvatar";
 
 function PresenceList({
   users,
@@ -56,7 +26,17 @@ function PresenceList({
   return (
     <div className="max-h-[300px] overflow-y-auto space-y-1 pr-2">
       {users.map((user) => (
-        <UserPresenceCard key={user.id} user={user} />
+        <div key={user.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+          <UserAvatar user={user} size="md" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">
+              {user.firstName} {user.lastName}
+            </p>
+            {user.serviceName && (
+              <p className="text-xs text-gray-500 truncate">{user.serviceName}</p>
+            )}
+          </div>
+        </div>
       ))}
     </div>
   );

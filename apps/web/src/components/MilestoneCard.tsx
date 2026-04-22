@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Milestone, Task, MilestoneStatus, TaskStatus } from "@/types";
+import { Milestone, Task, MilestoneStatus, TaskStatus, User } from "@/types";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { tasksService } from "@/services/tasks.service";
 import toast from "react-hot-toast";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface MilestoneCardProps {
   milestone: Milestone;
@@ -138,7 +139,7 @@ export function MilestoneCard({
 
   // Obtenir les contributeurs uniques
   const contributors = Array.from(
-    new Set(tasks.map((t) => t.assignee).filter(Boolean)),
+    new Set(tasks.map((t) => t.assignee).filter((a): a is User => Boolean(a))),
   ).slice(0, 3);
 
   return (
@@ -219,14 +220,12 @@ export function MilestoneCard({
           {contributors.length > 0 && (
             <div className="flex -space-x-2">
               {contributors.map((contributor, idx) => (
-                <div
+                <UserAvatar
                   key={idx}
-                  className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold border-2 border-white"
-                  title={`${contributor?.firstName} ${contributor?.lastName}`}
-                >
-                  {contributor?.firstName?.[0]}
-                  {contributor?.lastName?.[0]}
-                </div>
+                  user={contributor}
+                  size="sm"
+                  className="ring-2 ring-white"
+                />
               ))}
             </div>
           )}

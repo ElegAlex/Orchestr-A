@@ -15,6 +15,7 @@ import { servicesService } from "@/services/services.service";
 import { Project, User, Service } from "@/types";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ProjectIcon } from "@/components/ProjectIcon";
+import { UserAvatar } from "@/components/UserAvatar";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import toast from "react-hot-toast";
@@ -434,14 +435,12 @@ export default function EventsPage() {
                           </span>
                           <div className="flex -space-x-1">
                             {event.participants.slice(0, 5).map((p) => (
-                              <div
+                              <UserAvatar
                                 key={p.userId}
-                                className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs border border-white"
-                                title={`${p.user.firstName} ${p.user.lastName}`}
-                              >
-                                {p.user.firstName[0]}
-                                {p.user.lastName[0]}
-                              </div>
+                                user={p.user}
+                                size="sm"
+                                className="ring-2 ring-white"
+                              />
                             ))}
                             {event.participants.length > 5 && (
                               <div className="w-6 h-6 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs border border-white">
