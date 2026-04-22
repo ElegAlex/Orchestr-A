@@ -13,11 +13,8 @@ import { useTranslations, useLocale } from "next-intl";
 import { useRouter, usePathname } from "next/navigation";
 import { IcsExportSection } from "@/components/planning-export/IcsExportSection";
 import { IcsImportSection } from "@/components/planning-export/IcsImportSection";
+import { PERSONA_PRESETS } from "@/constants/avatar-presets";
 
-const PERSONA_PRESETS = Array.from(
-  { length: 48 },
-  (_, i) => `persona_${String(i + 1).padStart(2, "0")}`,
-);
 const INITIALS_PRESET = "initials";
 
 type TabType = "personal" | "security" | "preferences" | "import-export";
@@ -156,7 +153,7 @@ export default function ProfilePage() {
           <div className="flex items-start space-x-6">
             {/* Avatar */}
             <div className="flex-shrink-0">
-              <UserAvatar user={user} size="lg" />
+              <UserAvatar user={user} size="xl" />
             </div>
 
             {/* Info */}
@@ -375,7 +372,7 @@ export default function ProfilePage() {
                 <div className="flex items-start gap-6">
                   {/* Current avatar preview */}
                   <div className="flex-shrink-0">
-                    <UserAvatar user={user} size="lg" />
+                    <UserAvatar user={user} size="xl" />
                   </div>
                   <div className="flex-1 space-y-4">
                     {/* Initials preset */}
@@ -395,7 +392,7 @@ export default function ProfilePage() {
                       >
                         <UserAvatar
                           user={{ ...user, avatarUrl: null, avatarPreset: "initials" }}
-                          size="md"
+                          size="lg"
                         />
                       </button>
                     </div>

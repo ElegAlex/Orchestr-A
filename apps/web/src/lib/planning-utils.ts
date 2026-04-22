@@ -38,7 +38,6 @@ export const getGroupColors = (color: string, isManagement: boolean) => {
       text: "text-amber-900",
       badge: "bg-amber-500",
       border: "border-l-4 border-amber-300",
-      avatar: "bg-amber-600",
     };
   }
 
@@ -49,7 +48,6 @@ export const getGroupColors = (color: string, isManagement: boolean) => {
       text: string;
       badge: string;
       border: string;
-      avatar: string;
     }
   > = {
     blue: {
@@ -58,7 +56,6 @@ export const getGroupColors = (color: string, isManagement: boolean) => {
       text: "text-blue-900",
       badge: "bg-blue-500",
       border: "border-l-4 border-blue-300",
-      avatar: "bg-blue-600",
     },
     emerald: {
       header:
@@ -66,7 +63,6 @@ export const getGroupColors = (color: string, isManagement: boolean) => {
       text: "text-emerald-900",
       badge: "bg-emerald-500",
       border: "border-l-4 border-emerald-300",
-      avatar: "bg-emerald-600",
     },
     purple: {
       header:
@@ -74,7 +70,6 @@ export const getGroupColors = (color: string, isManagement: boolean) => {
       text: "text-purple-900",
       badge: "bg-purple-500",
       border: "border-l-4 border-purple-300",
-      avatar: "bg-purple-600",
     },
     pink: {
       header:
@@ -82,7 +77,6 @@ export const getGroupColors = (color: string, isManagement: boolean) => {
       text: "text-pink-900",
       badge: "bg-pink-500",
       border: "border-l-4 border-pink-300",
-      avatar: "bg-pink-600",
     },
     slate: {
       header:
@@ -90,7 +84,6 @@ export const getGroupColors = (color: string, isManagement: boolean) => {
       text: "text-slate-900",
       badge: "bg-slate-500",
       border: "border-l-4 border-slate-300",
-      avatar: "bg-slate-600",
     },
     cyan: {
       header:
@@ -98,7 +91,6 @@ export const getGroupColors = (color: string, isManagement: boolean) => {
       text: "text-cyan-900",
       badge: "bg-cyan-500",
       border: "border-l-4 border-cyan-300",
-      avatar: "bg-cyan-600",
     },
     indigo: {
       header:
@@ -106,7 +98,6 @@ export const getGroupColors = (color: string, isManagement: boolean) => {
       text: "text-indigo-900",
       badge: "bg-indigo-500",
       border: "border-l-4 border-indigo-300",
-      avatar: "bg-indigo-600",
     },
     gray: {
       header:
@@ -114,7 +105,6 @@ export const getGroupColors = (color: string, isManagement: boolean) => {
       text: "text-gray-900",
       badge: "bg-gray-500",
       border: "border-l-4 border-gray-300",
-      avatar: "bg-gray-600",
     },
   };
 

@@ -142,7 +142,7 @@ export class TimeTrackingService {
       },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
         },
         thirdParty: {
           select: {
@@ -152,7 +152,7 @@ export class TimeTrackingService {
           },
         },
         declaredBy: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
         },
         task: { select: { id: true, title: true } },
         project: { select: { id: true, name: true } },
@@ -302,7 +302,7 @@ export class TimeTrackingService {
         take: safeLimit,
         include: {
           user: {
-            select: { id: true, firstName: true, lastName: true },
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
           },
           thirdParty: {
             select: {
@@ -312,7 +312,7 @@ export class TimeTrackingService {
             },
           },
           declaredBy: {
-            select: { id: true, firstName: true, lastName: true },
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
           },
           task: { select: { id: true, title: true } },
           project: { select: { id: true, name: true } },
@@ -341,7 +341,7 @@ export class TimeTrackingService {
       where: { id },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, email: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true, email: true },
         },
         thirdParty: {
           select: {
@@ -351,7 +351,7 @@ export class TimeTrackingService {
           },
         },
         declaredBy: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
         },
         task: { select: { id: true, title: true, status: true } },
         project: { select: { id: true, name: true, status: true } },
@@ -452,7 +452,7 @@ export class TimeTrackingService {
       },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
         },
         thirdParty: {
           select: {
@@ -462,7 +462,7 @@ export class TimeTrackingService {
           },
         },
         declaredBy: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
         },
         task: { select: { id: true, title: true } },
         project: { select: { id: true, name: true } },
@@ -521,7 +521,7 @@ export class TimeTrackingService {
     const entries = await this.prisma.timeEntry.findMany({
       where,
       include: {
-        user: { select: { id: true, firstName: true, lastName: true } },
+        user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true } },
         task: { select: { id: true, title: true } },
         project: { select: { id: true, name: true } },
       },
@@ -654,10 +654,10 @@ export class TimeTrackingService {
         },
         include: {
           user: {
-            select: { id: true, firstName: true, lastName: true },
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
           },
           declaredBy: {
-            select: { id: true, firstName: true, lastName: true },
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
           },
           task: { select: { id: true, title: true } },
         },
@@ -679,7 +679,7 @@ export class TimeTrackingService {
             },
           },
           declaredBy: {
-            select: { id: true, firstName: true, lastName: true },
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
           },
           task: { select: { id: true, title: true } },
         },

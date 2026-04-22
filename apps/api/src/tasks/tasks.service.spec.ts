@@ -826,6 +826,7 @@ describe('TasksService', () => {
               firstName: true,
               lastName: true,
               avatarUrl: true,
+              avatarPreset: true,
             },
           },
         },

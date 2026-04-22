@@ -116,10 +116,10 @@ export class ProjectsService {
         where: { id: newProject.id },
         include: {
           manager: {
-            select: { id: true, firstName: true, lastName: true },
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
           },
           sponsor: {
-            select: { id: true, firstName: true, lastName: true },
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
           },
           members: {
             include: {
@@ -128,6 +128,8 @@ export class ProjectsService {
                   id: true,
                   firstName: true,
                   lastName: true,
+                  avatarUrl: true,
+                  avatarPreset: true,
                   email: true,
                 },
               },
@@ -200,14 +202,16 @@ export class ProjectsService {
               id: true,
               firstName: true,
               lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
               login: true,
             },
           },
           manager: {
-            select: { id: true, firstName: true, lastName: true },
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
           },
           sponsor: {
-            select: { id: true, firstName: true, lastName: true },
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
           },
           members: {
             take: 5,
@@ -217,6 +221,8 @@ export class ProjectsService {
                   id: true,
                   firstName: true,
                   lastName: true,
+                  avatarUrl: true,
+                  avatarPreset: true,
                   email: true,
                 },
               },
@@ -277,14 +283,16 @@ export class ProjectsService {
             id: true,
             firstName: true,
             lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
             login: true,
           },
         },
         manager: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
         },
         sponsor: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
         },
         members: {
           include: {
@@ -296,6 +304,7 @@ export class ProjectsService {
                 email: true,
                 role: true,
                 avatarUrl: true,
+                avatarPreset: true,
               },
             },
           },
@@ -403,10 +412,10 @@ export class ProjectsService {
       },
       include: {
         manager: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
         },
         sponsor: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
         },
         members: {
           include: {
@@ -415,6 +424,8 @@ export class ProjectsService {
                 id: true,
                 firstName: true,
                 lastName: true,
+                avatarUrl: true,
+                avatarPreset: true,
                 email: true,
               },
             },
@@ -527,6 +538,7 @@ export class ProjectsService {
             email: true,
             role: true,
             avatarUrl: true,
+            avatarPreset: true,
           },
         },
       },
@@ -566,7 +578,7 @@ export class ProjectsService {
     return this.prisma.projectMember.update({
       where: { projectId_userId: { projectId, userId } },
       data,
-      include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true, email: true } } },
     });
   }
 
@@ -630,10 +642,10 @@ export class ProjectsService {
       },
       include: {
         manager: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
         },
         sponsor: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
         },
         members: {
           take: 5,
@@ -643,6 +655,8 @@ export class ProjectsService {
                 id: true,
                 firstName: true,
                 lastName: true,
+                avatarUrl: true,
+                avatarPreset: true,
               },
             },
           },

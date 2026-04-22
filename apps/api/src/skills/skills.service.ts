@@ -111,6 +111,7 @@ export class SkillsService {
                 lastName: true,
                 email: true,
                 avatarUrl: true,
+                avatarPreset: true,
                 department: {
                   select: {
                     id: true,
@@ -377,6 +378,8 @@ export class SkillsService {
           firstName: true,
           lastName: true,
           email: true,
+          avatarUrl: true,
+          avatarPreset: true,
           role: {
             select: { code: true },
           },
@@ -482,6 +485,7 @@ export class SkillsService {
             email: true,
             role: true,
             avatarUrl: true,
+            avatarPreset: true,
             isActive: true,
             department: {
               select: {

@@ -207,6 +207,8 @@ export class UsersService {
         login: true,
         firstName: true,
         lastName: true,
+        avatarUrl: true,
+        avatarPreset: true,
         roleId: true,
         role: {
           select: {
@@ -218,7 +220,6 @@ export class UsersService {
           },
         },
         departmentId: true,
-        avatarUrl: true,
         isActive: true,
         createdAt: true,
         department: {
@@ -335,6 +336,8 @@ export class UsersService {
         login: true,
         firstName: true,
         lastName: true,
+        avatarUrl: true,
+        avatarPreset: true,
         roleId: true,
         role: {
           select: {
@@ -346,7 +349,6 @@ export class UsersService {
           },
         },
         departmentId: true,
-        avatarUrl: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -516,6 +518,8 @@ export class UsersService {
         login: true,
         firstName: true,
         lastName: true,
+        avatarUrl: true,
+        avatarPreset: true,
         roleId: true,
         role: {
           select: {
@@ -527,7 +531,6 @@ export class UsersService {
           },
         },
         departmentId: true,
-        avatarUrl: true,
         isActive: true,
         updatedAt: true,
         department: {
@@ -816,6 +819,8 @@ export class UsersService {
         id: true,
         firstName: true,
         lastName: true,
+        avatarUrl: true,
+        avatarPreset: true,
         email: true,
         role: {
           select: { id: true, code: true, label: true, templateKey: true },
@@ -848,6 +853,8 @@ export class UsersService {
         id: true,
         firstName: true,
         lastName: true,
+        avatarUrl: true,
+        avatarPreset: true,
         email: true,
         role: {
           select: { id: true, code: true, label: true, templateKey: true },
@@ -866,6 +873,8 @@ export class UsersService {
         id: true,
         firstName: true,
         lastName: true,
+        avatarUrl: true,
+        avatarPreset: true,
         email: true,
         departmentId: true,
       },
@@ -992,6 +1001,8 @@ export class UsersService {
             login: true,
             firstName: true,
             lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
             roleId: true,
             role: {
               select: { id: true, code: true, label: true, templateKey: true },
@@ -1244,6 +1255,7 @@ export class UsersService {
         firstName: true,
         lastName: true,
         avatarUrl: true,
+        avatarPreset: true,
         department: {
           select: {
             name: true,
@@ -1327,6 +1339,7 @@ export class UsersService {
       firstName: string;
       lastName: string;
       avatarUrl?: string;
+      avatarPreset?: string | null;
       serviceName?: string;
       departmentName?: string;
     }> = [];
@@ -1340,6 +1353,7 @@ export class UsersService {
         firstName: user.firstName,
         lastName: user.lastName,
         avatarUrl: user.avatarUrl ?? undefined,
+        avatarPreset: user.avatarPreset ?? undefined,
         serviceName: user.userServices[0]?.service?.name,
         departmentName: user.department?.name,
       };

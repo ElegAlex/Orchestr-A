@@ -11,6 +11,7 @@ import {
 import type { HealthStatus } from './types';
 import { format } from 'date-fns';
 import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { UserAvatar } from '@/components/UserAvatar';
 
 interface GanttTooltipProps {
   row: GanttPortfolioRow | GanttTaskRow;
@@ -42,30 +43,6 @@ function StatusBadge({ color, label }: { color: string; label: string }) {
       }}
     >
       {label}
-    </span>
-  );
-}
-
-function Avatar({ name }: { name: string }) {
-  const initials = name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-  return (
-    <span
-      className="inline-flex items-center justify-center shrink-0 rounded-full"
-      style={{
-        width: 20,
-        height: 20,
-        fontSize: 9,
-        fontWeight: 600,
-        backgroundColor: '#E2E8F0',
-        color: '#475569',
-      }}
-    >
-      {initials}
     </span>
   );
 }
@@ -146,10 +123,10 @@ function ProjectTooltip({ row }: { row: GanttTaskRow }) {
       <Row label="Statut">
         <StatusBadge color={color} label={label} />
       </Row>
-      {row.assigneeName && (
+      {(row.assignee || row.assigneeName) && (
         <Row label="Assigné">
-          <Avatar name={row.assigneeName} />
-          <span style={{ fontSize: 12, color: '#334155' }}>{row.assigneeName}</span>
+          {row.assignee && <UserAvatar user={row.assignee} size="xs" />}
+          {row.assigneeName && <span style={{ fontSize: 12, color: '#334155' }}>{row.assigneeName}</span>}
         </Row>
       )}
       <Row label="Dates">
@@ -182,10 +159,10 @@ function PortfolioTooltip({ row }: { row: GanttPortfolioRow }) {
       <Row label="Santé">
         <StatusBadge color={color} label={label} />
       </Row>
-      {row.managerName && (
+      {(row.manager || row.managerName) && (
         <Row label="Chef de projet">
-          <Avatar name={row.managerName} />
-          <span style={{ fontSize: 12, color: '#334155' }}>{row.managerName}</span>
+          {row.manager && <UserAvatar user={row.manager} size="xs" />}
+          {row.managerName && <span style={{ fontSize: 12, color: '#334155' }}>{row.managerName}</span>}
         </Row>
       )}
       <Row label="Dates">

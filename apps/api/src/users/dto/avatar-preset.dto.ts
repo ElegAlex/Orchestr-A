@@ -1,3 +1,4 @@
+// KEEP IN SYNC WITH apps/web/src/constants/avatar-presets.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { IsIn } from 'class-validator';
 

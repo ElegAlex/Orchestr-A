@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { skillsService } from "@/services/skills.service";
 import { SkillCategory, SkillLevel } from "@/types";
 import toast from "react-hot-toast";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface MatrixData {
   totalUsers: number;
@@ -788,8 +789,6 @@ export function SkillsMatrix() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredUsers.map((row) => {
-              const initials =
-                `${row.user.firstName[0]}${row.user.lastName[0]}`.toUpperCase();
               const skillsMap = new Map(
                 row.skills.map((s) => [s.skillId, s.level]),
               );
@@ -807,9 +806,7 @@ export function SkillsMatrix() {
                     ${isRowHighlighted ? "bg-blue-50" : "bg-white"}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-medium">
-                        {initials}
-                      </div>
+                      <UserAvatar user={row.user} size="sm" />
                       <div>
                         <p className="text-sm font-medium text-gray-900">
                           {row.user.firstName} {row.user.lastName}

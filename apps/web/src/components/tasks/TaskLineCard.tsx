@@ -2,6 +2,7 @@
 
 import { Task, TaskStatus, Priority } from "@/types";
 import { useTranslations } from "next-intl";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface TaskLineCardProps {
   task: Task;
@@ -87,16 +88,15 @@ export function TaskLineCard({
         {/* Assignees */}
         {task.assignees && task.assignees.length > 0 && (
           <div className="flex -space-x-1 shrink-0">
-            {task.assignees.slice(0, 3).map((a, idx) => (
-              <div
-                key={a.userId || idx}
-                className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] border border-white"
-                title={`${a.user?.firstName || ""} ${a.user?.lastName || ""}`}
-              >
-                {a.user?.firstName?.[0] || "?"}
-                {a.user?.lastName?.[0] || ""}
-              </div>
-            ))}
+            {task.assignees.slice(0, 3).map((a, idx) =>
+              a.user ? (
+                <UserAvatar
+                  key={a.userId || idx}
+                  user={a.user}
+                  size="xs"
+                />
+              ) : null
+            )}
             {task.assignees.length > 3 && (
               <div className="w-6 h-6 rounded-full bg-gray-400 text-white flex items-center justify-center text-[10px] border border-white">
                 +{task.assignees.length - 3}

@@ -206,6 +206,7 @@ export interface UserPresenceItem {
   firstName: string;
   lastName: string;
   avatarUrl?: string;
+  avatarPreset?: string | null;
   serviceName?: string;
   departmentName?: string;
 }

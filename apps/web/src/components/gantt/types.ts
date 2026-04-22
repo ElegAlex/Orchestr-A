@@ -2,7 +2,7 @@
 // GANTT COMPONENT — SHARED TYPES
 // ===========================
 
-import type { TaskStatus } from '@/types';
+import type { TaskStatus, UserSummary } from '@/types';
 
 // ===========================
 // ENUMS & LITERALS
@@ -29,7 +29,10 @@ export interface GanttPortfolioRow {
   health: HealthStatus;
   /** Optional metadata */
   departmentName?: string;
+  /** @deprecated use manager?.firstName + manager?.lastName instead — kept for tooltip text */
   managerName?: string;
+  /** Full manager object for avatar rendering */
+  manager?: UserSummary | null;
   code?: string;
   priority?: string;
 }
@@ -49,8 +52,12 @@ export interface GanttTaskRow {
   epicName?: string;
   /** When true, render as a diamond marker instead of a bar */
   isMilestone: boolean;
+  /** @deprecated use assignee?.firstName + assignee?.lastName instead — kept for tooltip text */
   assigneeName?: string;
+  /** @deprecated use assignee?.avatarUrl / assignee?.avatarPreset instead */
   assigneeAvatar?: string;
+  /** Full assignee object for avatar rendering */
+  assignee?: UserSummary | null;
   priority?: string;
 }
 

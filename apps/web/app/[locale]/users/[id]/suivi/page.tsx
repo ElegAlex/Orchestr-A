@@ -14,6 +14,7 @@ import { projectsService } from "@/services/projects.service";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import { withAccessControl } from "@/components/withAccessControl";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   User,
   Task,
@@ -418,10 +419,7 @@ function SuiviPage() {
             <div className="flex items-center space-x-4">
               {user && (
                 <>
-                  <div className="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center text-lg font-semibold">
-                    {user.firstName?.[0]}
-                    {user.lastName?.[0]}
-                  </div>
+                  <UserAvatar user={user} size="xl" />
                   <div>
                     <h1 className="text-2xl font-bold text-gray-900">
                       {user.firstName} {user.lastName}
@@ -464,10 +462,7 @@ function SuiviPage() {
                           u.id === userId ? "bg-purple-50 font-medium" : ""
                         }`}
                       >
-                        <div className="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center text-xs font-semibold flex-shrink-0">
-                          {u.firstName?.[0]}
-                          {u.lastName?.[0]}
-                        </div>
+                        <UserAvatar user={u} size="md" />
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
                             {u.firstName} {u.lastName}

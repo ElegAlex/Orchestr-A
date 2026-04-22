@@ -40,6 +40,7 @@ import { TaskListView } from "@/components/tasks/TaskListView";
 import { getTaskProgress } from "@/lib/task-progress";
 import api from "@/lib/api";
 import { ProjectIcon } from "@/components/ProjectIcon";
+import { UserAvatar } from "@/components/UserAvatar";
 
 const GanttChart = dynamic(() => import("@/components/GanttChart"), {
   ssr: false,
@@ -1518,18 +1519,15 @@ export default function ProjectDetailPage() {
                                           <div className="flex -space-x-1">
                                             {task.assignees
                                               .slice(0, 3)
-                                              .map((assignment, idx) => (
-                                                <div
-                                                  key={assignment.userId || idx}
-                                                  className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] border border-white"
-                                                  title={`${assignment.user?.firstName || ""} ${assignment.user?.lastName || ""}`}
-                                                >
-                                                  {assignment.user
-                                                    ?.firstName?.[0] || "?"}
-                                                  {assignment.user
-                                                    ?.lastName?.[0] || ""}
-                                                </div>
-                                              ))}
+                                              .map((assignment, idx) =>
+                                                assignment.user ? (
+                                                  <UserAvatar
+                                                    key={assignment.userId || idx}
+                                                    user={assignment.user}
+                                                    size="xs"
+                                                  />
+                                                ) : null
+                                              )}
                                             {task.assignees.length > 3 && (
                                               <div className="w-5 h-5 rounded-full bg-gray-400 text-white flex items-center justify-center text-[10px] border border-white">
                                                 +{task.assignees.length - 3}
@@ -1547,10 +1545,7 @@ export default function ProjectDetailPage() {
                                       ) : (
                                         task.assignee && (
                                           <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
-                                            <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">
-                                              {task.assignee.firstName[0]}
-                                              {task.assignee.lastName[0]}
-                                            </div>
+                                            <UserAvatar user={task.assignee} size="xs" />
                                             <span>
                                               {task.assignee.firstName}{" "}
                                               {task.assignee.lastName}
@@ -1643,10 +1638,13 @@ export default function ProjectDetailPage() {
                     <div key={member.id} className="p-6">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
-                            {member.user?.firstName[0]}
-                            {member.user?.lastName[0]}
-                          </div>
+                          {member.user ? (
+                            <UserAvatar user={member.user} size="lg" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
+                              ?
+                            </div>
+                          )}
                           <div>
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold text-gray-900">

@@ -102,7 +102,6 @@ describe("planning-utils", () => {
       expect(result.text).toContain("amber");
       expect(result.badge).toContain("amber");
       expect(result.border).toContain("amber");
-      expect(result.avatar).toContain("amber");
     });
 
     it("should return blue colors when isManagement is false and color is blue", () => {
@@ -111,7 +110,6 @@ describe("planning-utils", () => {
       expect(result.text).toBe("text-blue-900");
       expect(result.badge).toBe("bg-blue-500");
       expect(result.border).toContain("blue");
-      expect(result.avatar).toBe("bg-blue-600");
     });
 
     it("should return emerald colors", () => {
@@ -171,7 +169,6 @@ describe("planning-utils", () => {
       expect(result).toHaveProperty("text");
       expect(result).toHaveProperty("badge");
       expect(result).toHaveProperty("border");
-      expect(result).toHaveProperty("avatar");
     });
   });
 

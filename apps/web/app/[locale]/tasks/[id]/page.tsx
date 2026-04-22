@@ -30,6 +30,7 @@ import { getTaskProgress } from "@/lib/task-progress";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface TaskMilestone {
   name: string;
@@ -991,10 +992,12 @@ export default function TaskDetailPage() {
                           key={assignment.userId}
                           className="flex items-center space-x-3"
                         >
-                          <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
-                            {assignment.user?.firstName?.[0] || "?"}
-                            {assignment.user?.lastName?.[0] || ""}
-                          </div>
+                          {assignment.user && (
+                            <UserAvatar
+                              user={assignment.user}
+                              size="md"
+                            />
+                          )}
                           <div>
                             <p className="font-medium text-gray-900">
                               {assignment.user?.firstName}{" "}
@@ -1008,10 +1011,10 @@ export default function TaskDetailPage() {
                       ))
                     : task.assignee && (
                         <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
-                            {task.assignee.firstName[0]}
-                            {task.assignee.lastName[0]}
-                          </div>
+                          <UserAvatar
+                            user={task.assignee}
+                            size="md"
+                          />
                           <div>
                             <p className="font-medium text-gray-900">
                               {task.assignee.firstName} {task.assignee.lastName}

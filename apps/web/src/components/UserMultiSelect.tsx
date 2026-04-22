@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { User } from "@/types";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface UserMultiSelectProps {
   users: User[];
@@ -98,10 +99,7 @@ export function UserMultiSelect({
             key={user.id}
             className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm"
           >
-            <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-medium">
-              {user.firstName[0]}
-              {user.lastName[0]}
-            </span>
+            <UserAvatar user={user} size="xs" />
             <span className="max-w-[120px] truncate">
               {user.firstName} {user.lastName}
             </span>
@@ -193,10 +191,7 @@ export function UserMultiSelect({
                   </div>
 
                   {/* Avatar */}
-                  <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-medium flex-shrink-0">
-                    {user.firstName[0]}
-                    {user.lastName[0]}
-                  </div>
+                  <UserAvatar user={user} size="sm" />
 
                   {/* Nom */}
                   <div className="flex-1 min-w-0">
