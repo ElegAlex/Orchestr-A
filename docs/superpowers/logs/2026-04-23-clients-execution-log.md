@@ -193,4 +193,43 @@ Escape criteria de l'advisor : « if the legacy seed references cross more than 
 
 ---
 
+## Wave 2 — Backend (2 subagents Sonnet parallèles)
+
+**Exécuté** : 2026-04-23, ≈7 min en parallèle (W2-B 4min48s, W2-A 6min33s)
+
+### W2-A (subagent Sonnet) — Module `clients/*`
+- **SHA** : `625c65f`
+- **Fichiers créés** : 9 (`clients.module.ts`, `clients.controller.ts`, `clients.service.ts`, `projects-clients.controller.ts`, 3 DTOs, 2 specs Vitest)
+- **Fichier modifié** : `apps/api/src/app.module.ts` (ajout `ClientsModule` dans imports)
+- **Tests** : 35 nouveaux (28 service + 7 controller)
+- **Décisions ad-hoc** :
+  - `AssignClientToProjectDto` inline dans `projects-clients.controller.ts` (DTO trivial, 1 champ `clientId: IsUUID`)
+  - `GET /clients/:id/projects` : 2 requêtes parallèles `timeEntry.groupBy` + `project.findMany` pour éviter N+1, pas de filtre `isDismissal` (spec explicite "interne + tiers")
+  - `hardDelete` lève `ConflictException` (409) si `projectClient.count > 0` — conforme au spec §5 (refus si projets rattachés)
+  - `GET /clients/:id/projects` gaté par `@RequirePermissions('clients:read', 'projects:read')` (AND)
+
+### W2-B (subagent Sonnet) — Extensions `projects`
+- **SHA** : `32dd3db`
+- **Fichier créé** : `apps/api/src/projects/dto/query-projects.dto.ts`
+- **Fichiers modifiés** : `projects.service.ts` (+ `clients` filter + enrichment N:M flatten), `projects.controller.ts` (6e `@Query('clients')` + `@ApiQuery`), `projects.service.spec.ts` (+ 4 tests clients), `projects.controller.spec.ts` (2 tests ajustés pour nouveau nombre d'args)
+- **Tests** : 4 nouveaux + 2 corrigés
+- **Décisions ad-hoc** :
+  - Controller garde les `@Query()` individuels (pas de `@Query() query: QueryProjectsDto`) pour éviter un refactor hors scope
+  - UUIDs invalides rejetés via `isUUID` (class-validator, déjà dépendance)
+
+### Règle de non-conflit respectée
+- W2-A : `apps/api/src/clients/*` + `app.module.ts` (seul)
+- W2-B : `apps/api/src/projects/*` uniquement
+- Aucun fichier commun, pas de merge conflict lors des 2 commits successifs.
+
+### Gate W2
+- `pnpm run build` : ✅ 3 tasks successful, 5.9s (cached)
+- `pnpm run test` : ✅ 6 tasks successful (api 1128 tests, rbac 108 tests, web 514 tests — tous verts)
+- `grep -c @RequirePermissions` : 7 dans clients.controller + 3 dans projects-clients.controller = 10 endpoints protégés
+
+**Statut** : `W2 PASS`. Branche poussée sur origin.
+
+---
+
+
 
