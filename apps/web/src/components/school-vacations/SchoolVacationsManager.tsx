@@ -18,12 +18,15 @@ export function SchoolVacationsManager() {
 
   // School year logic: if month >= September (8), use current year; else use current year - 1
   const now = new Date();
-  const currentSchoolYear = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+  const currentSchoolYear =
+    now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
   const [selectedYear, setSelectedYear] = useState(currentSchoolYear);
   const [vacations, setVacations] = useState<SchoolVacation[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingVacation, setEditingVacation] = useState<SchoolVacation | null>(null);
+  const [editingVacation, setEditingVacation] = useState<SchoolVacation | null>(
+    null,
+  );
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -45,7 +48,8 @@ export function SchoolVacationsManager() {
 
   const sortedVacations = useMemo(() => {
     return [...vacations].sort(
-      (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     );
   }, [vacations]);
 
@@ -74,7 +78,8 @@ export function SchoolVacationsManager() {
   const handleImport = async () => {
     setIsImporting(true);
     try {
-      const result = await schoolVacationsService.importFromOpenData(selectedYear);
+      const result =
+        await schoolVacationsService.importFromOpenData(selectedYear);
       toast.success(
         t("messages.importSuccess", {
           created: result.created,
@@ -198,7 +203,11 @@ export function SchoolVacationsManager() {
                 />
               </svg>
             )}
-            <span>{t("importButton", { year: `${selectedYear}-${selectedYear + 1}` })}</span>
+            <span>
+              {t("importButton", {
+                year: `${selectedYear}-${selectedYear + 1}`,
+              })}
+            </span>
           </button>
           <button
             onClick={handleCreate}
@@ -255,15 +264,14 @@ export function SchoolVacationsManager() {
             ) : sortedVacations.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                  {t("table.empty", { year: `${selectedYear}-${selectedYear + 1}` })}
+                  {t("table.empty", {
+                    year: `${selectedYear}-${selectedYear + 1}`,
+                  })}
                 </td>
               </tr>
             ) : (
               sortedVacations.map((vacation) => (
-                <tr
-                  key={vacation.id}
-                  className="hover:bg-gray-100 transition"
-                >
+                <tr key={vacation.id} className="hover:bg-gray-100 transition">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="font-medium text-gray-900">
                       {vacation.name}

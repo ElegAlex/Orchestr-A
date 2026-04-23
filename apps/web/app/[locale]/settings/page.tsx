@@ -344,9 +344,8 @@ export default function SettingsPage() {
                     const currentDays = (settings[
                       "planning.visibleDays"
                     ] as number[]) || [1, 2, 3, 4, 5];
-                    const currentSpecialDays = (settings[
-                      "planning.specialDays"
-                    ] as number[]) || [];
+                    const currentSpecialDays =
+                      (settings["planning.specialDays"] as number[]) || [];
                     const isChecked = currentDays.includes(day.isoDay);
                     const isLastChecked = isChecked && currentDays.length === 1;
                     const isSpecial = currentSpecialDays.includes(day.isoDay);
@@ -372,7 +371,9 @@ export default function SettingsPage() {
                               if (isChecked && isSpecial) {
                                 handleChange(
                                   "planning.specialDays",
-                                  currentSpecialDays.filter((d) => d !== day.isoDay),
+                                  currentSpecialDays.filter(
+                                    (d) => d !== day.isoDay,
+                                  ),
                                 );
                               }
                             }}
@@ -393,11 +394,16 @@ export default function SettingsPage() {
                             disabled={!isChecked}
                             onChange={() => {
                               const newSpecialDays = isSpecial
-                                ? currentSpecialDays.filter((d) => d !== day.isoDay)
+                                ? currentSpecialDays.filter(
+                                    (d) => d !== day.isoDay,
+                                  )
                                 : [...currentSpecialDays, day.isoDay].sort(
                                     (a, b) => a - b,
                                   );
-                              handleChange("planning.specialDays", newSpecialDays);
+                              handleChange(
+                                "planning.specialDays",
+                                newSpecialDays,
+                              );
                             }}
                             className="h-4 w-4 text-gray-600 rounded border-gray-300 focus:ring-gray-500 disabled:opacity-50"
                           />
@@ -435,13 +441,21 @@ export default function SettingsPage() {
                   {t("schoolVacations.zoneLabel")}
                 </h3>
                 <select
-                  value={(settings["planning.schoolVacationZone"] as string) ?? "C"}
-                  onChange={(e) => handleChange("planning.schoolVacationZone", e.target.value)}
+                  value={
+                    (settings["planning.schoolVacationZone"] as string) ?? "C"
+                  }
+                  onChange={(e) =>
+                    handleChange("planning.schoolVacationZone", e.target.value)
+                  }
                   className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  {Object.entries(SCHOOL_VACATION_ZONE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
+                  {Object.entries(SCHOOL_VACATION_ZONE_LABELS).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ),
+                  )}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   {t("schoolVacations.zoneHint")}

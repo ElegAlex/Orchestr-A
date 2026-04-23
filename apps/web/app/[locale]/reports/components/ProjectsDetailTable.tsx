@@ -86,9 +86,7 @@ interface Row {
   rag: RagColor;
 }
 
-function computeRag(
-  project: ProjectDetail,
-): RagColor {
+function computeRag(project: ProjectDetail): RagColor {
   if (project.status === "COMPLETED" || project.status === "CANCELLED") {
     return "grey";
   }
@@ -137,9 +135,7 @@ function SortHeader({
       <span className="inline-flex items-center gap-1">
         {label}
         {sortKey === sortKeyName && (
-          <span className="text-blue-600">
-            {sortDir === "asc" ? "▲" : "▼"}
-          </span>
+          <span className="text-blue-600">{sortDir === "asc" ? "▲" : "▼"}</span>
         )}
       </span>
     </th>
@@ -171,8 +167,8 @@ export function ProjectsDetailTable({
         ]);
         const taskData = taskRes.data;
         const msData = msRes.data;
-        setTasks(Array.isArray(taskData) ? taskData : taskData.data ?? []);
-        setMilestones(Array.isArray(msData) ? msData : msData.data ?? []);
+        setTasks(Array.isArray(taskData) ? taskData : (taskData.data ?? []));
+        setMilestones(Array.isArray(msData) ? msData : (msData.data ?? []));
       } catch (err) {
         console.error("Error loading projects detail data:", err);
       }
@@ -299,10 +295,35 @@ export function ProjectsDetailTable({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <SortHeader label="RAG" sortKeyName="rag" className="w-16" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-              <SortHeader label="Projet" sortKeyName="name" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-              <SortHeader label="Statut" sortKeyName="status" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-              <SortHeader label="Progression" sortKeyName="progress" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              <SortHeader
+                label="RAG"
+                sortKeyName="rag"
+                className="w-16"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
+              <SortHeader
+                label="Projet"
+                sortKeyName="name"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
+              <SortHeader
+                label="Statut"
+                sortKeyName="status"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
+              <SortHeader
+                label="Progression"
+                sortKeyName="progress"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
               <SortHeader
                 label="Tâches"
                 sortKeyName="tasks"
@@ -311,8 +332,20 @@ export function ProjectsDetailTable({
                 sortDir={sortDir}
                 onSort={handleSort}
               />
-              <SortHeader label="Prochain jalon" sortKeyName="milestone" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-              <SortHeader label="Échéance" sortKeyName="dueDate" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              <SortHeader
+                label="Prochain jalon"
+                sortKeyName="milestone"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
+              <SortHeader
+                label="Échéance"
+                sortKeyName="dueDate"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
               <SortHeader
                 label="Heures"
                 sortKeyName="hours"
@@ -321,7 +354,13 @@ export function ProjectsDetailTable({
                 sortDir={sortDir}
                 onSort={handleSort}
               />
-              <SortHeader label="Chef de projet" sortKeyName="manager" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              <SortHeader
+                label="Chef de projet"
+                sortKeyName="manager"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">

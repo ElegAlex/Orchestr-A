@@ -64,11 +64,14 @@ export class TasksService {
     }
 
     // Vérification dynamique des permissions de création
-    const userPermissions =
-      await this.permissionsService.getPermissionsForRole(user.role);
+    const userPermissions = await this.permissionsService.getPermissionsForRole(
+      user.role,
+    );
     const canCreate = userPermissions.includes('tasks:create');
     const canCreateOrphan = userPermissions.includes('tasks:create_orphan');
-    const canCreateInProject = userPermissions.includes('tasks:create_in_project');
+    const canCreateInProject = userPermissions.includes(
+      'tasks:create_in_project',
+    );
 
     if (!canCreate && !canCreateOrphan && !canCreateInProject) {
       throw new ForbiddenException(
@@ -295,10 +298,9 @@ export class TasksService {
 
     // RBAC: filtrer par utilisateur si pas la permission tasks:readAll
     if (currentUser) {
-      const permissions =
-        await this.permissionsService.getPermissionsForRole(
-          currentUser.role,
-        );
+      const permissions = await this.permissionsService.getPermissionsForRole(
+        currentUser.role,
+      );
       if (!permissions.includes('tasks:readAll')) {
         where.OR = [
           { assigneeId: currentUser.id },
@@ -773,7 +775,7 @@ export class TasksService {
           task.assignees.some((a) => a.userId === user.id);
         if (!isAssignee) {
           throw new ForbiddenException(
-            "Vous ne pouvez supprimer que les tâches qui vous sont assignées",
+            'Vous ne pouvez supprimer que les tâches qui vous sont assignées',
           );
         }
       }
@@ -996,10 +998,9 @@ export class TasksService {
   ) {
     // If requesting another user's tasks, require tasks:readAll permission
     if (currentUser && userId !== currentUser.id) {
-      const permissions =
-        await this.permissionsService.getPermissionsForRole(
-          currentUser.role,
-        );
+      const permissions = await this.permissionsService.getPermissionsForRole(
+        currentUser.role,
+      );
       if (!permissions.includes('tasks:readAll')) {
         throw new ForbiddenException(
           "Vous n'avez pas la permission de consulter les tâches d'un autre utilisateur",
@@ -1795,7 +1796,11 @@ export class TasksService {
     });
   }
 
-  async updateSubtask(taskId: string, subtaskId: string, dto: UpdateSubtaskDto) {
+  async updateSubtask(
+    taskId: string,
+    subtaskId: string,
+    dto: UpdateSubtaskDto,
+  ) {
     const subtask = await this.prisma.subtask.findFirst({
       where: { id: subtaskId, taskId },
     });
@@ -1827,7 +1832,10 @@ export class TasksService {
 
     await Promise.all(
       subtaskIds.map((id, index) =>
-        this.prisma.subtask.update({ where: { id }, data: { position: index } }),
+        this.prisma.subtask.update({
+          where: { id },
+          data: { position: index },
+        }),
       ),
     );
 

@@ -145,7 +145,7 @@ describe('TimeTrackingService', () => {
       );
     });
 
-    it("falls back to task.projectId when dto.projectId is missing", async () => {
+    it('falls back to task.projectId when dto.projectId is missing', async () => {
       const taskOnly = {
         date: '2025-01-01',
         hours: 8,
@@ -662,11 +662,7 @@ describe('TimeTrackingService', () => {
       });
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
 
-      await service.getProjectReport(
-        'project-1',
-        '2025-01-01',
-        '2025-01-31',
-      );
+      await service.getProjectReport('project-1', '2025-01-01', '2025-01-31');
 
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledTimes(2);
       expect(mockPrismaService.timeEntry.findMany).toHaveBeenNthCalledWith(

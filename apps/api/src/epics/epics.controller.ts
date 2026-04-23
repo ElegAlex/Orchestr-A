@@ -72,7 +72,12 @@ export class EpicsController {
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
-    return this.epicsService.update(id, updateEpicDto, currentUserId, currentUserRole);
+    return this.epicsService.update(
+      id,
+      updateEpicDto,
+      currentUserId,
+      currentUserRole,
+    );
   }
 
   @Delete(':id')

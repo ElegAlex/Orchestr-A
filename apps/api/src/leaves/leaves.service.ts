@@ -1164,7 +1164,11 @@ export class LeavesService {
     const isOwner = leave.userId === currentUserId;
     const canManage =
       currentUserId && currentUserRole
-        ? await this.canManageLeave(leave.userId, currentUserId, currentUserRole)
+        ? await this.canManageLeave(
+            leave.userId,
+            currentUserId,
+            currentUserRole,
+          )
         : false;
 
     if (!isOwner && !canManage) {
@@ -1210,10 +1214,9 @@ export class LeavesService {
 
     if (!validator) return false;
 
-    const validatorPerms =
-      await this.permissionsService.getPermissionsForRole(
-        validator.role?.code ?? null,
-      );
+    const validatorPerms = await this.permissionsService.getPermissionsForRole(
+      validator.role?.code ?? null,
+    );
 
     // Accès global → peut tout valider
     if (validatorPerms.includes(MANAGE_ANY_LEAVES)) {
@@ -1281,9 +1284,7 @@ export class LeavesService {
     }
 
     if (leave.userId === validatorId) {
-      throw new ForbiddenException(
-        'Cannot approve your own leave request',
-      );
+      throw new ForbiddenException('Cannot approve your own leave request');
     }
 
     if (leave.status !== LeaveStatus.PENDING) {
@@ -1356,9 +1357,7 @@ export class LeavesService {
     }
 
     if (leave.userId === validatorId) {
-      throw new ForbiddenException(
-        'Cannot reject your own leave request',
-      );
+      throw new ForbiddenException('Cannot reject your own leave request');
     }
 
     if (leave.status !== LeaveStatus.PENDING) {
@@ -1565,7 +1564,14 @@ export class LeavesService {
       data: { status: LeaveStatus.APPROVED },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true, email: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+            email: true,
+          },
         },
         leaveType: true,
       },

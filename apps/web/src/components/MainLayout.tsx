@@ -33,12 +33,37 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       icon: "📁",
       permission: "projects:read",
     },
-    { key: "tasks", href: `/${locale}/tasks`, icon: "✓", permission: "tasks:read" },
-    { key: "events", href: `/${locale}/events`, icon: "📣", permission: "events:read" },
+    {
+      key: "tasks",
+      href: `/${locale}/tasks`,
+      icon: "✓",
+      permission: "tasks:read",
+    },
+    {
+      key: "events",
+      href: `/${locale}/events`,
+      icon: "📣",
+      permission: "events:read",
+    },
     { key: "planning", href: `/${locale}/planning`, icon: "🗓️" },
-    { key: "timeTracking", href: `/${locale}/time-tracking`, icon: "⏱️", permission: "time_tracking:read" },
-    { key: "leaves", href: `/${locale}/leaves`, icon: "🏖️", permission: "leaves:read" },
-    { key: "telework", href: `/${locale}/telework`, icon: "🏠", permission: "telework:read" },
+    {
+      key: "timeTracking",
+      href: `/${locale}/time-tracking`,
+      icon: "⏱️",
+      permission: "time_tracking:read",
+    },
+    {
+      key: "leaves",
+      href: `/${locale}/leaves`,
+      icon: "🏖️",
+      permission: "leaves:read",
+    },
+    {
+      key: "telework",
+      href: `/${locale}/telework`,
+      icon: "🏠",
+      permission: "telework:read",
+    },
   ];
 
   const adminNavigation: (NavItem & { permission?: PermissionCode })[] = [
@@ -125,22 +150,22 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               (item) => !item.permission || hasPermission(item.permission),
             )
             .map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
-                  isActive
-                    ? "bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-200"
-                    : "text-[var(--foreground)] hover:bg-[var(--accent)]"
-                }`}
-              >
-                <span className="text-xl mr-3">{item.icon}</span>
-                {sidebarOpen && <span>{t(`nav.${item.key}`)}</span>}
-              </Link>
-            );
-          })}
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition ${
+                    isActive
+                      ? "bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-200"
+                      : "text-[var(--foreground)] hover:bg-[var(--accent)]"
+                  }`}
+                >
+                  <span className="text-xl mr-3">{item.icon}</span>
+                  {sidebarOpen && <span>{t(`nav.${item.key}`)}</span>}
+                </Link>
+              );
+            })}
 
           {adminNavigation.some((item) => {
             if (item.adminOnly) return isAdmin;

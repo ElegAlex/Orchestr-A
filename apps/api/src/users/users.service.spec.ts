@@ -931,7 +931,9 @@ describe('UsersService', () => {
       mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
         { userId: 'user-2' },
       ]);
-      mockPrismaService.leave.findMany.mockResolvedValue([{ userId: 'user-3' }]);
+      mockPrismaService.leave.findMany.mockResolvedValue([
+        { userId: 'user-3' },
+      ]);
       mockPrismaService.task.findMany.mockResolvedValue([
         { assignees: [{ userId: 'user-4' }] },
       ]);

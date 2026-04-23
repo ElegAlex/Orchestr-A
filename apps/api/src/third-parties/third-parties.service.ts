@@ -112,10 +112,7 @@ export class ThirdPartiesService {
     return tp;
   }
 
-  async update(
-    id: string,
-    dto: UpdateThirdPartyDto,
-  ): Promise<ThirdParty> {
+  async update(id: string, dto: UpdateThirdPartyDto): Promise<ThirdParty> {
     const existing = await this.prisma.thirdParty.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException(`Third party ${id} not found`);

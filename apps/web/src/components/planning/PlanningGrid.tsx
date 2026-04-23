@@ -78,12 +78,7 @@ const CollapsibleServiceSection = ({
   return (
     <div>
       {/* Group Header — sticky inside this section div = push-out behavior */}
-      {showGroupHeaders && (
-        <GroupHeader
-          group={group}
-          taskCount={taskCount}
-        />
-      )}
+      {showGroupHeaders && <GroupHeader group={group} taskCount={taskCount} />}
       {/* User Rows - masquées si le groupe est replié */}
       {!isCollapsed &&
         group.users.map((user) => (
@@ -160,7 +155,12 @@ export const PlanningGrid = ({
 
   // Compute school vacation banners overlapping displayed days
   const vacationBanners = useMemo(() => {
-    if (!schoolVacations || schoolVacations.length === 0 || displayDays.length === 0) return [];
+    if (
+      !schoolVacations ||
+      schoolVacations.length === 0 ||
+      displayDays.length === 0
+    )
+      return [];
 
     const banners: {
       id: string;
@@ -387,7 +387,12 @@ export const PlanningGrid = ({
     <>
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-200px)]">
-          <div className="w-full" style={{ minWidth: `${220 + displayDays.length * (viewMode === "month" ? 35 : 100)}px` }}>
+          <div
+            className="w-full"
+            style={{
+              minWidth: `${220 + displayDays.length * (viewMode === "month" ? 35 : 100)}px`,
+            }}
+          >
             {/* Days header — sticky at top */}
             <div
               className="bg-gray-50 border-b border-gray-200 sticky top-0 z-30"
@@ -407,13 +412,9 @@ export const PlanningGrid = ({
                   <div
                     key={day.toISOString()}
                     className={`text-center font-semibold ${
-                      viewMode === "month"
-                        ? "px-1 py-1"
-                        : "px-2 py-3"
+                      viewMode === "month" ? "px-1 py-1" : "px-2 py-3"
                     } ${holiday ? "bg-red-50 text-red-900" : isToday(day) ? "bg-blue-50 text-blue-900" : isSpecialDay(day) ? "bg-gray-100 text-gray-900" : "text-gray-900"} ${
-                      showWeekSeparator
-                        ? "border-l-2 border-l-indigo-400"
-                        : ""
+                      showWeekSeparator ? "border-l-2 border-l-indigo-400" : ""
                     }`}
                     title={holiday ? holiday.name : undefined}
                   >
@@ -449,9 +450,7 @@ export const PlanningGrid = ({
 
             {/* School vacation banners */}
             {vacationBanners.length > 0 && (
-              <div
-                style={{ display: "grid", gridTemplateColumns: gridCols }}
-              >
+              <div style={{ display: "grid", gridTemplateColumns: gridCols }}>
                 {/* Empty resource column */}
                 <div />
                 {/* Vacation bars positioned via grid columns */}
@@ -470,7 +469,8 @@ export const PlanningGrid = ({
                       }`}
                       style={{
                         gridColumn: `${banner.startCol} / ${banner.endCol}`,
-                        background: "linear-gradient(to right, #dbeafe, #bfdbfe)",
+                        background:
+                          "linear-gradient(to right, #dbeafe, #bfdbfe)",
                       }}
                       title={`${banner.name} — Zone ${banner.zone}`}
                     >

@@ -38,7 +38,9 @@ export default function RegisterPage() {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { confirmPassword: _unused, ...registerData } = formData;
       const response = await authService.register(registerData);
-      const permsRes = await api.get<{ permissions: string[] }>("/auth/me/permissions");
+      const permsRes = await api.get<{ permissions: string[] }>(
+        "/auth/me/permissions",
+      );
       setAuth(response.user, permsRes.data.permissions);
       toast.success(t("register.success"));
       router.push(`/${locale}/dashboard`);

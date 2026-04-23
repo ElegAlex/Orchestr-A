@@ -64,7 +64,9 @@ describe('OwnershipService', () => {
 
   describe('isOwner - leave', () => {
     it('should return true when user owns the leave', async () => {
-      mockPrismaService.leave.findUnique.mockResolvedValue({ userId: 'user-1' });
+      mockPrismaService.leave.findUnique.mockResolvedValue({
+        userId: 'user-1',
+      });
 
       const result = await service.isOwner('leave', 'leave-1', 'user-1');
 
@@ -76,7 +78,9 @@ describe('OwnershipService', () => {
     });
 
     it('should return false when user does not own the leave', async () => {
-      mockPrismaService.leave.findUnique.mockResolvedValue({ userId: 'user-2' });
+      mockPrismaService.leave.findUnique.mockResolvedValue({
+        userId: 'user-2',
+      });
 
       const result = await service.isOwner('leave', 'leave-1', 'user-1');
 

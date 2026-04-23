@@ -61,7 +61,7 @@ export class ThirdPartiesController {
   @RequirePermissions('third_parties:delete')
   @ApiOperation({
     summary:
-      "Compter les éléments qui seront supprimés en cascade si on hard delete ce tiers",
+      'Compter les éléments qui seront supprimés en cascade si on hard delete ce tiers',
   })
   getDeletionImpact(@Param('id', ParseUUIDPipe) id: string) {
     return this.thirdPartiesService.getDeletionImpact(id);

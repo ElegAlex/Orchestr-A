@@ -25,7 +25,10 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
-import { CurrentUser, CurrentUserRoleCode } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserRoleCode,
+} from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 import { ProjectStatus } from 'database';
@@ -82,12 +85,20 @@ export class ProjectsController {
     @CurrentUser('id') userId?: string,
     @CurrentUserRoleCode() userRole?: string | null,
   ) {
-    return this.projectsService.findAll(page, limit, status, userId, userRole ?? undefined);
+    return this.projectsService.findAll(
+      page,
+      limit,
+      status,
+      userId,
+      userRole ?? undefined,
+    );
   }
 
   @Post('snapshots/capture')
   @RequirePermissions('reports:export')
-  @ApiOperation({ summary: 'Capture progress snapshot for all active projects' })
+  @ApiOperation({
+    summary: 'Capture progress snapshot for all active projects',
+  })
   async captureSnapshots() {
     return this.projectsService.captureSnapshots();
   }
@@ -150,7 +161,10 @@ export class ProjectsController {
 
   @Patch(':id')
   @RequirePermissions('projects:update')
-  @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
+  @OwnershipCheck({
+    resource: 'project',
+    bypassPermission: 'projects:manage_any',
+  })
   @ApiOperation({
     summary:
       'Mettre à jour un projet (Admin/Responsable/Manager/Chef de projet)',
@@ -172,12 +186,18 @@ export class ProjectsController {
     @Body() updateProjectDto: UpdateProjectDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.update(id, updateProjectDto, { id: user.id, role: user.role?.code ?? undefined });
+    return this.projectsService.update(id, updateProjectDto, {
+      id: user.id,
+      role: user.role?.code ?? undefined,
+    });
   }
 
   @Delete(':id')
   @RequirePermissions('projects:delete')
-  @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
+  @OwnershipCheck({
+    resource: 'project',
+    bypassPermission: 'projects:manage_any',
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Annuler un projet (soft delete, Admin/Responsable uniquement)',
@@ -194,12 +214,18 @@ export class ProjectsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.remove(id, { id: user.id, role: user.role?.code ?? undefined });
+    return this.projectsService.remove(id, {
+      id: user.id,
+      role: user.role?.code ?? undefined,
+    });
   }
 
   @Delete(':id/hard')
   @RequirePermissions('projects:delete')
-  @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
+  @OwnershipCheck({
+    resource: 'project',
+    bypassPermission: 'projects:manage_any',
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Supprimer définitivement un projet (Admin/Responsable)',
@@ -218,7 +244,11 @@ export class ProjectsController {
 
   @Post(':id/members')
   @RequirePermissions('projects:manage_members')
-  @OwnershipCheck({ resource: 'project', paramKey: 'id', bypassPermission: 'projects:manage_any' })
+  @OwnershipCheck({
+    resource: 'project',
+    paramKey: 'id',
+    bypassPermission: 'projects:manage_any',
+  })
   @ApiOperation({
     summary:
       'Ajouter un membre au projet (Admin/Responsable/Manager/Chef de projet)',
@@ -250,17 +280,23 @@ export class ProjectsController {
     bypassPermission: 'projects:manage_any',
   })
   @ApiOperation({
-    summary: 'Modifier le rôle ou l\'allocation d\'un membre du projet',
+    summary: "Modifier le rôle ou l'allocation d'un membre du projet",
   })
   @ApiResponse({ status: 200, description: 'Membre mis à jour' })
-  @ApiResponse({ status: 404, description: 'Membre introuvable dans ce projet' })
+  @ApiResponse({
+    status: 404,
+    description: 'Membre introuvable dans ce projet',
+  })
   updateMember(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body() dto: UpdateMemberDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.updateMember(projectId, userId, dto, { id: user.id, role: user.role?.code ?? undefined });
+    return this.projectsService.updateMember(projectId, userId, dto, {
+      id: user.id,
+      role: user.role?.code ?? undefined,
+    });
   }
 
   @Delete(':projectId/members/:userId')
@@ -288,6 +324,9 @@ export class ProjectsController {
     @Param('userId', ParseUUIDPipe) userId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.removeMember(projectId, userId, { id: user.id, role: user.role?.code ?? undefined });
+    return this.projectsService.removeMember(projectId, userId, {
+      id: user.id,
+      role: user.role?.code ?? undefined,
+    });
   }
 }

@@ -127,91 +127,85 @@ test.describe("Time Tracking — declare for third party", () => {
     test.info().project.use.baseURL ?? "http://localhost:4001";
   const stamp = Date.now();
 
-  test(
-    "@smoke MANAGER déclare 4h pour un tiers sur projet, report ségrégé",
-    async ({ request }) => {
-      const mgr = getToken("manager");
-      const url = baseURL();
+  test("@smoke MANAGER déclare 4h pour un tiers sur projet, report ségrégé", async ({
+    request,
+  }) => {
+    const mgr = getToken("manager");
+    const url = baseURL();
 
-      // Setup : projet + tiers + rattachement projet + tâche
-      const tp = await createThirdParty(
-        request,
-        url,
-        mgr,
-        `Acme ${stamp}-A`,
-      );
-      const project = await createProject(
-        request,
-        url,
-        mgr,
-        `ProjetTiers ${stamp}-A`,
-      );
-      const task = await createTask(
-        request,
-        url,
-        mgr,
-        `Tâche tiers ${stamp}-A`,
-        project.id,
-      );
+    // Setup : projet + tiers + rattachement projet + tâche
+    const tp = await createThirdParty(request, url, mgr, `Acme ${stamp}-A`);
+    const project = await createProject(
+      request,
+      url,
+      mgr,
+      `ProjetTiers ${stamp}-A`,
+    );
+    const task = await createTask(
+      request,
+      url,
+      mgr,
+      `Tâche tiers ${stamp}-A`,
+      project.id,
+    );
 
-      // Rattacher le tiers au projet
-      const attachRes = await request.post(
-        `${url}/api/projects/${project.id}/third-party-members`,
-        {
-          headers: authHeaders(mgr),
-          data: { thirdPartyId: tp.id, allocation: 50 },
-        },
-      );
-      expect(attachRes.status()).toBe(201);
-
-      // Déclarer 4h pour le tiers
-      const timeRes = await request.post(`${url}/api/time-tracking`, {
+    // Rattacher le tiers au projet
+    const attachRes = await request.post(
+      `${url}/api/projects/${project.id}/third-party-members`,
+      {
         headers: authHeaders(mgr),
-        data: {
-          date: "2026-04-11T00:00:00Z",
-          hours: 4,
-          activityType: "DEVELOPMENT",
-          taskId: task.id,
-          projectId: project.id,
-          thirdPartyId: tp.id,
-        },
-      });
-      expect(timeRes.status()).toBe(201);
-      const entry = await timeRes.json();
-      expect(entry.userId).toBeNull();
-      expect(entry.thirdPartyId).toBe(tp.id);
-      expect(entry.declaredById).toBeDefined();
+        data: { thirdPartyId: tp.id, allocation: 50 },
+      },
+    );
+    expect(attachRes.status()).toBe(201);
 
-      // Rapport projet ségrégé
-      const reportRes = await request.get(
-        `${url}/api/time-tracking/project/${project.id}/report`,
-        { headers: authHeadersNoContentType(mgr) },
-      );
-      expect(reportRes.status()).toBe(200);
-      const report = await reportRes.json();
-      expect(report.totals).toBeDefined();
-      expect(report.totals.userHours).toBe(0);
-      expect(report.totals.thirdPartyHours).toBe(4);
-      expect(report.userEntries).toHaveLength(0);
-      expect(report.thirdPartyEntries).toHaveLength(1);
-      expect(report.byThirdParty).toHaveLength(1);
-      expect(report.byThirdParty[0].thirdPartyId).toBe(tp.id);
+    // Déclarer 4h pour le tiers
+    const timeRes = await request.post(`${url}/api/time-tracking`, {
+      headers: authHeaders(mgr),
+      data: {
+        date: "2026-04-11T00:00:00Z",
+        hours: 4,
+        activityType: "DEVELOPMENT",
+        taskId: task.id,
+        projectId: project.id,
+        thirdPartyId: tp.id,
+      },
+    });
+    expect(timeRes.status()).toBe(201);
+    const entry = await timeRes.json();
+    expect(entry.userId).toBeNull();
+    expect(entry.thirdPartyId).toBe(tp.id);
+    expect(entry.declaredById).toBeDefined();
 
-      // Stats projet : loggedHours (user-only) = 0, thirdPartyActual = 4
-      const statsRes = await request.get(
-        `${url}/api/projects/${project.id}/stats`,
-        { headers: authHeadersNoContentType(mgr) },
-      );
-      expect(statsRes.status()).toBe(200);
-      const stats = await statsRes.json();
-      expect(stats.hours.actual).toBe(0);
-      expect(stats.hours.thirdPartyActual).toBe(4);
+    // Rapport projet ségrégé
+    const reportRes = await request.get(
+      `${url}/api/time-tracking/project/${project.id}/report`,
+      { headers: authHeadersNoContentType(mgr) },
+    );
+    expect(reportRes.status()).toBe(200);
+    const report = await reportRes.json();
+    expect(report.totals).toBeDefined();
+    expect(report.totals.userHours).toBe(0);
+    expect(report.totals.thirdPartyHours).toBe(4);
+    expect(report.userEntries).toHaveLength(0);
+    expect(report.thirdPartyEntries).toHaveLength(1);
+    expect(report.byThirdParty).toHaveLength(1);
+    expect(report.byThirdParty[0].thirdPartyId).toBe(tp.id);
 
-      // Cleanup
-      await deleteThirdParty(request, url, mgr, tp.id);
-      await deleteProject(request, url, mgr, project.id);
-    },
-  );
+    // Stats projet : loggedHours (user-only) = 0, thirdPartyActual = 4
+    const statsRes = await request.get(
+      `${url}/api/projects/${project.id}/stats`,
+      { headers: authHeadersNoContentType(mgr) },
+    );
+    expect(statsRes.status()).toBe(200);
+    const stats = await statsRes.json();
+    expect(stats.hours.actual).toBe(0);
+    expect(stats.hours.thirdPartyActual).toBe(4);
+
+    // Cleanup
+    await deleteThirdParty(request, url, mgr, tp.id);
+    await deleteProject(request, url, mgr, project.id);
+  });
 
   test("MANAGER assigne tiers à tâche orpheline et déclare 2h", async ({
     request,
@@ -219,12 +213,7 @@ test.describe("Time Tracking — declare for third party", () => {
     const mgr = getToken("manager");
     const url = baseURL();
 
-    const tp = await createThirdParty(
-      request,
-      url,
-      mgr,
-      `Acme ${stamp}-B`,
-    );
+    const tp = await createThirdParty(request, url, mgr, `Acme ${stamp}-B`);
     // Tâche orpheline (sans projectId)
     const task = await createTask(request, url, mgr, `Orphan ${stamp}-B`);
 
@@ -267,12 +256,7 @@ test.describe("Time Tracking — declare for third party", () => {
     const url = baseURL();
 
     // Setup minimal via MANAGER
-    const tp = await createThirdParty(
-      request,
-      url,
-      mgr,
-      `Acme ${stamp}-C`,
-    );
+    const tp = await createThirdParty(request, url, mgr, `Acme ${stamp}-C`);
     const project = await createProject(
       request,
       url,
@@ -311,12 +295,7 @@ test.describe("Time Tracking — declare for third party", () => {
     const mgr = getToken("manager");
     const url = baseURL();
 
-    const tp = await createThirdParty(
-      request,
-      url,
-      mgr,
-      `Acme ${stamp}-D`,
-    );
+    const tp = await createThirdParty(request, url, mgr, `Acme ${stamp}-D`);
     const project = await createProject(
       request,
       url,
@@ -346,20 +325,14 @@ test.describe("Time Tracking — declare for third party", () => {
         data: { thirdPartyId: tp.id },
       },
     );
-    await request.post(
-      `${url}/api/tasks/${task1.id}/third-party-assignees`,
-      {
-        headers: authHeaders(mgr),
-        data: { thirdPartyId: tp.id },
-      },
-    );
-    await request.post(
-      `${url}/api/tasks/${task2.id}/third-party-assignees`,
-      {
-        headers: authHeaders(mgr),
-        data: { thirdPartyId: tp.id },
-      },
-    );
+    await request.post(`${url}/api/tasks/${task1.id}/third-party-assignees`, {
+      headers: authHeaders(mgr),
+      data: { thirdPartyId: tp.id },
+    });
+    await request.post(`${url}/api/tasks/${task2.id}/third-party-assignees`, {
+      headers: authHeaders(mgr),
+      data: { thirdPartyId: tp.id },
+    });
 
     for (let i = 0; i < 3; i++) {
       const timeRes = await request.post(`${url}/api/time-tracking`, {
@@ -388,10 +361,9 @@ test.describe("Time Tracking — declare for third party", () => {
     expect(impact.projectMembershipsCount).toBe(1);
 
     // Hard delete
-    const delRes = await request.delete(
-      `${url}/api/third-parties/${tp.id}`,
-      { headers: authHeadersNoContentType(mgr) },
-    );
+    const delRes = await request.delete(`${url}/api/third-parties/${tp.id}`, {
+      headers: authHeadersNoContentType(mgr),
+    });
     expect(delRes.status()).toBe(204);
 
     // Tout a disparu
@@ -420,12 +392,7 @@ test.describe("Time Tracking — declare for third party", () => {
     const mgr = getToken("manager");
     const url = baseURL();
 
-    const tp = await createThirdParty(
-      request,
-      url,
-      mgr,
-      `Acme ${stamp}-E`,
-    );
+    const tp = await createThirdParty(request, url, mgr, `Acme ${stamp}-E`);
     const project = await createProject(
       request,
       url,

@@ -106,7 +106,7 @@ describe('RolesService — V3 F', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('si isDefault=true, désactive l\'ancien default', async () => {
+    it("si isDefault=true, désactive l'ancien default", async () => {
       prisma.role.findUnique.mockResolvedValue(null);
       prisma.role.create.mockResolvedValue({
         id: 'r-new',

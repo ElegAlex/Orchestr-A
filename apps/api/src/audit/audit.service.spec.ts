@@ -20,7 +20,9 @@ describe('AuditService', () => {
 
   describe('log', () => {
     it('should log successful events with logger.log', () => {
-      const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+      const logSpy = vi
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => {});
 
       service.log({
         action: AuditAction.LOGIN_SUCCESS,
@@ -46,7 +48,9 @@ describe('AuditService', () => {
     });
 
     it('should log failed events with logger.warn', () => {
-      const warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+      const warnSpy = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => {});
 
       service.log({
         action: AuditAction.LOGIN_FAILURE,
@@ -70,7 +74,9 @@ describe('AuditService', () => {
     });
 
     it('should include optional fields when provided', () => {
-      const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+      const logSpy = vi
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => {});
 
       service.log({
         action: AuditAction.ROLE_CHANGE,
@@ -95,7 +101,9 @@ describe('AuditService', () => {
     });
 
     it('should work without optional fields', () => {
-      const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+      const logSpy = vi
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => {});
 
       service.log({
         action: AuditAction.LEAVE_APPROVED,

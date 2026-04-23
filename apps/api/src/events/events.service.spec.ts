@@ -63,13 +63,15 @@ describe('EventsService', () => {
       isOwner: vi.fn().mockResolvedValue(false),
     };
     permissionsService = {
-      getPermissionsForRole: vi.fn().mockResolvedValue([
-        'events:read',
-        'events:readAll',
-        'tasks:readAll',
-        'leaves:readAll',
-        'telework:readAll',
-      ]),
+      getPermissionsForRole: vi
+        .fn()
+        .mockResolvedValue([
+          'events:read',
+          'events:readAll',
+          'tasks:readAll',
+          'leaves:readAll',
+          'telework:readAll',
+        ]),
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -515,7 +517,9 @@ describe('EventsService', () => {
 
     beforeEach(() => {
       // Mock deleteMany and update for stopRecurrence
-      (mockPrismaService.event as any).deleteMany = vi.fn().mockResolvedValue({ count: 0 });
+      (mockPrismaService.event as any).deleteMany = vi
+        .fn()
+        .mockResolvedValue({ count: 0 });
     });
 
     it('should stop recurrence of a parent recurring event', async () => {

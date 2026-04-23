@@ -81,22 +81,21 @@ export function TaskLineCard({
         </h4>
         {task.subtasks && task.subtasks.length > 0 && (
           <span className="text-xs text-gray-500 shrink-0" title="Sous-tâches">
-            ☑ {task.subtasks.filter((s) => s.isCompleted).length}/{task.subtasks.length}
+            ☑ {task.subtasks.filter((s) => s.isCompleted).length}/
+            {task.subtasks.length}
           </span>
         )}
 
         {/* Assignees */}
         {task.assignees && task.assignees.length > 0 && (
           <div className="flex -space-x-1 shrink-0">
-            {task.assignees.slice(0, 3).map((a, idx) =>
-              a.user ? (
-                <UserAvatar
-                  key={a.userId || idx}
-                  user={a.user}
-                  size="xs"
-                />
-              ) : null
-            )}
+            {task.assignees
+              .slice(0, 3)
+              .map((a, idx) =>
+                a.user ? (
+                  <UserAvatar key={a.userId || idx} user={a.user} size="xs" />
+                ) : null,
+              )}
             {task.assignees.length > 3 && (
               <div className="w-6 h-6 rounded-full bg-gray-400 text-white flex items-center justify-center text-[10px] border border-white">
                 +{task.assignees.length - 3}
@@ -139,15 +138,22 @@ export function TaskLineCard({
               }
             }}
             className={`text-xs border rounded px-1 py-0.5 w-[110px] hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none ${
-              task.endDate && new Date(task.endDate) < new Date() && task.status !== TaskStatus.DONE
+              task.endDate &&
+              new Date(task.endDate) < new Date() &&
+              task.status !== TaskStatus.DONE
                 ? "text-red-600 border-red-300 bg-red-50"
                 : "text-gray-500 border-gray-200"
             }`}
             title="Date de fin"
           />
-          {task.endDate && new Date(task.endDate) < new Date() && task.status !== TaskStatus.DONE && (
-            <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" title="En retard" />
-          )}
+          {task.endDate &&
+            new Date(task.endDate) < new Date() &&
+            task.status !== TaskStatus.DONE && (
+              <span
+                className="w-2 h-2 rounded-full bg-red-500 shrink-0"
+                title="En retard"
+              />
+            )}
         </div>
 
         {task.progress > 0 && (

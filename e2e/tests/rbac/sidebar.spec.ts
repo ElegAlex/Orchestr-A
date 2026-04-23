@@ -53,7 +53,9 @@ const NAV_LABELS = {
  * d'autres éléments de la page (ex: un header, un breadcrumb).
  */
 function sidebarLink(page: Page, label: string) {
-  return page.locator("aside nav").getByRole("link", { name: label, exact: false });
+  return page
+    .locator("aside nav")
+    .getByRole("link", { name: label, exact: false });
 }
 
 /**
@@ -64,7 +66,9 @@ function sidebarLink(page: Page, label: string) {
 async function dismissDevErrorOverlay(page: Page) {
   // Le dialog d'erreur Next.js a role="dialog" avec "Console AxiosError" ou similaire.
   // On le ferme via Escape si présent (Next.js écoute Escape pour fermer l'overlay).
-  const overlay = page.locator("nextjs-portal, [data-nextjs-dialog], nextjs-build-indicator");
+  const overlay = page.locator(
+    "nextjs-portal, [data-nextjs-dialog], nextjs-build-indicator",
+  );
   if ((await overlay.count()) > 0) {
     await page.keyboard.press("Escape").catch(() => undefined);
     await page.waitForTimeout(200);
@@ -87,7 +91,10 @@ async function waitForSidebar(page: Page) {
   await dismissDevErrorOverlay(page);
   // Le dashboard link est toujours présent (pas de permission requise)
   await expect(
-    page.locator("aside nav").getByText(NAV_LABELS.dashboard, { exact: false }).first(),
+    page
+      .locator("aside nav")
+      .getByText(NAV_LABELS.dashboard, { exact: false })
+      .first(),
   ).toBeVisible({ timeout: 10000 });
 }
 

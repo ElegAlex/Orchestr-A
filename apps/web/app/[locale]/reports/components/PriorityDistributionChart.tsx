@@ -60,12 +60,10 @@ export function PriorityDistributionChart({
       try {
         setLoading(true);
         setError(null);
-        const url = projectId
-          ? `/tasks?projectId=${projectId}`
-          : "/tasks";
+        const url = projectId ? `/tasks?projectId=${projectId}` : "/tasks";
         const res = await api.get(url);
         const data = res.data;
-        const taskList = Array.isArray(data) ? data : data.data ?? [];
+        const taskList = Array.isArray(data) ? data : (data.data ?? []);
         setTasks(taskList);
       } catch (err) {
         console.error("Error loading priority distribution:", err);
@@ -79,7 +77,7 @@ export function PriorityDistributionChart({
 
   const activeTasks = useMemo(
     () => tasks.filter((t) => t.status !== "DONE"),
-    [tasks]
+    [tasks],
   );
 
   const donutData = useMemo(() => {
@@ -127,7 +125,7 @@ export function PriorityDistributionChart({
       };
       return map[key] ?? key;
     },
-    [t]
+    [t],
   );
 
   const statusLabel = useCallback(
@@ -140,13 +138,11 @@ export function PriorityDistributionChart({
       };
       return map[key] ?? key;
     },
-    [t]
+    [t],
   );
 
   const handleDonutClick = (entry: { name: string }) => {
-    setSelectedPriority((prev) =>
-      prev === entry.name ? null : entry.name
-    );
+    setSelectedPriority((prev) => (prev === entry.name ? null : entry.name));
   };
 
   if (loading) {
@@ -225,9 +221,7 @@ export function PriorityDistributionChart({
                   return [`${value} tâches (${pct}%)`, priorityLabel(name)];
                 }}
               />
-              <Legend
-                formatter={(value: string) => priorityLabel(value)}
-              />
+              <Legend formatter={(value: string) => priorityLabel(value)} />
             </PieChart>
           </ResponsiveContainer>
           {/* Center label */}

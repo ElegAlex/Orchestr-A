@@ -81,9 +81,7 @@ test.describe("Third Parties — CRUD et règles métier", () => {
       const listBody = await listRes.json();
       expect(listBody.data).toBeDefined();
       expect(
-        listBody.data.some(
-          (tp: { id: string }) => tp.id === created.id,
-        ),
+        listBody.data.some((tp: { id: string }) => tp.id === created.id),
       ).toBe(true);
 
       // ─── 3. Update via API ───────────────────────────────────────────

@@ -1,5 +1,4 @@
 ---
-
 title: "Rapport d'audit de sécurité — Application analysée"
 auteur: "HAMMACHE Lilian"
 date: 2026-04-15
@@ -13,22 +12,20 @@ failles_faibles: 1
 bugs_total: 8
 bugs_haute: 4
 tags:
-
-- audit
-- sécurité
-- vulnérabilités
-- confidentiel
-- owasp aliases:
-- "Audit LHA 15/04/2026"
-- cssclasses:
-- audit-report
-
+  - audit
+  - sécurité
+  - vulnérabilités
+  - confidentiel
+  - owasp aliases:
+  - "Audit LHA 15/04/2026"
+  - cssclasses:
+  - audit-report
 ---
 
 # 🛡️ Rapport d'audit de sécurité
 
 > [!info] Métadonnées du document
-> 
+>
 > - **Auteur** : HAMMACHE Lilian
 > - **Date** : 15 avril 2026
 > - **Type** : Audit de sécurité applicative
@@ -54,12 +51,12 @@ Cet audit a permis d'identifier **8 vulnérabilités de sécurité** et **8 anom
 ### Points d'attention prioritaires
 
 > [!danger] Critiques — action immédiate
-> 
+>
 > - 🔴 **Credentials administrateur par défaut** actifs en production (`admin / admin123`) → risque de compromission immédiate.
 > - 🔴 **Rôle utilisateur stocké dans le `localStorage`** et modifiable côté client → élévation de privilèges triviale.
 
 > [!warning] Élevées — court terme
-> 
+>
 > - 🟠 **Swagger UI exposé publiquement**, cartographiant toute la surface d'attaque de l'API.
 > - 🟠 **Absence de révocation JWT** et throttling insuffisant sur le login.
 
@@ -71,16 +68,16 @@ Les bugs fonctionnels incluent plusieurs cas de **contrôle d'accès insuffisant
 
 ### 2.1 Tableau de synthèse
 
-|ID|Titre|Sévérité|Catégorie|
-|---|---|---|---|
-|[[#SEC-01]]|Swagger UI exposé en production|🟠 ÉLEVÉE|Exposition d'informations|
-|[[#SEC-02]]|Credentials administrateur par défaut actifs|🔴 CRITIQUE|Authentification|
-|[[#SEC-03]]|Données sensibles dans le `localStorage`|🔴 CRITIQUE|Gestion de session / Contrôle d'accès|
-|[[#SEC-04]]|Absence de refresh token et de révocation JWT|🟠 ÉLEVÉE|Gestion de session|
-|[[#SEC-05]]|Throttling trop permissif sur `/auth/login`|🟡 MOYENNE|Protection contre les attaques par force brute|
-|[[#SEC-06]]|IDOR potentiel sur les ressources RH|🟠 ÉLEVÉE|Contrôle d'accès / Autorisation|
-|[[#SEC-07]]|Upload de fichiers sans validation magic bytes|🟡 MOYENNE|Validation des entrées|
-|[[#SEC-08]]|`LOG_LEVEL=debug` — fuite de données sensibles|🟢 FAIBLE|Journalisation|
+| ID          | Titre                                          | Sévérité    | Catégorie                                      |
+| ----------- | ---------------------------------------------- | ----------- | ---------------------------------------------- |
+| [[#SEC-01]] | Swagger UI exposé en production                | 🟠 ÉLEVÉE   | Exposition d'informations                      |
+| [[#SEC-02]] | Credentials administrateur par défaut actifs   | 🔴 CRITIQUE | Authentification                               |
+| [[#SEC-03]] | Données sensibles dans le `localStorage`       | 🔴 CRITIQUE | Gestion de session / Contrôle d'accès          |
+| [[#SEC-04]] | Absence de refresh token et de révocation JWT  | 🟠 ÉLEVÉE   | Gestion de session                             |
+| [[#SEC-05]] | Throttling trop permissif sur `/auth/login`    | 🟡 MOYENNE  | Protection contre les attaques par force brute |
+| [[#SEC-06]] | IDOR potentiel sur les ressources RH           | 🟠 ÉLEVÉE   | Contrôle d'accès / Autorisation                |
+| [[#SEC-07]] | Upload de fichiers sans validation magic bytes | 🟡 MOYENNE  | Validation des entrées                         |
+| [[#SEC-08]] | `LOG_LEVEL=debug` — fuite de données sensibles | 🟢 FAIBLE   | Journalisation                                 |
 
 ### 2.2 Détail des vulnérabilités
 
@@ -203,7 +200,7 @@ Les bugs fonctionnels incluent plusieurs cas de **contrôle d'accès insuffisant
 **Recommandation** Utiliser l'option `redact` dans la config Fastify :
 
 ```ts
-redact: ['body.password', 'req.headers.authorization']
+redact: ["body.password", "req.headers.authorization"];
 ```
 
 ---
@@ -212,16 +209,16 @@ redact: ['body.password', 'req.headers.authorization']
 
 ### 3.1 Tableau de synthèse
 
-|ID|Titre|Priorité|Module|Statut|
-|---|---|---|---|---|
-|[[#BUG-01]]|Modification des jours TTV d'autres utilisateurs|🔴 HAUTE|Planning / Télétravail|🟡 Ouvert|
-|[[#BUG-02]]|Formulaire de création de tâche — blink sur les assignés|🟡 MOYENNE|Tâches|🟡 Ouvert|
-|[[#BUG-03]]|Planning des ressources — aucun service affiché par défaut|🟡 MOYENNE|Planning|🟡 Ouvert|
-|[[#BUG-04]]|Modification/suppression d'un projet non possédé (membre)|🔴 HAUTE|Projets|🟡 Ouvert|
-|[[#BUG-05]]|Modification/suppression d'événements arbitraires|🔴 HAUTE|Événements|🟡 Ouvert|
-|[[#BUG-06]]|Champ « Membre depuis » affiche une date invalide|🟢 FAIBLE|Profil|🟡 Ouvert|
-|[[#BUG-07]]|Compte affiché comme inactif à tort|🟡 MOYENNE|Profil|🟡 Ouvert|
-|[[#BUG-08]]|Modification/suppression de tout projet (sans restriction)|🔴 HAUTE|Projets|🟡 Ouvert|
+| ID          | Titre                                                      | Priorité   | Module                 | Statut    |
+| ----------- | ---------------------------------------------------------- | ---------- | ---------------------- | --------- |
+| [[#BUG-01]] | Modification des jours TTV d'autres utilisateurs           | 🔴 HAUTE   | Planning / Télétravail | 🟡 Ouvert |
+| [[#BUG-02]] | Formulaire de création de tâche — blink sur les assignés   | 🟡 MOYENNE | Tâches                 | 🟡 Ouvert |
+| [[#BUG-03]] | Planning des ressources — aucun service affiché par défaut | 🟡 MOYENNE | Planning               | 🟡 Ouvert |
+| [[#BUG-04]] | Modification/suppression d'un projet non possédé (membre)  | 🔴 HAUTE   | Projets                | 🟡 Ouvert |
+| [[#BUG-05]] | Modification/suppression d'événements arbitraires          | 🔴 HAUTE   | Événements             | 🟡 Ouvert |
+| [[#BUG-06]] | Champ « Membre depuis » affiche une date invalide          | 🟢 FAIBLE  | Profil                 | 🟡 Ouvert |
+| [[#BUG-07]] | Compte affiché comme inactif à tort                        | 🟡 MOYENNE | Profil                 | 🟡 Ouvert |
+| [[#BUG-08]] | Modification/suppression de tout projet (sans restriction) | 🔴 HAUTE   | Projets                | 🟡 Ouvert |
 
 ### 3.2 Détail des anomalies
 

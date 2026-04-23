@@ -1,4 +1,4 @@
-import type { GanttGrouping, GanttGroup, GanttTaskRow } from './types';
+import type { GanttGrouping, GanttGroup, GanttTaskRow } from "./types";
 
 /**
  * Sort tasks by startDate ascending.
@@ -29,27 +29,27 @@ export function groupTasks(
   tasks: GanttTaskRow[],
   by: GanttGrouping,
 ): GanttGroup[] {
-  if (by === 'none') {
+  if (by === "none") {
     return [
       {
-        key: 'all',
-        label: '',
+        key: "all",
+        label: "",
         rows: sortByStartDate(tasks),
         isExpanded: true,
       },
     ];
   }
 
-  const idField = by === 'milestone' ? 'milestoneId' : 'epicId';
-  const nameField = by === 'milestone' ? 'milestoneName' : 'epicName';
-  const ungroupedLabel = by === 'milestone' ? 'Sans jalon' : 'Sans épopée';
+  const idField = by === "milestone" ? "milestoneId" : "epicId";
+  const nameField = by === "milestone" ? "milestoneName" : "epicName";
+  const ungroupedLabel = by === "milestone" ? "Sans jalon" : "Sans épopée";
 
   const groupMap = new Map<string, GanttGroup>();
   const ungrouped: GanttTaskRow[] = [];
 
   for (const task of tasks) {
     // Skip milestone diamond rows that duplicate the group header
-    if (by === 'milestone' && task.isMilestone && task.milestoneId) continue;
+    if (by === "milestone" && task.isMilestone && task.milestoneId) continue;
 
     const groupId = task[idField];
     if (!groupId) {
@@ -83,7 +83,7 @@ export function groupTasks(
   // Append ungrouped at the end if any
   if (ungrouped.length > 0) {
     namedGroups.push({
-      key: 'ungrouped',
+      key: "ungrouped",
       label: ungroupedLabel,
       rows: sortByStartDate(ungrouped),
       isExpanded: true,

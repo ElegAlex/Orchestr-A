@@ -28,7 +28,7 @@ export class TasksThirdPartyAssigneesController {
 
   @Get()
   @RequirePermissions('third_parties:read')
-  @ApiOperation({ summary: "Lister les tiers assignés à une tâche" })
+  @ApiOperation({ summary: 'Lister les tiers assignés à une tâche' })
   list(@Param('taskId', ParseUUIDPipe) taskId: string) {
     return this.thirdPartiesService.listTaskAssignees(taskId);
   }

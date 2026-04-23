@@ -1,5 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsIn, IsBoolean, Matches } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsIn,
+  IsBoolean,
+  Matches,
+} from 'class-validator';
 
 export class UpdatePredefinedTaskDto {
   @ApiPropertyOptional({
@@ -58,7 +64,9 @@ export class UpdatePredefinedTaskDto {
   })
   @IsString()
   @IsOptional()
-  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'startTime doit être au format HH:mm' })
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {
+    message: 'startTime doit être au format HH:mm',
+  })
   startTime?: string;
 
   @ApiPropertyOptional({
@@ -67,7 +75,9 @@ export class UpdatePredefinedTaskDto {
   })
   @IsString()
   @IsOptional()
-  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'endTime doit être au format HH:mm' })
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {
+    message: 'endTime doit être au format HH:mm',
+  })
   endTime?: string;
 
   @ApiPropertyOptional({

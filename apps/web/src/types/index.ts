@@ -878,12 +878,18 @@ export const SCHOOL_VACATION_ZONE_LABELS: Record<SchoolVacationZone, string> = {
   [SchoolVacationZone.C]: "Zone C",
 };
 
-export const SCHOOL_VACATION_SOURCE_LABELS: Record<SchoolVacationSource, string> = {
+export const SCHOOL_VACATION_SOURCE_LABELS: Record<
+  SchoolVacationSource,
+  string
+> = {
   [SchoolVacationSource.IMPORT]: "Import",
   [SchoolVacationSource.MANUAL]: "Manuel",
 };
 
-export const SCHOOL_VACATION_SOURCE_COLORS: Record<SchoolVacationSource, string> = {
+export const SCHOOL_VACATION_SOURCE_COLORS: Record<
+  SchoolVacationSource,
+  string
+> = {
   [SchoolVacationSource.IMPORT]: "bg-blue-100 text-blue-800",
   [SchoolVacationSource.MANUAL]: "bg-gray-100 text-gray-800",
 };

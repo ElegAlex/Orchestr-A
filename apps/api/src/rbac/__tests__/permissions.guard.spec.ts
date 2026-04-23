@@ -109,7 +109,9 @@ describe('PermissionsGuardV2 — V3 F', () => {
   describe('@RequirePermissions (AND)', () => {
     it('autorise si toutes les perms présentes', async () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
-        key === REQUIRE_PERMISSIONS_KEY ? ['tasks:read', 'tasks:update'] : undefined,
+        key === REQUIRE_PERMISSIONS_KEY
+          ? ['tasks:read', 'tasks:update']
+          : undefined,
       );
       permissions.getPermissionsForUser.mockResolvedValue([
         'tasks:read',
@@ -124,7 +126,9 @@ describe('PermissionsGuardV2 — V3 F', () => {
 
     it('refuse si une perm manque (sémantique AND)', async () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
-        key === REQUIRE_PERMISSIONS_KEY ? ['tasks:read', 'tasks:delete'] : undefined,
+        key === REQUIRE_PERMISSIONS_KEY
+          ? ['tasks:read', 'tasks:delete']
+          : undefined,
       );
       permissions.getPermissionsForUser.mockResolvedValue(['tasks:read']);
       const guard = makeGuard('enforce');
@@ -148,13 +152,15 @@ describe('PermissionsGuardV2 — V3 F', () => {
   });
 
   describe('@RequireAnyPermission (OR)', () => {
-    it('autorise dès qu\'une perm match', async () => {
+    it("autorise dès qu'une perm match", async () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
         key === REQUIRE_ANY_PERMISSION_KEY
           ? ['tasks:create', 'tasks:create_orphan', 'tasks:create_in_project']
           : undefined,
       );
-      permissions.getPermissionsForUser.mockResolvedValue(['tasks:create_orphan']);
+      permissions.getPermissionsForUser.mockResolvedValue([
+        'tasks:create_orphan',
+      ]);
       const guard = makeGuard('enforce');
       await expect(
         guard.canActivate(buildCtx({ id: 'u-1', role: 'BASIC_USER' })),
@@ -189,9 +195,9 @@ describe('PermissionsGuardV2 — V3 F', () => {
         key === REQUIRE_PERMISSIONS_KEY ? ['tasks:read'] : undefined,
       );
       const guard = makeGuard('enforce');
-      await expect(
-        guard.canActivate(buildCtx({ id: 'u-1' })),
-      ).resolves.toBe(false);
+      await expect(guard.canActivate(buildCtx({ id: 'u-1' }))).resolves.toBe(
+        false,
+      );
     });
 
     it('utilise user.role.code (objet Role Prisma V4)', async () => {

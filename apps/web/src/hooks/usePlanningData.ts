@@ -13,7 +13,15 @@ import { fr } from "date-fns/locale";
 import { planningService } from "@/services/planning.service";
 import { Event } from "@/services/events.service";
 import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
-import { Task, User, Leave, TeleworkSchedule, Service, Holiday, SchoolVacation } from "@/types";
+import {
+  Task,
+  User,
+  Leave,
+  TeleworkSchedule,
+  Service,
+  Holiday,
+  SchoolVacation,
+} from "@/types";
 import { getServiceStyle } from "@/lib/planning-utils";
 import { useSettingsStore } from "@/stores/settings.store";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -131,7 +139,9 @@ export const usePlanningData = ({
     if (viewMode === "week") {
       const start = startOfWeek(currentDate, { locale: fr, weekStartsOn: 1 });
       const allDays = Array.from({ length: 7 }, (_, i) => addDays(start, i));
-      const filtered = allDays.filter((d) => jsVisibleDays.includes(d.getDay()));
+      const filtered = allDays.filter((d) =>
+        jsVisibleDays.includes(d.getDay()),
+      );
       return {
         displayDays: filtered,
         queryStartDate: startOfDay(allDays[0]),
@@ -418,7 +428,9 @@ export const usePlanningData = ({
       const hasExternalIntervention =
         dayTasks.some((t) => t.isExternalIntervention) ||
         dayEvents.some((e) => e.isExternalIntervention) ||
-        dayPredefinedAssignments.some((a) => a.predefinedTask?.isExternalIntervention);
+        dayPredefinedAssignments.some(
+          (a) => a.predefinedTask?.isExternalIntervention,
+        );
 
       // Appliquer le filtre d'affichage
       let filteredTasks = dayTasks;
@@ -469,7 +481,12 @@ export const usePlanningData = ({
         events: filteredEvents,
         leaves: filteredLeaves,
         predefinedTaskAssignments:
-          (displayFilters && !displayFilters.orphanTasks && !displayFilters.projectTasks) || viewFilter === "availability" ? [] : dayPredefinedAssignments,
+          (displayFilters &&
+            !displayFilters.orphanTasks &&
+            !displayFilters.projectTasks) ||
+          viewFilter === "availability"
+            ? []
+            : dayPredefinedAssignments,
         isTelework: filteredIsTelework,
         isExternalIntervention: filteredIsExternalIntervention,
         teleworkSchedule: teleworkSchedule || null,

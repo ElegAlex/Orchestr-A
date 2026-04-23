@@ -14,16 +14,16 @@ Distinct du tiers : le tiers est réalisateur (intégré à l'équipe, saisit du
 
 ## 2. Décisions ratifiées
 
-| # | Décision |
-|---|---|
-| 1 | Entité `Client` autonome (pas de lien structuré vers `User` ni `Service`) |
-| 2 | Relation N:M avec `Project`, sans notion de client principal |
-| 3 | Coexistence libre tiers ↔ clients sur un même projet |
-| 4 | Module inclut référentiel CRUD + vue projets par client + consolidation heures + exports |
-| 5 | CRUD : ADMIN + RESPONSABLE ; attribution projet : ADMIN + RESPONSABLE + MANAGER + CHEF DE PROJET |
-| 6 | Client affiché sur fiche projet, liste projets, exports PDF/Excel, Portfolio Gantt |
-| 7 | Modèle minimal : `name` + `isActive` uniquement (pas de `description`) |
-| 8 | `hoursLoggedTotal` = somme totale des `TimeEntry.hours` (interne + tiers) |
+| #   | Décision                                                                                         |
+| --- | ------------------------------------------------------------------------------------------------ |
+| 1   | Entité `Client` autonome (pas de lien structuré vers `User` ni `Service`)                        |
+| 2   | Relation N:M avec `Project`, sans notion de client principal                                     |
+| 3   | Coexistence libre tiers ↔ clients sur un même projet                                            |
+| 4   | Module inclut référentiel CRUD + vue projets par client + consolidation heures + exports         |
+| 5   | CRUD : ADMIN + RESPONSABLE ; attribution projet : ADMIN + RESPONSABLE + MANAGER + CHEF DE PROJET |
+| 6   | Client affiché sur fiche projet, liste projets, exports PDF/Excel, Portfolio Gantt               |
+| 7   | Modèle minimal : `name` + `isActive` uniquement (pas de `description`)                           |
+| 8   | `hoursLoggedTotal` = somme totale des `TimeEntry.hours` (interne + tiers)                        |
 
 ## 3. Phase 0 — Audit préalable (bloquant)
 
@@ -72,20 +72,21 @@ Ajout sur `Project` : `clients ProjectClient[]`.
 
 Module `apps/api/src/clients/`.
 
-| Méthode | Route | Permission | Description |
-|---|---|---|---|
-| POST | `/clients` | `clients:create` | Créer |
-| GET | `/clients` | `clients:read` | Liste paginée (`search`, `isActive`, `page`, `limit`) |
-| GET | `/clients/:id` | `clients:read` | Détail |
-| GET | `/clients/:id/projects` | `clients:read` + `projects:read` | Liste projets + synthèse heures |
-| GET | `/clients/:id/deletion-impact` | `clients:delete` | Compte projets rattachés |
-| PATCH | `/clients/:id` | `clients:update` | MAJ (dont `isActive`) |
-| DELETE | `/clients/:id` | `clients:delete` | Hard delete (refus si projets rattachés) |
-| GET | `/projects/:projectId/clients` | `clients:read` | Liste clients d'un projet |
-| POST | `/projects/:projectId/clients` | `clients:assign_to_project` | Rattacher |
-| DELETE | `/projects/:projectId/clients/:clientId` | `clients:assign_to_project` | Détacher |
+| Méthode | Route                                    | Permission                       | Description                                           |
+| ------- | ---------------------------------------- | -------------------------------- | ----------------------------------------------------- |
+| POST    | `/clients`                               | `clients:create`                 | Créer                                                 |
+| GET     | `/clients`                               | `clients:read`                   | Liste paginée (`search`, `isActive`, `page`, `limit`) |
+| GET     | `/clients/:id`                           | `clients:read`                   | Détail                                                |
+| GET     | `/clients/:id/projects`                  | `clients:read` + `projects:read` | Liste projets + synthèse heures                       |
+| GET     | `/clients/:id/deletion-impact`           | `clients:delete`                 | Compte projets rattachés                              |
+| PATCH   | `/clients/:id`                           | `clients:update`                 | MAJ (dont `isActive`)                                 |
+| DELETE  | `/clients/:id`                           | `clients:delete`                 | Hard delete (refus si projets rattachés)              |
+| GET     | `/projects/:projectId/clients`           | `clients:read`                   | Liste clients d'un projet                             |
+| POST    | `/projects/:projectId/clients`           | `clients:assign_to_project`      | Rattacher                                             |
+| DELETE  | `/projects/:projectId/clients/:clientId` | `clients:assign_to_project`      | Détacher                                              |
 
 **Enrichissements existants** :
+
 - `GET /projects` et `GET /projects/:id` : inclure `clients: {id, name}[]`
 - `GET /projects?clients=uuid1,uuid2` : filtre OR (projet contient au moins un des clients)
 
@@ -101,11 +102,11 @@ Composée `CLIENTS_CRUD` = les 5.
 
 Distribution dans les templates :
 
-| Template | Permissions |
-|---|---|
-| ADMIN, ADMIN_DELEGATED, PORTFOLIO_MANAGER | `CLIENTS_CRUD` (tout) |
-| MANAGER, MANAGER_PROJECT_FOCUS, PROJECT_LEAD, PROJECT_LEAD_JUNIOR | `clients:read` + `clients:assign_to_project` |
-| THIRD_PARTY_MANAGER, TECHNICAL_LEAD, PROJECT_CONTRIBUTOR, PROJECT_CONTRIBUTOR_LIGHT, FUNCTIONAL_REFERENT, CONTROLLER, OBSERVER_FULL, OBSERVER_PROJECTS_ONLY, EXTERNAL_PRESTATAIRE | `clients:read` |
+| Template                                                                                                                                                                          | Permissions                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| ADMIN, ADMIN_DELEGATED, PORTFOLIO_MANAGER                                                                                                                                         | `CLIENTS_CRUD` (tout)                        |
+| MANAGER, MANAGER_PROJECT_FOCUS, PROJECT_LEAD, PROJECT_LEAD_JUNIOR                                                                                                                 | `clients:read` + `clients:assign_to_project` |
+| THIRD_PARTY_MANAGER, TECHNICAL_LEAD, PROJECT_CONTRIBUTOR, PROJECT_CONTRIBUTOR_LIGHT, FUNCTIONAL_REFERENT, CONTROLLER, OBSERVER_FULL, OBSERVER_PROJECTS_ONLY, EXTERNAL_PRESTATAIRE | `clients:read`                               |
 
 **Validation post-seed** : requête SQL vérifiant que `role_permissions` contient bien les lignes attendues pour chaque template. Silent skip = bug.
 
@@ -114,12 +115,14 @@ Distribution dans les templates :
 **Service Axios** : `apps/web/src/services/clients.service.ts` (clone `third-parties.service.ts`).
 
 **Pages** :
+
 - `apps/web/app/[locale]/clients/page.tsx` — liste : search, toggle inactifs, bouton créer, CRUD inline, bouton « Exporter PDF/Excel »
 - `apps/web/app/[locale]/clients/[id]/page.tsx` — 2 onglets :
   - **Infos** : nom, statut, dates, actions (éditer, archiver, supprimer avec confirmation si projets rattachés)
   - **Projets** : bandeau synthèse (Nb projets actifs/total, Budget cumulé h, Saisi h, Écart h) + tableau projets (nom, statut, manager, dates, charge saisie)
 
 **Composants** (`apps/web/src/components/clients/`) :
+
 - `ClientModal.tsx` — create/edit
 - `ClientDeleteConfirmModal.tsx` — confirmation + `deletion-impact`
 - `ClientSelector.tsx` — multi-select pour attacher à un projet (pattern `UserMultiSelect`)
@@ -127,6 +130,7 @@ Distribution dans les templates :
 **Fiche projet** : nouvel onglet `"clients"` inséré après `"thirdParties"` dans `apps/web/app/[locale]/projects/[id]/page.tsx`, pattern lazy load + `hasPermission`.
 
 **Liste projets** :
+
 - Dropdown multi-select « Clients » (source `GET /clients?isActive=true`), URL sync `?clients=...`
 - Tag coloré sur chaque carte projet affichant les clients rattachés (truncate au 2ᵉ)
 
@@ -170,6 +174,7 @@ Pas de cache dédié V1 — requête Prisma avec `aggregate`. Si perf problème 
 > ⚠️ Cette section est conservée pour traçabilité mais a été **annulée et remplacée** par §15 R2 après l'audit Phase 0. Les tables `permissions` et `role_permissions` n'existent plus depuis la migration `20260420120000_rbac_v4_drop_legacy`. Voir §15 pour la procédure réelle.
 
 Enregistrer les 5 nouvelles permissions dans `atomic-permissions.ts` + leur distribution dans les templates. Le seed idempotent doit :
+
 - créer les 5 `permissions` si absentes
 - insérer les `role_permissions` manquantes sans dupliquer l'existant
 - logger explicitement chaque insertion effective
@@ -194,32 +199,32 @@ SELECT COUNT(*) FROM role_permissions rp
 
 ## 13. Plan d'exécution par vagues
 
-| Wave | Périmètre | Parallélisme | Dépendance |
-|---|---|---|---|
-| 0 | Audit Claude Code → `clients-audit.md` | Solo | — |
-| 1 | Migration Prisma + seed RBAC idempotent | Solo (`schema.prisma` + `seed.ts`) | W0 validé |
-| 2 | Backend : module `clients` (A) + extensions `projects` DTO/filter (B) | 2 agents si `projects.service.ts` séparable, sinon solo | W1 |
-| 3 | Frontend référentiel pages+composants (A) + intégrations fiche projet/liste/ClientSelector (B) | 2 agents | W2 |
-| 4 | Exports (ExportService + PortfolioGantt tooltip) | Solo | W2, W3 |
-| 5 | E2E Playwright + `permission-matrix.ts` mise à jour | Solo | W4 |
+| Wave | Périmètre                                                                                      | Parallélisme                                            | Dépendance |
+| ---- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ---------- |
+| 0    | Audit Claude Code → `clients-audit.md`                                                         | Solo                                                    | —          |
+| 1    | Migration Prisma + seed RBAC idempotent                                                        | Solo (`schema.prisma` + `seed.ts`)                      | W0 validé  |
+| 2    | Backend : module `clients` (A) + extensions `projects` DTO/filter (B)                          | 2 agents si `projects.service.ts` séparable, sinon solo | W1         |
+| 3    | Frontend référentiel pages+composants (A) + intégrations fiche projet/liste/ClientSelector (B) | 2 agents                                                | W2         |
+| 4    | Exports (ExportService + PortfolioGantt tooltip)                                               | Solo                                                    | W2, W3     |
+| 5    | E2E Playwright + `permission-matrix.ts` mise à jour                                            | Solo                                                    | W4         |
 
 ## 14. Matrice de conflits fichiers
 
-| Fichier | W1 | W2-A | W2-B | W3-A | W3-B | W4 | W5 |
-|---|---|---|---|---|---|---|---|
-| `schema.prisma` | ✏️ | | | | | | |
-| `seed.ts`, `atomic-permissions.ts` | ✏️ | | | | | | |
-| `apps/api/src/clients/*` | | ✏️ | | | | | |
-| `apps/api/src/projects/projects.service.ts` | | | ✏️ | | | | |
-| `apps/api/src/projects/dto/*` | | | ✏️ | | | | |
-| `apps/web/app/[locale]/clients/*` | | | | ✏️ | | | |
-| `apps/web/src/components/clients/*` | | | | ✏️ | | | |
-| `apps/web/src/services/clients.service.ts` | | | | ✏️ | | | |
-| `apps/web/app/[locale]/projects/[id]/page.tsx` | | | | | ✏️ | | |
-| `apps/web/app/[locale]/projects/page.tsx` (liste) | | | | | ✏️ | | |
-| `MainLayout.tsx` | | | | | ✏️ | | |
-| `ExportService.ts`, `PortfolioGantt` | | | | | | ✏️ | |
-| `e2e/clients.spec.ts`, `permission-matrix.ts` | | | | | | | ✏️ |
+| Fichier                                           | W1  | W2-A | W2-B | W3-A | W3-B | W4  | W5  |
+| ------------------------------------------------- | --- | ---- | ---- | ---- | ---- | --- | --- |
+| `schema.prisma`                                   | ✏️  |      |      |      |      |     |     |
+| `seed.ts`, `atomic-permissions.ts`                | ✏️  |      |      |      |      |     |     |
+| `apps/api/src/clients/*`                          |     | ✏️   |      |      |      |     |     |
+| `apps/api/src/projects/projects.service.ts`       |     |      | ✏️   |      |      |     |     |
+| `apps/api/src/projects/dto/*`                     |     |      | ✏️   |      |      |     |     |
+| `apps/web/app/[locale]/clients/*`                 |     |      |      | ✏️   |      |     |     |
+| `apps/web/src/components/clients/*`               |     |      |      | ✏️   |      |     |     |
+| `apps/web/src/services/clients.service.ts`        |     |      |      | ✏️   |      |     |     |
+| `apps/web/app/[locale]/projects/[id]/page.tsx`    |     |      |      |      | ✏️   |     |     |
+| `apps/web/app/[locale]/projects/page.tsx` (liste) |     |      |      |      | ✏️   |     |     |
+| `MainLayout.tsx`                                  |     |      |      |      | ✏️   |     |     |
+| `ExportService.ts`, `PortfolioGantt`              |     |      |      |      |      | ✏️  |     |
+| `e2e/clients.spec.ts`, `permission-matrix.ts`     |     |      |      |      |      |     | ✏️  |
 
 Locales fr.json / en.json : touchées en W3-A (à arbitrer sinon merge conflict W3-A ↔ W3-B).
 
@@ -244,6 +249,7 @@ Le module `third-parties` ne calcule PAS de computed flags (contrairement à ce 
 La migration `20260420120000_rbac_v4_drop_legacy` a supprimé les tables `permissions`, `role_configs`, `role_permissions`. Les permissions sont résolues 100 % en mémoire via `ROLE_TEMPLATES[templateKey].permissions`. §11 du spec (vérification SQL post-seed) est **annulée et remplacée par** :
 
 **Nouvelle procédure post-seed** :
+
 1. Vérifier que les 5 nouveaux codes sont dans `PermissionCode` (type TS dans `packages/rbac/atomic-permissions.ts`).
 2. Vérifier que `CLIENTS_CRUD` est défini et exporté.
 3. Vérifier que chaque template de `packages/rbac/templates.ts` touché contient la bonne distribution (grep du code source).
@@ -266,41 +272,40 @@ La sidebar utilise des emoji Unicode, pas des composants `lucide-react`. Ratific
 
 ### Table révisée
 
-| Wave | Périmètre | Parallélisme | Dépendance |
-|---|---|---|---|
-| 0 | Audit Claude Code → `clients-audit.md` | Solo | — (fait) |
-| 0.5 | Baseline check (build+test+docker+migrations) | Solo | W0 validé |
-| 0.7 | Fix baseline 5 suites rouges préexistantes (si nécessaire) | Solo | W0.5 rouge |
-| 1 | Migration Prisma + RBAC permissions + distribution templates | Solo (`schema.prisma` + `atomic-permissions.ts` + `templates.ts`) | W0.7 validé |
-| 1.5 | Nettoyage `seedPermissionsAndRoles` (retrait appels Prisma morts) | Solo (`seed.ts`) | W1 ; escape hatch si > 2 callers |
-| 2-A | Backend module `clients/*` (controller+service+DTO+tests) | Parallèle avec 2-B | W1 |
-| 2-B | Backend extensions `projects` (filter + enrichment `clients: {id,name}[]`) | Parallèle avec 2-A | W1 |
-| 3-A | Frontend référentiel Clients (pages + composants + sidebar + `nav.clients`) | **Séquentiel avant 3-B** (3-B consomme `clients.service.ts` + `ClientSelector`) | W2 |
-| 3-B | Frontend intégrations Projets (onglet + filtre + tags) | Séquentiel après 3-A | W3-A commit |
-| 4 | Exports (`ExportService` + `PortfolioGantt` tooltip) | Solo | W2, W3 |
-| 5 | E2E Playwright + `permission-matrix.ts` | Solo | W4 |
+| Wave | Périmètre                                                                   | Parallélisme                                                                    | Dépendance                       |
+| ---- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------- |
+| 0    | Audit Claude Code → `clients-audit.md`                                      | Solo                                                                            | — (fait)                         |
+| 0.5  | Baseline check (build+test+docker+migrations)                               | Solo                                                                            | W0 validé                        |
+| 0.7  | Fix baseline 5 suites rouges préexistantes (si nécessaire)                  | Solo                                                                            | W0.5 rouge                       |
+| 1    | Migration Prisma + RBAC permissions + distribution templates                | Solo (`schema.prisma` + `atomic-permissions.ts` + `templates.ts`)               | W0.7 validé                      |
+| 1.5  | Nettoyage `seedPermissionsAndRoles` (retrait appels Prisma morts)           | Solo (`seed.ts`)                                                                | W1 ; escape hatch si > 2 callers |
+| 2-A  | Backend module `clients/*` (controller+service+DTO+tests)                   | Parallèle avec 2-B                                                              | W1                               |
+| 2-B  | Backend extensions `projects` (filter + enrichment `clients: {id,name}[]`)  | Parallèle avec 2-A                                                              | W1                               |
+| 3-A  | Frontend référentiel Clients (pages + composants + sidebar + `nav.clients`) | **Séquentiel avant 3-B** (3-B consomme `clients.service.ts` + `ClientSelector`) | W2                               |
+| 3-B  | Frontend intégrations Projets (onglet + filtre + tags)                      | Séquentiel après 3-A                                                            | W3-A commit                      |
+| 4    | Exports (`ExportService` + `PortfolioGantt` tooltip)                        | Solo                                                                            | W2, W3                           |
+| 5    | E2E Playwright + `permission-matrix.ts`                                     | Solo                                                                            | W4                               |
 
 **Correction vs §13 initial** : W3 n'est plus parallélisé (B importe du code produit par A). Advisor avait flagué cette dépendance ; ratifié.
 
 ### Matrice de conflits fichiers (W1.5 ajoutée)
 
-| Fichier | W1 | W1.5 | W2-A | W2-B | W3-A | W3-B | W4 | W5 |
-|---|---|---|---|---|---|---|---|---|
-| `schema.prisma` | ✏️ | | | | | | | |
-| `atomic-permissions.ts`, `templates.ts` | ✏️ | | | | | | | |
-| `seed.ts` | | ✏️ | | | | | | |
-| `apps/api/src/clients/*` | | | ✏️ | | | | | |
-| `apps/api/src/projects/projects.service.ts` | | | | ✏️ | | | | |
-| `apps/api/src/projects/dto/*` | | | | ✏️ | | | | |
-| `apps/web/app/[locale]/clients/*` | | | | | ✏️ | | | |
-| `apps/web/src/components/clients/*` | | | | | ✏️ | | | |
-| `apps/web/src/services/clients.service.ts` | | | | | ✏️ | | | |
-| `apps/web/src/components/MainLayout.tsx` | | | | | ✏️ | | | |
-| `apps/web/messages/{fr,en}/common.json` | | | | | ✏️ | | | |
-| `apps/web/app/[locale]/projects/[id]/page.tsx` | | | | | | ✏️ | | |
-| `apps/web/app/[locale]/projects/page.tsx` | | | | | | ✏️ | | |
-| `ExportService.ts`, `PortfolioGantt`, `GanttTooltip.tsx`, `types.ts` | | | | | | | ✏️ | |
-| `e2e/clients.spec.ts`, `e2e/fixtures/permission-matrix.ts` | | | | | | | | ✏️ |
+| Fichier                                                              | W1  | W1.5 | W2-A | W2-B | W3-A | W3-B | W4  | W5  |
+| -------------------------------------------------------------------- | --- | ---- | ---- | ---- | ---- | ---- | --- | --- |
+| `schema.prisma`                                                      | ✏️  |      |      |      |      |      |     |     |
+| `atomic-permissions.ts`, `templates.ts`                              | ✏️  |      |      |      |      |      |     |     |
+| `seed.ts`                                                            |     | ✏️   |      |      |      |      |     |     |
+| `apps/api/src/clients/*`                                             |     |      | ✏️   |      |      |      |     |     |
+| `apps/api/src/projects/projects.service.ts`                          |     |      |      | ✏️   |      |      |     |     |
+| `apps/api/src/projects/dto/*`                                        |     |      |      | ✏️   |      |      |     |     |
+| `apps/web/app/[locale]/clients/*`                                    |     |      |      |      | ✏️   |      |     |     |
+| `apps/web/src/components/clients/*`                                  |     |      |      |      | ✏️   |      |     |     |
+| `apps/web/src/services/clients.service.ts`                           |     |      |      |      | ✏️   |      |     |     |
+| `apps/web/src/components/MainLayout.tsx`                             |     |      |      |      | ✏️   |      |     |     |
+| `apps/web/messages/{fr,en}/common.json`                              |     |      |      |      | ✏️   |      |     |     |
+| `apps/web/app/[locale]/projects/[id]/page.tsx`                       |     |      |      |      |      | ✏️   |     |     |
+| `apps/web/app/[locale]/projects/page.tsx`                            |     |      |      |      |      | ✏️   |     |     |
+| `ExportService.ts`, `PortfolioGantt`, `GanttTooltip.tsx`, `types.ts` |     |      |      |      |      |      | ✏️  |     |
+| `e2e/clients.spec.ts`, `e2e/fixtures/permission-matrix.ts`           |     |      |      |      |      |      |     | ✏️  |
 
 Pas de conflit de locale à arbitrer (§14 note levée par R3 : une seule clé `nav.clients`, pas de namespace).
-

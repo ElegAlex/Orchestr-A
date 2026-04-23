@@ -131,59 +131,59 @@ import {
   SKILLS_ADMIN,
   SETTINGS_READ,
   USERS_PAGE_ACCESS,
-} from './atomic-permissions.ts';
+} from "./atomic-permissions.ts";
 
 // ============================================================================
 // 1. Types : catégories, clés, structure d'un template
 // ============================================================================
 
 export type RoleCategoryKey =
-  | 'ADMINISTRATION' // A — Rouge (2)
-  | 'MANAGEMENT' // B — Orange (4)
-  | 'PROJECT' // C — Bleu (6)
-  | 'HR_AND_THIRD_PARTIES' // D — Rose (3)
-  | 'ANALYTICS' // E — Violet (3)
-  | 'IT_OPERATIONS' // F — Cyan (2)
-  | 'OBSERVATION' // G — Gris (3)
-  | 'STANDARD_USER' // H — Vert (1)
-  | 'EXTERNAL'; // I — Jaune (2)
+  | "ADMINISTRATION" // A — Rouge (2)
+  | "MANAGEMENT" // B — Orange (4)
+  | "PROJECT" // C — Bleu (6)
+  | "HR_AND_THIRD_PARTIES" // D — Rose (3)
+  | "ANALYTICS" // E — Violet (3)
+  | "IT_OPERATIONS" // F — Cyan (2)
+  | "OBSERVATION" // G — Gris (3)
+  | "STANDARD_USER" // H — Vert (1)
+  | "EXTERNAL"; // I — Jaune (2)
 
 export type RoleTemplateKey =
   // A - ADMINISTRATION
-  | 'ADMIN'
-  | 'ADMIN_DELEGATED'
+  | "ADMIN"
+  | "ADMIN_DELEGATED"
   // B - MANAGEMENT
-  | 'PORTFOLIO_MANAGER'
-  | 'MANAGER'
-  | 'MANAGER_PROJECT_FOCUS'
-  | 'MANAGER_HR_FOCUS'
+  | "PORTFOLIO_MANAGER"
+  | "MANAGER"
+  | "MANAGER_PROJECT_FOCUS"
+  | "MANAGER_HR_FOCUS"
   // C - PROJECT
-  | 'PROJECT_LEAD'
-  | 'PROJECT_LEAD_JUNIOR'
-  | 'TECHNICAL_LEAD'
-  | 'PROJECT_CONTRIBUTOR'
-  | 'PROJECT_CONTRIBUTOR_LIGHT'
-  | 'FUNCTIONAL_REFERENT'
+  | "PROJECT_LEAD"
+  | "PROJECT_LEAD_JUNIOR"
+  | "TECHNICAL_LEAD"
+  | "PROJECT_CONTRIBUTOR"
+  | "PROJECT_CONTRIBUTOR_LIGHT"
+  | "FUNCTIONAL_REFERENT"
   // D - HR_AND_THIRD_PARTIES
-  | 'HR_OFFICER'
-  | 'HR_OFFICER_LIGHT'
-  | 'THIRD_PARTY_MANAGER'
+  | "HR_OFFICER"
+  | "HR_OFFICER_LIGHT"
+  | "THIRD_PARTY_MANAGER"
   // E - ANALYTICS
-  | 'CONTROLLER'
-  | 'BUDGET_ANALYST'
-  | 'DATA_ANALYST'
+  | "CONTROLLER"
+  | "BUDGET_ANALYST"
+  | "DATA_ANALYST"
   // F - IT_OPERATIONS
-  | 'IT_SUPPORT'
-  | 'IT_INFRASTRUCTURE'
+  | "IT_SUPPORT"
+  | "IT_INFRASTRUCTURE"
   // G - OBSERVATION
-  | 'OBSERVER_FULL'
-  | 'OBSERVER_PROJECTS_ONLY'
-  | 'OBSERVER_HR_ONLY'
+  | "OBSERVER_FULL"
+  | "OBSERVER_PROJECTS_ONLY"
+  | "OBSERVER_HR_ONLY"
   // H - STANDARD_USER
-  | 'BASIC_USER'
+  | "BASIC_USER"
   // I - EXTERNAL
-  | 'EXTERNAL_PRESTATAIRE'
-  | 'STAGIAIRE_ALTERNANT';
+  | "EXTERNAL_PRESTATAIRE"
+  | "STAGIAIRE_ALTERNANT";
 
 export interface RoleTemplate {
   readonly key: RoleTemplateKey;
@@ -291,11 +291,11 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Inclut `documents:manage_any` (D6 #4).
    */
   ADMIN: {
-    key: 'ADMIN',
-    defaultLabel: 'Administrateur',
-    category: 'ADMINISTRATION',
+    key: "ADMIN",
+    defaultLabel: "Administrateur",
+    category: "ADMINISTRATION",
     description:
-      'Accès total, incluant configuration système et gestion des rôles.',
+      "Accès total, incluant configuration système et gestion des rôles.",
     permissions: CATALOG_PERMISSIONS,
   },
 
@@ -315,15 +315,15 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * `settings:update`, `leaves:manage_any`).
    */
   ADMIN_DELEGATED: {
-    key: 'ADMIN_DELEGATED',
-    defaultLabel: 'Directeur adjoint',
-    category: 'ADMINISTRATION',
+    key: "ADMIN_DELEGATED",
+    defaultLabel: "Directeur adjoint",
+    category: "ADMINISTRATION",
     description:
-      'Direction opérationnelle de haut niveau sans droits de paramétrage système ni de gestion RBAC.',
+      "Direction opérationnelle de haut niveau sans droits de paramétrage système ni de gestion RBAC.",
     permissions: without(CATALOG_PERMISSIONS, [
-      'users:manage_roles',
-      'settings:update',
-      'leaves:manage_any', // Scope périmètre préservé (memory)
+      "users:manage_roles",
+      "settings:update",
+      "leaves:manage_any", // Scope périmètre préservé (memory)
     ]),
   },
 
@@ -340,11 +340,11 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * avec les CRUD tiers déjà attribués).
    */
   PORTFOLIO_MANAGER: {
-    key: 'PORTFOLIO_MANAGER',
-    defaultLabel: 'Manager de portefeuille',
-    category: 'MANAGEMENT',
+    key: "PORTFOLIO_MANAGER",
+    defaultLabel: "Manager de portefeuille",
+    category: "MANAGEMENT",
     description:
-      'Supervision transversale multi-projets avec bypass OwnershipGuard. PMO / architecte senior. Sans autorité RH.',
+      "Supervision transversale multi-projets avec bypass OwnershipGuard. PMO / architecte senior. Sans autorité RH.",
     permissions: compose(
       STANDARD_CONTRIBUTOR_BASE,
       PROJECT_CONTRIB_CAPACITIES,
@@ -356,10 +356,10 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       THIRD_PARTIES_CRUD,
       SETTINGS_READ, // §NOTE 3
       [
-        'projects:manage_any',
-        'tasks:manage_any',
-        'events:manage_any',
-        'telework:read_team',
+        "projects:manage_any",
+        "tasks:manage_any",
+        "events:manage_any",
+        "telework:read_team",
       ],
     ),
   },
@@ -376,9 +376,9 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    *     corriger (MANAGER a toujours pu saisir du temps pour un tiers).
    */
   MANAGER: {
-    key: 'MANAGER',
-    defaultLabel: 'Manager',
-    category: 'MANAGEMENT',
+    key: "MANAGER",
+    defaultLabel: "Manager",
+    category: "MANAGEMENT",
     description:
       "Management d'équipe complet : projets, tâches, congés, télétravail, membres.",
     permissions: compose(
@@ -395,8 +395,8 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       USERS_PAGE_ACCESS, // Correction PO 2026-04-19 (users:manage sans CRUD)
       SETTINGS_READ, // §NOTE 3
       [
-        'telework:manage_any', // D7 rename
-        'tasks:manage_any', // memory: MANAGER a tasks:manage_any (cluster 3)
+        "telework:manage_any", // D7 rename
+        "tasks:manage_any", // memory: MANAGER a tasks:manage_any (cluster 3)
       ],
     ),
   },
@@ -406,19 +406,19 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * +settings:read (§NOTE 3).
    */
   MANAGER_PROJECT_FOCUS: {
-    key: 'MANAGER_PROJECT_FOCUS',
-    defaultLabel: 'Manager projet',
-    category: 'MANAGEMENT',
+    key: "MANAGER_PROJECT_FOCUS",
+    defaultLabel: "Manager projet",
+    category: "MANAGEMENT",
     description:
-      'Management centré projets, sans autorité RH. Chef de programme sans équipe directe.',
+      "Management centré projets, sans autorité RH. Chef de programme sans équipe directe.",
     permissions: without(DRAFT_MANAGER(), [
-      'leaves:approve',
-      'leaves:manage',
-      'leaves:declare_for_others',
-      'leaves:manage_delegations',
-      'leaves:update',
-      'leaves:delete',
-      'telework:manage_any',
+      "leaves:approve",
+      "leaves:manage",
+      "leaves:declare_for_others",
+      "leaves:manage_delegations",
+      "leaves:update",
+      "leaves:delete",
+      "telework:manage_any",
     ]),
   },
 
@@ -427,11 +427,11 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * epics/milestones:read quasi-universal). +settings:read (§NOTE 3).
    */
   MANAGER_HR_FOCUS: {
-    key: 'MANAGER_HR_FOCUS',
-    defaultLabel: 'Chef de service',
-    category: 'MANAGEMENT',
+    key: "MANAGER_HR_FOCUS",
+    defaultLabel: "Chef de service",
+    category: "MANAGEMENT",
     description:
-      'Management centré ressources humaines, sans delivery projet. Chef de service.',
+      "Management centré ressources humaines, sans delivery projet. Chef de service.",
     permissions: compose(
       STANDARD_CONTRIBUTOR_BASE,
       LEAVES_MANAGEMENT,
@@ -441,7 +441,7 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       REPORTS_FULL,
       SETTINGS_READ, // §NOTE 3
       [
-        'telework:manage_any', // D7
+        "telework:manage_any", // D7
       ],
     ),
   },
@@ -459,11 +459,11 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Propagé automatiquement à PROJECT_LEAD_JUNIOR via `DRAFT_PROJECT_LEAD()`.
    */
   PROJECT_LEAD: {
-    key: 'PROJECT_LEAD',
-    defaultLabel: 'Chef de projet',
-    category: 'PROJECT',
+    key: "PROJECT_LEAD",
+    defaultLabel: "Chef de projet",
+    category: "PROJECT",
     description:
-      'Chef de projet confirmé : CRUD projet complet + gestion des membres.',
+      "Chef de projet confirmé : CRUD projet complet + gestion des membres.",
     permissions: compose(
       STANDARD_CONTRIBUTOR_BASE,
       PROJECT_CONTRIB_CAPACITIES,
@@ -471,7 +471,7 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       THIRD_PARTIES_CRUD,
       TIME_TRACKING_FOR_THIRD_PARTY, // Correction PO 2026-04-19
       [
-        'telework:manage_any', // D7
+        "telework:manage_any", // D7
       ],
     ),
   },
@@ -480,14 +480,14 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * PROJECT_LEAD moins projects:create/delete/manage_members.
    */
   PROJECT_LEAD_JUNIOR: {
-    key: 'PROJECT_LEAD_JUNIOR',
-    defaultLabel: 'Chef de projet junior',
-    category: 'PROJECT',
-    description: 'Chef de projet en montée en compétence.',
+    key: "PROJECT_LEAD_JUNIOR",
+    defaultLabel: "Chef de projet junior",
+    category: "PROJECT",
+    description: "Chef de projet en montée en compétence.",
     permissions: without(DRAFT_PROJECT_LEAD(), [
-      'projects:create',
-      'projects:delete',
-      'projects:manage_members',
+      "projects:create",
+      "projects:delete",
+      "projects:manage_members",
     ]),
   },
 
@@ -495,11 +495,11 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Cluster 6 actuel (REFERENT_TECHNIQUE).
    */
   TECHNICAL_LEAD: {
-    key: 'TECHNICAL_LEAD',
-    defaultLabel: 'Référent technique',
-    category: 'PROJECT',
+    key: "TECHNICAL_LEAD",
+    defaultLabel: "Référent technique",
+    category: "PROJECT",
     description:
-      'Référent technique dans les projets : création/modification tâches sans gestion de projet.',
+      "Référent technique dans les projets : création/modification tâches sans gestion de projet.",
     permissions: compose(
       STANDARD_CONTRIBUTOR_BASE,
       PROJECT_STRUCTURE_READ,
@@ -508,9 +508,7 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       TIME_TRACKING_EDIT,
       EVENTS_DELETE,
       SKILLS_ADMIN,
-      [
-        'tasks:create_in_project',
-      ],
+      ["tasks:create_in_project"],
     ),
   },
 
@@ -518,16 +516,16 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Cluster 5 actuel (CHARGE_DE_MISSION, CONSULTANT_TECHNOLOGIE_SI, etc.).
    */
   PROJECT_CONTRIBUTOR: {
-    key: 'PROJECT_CONTRIBUTOR',
-    defaultLabel: 'Contributeur projet',
-    category: 'PROJECT',
+    key: "PROJECT_CONTRIBUTOR",
+    defaultLabel: "Contributeur projet",
+    category: "PROJECT",
     description:
-      'Contributeur projet actif : pattern couteau suisse (couvre les 4 libellés UCANSS actuels).',
+      "Contributeur projet actif : pattern couteau suisse (couvre les 4 libellés UCANSS actuels).",
     permissions: compose(
       STANDARD_CONTRIBUTOR_BASE,
       PROJECT_CONTRIB_CAPACITIES,
       [
-        'telework:manage_any', // D7
+        "telework:manage_any", // D7
       ],
     ),
   },
@@ -536,19 +534,19 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Contributeur à scope réduit.
    */
   PROJECT_CONTRIBUTOR_LIGHT: {
-    key: 'PROJECT_CONTRIBUTOR_LIGHT',
-    defaultLabel: 'Contributeur projet junior',
-    category: 'PROJECT',
-    description: 'Contributeur au scope réduit. Équipes juniors encadrées.',
+    key: "PROJECT_CONTRIBUTOR_LIGHT",
+    defaultLabel: "Contributeur projet junior",
+    category: "PROJECT",
+    description: "Contributeur au scope réduit. Équipes juniors encadrées.",
     permissions: without(DRAFT_PROJECT_CONTRIB(), [
-      'projects:update', // =ex projects:edit D4 A
-      'projects:delete',
-      'epics:create',
-      'epics:delete',
-      'milestones:create',
-      'milestones:delete',
-      'telework:manage_any', // =ex telework:manage_others D7
-      'tasks:delete',
+      "projects:update", // =ex projects:edit D4 A
+      "projects:delete",
+      "epics:create",
+      "epics:delete",
+      "milestones:create",
+      "milestones:delete",
+      "telework:manage_any", // =ex telework:manage_others D7
+      "tasks:delete",
     ]),
   },
 
@@ -556,25 +554,25 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Référent fonctionnel applicatif.
    */
   FUNCTIONAL_REFERENT: {
-    key: 'FUNCTIONAL_REFERENT',
-    defaultLabel: 'Référent fonctionnel',
-    category: 'PROJECT',
+    key: "FUNCTIONAL_REFERENT",
+    defaultLabel: "Référent fonctionnel",
+    category: "PROJECT",
     description:
       "Référent fonctionnel applicatif : expertise métier sans écriture sur la structure projet.",
     permissions: without(DRAFT_PROJECT_CONTRIB(), [
-      'projects:create',
-      'projects:delete',
-      'projects:update',
-      'epics:create',
-      'epics:update',
-      'epics:delete',
-      'milestones:create',
-      'milestones:update',
-      'milestones:delete',
-      'tasks:create',
-      'tasks:create_in_project',
-      'tasks:delete',
-      'telework:manage_any',
+      "projects:create",
+      "projects:delete",
+      "projects:update",
+      "epics:create",
+      "epics:update",
+      "epics:delete",
+      "milestones:create",
+      "milestones:update",
+      "milestones:delete",
+      "tasks:create",
+      "tasks:create_in_project",
+      "tasks:delete",
+      "telework:manage_any",
     ]),
   },
 
@@ -590,9 +588,9 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Pas de `settings:read` (§NOTE 3).
    */
   HR_OFFICER: {
-    key: 'HR_OFFICER',
-    defaultLabel: 'Gestionnaire RH',
-    category: 'HR_AND_THIRD_PARTIES',
+    key: "HR_OFFICER",
+    defaultLabel: "Gestionnaire RH",
+    category: "HR_AND_THIRD_PARTIES",
     description: "Gestionnaire RH avec pouvoir d'approbation.",
     permissions: compose(
       COMMON_BASE,
@@ -603,13 +601,13 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       TELEWORK_TEAM_READ,
       PREDEFINED_TASKS_ADMIN,
       [
-        'telework:manage_any', // D7
-        'holidays:create',
-        'holidays:update',
-        'holidays:delete',
-        'school_vacations:create',
-        'school_vacations:update',
-        'school_vacations:delete',
+        "telework:manage_any", // D7
+        "holidays:create",
+        "holidays:update",
+        "holidays:delete",
+        "school_vacations:create",
+        "school_vacations:update",
+        "school_vacations:delete",
       ],
     ),
   },
@@ -618,9 +616,9 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * RH junior / assistant RH, sans pouvoir d'approbation.
    */
   HR_OFFICER_LIGHT: {
-    key: 'HR_OFFICER_LIGHT',
-    defaultLabel: 'Assistant RH',
-    category: 'HR_AND_THIRD_PARTIES',
+    key: "HR_OFFICER_LIGHT",
+    defaultLabel: "Assistant RH",
+    category: "HR_AND_THIRD_PARTIES",
     description: "RH junior / assistant RH, sans pouvoir d'approbation.",
     permissions: compose(
       COMMON_BASE,
@@ -636,10 +634,10 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * time_tracking:declare_for_third_party.
    */
   THIRD_PARTY_MANAGER: {
-    key: 'THIRD_PARTY_MANAGER',
-    defaultLabel: 'Gestionnaire prestataires',
-    category: 'HR_AND_THIRD_PARTIES',
-    description: 'Gestionnaire de prestataires/tiers.',
+    key: "THIRD_PARTY_MANAGER",
+    defaultLabel: "Gestionnaire prestataires",
+    category: "HR_AND_THIRD_PARTIES",
+    description: "Gestionnaire de prestataires/tiers.",
     permissions: compose(
       DRAFT_PROJECT_CONTRIB_LIGHT(),
       THIRD_PARTIES_CRUD,
@@ -656,27 +654,27 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * déjà historique).
    */
   CONTROLLER: {
-    key: 'CONTROLLER',
-    defaultLabel: 'Contrôleur de gestion',
-    category: 'ANALYTICS',
+    key: "CONTROLLER",
+    defaultLabel: "Contrôleur de gestion",
+    category: "ANALYTICS",
     description:
-      'Contrôle de gestion : vue large en lecture sur tous les pans opérationnels.',
+      "Contrôle de gestion : vue large en lecture sur tous les pans opérationnels.",
     permissions: compose(
       COMMON_BASE,
       PROJECT_STRUCTURE_READ,
       SETTINGS_READ, // §NOTE 3
       [
-        'events:read',
-        'events:readAll',
-        'leaves:read',
-        'leaves:readAll',
-        'telework:read',
-        'telework:readAll',
-        'tasks:read',
-        'tasks:readAll',
-        'time_tracking:read',
-        'time_tracking:read_reports',
-        'time_tracking:view_any',
+        "events:read",
+        "events:readAll",
+        "leaves:read",
+        "leaves:readAll",
+        "telework:read",
+        "telework:readAll",
+        "tasks:read",
+        "tasks:readAll",
+        "time_tracking:read",
+        "time_tracking:read_reports",
+        "time_tracking:view_any",
       ],
       REPORTS_FULL,
     ),
@@ -686,18 +684,18 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Analyste budgétaire. +settings:read (§NOTE 3).
    */
   BUDGET_ANALYST: {
-    key: 'BUDGET_ANALYST',
-    defaultLabel: 'Analyste budgétaire',
-    category: 'ANALYTICS',
-    description: 'Analyste budgétaire centré temps/coûts.',
+    key: "BUDGET_ANALYST",
+    defaultLabel: "Analyste budgétaire",
+    category: "ANALYTICS",
+    description: "Analyste budgétaire centré temps/coûts.",
     permissions: compose(
       COMMON_BASE,
       SETTINGS_READ, // §NOTE 3
       [
-        'projects:read',
-        'time_tracking:read',
-        'time_tracking:read_reports',
-        'time_tracking:view_any',
+        "projects:read",
+        "time_tracking:read",
+        "time_tracking:read_reports",
+        "time_tracking:view_any",
       ],
       REPORTS_FULL,
     ),
@@ -707,14 +705,14 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * BI/analytics pur. +settings:read (§NOTE 3).
    */
   DATA_ANALYST: {
-    key: 'DATA_ANALYST',
-    defaultLabel: 'Analyste données',
-    category: 'ANALYTICS',
-    description: 'BI/analytics pur, sans lien opérationnel.',
+    key: "DATA_ANALYST",
+    defaultLabel: "Analyste données",
+    category: "ANALYTICS",
+    description: "BI/analytics pur, sans lien opérationnel.",
     permissions: compose(
       COMMON_BASE,
       SETTINGS_READ, // §NOTE 3
-      ['projects:read'],
+      ["projects:read"],
       REPORTS_FULL,
     ),
   },
@@ -727,10 +725,10 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Support technique utilisateurs. Pas de `settings:read` (§NOTE 3).
    */
   IT_SUPPORT: {
-    key: 'IT_SUPPORT',
-    defaultLabel: 'Technicien support',
-    category: 'IT_OPERATIONS',
-    description: 'Support technique utilisateurs.',
+    key: "IT_SUPPORT",
+    defaultLabel: "Technicien support",
+    category: "IT_OPERATIONS",
+    description: "Support technique utilisateurs.",
     permissions: compose(
       COMMON_BASE,
       LEAVES_SELF_SERVICE,
@@ -746,10 +744,10 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Équipe exploitation / infrastructure. +settings:read (§NOTE 3).
    */
   IT_INFRASTRUCTURE: {
-    key: 'IT_INFRASTRUCTURE',
-    defaultLabel: 'Équipe infrastructure',
-    category: 'IT_OPERATIONS',
-    description: 'Équipe exploitation / infrastructure.',
+    key: "IT_INFRASTRUCTURE",
+    defaultLabel: "Équipe infrastructure",
+    category: "IT_OPERATIONS",
+    description: "Équipe exploitation / infrastructure.",
     permissions: compose(
       COMMON_BASE,
       LEAVES_SELF_SERVICE,
@@ -760,10 +758,10 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       TASKS_SELF_AUTHORING,
       SETTINGS_READ, // §NOTE 3
       [
-        'holidays:create',
-        'holidays:update',
-        'school_vacations:create',
-        'school_vacations:update',
+        "holidays:create",
+        "holidays:update",
+        "school_vacations:create",
+        "school_vacations:update",
       ],
     ),
   },
@@ -777,11 +775,11 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * users en lecture).
    */
   OBSERVER_FULL: {
-    key: 'OBSERVER_FULL',
-    defaultLabel: 'Observateur global',
-    category: 'OBSERVATION',
+    key: "OBSERVER_FULL",
+    defaultLabel: "Observateur global",
+    category: "OBSERVATION",
     description:
-      'Observateur global en lecture seule sur tout le périmètre métier. Volontairement large — inclut settings:read et users:read.',
+      "Observateur global en lecture seule sur tout le périmètre métier. Volontairement large — inclut settings:read et users:read.",
     permissions: compose(
       ANNUAIRE_READ,
       CALENDAR_CONTEXT_READ,
@@ -789,16 +787,16 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       PREDEFINED_TASKS_VIEW,
       SETTINGS_READ, // §NOTE 3 (historique)
       [
-        'events:read',
-        'events:readAll',
-        'leaves:read',
-        'leaves:readAll',
-        'telework:read',
-        'telework:readAll',
-        'tasks:read',
-        'tasks:readAll',
-        'time_tracking:read',
-        'reports:view',
+        "events:read",
+        "events:readAll",
+        "leaves:read",
+        "leaves:readAll",
+        "telework:read",
+        "telework:readAll",
+        "tasks:read",
+        "tasks:readAll",
+        "time_tracking:read",
+        "reports:view",
       ],
     ),
   },
@@ -807,10 +805,10 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Sponsor / comité de pilotage. +settings:read (§NOTE 3).
    */
   OBSERVER_PROJECTS_ONLY: {
-    key: 'OBSERVER_PROJECTS_ONLY',
-    defaultLabel: 'Sponsor projet',
-    category: 'OBSERVATION',
-    description: 'Observation limitée au scope projets (sponsor, COPIL).',
+    key: "OBSERVER_PROJECTS_ONLY",
+    defaultLabel: "Sponsor projet",
+    category: "OBSERVATION",
+    description: "Observation limitée au scope projets (sponsor, COPIL).",
     permissions: compose(
       ANNUAIRE_READ,
       CALENDAR_CONTEXT_READ,
@@ -818,12 +816,12 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       PREDEFINED_TASKS_VIEW,
       SETTINGS_READ, // §NOTE 3
       [
-        'events:read',
-        'events:readAll',
-        'tasks:read',
-        'tasks:readAll',
-        'time_tracking:read',
-        'reports:view',
+        "events:read",
+        "events:readAll",
+        "tasks:read",
+        "tasks:readAll",
+        "time_tracking:read",
+        "reports:view",
       ],
     ),
   },
@@ -833,22 +831,23 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * projet (comments/documents/epics/milestones). +settings:read (§NOTE 3).
    */
   OBSERVER_HR_ONLY: {
-    key: 'OBSERVER_HR_ONLY',
-    defaultLabel: 'Audit social',
-    category: 'OBSERVATION',
-    description: 'Observation limitée au scope RH (audit social, direction sociale).',
+    key: "OBSERVER_HR_ONLY",
+    defaultLabel: "Audit social",
+    category: "OBSERVATION",
+    description:
+      "Observation limitée au scope RH (audit social, direction sociale).",
     permissions: compose(
       ANNUAIRE_READ,
       CALENDAR_CONTEXT_READ,
       PREDEFINED_TASKS_VIEW,
       SETTINGS_READ, // §NOTE 3
       [
-        'leaves:read',
-        'leaves:readAll',
-        'telework:read',
-        'telework:readAll',
-        'time_tracking:read',
-        'reports:view',
+        "leaves:read",
+        "leaves:readAll",
+        "telework:read",
+        "telework:readAll",
+        "time_tracking:read",
+        "reports:view",
       ],
     ),
   },
@@ -865,11 +864,11 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Pas de `settings:read` (§NOTE 3).
    */
   BASIC_USER: {
-    key: 'BASIC_USER',
-    defaultLabel: 'Utilisateur standard',
-    category: 'STANDARD_USER',
+    key: "BASIC_USER",
+    defaultLabel: "Utilisateur standard",
+    category: "STANDARD_USER",
     description:
-      'Utilisateur standard : self-service complet (congés, télétravail, time tracking, tâches orphelines).',
+      "Utilisateur standard : self-service complet (congés, télétravail, time tracking, tâches orphelines).",
     permissions: compose(COMMON_BASE, STANDARD_SELF_SERVICE),
   },
 
@@ -881,16 +880,16 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Prestataire externe temporaire. Pas de `settings:read` (§NOTE 3).
    */
   EXTERNAL_PRESTATAIRE: {
-    key: 'EXTERNAL_PRESTATAIRE',
-    defaultLabel: 'Prestataire externe',
-    category: 'EXTERNAL',
-    description: 'Prestataire externe temporaire (consultant facturable).',
+    key: "EXTERNAL_PRESTATAIRE",
+    defaultLabel: "Prestataire externe",
+    category: "EXTERNAL",
+    description: "Prestataire externe temporaire (consultant facturable).",
     permissions: compose(
       without(DRAFT_PROJECT_CONTRIB_LIGHT(), [
-        'users:read',
-        'events:create',
-        'events:delete',
-        'events:update',
+        "users:read",
+        "events:create",
+        "events:delete",
+        "events:update",
       ]),
       TIME_TRACKING_FOR_THIRD_PARTY,
     ),
@@ -900,19 +899,17 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
    * Stagiaire ou alternant encadré. Pas de `settings:read` (§NOTE 3).
    */
   STAGIAIRE_ALTERNANT: {
-    key: 'STAGIAIRE_ALTERNANT',
-    defaultLabel: 'Stagiaire / alternant',
-    category: 'EXTERNAL',
-    description: 'Stagiaire ou alternant encadré, scope très réduit.',
+    key: "STAGIAIRE_ALTERNANT",
+    defaultLabel: "Stagiaire / alternant",
+    category: "EXTERNAL",
+    description: "Stagiaire ou alternant encadré, scope très réduit.",
     permissions: compose(
-      without(
-        compose(COMMON_BASE, STANDARD_SELF_SERVICE),
-        ['events:create', 'events:update', 'telework:delete'],
-      ),
-      [
-        'comments:create',
-        'comments:update',
-      ],
+      without(compose(COMMON_BASE, STANDARD_SELF_SERVICE), [
+        "events:create",
+        "events:update",
+        "telework:delete",
+      ]),
+      ["comments:create", "comments:update"],
     ),
   },
 };
@@ -938,7 +935,7 @@ function DRAFT_MANAGER(): readonly PermissionCode[] {
     THIRD_PARTIES_CRUD,
     USERS_PAGE_ACCESS, // Correction PO 2026-04-19
     SETTINGS_READ,
-    ['telework:manage_any', 'tasks:manage_any'],
+    ["telework:manage_any", "tasks:manage_any"],
   );
 }
 
@@ -952,28 +949,26 @@ function DRAFT_PROJECT_LEAD(): readonly PermissionCode[] {
     REPORTS_FULL,
     THIRD_PARTIES_CRUD,
     TIME_TRACKING_FOR_THIRD_PARTY, // Correction PO 2026-04-19
-    ['telework:manage_any'],
+    ["telework:manage_any"],
   );
 }
 
 function DRAFT_PROJECT_CONTRIB(): readonly PermissionCode[] {
-  return compose(
-    STANDARD_CONTRIBUTOR_BASE,
-    PROJECT_CONTRIB_CAPACITIES,
-    ['telework:manage_any'],
-  );
+  return compose(STANDARD_CONTRIBUTOR_BASE, PROJECT_CONTRIB_CAPACITIES, [
+    "telework:manage_any",
+  ]);
 }
 
 function DRAFT_PROJECT_CONTRIB_LIGHT(): readonly PermissionCode[] {
   return without(DRAFT_PROJECT_CONTRIB(), [
-    'projects:update',
-    'projects:delete',
-    'epics:create',
-    'epics:delete',
-    'milestones:create',
-    'milestones:delete',
-    'telework:manage_any',
-    'tasks:delete',
+    "projects:update",
+    "projects:delete",
+    "epics:create",
+    "epics:delete",
+    "milestones:create",
+    "milestones:delete",
+    "telework:manage_any",
+    "tasks:delete",
   ]);
 }
 
@@ -985,32 +980,32 @@ function DRAFT_PROJECT_CONTRIB_LIGHT(): readonly PermissionCode[] {
  * Liste ordonnée des clés de templates (ordre du design doc §4).
  */
 export const ROLE_TEMPLATE_KEYS: readonly RoleTemplateKey[] = [
-  'ADMIN',
-  'ADMIN_DELEGATED',
-  'PORTFOLIO_MANAGER',
-  'MANAGER',
-  'MANAGER_PROJECT_FOCUS',
-  'MANAGER_HR_FOCUS',
-  'PROJECT_LEAD',
-  'PROJECT_LEAD_JUNIOR',
-  'TECHNICAL_LEAD',
-  'PROJECT_CONTRIBUTOR',
-  'PROJECT_CONTRIBUTOR_LIGHT',
-  'FUNCTIONAL_REFERENT',
-  'HR_OFFICER',
-  'HR_OFFICER_LIGHT',
-  'THIRD_PARTY_MANAGER',
-  'CONTROLLER',
-  'BUDGET_ANALYST',
-  'DATA_ANALYST',
-  'IT_SUPPORT',
-  'IT_INFRASTRUCTURE',
-  'OBSERVER_FULL',
-  'OBSERVER_PROJECTS_ONLY',
-  'OBSERVER_HR_ONLY',
-  'BASIC_USER',
-  'EXTERNAL_PRESTATAIRE',
-  'STAGIAIRE_ALTERNANT',
+  "ADMIN",
+  "ADMIN_DELEGATED",
+  "PORTFOLIO_MANAGER",
+  "MANAGER",
+  "MANAGER_PROJECT_FOCUS",
+  "MANAGER_HR_FOCUS",
+  "PROJECT_LEAD",
+  "PROJECT_LEAD_JUNIOR",
+  "TECHNICAL_LEAD",
+  "PROJECT_CONTRIBUTOR",
+  "PROJECT_CONTRIBUTOR_LIGHT",
+  "FUNCTIONAL_REFERENT",
+  "HR_OFFICER",
+  "HR_OFFICER_LIGHT",
+  "THIRD_PARTY_MANAGER",
+  "CONTROLLER",
+  "BUDGET_ANALYST",
+  "DATA_ANALYST",
+  "IT_SUPPORT",
+  "IT_INFRASTRUCTURE",
+  "OBSERVER_FULL",
+  "OBSERVER_PROJECTS_ONLY",
+  "OBSERVER_HR_ONLY",
+  "BASIC_USER",
+  "EXTERNAL_PRESTATAIRE",
+  "STAGIAIRE_ALTERNANT",
 ];
 
 /**
@@ -1018,21 +1013,21 @@ export const ROLE_TEMPLATE_KEYS: readonly RoleTemplateKey[] = [
  * Utilisé par la migration (Spec 2 Vague 1) pour backfill `User.roleId`.
  */
 export const LEGACY_ROLE_MIGRATION: Record<string, RoleTemplateKey> = {
-  ADMIN: 'ADMIN',
-  RESPONSABLE: 'ADMIN_DELEGATED',
-  MANAGER: 'MANAGER',
-  CHEF_DE_PROJET: 'PROJECT_LEAD',
-  CHARGE_DE_MISSION: 'PROJECT_CONTRIBUTOR',
-  CONSULTANT_TECHNOLOGIE_SI: 'PROJECT_CONTRIBUTOR',
-  CORRESPONDANT_FONCTIONNEL_APPLICATION: 'PROJECT_CONTRIBUTOR',
-  DEVELOPPEUR_CONCEPTEUR: 'PROJECT_CONTRIBUTOR',
-  REFERENT_TECHNIQUE: 'TECHNICAL_LEAD',
-  OBSERVATEUR: 'OBSERVER_FULL',
-  ADMINISTRATEUR_IML: 'BASIC_USER',
-  CONTRIBUTEUR: 'BASIC_USER',
-  GESTIONNAIRE_IML: 'BASIC_USER',
-  GESTIONNAIRE_PARC: 'BASIC_USER',
-  TECHNICIEN_SUPPORT: 'BASIC_USER',
+  ADMIN: "ADMIN",
+  RESPONSABLE: "ADMIN_DELEGATED",
+  MANAGER: "MANAGER",
+  CHEF_DE_PROJET: "PROJECT_LEAD",
+  CHARGE_DE_MISSION: "PROJECT_CONTRIBUTOR",
+  CONSULTANT_TECHNOLOGIE_SI: "PROJECT_CONTRIBUTOR",
+  CORRESPONDANT_FONCTIONNEL_APPLICATION: "PROJECT_CONTRIBUTOR",
+  DEVELOPPEUR_CONCEPTEUR: "PROJECT_CONTRIBUTOR",
+  REFERENT_TECHNIQUE: "TECHNICAL_LEAD",
+  OBSERVATEUR: "OBSERVER_FULL",
+  ADMINISTRATEUR_IML: "BASIC_USER",
+  CONTRIBUTEUR: "BASIC_USER",
+  GESTIONNAIRE_IML: "BASIC_USER",
+  GESTIONNAIRE_PARC: "BASIC_USER",
+  TECHNICIEN_SUPPORT: "BASIC_USER",
 };
 
 /**

@@ -60,7 +60,10 @@ describe('PlanningService', () => {
           provide: SchoolVacationsService,
           useValue: mockSchoolVacationsService,
         },
-        { provide: PredefinedTasksService, useValue: mockPredefinedTasksService },
+        {
+          provide: PredefinedTasksService,
+          useValue: mockPredefinedTasksService,
+        },
         { provide: PermissionsService, useValue: mockPermissionsService },
       ],
     }).compile();

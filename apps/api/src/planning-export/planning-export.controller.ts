@@ -67,10 +67,7 @@ export class PlanningExportController {
     },
   })
   @ApiResponse({ status: 200, description: "Resultat de l'import" })
-  importIcs(
-    @Body() dto: ImportIcsDto,
-    @CurrentUser('id') userId: string,
-  ) {
+  importIcs(@Body() dto: ImportIcsDto, @CurrentUser('id') userId: string) {
     return this.planningExportService.importIcs(dto.icsContent, userId);
   }
 }

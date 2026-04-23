@@ -299,7 +299,11 @@ export class EventsService {
   /**
    * Récupérer un événement par ID
    */
-  async findOne(id: string, currentUserId?: string, currentUserRole?: string | null) {
+  async findOne(
+    id: string,
+    currentUserId?: string,
+    currentUserRole?: string | null,
+  ) {
     const event = await this.prisma.event.findUnique({
       where: { id },
       include: {
@@ -506,7 +510,11 @@ export class EventsService {
   /**
    * Supprimer un événement
    */
-  async remove(id: string, currentUserId?: string, currentUserRole?: string | null) {
+  async remove(
+    id: string,
+    currentUserId?: string,
+    currentUserRole?: string | null,
+  ) {
     const event = await this.prisma.event.findUnique({
       where: { id },
     });

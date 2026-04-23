@@ -6,14 +6,7 @@
  * formulaire à TaskForm.
  */
 
-import {
-  Task,
-  TaskStatus,
-  Milestone,
-  User,
-  Project,
-  Service,
-} from "@/types";
+import { Task, TaskStatus, Milestone, User, Project, Service } from "@/types";
 import { useTranslations } from "next-intl";
 import { usePermissions } from "@/hooks/usePermissions";
 import { TaskForm } from "@/components/tasks/TaskForm";

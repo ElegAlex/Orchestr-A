@@ -21,11 +21,17 @@ const sizeMap = {
 } as const;
 
 function getAvatarSrc(avatarUrl: string): string {
-  if (avatarUrl.startsWith("http") || avatarUrl.startsWith("/")) return avatarUrl;
+  if (avatarUrl.startsWith("http") || avatarUrl.startsWith("/"))
+    return avatarUrl;
   return `/${avatarUrl}`;
 }
 
-export function UserAvatar({ user, size = "md", badge, className = "" }: UserAvatarProps) {
+export function UserAvatar({
+  user,
+  size = "md",
+  badge,
+  className = "",
+}: UserAvatarProps) {
   const { dim, text } = sizeMap[size];
   const style = { width: dim, height: dim };
   const fullName = `${user.firstName} ${user.lastName}`.trim();
@@ -64,7 +70,7 @@ export function UserAvatar({ user, size = "md", badge, className = "" }: UserAva
           unoptimized
           onError={() => setImageFailed(true)}
         />
-      </span>
+      </span>,
     );
   }
 
@@ -78,7 +84,7 @@ export function UserAvatar({ user, size = "md", badge, className = "" }: UserAva
           className="w-full h-full object-cover"
           onError={() => setImageFailed(true)}
         />
-      </span>
+      </span>,
     );
   }
 
@@ -103,6 +109,6 @@ export function UserAvatar({ user, size = "md", badge, className = "" }: UserAva
         }}
       />
       <span className="relative drop-shadow-sm">{initials}</span>
-    </span>
+    </span>,
   );
 }

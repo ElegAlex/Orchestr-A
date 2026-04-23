@@ -252,11 +252,16 @@ describe('SchoolVacationsService', () => {
 
   describe('update', () => {
     it('should call findOne then update and return updated vacation', async () => {
-      const updatedVacation = { ...mockVacation, name: 'Vacances de Printemps' };
+      const updatedVacation = {
+        ...mockVacation,
+        name: 'Vacances de Printemps',
+      };
       mockPrismaService.schoolVacation.findUnique.mockResolvedValue(
         mockVacation,
       );
-      mockPrismaService.schoolVacation.update.mockResolvedValue(updatedVacation);
+      mockPrismaService.schoolVacation.update.mockResolvedValue(
+        updatedVacation,
+      );
 
       const dto = { name: 'Vacances de Printemps' };
       const result = await service.update('vacation-1', dto);

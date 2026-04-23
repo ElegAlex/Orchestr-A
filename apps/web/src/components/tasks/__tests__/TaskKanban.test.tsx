@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import TaskKanban from "../TaskKanban";
 import type { Task } from "@/types";
 
@@ -40,7 +46,7 @@ const makeTask = (overrides: Partial<Task>): Task =>
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-01-01T00:00:00Z",
     ...overrides,
-  } as Task);
+  }) as Task;
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
@@ -51,9 +57,7 @@ describe("TaskKanban", () => {
 
   // 1 — renders 5 columns by default
   it("renders 5 columns by default", () => {
-    render(
-      <TaskKanban tasks={[]} onTaskClick={jest.fn()} />
-    );
+    render(<TaskKanban tasks={[]} onTaskClick={jest.fn()} />);
     expect(screen.getByTestId("kanban-column-TODO")).toBeInTheDocument();
     expect(screen.getByTestId("kanban-column-IN_PROGRESS")).toBeInTheDocument();
     expect(screen.getByTestId("kanban-column-IN_REVIEW")).toBeInTheDocument();
@@ -68,7 +72,7 @@ describe("TaskKanban", () => {
         tasks={[]}
         onTaskClick={jest.fn()}
         hiddenStatuses={["BLOCKED" as Task["status"]]}
-      />
+      />,
     );
     expect(screen.queryByTestId("kanban-column-BLOCKED")).toBeNull();
     expect(screen.getByTestId("kanban-column-TODO")).toBeInTheDocument();
@@ -103,7 +107,9 @@ describe("TaskKanban", () => {
     const doneCol = screen.getByTestId("kanban-column-DONE");
 
     expect(within(todoCol).getByTestId("kanban-card-ta")).toBeInTheDocument();
-    expect(within(inProgressCol).getByTestId("kanban-card-tb")).toBeInTheDocument();
+    expect(
+      within(inProgressCol).getByTestId("kanban-card-tb"),
+    ).toBeInTheDocument();
     expect(within(doneCol).getByTestId("kanban-card-tc")).toBeInTheDocument();
 
     // Should NOT appear in wrong columns
@@ -167,7 +173,7 @@ describe("TaskKanban", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "kanban.messages.statusUpdateError"
+        "kanban.messages.statusUpdateError",
       );
     });
   });
@@ -187,7 +193,12 @@ describe("TaskKanban", () => {
   // 9 — renders CRITICAL and HIGH priority badge colors
   it("renders CRITICAL and HIGH priority badge colors", () => {
     const tasks = [
-      makeTask({ id: "tc", title: "Critical", status: "TODO", priority: "CRITICAL" }),
+      makeTask({
+        id: "tc",
+        title: "Critical",
+        status: "TODO",
+        priority: "CRITICAL",
+      }),
       makeTask({ id: "th", title: "High", status: "TODO", priority: "HIGH" }),
     ];
     render(<TaskKanban tasks={tasks} onTaskClick={jest.fn()} />);
@@ -209,7 +220,9 @@ describe("TaskKanban", () => {
       }),
       makeTask({ id: "to", title: "Orphan", status: "TODO", projectId: null }),
     ];
-    render(<TaskKanban tasks={tasks} onTaskClick={jest.fn()} showProjectBadge />);
+    render(
+      <TaskKanban tasks={tasks} onTaskClick={jest.fn()} showProjectBadge />,
+    );
     expect(screen.getByText("My Project")).toBeInTheDocument();
     expect(screen.getByText("kanban.orphanTask")).toBeInTheDocument();
   });
@@ -225,7 +238,7 @@ describe("TaskKanban", () => {
       }),
     ];
     render(
-      <TaskKanban tasks={tasks} onTaskClick={jest.fn()} showOverdueBadge />
+      <TaskKanban tasks={tasks} onTaskClick={jest.fn()} showOverdueBadge />,
     );
     expect(screen.getByText("kanban.overdue")).toBeInTheDocument();
   });
@@ -243,7 +256,7 @@ describe("TaskKanban", () => {
         onTaskClick={jest.fn()}
         showStatusArrows
         onAfterStatusChange={onAfterStatusChange}
-      />
+      />,
     );
     const card = screen.getByTestId("kanban-card-ta");
     const prevButton = within(card).getByText("←");
@@ -266,9 +279,7 @@ describe("TaskKanban", () => {
     ];
     render(<TaskKanban tasks={tasks} onTaskClick={jest.fn()} />);
     expect(
-      screen.getByText(
-        'kanban.estimatedHours:{"hours":8}'
-      )
+      screen.getByText('kanban.estimatedHours:{"hours":8}'),
     ).toBeInTheDocument();
   });
 

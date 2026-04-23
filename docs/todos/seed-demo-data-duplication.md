@@ -8,12 +8,12 @@
 
 Lancer `pnpm --filter database run db:seed` plusieurs fois sur la même base crée ~50 entités en double à chaque run :
 
-| Entité | Comptage après 10 runs locaux | Cible idempotente |
-|---|---|---|
-| `projects` ("Projet de test") | 10 | 1 |
-| `milestones` ("Audit & Cadrage terminé") | 10 | 1 |
-| `milestones` ("Cahier des charges validé") | 4 | 1 |
-| `tasks` | 393 | ~35–40 |
+| Entité                                     | Comptage après 10 runs locaux | Cible idempotente |
+| ------------------------------------------ | ----------------------------- | ----------------- |
+| `projects` ("Projet de test")              | 10                            | 1                 |
+| `milestones` ("Audit & Cadrage terminé")   | 10                            | 1                 |
+| `milestones` ("Cahier des charges validé") | 4                             | 1                 |
+| `tasks`                                    | 393                           | ~35–40            |
 
 ## Causes précises dans `packages/database/prisma/seed.ts`
 

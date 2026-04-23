@@ -182,15 +182,10 @@ export class SchoolVacationsService {
     }
 
     const data = (await response.json()) as OpenDataResponse;
-    this.logger.log(
-      `Fetched ${data.total_count} records from Open Data API`,
-    );
+    this.logger.log(`Fetched ${data.total_count} records from Open Data API`);
 
     // Dédupliquer par description, en prenant la plage de dates la plus large
-    const vacationMap = new Map<
-      string,
-      { startDate: Date; endDate: Date }
-    >();
+    const vacationMap = new Map<string, { startDate: Date; endDate: Date }>();
 
     for (const record of data.results) {
       const key = record.description;
@@ -235,9 +230,7 @@ export class SchoolVacationsService {
       }
     }
 
-    this.logger.log(
-      `Import complete: ${created} created, ${skipped} skipped`,
-    );
+    this.logger.log(`Import complete: ${created} created, ${skipped} skipped`);
     return { created, skipped };
   }
 }

@@ -249,7 +249,11 @@ describe('MilestonesController', () => {
         message: 'Milestone supprimé',
       });
 
-      const result = await controller.remove('milestone-id-1', 'user-1', 'ADMIN');
+      const result = await controller.remove(
+        'milestone-id-1',
+        'user-1',
+        'ADMIN',
+      );
 
       expect(result.message).toBe('Milestone supprimé');
       expect(mockMilestonesService.remove).toHaveBeenCalledWith(
@@ -264,9 +268,9 @@ describe('MilestonesController', () => {
         new NotFoundException('Milestone introuvable'),
       );
 
-      await expect(controller.remove('nonexistent', 'user-1', 'ADMIN')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.remove('nonexistent', 'user-1', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -318,12 +322,17 @@ describe('MilestonesController', () => {
 
       await controller.exportProjectMilestones('project-id-1', mockReply);
 
-      expect(mockReply.header).toHaveBeenCalledWith('Content-Type', 'text/csv; charset=utf-8');
+      expect(mockReply.header).toHaveBeenCalledWith(
+        'Content-Type',
+        'text/csv; charset=utf-8',
+      );
       expect(mockReply.header).toHaveBeenCalledWith(
         'Content-Disposition',
         expect.stringContaining('milestones_project-id-1.csv'),
       );
-      expect(mockReply.send).toHaveBeenCalledWith('name;dueDate\nMilestone 1;2025-01-01');
+      expect(mockReply.send).toHaveBeenCalledWith(
+        'name;dueDate\nMilestone 1;2025-01-01',
+      );
     });
   });
 

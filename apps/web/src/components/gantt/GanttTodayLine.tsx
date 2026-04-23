@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { TODAY_LINE_COLOR } from './tokens';
+import { TODAY_LINE_COLOR } from "./tokens";
 
 interface GanttTodayLineProps {
   left: number;
@@ -17,7 +17,7 @@ export default function GanttTodayLine({ left, height }: GanttTodayLineProps) {
         style={{
           width: 0,
           borderLeft: `1.5px dashed ${TODAY_LINE_COLOR}`,
-          height: '100%',
+          height: "100%",
         }}
       />
     </div>

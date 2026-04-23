@@ -1,8 +1,5 @@
 import { useAuthStore } from "../auth.store";
-import {
-  AUTH_TOKEN_KEY,
-  AUTH_USER_DISPLAY_KEY,
-} from "@/services/auth.service";
+import { AUTH_TOKEN_KEY, AUTH_USER_DISPLAY_KEY } from "@/services/auth.service";
 import type { User } from "@/types";
 
 jest.mock("@/lib/api", () => ({

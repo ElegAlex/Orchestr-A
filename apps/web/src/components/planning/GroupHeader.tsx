@@ -8,10 +8,7 @@ interface GroupHeaderProps {
   taskCount: number;
 }
 
-export const GroupHeader = ({
-  group,
-  taskCount,
-}: GroupHeaderProps) => {
+export const GroupHeader = ({ group, taskCount }: GroupHeaderProps) => {
   const t = useTranslations("planning");
   const colors = getGroupColors(group.color, group.isManagement);
   const { collapsedServices, toggleService } = usePlanningViewStore();

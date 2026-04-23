@@ -1,9 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  ROLE_TEMPLATES,
-  ROLE_TEMPLATE_KEYS,
-  CATALOG_PERMISSIONS,
-} from 'rbac';
+import { ROLE_TEMPLATES, ROLE_TEMPLATE_KEYS, CATALOG_PERMISSIONS } from 'rbac';
 import { PermissionsService } from '../permissions.service';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { ConfigService } from '@nestjs/config';
@@ -144,9 +140,9 @@ describe('PermissionsService — V4', () => {
 
     it('roleHasAll matche quand toutes les perms présentes', async () => {
       const perms = ROLE_TEMPLATES.BASIC_USER.permissions;
-      expect(
-        await service.roleHasAll('BASIC_USER', [perms[0], perms[1]]),
-      ).toBe(true);
+      expect(await service.roleHasAll('BASIC_USER', [perms[0], perms[1]])).toBe(
+        true,
+      );
     });
 
     it('roleHasAll rejette si une perm absente', async () => {

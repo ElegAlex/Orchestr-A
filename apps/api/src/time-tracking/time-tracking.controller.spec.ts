@@ -335,9 +335,9 @@ describe('TimeTrackingController', () => {
         new NotFoundException('Entrée de temps introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent', currentUser)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.findOne('nonexistent', currentUser),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

@@ -84,7 +84,9 @@ describe("projectsService", () => {
 
       await projectsService.getAll(undefined, undefined, ProjectStatus.ACTIVE);
 
-      expect(api.get).toHaveBeenCalledWith("/projects?limit=1000&status=ACTIVE");
+      expect(api.get).toHaveBeenCalledWith(
+        "/projects?limit=1000&status=ACTIVE",
+      );
     });
 
     it("should combine all parameters", async () => {

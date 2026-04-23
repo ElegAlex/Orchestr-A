@@ -92,9 +92,7 @@ export function TemplateDetailsModal({
             >
               {template.defaultLabel}
             </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {template.description}
-            </p>
+            <p className="text-sm text-gray-600 mt-1">{template.description}</p>
           </div>
           <button
             type="button"

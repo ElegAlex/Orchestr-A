@@ -34,7 +34,10 @@ import {
 } from './dto/import-leaves.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
-import { CurrentUser, CurrentUserRoleCode } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserRoleCode,
+} from '../auth/decorators/current-user.decorator';
 import { LeaveStatus, LeaveType } from 'database';
 
 @ApiTags('leaves')
@@ -71,7 +74,11 @@ export class LeavesController {
     @CurrentUserRoleCode() userRole: string | null,
     @Body() createLeaveDto: CreateLeaveDto,
   ) {
-    return this.leavesService.create(userId, createLeaveDto, userRole ?? undefined);
+    return this.leavesService.create(
+      userId,
+      createLeaveDto,
+      userRole ?? undefined,
+    );
   }
 
   // ===========================
@@ -291,14 +298,15 @@ export class LeavesController {
     @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     if (userId !== currentUserId) {
-      const permissions =
-        await this.permissionsService.getPermissionsForRole(currentUserRole ?? '');
+      const permissions = await this.permissionsService.getPermissionsForRole(
+        currentUserRole ?? '',
+      );
       // D6 #2 PO : `leaves:validate` n'existe pas au catalogue ; le check
       // historique était cassé (toujours faux). La permission métier
       // équivalente est `leaves:approve`.
       if (!permissions.includes('leaves:approve')) {
         throw new ForbiddenException(
-          'Permission leaves:approve requise pour consulter le solde d\'un autre utilisateur',
+          "Permission leaves:approve requise pour consulter le solde d'un autre utilisateur",
         );
       }
     }
@@ -338,7 +346,11 @@ export class LeavesController {
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
-    return this.leavesService.findOne(id, currentUserId, currentUserRole ?? undefined);
+    return this.leavesService.findOne(
+      id,
+      currentUserId,
+      currentUserRole ?? undefined,
+    );
   }
 
   @Patch(':id')
@@ -396,7 +408,11 @@ export class LeavesController {
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
-    return this.leavesService.remove(id, currentUserId, currentUserRole ?? undefined);
+    return this.leavesService.remove(
+      id,
+      currentUserId,
+      currentUserRole ?? undefined,
+    );
   }
 
   @Post(':id/approve')
@@ -532,7 +548,11 @@ export class LeavesController {
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
-    return this.leavesService.cancel(id, currentUserId, currentUserRole ?? undefined);
+    return this.leavesService.cancel(
+      id,
+      currentUserId,
+      currentUserRole ?? undefined,
+    );
   }
 
   @Post(':id/reject-cancellation')

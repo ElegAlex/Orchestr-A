@@ -2,11 +2,7 @@
   "metadata": {
     "snapshot_date": "2026-04-19",
     "database": "orchestr_a_v2",
-    "source_tables": [
-      "role_configs",
-      "permissions",
-      "role_permissions"
-    ],
+    "source_tables": ["role_configs", "permissions", "role_permissions"],
     "totals": {
       "roles": 15,
       "permissions": 119,

@@ -34,9 +34,7 @@ export default function ProjectsPage() {
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const initialStatusParam = searchParams.get("status");
-  const isValidProjectStatus = (
-    v: string | null,
-  ): v is ProjectStatus =>
+  const isValidProjectStatus = (v: string | null): v is ProjectStatus =>
     !!v && (Object.values(ProjectStatus) as string[]).includes(v);
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "ALL">(
     isValidProjectStatus(initialStatusParam) ? initialStatusParam : "ALL",
@@ -620,7 +618,8 @@ export default function ProjectsPage() {
                     </option>
                     {managers.map((manager) => (
                       <option key={manager.id} value={manager.id}>
-                        {manager.firstName} {manager.lastName} ({manager.role?.label ?? ""})
+                        {manager.firstName} {manager.lastName} (
+                        {manager.role?.label ?? ""})
                       </option>
                     ))}
                   </select>

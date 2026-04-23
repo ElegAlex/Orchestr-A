@@ -1,4 +1,4 @@
-export { default as Gantt } from './GanttBase';
+export { default as Gantt } from "./GanttBase";
 export type {
   GanttProps,
   GanttPortfolioRow,
@@ -8,4 +8,4 @@ export type {
   GanttGrouping,
   GanttGroup,
   HealthStatus,
-} from './types';
+} from "./types";

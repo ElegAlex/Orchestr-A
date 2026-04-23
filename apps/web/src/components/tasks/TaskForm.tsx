@@ -126,9 +126,7 @@ export interface TaskFormProps {
    * retourne la tâche (pour le chaînage des assignations tiers) ou void
    * (mode edit sans création nouvelle).
    */
-  onSubmit: (
-    payload: TaskFormSubmitPayload,
-  ) => Promise<Task | void>;
+  onSubmit: (payload: TaskFormSubmitPayload) => Promise<Task | void>;
   onCancel: () => void;
 }
 
@@ -302,8 +300,7 @@ export function TaskForm({
     (s) => !hiddenStatuses.includes(s) || s === initialTask?.status,
   );
 
-  const showProjectSelector =
-    lockedProjectId == null && projects.length > 0;
+  const showProjectSelector = lockedProjectId == null && projects.length > 0;
 
   const filteredMilestones =
     enableMilestone && values.projectId
@@ -426,7 +423,10 @@ export function TaskForm({
   const handleRemoveThirdParty = async (thirdPartyId: string) => {
     if (mode === "edit" && initialTask?.id) {
       try {
-        await thirdPartiesService.unassignFromTask(initialTask.id, thirdPartyId);
+        await thirdPartiesService.unassignFromTask(
+          initialTask.id,
+          thirdPartyId,
+        );
         setThirdPartyAssignees((prev) =>
           prev.filter((a) => a.thirdPartyId !== thirdPartyId),
         );
@@ -558,9 +558,7 @@ export function TaskForm({
   // List of users shown in the UserMultiSelect. When filter is active AND a
   // project is selected AND we fetched its members, narrow the list.
   const availableAssignees: User[] =
-    effectiveFilterByMembers &&
-    values.projectId &&
-    projectMembers.length > 0
+    effectiveFilterByMembers && values.projectId && projectMembers.length > 0
       ? projectMembers
       : users;
 
@@ -571,8 +569,7 @@ export function TaskForm({
       {/* Title */}
       <div>
         <label className="block text-sm font-medium text-gray-900 mb-2">
-          {t("modal.create.titleLabel")}{" "}
-          <span className="text-red-500">*</span>
+          {t("modal.create.titleLabel")} <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
@@ -759,9 +756,7 @@ export function TaskForm({
             <option value={Priority.LOW}>{t("priority.LOW")}</option>
             <option value={Priority.NORMAL}>{t("priority.NORMAL")}</option>
             <option value={Priority.HIGH}>{t("priority.HIGH")}</option>
-            <option value={Priority.CRITICAL}>
-              {t("priority.CRITICAL")}
-            </option>
+            <option value={Priority.CRITICAL}>{t("priority.CRITICAL")}</option>
           </select>
         </div>
       </div>

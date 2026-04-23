@@ -318,7 +318,8 @@ export function RecurringRulesModal({
               </div>
               {formData.userIds.length > 0 && (
                 <p className="text-xs text-gray-500 mt-1">
-                  {formData.userIds.length} sélectionné{formData.userIds.length > 1 ? "s" : ""}
+                  {formData.userIds.length} sélectionné
+                  {formData.userIds.length > 1 ? "s" : ""}
                 </p>
               )}
             </div>
@@ -435,12 +436,17 @@ export function RecurringRulesModal({
             {/* Summary */}
             {formData.userIds.length > 0 && formData.daysOfWeek.length > 0 && (
               <div className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
-                {formData.userIds.length} collaborateur{formData.userIds.length > 1 ? "s" : ""}
+                {formData.userIds.length} collaborateur
+                {formData.userIds.length > 1 ? "s" : ""}
                 {" × "}
-                {formData.daysOfWeek.length} jour{formData.daysOfWeek.length > 1 ? "s" : ""}
+                {formData.daysOfWeek.length} jour
+                {formData.daysOfWeek.length > 1 ? "s" : ""}
                 {" = "}
-                <strong>{formData.userIds.length * formData.daysOfWeek.length} règles</strong>
-                {formData.weekInterval > 1 && ` (toutes les ${formData.weekInterval} semaines)`}
+                <strong>
+                  {formData.userIds.length * formData.daysOfWeek.length} règles
+                </strong>
+                {formData.weekInterval > 1 &&
+                  ` (toutes les ${formData.weekInterval} semaines)`}
               </div>
             )}
 
@@ -454,7 +460,11 @@ export function RecurringRulesModal({
               </button>
               <button
                 type="submit"
-                disabled={saving || formData.userIds.length === 0 || formData.daysOfWeek.length === 0}
+                disabled={
+                  saving ||
+                  formData.userIds.length === 0 ||
+                  formData.daysOfWeek.length === 0
+                }
                 className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
               >
                 {saving ? "Création..." : "Créer les règles"}

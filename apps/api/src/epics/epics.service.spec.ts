@@ -216,7 +216,12 @@ describe('EpicsService', () => {
         name: 'Admin Updated',
       });
 
-      const result = await service.update('1', { name: 'Admin Updated' }, 'admin-user', 'ADMIN');
+      const result = await service.update(
+        '1',
+        { name: 'Admin Updated' },
+        'admin-user',
+        'ADMIN',
+      );
 
       expect(result.name).toBe('Admin Updated');
     });
@@ -231,7 +236,12 @@ describe('EpicsService', () => {
         name: 'Member Updated',
       });
 
-      const result = await service.update('1', { name: 'Member Updated' }, 'user-1', 'CONTRIBUTEUR');
+      const result = await service.update(
+        '1',
+        { name: 'Member Updated' },
+        'user-1',
+        'CONTRIBUTEUR',
+      );
 
       expect(result.name).toBe('Member Updated');
     });
@@ -240,7 +250,12 @@ describe('EpicsService', () => {
       mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
 
       await expect(
-        service.update('1', { name: 'Forbidden' }, 'non-member', 'CONTRIBUTEUR'),
+        service.update(
+          '1',
+          { name: 'Forbidden' },
+          'non-member',
+          'CONTRIBUTEUR',
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
   });

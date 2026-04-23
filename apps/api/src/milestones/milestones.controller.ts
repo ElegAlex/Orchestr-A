@@ -82,7 +82,12 @@ export class MilestonesController {
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
-    return this.milestonesService.update(id, updateMilestoneDto, currentUserId, currentUserRole);
+    return this.milestonesService.update(
+      id,
+      updateMilestoneDto,
+      currentUserId,
+      currentUserRole,
+    );
   }
 
   @Post(':id/complete')

@@ -36,7 +36,7 @@ export function MilestoneCompletionChart({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hoveredMilestone, setHoveredMilestone] = useState<Milestone | null>(
-    null
+    null,
   );
 
   const loadMilestones = useCallback(async () => {
@@ -100,16 +100,15 @@ export function MilestoneCompletionChart({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const dueMilestones = milestones.filter(
-    (m) => new Date(m.dueDate) <= today
-  );
+  const dueMilestones = milestones.filter((m) => new Date(m.dueDate) <= today);
   const onTime = dueMilestones.filter((m) => m.status === "COMPLETED");
   const late = dueMilestones.filter((m) => m.status !== "COMPLETED");
   const upcoming = milestones.filter((m) => new Date(m.dueDate) > today);
 
   const totalDue = dueMilestones.length;
   const onTimeCount = onTime.length;
-  const percentage = totalDue > 0 ? Math.round((onTimeCount / totalDue) * 100) : 0;
+  const percentage =
+    totalDue > 0 ? Math.round((onTimeCount / totalDue) * 100) : 0;
 
   const kpiColor =
     percentage >= 80 ? "#22c55e" : percentage >= 50 ? "#f59e0b" : "#ef4444";
@@ -156,9 +155,7 @@ export function MilestoneCompletionChart({
           <span className={`text-4xl font-bold ${kpiColorClass}`}>
             {onTimeCount} / {totalDue}
           </span>
-          <span className="text-sm text-gray-500">
-            {t("milestonesOnTime")}
-          </span>
+          <span className="text-sm text-gray-500">{t("milestonesOnTime")}</span>
         </div>
         <div
           className="text-2xl font-semibold mt-1"

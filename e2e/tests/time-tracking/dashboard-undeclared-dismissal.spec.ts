@@ -267,11 +267,7 @@ test.describe("@smoke Dashboard - Dismissal checkbox", () => {
       const body = await listRes.json();
       const entries = Array.isArray(body) ? body : (body.data ?? []);
       const dismissal = entries.find(
-        (e: {
-          taskId?: string;
-          userId?: string;
-          isDismissal?: boolean;
-        }) =>
+        (e: { taskId?: string; userId?: string; isDismissal?: boolean }) =>
           e.taskId === task.id &&
           e.userId === contribUserId &&
           e.isDismissal === true,

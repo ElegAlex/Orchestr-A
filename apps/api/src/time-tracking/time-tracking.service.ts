@@ -50,8 +50,9 @@ export class TimeTrackingService {
       user.id,
     );
     if (isOwner) return;
-    const permissions =
-      await this.permissionsService.getPermissionsForRole(user.role);
+    const permissions = await this.permissionsService.getPermissionsForRole(
+      user.role,
+    );
     if (permissions.includes(MANAGE_ANY_PERMISSION)) return;
     throw new ForbiddenException('Time entry ownership violation');
   }
@@ -130,8 +131,7 @@ export class TimeTrackingService {
     return this.prisma.timeEntry.create({
       data: {
         userId: actor.kind === 'user' ? actor.userId : null,
-        thirdPartyId:
-          actor.kind === 'thirdParty' ? actor.thirdPartyId : null,
+        thirdPartyId: actor.kind === 'thirdParty' ? actor.thirdPartyId : null,
         declaredById: currentUser.id,
         date: new Date(date),
         hours,
@@ -142,7 +142,13 @@ export class TimeTrackingService {
       },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
         },
         thirdParty: {
           select: {
@@ -152,7 +158,13 @@ export class TimeTrackingService {
           },
         },
         declaredBy: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
         },
         task: { select: { id: true, title: true } },
         project: { select: { id: true, name: true } },
@@ -169,8 +181,9 @@ export class TimeTrackingService {
       return { kind: 'user', userId: currentUser.id };
     }
 
-    const permissions =
-      await this.permissionsService.getPermissionsForRole(currentUser.role);
+    const permissions = await this.permissionsService.getPermissionsForRole(
+      currentUser.role,
+    );
     if (!permissions.includes(DECLARE_FOR_THIRD_PARTY_PERMISSION)) {
       throw new ForbiddenException(
         'Permission time_tracking:declare_for_third_party requise pour déclarer pour un tiers',
@@ -270,10 +283,7 @@ export class TimeTrackingService {
     if (userId) {
       where.userId = userId;
     } else if (!hasViewAny) {
-      where.OR = [
-        { userId: currentUser.id },
-        { declaredById: currentUser.id },
-      ];
+      where.OR = [{ userId: currentUser.id }, { declaredById: currentUser.id }];
     }
 
     if (thirdPartyId) where.thirdPartyId = thirdPartyId;
@@ -302,7 +312,13 @@ export class TimeTrackingService {
         take: safeLimit,
         include: {
           user: {
-            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
           thirdParty: {
             select: {
@@ -312,7 +328,13 @@ export class TimeTrackingService {
             },
           },
           declaredBy: {
-            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
           task: { select: { id: true, title: true } },
           project: { select: { id: true, name: true } },
@@ -341,7 +363,14 @@ export class TimeTrackingService {
       where: { id },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true, email: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+            email: true,
+          },
         },
         thirdParty: {
           select: {
@@ -351,7 +380,13 @@ export class TimeTrackingService {
           },
         },
         declaredBy: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
         },
         task: { select: { id: true, title: true, status: true } },
         project: { select: { id: true, name: true, status: true } },
@@ -368,10 +403,9 @@ export class TimeTrackingService {
         entry.userId === currentUser.id ||
         entry.declaredById === currentUser.id;
       if (!isOwner) {
-        const permissions =
-          await this.permissionsService.getPermissionsForRole(
-            currentUser.role,
-          );
+        const permissions = await this.permissionsService.getPermissionsForRole(
+          currentUser.role,
+        );
         if (!permissions.includes(VIEW_ANY_PERMISSION)) {
           throw new ForbiddenException(
             "Vous n'avez pas la permission de consulter cette entrée de temps",
@@ -452,7 +486,13 @@ export class TimeTrackingService {
       },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
         },
         thirdParty: {
           select: {
@@ -462,7 +502,13 @@ export class TimeTrackingService {
           },
         },
         declaredBy: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
         },
         task: { select: { id: true, title: true } },
         project: { select: { id: true, name: true } },
@@ -521,7 +567,15 @@ export class TimeTrackingService {
     const entries = await this.prisma.timeEntry.findMany({
       where,
       include: {
-        user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true } },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
+        },
         task: { select: { id: true, title: true } },
         project: { select: { id: true, name: true } },
       },
@@ -654,10 +708,22 @@ export class TimeTrackingService {
         },
         include: {
           user: {
-            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
           declaredBy: {
-            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
           task: { select: { id: true, title: true } },
         },
@@ -679,7 +745,13 @@ export class TimeTrackingService {
             },
           },
           declaredBy: {
-            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
           task: { select: { id: true, title: true } },
         },
@@ -707,10 +779,7 @@ export class TimeTrackingService {
         acc[key].hours += entry.hours;
         return acc;
       },
-      {} as Record<
-        string,
-        { userId: string; userName: string; hours: number }
-      >,
+      {} as Record<string, { userId: string; userName: string; hours: number }>,
     );
 
     const byThirdParty = thirdPartyEntries.reduce(

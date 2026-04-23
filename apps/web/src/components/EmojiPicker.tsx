@@ -45,8 +45,14 @@ const CATEGORIES: Category[] = [
       { char: "⚙️", keywords: "paramètres configuration engrenage" },
       { char: "🧩", keywords: "module extension plugin" },
       { char: "🤖", keywords: "ia intelligence artificielle chatbot robot" },
-      { char: "🧠", keywords: "ia intelligence artificielle cerveau machine learning" },
-      { char: "🪄", keywords: "ia générative automatisation copilot assistant" },
+      {
+        char: "🧠",
+        keywords: "ia intelligence artificielle cerveau machine learning",
+      },
+      {
+        char: "🪄",
+        keywords: "ia générative automatisation copilot assistant",
+      },
     ],
   },
   {
@@ -78,7 +84,10 @@ const CATEGORIES: Category[] = [
   {
     key: "territory",
     emojis: [
-      { char: "🏛️", keywords: "mairie collectivité institution administration" },
+      {
+        char: "🏛️",
+        keywords: "mairie collectivité institution administration",
+      },
       { char: "🏢", keywords: "bâtiment immeuble bureau administratif" },
       { char: "🏗️", keywords: "chantier construction travaux" },
       { char: "🏘️", keywords: "habitat logement quartier" },
@@ -232,9 +241,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
       }
       return matches;
     }
-    return (
-      CATEGORIES.find((c) => c.key === activeCategory)?.emojis ?? []
-    );
+    return CATEGORIES.find((c) => c.key === activeCategory)?.emojis ?? [];
   }, [search, activeCategory]);
 
   return (

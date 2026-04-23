@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { ARROW_COLOR, ARROW_HIGHLIGHT_COLOR } from './tokens';
-import type { GanttDependency } from './types';
+import { ARROW_COLOR, ARROW_HIGHLIGHT_COLOR } from "./tokens";
+import type { GanttDependency } from "./types";
 
 interface RowPosition {
   y: number;
@@ -57,10 +57,11 @@ export default function GanttDependencyLayer({
         const to = rowPositions.get(dep.toId);
         if (!from && !to) return null;
 
-        const isHighlighted = hoveredRowId === dep.fromId || hoveredRowId === dep.toId;
+        const isHighlighted =
+          hoveredRowId === dep.fromId || hoveredRowId === dep.toId;
         const stroke = isHighlighted ? ARROW_HIGHLIGHT_COLOR : ARROW_COLOR;
         const strokeWidth = isHighlighted ? 2 : 1.5;
-        const markerId = isHighlighted ? 'arrowhead-highlight' : 'arrowhead';
+        const markerId = isHighlighted ? "arrowhead-highlight" : "arrowhead";
 
         if (!from || !to) return null;
 

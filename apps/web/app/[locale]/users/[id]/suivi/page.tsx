@@ -286,11 +286,9 @@ function SuiviPage() {
   // Stats for overview
   const overviewStats = useMemo(() => {
     const activeTasks = tasks.filter((task) =>
-      [
-        TaskStatus.TODO,
-        TaskStatus.IN_PROGRESS,
-        TaskStatus.IN_REVIEW,
-      ].includes(task.status),
+      [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.IN_REVIEW].includes(
+        task.status,
+      ),
     ).length;
     const completedTasks = tasks.filter(
       (task) => task.status === TaskStatus.DONE,

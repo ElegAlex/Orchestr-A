@@ -116,10 +116,22 @@ export class ProjectsService {
         where: { id: newProject.id },
         include: {
           manager: {
-            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
           sponsor: {
-            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
           members: {
             include: {
@@ -208,10 +220,22 @@ export class ProjectsService {
             },
           },
           manager: {
-            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
           sponsor: {
-            select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
           members: {
             take: 5,
@@ -289,10 +313,22 @@ export class ProjectsService {
           },
         },
         manager: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
         },
         sponsor: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
         },
         members: {
           include: {
@@ -412,10 +448,22 @@ export class ProjectsService {
       },
       include: {
         manager: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
         },
         sponsor: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
         },
         members: {
           include: {
@@ -553,7 +601,12 @@ export class ProjectsService {
   async updateMember(
     projectId: string,
     userId: string,
-    dto: { role?: string; allocation?: number; startDate?: string; endDate?: string },
+    dto: {
+      role?: string;
+      allocation?: number;
+      startDate?: string;
+      endDate?: string;
+    },
     user?: ProjectMutationUser,
   ) {
     // Defense-in-depth: enforce ownership even if guard is bypassed.
@@ -578,7 +631,18 @@ export class ProjectsService {
     return this.prisma.projectMember.update({
       where: { projectId_userId: { projectId, userId } },
       data,
-      include: { user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true, email: true } } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+            email: true,
+          },
+        },
+      },
     });
   }
 
@@ -642,10 +706,22 @@ export class ProjectsService {
       },
       include: {
         manager: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
         },
         sponsor: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
         },
         members: {
           take: 5,
@@ -702,8 +778,11 @@ export class ProjectsService {
     const snapshots = await Promise.all(
       projects.map(async (project) => {
         const tasksTotal = project.tasks.length;
-        const tasksDone = project.tasks.filter((t) => t.status === 'DONE').length;
-        const progress = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
+        const tasksDone = project.tasks.filter(
+          (t) => t.status === 'DONE',
+        ).length;
+        const progress =
+          tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
 
         return this.prisma.projectSnapshot.create({
           data: {

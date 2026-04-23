@@ -66,7 +66,8 @@ export class ImportTaskDto {
   endDate?: string;
 
   @ApiProperty({
-    description: 'Sous-tâches séparées par | (ex: "Vérifier prérequis|Nettoyer AD")',
+    description:
+      'Sous-tâches séparées par | (ex: "Vérifier prérequis|Nettoyer AD")',
     required: false,
   })
   @IsString()

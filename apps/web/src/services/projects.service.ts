@@ -78,7 +78,11 @@ export const projectsService = {
     await api.post(`/projects/${projectId}/members`, data);
   },
 
-  async updateMember(projectId: string, userId: string, data: { role?: string; allocation?: number }): Promise<void> {
+  async updateMember(
+    projectId: string,
+    userId: string,
+    data: { role?: string; allocation?: number },
+  ): Promise<void> {
     await api.patch(`/projects/${projectId}/members/${userId}`, data);
   },
 

@@ -74,13 +74,8 @@ export const thirdPartiesService = {
     return response.data;
   },
 
-  async unassignFromTask(
-    taskId: string,
-    thirdPartyId: string,
-  ): Promise<void> {
-    await api.delete(
-      `/tasks/${taskId}/third-party-assignees/${thirdPartyId}`,
-    );
+  async unassignFromTask(taskId: string, thirdPartyId: string): Promise<void> {
+    await api.delete(`/tasks/${taskId}/third-party-assignees/${thirdPartyId}`);
   },
 
   // ===== Project memberships =====

@@ -5,6 +5,7 @@
 **Goal:** Remediate the 8 security findings (SEC-01 → SEC-08) and 8 functional bugs (BUG-01 → BUG-08) from the 2026-04-15 audit by HAMMACHE Lilian, without regressing existing features.
 
 **Architecture:**
+
 - **Backend-first trust:** every authorization decision moves server-side. Frontend role in localStorage becomes display-only derived from `/auth/me`.
 - **Transverse ownership layer:** a shared `OwnershipGuard` + `@OwnershipCheck()` decorator, applied module-by-module, resolves SEC-06 and its functional manifestations (BUG-01/04/05/08) with a single pattern.
 - **Session hardening:** refresh-token flow backed by a Redis blacklist reuses existing Redis infra (already used by `role-management.service` permission cache).
@@ -15,6 +16,7 @@
 **Audit source:** `docs/security/2026_04_15_Rapport_audit.md`.
 
 **Key audit refinements discovered during mapping (2026-04-15):**
+
 - SEC-03 is about **role** in localStorage, not JWT (JWT in localStorage is a conscious choice per CLAUDE.md).
 - `leaves` and `telework` already have ownership checks — audit findings cover edge-case paths; verification pass rather than rewrite.
 - `documents.service.ts` only persists metadata (no upload logic); SEC-07 mainly affects `users.service.ts:1288-1292` (avatar) and any future multipart route.
@@ -90,6 +92,7 @@
 Each wave below is dispatched as a **single message with multiple `Agent` tool calls** (parallel Opus subagents). Between waves: main session runs `pnpm run build` + targeted tests, reviews diffs, commits bundled work if subagents didn't commit, pushes, deploys to VPS, then proceeds.
 
 **Common instructions for every subagent:**
+
 - Model: **Opus 4.6** (user memory: never Sonnet/Haiku for agents)
 - Work on **master** directly (user memory: no feature branches)
 - After making changes: `pnpm run build` must pass. If frontend changed, at least typecheck + relevant Jest tests. If backend changed, run the module's Vitest spec.
@@ -106,12 +109,14 @@ Independent, small-blast-radius fixes. All can run in parallel.
 ### Task 1.1 — SEC-02: Env-gate default admin seed
 
 **Files:**
+
 - Modify: `packages/database/prisma/seed.ts:1470-1481`
 - Modify: `.env.example`
 
 **Subagent prompt (Opus, parallel):**
 
 > Fix SEC-02 from the audit at `docs/security/2026_04_15_Rapport_audit.md`. Currently `packages/database/prisma/seed.ts:1470-1481` unconditionally upserts `admin/admin123`. Change to:
+>
 > 1. Read `SEED_ADMIN_PASSWORD` env var.
 > 2. If unset AND `NODE_ENV === 'production'`: skip admin seed entirely, log a warning.
 > 3. If unset AND non-prod: generate a 24-char random password via `crypto.randomBytes`, bcrypt-hash, log the plaintext to stdout **once** with a prominent banner.
@@ -119,7 +124,7 @@ Independent, small-blast-radius fixes. All can run in parallel.
 > 5. Add `forcePasswordChange: true` on the user record when password came from the random generator (add the field to `User` in `schema.prisma` with `@default(false)` and create a migration named `add-force-password-change`).
 > 6. Update `.env.example` with `SEED_ADMIN_PASSWORD=` (commented, with guidance).
 > 7. Verify: `pnpm run build` passes; `pnpm --filter @orchestra/database exec tsx prisma/seed.ts` runs locally without crashing (dev DB).
-> Commit: `fix(security): SEC-02 env-gate default admin seed and force password change`.
+>    Commit: `fix(security): SEC-02 env-gate default admin seed and force password change`.
 
 **Acceptance:** Seed without `SEED_ADMIN_PASSWORD` in `NODE_ENV=production` leaves admin untouched. Non-prod logs a strong random password.
 
@@ -128,6 +133,7 @@ Independent, small-blast-radius fixes. All can run in parallel.
 ### Task 1.2 — SEC-01: Swagger prod hygiene
 
 **Files:**
+
 - Modify: `apps/api/src/main.ts:67-89`
 - Modify: `docker-compose.prod.yml` (verify `SWAGGER_ENABLED` absent)
 - Modify: `.env.example`
@@ -135,11 +141,12 @@ Independent, small-blast-radius fixes. All can run in parallel.
 **Subagent prompt:**
 
 > Fix SEC-01. Swagger is already gated by `process.env.SWAGGER_ENABLED === 'true'` at `apps/api/src/main.ts:67-89`. Harden:
+>
 > 1. Add an **additional** guard: if `NODE_ENV === 'production'` AND `SWAGGER_ENABLED === 'true'`, log a `[SECURITY WARNING]` banner on startup but still mount (ops may want this temporarily).
 > 2. Ensure `docker-compose.prod.yml` has NO `SWAGGER_ENABLED` env entry (remove if present).
 > 3. Document in `.env.example`: `SWAGGER_ENABLED=false  # NEVER set to true in production`.
 > 4. Add a basic auth guard option: if `SWAGGER_USER`/`SWAGGER_PASS` are set, protect `api/docs` via Fastify basic auth middleware.
-> Commit: `fix(security): SEC-01 harden Swagger prod exposure with basic-auth option`.
+>    Commit: `fix(security): SEC-01 harden Swagger prod exposure with basic-auth option`.
 
 **Acceptance:** `docker compose -f docker-compose.prod.yml config` shows no `SWAGGER_ENABLED`. Local `SWAGGER_ENABLED=true SWAGGER_USER=a SWAGGER_PASS=b pnpm --filter @orchestra/api dev` requires basic auth at `/api/docs`.
 
@@ -148,33 +155,35 @@ Independent, small-blast-radius fixes. All can run in parallel.
 ### Task 1.3 — SEC-08: Fastify logger redact
 
 **Files:**
+
 - Create: `apps/api/src/common/fastify/redact.config.ts`
 - Modify: `apps/api/src/main.ts:17`
 
 **Subagent prompt:**
 
 > Fix SEC-08. Currently `new FastifyAdapter({ logger: true })` at `apps/api/src/main.ts:17` has no redact config.
+>
 > 1. Create `apps/api/src/common/fastify/redact.config.ts` exporting `fastifyLoggerOptions` with:
 >    ```ts
 >    export const fastifyLoggerOptions = {
->      level: process.env.LOG_LEVEL ?? 'info',
+>      level: process.env.LOG_LEVEL ?? "info",
 >      redact: {
 >        paths: [
->          'req.headers.authorization',
->          'req.headers.cookie',
->          'req.body.password',
->          'req.body.currentPassword',
->          'req.body.newPassword',
->          'req.body.refreshToken',
+>          "req.headers.authorization",
+>          "req.headers.cookie",
+>          "req.body.password",
+>          "req.body.currentPassword",
+>          "req.body.newPassword",
+>          "req.body.refreshToken",
 >          'res.headers["set-cookie"]',
 >        ],
->        censor: '[REDACTED]',
+>        censor: "[REDACTED]",
 >      },
 >    };
 >    ```
 > 2. Wire it: `new FastifyAdapter({ logger: fastifyLoggerOptions })`.
 > 3. Verify locally with `LOG_LEVEL=debug pnpm --filter @orchestra/api dev`: hitting `/auth/login` must show `password: "[REDACTED]"` in logs.
-> Commit: `fix(security): SEC-08 redact sensitive fields in Fastify logger`.
+>    Commit: `fix(security): SEC-08 redact sensitive fields in Fastify logger`.
 
 **Acceptance:** Login body logs show `[REDACTED]` for password in debug mode.
 
@@ -183,18 +192,20 @@ Independent, small-blast-radius fixes. All can run in parallel.
 ### Task 1.4 — SEC-05: Tighten login throttling
 
 **Files:**
+
 - Modify: `apps/api/src/auth/auth.controller.ts:33-36`
 - Modify: `apps/api/src/app.module.ts:41-52`
 
 **Subagent prompt:**
 
 > Fix SEC-05. Currently login is 20/min + 100/15min at `auth.controller.ts:33-36`.
+>
 > 1. Replace login `@Throttle` decorator with `{ short: { limit: 5, ttl: 60_000 }, medium: { limit: 20, ttl: 900_000 } }`.
 > 2. Apply same tight limits to `/auth/register` and `/auth/reset-password`.
 > 3. Keep global throttler untouched (non-auth endpoints).
 > 4. Add Vitest: `apps/api/src/auth/auth.controller.spec.ts` — smoke test the decorator is present (reflect-metadata read on the handler). If this is impractical, add an E2E in wave 5.
 > 5. `pnpm run build` must pass.
-> Commit: `fix(security): SEC-05 tighten /auth/login throttling to 5/min`.
+>    Commit: `fix(security): SEC-05 tighten /auth/login throttling to 5/min`.
 
 **Acceptance:** Decorator values updated; reflection metadata shows new limits.
 
@@ -203,40 +214,45 @@ Independent, small-blast-radius fixes. All can run in parallel.
 ### Task 1.5 — BUG-06: Profile "Membre depuis" invalid date
 
 **Files:**
+
 - Modify: `apps/web/app/[locale]/profile/page.tsx:309-323`
 
 **Subagent prompt:**
 
 > Fix BUG-06. Profile page renders "Invalid date" for `user.createdAt`.
+>
 > 1. Read the current render block at `apps/web/app/[locale]/profile/page.tsx:309-323`.
 > 2. Root-cause: likely `new Date(user.createdAt)` called when `user` is null on first render, or `createdAt` arrives as ISO string that `date-fns/format` fails on due to locale mismatch.
 > 3. Fix: use a guarded formatter — if `!user?.createdAt` render `—`; else `format(parseISO(user.createdAt), 'PPP', { locale: fr })`.
 > 4. Check for the same bug on `apps/web/app/[locale]/users/[id]/suivi/page.tsx:655`; apply same fix if present.
 > 5. Add Jest test `apps/web/src/__tests__/profile-membersince.test.tsx` rendering the component with `createdAt: null`, `createdAt: '2026-01-15T10:00:00Z'`, and missing user.
-> Commit: `fix(profile): BUG-06 guard Membre depuis formatting against null/invalid dates`.
+>    Commit: `fix(profile): BUG-06 guard Membre depuis formatting against null/invalid dates`.
 
 ---
 
 ### Task 1.6 — BUG-07: Account shown inactive
 
 **Files:**
+
 - Modify: `apps/web/app/[locale]/profile/page.tsx` (and/or relevant badge component)
 
 **Subagent prompt:**
 
 > Fix BUG-07. The connected account is shown as inactive despite being operational.
+>
 > 1. Grep for how the "inactif" badge is computed in the profile and user-suivi pages.
 > 2. Likely root-cause: badge reads `user.isActive` but the store hydration provides `user.active` or vice-versa; or the field is missing from the `/auth/me` payload.
 > 3. Verify what `/auth/me` returns (`apps/api/src/auth/auth.controller.ts:95-106`) and what the User DTO exposes.
 > 4. Fix at whichever end is authoritative — prefer exposing `isActive` from `/auth/me` if missing; frontend then reads that.
 > 5. Add Jest test asserting the badge renders "Actif" for `isActive: true`.
-> Commit: `fix(profile): BUG-07 render correct active status from /auth/me`.
+>    Commit: `fix(profile): BUG-07 render correct active status from /auth/me`.
 
 ---
 
 ### Wave 1 Checkpoint
 
 Main session:
+
 1. Await all 6 subagent reports.
 2. Run `pnpm run build` at repo root.
 3. Run `pnpm --filter @orchestra/api test -- auth` and `pnpm --filter @orchestra/web test -- profile`.
@@ -253,6 +269,7 @@ Main session:
 **Subagent prompt (Opus, run alone, wait for completion):**
 
 > Build the shared ownership enforcement layer. The audit SEC-06 reports IDOR on leaves/telework/time-tracking; BUG-04/05/08 extend this to projects/events.
+>
 > 1. Create `apps/api/src/common/services/ownership.service.ts` — injectable service with one public method:
 >    ```ts
 >    async isOwner(resource: 'leave' | 'telework' | 'timeEntry' | 'project' | 'event', resourceId: string, userId: string): Promise<boolean>
@@ -263,7 +280,7 @@ Main session:
 > 4. Register the guard and service in `apps/api/src/common/common.module.ts` (create if missing) and import in `app.module.ts`.
 > 5. Write Vitest unit tests `apps/api/src/common/guards/ownership.guard.spec.ts` covering: owner pass, non-owner fail, privileged-role bypass, missing-resource 404.
 > 6. `pnpm --filter @orchestra/api test` must pass.
-> Commit: `feat(security): SEC-06 shared ownership guard and decorator`.
+>    Commit: `feat(security): SEC-06 shared ownership guard and decorator`.
 
 **Acceptance:** New files exist, unit tests green, no existing module regresses.
 
@@ -315,10 +332,12 @@ Main session: build, run `pnpm --filter @orchestra/api test`, review all commits
 >    ```ts
 >    export function useAuthBootstrap() {
 >      useEffect(() => {
->        const token = localStorage.getItem('access_token');
+>        const token = localStorage.getItem("access_token");
 >        if (!token) return;
->        Promise.all([api.get('/auth/me'), api.get('/auth/me/permissions')])
->          .then(([me, perms]) => authStore.getState().setAuth(me.data, perms.data))
+>        Promise.all([api.get("/auth/me"), api.get("/auth/me/permissions")])
+>          .then(([me, perms]) =>
+>            authStore.getState().setAuth(me.data, perms.data),
+>          )
 >          .catch(() => authStore.getState().clear());
 >      }, []);
 >    }
@@ -327,7 +346,7 @@ Main session: build, run `pnpm --filter @orchestra/api test`, review all commits
 > 5. Audit every call site that reads `role` from localStorage directly. Grep `localStorage.getItem` in `apps/web/src` and fix each.
 > 6. **Backend defense-in-depth:** every `@Roles()` decorator use + `RolesGuard` already validates server-side — confirm no endpoint trusts client-sent role. Add a sanity Vitest test asserting `RolesGuard` ignores request body/headers for role.
 > 7. Jest test: `auth.store.test.ts` — on `setAuth`, localStorage does NOT contain role/permissions.
-> Commit: `fix(security): SEC-03 remove role and permissions from localStorage, hydrate from /auth/me`.
+>    Commit: `fix(security): SEC-03 remove role and permissions from localStorage, hydrate from /auth/me`.
 
 **Acceptance:** In devtools, Application → localStorage shows NO `role` / `permissions`. Tampering `auth_user_display` does not grant privileges (next API call 401s or returns unauthorized).
 
@@ -367,7 +386,7 @@ Main session: build, run `pnpm --filter @orchestra/api test`, review all commits
 >    - `POST /auth/logout` — requires JWT; blacklists current JTI until its exp; revokes the provided refresh token too (body optional).
 > 5. **Frontend interceptor** `apps/web/src/lib/api.ts`: on 401, try `/auth/refresh` once (queue concurrent requests to avoid stampede), retry original request; on failure redirect to login. Persist `refresh_token` in localStorage (same risk class as access token, documented).
 > 6. **Tests:** Vitest for refresh rotation, blacklist isolation; Jest for frontend interceptor retry logic.
-> Commit: `feat(security): SEC-04 add refresh tokens and Redis JWT blacklist`.
+>    Commit: `feat(security): SEC-04 add refresh tokens and Redis JWT blacklist`.
 
 **Acceptance:** `/auth/logout` followed by a call using the old access token returns 401. Refresh returns new pair and revokes the old refresh.
 
@@ -386,15 +405,22 @@ Migration on dev DB, full build, all auth E2E green, push, deploy. **Announce to
 **Subagent prompt:**
 
 > Fix SEC-07. `file-type@19` is installed; currently used only at `users.service.ts:1288-1292` (avatar).
+>
 > 1. Create `apps/api/src/common/upload/magic-bytes.validator.ts`:
 >    ```ts
 >    const WHITELIST = {
->      image: ['image/png', 'image/jpeg', 'image/webp'],
->      document: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+>      image: ["image/png", "image/jpeg", "image/webp"],
+>      document: [
+>        "application/pdf",
+>        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+>      ],
 >    } as const;
->    export async function assertMagicBytes(buffer: Buffer, kind: keyof typeof WHITELIST) {
+>    export async function assertMagicBytes(
+>      buffer: Buffer,
+>      kind: keyof typeof WHITELIST,
+>    ) {
 >      const result = await fileTypeFromBuffer(buffer);
->      if (!result) throw new BadRequestException('Unknown file type');
+>      if (!result) throw new BadRequestException("Unknown file type");
 >      if (!WHITELIST[kind].includes(result.mime)) {
 >        throw new BadRequestException(`Disallowed mime: ${result.mime}`);
 >      }
@@ -404,7 +430,7 @@ Migration on dev DB, full build, all auth E2E green, push, deploy. **Announce to
 > 2. Refactor `users.service.ts` avatar upload to use this validator.
 > 3. Audit every multipart route in the API (grep `@fastify/multipart`, `file()`, `Multipart`). If any other route handles uploads, wire the validator. If `documents.service.ts` actually persists uploaded bytes somewhere (re-check — it looked metadata-only), add validation.
 > 4. Vitest: feeds a `.php` renamed `.jpg` buffer → throws; real PNG → passes.
-> Commit: `fix(security): SEC-07 centralize magic-bytes validation for uploads`.
+>    Commit: `fix(security): SEC-07 centralize magic-bytes validation for uploads`.
 
 ---
 
@@ -413,6 +439,7 @@ Migration on dev DB, full build, all auth E2E green, push, deploy. **Announce to
 **Subagent prompt:**
 
 > Fix BUG-02. `apps/web/src/components/tasks/TaskForm.tsx` shows a blink when assignees aren't resolved.
+>
 > 1. Read the component; find where assignees are fetched (likely a `useQuery` for users) and where they're rendered.
 > 2. Root cause: render happens before users are resolved; mounted-default shows an empty state that flips to populated.
 > 3. Fix options (pick whichever matches codebase conventions already used in neighboring components):
@@ -420,7 +447,7 @@ Migration on dev DB, full build, all auth E2E green, push, deploy. **Announce to
 >    - Pre-fetch users via a `useSuspenseQuery` with Suspense boundary.
 > 4. Verify visually: start dev server, open the form, no blink.
 > 5. Jest test asserting skeleton renders when `isLoading=true`.
-> Commit: `fix(tasks): BUG-02 prevent assignee blink in TaskForm`.
+>    Commit: `fix(tasks): BUG-02 prevent assignee blink in TaskForm`.
 
 ---
 
@@ -429,11 +456,12 @@ Migration on dev DB, full build, all auth E2E green, push, deploy. **Announce to
 **Subagent prompt:**
 
 > Fix BUG-03. `apps/web/app/[locale]/planning/page.tsx` loads with no service selected; user must manually select all to see anything.
+>
 > 1. Inspect `apps/web/src/stores/planningView.store.ts` and `apps/web/src/hooks/usePlanningData.ts`.
 > 2. In the store initializer (or on first data fetch), if `selectedServices` is empty AND available services list is non-empty → default to all services selected.
 > 3. Preserve user choice afterwards (persist middleware already does this per repo map; ensure we don't overwrite user's explicit empty selection — only default when `selectedServices === undefined`, not when `=== []`).
 > 4. Jest test on the store: first mount with services → all selected; subsequent manual clear → empty stays empty.
-> Commit: `fix(planning): BUG-03 default-select all services on first mount`.
+>    Commit: `fix(planning): BUG-03 default-select all services on first mount`.
 
 ---
 
@@ -448,38 +476,42 @@ Build, tests, push, deploy.
 ### Task 5.1 — Ownership IDOR E2E
 
 > Create `e2e/tests/security/ownership-idor.spec.ts`. Using the permission matrix at `e2e/fixtures/permission-matrix.ts` and `asRole()` fixture, for each of leaves, telework, time-tracking, projects, events:
+>
 > - Create a resource as user A
 > - Attempt `PATCH /:id` and `DELETE /:id` as user B (same role tier, different user)
 > - Assert 403 Forbidden
 > - Repeat as CONTRIBUTEUR, OBSERVATEUR, REFERENT_TECHNIQUE, MANAGER (outside perimeter)
 > - ADMIN should succeed (bypass)
-> Tag critical tests `@smoke`. Commit: `test(e2e): cross-user ownership IDOR coverage`.
+>   Tag critical tests `@smoke`. Commit: `test(e2e): cross-user ownership IDOR coverage`.
 
 ### Task 5.2 — Auth hardening E2E
 
 > Create `e2e/tests/security/auth-hardening.spec.ts`:
+>
 > - Tampering `auth_user_display` in localStorage → still unauthorized for admin endpoints (SEC-03).
 > - 6 rapid logins with wrong pw → 429 after 5 (SEC-05).
 > - Login → logout → reuse of access token → 401 (SEC-04).
 > - Refresh flow: old refresh after rotation → 401 (SEC-04).
-> Commit: `test(e2e): auth hardening coverage (SEC-03/04/05)`.
+>   Commit: `test(e2e): auth hardening coverage (SEC-03/04/05)`.
 
 ### Task 5.3 — Upload validation E2E
 
 > Create `e2e/tests/security/upload-validation.spec.ts`:
+>
 > - Upload a `.php` renamed `.jpg` to avatar → 400.
 > - Upload a real PNG → 200.
-> Commit: `test(e2e): magic-bytes upload validation (SEC-07)`.
+>   Commit: `test(e2e): magic-bytes upload validation (SEC-07)`.
 
 ### Task 5.4 — Final verification pass (sequential, main session)
 
 Main session does this itself:
+
 1. `pnpm run build` — must pass.
 2. `pnpm run test` — all units green.
 3. `pnpm run test:e2e --grep @smoke` — smoke suite green.
 4. Dispatch `superpowers:code-reviewer` subagent reviewing full plan-vs-diff.
 5. Dispatch `security-review` skill on the whole diff since start of plan.
-6. Create `docs/security/REMEDIATION_STATUS.md` mapping every SEC-* and BUG-* to commit SHA + status.
+6. Create `docs/security/REMEDIATION_STATUS.md` mapping every SEC-_ and BUG-_ to commit SHA + status.
 7. Final commit: `docs(security): remediation status doc for 2026-04-15 audit`.
 8. Push, deploy.
 9. Report to user.

@@ -50,9 +50,7 @@ export function ThirdPartySelector({
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      list = list.filter((tp) =>
-        tp.organizationName.toLowerCase().includes(q),
-      );
+      list = list.filter((tp) => tp.organizationName.toLowerCase().includes(q));
     }
     return list;
   }, [thirdParties, search, allowedIds]);

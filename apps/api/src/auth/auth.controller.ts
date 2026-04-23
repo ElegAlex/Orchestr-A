@@ -89,8 +89,11 @@ export class AuthController {
     medium: { limit: 120, ttl: 900_000 },
   })
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Rafraîchir le token d\'accès' })
-  @ApiResponse({ status: 200, description: 'Nouveau access_token + refresh_token' })
+  @ApiOperation({ summary: "Rafraîchir le token d'accès" })
+  @ApiResponse({
+    status: 200,
+    description: 'Nouveau access_token + refresh_token',
+  })
   @ApiResponse({ status: 401, description: 'Refresh token invalide ou expiré' })
   async refresh(@Body() body: RefreshTokenDto, @Req() req: any) {
     const { userId, newRefreshToken } = await this.refreshTokenService.rotate(
@@ -105,7 +108,9 @@ export class AuthController {
   @AllowSelfService()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Déconnexion — blacklist du JWT et révocation du refresh token' })
+  @ApiOperation({
+    summary: 'Déconnexion — blacklist du JWT et révocation du refresh token',
+  })
   @ApiResponse({ status: 204, description: 'Déconnexion effectuée' })
   @ApiResponse({ status: 401, description: 'Non autorisé' })
   async logout(
@@ -129,10 +134,14 @@ export class AuthController {
     short: { limit: 30, ttl: 60_000 },
     medium: { limit: 120, ttl: 900_000 },
   })
-  @ApiOperation({ summary: "Inscription d'un nouvel utilisateur (compte inactif, nécessite activation admin)" })
+  @ApiOperation({
+    summary:
+      "Inscription d'un nouvel utilisateur (compte inactif, nécessite activation admin)",
+  })
   @ApiResponse({
     status: 201,
-    description: 'Utilisateur créé (inactif). Un administrateur doit activer le compte avant la connexion.',
+    description:
+      'Utilisateur créé (inactif). Un administrateur doit activer le compte avant la connexion.',
   })
   @ApiResponse({
     status: 409,

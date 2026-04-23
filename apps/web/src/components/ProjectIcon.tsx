@@ -8,7 +8,11 @@ interface ProjectIconProps {
   className?: string;
 }
 
-export function ProjectIcon({ icon, size = 16, className = "" }: ProjectIconProps) {
+export function ProjectIcon({
+  icon,
+  size = 16,
+  className = "",
+}: ProjectIconProps) {
   if (icon) {
     return (
       <span
@@ -21,5 +25,7 @@ export function ProjectIcon({ icon, size = 16, className = "" }: ProjectIconProp
     );
   }
 
-  return <Folder size={size} className={`text-gray-400 shrink-0 ${className}`} />;
+  return (
+    <Folder size={size} className={`text-gray-400 shrink-0 ${className}`} />
+  );
 }

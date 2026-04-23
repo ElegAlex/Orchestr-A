@@ -48,7 +48,8 @@ export class PredefinedTasksService {
       }
     }
 
-    const startTime = dto.defaultDuration === 'TIME_SLOT' ? dto.startTime : null;
+    const startTime =
+      dto.defaultDuration === 'TIME_SLOT' ? dto.startTime : null;
     const endTime = dto.defaultDuration === 'TIME_SLOT' ? dto.endTime : null;
 
     return this.prisma.predefinedTask.create({
@@ -82,8 +83,10 @@ export class PredefinedTasksService {
     const effectiveDuration = dto.defaultDuration ?? existing.defaultDuration;
 
     if (effectiveDuration === 'TIME_SLOT') {
-      const effectiveStartTime = dto.startTime !== undefined ? dto.startTime : existing.startTime;
-      const effectiveEndTime = dto.endTime !== undefined ? dto.endTime : existing.endTime;
+      const effectiveStartTime =
+        dto.startTime !== undefined ? dto.startTime : existing.startTime;
+      const effectiveEndTime =
+        dto.endTime !== undefined ? dto.endTime : existing.endTime;
       if (!effectiveStartTime || !effectiveEndTime) {
         throw new BadRequestException(
           'startTime et endTime sont requis quand defaultDuration est TIME_SLOT',
@@ -112,7 +115,9 @@ export class PredefinedTasksService {
           defaultDuration: dto.defaultDuration,
         }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-        ...(dto.isExternalIntervention !== undefined && { isExternalIntervention: dto.isExternalIntervention }),
+        ...(dto.isExternalIntervention !== undefined && {
+          isExternalIntervention: dto.isExternalIntervention,
+        }),
         ...timeSlotData,
       },
       include: {

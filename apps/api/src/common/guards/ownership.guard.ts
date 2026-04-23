@@ -62,7 +62,8 @@ export class OwnershipGuard implements CanActivate {
     if (opts.bypassPermission) {
       // Post-V4 RBAC : `user.role` est l'objet Role Prisma ; PermissionsService
       // résout roleCode → templateKey → ROLE_TEMPLATES[key].permissions.
-      const permissions = await this.permissionsService.getPermissionsForUser(user);
+      const permissions =
+        await this.permissionsService.getPermissionsForUser(user);
       if ((permissions as readonly string[]).includes(opts.bypassPermission)) {
         return true;
       }

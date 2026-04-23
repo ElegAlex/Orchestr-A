@@ -3,7 +3,9 @@ import { Milestone, PaginatedResponse } from "@/types";
 
 export const milestonesService = {
   async getAll(): Promise<PaginatedResponse<Milestone>> {
-    const response = await api.get<PaginatedResponse<Milestone>>("/milestones?limit=1000");
+    const response = await api.get<PaginatedResponse<Milestone>>(
+      "/milestones?limit=1000",
+    );
     return response.data;
   },
 

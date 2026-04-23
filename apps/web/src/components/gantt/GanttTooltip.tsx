@@ -1,32 +1,32 @@
-'use client';
+"use client";
 
-import type { GanttPortfolioRow, GanttTaskRow } from './types';
+import type { GanttPortfolioRow, GanttTaskRow } from "./types";
 import {
   TASK_STATUS_COLORS,
   TASK_STATUS_LABELS,
   TASK_STATUS_DEFAULT_COLOR,
   HEALTH_COLORS,
   lightenColor,
-} from './tokens';
-import type { HealthStatus } from './types';
-import { format } from 'date-fns';
-import { useLayoutEffect, useRef, type RefObject } from 'react';
-import { UserAvatar } from '@/components/UserAvatar';
+} from "./tokens";
+import type { HealthStatus } from "./types";
+import { format } from "date-fns";
+import { useLayoutEffect, useRef, type RefObject } from "react";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface GanttTooltipProps {
   row: GanttPortfolioRow | GanttTaskRow;
-  scope: 'portfolio' | 'project';
+  scope: "portfolio" | "project";
   x: number;
   y: number;
   containerRef: RefObject<HTMLDivElement | null>;
 }
 
 const HEALTH_LABELS: Record<HealthStatus, string> = {
-  'on-track': 'En bonne voie',
-  'at-risk': 'À risque',
-  'late': 'En retard',
-  'upcoming': 'À venir',
-  'done': 'Terminé',
+  "on-track": "En bonne voie",
+  "at-risk": "À risque",
+  late: "En retard",
+  upcoming: "À venir",
+  done: "Terminé",
 };
 
 function StatusBadge({ color, label }: { color: string; label: string }) {
@@ -38,7 +38,7 @@ function StatusBadge({ color, label }: { color: string; label: string }) {
         fontWeight: 500,
         color: color,
         backgroundColor: lightenColor(color),
-        padding: '1px 8px',
+        padding: "1px 8px",
         borderRadius: 8,
       }}
     >
@@ -47,16 +47,31 @@ function StatusBadge({ color, label }: { color: string; label: string }) {
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center justify-between gap-4" style={{ minHeight: 22 }}>
-      <span style={{ fontSize: 12, color: '#64748B' }}>{label}</span>
+    <div
+      className="flex items-center justify-between gap-4"
+      style={{ minHeight: 22 }}
+    >
+      <span style={{ fontSize: 12, color: "#64748B" }}>{label}</span>
       <div className="flex items-center gap-1.5">{children}</div>
     </div>
   );
 }
 
-export default function GanttTooltip({ row, scope, x, y, containerRef }: GanttTooltipProps) {
+export default function GanttTooltip({
+  row,
+  scope,
+  x,
+  y,
+  containerRef,
+}: GanttTooltipProps) {
   const tooltipWidth = 240;
   const tooltipRef = useRef<HTMLDivElement>(null);
 
@@ -72,7 +87,7 @@ export default function GanttTooltip({ row, scope, x, y, containerRef }: GanttTo
     const top = y - rect.top + 16;
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
-    tooltip.style.visibility = 'visible';
+    tooltip.style.visibility = "visible";
   }, [containerRef, x, y]);
 
   return (
@@ -80,13 +95,13 @@ export default function GanttTooltip({ row, scope, x, y, containerRef }: GanttTo
       ref={tooltipRef}
       className="absolute z-50 pointer-events-none"
       style={{
-        visibility: 'hidden',
+        visibility: "hidden",
         width: tooltipWidth,
-        backgroundColor: 'white',
-        border: '1px solid #E2E8F0',
+        backgroundColor: "white",
+        border: "1px solid #E2E8F0",
         borderRadius: 8,
-        boxShadow: '0 8px 16px -4px rgba(0,0,0,0.1)',
-        padding: '12px 16px',
+        boxShadow: "0 8px 16px -4px rgba(0,0,0,0.1)",
+        padding: "12px 16px",
       }}
     >
       <div
@@ -94,15 +109,15 @@ export default function GanttTooltip({ row, scope, x, y, containerRef }: GanttTo
         style={{
           width: 10,
           height: 10,
-          backgroundColor: 'white',
-          border: '1px solid #E2E8F0',
-          borderRight: 'none',
-          borderBottom: 'none',
-          transform: 'translateX(-50%) rotate(45deg)',
+          backgroundColor: "white",
+          border: "1px solid #E2E8F0",
+          borderRight: "none",
+          borderBottom: "none",
+          transform: "translateX(-50%) rotate(45deg)",
         }}
       />
       <div className="flex flex-col gap-1">
-        {scope === 'project' ? (
+        {scope === "project" ? (
           <ProjectTooltip row={row as GanttTaskRow} />
         ) : (
           <PortfolioTooltip row={row as GanttPortfolioRow} />
@@ -117,7 +132,15 @@ function ProjectTooltip({ row }: { row: GanttTaskRow }) {
   const label = TASK_STATUS_LABELS[row.status] ?? row.status;
   return (
     <>
-      <div className="truncate" style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', marginBottom: 4 }}>
+      <div
+        className="truncate"
+        style={{
+          fontSize: 13,
+          fontWeight: 600,
+          color: "#0F172A",
+          marginBottom: 4,
+        }}
+      >
         {row.name}
       </div>
       <Row label="Statut">
@@ -126,22 +149,26 @@ function ProjectTooltip({ row }: { row: GanttTaskRow }) {
       {(row.assignee || row.assigneeName) && (
         <Row label="Assigné">
           {row.assignee && <UserAvatar user={row.assignee} size="xs" />}
-          {row.assigneeName && <span style={{ fontSize: 12, color: '#334155' }}>{row.assigneeName}</span>}
+          {row.assigneeName && (
+            <span style={{ fontSize: 12, color: "#334155" }}>
+              {row.assigneeName}
+            </span>
+          )}
         </Row>
       )}
       <Row label="Dates">
-        <span style={{ fontSize: 12, color: '#334155' }}>
-          {format(row.startDate, 'MMM d')} — {format(row.endDate, 'MMM d')}
+        <span style={{ fontSize: 12, color: "#334155" }}>
+          {format(row.startDate, "MMM d")} — {format(row.endDate, "MMM d")}
         </span>
       </Row>
       <Row label="Progrès">
-        <span style={{ fontSize: 12, color: '#334155', fontWeight: 600 }}>
+        <span style={{ fontSize: 12, color: "#334155", fontWeight: 600 }}>
           {Math.round(row.progress)}%
         </span>
       </Row>
       {row.priority && (
         <Row label="Priorité">
-          <span style={{ fontSize: 12, color: '#334155' }}>{row.priority}</span>
+          <span style={{ fontSize: 12, color: "#334155" }}>{row.priority}</span>
         </Row>
       )}
     </>
@@ -153,7 +180,15 @@ function PortfolioTooltip({ row }: { row: GanttPortfolioRow }) {
   const label = HEALTH_LABELS[row.health];
   return (
     <>
-      <div className="truncate" style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', marginBottom: 4 }}>
+      <div
+        className="truncate"
+        style={{
+          fontSize: 13,
+          fontWeight: 600,
+          color: "#0F172A",
+          marginBottom: 4,
+        }}
+      >
         {row.name}
       </div>
       <Row label="Santé">
@@ -162,16 +197,21 @@ function PortfolioTooltip({ row }: { row: GanttPortfolioRow }) {
       {(row.manager || row.managerName) && (
         <Row label="Chef de projet">
           {row.manager && <UserAvatar user={row.manager} size="xs" />}
-          {row.managerName && <span style={{ fontSize: 12, color: '#334155' }}>{row.managerName}</span>}
+          {row.managerName && (
+            <span style={{ fontSize: 12, color: "#334155" }}>
+              {row.managerName}
+            </span>
+          )}
         </Row>
       )}
       <Row label="Dates">
-        <span style={{ fontSize: 12, color: '#334155' }}>
-          {format(row.startDate, 'MMM yyyy')} — {format(row.endDate, 'MMM yyyy')}
+        <span style={{ fontSize: 12, color: "#334155" }}>
+          {format(row.startDate, "MMM yyyy")} —{" "}
+          {format(row.endDate, "MMM yyyy")}
         </span>
       </Row>
       <Row label="Progrès">
-        <span style={{ fontSize: 12, color: '#334155', fontWeight: 600 }}>
+        <span style={{ fontSize: 12, color: "#334155", fontWeight: 600 }}>
           {Math.round(row.progress)}%
         </span>
       </Row>

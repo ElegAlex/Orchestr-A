@@ -18,11 +18,11 @@
 
 Les 3 PRs (#3, #7, #8) présentent **exactement le même pattern d'échec CI** :
 
-| Check | PR #3 | PR #7 | PR #8 |
-|---|---|---|---|
-| Backend Tests (API) | ❌ fail | ❌ fail | ❌ fail |
-| Lint & Format | ❌ fail | ❌ fail | ❌ fail |
-| Frontend Tests (Web) | ✅ pass | ✅ pass | ✅ pass |
+| Check                               | PR #3                                 | PR #7   | PR #8   |
+| ----------------------------------- | ------------------------------------- | ------- | ------- |
+| Backend Tests (API)                 | ❌ fail                               | ❌ fail | ❌ fail |
+| Lint & Format                       | ❌ fail                               | ❌ fail | ❌ fail |
+| Frontend Tests (Web)                | ✅ pass                               | ✅ pass | ✅ pass |
 | Build Offline / Validation / Docker | — skipping (dépendent des précédents) |
 
 Les 3 PRs sont `mergeable: MERGEABLE` mais `mergeStateStatus: UNSTABLE`.
@@ -43,6 +43,7 @@ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  api@2.0.0 test:cov: `vitest run --coverage`
 ```
 
 **Aucun test ne fail**. Le job échoue uniquement sur les seuils de coverage :
+
 - Functions : 72.88% vs requis 80% (-7.12pp)
 - Branches : 61.46% vs requis 65% (-3.54pp)
 
@@ -86,6 +87,7 @@ b0b243e test(fix): update users/page.test ...
 ```
 
 → **Aucun de ces commits ne touche les fichiers frontend source fautifs**. Ce sont :
+
 - des docs (superpowers, clients)
 - des fix de tests (pas du code de prod)
 
@@ -131,6 +133,7 @@ Le gate Partie 1 échoue → Partie 2 non atteinte.
 La recherche Partie 2 (docs Gantt, vault Obsidian, reconstitution) est **indépendante** des PRs et peut être exécutée dans une session séparée si l'utilisateur le ré-autorise. Les scénarios A/B/C du prompt restent valides pour cette session dédiée.
 
 Matériel pré-existant utilisable (non ré-vérifié dans cette session) :
+
 - Session précédente a déjà vérifié `backlog/`, `.superpowers/`, `git log --diff-filter=D`, `git stash list` → **zéro trace**
 - Reste non vérifié : vault Obsidian (`~/Documents/Obsidian`, `~/Obsidian`, iCloud macOS, `CPAM*/PILOTAGE`)
 - Reste non vérifié : fichiers `audit-gantt.md` / `audit-legend-v2.md` **deleted** dans working tree de master — contenu récupérable via `git show HEAD:audit-gantt.md`
@@ -145,21 +148,21 @@ Dépend du scénario Partie 2.
 
 ## Actions prises
 
-| Action | Résultat |
-|---|---|
-| `git pull` master | ✅ déjà à jour (`91106f3`) |
-| `gh repo view` merge methods | ✅ merge/squash/rebase tous autorisés |
-| `gh pr checks 3/7/8` | ❌ 2 hard-fails communs (coverage + lint) |
-| `gh pr view --json mergeable` | ✅ MERGEABLE mais UNSTABLE |
-| Lint local sur master | ✅ reproduit : 13 errors, 22 warnings pré-existants |
-| Git blame fichiers fautifs | ✅ dernier commit = `b0ec76f` (avant tous les PRs) |
-| Advisor consulté | ✅ confirme stop |
-| Merge PR #3 | ⛔ NON EFFECTUÉ (gate rouge) |
-| Merge PR #8 | ⛔ NON EFFECTUÉ (gate rouge) |
-| Merge PR #7 | ⛔ NON EFFECTUÉ (gate rouge) |
-| Partie 2 (recherche Gantt) | ⛔ NON EXÉCUTÉE (dépend gate Partie 1) |
-| Partie 3 (Scénario A/B/C) | ⛔ NON EXÉCUTÉE |
-| Log d'état | ✅ présent fichier |
+| Action                        | Résultat                                            |
+| ----------------------------- | --------------------------------------------------- |
+| `git pull` master             | ✅ déjà à jour (`91106f3`)                          |
+| `gh repo view` merge methods  | ✅ merge/squash/rebase tous autorisés               |
+| `gh pr checks 3/7/8`          | ❌ 2 hard-fails communs (coverage + lint)           |
+| `gh pr view --json mergeable` | ✅ MERGEABLE mais UNSTABLE                          |
+| Lint local sur master         | ✅ reproduit : 13 errors, 22 warnings pré-existants |
+| Git blame fichiers fautifs    | ✅ dernier commit = `b0ec76f` (avant tous les PRs)  |
+| Advisor consulté              | ✅ confirme stop                                    |
+| Merge PR #3                   | ⛔ NON EFFECTUÉ (gate rouge)                        |
+| Merge PR #8                   | ⛔ NON EFFECTUÉ (gate rouge)                        |
+| Merge PR #7                   | ⛔ NON EFFECTUÉ (gate rouge)                        |
+| Partie 2 (recherche Gantt)    | ⛔ NON EXÉCUTÉE (dépend gate Partie 1)              |
+| Partie 3 (Scénario A/B/C)     | ⛔ NON EXÉCUTÉE                                     |
+| Log d'état                    | ✅ présent fichier                                  |
 
 ---
 

@@ -200,13 +200,28 @@ export const tasksService = {
     return response.data;
   },
 
-  async createSubtask(taskId: string, data: { title: string; description?: string }): Promise<Subtask> {
+  async createSubtask(
+    taskId: string,
+    data: { title: string; description?: string },
+  ): Promise<Subtask> {
     const response = await api.post<Subtask>(`/tasks/${taskId}/subtasks`, data);
     return response.data;
   },
 
-  async updateSubtask(taskId: string, subtaskId: string, data: Partial<{ title: string; description: string; isCompleted: boolean; position: number }>): Promise<Subtask> {
-    const response = await api.patch<Subtask>(`/tasks/${taskId}/subtasks/${subtaskId}`, data);
+  async updateSubtask(
+    taskId: string,
+    subtaskId: string,
+    data: Partial<{
+      title: string;
+      description: string;
+      isCompleted: boolean;
+      position: number;
+    }>,
+  ): Promise<Subtask> {
+    const response = await api.patch<Subtask>(
+      `/tasks/${taskId}/subtasks/${subtaskId}`,
+      data,
+    );
     return response.data;
   },
 
@@ -214,8 +229,14 @@ export const tasksService = {
     await api.delete(`/tasks/${taskId}/subtasks/${subtaskId}`);
   },
 
-  async reorderSubtasks(taskId: string, subtaskIds: string[]): Promise<Subtask[]> {
-    const response = await api.post<Subtask[]>(`/tasks/${taskId}/subtasks/reorder`, { subtaskIds });
+  async reorderSubtasks(
+    taskId: string,
+    subtaskIds: string[],
+  ): Promise<Subtask[]> {
+    const response = await api.post<Subtask[]>(
+      `/tasks/${taskId}/subtasks/reorder`,
+      { subtaskIds },
+    );
     return response.data;
   },
 };

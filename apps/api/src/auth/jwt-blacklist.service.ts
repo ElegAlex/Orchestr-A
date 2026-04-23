@@ -29,7 +29,12 @@ export class JwtBlacklistService {
     if (!jti) return;
     const ttl = Math.max(1, Math.floor(ttlSeconds));
     try {
-      await this.redis.set(`${JwtBlacklistService.KEY_PREFIX}${jti}`, '1', 'EX', ttl);
+      await this.redis.set(
+        `${JwtBlacklistService.KEY_PREFIX}${jti}`,
+        '1',
+        'EX',
+        ttl,
+      );
     } catch (err) {
       this.logger.error(`Failed to blacklist jti=${jti}: ${String(err)}`);
     }
@@ -45,7 +50,9 @@ export class JwtBlacklistService {
     } catch (err) {
       // Fail-closed: if Redis is unreachable we cannot verify the token is NOT blacklisted,
       // so we treat it as blacklisted to prevent use of potentially revoked tokens.
-      this.logger.warn(`Redis blacklist check failed for jti=${jti}, failing closed: ${String(err)}`);
+      this.logger.warn(
+        `Redis blacklist check failed for jti=${jti}, failing closed: ${String(err)}`,
+      );
       return true;
     }
   }

@@ -149,7 +149,12 @@ describe('EpicsController', () => {
       const updatedEpic = { ...mockEpic, ...updateEpicDto };
       mockEpicsService.update.mockResolvedValue(updatedEpic);
 
-      const result = await controller.update('epic-id-1', updateEpicDto, 'user-1', 'ADMIN');
+      const result = await controller.update(
+        'epic-id-1',
+        updateEpicDto,
+        'user-1',
+        'ADMIN',
+      );
 
       expect(result.name).toBe('User Authentication v2');
       expect(result.progress).toBe(75);
@@ -179,7 +184,11 @@ describe('EpicsController', () => {
       const result = await controller.remove('epic-id-1', 'user-1', 'ADMIN');
 
       expect(result.message).toBe('Epic supprimé');
-      expect(mockEpicsService.remove).toHaveBeenCalledWith('epic-id-1', 'user-1', 'ADMIN');
+      expect(mockEpicsService.remove).toHaveBeenCalledWith(
+        'epic-id-1',
+        'user-1',
+        'ADMIN',
+      );
     });
 
     it('should throw NotFoundException when epic not found', async () => {
@@ -187,9 +196,9 @@ describe('EpicsController', () => {
         new NotFoundException('Epic introuvable'),
       );
 
-      await expect(controller.remove('nonexistent', 'user-1', 'ADMIN')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.remove('nonexistent', 'user-1', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

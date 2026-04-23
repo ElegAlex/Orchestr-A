@@ -12,18 +12,18 @@
 
 ## File Map
 
-| File | Action | Responsibility |
-|------|--------|----------------|
-| `apps/api/src/role-management/role-management.service.ts` | Modify | Add missing permissions to 6 system roles in seed |
-| `apps/api/src/tasks/tasks.controller.ts` | Modify | Add `@Permissions('tasks:read')` to 7 GET endpoints |
-| `apps/api/src/departments/departments.controller.ts` | Modify | Add `@Permissions('departments:read')` to 3 GET endpoints |
-| `apps/api/src/users/users.controller.ts` | Modify | Add `@Permissions('users:read')` to 6 GET endpoints |
-| `apps/api/src/skills/skills.controller.ts` | Modify | Add `@Permissions('skills:read')` to 5 GET endpoints (skip `me/my-skills`) |
-| `apps/api/src/leaves/leaves.controller.ts` | Modify | Add `@Permissions` to 5 GET endpoints (skip `me/*`) |
-| `apps/api/src/telework/telework.controller.ts` | Modify | Add `@Permissions('telework:read')` to 3 GET endpoints (skip `me/*`) |
-| `apps/api/src/events/events.controller.ts` | Modify | Add `@Permissions('events:read')` to 4 GET endpoints |
-| `apps/web/src/components/MainLayout.tsx` | Modify | Add `permission` to 6 nav items, remove dead `isManager` |
-| `e2e/fixtures/permission-matrix.ts` | Modify | Add entries for newly-guarded endpoints |
+| File                                                      | Action | Responsibility                                                             |
+| --------------------------------------------------------- | ------ | -------------------------------------------------------------------------- |
+| `apps/api/src/role-management/role-management.service.ts` | Modify | Add missing permissions to 6 system roles in seed                          |
+| `apps/api/src/tasks/tasks.controller.ts`                  | Modify | Add `@Permissions('tasks:read')` to 7 GET endpoints                        |
+| `apps/api/src/departments/departments.controller.ts`      | Modify | Add `@Permissions('departments:read')` to 3 GET endpoints                  |
+| `apps/api/src/users/users.controller.ts`                  | Modify | Add `@Permissions('users:read')` to 6 GET endpoints                        |
+| `apps/api/src/skills/skills.controller.ts`                | Modify | Add `@Permissions('skills:read')` to 5 GET endpoints (skip `me/my-skills`) |
+| `apps/api/src/leaves/leaves.controller.ts`                | Modify | Add `@Permissions` to 5 GET endpoints (skip `me/*`)                        |
+| `apps/api/src/telework/telework.controller.ts`            | Modify | Add `@Permissions('telework:read')` to 3 GET endpoints (skip `me/*`)       |
+| `apps/api/src/events/events.controller.ts`                | Modify | Add `@Permissions('events:read')` to 4 GET endpoints                       |
+| `apps/web/src/components/MainLayout.tsx`                  | Modify | Add `permission` to 6 nav items, remove dead `isManager`                   |
+| `e2e/fixtures/permission-matrix.ts`                       | Modify | Add entries for newly-guarded endpoints                                    |
 
 ---
 
@@ -31,14 +31,14 @@
 
 These roles are **missing permissions for endpoints they currently access** (because the endpoints had no guard):
 
-| Role | Missing permissions | Why needed |
-|------|-------------------|------------|
-| `REFERENT_TECHNIQUE` | `leaves:create`, `leaves:read`, `leaves:view` | Employee — must request leave |
-| `CHEF_DE_PROJET` | `leaves:create`, `leaves:read`, `leaves:view`, `telework:read`, `telework:view` | Employee + manages team telework |
-| `DEVELOPPEUR_CONCEPTEUR` | `leaves:create`, `leaves:read`, `leaves:view` | Employee — must request leave |
-| `CORRESPONDANT_FONCTIONNEL_APPLICATION` | `leaves:create`, `leaves:read`, `leaves:view` | Employee — must request leave |
-| `CHARGE_DE_MISSION` | `leaves:create`, `leaves:read`, `leaves:view` | Employee — must request leave |
-| `CONSULTANT_TECHNOLOGIE_SI` | `leaves:create`, `leaves:read`, `leaves:view` | Employee — must request leave |
+| Role                                    | Missing permissions                                                             | Why needed                       |
+| --------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------- |
+| `REFERENT_TECHNIQUE`                    | `leaves:create`, `leaves:read`, `leaves:view`                                   | Employee — must request leave    |
+| `CHEF_DE_PROJET`                        | `leaves:create`, `leaves:read`, `leaves:view`, `telework:read`, `telework:view` | Employee + manages team telework |
+| `DEVELOPPEUR_CONCEPTEUR`                | `leaves:create`, `leaves:read`, `leaves:view`                                   | Employee — must request leave    |
+| `CORRESPONDANT_FONCTIONNEL_APPLICATION` | `leaves:create`, `leaves:read`, `leaves:view`                                   | Employee — must request leave    |
+| `CHARGE_DE_MISSION`                     | `leaves:create`, `leaves:read`, `leaves:view`                                   | Employee — must request leave    |
+| `CONSULTANT_TECHNOLOGIE_SI`             | `leaves:create`, `leaves:read`, `leaves:view`                                   | Employee — must request leave    |
 
 **No regression** for: ADMIN (all perms), RESPONSABLE (all minus 2), MANAGER (already has all needed), CONTRIBUTEUR (already has tasks:read, events:read, leaves:read, telework:read), OBSERVATEUR (dynamic filter gets all `*:read` + `*:view`).
 
@@ -46,20 +46,21 @@ These roles are **missing permissions for endpoints they currently access** (bec
 
 These 6 routes are personal data endpoints, accessible to any authenticated user. Do **NOT** add `@Permissions`:
 
-| Controller | Route | Method |
-|-----------|-------|--------|
-| `skills` | `GET me/my-skills` | `getMySkills` |
-| `leaves` | `GET me` | `getMyLeaves` |
-| `leaves` | `GET me/balance` | `getMyBalance` |
-| `leaves` | `GET delegations/me` | `getMyDelegations` |
-| `telework` | `GET me/week` | `getMyWeeklySchedule` |
-| `telework` | `GET me/stats` | `getMyStats` |
+| Controller | Route                | Method                |
+| ---------- | -------------------- | --------------------- |
+| `skills`   | `GET me/my-skills`   | `getMySkills`         |
+| `leaves`   | `GET me`             | `getMyLeaves`         |
+| `leaves`   | `GET me/balance`     | `getMyBalance`        |
+| `leaves`   | `GET delegations/me` | `getMyDelegations`    |
+| `telework` | `GET me/week`        | `getMyWeeklySchedule` |
+| `telework` | `GET me/stats`       | `getMyStats`          |
 
 ---
 
 ### Task 1: Extend seed permissions (prevent regressions)
 
 **Files:**
+
 - Modify: `apps/api/src/role-management/role-management.service.ts:471-840`
 
 - [ ] **Step 1: Add leaves permissions to REFERENT_TECHNIQUE**
@@ -154,11 +155,13 @@ access without this seed extension."
 ### Task 2: Add @Permissions guards to tasks controller
 
 **Files:**
+
 - Modify: `apps/api/src/tasks/tasks.controller.ts`
 
 The `@Permissions` decorator import should already exist in the file. If not, add it:
+
 ```typescript
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Permissions } from "../auth/decorators/permissions.decorator";
 ```
 
 - [ ] **Step 1: Verify Permissions import exists**
@@ -235,13 +238,15 @@ git commit -m "fix(rbac): add @Permissions('tasks:read') to 7 GET endpoints in t
 ### Task 3: Add @Permissions guards to departments controller
 
 **Files:**
+
 - Modify: `apps/api/src/departments/departments.controller.ts`
 
 - [ ] **Step 1: Verify Permissions import exists**
 
 Read the imports at the top. If `Permissions` is not imported, add:
+
 ```typescript
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Permissions } from "../auth/decorators/permissions.decorator";
 ```
 
 - [ ] **Step 2: Add @Permissions('departments:read') to findAll (line ~54)**
@@ -280,6 +285,7 @@ git commit -m "fix(rbac): add @Permissions('departments:read') to 3 GET endpoint
 ### Task 4: Add @Permissions guards to users controller
 
 **Files:**
+
 - Modify: `apps/api/src/users/users.controller.ts`
 
 - [ ] **Step 1: Verify Permissions import exists**
@@ -346,6 +352,7 @@ git commit -m "fix(rbac): add @Permissions('users:read') to 6 GET endpoints in u
 ### Task 5: Add @Permissions guards to skills controller
 
 **Files:**
+
 - Modify: `apps/api/src/skills/skills.controller.ts`
 
 **IMPORTANT:** Do NOT touch `GET me/my-skills` (line ~310) — it stays unprotected (personal data).
@@ -406,9 +413,11 @@ git commit -m "fix(rbac): add @Permissions('skills:read') to 5 GET endpoints in 
 ### Task 6: Add @Permissions guards to leaves controller
 
 **Files:**
+
 - Modify: `apps/api/src/leaves/leaves.controller.ts`
 
 **IMPORTANT:** Do NOT touch these `/me/*` routes — they stay unprotected:
+
 - `GET me` (getMyLeaves)
 - `GET me/balance` (getMyBalance)
 - `GET delegations/me` (getMyDelegations)
@@ -471,17 +480,20 @@ git commit -m "fix(rbac): add @Permissions to 5 GET endpoints in leaves controll
 ### Task 7: Add @Permissions guards to telework controller
 
 **Files:**
+
 - Modify: `apps/api/src/telework/telework.controller.ts`
 
 **IMPORTANT:** Do NOT touch these `/me/*` routes — they stay unprotected:
+
 - `GET me/week` (getMyWeeklySchedule)
 - `GET me/stats` (getMyStats)
 
 - [ ] **Step 1: Verify Permissions import exists or add it**
 
 Check imports. If `Permissions` is not imported:
+
 ```typescript
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Permissions } from "../auth/decorators/permissions.decorator";
 ```
 
 - [ ] **Step 2: Add @Permissions('telework:read') to findAll (line ~60)**
@@ -520,12 +532,13 @@ git commit -m "fix(rbac): add @Permissions('telework:read') to 3 GET endpoints i
 ### Task 8: Add @Permissions guards to events controller
 
 **Files:**
+
 - Modify: `apps/api/src/events/events.controller.ts`
 
 - [ ] **Step 1: Verify Permissions import exists or add it**
 
 ```typescript
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Permissions } from "../auth/decorators/permissions.decorator";
 ```
 
 - [ ] **Step 2: Add @Permissions('events:read') to findAll (line ~56)**
@@ -574,6 +587,7 @@ git commit -m "fix(rbac): add @Permissions('events:read') to 4 GET endpoints in 
 ### Task 9: Fix MainLayout navigation permissions
 
 **Files:**
+
 - Modify: `apps/web/src/components/MainLayout.tsx`
 
 - [ ] **Step 1: Add permission fields to 6 navigation items (lines ~35-41)**
@@ -581,21 +595,46 @@ git commit -m "fix(rbac): add @Permissions('events:read') to 4 GET endpoints in 
 Replace the navigation array items that are missing `permission`:
 
 ```typescript
-  const navigation: (NavItem & { permission?: string })[] = [
-    { key: "dashboard", href: `/${locale}/dashboard`, icon: "🎯" },
-    {
-      key: "projects",
-      href: `/${locale}/projects`,
-      icon: "📁",
-      permission: "projects:read",
-    },
-    { key: "tasks", href: `/${locale}/tasks`, icon: "✓", permission: "tasks:read" },
-    { key: "events", href: `/${locale}/events`, icon: "📣", permission: "events:read" },
-    { key: "planning", href: `/${locale}/planning`, icon: "🗓️" },
-    { key: "timeTracking", href: `/${locale}/time-tracking`, icon: "⏱️", permission: "time_tracking:read" },
-    { key: "leaves", href: `/${locale}/leaves`, icon: "🏖️", permission: "leaves:create" },
-    { key: "telework", href: `/${locale}/telework`, icon: "🏠", permission: "telework:create" },
-  ];
+const navigation: (NavItem & { permission?: string })[] = [
+  { key: "dashboard", href: `/${locale}/dashboard`, icon: "🎯" },
+  {
+    key: "projects",
+    href: `/${locale}/projects`,
+    icon: "📁",
+    permission: "projects:read",
+  },
+  {
+    key: "tasks",
+    href: `/${locale}/tasks`,
+    icon: "✓",
+    permission: "tasks:read",
+  },
+  {
+    key: "events",
+    href: `/${locale}/events`,
+    icon: "📣",
+    permission: "events:read",
+  },
+  { key: "planning", href: `/${locale}/planning`, icon: "🗓️" },
+  {
+    key: "timeTracking",
+    href: `/${locale}/time-tracking`,
+    icon: "⏱️",
+    permission: "time_tracking:read",
+  },
+  {
+    key: "leaves",
+    href: `/${locale}/leaves`,
+    icon: "🏖️",
+    permission: "leaves:create",
+  },
+  {
+    key: "telework",
+    href: `/${locale}/telework`,
+    icon: "🏠",
+    permission: "telework:create",
+  },
+];
 ```
 
 Note: `planning` stays without permission (composite view). `leaves` and `telework` use `:create` because all employees who can use these features have at minimum the create permission — OBSERVATEUR (read-only) should not see create-oriented pages but CAN see them in the admin nav if they have `*:read`.
@@ -603,8 +642,9 @@ Note: `planning` stays without permission (composite view). `leaves` and `telewo
 - [ ] **Step 2: Remove dead isManager variable (line ~82)**
 
 Delete this line:
+
 ```typescript
-  const isManager = hasAnyPermission(["projects:read", "projects:create"]);
+const isManager = hasAnyPermission(["projects:read", "projects:create"]);
 ```
 
 - [ ] **Step 3: Commit**
@@ -619,6 +659,7 @@ git commit -m "fix(rbac): add permission fields to MainLayout nav items, remove 
 ### Task 10: Update E2E permission matrix
 
 **Files:**
+
 - Modify: `e2e/fixtures/permission-matrix.ts`
 
 - [ ] **Step 1: Add tasks:read entry**
@@ -731,6 +772,7 @@ curl -X POST http://localhost:3001/api/role-management/reset-to-defaults \
 - [ ] **Step 3: Test permission isolation**
 
 Create a custom role with ONLY `projects:create` + `projects:read`. Assign to a test user. Verify:
+
 - Can access `GET /api/projects` → 200
 - Cannot access `GET /api/users` → 403
 - Cannot access `GET /api/departments` → 403
@@ -742,6 +784,7 @@ Create a custom role with ONLY `projects:create` + `projects:read`. Assign to a 
 - [ ] **Step 4: Test CONTRIBUTEUR regression**
 
 Login as CONTRIBUTEUR. Verify:
+
 - Can access `GET /api/tasks` → 200
 - Can access `GET /api/events` → 200
 - Can access `GET /api/leaves` → 200
@@ -753,5 +796,6 @@ Login as CONTRIBUTEUR. Verify:
 - [ ] **Step 5: Test OBSERVATEUR regression**
 
 Login as OBSERVATEUR. Verify:
+
 - Can access all `GET` endpoints (has all `*:read` + `*:view`)
 - Cannot POST/PATCH/DELETE anything → 403

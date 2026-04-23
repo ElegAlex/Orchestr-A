@@ -342,11 +342,13 @@ export class AnalyticsService {
         totalTasks: projectTasks.length,
         completedTasks: completedTasks.length,
         projectManager: project.projectManager ?? undefined,
-        manager: project.manager ? {
-          id: project.manager.id,
-          firstName: project.manager.firstName,
-          lastName: project.manager.lastName,
-        } : null,
+        manager: project.manager
+          ? {
+              id: project.manager.id,
+              firstName: project.manager.firstName,
+              lastName: project.manager.lastName,
+            }
+          : null,
         icon: project.icon ?? null,
         loggedHours: totalLoggedHours,
         thirdPartyLoggedHours: totalThirdPartyLoggedHours,

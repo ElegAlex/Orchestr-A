@@ -87,13 +87,7 @@ const baseProps = {
 
 describe("TaskForm — BUG-02 assignees blink", () => {
   it("renders a skeleton placeholder (no empty UserMultiSelect) when users are loading", () => {
-    render(
-      <TaskForm
-        {...baseProps}
-        users={[]}
-        isUsersLoading
-      />,
-    );
+    render(<TaskForm {...baseProps} users={[]} isUsersLoading />);
 
     expect(screen.getByTestId("assignees-skeleton")).toBeInTheDocument();
     expect(screen.getByTestId("assignees-skeleton")).toHaveAttribute(
@@ -105,11 +99,7 @@ describe("TaskForm — BUG-02 assignees blink", () => {
 
   it("renders the populated UserMultiSelect once users resolve", () => {
     render(
-      <TaskForm
-        {...baseProps}
-        users={sampleUsers}
-        isUsersLoading={false}
-      />,
+      <TaskForm {...baseProps} users={sampleUsers} isUsersLoading={false} />,
     );
 
     expect(screen.queryByTestId("assignees-skeleton")).not.toBeInTheDocument();

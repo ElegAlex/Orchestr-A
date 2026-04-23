@@ -72,6 +72,7 @@ Aucune migration DB automatique dans ce refactor. Rollback = `git revert <sha>` 
 ### Convention `MIGRATION-GAPS-<AGENT>.md` (par agent, sans collision)
 
 Les agents W2/W3 peuvent constater qu'un payload local ne contient pas `avatarUrl`/`avatarPreset`. Dans ce cas :
+
 - **NE PAS** bidouiller un fallback inline.
 - **Écrire** dans un fichier **par agent** à la racine du worktree, pour éviter toute race condition en parallélisation :
   - V2-A → `MIGRATION-GAPS-V2-A.md`
@@ -89,6 +90,7 @@ Les agents W2/W3 peuvent constater qu'un payload local ne contient pas `avatarUr
 ### Task 0.1 : Utilitaires partagés + PERSONA_PRESETS + UserSummary
 
 **Files:**
+
 - Create: `apps/web/src/lib/avatar.ts`
 - Create: `apps/web/src/lib/__tests__/avatar.test.ts`
 - Create: `apps/web/src/constants/avatar-presets.ts`
@@ -96,7 +98,7 @@ Les agents W2/W3 peuvent constater qu'un payload local ne contient pas `avatarUr
 
 **Dispatch prompt (copier-coller dans Agent tool, `model: "sonnet"`):**
 
-```
+````
 You are Wave 0 of the avatar unification refactor. Context: backlog/refactor-avatar/SPEC D'IMPLÉMENTATION — Unification des composants Avatar.md §4 Vague 0.
 
 Execute the following autonomously. No clarifying questions — the spec is authoritative.
@@ -153,19 +155,21 @@ Execute the following autonomously. No clarifying questions — the spec is auth
        expect(getInitials({ id: '1', firstName: '', lastName: '' })).toBe('');
      });
    });
-   ```
+````
 
 3. CREATE apps/web/src/constants/avatar-presets.ts (new folder `constants/`):
+
    ```ts
    export const PERSONA_PRESETS = Array.from(
      { length: 48 },
-     (_, i) => `persona_${String(i + 1).padStart(2, '0')}`,
+     (_, i) => `persona_${String(i + 1).padStart(2, "0")}`,
    );
-   export const VALID_PRESETS = ['initials', ...PERSONA_PRESETS] as const;
-   export type AvatarPreset = typeof VALID_PRESETS[number];
+   export const VALID_PRESETS = ["initials", ...PERSONA_PRESETS] as const;
+   export type AvatarPreset = (typeof VALID_PRESETS)[number];
    ```
 
 4. MODIFY apps/web/src/types/index.ts — APPEND (do not rename or remove anything) the interface:
+
    ```ts
    export interface UserSummary {
      id: string;
@@ -175,6 +179,7 @@ Execute the following autonomously. No clarifying questions — the spec is auth
      avatarPreset?: string | null;
    }
    ```
+
    Place it near other user-related types (after the existing `User` or `AuthUserDisplay`, whichever comes first).
 
 5. DO NOT modify apps/api/src/users/dto/avatar-preset.dto.ts in this wave — that's V6.
@@ -190,7 +195,8 @@ Execute the following autonomously. No clarifying questions — the spec is auth
    ```
 
 Report back: test output tail, build output tail, commit SHA.
-```
+
+````
 
 **Verification gate (orchestrator runs after agent returns):**
 
@@ -199,7 +205,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA
 pnpm --filter web test -- avatar.test 2>&1 | tail -15  # 10 passing
 pnpm --filter web exec tsc --noEmit 2>&1 | tail -5     # 0 errors
 git log --oneline -1                                    # V0 commit visible
-```
+````
 
 **Rollback:** `git revert HEAD` (single commit, no downstream dependency yet).
 
@@ -210,6 +216,7 @@ git log --oneline -1                                    # V0 commit visible
 ### Task 1.1 : Enrichissement API composant + migration des 5 sites d'appel existants + tests RTL
 
 **Files:**
+
 - Modify: `apps/web/src/components/UserAvatar.tsx`
 - Create: `apps/web/src/components/__tests__/UserAvatar.test.tsx`
 - Modify: `apps/web/app/[locale]/profile/page.tsx:159,378,396-399`
@@ -219,16 +226,16 @@ git log --oneline -1                                    # V0 commit visible
 **Remappage des tailles (ancien → nouveau, taille visuelle identique) :**
 
 | Ancien | Pixels | Nouveau |
-|---|---|---|
-| `sm`   | 40 | `md` |
-| `md`   | 48 | `lg` |
-| `lg`   | 96 | `xl` |
+| ------ | ------ | ------- |
+| `sm`   | 40     | `md`    |
+| `md`   | 48     | `lg`    |
+| `lg`   | 96     | `xl`    |
 
 Nouvelles valeurs introduites : `xs=20`, `xl=96`.
 
 **Dispatch prompt (Agent, `model: "sonnet"`):**
 
-```
+````
 You are Wave 1 of the avatar unification refactor. Context: backlog/refactor-avatar/SPEC D'IMPLÉMENTATION — Unification des composants Avatar.md §4 Vague 1. Wave 0 is already committed (lib/avatar.ts, UserSummary, avatar-presets.ts exist).
 
 Execute the following autonomously.
@@ -337,58 +344,72 @@ Execute the following autonomously.
        </span>
      );
    }
-   ```
+````
 
-2. CREATE apps/web/src/components/__tests__/UserAvatar.test.tsx :
+2. CREATE apps/web/src/components/**tests**/UserAvatar.test.tsx :
+
    ```tsx
-   import { render, screen, fireEvent } from '@testing-library/react';
-   import { UserAvatar } from '@/components/UserAvatar';
+   import { render, screen, fireEvent } from "@testing-library/react";
+   import { UserAvatar } from "@/components/UserAvatar";
 
-   const user = { id: '1', firstName: 'Alice', lastName: 'Martin' };
+   const user = { id: "1", firstName: "Alice", lastName: "Martin" };
 
-   describe('UserAvatar', () => {
-     it('renders monogram when no avatarUrl nor avatarPreset', () => {
+   describe("UserAvatar", () => {
+     it("renders monogram when no avatarUrl nor avatarPreset", () => {
        render(<UserAvatar user={user} />);
-       expect(screen.getByText('AM')).toBeInTheDocument();
+       expect(screen.getByText("AM")).toBeInTheDocument();
      });
 
-     it('renders image when avatarUrl is provided', () => {
-       render(<UserAvatar user={{ ...user, avatarUrl: '/avatars/persona_01.svg' }} />);
-       const img = screen.getByAltText('Alice Martin');
-       expect(img).toHaveAttribute('src', expect.stringContaining('persona_01.svg'));
+     it("renders image when avatarUrl is provided", () => {
+       render(
+         <UserAvatar
+           user={{ ...user, avatarUrl: "/avatars/persona_01.svg" }}
+         />,
+       );
+       const img = screen.getByAltText("Alice Martin");
+       expect(img).toHaveAttribute(
+         "src",
+         expect.stringContaining("persona_01.svg"),
+       );
      });
 
-     it('renders preset when avatarPreset is provided (not initials)', () => {
-       render(<UserAvatar user={{ ...user, avatarPreset: 'persona_03' }} />);
-       const img = screen.getByAltText('Alice Martin');
-       expect(img).toHaveAttribute('src', '/avatars/persona_03.svg');
+     it("renders preset when avatarPreset is provided (not initials)", () => {
+       render(<UserAvatar user={{ ...user, avatarPreset: "persona_03" }} />);
+       const img = screen.getByAltText("Alice Martin");
+       expect(img).toHaveAttribute("src", "/avatars/persona_03.svg");
      });
 
      it('renders monogram when avatarPreset is "initials"', () => {
-       render(<UserAvatar user={{ ...user, avatarPreset: 'initials' }} />);
-       expect(screen.getByText('AM')).toBeInTheDocument();
+       render(<UserAvatar user={{ ...user, avatarPreset: "initials" }} />);
+       expect(screen.getByText("AM")).toBeInTheDocument();
      });
 
-     it('renders badge when provided', () => {
-       render(<UserAvatar user={user} badge={<span data-testid="b">★</span>} />);
-       expect(screen.getByTestId('b')).toBeInTheDocument();
+     it("renders badge when provided", () => {
+       render(
+         <UserAvatar user={user} badge={<span data-testid="b">★</span>} />,
+       );
+       expect(screen.getByTestId("b")).toBeInTheDocument();
      });
 
-     it('does not render badge when absent', () => {
+     it("does not render badge when absent", () => {
        const { container } = render(<UserAvatar user={user} />);
-       expect(container.querySelector('[class*="absolute"][class*="-top"]')).toBeNull();
+       expect(
+         container.querySelector('[class*="absolute"][class*="-top"]'),
+       ).toBeNull();
      });
 
-     it('falls back to monogram on image error', () => {
-       render(<UserAvatar user={{ ...user, avatarPreset: 'persona_03' }} />);
-       const img = screen.getByAltText('Alice Martin');
+     it("falls back to monogram on image error", () => {
+       render(<UserAvatar user={{ ...user, avatarPreset: "persona_03" }} />);
+       const img = screen.getByAltText("Alice Martin");
        fireEvent.error(img);
-       expect(screen.getByText('AM')).toBeInTheDocument();
+       expect(screen.getByText("AM")).toBeInTheDocument();
      });
 
-     it('renders title attribute with full name', () => {
+     it("renders title attribute with full name", () => {
        const { container } = render(<UserAvatar user={user} />);
-       expect(container.querySelector('[title="Alice Martin"]')).toBeInTheDocument();
+       expect(
+         container.querySelector('[title="Alice Martin"]'),
+       ).toBeInTheDocument();
      });
    });
    ```
@@ -397,7 +418,7 @@ Execute the following autonomously.
    - L.159 `size="lg"` → `size="xl"`
    - L.378 `size="lg"` → `size="xl"`
    - L.396 (inside the preset picker) `size="md"` → `size="lg"`
-   Read the file first to confirm exact current text before Edit.
+     Read the file first to confirm exact current text before Edit.
 
 4. MODIFY apps/web/src/components/planning/UserRow.tsx — L.61:
    - Change `size="sm"` → `size="md"` (visual 40px preserved).
@@ -417,7 +438,8 @@ Execute the following autonomously.
    ```
 
 Report: test output, build output, commit SHA, and a note if any callsite text was unexpected (e.g., size already different from what the spec claimed).
-```
+
+````
 
 **Verification gate:**
 
@@ -425,7 +447,7 @@ Report: test output, build output, commit SHA, and a note if any callsite text w
 pnpm --filter web test -- UserAvatar.test 2>&1 | tail -15        # 8 passing
 pnpm --filter web exec tsc --noEmit 2>&1 | tail -5                # 0 errors
 grep -c 'size="sm"' apps/web/src/components/planning/UserRow.tsx  # 0 expected
-```
+````
 
 **Rollback:** `git revert HEAD`. V0 reste en place (utile pour toute reprise).
 
@@ -438,6 +460,7 @@ grep -c 'size="sm"' apps/web/src/components/planning/UserRow.tsx  # 0 expected
 ### Agent V2-A — Tasks (5 sites)
 
 **Files touched:**
+
 - `apps/web/app/[locale]/tasks/page.tsx:611-629, 640-645`
 - `apps/web/app/[locale]/tasks/[id]/page.tsx:989-1007, 1009-1014`
 - `apps/web/src/components/tasks/TaskLineCard.tsx:87-106`
@@ -464,10 +487,12 @@ Replace inline avatar divs with <UserAvatar> in these exact files:
 Rules:
 - Add `import { UserAvatar } from "@/components/UserAvatar";` at the top of each file if not already present.
 - Each user object passed MUST satisfy UserSummary (id, firstName, lastName, avatarUrl?, avatarPreset?). If the local type does not expose avatarUrl/avatarPreset → append a line to MIGRATION-GAPS-V2-A.md at repo root (create if missing):
-  ```
-  | apps/web/app/[locale]/tasks/page.tsx:611 | assignment.user | Task.assignees[*].user | missing avatarPreset |
-  ```
-  Do NOT inline a fallback. Trust the type — V4-A fills the Prisma payload in parallel. Prefer `user satisfies UserSummary` over `user as UserSummary` when TS needs a nudge (use `as UserSummary` only if `satisfies` fails).
+```
+
+| apps/web/app/[locale]/tasks/page.tsx:611 | assignment.user | Task.assignees[*].user | missing avatarPreset |
+
+```
+Do NOT inline a fallback. Trust the type — V4-A fills the Prisma payload in parallel. Prefer `user satisfies UserSummary` over `user as UserSummary` when TS needs a nudge (use `as UserSummary` only if `satisfies` fails).
 - Do NOT touch any other inline div with `rounded-full` that is not an avatar (badges, pills, etc.).
 
 Verify:
@@ -476,7 +501,9 @@ Verify:
 
 Commit:
 ```
+
 refactor(avatar): V2-A — migrate Tasks inline avatars to UserAvatar
+
 ```
 
 Report: commit SHA, list of MIGRATION-GAPS entries added, build output tail.
@@ -502,18 +529,23 @@ Modify apps/web/app/[locale]/projects/[id]/page.tsx only. Three callsites:
 Rules:
 - Add `import { UserAvatar } from "@/components/UserAvatar";` at top if missing.
 - Each user must satisfy UserSummary (id, firstName, lastName, avatarUrl?, avatarPreset?). If local typing is too strict → append a line to MIGRATION-GAPS-V2-B.md at repo root (create if missing):
-  ```
-  | apps/web/app/[locale]/projects/[id]/page.tsx:<line> | <expression> | <source type> | missing avatarPreset |
-  ```
-  Do NOT inline a fallback. Prefer `user satisfies UserSummary` over `as UserSummary`. V4-A fills the Prisma payload in parallel.
+```
+
+| apps/web/app/[locale]/projects/[id]/page.tsx:<line> | <expression> | <source type> | missing avatarPreset |
+
+```
+Do NOT inline a fallback. Prefer `user satisfies UserSummary` over `as UserSummary`. V4-A fills the Prisma payload in parallel.
 - Do NOT touch any other inline `rounded-full` div that isn't an avatar.
 
 Verify: `pnpm --filter web build` succeeds, `git diff` shows only the 3 callsites.
 
 Commit:
 ```
+
 refactor(avatar): V2-B — migrate Projects inline avatars to UserAvatar
+
 ```
+
 ```
 
 ---
@@ -521,6 +553,7 @@ refactor(avatar): V2-B — migrate Projects inline avatars to UserAvatar
 ### Agent V2-C — Users + UserMultiSelect (5 sites)
 
 **Files:**
+
 - `apps/web/app/[locale]/users/page.tsx:704-708`
 - `apps/web/app/[locale]/users/[id]/suivi/page.tsx:419-424, 459-479`
 - `apps/web/src/components/UserMultiSelect.tsx:101-104, 195-199`
@@ -540,9 +573,11 @@ Size mapping per spec §4 V2-C:
 Rules:
 - Add `import { UserAvatar } from "@/components/UserAvatar";` at top of each file if missing.
 - Each user must satisfy UserSummary. If not → append to MIGRATION-GAPS-V2-C.md at repo root (create if missing):
-  ```
-  | <file>:<line> | <expression> | <source type> | missing avatarPreset |
-  ```
+```
+
+| <file>:<line> | <expression> | <source type> | missing avatarPreset |
+
+```
 - Prefer `user satisfies UserSummary` over `as UserSummary`.
 - Do NOT inline fallbacks. Do NOT touch non-avatar `rounded-full` divs.
 
@@ -550,8 +585,11 @@ Verify: `pnpm --filter web build` succeeds, grep of firstName[0] should drop for
 
 Commit:
 ```
+
 refactor(avatar): V2-C — migrate Users + UserMultiSelect inline avatars
+
 ```
+
 ```
 
 ---
@@ -595,8 +633,11 @@ Verify:
 
 Commit:
 ```
+
 refactor(avatar): V3 — unify User-like types with UserSummary
+
 ```
+
 ```
 
 ---
@@ -604,6 +645,7 @@ refactor(avatar): V3 — unify User-like types with UserSummary
 ### Agent V4-A — Backend: Tasks + Comments + Projects
 
 **Files:**
+
 - `apps/api/src/tasks/tasks.service.ts`
 - `apps/api/src/comments/comments.service.ts`
 - `apps/api/src/projects/projects.service.ts`
@@ -639,8 +681,11 @@ Verify:
 
 Commit:
 ```
+
 refactor(avatar): V4-A — API tasks/comments/projects Prisma selects → avatarUrl+avatarPreset
+
 ```
+
 ```
 
 ---
@@ -648,6 +693,7 @@ refactor(avatar): V4-A — API tasks/comments/projects Prisma selects → avatar
 ### Agent V4-B — Backend: Leaves + Time-tracking + Users
 
 **Files:**
+
 - `apps/api/src/leaves/leaves.service.ts`
 - `apps/api/src/time-tracking/time-tracking.service.ts`
 - `apps/api/src/users/users.service.ts`
@@ -682,8 +728,11 @@ Verify:
 
 Commit message:
 ```
+
 refactor(avatar): V4-B — API leaves/time-tracking/users Prisma selects → avatarPreset
+
 ```
+
 ```
 
 ---
@@ -691,6 +740,7 @@ refactor(avatar): V4-B — API leaves/time-tracking/users Prisma selects → ava
 ### Agent V4-C — Backend: Events + Skills + Departments + Services
 
 **Files:**
+
 - `apps/api/src/events/events.service.ts`
 - `apps/api/src/skills/skills.service.ts`
 - `apps/api/src/departments/departments.service.ts`
@@ -716,8 +766,11 @@ Verify:
 
 Commit:
 ```
+
 refactor(avatar): V4-C — API events/skills/departments/services Prisma selects → avatarUrl+avatarPreset
+
 ```
+
 ```
 
 ---
@@ -746,6 +799,7 @@ Dépend de V4-A (Gantt task payload) + V4-B (UserPresenceItem).
 ### Agent V2-D — Events + Skills + Milestones + PresenceDialog
 
 **Files:**
+
 - `apps/web/app/[locale]/events/page.tsx:435-450`
 - `apps/web/src/components/SkillsMatrix.tsx:790-812`
 - `apps/web/src/components/MilestoneCard.tsx:220-230`
@@ -772,8 +826,11 @@ Verify:
 
 Commit:
 ```
+
 refactor(avatar): V2-D — migrate Events/Skills/Milestones + remove UserPresenceCard
+
 ```
+
 ```
 
 ---
@@ -781,6 +838,7 @@ refactor(avatar): V2-D — migrate Events/Skills/Milestones + remove UserPresenc
 ### Agent V2-E — Gantt (2 composants privés)
 
 **Files:**
+
 - `apps/web/src/components/gantt/GanttBase.tsx:83-101` (remove `AvatarCircle`)
 - `apps/web/src/components/gantt/GanttTooltip.tsx:49-71` (remove `Avatar`)
 
@@ -814,8 +872,11 @@ Verify:
 
 Commit:
 ```
+
 refactor(avatar): V2-E — Gantt private avatar components replaced with UserAvatar
+
 ```
+
 ```
 
 ---
@@ -838,6 +899,7 @@ git log --oneline -2  # V2-D + V2-E commits
 ### Task V5.1 : Vérifications + cleanup morts + E2E screenshots
 
 **Files:**
+
 - Modify: `apps/web/src/lib/planning-utils.ts` (suppression `colors.avatar`)
 - Modify: `apps/web/app/[locale]/profile/page.tsx:17-20` (suppression duplication `PERSONA_PRESETS`)
 - Delete: `MIGRATION-GAPS-V2-*.md` (5 fichiers potentiels, si toutes lacunes résolues)
@@ -845,7 +907,7 @@ git log --oneline -2  # V2-D + V2-E commits
 
 **Dispatch prompt:**
 
-```
+````
 You are Wave V5. All migrations (V0/V1/W2/W3) committed. Finalize.
 
 1. Consolidate MIGRATION-GAPS-V2-*.md files (up to 5: V2-A, V2-B, V2-C, V2-D, V2-E):
@@ -880,9 +942,11 @@ You are Wave V5. All migrations (V0/V1/W2/W3) committed. Finalize.
    - `grep -rn 'firstName\[0\]\|lastName\[0\]' apps/web/src apps/web/app` — must only show `apps/web/src/lib/avatar.ts` and optionally `apps/web/src/components/UserAvatar.tsx`.
 
 Commit (can be 2 commits if separating cleanup from screenshots):
-```
+````
+
 refactor(avatar): V5 — cleanup colors.avatar dead code + dedupe PERSONA_PRESETS
 chore(avatar): V5 — E2E screenshots for 8 functional zones
+
 ```
 
 Report: screenshot paths, final grep output, any MIGRATION-GAPS issue found.
@@ -904,6 +968,7 @@ ls .claude-screenshots/avatar-unification/*.png 2>&1 | wc -l  # ≥ 8
 ### Task V6.1 : Alignement DTO API + suppression 10 SVG + SQL livrable + E2E @smoke
 
 **Files:**
+
 - Modify: `apps/api/src/users/dto/avatar-preset.dto.ts`
 - Delete: `apps/web/public/avatars/avatar_01.svg` à `avatar_10.svg`
 - Create: `MIGRATION-SQL-AVATAR-LEGACY.sql` (racine)
@@ -911,7 +976,7 @@ ls .claude-screenshots/avatar-unification/*.png 2>&1 | wc -l  # ≥ 8
 
 **Dispatch prompt:**
 
-```
+````
 You are Wave V6 — final. All migrations validated. Do the housekeeping.
 
 1. Align apps/api/src/users/dto/avatar-preset.dto.ts with the web-side source.
@@ -926,14 +991,18 @@ You are Wave V6 — final. All migrations validated. Do the housekeeping.
 2. Delete 10 legacy assets:
    ```bash
    rm apps/web/public/avatars/avatar_0{1..9}.svg apps/web/public/avatars/avatar_10.svg
-   ```
-   Verify no code references them:
-   ```bash
-   grep -rn "avatar_0" apps/ packages/ 2>&1 | grep -v node_modules | grep -v ".next" | grep -v "migration-sql"
-   ```
-   Expected: 0 hits. If any hit, STOP and report.
+````
+
+Verify no code references them:
+
+```bash
+grep -rn "avatar_0" apps/ packages/ 2>&1 | grep -v node_modules | grep -v ".next" | grep -v "migration-sql"
+```
+
+Expected: 0 hits. If any hit, STOP and report.
 
 3. Create /home/alex/Documents/REPO/ORCHESTRA/MIGRATION-SQL-AVATAR-LEGACY.sql (root):
+
    ```sql
    -- Avatar unification — cleanup legacy presets (prod)
    -- Execution manuelle par admin DB requise. NE PAS exécuter automatiquement.
@@ -950,27 +1019,35 @@ You are Wave V6 — final. All migrations validated. Do the housekeeping.
    ```
 
 4. Create e2e/tests/avatar-unification.spec.ts with @smoke tag:
-   ```ts
-   import { test, expect } from '@playwright/test';
 
-   test.describe('@smoke Avatar unification', () => {
-     test('avatar visible on /users first row', async ({ page }) => {
-       await page.goto('/users');
-       await expect(page.locator('table tbody tr').first().locator('[title]')).toBeVisible();
+   ```ts
+   import { test, expect } from "@playwright/test";
+
+   test.describe("@smoke Avatar unification", () => {
+     test("avatar visible on /users first row", async ({ page }) => {
+       await page.goto("/users");
+       await expect(
+         page.locator("table tbody tr").first().locator("[title]"),
+       ).toBeVisible();
      });
 
-     test('avatar visible in task assignees stack', async ({ page }) => {
-       await page.goto('/tasks');
-       await expect(page.locator('.flex.-space-x-1 [title]').first()).toBeVisible();
+     test("avatar visible in task assignees stack", async ({ page }) => {
+       await page.goto("/tasks");
+       await expect(
+         page.locator(".flex.-space-x-1 [title]").first(),
+       ).toBeVisible();
      });
    });
    ```
+
    Use the admin storage state (playwright.config.ts existing project "admin" already sets it).
 
 5. Run full E2E smoke:
+
    ```bash
    pnpm run test:e2e -- --grep "@smoke"
    ```
+
    Expected: all pass.
 
 6. Final verification — the DoD checklist (spec §7):
@@ -978,19 +1055,21 @@ You are Wave V6 — final. All migrations validated. Do the housekeeping.
    - pnpm -w run build succeeds.
    - @smoke green.
    - Screenshots present.
-   - MIGRATION-GAPS-V2-*.md absents (tous supprimés par V5).
+   - MIGRATION-GAPS-V2-\*.md absents (tous supprimés par V5).
    - Grep firstName[0]|lastName[0] limited to lib/avatar.ts + UserAvatar.tsx.
    - Grep rounded-full on apps/web: no avatar-inline match.
-   - avatar_0*.svg deleted.
+   - avatar_0\*.svg deleted.
    - MIGRATION-SQL-AVATAR-LEGACY.sql present.
 
 Commit (2 separate commits):
+
 ```
 refactor(avatar): V6 — DTO keep-in-sync + delete 10 legacy SVG
 test(avatar): V6 — E2E @smoke avatar-unification + SQL migration livrable
 ```
 
 Report: E2E output, final DoD checklist status.
+
 ```
 
 ---
@@ -1043,3 +1122,4 @@ Exécution séquentielle dans la session courante via `superpowers:executing-pla
 ---
 
 **Valide "option 1" ou "vas-y" pour que je lance le dispatch V0. "option 2" si tu préfères le mode inline. Sinon précise.**
+```

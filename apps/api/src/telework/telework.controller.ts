@@ -193,7 +193,10 @@ export class TeleworkController {
 
   @Get(':id')
   @RequirePermissions('telework:read')
-  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_any' })
+  @OwnershipCheck({
+    resource: 'telework',
+    bypassPermission: 'telework:manage_any',
+  })
   @ApiOperation({ summary: 'Récupérer un télétravail par ID' })
   @ApiResponse({
     status: 200,
@@ -213,7 +216,10 @@ export class TeleworkController {
 
   @Patch(':id')
   @RequirePermissions('telework:update')
-  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_any' })
+  @OwnershipCheck({
+    resource: 'telework',
+    bypassPermission: 'telework:manage_any',
+  })
   @ApiOperation({ summary: 'Mettre à jour un télétravail' })
   @ApiResponse({
     status: 200,
@@ -238,7 +244,10 @@ export class TeleworkController {
 
   @Delete(':id')
   @RequirePermissions('telework:delete')
-  @OwnershipCheck({ resource: 'telework', bypassPermission: 'telework:manage_any' })
+  @OwnershipCheck({
+    resource: 'telework',
+    bypassPermission: 'telework:manage_any',
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un télétravail' })
   @ApiResponse({

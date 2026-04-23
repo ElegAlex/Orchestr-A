@@ -244,7 +244,8 @@ export class AuthService {
     // No JWT issued — account requires admin activation before login
     return {
       user,
-      message: 'Compte créé. Un administrateur doit activer votre compte avant la connexion.',
+      message:
+        'Compte créé. Un administrateur doit activer votre compte avant la connexion.',
     };
   }
 

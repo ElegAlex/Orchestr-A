@@ -26,7 +26,9 @@ export default function LoginPage() {
 
     try {
       const response = await authService.login(formData);
-      const permsRes = await api.get<{ permissions: string[] }>("/auth/me/permissions");
+      const permsRes = await api.get<{ permissions: string[] }>(
+        "/auth/me/permissions",
+      );
       setAuth(response.user, permsRes.data.permissions);
       toast.success(t("login.success"));
       router.push(`/${locale}/dashboard`);
@@ -109,7 +111,9 @@ export default function LoginPage() {
         <div className="mt-4 text-center">
           <button
             type="button"
-            onClick={() => toast(t("login.forgotPasswordMessage"), { icon: "ℹ️" })}
+            onClick={() =>
+              toast(t("login.forgotPasswordMessage"), { icon: "ℹ️" })
+            }
             className="text-sm text-[var(--primary)] hover:underline font-medium"
           >
             {t("login.forgotPassword")}

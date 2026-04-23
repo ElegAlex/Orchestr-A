@@ -46,7 +46,9 @@ export const PlanningView = ({
   const [viewMode, setViewMode] = useState<"week" | "month">(initialViewMode);
   const [selectedUser, setSelectedUser] = useState<string>("ALL");
   const [viewFilter] = useState<ViewFilter>("all");
-  const [displayFilters, setDisplayFilters] = useState<DisplayFilters>(DEFAULT_DISPLAY_FILTERS);
+  const [displayFilters, setDisplayFilters] = useState<DisplayFilters>(
+    DEFAULT_DISPLAY_FILTERS,
+  );
   const [showDisplayDropdown, setShowDisplayDropdown] = useState(false);
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [showTaskCreateModal, setShowTaskCreateModal] = useState(false);
@@ -125,8 +127,7 @@ export const PlanningView = ({
     // Si l'utilisateur est manager, inclure aussi le groupe "management"
     const isManager =
       hasPermission("telework:read_team") ||
-      (currentUser?.managedServices &&
-        currentUser.managedServices.length > 0);
+      (currentUser?.managedServices && currentUser.managedServices.length > 0);
 
     const validServiceIds = userServiceIds.filter((id) =>
       groupedUsers.some((g) => g.id === id),
@@ -474,7 +475,14 @@ export const PlanningView = ({
                 <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[250px]">
                   <div className="p-2 border-b border-gray-200 flex gap-2">
                     <button
-                      onClick={() => setDisplayFilters({ availability: true, projectTasks: true, orphanTasks: true, events: true })}
+                      onClick={() =>
+                        setDisplayFilters({
+                          availability: true,
+                          projectTasks: true,
+                          orphanTasks: true,
+                          events: true,
+                        })
+                      }
                       className={`px-3 py-1 text-xs rounded ${
                         Object.values(displayFilters).every(Boolean)
                           ? "bg-blue-100 text-blue-700"
@@ -484,7 +492,14 @@ export const PlanningView = ({
                       {t("filters.all")}
                     </button>
                     <button
-                      onClick={() => setDisplayFilters({ availability: false, projectTasks: false, orphanTasks: false, events: false })}
+                      onClick={() =>
+                        setDisplayFilters({
+                          availability: false,
+                          projectTasks: false,
+                          orphanTasks: false,
+                          events: false,
+                        })
+                      }
                       className={`px-3 py-1 text-xs rounded ${
                         Object.values(displayFilters).every((v) => !v)
                           ? "bg-blue-100 text-blue-700"
@@ -495,12 +510,28 @@ export const PlanningView = ({
                     </button>
                   </div>
                   <div>
-                    {([
-                      { key: "availability" as const, label: t("filters.displayAvailability"), icon: "🌴" },
-                      { key: "projectTasks" as const, label: t("filters.displayProjectTasks"), icon: "🔵" },
-                      { key: "orphanTasks" as const, label: t("filters.displayOrphanTasks"), icon: "⚫" },
-                      { key: "events" as const, label: t("filters.displayEvents"), icon: "📅" },
-                    ]).map((item) => (
+                    {[
+                      {
+                        key: "availability" as const,
+                        label: t("filters.displayAvailability"),
+                        icon: "🌴",
+                      },
+                      {
+                        key: "projectTasks" as const,
+                        label: t("filters.displayProjectTasks"),
+                        icon: "🔵",
+                      },
+                      {
+                        key: "orphanTasks" as const,
+                        label: t("filters.displayOrphanTasks"),
+                        icon: "⚫",
+                      },
+                      {
+                        key: "events" as const,
+                        label: t("filters.displayEvents"),
+                        icon: "📅",
+                      },
+                    ].map((item) => (
                       <label
                         key={item.key}
                         className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"

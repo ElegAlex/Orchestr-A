@@ -127,7 +127,10 @@ describe('OwnershipGuard', () => {
   it('surfaces Forbidden when the resource is not found (isOwner=false)', async () => {
     setMeta({ resource: 'event', paramKey: 'id' });
     ownershipService.isOwner.mockResolvedValue(false);
-    const ctx = buildCtx({ id: 'missing' }, { id: 'u-1', role: 'CONTRIBUTEUR' });
+    const ctx = buildCtx(
+      { id: 'missing' },
+      { id: 'u-1', role: 'CONTRIBUTEUR' },
+    );
     await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(
       ForbiddenException,
     );

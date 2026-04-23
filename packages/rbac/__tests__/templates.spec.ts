@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 import {
   ROLE_TEMPLATES,
   ROLE_TEMPLATE_KEYS,
   CATALOG_PERMISSIONS,
   type PermissionCode,
   type RoleTemplateKey,
-} from '..';
+} from "..";
 
 /**
  * Tests V0 B — conformité du package `rbac` aux contrats Phase 1.
@@ -48,25 +48,25 @@ const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
   STAGIAIRE_ALTERNANT: 27,
 };
 
-describe('rbac — conformité contrats Phase 1', () => {
-  it('CATALOG_PERMISSIONS contient exactement 107 permissions', () => {
+describe("rbac — conformité contrats Phase 1", () => {
+  it("CATALOG_PERMISSIONS contient exactement 107 permissions", () => {
     expect(CATALOG_PERMISSIONS.length).toBe(107);
   });
 
-  it('CATALOG_PERMISSIONS sans doublon', () => {
+  it("CATALOG_PERMISSIONS sans doublon", () => {
     const set = new Set(CATALOG_PERMISSIONS);
     expect(set.size).toBe(CATALOG_PERMISSIONS.length);
   });
 
-  it('ROLE_TEMPLATE_KEYS contient exactement 26 templates', () => {
+  it("ROLE_TEMPLATE_KEYS contient exactement 26 templates", () => {
     expect(ROLE_TEMPLATE_KEYS.length).toBe(26);
   });
 
-  it('ROLE_TEMPLATES contient exactement 26 entrées', () => {
+  it("ROLE_TEMPLATES contient exactement 26 entrées", () => {
     expect(Object.keys(ROLE_TEMPLATES).length).toBe(26);
   });
 
-  describe('counts normatifs (V0 B critère a)', () => {
+  describe("counts normatifs (V0 B critère a)", () => {
     for (const key of ROLE_TEMPLATE_KEYS) {
       const expected = EXPECTED_COUNTS[key];
       it(`${key} → ${expected} permissions`, () => {
@@ -76,7 +76,7 @@ describe('rbac — conformité contrats Phase 1', () => {
     }
   });
 
-  describe('cohérence permissions (V0 B critère b)', () => {
+  describe("cohérence permissions (V0 B critère b)", () => {
     const catalogSet = new Set<PermissionCode>(CATALOG_PERMISSIONS);
 
     for (const key of ROLE_TEMPLATE_KEYS) {
@@ -97,7 +97,7 @@ describe('rbac — conformité contrats Phase 1', () => {
     }
   });
 
-  describe('métadonnées templates', () => {
+  describe("métadonnées templates", () => {
     for (const key of ROLE_TEMPLATE_KEYS) {
       it(`${key} a key/category/defaultLabel/description renseignés`, () => {
         const tpl = ROLE_TEMPLATES[key];

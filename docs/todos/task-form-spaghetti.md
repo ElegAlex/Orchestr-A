@@ -16,6 +16,7 @@ apps/web/
 ```
 
 Chaque instance a :
+
 - Son propre `formData` state avec les ~15 mêmes champs
 - Son propre `handleCreate` / `handleSubmit` / `resetForm`
 - Ses propres validations
@@ -37,38 +38,39 @@ Lors de l'ajout de la feature tiers (Wave 4 → 4.5 → sidebar fix → query DT
 
 Tous présents à l'identique dans les 3 formulaires :
 
-| Champ | Type | Obligatoire | Composant |
-|---|---|---|---|
-| `title` | string | ✅ | input text |
-| `description` | string | ❌ | textarea |
-| `status` | TaskStatus | ❌ (default TODO) | select |
-| `priority` | Priority | ❌ (default NORMAL) | select |
-| `projectId` | string \| null | ❌ (orphan possible) | select |
-| `milestoneId` | string | ❌ | select (conditionné projectId) |
-| `assigneeIds` | string[] | ❌ | UserMultiSelect |
-| `serviceIds` | string[] | ❌ | ServiceMultiSelect |
-| `estimatedHours` | number | ❌ | input number |
-| `startDate` | string (ISO date) | ❌ | input date |
-| `endDate` | string (ISO date) | ❌ | input date |
-| `startTime` | string (HH:MM) | ❌ | input time |
-| `endTime` | string (HH:MM) | ❌ | input time |
-| `isExternalIntervention` | boolean | ❌ | checkbox |
-| `thirdParties` (nouveau Wave 4.5) | `{id,organizationName}[]` | ❌ | ThirdPartySelector + liste |
+| Champ                             | Type                      | Obligatoire          | Composant                      |
+| --------------------------------- | ------------------------- | -------------------- | ------------------------------ |
+| `title`                           | string                    | ✅                   | input text                     |
+| `description`                     | string                    | ❌                   | textarea                       |
+| `status`                          | TaskStatus                | ❌ (default TODO)    | select                         |
+| `priority`                        | Priority                  | ❌ (default NORMAL)  | select                         |
+| `projectId`                       | string \| null            | ❌ (orphan possible) | select                         |
+| `milestoneId`                     | string                    | ❌                   | select (conditionné projectId) |
+| `assigneeIds`                     | string[]                  | ❌                   | UserMultiSelect                |
+| `serviceIds`                      | string[]                  | ❌                   | ServiceMultiSelect             |
+| `estimatedHours`                  | number                    | ❌                   | input number                   |
+| `startDate`                       | string (ISO date)         | ❌                   | input date                     |
+| `endDate`                         | string (ISO date)         | ❌                   | input date                     |
+| `startTime`                       | string (HH:MM)            | ❌                   | input time                     |
+| `endTime`                         | string (HH:MM)            | ❌                   | input time                     |
+| `isExternalIntervention`          | boolean                   | ❌                   | checkbox                       |
+| `thirdParties` (nouveau Wave 4.5) | `{id,organizationName}[]` | ❌                   | ThirdPartySelector + liste     |
 
 TaskModal.tsx a un champ supplémentaire :
+
 - `subtasks` — liste de sous-tâches (mode édition uniquement, via `subtaskService`)
 
 ## Divergences connues entre les 3 formulaires
 
-| Aspect | TaskModal | TaskCreateModal | tasks/page.tsx |
-|---|---|---|---|
-| Mode | create + edit | create seul | create seul |
-| assigneeId par défaut | vide | currentUser.id | vide |
-| Sous-tâches | ✅ (édition) | ❌ | ❌ |
-| Récupération projects | prop | fetch inline au mount | fetch global au mount |
-| Récupération users | prop | fetch inline | fetch inline |
-| Récupération services | prop | fetch inline | fetch inline |
-| Reset form | oui | oui | oui |
+| Aspect                | TaskModal     | TaskCreateModal       | tasks/page.tsx        |
+| --------------------- | ------------- | --------------------- | --------------------- |
+| Mode                  | create + edit | create seul           | create seul           |
+| assigneeId par défaut | vide          | currentUser.id        | vide                  |
+| Sous-tâches           | ✅ (édition)  | ❌                    | ❌                    |
+| Récupération projects | prop          | fetch inline au mount | fetch global au mount |
+| Récupération users    | prop          | fetch inline          | fetch inline          |
+| Récupération services | prop          | fetch inline          | fetch inline          |
+| Reset form            | oui           | oui                   | oui                   |
 
 ## Solution proposée : extraction `TaskForm`
 

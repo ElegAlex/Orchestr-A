@@ -113,9 +113,7 @@ export function ProgressTrendChart({
           ? data
           : data.data || [];
         projectIds = projects
-          .filter(
-            (p) => p.status === "ACTIVE" || p.status === "IN_PROGRESS"
-          )
+          .filter((p) => p.status === "ACTIVE" || p.status === "IN_PROGRESS")
           .map((p) => p.id);
       }
 
@@ -128,7 +126,7 @@ export function ProgressTrendChart({
       for (const pId of projectIds) {
         try {
           const res = await api.get(
-            `/projects/${pId}/snapshots?from=${from}&to=${to}`
+            `/projects/${pId}/snapshots?from=${from}&to=${to}`,
           );
           const snapshots: SnapshotPoint[] = res.data;
           if (!Array.isArray(snapshots) || snapshots.length === 0) continue;
@@ -213,9 +211,7 @@ export function ProgressTrendChart({
   if (error) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">
-          📊 {t("progressTrend")}
-        </h3>
+        <h3 className="text-lg font-semibold mb-4">📊 {t("progressTrend")}</h3>
         <div className="border-l-4 border-red-500 bg-red-50 p-4">
           <p className="text-sm text-red-700">{error}</p>
         </div>
@@ -226,12 +222,8 @@ export function ProgressTrendChart({
   if (globalData.length === 0 && projectData.size === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">
-          📊 {t("progressTrend")}
-        </h3>
-        <p className="text-sm text-gray-500 text-center py-8">
-          {t("noData")}
-        </p>
+        <h3 className="text-lg font-semibold mb-4">📊 {t("progressTrend")}</h3>
+        <p className="text-sm text-gray-500 text-center py-8">{t("noData")}</p>
       </div>
     );
   }
@@ -320,20 +312,18 @@ export function ProgressTrendChart({
             <XAxis dataKey="date" />
             <YAxis domain={[0, 100]} unit="%" />
             <Tooltip formatter={(value: number) => `${value}%`} />
-            {Array.from(projectData.entries()).map(
-              ([pId, { name }], index) => (
-                <Area
-                  key={pId}
-                  type="monotone"
-                  dataKey={pId}
-                  stroke={COLORS[index % COLORS.length]}
-                  fill={COLORS[index % COLORS.length]}
-                  fillOpacity={0.1}
-                  strokeWidth={2}
-                  name={name}
-                />
-              )
-            )}
+            {Array.from(projectData.entries()).map(([pId, { name }], index) => (
+              <Area
+                key={pId}
+                type="monotone"
+                dataKey={pId}
+                stroke={COLORS[index % COLORS.length]}
+                fill={COLORS[index % COLORS.length]}
+                fillOpacity={0.1}
+                strokeWidth={2}
+                name={name}
+              />
+            ))}
           </AreaChart>
         )}
       </ResponsiveContainer>

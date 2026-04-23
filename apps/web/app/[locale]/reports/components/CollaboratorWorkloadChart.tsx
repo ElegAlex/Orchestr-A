@@ -61,12 +61,10 @@ export function CollaboratorWorkloadChart({
     try {
       setLoading(true);
       setError(null);
-      const url = projectId
-        ? `/tasks?projectId=${projectId}`
-        : "/tasks";
+      const url = projectId ? `/tasks?projectId=${projectId}` : "/tasks";
       const res = await api.get(url);
       const result = res.data;
-      const taskList = Array.isArray(result) ? result : result.data ?? [];
+      const taskList = Array.isArray(result) ? result : (result.data ?? []);
       setTasks(taskList);
     } catch (err) {
       console.error("Error loading collaborator workload:", err);
@@ -79,7 +77,7 @@ export function CollaboratorWorkloadChart({
   const { chartData, projectNames, average } = useMemo(() => {
     // Filter active tasks only (not DONE) and with an assignee
     const activeTasks = tasks.filter(
-      (t) => t.status !== "DONE" && t.assigneeId && t.assignee
+      (t) => t.status !== "DONE" && t.assigneeId && t.assignee,
     );
 
     // Group by assignee then by project
@@ -107,9 +105,7 @@ export function CollaboratorWorkloadChart({
     }
 
     // Sort by total descending
-    const sorted = Object.values(byAssignee).sort(
-      (a, b) => b.total - a.total
-    );
+    const sorted = Object.values(byAssignee).sort((a, b) => b.total - a.total);
 
     const avg =
       sorted.length > 0
@@ -134,9 +130,7 @@ export function CollaboratorWorkloadChart({
   }, [tasks]);
 
   const overloadThreshold = average * 1.5;
-  const displayData = showAll
-    ? chartData
-    : chartData.slice(0, DEFAULT_LIMIT);
+  const displayData = showAll ? chartData : chartData.slice(0, DEFAULT_LIMIT);
   const hasMore = chartData.length > DEFAULT_LIMIT;
 
   if (loading) {
@@ -192,7 +186,15 @@ export function CollaboratorWorkloadChart({
             dataKey="name"
             type="category"
             width={140}
-            tick={({ x, y, payload }: { x: number; y: number; payload: { value: string } }) => {
+            tick={({
+              x,
+              y,
+              payload,
+            }: {
+              x: number;
+              y: number;
+              payload: { value: string };
+            }) => {
               const entry = chartData.find((d) => d.name === payload.value);
               const total = (entry?._total as number) ?? 0;
               const isOverloaded = total > overloadThreshold;
@@ -217,7 +219,12 @@ export function CollaboratorWorkloadChart({
             x={average}
             stroke="#9ca3af"
             strokeDasharray="5 5"
-            label={{ value: `Moy: ${average.toFixed(1)}`, position: "top", fill: "#6b7280", fontSize: 11 }}
+            label={{
+              value: `Moy: ${average.toFixed(1)}`,
+              position: "top",
+              fill: "#6b7280",
+              fontSize: 11,
+            }}
           />
           {projectNames.map((projName, idx) => (
             <Bar

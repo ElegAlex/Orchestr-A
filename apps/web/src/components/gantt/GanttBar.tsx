@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { format } from 'date-fns';
-import type { GanttView } from './types';
+import { format } from "date-fns";
+import type { GanttView } from "./types";
 import {
   getBarHeight,
   hexWithAlpha,
@@ -9,7 +9,7 @@ import {
   lightenColor,
   MILESTONE_COLOR,
   MILESTONE_BORDER_COLOR,
-} from './tokens';
+} from "./tokens";
 
 interface GanttBarProps {
   left: number;
@@ -42,7 +42,7 @@ export default function GanttBar({
 
   if (isMilestone) {
     const size = 14;
-    const dateLabel = milestoneDate ? format(milestoneDate, 'MMM d') : '';
+    const dateLabel = milestoneDate ? format(milestoneDate, "MMM d") : "";
     return (
       <div
         className="absolute top-1/2 -translate-y-1/2 flex items-center gap-2"
@@ -63,9 +63,10 @@ export default function GanttBar({
         {name && (
           <span
             className="whitespace-nowrap"
-            style={{ fontSize: 13, fontWeight: 500, color: '#334155' }}
+            style={{ fontSize: 13, fontWeight: 500, color: "#334155" }}
           >
-            {dateLabel && `${dateLabel} — `}{name}
+            {dateLabel && `${dateLabel} — `}
+            {name}
           </span>
         )}
       </div>
@@ -87,7 +88,7 @@ export default function GanttBar({
         borderRadius: radius,
         backgroundColor: hexWithAlpha(color, 0.5),
         border: `1px solid ${hexWithAlpha(color, 0.6)}`,
-        overflow: 'hidden',
+        overflow: "hidden",
       }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -98,7 +99,8 @@ export default function GanttBar({
         style={{
           width: `${progressWidth}%`,
           background: `linear-gradient(180deg, ${lightenColor(color, 0.2)} 0%, ${color} 50%, ${darkenColor(color)} 100%)`,
-          boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 rgba(0, 0, 0, 0.08)',
+          boxShadow:
+            "inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 rgba(0, 0, 0, 0.08)",
         }}
       />
       {(showName || showPercent) && (
@@ -109,7 +111,11 @@ export default function GanttBar({
           {showName && (
             <span
               className="truncate text-white"
-              style={{ fontSize: 13, fontWeight: 500, maxWidth: 'calc(100% - 48px)' }}
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                maxWidth: "calc(100% - 48px)",
+              }}
             >
               {name}
             </span>
@@ -117,7 +123,11 @@ export default function GanttBar({
           {showPercent && (
             <span
               className="shrink-0"
-              style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: "rgba(255,255,255,0.9)",
+              }}
             >
               {Math.round(progress)}%
             </span>

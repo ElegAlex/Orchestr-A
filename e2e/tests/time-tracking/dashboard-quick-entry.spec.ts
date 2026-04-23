@@ -97,7 +97,12 @@ async function createTaskAssignedTo(
   title: string,
   projectId: string,
   assigneeId: string,
-  status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE" | "BLOCKED" = "IN_PROGRESS",
+  status:
+    | "TODO"
+    | "IN_PROGRESS"
+    | "IN_REVIEW"
+    | "DONE"
+    | "BLOCKED" = "IN_PROGRESS",
 ): Promise<{ id: string; title: string }> {
   // endDate dans le futur pour rester dans "à venir" (MyTasksUpcomingList).
   const futureEndDate = new Date();
@@ -251,9 +256,9 @@ test.describe("@smoke Dashboard - Quick time entry", () => {
 
       // ── Optimistic update : cumul incrémenté de 2.5 h ───────────────────────
       // Le span affiche `toFixed(2) h` → "2.50 h" (avant: "0.00 h").
-      await expect(
-        card.getByText(/2\.50\s*h/i).first(),
-      ).toBeVisible({ timeout: 5_000 });
+      await expect(card.getByText(/2\.50\s*h/i).first()).toBeVisible({
+        timeout: 5_000,
+      });
 
       // L'input doit être vidé après succès.
       await expect(input).toHaveValue("");

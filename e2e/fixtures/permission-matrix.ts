@@ -428,12 +428,7 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "third-parties",
     method: "GET",
     apiEndpoint: "/api/third-parties",
-    allowedRoles: [
-      "admin",
-      "responsable",
-      "manager",
-      "observateur",
-    ],
+    allowedRoles: ["admin", "responsable", "manager", "observateur"],
     deniedRoles: ["referent", "contributeur"],
     description:
       "Lister les tiers — Admin, Responsable, Manager, Observateur (hérite :read via action=read pattern)",

@@ -143,7 +143,8 @@ export default function ThirdPartyDetailPage() {
               </div>
 
               <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                {(thirdParty.contactFirstName || thirdParty.contactLastName) && (
+                {(thirdParty.contactFirstName ||
+                  thirdParty.contactLastName) && (
                   <div>
                     <dt className="text-gray-500">Contact</dt>
                     <dd className="font-medium text-gray-900">

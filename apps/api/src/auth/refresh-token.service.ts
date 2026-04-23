@@ -12,7 +12,10 @@ export interface RefreshTokenMeta {
  * Parse a simple duration string (e.g. "7d", "15m", "3600s", "2h") into milliseconds.
  * Falls back to the provided default if parsing fails.
  */
-export function parseDurationMs(input: string | undefined, fallbackMs: number): number {
+export function parseDurationMs(
+  input: string | undefined,
+  fallbackMs: number,
+): number {
   if (!input) return fallbackMs;
   const match = /^(\d+)\s*(ms|s|m|h|d)?$/i.exec(input.trim());
   if (!match) {
@@ -83,54 +86,57 @@ export class RefreshTokenService {
     const tokenHash = this.hash(refreshToken);
 
     // Wrap find + revoke + create in a serializable transaction to prevent TOCTOU races
-    return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.refreshToken.findUnique({
-        where: { tokenHash },
-      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.refreshToken.findUnique({
+          where: { tokenHash },
+        });
 
-      if (!existing) {
-        throw new UnauthorizedException('Refresh token inconnu');
-      }
+        if (!existing) {
+          throw new UnauthorizedException('Refresh token inconnu');
+        }
 
-      // Reuse detection: revoked token presented again => revoke everything.
-      if (existing.revokedAt) {
-        this.logger.warn(
-          `Refresh token reuse detected for user ${existing.userId} — revoking all tokens`,
-        );
-        await tx.refreshToken.updateMany({
-          where: { userId: existing.userId, revokedAt: null },
+        // Reuse detection: revoked token presented again => revoke everything.
+        if (existing.revokedAt) {
+          this.logger.warn(
+            `Refresh token reuse detected for user ${existing.userId} — revoking all tokens`,
+          );
+          await tx.refreshToken.updateMany({
+            where: { userId: existing.userId, revokedAt: null },
+            data: { revokedAt: new Date() },
+          });
+          throw new UnauthorizedException('Refresh token déjà utilisé');
+        }
+
+        if (existing.expiresAt.getTime() < Date.now()) {
+          throw new UnauthorizedException('Refresh token expiré');
+        }
+
+        // Revoke old token
+        await tx.refreshToken.update({
+          where: { id: existing.id },
           data: { revokedAt: new Date() },
         });
-        throw new UnauthorizedException('Refresh token déjà utilisé');
-      }
 
-      if (existing.expiresAt.getTime() < Date.now()) {
-        throw new UnauthorizedException('Refresh token expiré');
-      }
+        // Issue new token within the same transaction
+        const plaintext = crypto.randomBytes(48).toString('base64url');
+        const newTokenHash = this.hash(plaintext);
+        const expiresAt = new Date(Date.now() + this.getTtlMs());
 
-      // Revoke old token
-      await tx.refreshToken.update({
-        where: { id: existing.id },
-        data: { revokedAt: new Date() },
-      });
+        await tx.refreshToken.create({
+          data: {
+            userId: existing.userId,
+            tokenHash: newTokenHash,
+            expiresAt,
+            userAgent: meta?.userAgent ?? null,
+            ip: meta?.ip ?? null,
+          },
+        });
 
-      // Issue new token within the same transaction
-      const plaintext = crypto.randomBytes(48).toString('base64url');
-      const newTokenHash = this.hash(plaintext);
-      const expiresAt = new Date(Date.now() + this.getTtlMs());
-
-      await tx.refreshToken.create({
-        data: {
-          userId: existing.userId,
-          tokenHash: newTokenHash,
-          expiresAt,
-          userAgent: meta?.userAgent ?? null,
-          ip: meta?.ip ?? null,
-        },
-      });
-
-      return { userId: existing.userId, newRefreshToken: plaintext };
-    }, { isolationLevel: 'Serializable' });
+        return { userId: existing.userId, newRefreshToken: plaintext };
+      },
+      { isolationLevel: 'Serializable' },
+    );
   }
 
   async revoke(refreshToken: string): Promise<void> {

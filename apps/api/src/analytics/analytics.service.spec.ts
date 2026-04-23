@@ -579,5 +579,4 @@ describe('AnalyticsService', () => {
       expect(result.projectId).toBe('project-1');
     });
   });
-
 });

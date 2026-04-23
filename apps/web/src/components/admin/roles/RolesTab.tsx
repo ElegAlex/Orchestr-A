@@ -55,10 +55,7 @@ export function RolesTab({
 
   // Rôles créés par l'admin uniquement (le seeding prod/dev pose les 26 rôles
   // système en DB ; ils sont déjà visibles dans l'onglet "Templates RBAC").
-  const userRoles = useMemo(
-    () => roles.filter((r) => !r.isSystem),
-    [roles],
-  );
+  const userRoles = useMemo(() => roles.filter((r) => !r.isSystem), [roles]);
 
   const visibleRoles = useMemo(() => {
     if (templateFilter === "ALL") return userRoles;
@@ -155,8 +152,7 @@ export function RolesTab({
         );
       } else {
         toast.error(
-          axiosErr.response?.data?.message ??
-            "Erreur lors de la suppression.",
+          axiosErr.response?.data?.message ?? "Erreur lors de la suppression.",
         );
       }
     } finally {
@@ -241,7 +237,8 @@ export function RolesTab({
                     </span>
                   )}
                   <span className="text-xs text-gray-500">
-                    {section.roles.length} rôle{section.roles.length > 1 ? "s" : ""}
+                    {section.roles.length} rôle
+                    {section.roles.length > 1 ? "s" : ""}
                   </span>
                   <span className="text-[11px] font-mono text-gray-400 ml-auto">
                     {section.key}
