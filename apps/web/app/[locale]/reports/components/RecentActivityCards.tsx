@@ -49,12 +49,10 @@ export function RecentActivityCards({
       try {
         setLoading(true);
         setError(null);
-        const url = projectId
-          ? `/tasks?projectId=${projectId}`
-          : "/tasks";
+        const url = projectId ? `/tasks?projectId=${projectId}` : "/tasks";
         const res = await api.get(url);
         const data = res.data;
-        const taskList = Array.isArray(data) ? data : data.data ?? [];
+        const taskList = Array.isArray(data) ? data : (data.data ?? []);
         setTasks(taskList);
       } catch (err) {
         console.error("Error loading recent activity:", err);
@@ -138,9 +136,7 @@ export function RecentActivityCards({
   if (error) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">
-          ⚡ {t("recentActivity")}
-        </h3>
+        <h3 className="text-lg font-semibold mb-4">⚡ {t("recentActivity")}</h3>
         <div className="border-l-4 border-red-500 bg-red-50 p-4">
           <p className="text-sm text-red-700">{error}</p>
         </div>
@@ -151,23 +147,21 @@ export function RecentActivityCards({
   if (tasks.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">
-          ⚡ {t("recentActivity")}
-        </h3>
+        <h3 className="text-lg font-semibold mb-4">⚡ {t("recentActivity")}</h3>
         <p className="text-sm text-gray-500 text-center py-8">{t("noData")}</p>
       </div>
     );
   }
 
-  const ratioColor = metrics.ratio >= 100 ? "text-green-700" : "text-orange-600";
+  const ratioColor =
+    metrics.ratio >= 100 ? "text-green-700" : "text-orange-600";
   const overdueCardBg = metrics.overdue > 0 ? "bg-red-50" : "bg-gray-50";
-  const overdueTextColor = metrics.overdue > 0 ? "text-red-700" : "text-gray-700";
+  const overdueTextColor =
+    metrics.overdue > 0 ? "text-red-700" : "text-gray-700";
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">
-        ⚡ {t("recentActivity")}
-      </h3>
+      <h3 className="text-lg font-semibold mb-4">⚡ {t("recentActivity")}</h3>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
@@ -215,7 +209,9 @@ export function RecentActivityCards({
               {metrics.overdue}
             </span>
           </div>
-          <div className={`text-sm font-medium ${metrics.overdue > 0 ? "text-red-600" : "text-gray-600"}`}>
+          <div
+            className={`text-sm font-medium ${metrics.overdue > 0 ? "text-red-600" : "text-gray-600"}`}
+          >
             {t("becameOverdue")}
           </div>
         </div>
@@ -235,9 +231,7 @@ export function RecentActivityCards({
             {t("completionRatio")}
           </div>
           <div className={`text-xs mt-1 ${ratioColor}`}>
-            {metrics.ratio >= 100
-              ? t("backlogShrinking")
-              : t("backlogGrowing")}
+            {metrics.ratio >= 100 ? t("backlogShrinking") : t("backlogGrowing")}
           </div>
         </div>
       </div>

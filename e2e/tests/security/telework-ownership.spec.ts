@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test } from "@playwright/test";
 
 /**
  * Placeholder for Wave 5 (W5.1 — E2E ownership IDOR).
@@ -13,8 +13,8 @@ import { test } from '@playwright/test';
  * MANAGER out-of-perimeter → 403; ADMIN → 200) is implemented in Wave 5 inside
  * `e2e/tests/security/ownership-idor.spec.ts`.
  */
-test.describe('telework ownership (placeholder — see Wave 5)', () => {
-  test.skip('cross-user TTV modification returns 403', () => {
+test.describe("telework ownership (placeholder — see Wave 5)", () => {
+  test.skip("cross-user TTV modification returns 403", () => {
     // Implemented in Wave 5 ownership-idor.spec.ts
   });
 });

@@ -37,7 +37,7 @@ function getPriorityBadgeColor(priority: string): string {
 
 function getPriorityLabel(
   priority: string,
-  t: (key: string) => string
+  t: (key: string) => string,
 ): string {
   return t(`priority.${priority}`);
 }
@@ -74,22 +74,22 @@ export default function TaskKanban({
   // Filtered + titled columns
   const columns = useMemo(
     () =>
-      ALL_COLUMNS.filter(
-        (c) => !(hiddenStatuses ?? []).includes(c.status)
-      ).map((c) => ({
-        ...c,
-        title: t(`kanban.columns.${c.status}`),
-      })),
-    [hiddenStatuses, t]
+      ALL_COLUMNS.filter((c) => !(hiddenStatuses ?? []).includes(c.status)).map(
+        (c) => ({
+          ...c,
+          title: t(`kanban.columns.${c.status}`),
+        }),
+      ),
+    [hiddenStatuses, t],
   );
 
   // Sorted tasks
   const sortedTasks = useMemo(
     () =>
       [...tasks].sort((a, b) =>
-        a.title.localeCompare(b.title, locale, { sensitivity: "base" })
+        a.title.localeCompare(b.title, locale, { sensitivity: "base" }),
       ),
-    [tasks, locale]
+    [tasks, locale],
   );
 
   const getTasksByStatus = (status: TaskStatus) =>
@@ -97,10 +97,7 @@ export default function TaskKanban({
 
   // ─── DnD Handlers ──────────────────────────────────────────────────────────
 
-  const handleDragStart = (
-    e: React.DragEvent<HTMLElement>,
-    task: Task
-  ) => {
+  const handleDragStart = (e: React.DragEvent<HTMLElement>, task: Task) => {
     setDraggedTask(task);
     setIsDragging(true);
     if (e.dataTransfer) {
@@ -116,7 +113,7 @@ export default function TaskKanban({
 
   const handleDragOver = (
     e: React.DragEvent<HTMLDivElement>,
-    status: TaskStatus
+    status: TaskStatus,
   ) => {
     e.preventDefault();
     if (e.dataTransfer) {
@@ -131,7 +128,7 @@ export default function TaskKanban({
 
   const handleDrop = async (
     e: React.DragEvent<HTMLDivElement>,
-    newStatus: TaskStatus
+    newStatus: TaskStatus,
   ) => {
     e.preventDefault();
     setDragOverColumn(null);
@@ -247,7 +244,7 @@ export default function TaskKanban({
                       {showProjectBadge && (
                         <div className="text-xs text-gray-500 mb-2">
                           {task.projectId
-                            ? task.project?.name ?? ""
+                            ? (task.project?.name ?? "")
                             : t("kanban.orphanTask")}
                         </div>
                       )}

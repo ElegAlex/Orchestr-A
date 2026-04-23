@@ -384,14 +384,19 @@ export default function ProfilePage() {
                         onClick={() => handleAvatarPreset(INITIALS_PRESET)}
                         disabled={avatarLoading}
                         className={`rounded-full border-2 transition hover:scale-105 disabled:opacity-50 ${
-                          user.avatarPreset === INITIALS_PRESET && !user.avatarUrl
+                          user.avatarPreset === INITIALS_PRESET &&
+                          !user.avatarUrl
                             ? "border-blue-500 ring-2 ring-blue-300"
                             : "border-transparent hover:border-gray-300"
                         }`}
                         title="Initiales"
                       >
                         <UserAvatar
-                          user={{ ...user, avatarUrl: null, avatarPreset: "initials" }}
+                          user={{
+                            ...user,
+                            avatarUrl: null,
+                            avatarPreset: "initials",
+                          }}
                           size="lg"
                         />
                       </button>

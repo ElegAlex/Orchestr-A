@@ -26,7 +26,10 @@ function getDueDateInfo(endDate?: string): {
   const formatted = format(date, "dd MMM yyyy", { locale: fr });
 
   if (isPast(date)) {
-    return { label: `⚠ ${formatted}`, className: "text-red-600 font-semibold" };
+    return {
+      label: `⚠ ${formatted}`,
+      className: "text-red-600 font-semibold",
+    };
   }
   if (daysLeft <= 14) {
     return {
@@ -57,7 +60,10 @@ export function ProjectProgressChart({ data }: ProjectProgressChartProps) {
           const dueInfo = getDueDateInfo(project.endDate);
 
           return (
-            <div key={project.name} className="flex items-center gap-2 h-[28px]">
+            <div
+              key={project.name}
+              className="flex items-center gap-2 h-[28px]"
+            >
               {/* Project name */}
               <div className="w-[220px] shrink-0 min-w-0">
                 <span

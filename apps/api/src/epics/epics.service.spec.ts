@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EpicsService } from './epics.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
 describe('EpicsService', () => {
   let service: EpicsService;
@@ -173,6 +174,118 @@ describe('EpicsService', () => {
       expect(mockPrismaService.epic.delete).toHaveBeenCalledWith({
         where: { id: '1' },
       });
+    });
+
+    it('should throw NotFoundException when epic not found', async () => {
+      mockPrismaService.epic.findUnique.mockResolvedValue(null);
+
+      await expect(service.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('update with project membership check', () => {
+    const mockEpicWithProject = {
+      id: '1',
+      name: 'Epic',
+      tasks: [],
+      project: {
+        id: 'project-1',
+        members: [{ userId: 'user-1' }],
+      },
+    };
+
+    it('should skip membership check when no currentUserId', async () => {
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+      mockPrismaService.epic.update.mockResolvedValue({
+        ...mockEpicWithProject,
+        name: 'Updated',
+      });
+
+      const result = await service.update('1', { name: 'Updated' });
+
+      expect(result.name).toBe('Updated');
+      // findUnique should be called once for findOne (not for membership check)
+    });
+
+    it('should bypass membership check for ADMIN role', async () => {
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+      mockPrismaService.epic.update.mockResolvedValue({
+        ...mockEpicWithProject,
+        name: 'Admin Updated',
+      });
+
+      const result = await service.update(
+        '1',
+        { name: 'Admin Updated' },
+        'admin-user',
+        'ADMIN',
+      );
+
+      expect(result.name).toBe('Admin Updated');
+    });
+
+    it('should allow member to update', async () => {
+      // First call for assertProjectMembership, second for findOne
+      mockPrismaService.epic.findUnique
+        .mockResolvedValueOnce(mockEpicWithProject)
+        .mockResolvedValueOnce(mockEpicWithProject);
+      mockPrismaService.epic.update.mockResolvedValue({
+        ...mockEpicWithProject,
+        name: 'Member Updated',
+      });
+
+      const result = await service.update(
+        '1',
+        { name: 'Member Updated' },
+        'user-1',
+        'CONTRIBUTEUR',
+      );
+
+      expect(result.name).toBe('Member Updated');
+    });
+
+    it('should throw ForbiddenException when non-member tries to update', async () => {
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+
+      await expect(
+        service.update(
+          '1',
+          { name: 'Forbidden' },
+          'non-member',
+          'CONTRIBUTEUR',
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('remove with project membership check', () => {
+    const mockEpicWithProject = {
+      id: '1',
+      name: 'Epic',
+      tasks: [],
+      project: {
+        id: 'project-1',
+        members: [{ userId: 'user-1' }],
+      },
+    };
+
+    it('should throw ForbiddenException when non-member tries to remove', async () => {
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+
+      await expect(
+        service.remove('1', 'non-member', 'CONTRIBUTEUR'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should skip membership check when no currentUserId is provided to remove', async () => {
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+      mockPrismaService.epic.delete.mockResolvedValue(mockEpicWithProject);
+
+      const result = await service.remove('1');
+
+      expect(result).toEqual({ message: 'Epic supprimé avec succès' });
     });
   });
 });

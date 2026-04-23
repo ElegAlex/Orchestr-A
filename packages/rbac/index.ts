@@ -9,9 +9,7 @@
 // Conformité : Phase 1 Spec 1 (5 contrats) + arbitrages PO 2026-04-19.
 // Toute modification du catalogue passe par PR + validation de Phase 1.
 
-export type {
-  PermissionCode,
-} from './atomic-permissions.ts';
+export type { PermissionCode } from "./atomic-permissions.ts";
 
 export {
   CATALOG_PERMISSIONS,
@@ -49,17 +47,17 @@ export {
   USERS_CRUD,
   SYSTEM_ADMIN_WRITE,
   SETTINGS_READ,
-} from './atomic-permissions.ts';
+} from "./atomic-permissions.ts";
 
 export type {
   RoleCategoryKey,
   RoleTemplateKey,
   RoleTemplate,
-} from './templates.ts';
+} from "./templates.ts";
 
 export {
   ROLE_TEMPLATES,
   ROLE_TEMPLATE_KEYS,
   LEGACY_ROLE_MIGRATION,
   TEMPLATE_TO_LEGACY_LABELS,
-} from './templates.ts';
+} from "./templates.ts";

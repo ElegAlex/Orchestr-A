@@ -5,1465 +5,6 @@ import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
-
-// ============================================================
-// RBAC seed — extracted for reuse by seed-permissions.ts entry
-// point. main() still calls this. Enables prod-safe targeted
-// RBAC seed without re-running the demo-data blocks.
-// ============================================================
-export async function seedPermissionsAndRoles(prisma: PrismaClient) {
-// ============================================================
-// RBAC — Permissions et rôles système (idempotent via upsert)
-// ============================================================
-
-const permissionsData = [
-  // Projects
-  {
-    code: "projects:create",
-    module: "projects",
-    action: "create",
-    description: "Créer un projet",
-  },
-  {
-    code: "projects:read",
-    module: "projects",
-    action: "read",
-    description: "Voir les projets",
-  },
-  {
-    code: "projects:update",
-    module: "projects",
-    action: "update",
-    description: "Modifier un projet",
-  },
-  {
-    code: "projects:delete",
-    module: "projects",
-    action: "delete",
-    description: "Supprimer un projet",
-  },
-  {
-    code: "projects:manage_members",
-    module: "projects",
-    action: "manage_members",
-    description: "Gérer les membres d'un projet",
-  },
-  {
-    code: "projects:view",
-    module: "projects",
-    action: "view",
-    description: "Voir les projets (granularité RBAC)",
-  },
-  {
-    code: "projects:edit",
-    module: "projects",
-    action: "edit",
-    description: "Modifier les projets (granularité RBAC)",
-  },
-  // Tasks
-  {
-    code: "tasks:create",
-    module: "tasks",
-    action: "create",
-    description: "Créer une tâche dans un projet",
-  },
-  {
-    code: "tasks:read",
-    module: "tasks",
-    action: "read",
-    description: "Voir les tâches",
-  },
-  {
-    code: "tasks:update",
-    module: "tasks",
-    action: "update",
-    description: "Modifier une tâche",
-  },
-  {
-    code: "tasks:delete",
-    module: "tasks",
-    action: "delete",
-    description: "Supprimer une tâche",
-  },
-  {
-    code: "tasks:readAll",
-    module: "tasks",
-    action: "readAll",
-    description: "Voir toutes les tâches (pas uniquement les siennes)",
-  },
-  {
-    code: "tasks:create_in_project",
-    module: "tasks",
-    action: "create_in_project",
-    description: "Créer des tâches dans les projets dont on est membre",
-  },
-  {
-    code: "tasks:create_orphan",
-    module: "tasks",
-    action: "create_orphan",
-    description: "Créer des tâches orphelines (sans projet)",
-  },
-  // Events
-  {
-    code: "events:create",
-    module: "events",
-    action: "create",
-    description: "Créer un événement",
-  },
-  {
-    code: "events:read",
-    module: "events",
-    action: "read",
-    description: "Voir les événements",
-  },
-  {
-    code: "events:update",
-    module: "events",
-    action: "update",
-    description: "Modifier un événement",
-  },
-  {
-    code: "events:delete",
-    module: "events",
-    action: "delete",
-    description: "Supprimer un événement",
-  },
-  {
-    code: "events:readAll",
-    module: "events",
-    action: "readAll",
-    description: "Voir tous les événements (pas uniquement les siens)",
-  },
-  // Epics
-  {
-    code: "epics:create",
-    module: "epics",
-    action: "create",
-    description: "Créer un epic",
-  },
-  {
-    code: "epics:read",
-    module: "epics",
-    action: "read",
-    description: "Voir les epics",
-  },
-  {
-    code: "epics:update",
-    module: "epics",
-    action: "update",
-    description: "Modifier un epic",
-  },
-  {
-    code: "epics:delete",
-    module: "epics",
-    action: "delete",
-    description: "Supprimer un epic",
-  },
-  // Milestones
-  {
-    code: "milestones:create",
-    module: "milestones",
-    action: "create",
-    description: "Créer un jalon",
-  },
-  {
-    code: "milestones:read",
-    module: "milestones",
-    action: "read",
-    description: "Voir les jalons",
-  },
-  {
-    code: "milestones:update",
-    module: "milestones",
-    action: "update",
-    description: "Modifier un jalon",
-  },
-  {
-    code: "milestones:delete",
-    module: "milestones",
-    action: "delete",
-    description: "Supprimer un jalon",
-  },
-  // Leaves
-  {
-    code: "leaves:create",
-    module: "leaves",
-    action: "create",
-    description: "Poser une demande de congé",
-  },
-  {
-    code: "leaves:read",
-    module: "leaves",
-    action: "read",
-    description: "Voir les congés",
-  },
-  {
-    code: "leaves:update",
-    module: "leaves",
-    action: "update",
-    description: "Modifier une demande de congé",
-  },
-  {
-    code: "leaves:delete",
-    module: "leaves",
-    action: "delete",
-    description: "Supprimer une demande de congé",
-  },
-  {
-    code: "leaves:readAll",
-    module: "leaves",
-    action: "readAll",
-    description: "Voir tous les congés (pas uniquement les siens)",
-  },
-  {
-    code: "leaves:approve",
-    module: "leaves",
-    action: "approve",
-    description: "Valider ou rejeter des congés",
-  },
-  {
-    code: "leaves:manage_delegations",
-    module: "leaves",
-    action: "manage_delegations",
-    description: "Gérer les délégations de validation",
-  },
-  {
-    code: "leaves:view",
-    module: "leaves",
-    action: "view",
-    description: "Voir les congés (granularité RBAC)",
-  },
-  {
-    code: "leaves:manage",
-    module: "leaves",
-    action: "manage",
-    description: "Valider ou rejeter des demandes de congés",
-  },
-  {
-    code: "leaves:declare_for_others",
-    module: "leaves",
-    action: "declare_for_others",
-    description: "Déclarer des congés au nom d'un autre agent",
-  },
-  // Telework
-  {
-    code: "telework:create",
-    module: "telework",
-    action: "create",
-    description: "Déclarer du télétravail",
-  },
-  {
-    code: "telework:read",
-    module: "telework",
-    action: "read",
-    description: "Voir le télétravail",
-  },
-  {
-    code: "telework:update",
-    module: "telework",
-    action: "update",
-    description: "Modifier une déclaration de télétravail",
-  },
-  {
-    code: "telework:delete",
-    module: "telework",
-    action: "delete",
-    description: "Supprimer une déclaration de télétravail",
-  },
-  {
-    code: "telework:readAll",
-    module: "telework",
-    action: "readAll",
-    description: "Voir tous les télétravails (pas uniquement les siens)",
-  },
-  {
-    code: "telework:read_team",
-    module: "telework",
-    action: "read_team",
-    description: "Voir le télétravail de l'équipe",
-  },
-  {
-    code: "telework:manage_others",
-    module: "telework",
-    action: "manage_others",
-    description: "Gérer le télétravail des autres agents",
-  },
-  {
-    code: "telework:view",
-    module: "telework",
-    action: "view",
-    description: "Voir le télétravail (granularité RBAC)",
-  },
-  // Skills
-  {
-    code: "skills:create",
-    module: "skills",
-    action: "create",
-    description: "Ajouter une compétence",
-  },
-  {
-    code: "skills:read",
-    module: "skills",
-    action: "read",
-    description: "Voir les compétences",
-  },
-  {
-    code: "skills:update",
-    module: "skills",
-    action: "update",
-    description: "Modifier une compétence",
-  },
-  {
-    code: "skills:delete",
-    module: "skills",
-    action: "delete",
-    description: "Supprimer une compétence",
-  },
-  {
-    code: "skills:manage_matrix",
-    module: "skills",
-    action: "manage_matrix",
-    description: "Gérer la matrice de compétences",
-  },
-  {
-    code: "skills:view",
-    module: "skills",
-    action: "view",
-    description: "Voir les compétences (granularité RBAC)",
-  },
-  {
-    code: "skills:edit",
-    module: "skills",
-    action: "edit",
-    description: "Modifier les compétences (granularité RBAC)",
-  },
-  // Time Tracking
-  {
-    code: "time_tracking:create",
-    module: "time_tracking",
-    action: "create",
-    description: "Saisir du temps",
-  },
-  {
-    code: "time_tracking:read",
-    module: "time_tracking",
-    action: "read",
-    description: "Voir les saisies de temps",
-  },
-  {
-    code: "time_tracking:update",
-    module: "time_tracking",
-    action: "update",
-    description: "Modifier une saisie de temps",
-  },
-  {
-    code: "time_tracking:delete",
-    module: "time_tracking",
-    action: "delete",
-    description: "Supprimer une saisie de temps",
-  },
-  {
-    code: "time_tracking:read_reports",
-    module: "time_tracking",
-    action: "read_reports",
-    description: "Voir les rapports de temps",
-  },
-  // Users
-  {
-    code: "users:create",
-    module: "users",
-    action: "create",
-    description: "Créer un utilisateur",
-  },
-  {
-    code: "users:read",
-    module: "users",
-    action: "read",
-    description: "Voir les utilisateurs",
-  },
-  {
-    code: "users:update",
-    module: "users",
-    action: "update",
-    description: "Modifier un utilisateur",
-  },
-  {
-    code: "users:delete",
-    module: "users",
-    action: "delete",
-    description: "Supprimer un utilisateur",
-  },
-  {
-    code: "users:import",
-    module: "users",
-    action: "import",
-    description: "Importer des utilisateurs",
-  },
-  {
-    code: "users:manage_roles",
-    module: "users",
-    action: "manage_roles",
-    description: "Gérer les rôles des utilisateurs",
-  },
-  {
-    code: "users:view",
-    module: "users",
-    action: "view",
-    description: "Voir les utilisateurs (granularité RBAC)",
-  },
-  {
-    code: "users:edit",
-    module: "users",
-    action: "edit",
-    description: "Modifier les utilisateurs (granularité RBAC)",
-  },
-  {
-    code: "users:manage",
-    module: "users",
-    action: "manage",
-    description: "Accéder à la page d'administration des utilisateurs",
-  },
-  // Departments
-  {
-    code: "departments:create",
-    module: "departments",
-    action: "create",
-    description: "Créer un département/service",
-  },
-  {
-    code: "departments:read",
-    module: "departments",
-    action: "read",
-    description: "Voir les départements/services",
-  },
-  {
-    code: "departments:update",
-    module: "departments",
-    action: "update",
-    description: "Modifier un département/service",
-  },
-  {
-    code: "departments:delete",
-    module: "departments",
-    action: "delete",
-    description: "Supprimer un département/service",
-  },
-  {
-    code: "departments:view",
-    module: "departments",
-    action: "view",
-    description: "Voir les départements (granularité RBAC)",
-  },
-  {
-    code: "departments:edit",
-    module: "departments",
-    action: "edit",
-    description: "Modifier les départements (granularité RBAC)",
-  },
-  // Services
-  {
-    code: "services:create",
-    module: "services",
-    action: "create",
-    description: "Créer un service",
-  },
-  {
-    code: "services:read",
-    module: "services",
-    action: "read",
-    description: "Voir les services",
-  },
-  {
-    code: "services:update",
-    module: "services",
-    action: "update",
-    description: "Modifier un service",
-  },
-  {
-    code: "services:delete",
-    module: "services",
-    action: "delete",
-    description: "Supprimer un service",
-  },
-  // Documents
-  {
-    code: "documents:create",
-    module: "documents",
-    action: "create",
-    description: "Uploader un document",
-  },
-  {
-    code: "documents:read",
-    module: "documents",
-    action: "read",
-    description: "Voir les documents",
-  },
-  {
-    code: "documents:update",
-    module: "documents",
-    action: "update",
-    description: "Modifier un document",
-  },
-  {
-    code: "documents:delete",
-    module: "documents",
-    action: "delete",
-    description: "Supprimer un document",
-  },
-  // Comments
-  {
-    code: "comments:create",
-    module: "comments",
-    action: "create",
-    description: "Écrire un commentaire",
-  },
-  {
-    code: "comments:read",
-    module: "comments",
-    action: "read",
-    description: "Voir les commentaires",
-  },
-  {
-    code: "comments:update",
-    module: "comments",
-    action: "update",
-    description: "Modifier un commentaire",
-  },
-  {
-    code: "comments:delete",
-    module: "comments",
-    action: "delete",
-    description: "Supprimer un commentaire",
-  },
-  // Settings
-  {
-    code: "settings:read",
-    module: "settings",
-    action: "read",
-    description: "Voir les paramètres",
-  },
-  {
-    code: "settings:update",
-    module: "settings",
-    action: "update",
-    description: "Modifier les paramètres",
-  },
-  // Analytics
-  {
-    code: "analytics:read",
-    module: "analytics",
-    action: "read",
-    description: "Voir les analytics",
-  },
-  {
-    code: "analytics:export",
-    module: "analytics",
-    action: "export",
-    description: "Exporter les analytics",
-  },
-  // Reports (granularité distincte de analytics)
-  {
-    code: "reports:view",
-    module: "reports",
-    action: "view",
-    description: "Voir les rapports",
-  },
-  {
-    code: "reports:export",
-    module: "reports",
-    action: "export",
-    description: "Exporter les rapports",
-  },
-  // Holidays
-  {
-    code: "holidays:create",
-    module: "holidays",
-    action: "create",
-    description: "Créer un jour férié",
-  },
-  {
-    code: "holidays:read",
-    module: "holidays",
-    action: "read",
-    description: "Voir les jours fériés",
-  },
-  {
-    code: "holidays:update",
-    module: "holidays",
-    action: "update",
-    description: "Modifier un jour férié",
-  },
-  {
-    code: "holidays:delete",
-    module: "holidays",
-    action: "delete",
-    description: "Supprimer un jour férié",
-  },
-  // School Vacations
-  {
-    code: "school_vacations:create",
-    module: "school_vacations",
-    action: "create",
-    description: "Creer une periode de vacances scolaires",
-  },
-  {
-    code: "school_vacations:read",
-    module: "school_vacations",
-    action: "read",
-    description: "Voir les vacances scolaires",
-  },
-  {
-    code: "school_vacations:update",
-    module: "school_vacations",
-    action: "update",
-    description: "Modifier une periode de vacances scolaires",
-  },
-  {
-    code: "school_vacations:delete",
-    module: "school_vacations",
-    action: "delete",
-    description: "Supprimer une periode de vacances scolaires",
-  },
-  // Predefined Tasks
-  {
-    code: "predefined_tasks:view",
-    module: "predefined_tasks",
-    action: "view",
-    description: "Voir les tâches prédéfinies",
-  },
-  {
-    code: "predefined_tasks:create",
-    module: "predefined_tasks",
-    action: "create",
-    description: "Créer une tâche prédéfinie",
-  },
-  {
-    code: "predefined_tasks:edit",
-    module: "predefined_tasks",
-    action: "edit",
-    description: "Modifier une tâche prédéfinie",
-  },
-  {
-    code: "predefined_tasks:delete",
-    module: "predefined_tasks",
-    action: "delete",
-    description: "Supprimer une tâche prédéfinie",
-  },
-  {
-    code: "predefined_tasks:assign",
-    module: "predefined_tasks",
-    action: "assign",
-    description: "Assigner une tâche prédéfinie à un agent",
-  },
-  // Telework recurring
-  {
-    code: "telework:manage_recurring",
-    module: "telework",
-    action: "manage_recurring",
-    description: "Gérer les règles de télétravail récurrentes",
-  },
-  // Users password reset
-  {
-    code: "users:reset_password",
-    module: "users",
-    action: "reset_password",
-    description: "Réinitialiser le mot de passe d'un utilisateur",
-  },
-  // Third Parties
-  {
-    code: "third_parties:read",
-    module: "third_parties",
-    action: "read",
-    description: "Voir les tiers",
-  },
-  {
-    code: "third_parties:create",
-    module: "third_parties",
-    action: "create",
-    description: "Créer un tiers",
-  },
-  {
-    code: "third_parties:update",
-    module: "third_parties",
-    action: "update",
-    description: "Modifier un tiers",
-  },
-  {
-    code: "third_parties:delete",
-    module: "third_parties",
-    action: "delete",
-    description: "Supprimer un tiers (hard delete en cascade)",
-  },
-  {
-    code: "third_parties:assign_to_task",
-    module: "third_parties",
-    action: "assign_to_task",
-    description: "Assigner un tiers à une tâche",
-  },
-  {
-    code: "third_parties:assign_to_project",
-    module: "third_parties",
-    action: "assign_to_project",
-    description: "Rattacher un tiers à un projet",
-  },
-  // Time tracking extension
-  {
-    code: "time_tracking:declare_for_third_party",
-    module: "time_tracking",
-    action: "declare_for_third_party",
-    description: "Déclarer du temps pour le compte d'un tiers",
-  },
-];
-
-// Upsert toutes les permissions
-const permissionsMap = new Map<string, string>();
-for (const perm of permissionsData) {
-  const permission = await prisma.permission.upsert({
-    where: { code: perm.code },
-    update: { description: perm.description },
-    create: perm,
-  });
-  permissionsMap.set(perm.code, permission.id);
-}
-
-console.log(`✅ ${permissionsData.length} permissions upserted`);
-
-// Rôles système — upsert (ne pas écraser les permissions existantes des rôles déjà en prod)
-const allPermCodes = permissionsData.map((p) => p.code);
-const rolesConfig = [
-  {
-    code: "ADMIN",
-    name: "Administrateur",
-    description: "Accès complet à toutes les fonctionnalités",
-    isSystem: true,
-    isDefault: false,
-    permissions: allPermCodes, // Toutes les permissions
-  },
-  {
-    code: "RESPONSABLE",
-    name: "Responsable",
-    description: "Gestion complète sauf rôles et settings",
-    isSystem: true,
-    isDefault: false,
-    permissions: allPermCodes.filter(
-      (c) => c !== "users:manage_roles" && c !== "settings:update",
-    ),
-  },
-  {
-    code: "MANAGER",
-    name: "Manager",
-    description: "Gestion de projets, tâches, congés équipe",
-    isSystem: true,
-    isDefault: false,
-    permissions: [
-      "projects:create",
-      "projects:read",
-      "projects:update",
-      "projects:delete",
-      "projects:manage_members",
-      "projects:view",
-      "projects:edit",
-      "tasks:create",
-      "tasks:read",
-      "tasks:readAll",
-      "tasks:update",
-      "tasks:delete",
-      "tasks:create_in_project",
-      "events:create",
-      "events:read",
-      "events:readAll",
-      "events:update",
-      "events:delete",
-      "epics:create",
-      "epics:read",
-      "epics:update",
-      "epics:delete",
-      "milestones:create",
-      "milestones:read",
-      "milestones:update",
-      "milestones:delete",
-      "time_tracking:create",
-      "time_tracking:read",
-      "time_tracking:update",
-      "time_tracking:delete",
-      "time_tracking:read_reports",
-      "documents:create",
-      "documents:read",
-      "documents:update",
-      "documents:delete",
-      "comments:create",
-      "comments:read",
-      "comments:update",
-      "comments:delete",
-      "leaves:create",
-      "leaves:read",
-      "leaves:readAll",
-      "leaves:view",
-      "leaves:approve",
-      "leaves:manage",
-      "leaves:manage_delegations",
-      "leaves:declare_for_others",
-      "leaves:delete",
-      "telework:create",
-      "telework:read",
-      "telework:readAll",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "telework:manage_others",
-      "telework:read_team",
-      "telework:manage_recurring",
-      "reports:view",
-      "reports:export",
-      "users:read",
-      "users:view",
-      "users:manage",
-      "departments:read",
-      "departments:view",
-      "skills:read",
-      "skills:view",
-      "predefined_tasks:view",
-      "predefined_tasks:create",
-      "predefined_tasks:edit",
-      "predefined_tasks:delete",
-      "predefined_tasks:assign",
-      "third_parties:read",
-      "third_parties:create",
-      "third_parties:update",
-      "third_parties:delete",
-      "third_parties:assign_to_task",
-      "third_parties:assign_to_project",
-      "time_tracking:declare_for_third_party",
-    ],
-  },
-  {
-    code: "CHEF_DE_PROJET",
-    name: "Chef de Projet",
-    description: "Gestion de projets et tâches",
-    isSystem: true,
-    isDefault: false,
-    permissions: [
-      "projects:create",
-      "projects:read",
-      "projects:update",
-      "projects:delete",
-      "projects:manage_members",
-      "projects:view",
-      "projects:edit",
-      "tasks:create",
-      "tasks:read",
-      "tasks:readAll",
-      "tasks:update",
-      "tasks:delete",
-      "tasks:create_in_project",
-      "events:create",
-      "events:read",
-      "events:readAll",
-      "events:update",
-      "events:delete",
-      "epics:create",
-      "epics:read",
-      "epics:update",
-      "epics:delete",
-      "milestones:create",
-      "milestones:read",
-      "milestones:update",
-      "milestones:delete",
-      "time_tracking:create",
-      "time_tracking:read",
-      "time_tracking:update",
-      "time_tracking:delete",
-      "documents:create",
-      "documents:read",
-      "documents:update",
-      "documents:delete",
-      "comments:create",
-      "comments:read",
-      "comments:update",
-      "comments:delete",
-      "leaves:create",
-      "leaves:read",
-      "leaves:readAll",
-      "leaves:view",
-      "telework:create",
-      "telework:read",
-      "telework:readAll",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "telework:manage_others",
-      "users:read",
-      "users:view",
-      "reports:view",
-      "third_parties:read",
-      "third_parties:create",
-      "third_parties:update",
-      "third_parties:delete",
-      "third_parties:assign_to_task",
-      "third_parties:assign_to_project",
-      "time_tracking:declare_for_third_party",
-    ],
-  },
-  {
-    code: "REFERENT_TECHNIQUE",
-    name: "Référent Technique",
-    description: "Création et modification de tâches dans les projets",
-    isSystem: true,
-    isDefault: false,
-    permissions: [
-      "tasks:create_in_project",
-      "tasks:read",
-      "tasks:readAll",
-      "tasks:update",
-      "events:create",
-      "events:read",
-      "events:readAll",
-      "events:update",
-      "events:delete",
-      "time_tracking:create",
-      "time_tracking:read",
-      "time_tracking:update",
-      "time_tracking:delete",
-      "documents:create",
-      "documents:read",
-      "documents:update",
-      "documents:delete",
-      "comments:create",
-      "comments:read",
-      "comments:update",
-      "comments:delete",
-      "leaves:create",
-      "leaves:read",
-      "leaves:readAll",
-      "leaves:view",
-      "skills:create",
-      "skills:read",
-      "skills:update",
-      "skills:delete",
-      "skills:manage_matrix",
-      "skills:view",
-      "skills:edit",
-      "predefined_tasks:view",
-      "telework:create",
-      "telework:read",
-      "telework:readAll",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "users:read",
-      "users:view",
-    ],
-  },
-  {
-    code: "CONTRIBUTEUR",
-    name: "Contributeur",
-    description: "Création de tâches orphelines et gestion personnelle",
-    isSystem: true,
-    isDefault: true,
-    permissions: [
-      "tasks:create_orphan",
-      "tasks:read",
-      "tasks:update",
-      "events:create",
-      "events:read",
-      "events:update",
-      "time_tracking:create",
-      "time_tracking:read",
-      "leaves:create",
-      "leaves:read",
-      "leaves:view",
-      "predefined_tasks:view",
-      "telework:create",
-      "telework:read",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "users:read",
-      "users:view",
-    ],
-  },
-  {
-    code: "OBSERVATEUR",
-    name: "Observateur",
-    description: "Accès en lecture seule",
-    isSystem: true,
-    isDefault: false,
-    permissions: permissionsData
-      .filter((p) => p.action === "read" || p.action === "view")
-      .map((p) => p.code),
-  },
-  {
-    code: "TECHNICIEN_SUPPORT",
-    name: "Technicien Support",
-    description: "Support technique",
-    isSystem: true,
-    isDefault: false,
-    permissions: [
-      "tasks:create_orphan",
-      "tasks:read",
-      "tasks:update",
-      "events:create",
-      "events:read",
-      "events:update",
-      "time_tracking:create",
-      "time_tracking:read",
-      "leaves:create",
-      "leaves:read",
-      "leaves:view",
-      "telework:create",
-      "telework:read",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "users:read",
-      "users:view",
-    ],
-  },
-  {
-    code: "GESTIONNAIRE_PARC",
-    name: "Gestionnaire de Parc",
-    description: "Gestion du parc informatique",
-    isSystem: true,
-    isDefault: false,
-    permissions: [
-      "tasks:create_orphan",
-      "tasks:read",
-      "tasks:update",
-      "events:create",
-      "events:read",
-      "events:update",
-      "time_tracking:create",
-      "time_tracking:read",
-      "leaves:create",
-      "leaves:read",
-      "leaves:view",
-      "telework:create",
-      "telework:read",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "users:read",
-      "users:view",
-    ],
-  },
-  {
-    code: "ADMINISTRATEUR_IML",
-    name: "Administrateur IML",
-    description: "Administration IML",
-    isSystem: true,
-    isDefault: false,
-    permissions: [
-      "tasks:create_orphan",
-      "tasks:read",
-      "tasks:update",
-      "events:create",
-      "events:read",
-      "events:update",
-      "time_tracking:create",
-      "time_tracking:read",
-      "leaves:create",
-      "leaves:read",
-      "leaves:view",
-      "telework:create",
-      "telework:read",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "users:read",
-      "users:view",
-    ],
-  },
-  {
-    code: "DEVELOPPEUR_CONCEPTEUR",
-    name: "Développeur Concepteur",
-    description: "Développement et conception",
-    isSystem: true,
-    isDefault: false,
-    permissions: [
-      "projects:create",
-      "projects:read",
-      "projects:update",
-      "projects:delete",
-      "projects:manage_members",
-      "projects:view",
-      "projects:edit",
-      "tasks:create",
-      "tasks:read",
-      "tasks:readAll",
-      "tasks:update",
-      "tasks:delete",
-      "tasks:create_in_project",
-      "events:create",
-      "events:read",
-      "events:readAll",
-      "events:update",
-      "events:delete",
-      "epics:create",
-      "epics:read",
-      "epics:update",
-      "epics:delete",
-      "milestones:create",
-      "milestones:read",
-      "milestones:update",
-      "milestones:delete",
-      "time_tracking:create",
-      "time_tracking:read",
-      "time_tracking:update",
-      "time_tracking:delete",
-      "documents:create",
-      "documents:read",
-      "documents:update",
-      "documents:delete",
-      "comments:create",
-      "comments:read",
-      "comments:update",
-      "comments:delete",
-      "leaves:create",
-      "leaves:read",
-      "leaves:readAll",
-      "leaves:view",
-      "telework:create",
-      "telework:read",
-      "telework:readAll",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "telework:manage_others",
-      "users:read",
-      "users:view",
-    ],
-  },
-  {
-    code: "CORRESPONDANT_FONCTIONNEL_APPLICATION",
-    name: "Correspondant Fonctionnel Application",
-    description: "Référent fonctionnel applicatif",
-    isSystem: true,
-    isDefault: false,
-    permissions: [
-      "projects:create",
-      "projects:read",
-      "projects:update",
-      "projects:delete",
-      "projects:manage_members",
-      "projects:view",
-      "projects:edit",
-      "tasks:create",
-      "tasks:read",
-      "tasks:readAll",
-      "tasks:update",
-      "tasks:delete",
-      "tasks:create_in_project",
-      "events:create",
-      "events:read",
-      "events:readAll",
-      "events:update",
-      "events:delete",
-      "epics:create",
-      "epics:read",
-      "epics:update",
-      "epics:delete",
-      "milestones:create",
-      "milestones:read",
-      "milestones:update",
-      "milestones:delete",
-      "time_tracking:create",
-      "time_tracking:read",
-      "time_tracking:update",
-      "time_tracking:delete",
-      "documents:create",
-      "documents:read",
-      "documents:update",
-      "documents:delete",
-      "comments:create",
-      "comments:read",
-      "comments:update",
-      "comments:delete",
-      "leaves:create",
-      "leaves:read",
-      "leaves:readAll",
-      "leaves:view",
-      "telework:create",
-      "telework:read",
-      "telework:readAll",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "telework:manage_others",
-      "users:read",
-      "users:view",
-    ],
-  },
-  {
-    code: "CHARGE_DE_MISSION",
-    name: "Chargé de Mission",
-    description: "Pilotage de missions",
-    isSystem: true,
-    isDefault: false,
-    permissions: [
-      "projects:create",
-      "projects:read",
-      "projects:update",
-      "projects:delete",
-      "projects:manage_members",
-      "projects:view",
-      "projects:edit",
-      "tasks:create",
-      "tasks:read",
-      "tasks:readAll",
-      "tasks:update",
-      "tasks:delete",
-      "tasks:create_in_project",
-      "events:create",
-      "events:read",
-      "events:readAll",
-      "events:update",
-      "events:delete",
-      "epics:create",
-      "epics:read",
-      "epics:update",
-      "epics:delete",
-      "milestones:create",
-      "milestones:read",
-      "milestones:update",
-      "milestones:delete",
-      "time_tracking:create",
-      "time_tracking:read",
-      "time_tracking:update",
-      "time_tracking:delete",
-      "documents:create",
-      "documents:read",
-      "documents:update",
-      "documents:delete",
-      "comments:create",
-      "comments:read",
-      "comments:update",
-      "comments:delete",
-      "leaves:create",
-      "leaves:read",
-      "leaves:readAll",
-      "leaves:view",
-      "telework:create",
-      "telework:read",
-      "telework:readAll",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "telework:manage_others",
-      "users:read",
-      "users:view",
-    ],
-  },
-  {
-    code: "GESTIONNAIRE_IML",
-    name: "Gestionnaire IML",
-    description: "Gestion IML",
-    isSystem: true,
-    isDefault: false,
-    permissions: [
-      "tasks:create_orphan",
-      "tasks:read",
-      "tasks:update",
-      "events:create",
-      "events:read",
-      "events:update",
-      "time_tracking:create",
-      "time_tracking:read",
-      "leaves:create",
-      "leaves:read",
-      "leaves:view",
-      "telework:create",
-      "telework:read",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "users:read",
-      "users:view",
-    ],
-  },
-  {
-    code: "CONSULTANT_TECHNOLOGIE_SI",
-    name: "Consultant Technologie SI",
-    description: "Conseil en technologies SI",
-    isSystem: true,
-    isDefault: false,
-    permissions: [
-      "projects:create",
-      "projects:read",
-      "projects:update",
-      "projects:delete",
-      "projects:manage_members",
-      "projects:view",
-      "projects:edit",
-      "tasks:create",
-      "tasks:read",
-      "tasks:readAll",
-      "tasks:update",
-      "tasks:delete",
-      "tasks:create_in_project",
-      "events:create",
-      "events:read",
-      "events:readAll",
-      "events:update",
-      "events:delete",
-      "epics:create",
-      "epics:read",
-      "epics:update",
-      "epics:delete",
-      "milestones:create",
-      "milestones:read",
-      "milestones:update",
-      "milestones:delete",
-      "time_tracking:create",
-      "time_tracking:read",
-      "time_tracking:update",
-      "time_tracking:delete",
-      "documents:create",
-      "documents:read",
-      "documents:update",
-      "documents:delete",
-      "comments:create",
-      "comments:read",
-      "comments:update",
-      "comments:delete",
-      "leaves:create",
-      "leaves:read",
-      "leaves:readAll",
-      "leaves:view",
-      "telework:create",
-      "telework:read",
-      "telework:readAll",
-      "telework:update",
-      "telework:delete",
-      "telework:view",
-      "telework:manage_others",
-      "users:read",
-      "users:view",
-    ],
-  },
-];
-
-let rolesCreated = 0;
-let rolesSkipped = 0;
-
-for (const roleData of rolesConfig) {
-  const { permissions, ...roleInfo } = roleData;
-
-  // Vérifier si le rôle existe déjà (pour ne pas écraser les permissions en prod)
-  const existingRole = await prisma.roleConfig.findUnique({
-    where: { code: roleData.code },
-    include: { permissions: true },
-  });
-
-  const role = await prisma.roleConfig.upsert({
-    where: { code: roleData.code },
-    update: {
-      name: roleInfo.name,
-      description: roleInfo.description,
-      isSystem: roleInfo.isSystem,
-    },
-    create: roleInfo,
-  });
-
-  // Permissions cibles définies dans le seed (source de vérité)
-  const targetPermIds = new Set(
-    permissions
-      .map((permCode) => permissionsMap.get(permCode))
-      .filter((permId): permId is string => !!permId),
-  );
-
-  if (existingRole && existingRole.permissions.length > 0) {
-    const existingPermIds = new Set(
-      existingRole.permissions.map((rp) => rp.permissionId),
-    );
-
-    // Permissions à ajouter (dans le seed mais pas en BDD)
-    const toAdd = [...targetPermIds]
-      .filter((permId) => !existingPermIds.has(permId))
-      .map((permId) => ({ roleConfigId: role.id, permissionId: permId }));
-
-    // Permissions à retirer (en BDD mais plus dans le seed)
-    const toRemove = [...existingPermIds].filter(
-      (permId) => !targetPermIds.has(permId),
-    );
-
-    if (toAdd.length > 0) {
-      await prisma.rolePermission.createMany({
-        data: toAdd,
-        skipDuplicates: true,
-      });
-    }
-
-    if (toRemove.length > 0) {
-      await prisma.rolePermission.deleteMany({
-        where: {
-          roleConfigId: role.id,
-          permissionId: { in: toRemove },
-        },
-      });
-    }
-
-    if (toAdd.length > 0 || toRemove.length > 0) {
-      console.log(
-        `  → ${roleData.code}: +${toAdd.length} permissions, -${toRemove.length} permissions`,
-      );
-    }
-    rolesSkipped++;
-    continue;
-  }
-
-  // Nouveau rôle : créer toutes les permissions
-  const permissionAssignments = [...targetPermIds].map((permId) => ({
-    roleConfigId: role.id,
-    permissionId: permId,
-  }));
-
-  if (permissionAssignments.length > 0) {
-    await prisma.rolePermission.createMany({
-      data: permissionAssignments,
-      skipDuplicates: true,
-    });
-  }
-  rolesCreated++;
-}
-
-console.log(
-  `✅ RBAC: ${rolesCreated} rôles créés, ${rolesSkipped} rôles existants synchronisés (seed = source de vérité)`,
-);
-
-// Flush du cache RBAC Redis : nécessaire pour propager les permissions
-// nouvellement ajoutées/retirées aux users connectés sans attendre le TTL.
-// Non-bloquant : si Redis est injoignable (test isolé, env sans cache), on
-// log un warning mais le seed reste un succès.
-const redisUrl = process.env.REDIS_URL;
-if (redisUrl) {
-  const redis = new Redis(redisUrl, {
-    lazyConnect: true,
-    maxRetriesPerRequest: 1,
-    retryStrategy: () => null,
-  });
-  try {
-    await redis.connect();
-    const keys = await redis.keys("role-permissions:*");
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
-    console.log(`✅ Flushed ${keys.length} RBAC cache key(s) from Redis`);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.warn(
-      `⚠️  Redis RBAC cache flush failed (non-blocking): ${msg}. ` +
-        `Run manually: redis-cli DEL "role-permissions:*"`,
-    );
-  } finally {
-    redis.disconnect();
-  }
-} else {
-  console.warn(
-    "⚠️  REDIS_URL not set — skipping RBAC cache flush. " +
-      'Run manually: redis-cli DEL "role-permissions:*"',
-  );
-}
-}
 // ============================================================
 // V0 RBAC refactor — Seed des 26 rôles templates système
 // ============================================================
@@ -1485,51 +26,185 @@ const SYSTEM_ROLE_TEMPLATES: Array<{
   templateKey: string;
   isDefault: boolean;
 }> = [
-  { code: "ADMIN", label: "Administrateur", templateKey: "ADMIN", isDefault: false },
-  { code: "ADMIN_DELEGATED", label: "Directeur adjoint", templateKey: "ADMIN_DELEGATED", isDefault: false },
-  { code: "PORTFOLIO_MANAGER", label: "Manager de portefeuille", templateKey: "PORTFOLIO_MANAGER", isDefault: false },
-  { code: "MANAGER", label: "Manager", templateKey: "MANAGER", isDefault: false },
-  { code: "MANAGER_PROJECT_FOCUS", label: "Manager projet", templateKey: "MANAGER_PROJECT_FOCUS", isDefault: false },
-  { code: "MANAGER_HR_FOCUS", label: "Chef de service", templateKey: "MANAGER_HR_FOCUS", isDefault: false },
-  { code: "PROJECT_LEAD", label: "Chef de projet", templateKey: "PROJECT_LEAD", isDefault: false },
-  { code: "PROJECT_LEAD_JUNIOR", label: "Chef de projet junior", templateKey: "PROJECT_LEAD_JUNIOR", isDefault: false },
-  { code: "TECHNICAL_LEAD", label: "Référent technique", templateKey: "TECHNICAL_LEAD", isDefault: false },
-  { code: "PROJECT_CONTRIBUTOR", label: "Contributeur projet", templateKey: "PROJECT_CONTRIBUTOR", isDefault: false },
-  { code: "PROJECT_CONTRIBUTOR_LIGHT", label: "Contributeur projet junior", templateKey: "PROJECT_CONTRIBUTOR_LIGHT", isDefault: false },
-  { code: "FUNCTIONAL_REFERENT", label: "Référent fonctionnel", templateKey: "FUNCTIONAL_REFERENT", isDefault: false },
-  { code: "HR_OFFICER", label: "Gestionnaire RH", templateKey: "HR_OFFICER", isDefault: false },
-  { code: "HR_OFFICER_LIGHT", label: "Assistant RH", templateKey: "HR_OFFICER_LIGHT", isDefault: false },
-  { code: "THIRD_PARTY_MANAGER", label: "Gestionnaire prestataires", templateKey: "THIRD_PARTY_MANAGER", isDefault: false },
-  { code: "CONTROLLER", label: "Contrôleur de gestion", templateKey: "CONTROLLER", isDefault: false },
-  { code: "BUDGET_ANALYST", label: "Analyste budgétaire", templateKey: "BUDGET_ANALYST", isDefault: false },
-  { code: "DATA_ANALYST", label: "Analyste données", templateKey: "DATA_ANALYST", isDefault: false },
-  { code: "IT_SUPPORT", label: "Technicien support", templateKey: "IT_SUPPORT", isDefault: false },
-  { code: "IT_INFRASTRUCTURE", label: "Équipe infrastructure", templateKey: "IT_INFRASTRUCTURE", isDefault: false },
-  { code: "OBSERVER_FULL", label: "Observateur global", templateKey: "OBSERVER_FULL", isDefault: false },
-  { code: "OBSERVER_PROJECTS_ONLY", label: "Sponsor projet", templateKey: "OBSERVER_PROJECTS_ONLY", isDefault: false },
-  { code: "OBSERVER_HR_ONLY", label: "Audit social", templateKey: "OBSERVER_HR_ONLY", isDefault: false },
-  { code: "BASIC_USER", label: "Utilisateur standard", templateKey: "BASIC_USER", isDefault: true },
-  { code: "EXTERNAL_PRESTATAIRE", label: "Prestataire externe", templateKey: "EXTERNAL_PRESTATAIRE", isDefault: false },
-  { code: "STAGIAIRE_ALTERNANT", label: "Stagiaire / alternant", templateKey: "STAGIAIRE_ALTERNANT", isDefault: false },
+  {
+    code: "ADMIN",
+    label: "Administrateur",
+    templateKey: "ADMIN",
+    isDefault: false,
+  },
+  {
+    code: "ADMIN_DELEGATED",
+    label: "Directeur adjoint",
+    templateKey: "ADMIN_DELEGATED",
+    isDefault: false,
+  },
+  {
+    code: "PORTFOLIO_MANAGER",
+    label: "Manager de portefeuille",
+    templateKey: "PORTFOLIO_MANAGER",
+    isDefault: false,
+  },
+  {
+    code: "MANAGER",
+    label: "Manager",
+    templateKey: "MANAGER",
+    isDefault: false,
+  },
+  {
+    code: "MANAGER_PROJECT_FOCUS",
+    label: "Manager projet",
+    templateKey: "MANAGER_PROJECT_FOCUS",
+    isDefault: false,
+  },
+  {
+    code: "MANAGER_HR_FOCUS",
+    label: "Chef de service",
+    templateKey: "MANAGER_HR_FOCUS",
+    isDefault: false,
+  },
+  {
+    code: "PROJECT_LEAD",
+    label: "Chef de projet",
+    templateKey: "PROJECT_LEAD",
+    isDefault: false,
+  },
+  {
+    code: "PROJECT_LEAD_JUNIOR",
+    label: "Chef de projet junior",
+    templateKey: "PROJECT_LEAD_JUNIOR",
+    isDefault: false,
+  },
+  {
+    code: "TECHNICAL_LEAD",
+    label: "Référent technique",
+    templateKey: "TECHNICAL_LEAD",
+    isDefault: false,
+  },
+  {
+    code: "PROJECT_CONTRIBUTOR",
+    label: "Contributeur projet",
+    templateKey: "PROJECT_CONTRIBUTOR",
+    isDefault: false,
+  },
+  {
+    code: "PROJECT_CONTRIBUTOR_LIGHT",
+    label: "Contributeur projet junior",
+    templateKey: "PROJECT_CONTRIBUTOR_LIGHT",
+    isDefault: false,
+  },
+  {
+    code: "FUNCTIONAL_REFERENT",
+    label: "Référent fonctionnel",
+    templateKey: "FUNCTIONAL_REFERENT",
+    isDefault: false,
+  },
+  {
+    code: "HR_OFFICER",
+    label: "Gestionnaire RH",
+    templateKey: "HR_OFFICER",
+    isDefault: false,
+  },
+  {
+    code: "HR_OFFICER_LIGHT",
+    label: "Assistant RH",
+    templateKey: "HR_OFFICER_LIGHT",
+    isDefault: false,
+  },
+  {
+    code: "THIRD_PARTY_MANAGER",
+    label: "Gestionnaire prestataires",
+    templateKey: "THIRD_PARTY_MANAGER",
+    isDefault: false,
+  },
+  {
+    code: "CONTROLLER",
+    label: "Contrôleur de gestion",
+    templateKey: "CONTROLLER",
+    isDefault: false,
+  },
+  {
+    code: "BUDGET_ANALYST",
+    label: "Analyste budgétaire",
+    templateKey: "BUDGET_ANALYST",
+    isDefault: false,
+  },
+  {
+    code: "DATA_ANALYST",
+    label: "Analyste données",
+    templateKey: "DATA_ANALYST",
+    isDefault: false,
+  },
+  {
+    code: "IT_SUPPORT",
+    label: "Technicien support",
+    templateKey: "IT_SUPPORT",
+    isDefault: false,
+  },
+  {
+    code: "IT_INFRASTRUCTURE",
+    label: "Équipe infrastructure",
+    templateKey: "IT_INFRASTRUCTURE",
+    isDefault: false,
+  },
+  {
+    code: "OBSERVER_FULL",
+    label: "Observateur global",
+    templateKey: "OBSERVER_FULL",
+    isDefault: false,
+  },
+  {
+    code: "OBSERVER_PROJECTS_ONLY",
+    label: "Sponsor projet",
+    templateKey: "OBSERVER_PROJECTS_ONLY",
+    isDefault: false,
+  },
+  {
+    code: "OBSERVER_HR_ONLY",
+    label: "Audit social",
+    templateKey: "OBSERVER_HR_ONLY",
+    isDefault: false,
+  },
+  {
+    code: "BASIC_USER",
+    label: "Utilisateur standard",
+    templateKey: "BASIC_USER",
+    isDefault: true,
+  },
+  {
+    code: "EXTERNAL_PRESTATAIRE",
+    label: "Prestataire externe",
+    templateKey: "EXTERNAL_PRESTATAIRE",
+    isDefault: false,
+  },
+  {
+    code: "STAGIAIRE_ALTERNANT",
+    label: "Stagiaire / alternant",
+    templateKey: "STAGIAIRE_ALTERNANT",
+    isDefault: false,
+  },
 ];
 
-export async function seedSystemRoleTemplates(prisma: PrismaClient): Promise<void> {
+export async function seedSystemRoleTemplates(
+  prisma: PrismaClient,
+): Promise<void> {
   let created = 0;
   let preserved = 0;
   for (const tpl of SYSTEM_ROLE_TEMPLATES) {
-    const existing = await prisma.roleEntity.findUnique({ where: { code: tpl.code } });
+    const existing = await prisma.role.findUnique({
+      where: { code: tpl.code },
+    });
     if (existing) {
       // Préserve label custom + isDefault DB. Réaligne uniquement templateKey
       // si drift (cas re-seed après changement contrat).
       if (existing.templateKey !== tpl.templateKey) {
-        await prisma.roleEntity.update({
+        await prisma.role.update({
           where: { code: tpl.code },
           data: { templateKey: tpl.templateKey, isSystem: true },
         });
       }
       preserved++;
     } else {
-      await prisma.roleEntity.create({
+      await prisma.role.create({
         data: {
           code: tpl.code,
           label: tpl.label,
@@ -1551,6 +226,23 @@ async function main() {
 
   // V0 RBAC : assurer la présence des 26 rôles templates système.
   await seedSystemRoleTemplates(prisma);
+
+  // RBAC V4 : les users référencent Role via roleId. On charge la map
+  // code → id depuis les rôles système créés juste au-dessus, pour que
+  // tous les user.upsert/create puissent faire `roleId: roleIdByCode("X")`.
+  const allRoles = await prisma.role.findMany({
+    select: { id: true, code: true },
+  });
+  const roleIdByCode = new Map(allRoles.map((r) => [r.code, r.id]));
+  const requireRoleId = (code: string): string => {
+    const id = roleIdByCode.get(code);
+    if (!id) {
+      throw new Error(
+        `[SEED] Role '${code}' introuvable en DB — seedSystemRoleTemplates a-t-il tourné ?`,
+      );
+    }
+    return id;
+  };
 
   // Create or get admin user — SEC-02: env-gated, no hardcoded default password
   const envAdminPassword = process.env.SEED_ADMIN_PASSWORD;
@@ -1594,7 +286,7 @@ async function main() {
         passwordHash,
         firstName: "Admin",
         lastName: "System",
-        role: "ADMIN",
+        roleId: requireRoleId("ADMIN"),
         isActive: true,
         forcePasswordChange,
       },
@@ -1688,7 +380,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Sophie",
         lastName: "Martin",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1703,7 +395,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Thomas",
         lastName: "Bernard",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1718,7 +410,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Julie",
         lastName: "Dubois",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1733,7 +425,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Nicolas",
         lastName: "Rousseau",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1748,7 +440,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Marie",
         lastName: "Lefevre",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1788,7 +480,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Pierre",
         lastName: "Moreau",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1803,7 +495,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Isabelle",
         lastName: "Simon",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1818,7 +510,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Laurent",
         lastName: "Michel",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1833,7 +525,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Céline",
         lastName: "Garcia",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1848,7 +540,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Alexandre",
         lastName: "Roux",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1888,7 +580,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Emma",
         lastName: "Petit",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1903,7 +595,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Maxime",
         lastName: "Durand",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1918,7 +610,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Camille",
         lastName: "Laurent",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1933,7 +625,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Hugo",
         lastName: "Girard",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -1948,7 +640,7 @@ async function main() {
           "$2b$12$vI3W06KqOPjBiGN8qXDBIuiSsdM1KyN2UJJAUkk400Da2YqETfPsG",
         firstName: "Léa",
         lastName: "Fontaine",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: department.id,
         isActive: true,
       },
@@ -2151,7 +843,8 @@ async function main() {
       create: {
         id: "00000000-0000-0000-0000-000000000012",
         name: "Fibre optique - Interconnexion sites",
-        description: "Déploiement fibre optique entre les 12 sites de la collectivité",
+        description:
+          "Déploiement fibre optique entre les 12 sites de la collectivité",
         status: "ACTIVE",
         priority: "NORMAL",
         startDate: new Date("2025-11-01"),
@@ -2168,7 +861,8 @@ async function main() {
       create: {
         id: "00000000-0000-0000-0000-000000000013",
         name: "GED - Dématérialisation courrier",
-        description: "Mise en place de la GED pour la dématérialisation du courrier entrant/sortant",
+        description:
+          "Mise en place de la GED pour la dématérialisation du courrier entrant/sortant",
         status: "DRAFT",
         priority: "NORMAL",
         startDate: new Date("2026-05-01"),
@@ -2203,7 +897,12 @@ async function main() {
     await prisma.projectMember.upsert({
       where: { projectId_userId: { projectId: ep.id, userId: admin.id } },
       update: {},
-      create: { projectId: ep.id, userId: admin.id, role: "Chef de projet", allocation: 30 },
+      create: {
+        projectId: ep.id,
+        userId: admin.id,
+        role: "Chef de projet",
+        allocation: 30,
+      },
     });
   }
 
@@ -2378,7 +1077,13 @@ async function main() {
   ]);
 
   // Tâches rapides pour donner de la progression aux projets
-  const taskStatuses: Array<"DONE" | "IN_PROGRESS" | "TODO"> = ["DONE", "DONE", "DONE", "IN_PROGRESS", "TODO"];
+  const taskStatuses: Array<"DONE" | "IN_PROGRESS" | "TODO"> = [
+    "DONE",
+    "DONE",
+    "DONE",
+    "IN_PROGRESS",
+    "TODO",
+  ];
   for (const ep of extraProjects) {
     await Promise.all(
       taskStatuses.map((status, i) =>
@@ -2389,8 +1094,8 @@ async function main() {
             status,
             priority: "NORMAL",
           },
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -2887,11 +1592,6 @@ async function main() {
 
   console.log("✅ 30 tasks created for Migration SI project");
 
-  // RBAC (permissions + rôles + flush Redis) → seedPermissionsAndRoles().
-  // Extraction Wave 1.5 : permet aussi une exécution partielle prod-safe
-  // via pnpm db:seed:permissions, sans re-exécuter les blocs démo.
-  await seedPermissionsAndRoles(prisma);
-
   // ============================================================
   // E2E TEST USERS — créés uniquement si E2E_SEED=true ou NODE_ENV=test
   // ============================================================
@@ -2939,7 +1639,7 @@ async function main() {
         passwordHash: testPasswordHash,
         firstName: "Admin",
         lastName: "Test",
-        role: "ADMIN",
+        roleId: requireRoleId("ADMIN"),
         departmentId: testDepartment.id,
         isActive: true,
       },
@@ -2954,7 +1654,7 @@ async function main() {
         passwordHash: testPasswordHash,
         firstName: "Responsable",
         lastName: "Test",
-        role: "RESPONSABLE",
+        roleId: requireRoleId("ADMIN_DELEGATED"),
         departmentId: testDepartment.id,
         isActive: true,
       },
@@ -2969,7 +1669,7 @@ async function main() {
         passwordHash: testPasswordHash,
         firstName: "Manager",
         lastName: "Test",
-        role: "MANAGER",
+        roleId: requireRoleId("MANAGER"),
         departmentId: testDepartment.id,
         isActive: true,
       },
@@ -2984,7 +1684,7 @@ async function main() {
         passwordHash: testPasswordHash,
         firstName: "Referent",
         lastName: "Test",
-        role: "REFERENT_TECHNIQUE",
+        roleId: requireRoleId("TECHNICAL_LEAD"),
         departmentId: testDepartment.id,
         isActive: true,
       },
@@ -2999,7 +1699,7 @@ async function main() {
         passwordHash: testPasswordHash,
         firstName: "Contributeur",
         lastName: "Test",
-        role: "CONTRIBUTEUR",
+        roleId: requireRoleId("BASIC_USER"),
         departmentId: testDepartment.id,
         isActive: true,
       },
@@ -3014,7 +1714,7 @@ async function main() {
         passwordHash: testPasswordHash,
         firstName: "Observateur",
         lastName: "Test",
-        role: "OBSERVATEUR",
+        roleId: requireRoleId("OBSERVER_FULL"),
         departmentId: testDepartment.id,
         isActive: true,
       },
@@ -3182,7 +1882,6 @@ async function main() {
       "🧪 E2E seed complete — 6 users, 1 project, 3 tasks, 1 leave, 1 telework",
     );
   }
-
 
   console.log("🎉 Seeding complete!");
 }

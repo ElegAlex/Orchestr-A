@@ -15,10 +15,7 @@ import { departmentsService } from "@/services/departments.service";
 import { servicesService } from "@/services/services.service";
 import { User, Department, Service } from "@/types";
 import { UserAvatar } from "@/components/UserAvatar";
-import {
-  rolesService,
-  type RoleWithStats,
-} from "@/services/roles.service";
+import { rolesService, type RoleWithStats } from "@/services/roles.service";
 import {
   CATEGORY_CONFIG,
   CATEGORY_ORDER,
@@ -460,9 +457,7 @@ export default function UsersPage() {
 
       // Accepte historiquement `role` (ancien format) ou `rolecode` (nouveau).
       const roleCode =
-        normalizedRow.rolecode ||
-        normalizedRow.role ||
-        defaultRoleCode;
+        normalizedRow.rolecode || normalizedRow.role || defaultRoleCode;
 
       const user: ImportUserData = {
         email: normalizedRow.email || "",

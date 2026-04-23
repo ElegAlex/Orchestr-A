@@ -20,9 +20,9 @@ import {
   getISOWeekYear,
   isAfter,
   isBefore,
-} from 'date-fns';
+} from "date-fns";
 
-import type { GanttView } from './types';
+import type { GanttView } from "./types";
 
 // ===========================
 // PUBLIC TYPES
@@ -95,11 +95,29 @@ export function xToDate(
 // BUCKETS
 // ===========================
 
-const FRENCH_WEEKDAYS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+const FRENCH_WEEKDAYS = [
+  "dim.",
+  "lun.",
+  "mar.",
+  "mer.",
+  "jeu.",
+  "ven.",
+  "sam.",
+];
 
 const FRENCH_MONTHS = [
-  'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
-  'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
+  "janv.",
+  "févr.",
+  "mars",
+  "avr.",
+  "mai",
+  "juin",
+  "juil.",
+  "août",
+  "sept.",
+  "oct.",
+  "nov.",
+  "déc.",
 ];
 
 /**
@@ -114,13 +132,13 @@ export function bucketsForRange(
   const e = startOfDay(end);
 
   switch (view) {
-    case 'day':
+    case "day":
       return dayBuckets(s, e);
-    case 'week':
+    case "week":
       return weekBuckets(s, e);
-    case 'month':
+    case "month":
       return monthBuckets(s, e);
-    case 'quarter':
+    case "quarter":
       return quarterBuckets(s, e);
   }
 }
@@ -129,18 +147,22 @@ export function bucketsForRange(
 // INTERNAL — fractional unit helpers
 // ===========================
 
-function dateToFractionalUnits(date: Date, view: GanttView, origin: Date): number {
+function dateToFractionalUnits(
+  date: Date,
+  view: GanttView,
+  origin: Date,
+): number {
   const d = startOfDay(date);
   const o = startOfDay(origin);
 
   switch (view) {
-    case 'day': {
+    case "day": {
       return differenceInCalendarDays(d, o);
     }
-    case 'week': {
+    case "week": {
       return differenceInCalendarDays(d, o) / 7;
     }
-    case 'month': {
+    case "month": {
       // Whole months + fractional position within the current month
       const wholeMonths = differenceInCalendarMonths(
         startOfMonth(d),
@@ -162,24 +184,28 @@ function dateToFractionalUnits(date: Date, view: GanttView, origin: Date): numbe
       //  because we already counted the full month)
       return wholeMonths - originFraction + targetFraction;
     }
-    case 'quarter': {
+    case "quarter": {
       // Reuse month calculation, divide by 3
-      return dateToFractionalUnits(date, 'month', origin) / 3;
+      return dateToFractionalUnits(date, "month", origin) / 3;
     }
   }
 }
 
-function fractionalUnitsToDate(units: number, view: GanttView, origin: Date): Date {
+function fractionalUnitsToDate(
+  units: number,
+  view: GanttView,
+  origin: Date,
+): Date {
   const o = startOfDay(origin);
 
   switch (view) {
-    case 'day': {
+    case "day": {
       return addDays(o, Math.round(units));
     }
-    case 'week': {
+    case "week": {
       return addDays(o, Math.round(units * 7));
     }
-    case 'month': {
+    case "month": {
       // Start from origin, advance by remaining fraction of origin month first
       const originFrac = fractionOfMonth(o);
       let currentDate: Date;
@@ -223,8 +249,8 @@ function fractionalUnitsToDate(units: number, view: GanttView, origin: Date): Da
         return addDays(currentDate, Math.round(frac * daysInTargetMonth));
       }
     }
-    case 'quarter': {
-      return fractionalUnitsToDate(units * 3, 'month', origin);
+    case "quarter": {
+      return fractionalUnitsToDate(units * 3, "month", origin);
     }
   }
 }
@@ -274,13 +300,18 @@ function weekBuckets(start: Date, end: Date): TimelineBucket[] {
     const isoYear = getISOWeekYear(weekStart);
 
     // Clamp to the actual range for width calculation
-    const clampedStart = isBefore(weekStart, rangeStart) ? rangeStart : startOfDay(weekStart);
-    const clampedEnd = isAfter(startOfDay(weekEnd), rangeEnd) ? rangeEnd : startOfDay(weekEnd);
+    const clampedStart = isBefore(weekStart, rangeStart)
+      ? rangeStart
+      : startOfDay(weekStart);
+    const clampedEnd = isAfter(startOfDay(weekEnd), rangeEnd)
+      ? rangeEnd
+      : startOfDay(weekEnd);
     const daysInBucket = differenceInCalendarDays(clampedEnd, clampedStart) + 1;
 
     // Check if week crosses year boundary
     const weekEndYear = getISOWeekYear(weekEnd);
-    const sublabel = isoYear !== weekEndYear ? `${isoYear}/${weekEndYear}` : undefined;
+    const sublabel =
+      isoYear !== weekEndYear ? `${isoYear}/${weekEndYear}` : undefined;
 
     buckets.push({
       label: `S${isoWeek}`,
@@ -306,8 +337,12 @@ function monthBuckets(start: Date, end: Date): TimelineBucket[] {
   while (!isAfter(monthStart, rangeEnd)) {
     const monthEnd = endOfMonth(monthStart);
 
-    const clampedStart = isBefore(monthStart, rangeStart) ? rangeStart : startOfDay(monthStart);
-    const clampedEnd = isAfter(startOfDay(monthEnd), rangeEnd) ? rangeEnd : startOfDay(monthEnd);
+    const clampedStart = isBefore(monthStart, rangeStart)
+      ? rangeStart
+      : startOfDay(monthStart);
+    const clampedEnd = isAfter(startOfDay(monthEnd), rangeEnd)
+      ? rangeEnd
+      : startOfDay(monthEnd);
     const daysInBucket = differenceInCalendarDays(clampedEnd, clampedStart) + 1;
 
     buckets.push({
@@ -335,8 +370,12 @@ function quarterBuckets(start: Date, end: Date): TimelineBucket[] {
     const qEnd = endOfQuarter(qStart);
     const quarterNumber = Math.floor(qStart.getMonth() / 3) + 1;
 
-    const clampedStart = isBefore(qStart, rangeStart) ? rangeStart : startOfDay(qStart);
-    const clampedEnd = isAfter(startOfDay(qEnd), rangeEnd) ? rangeEnd : startOfDay(qEnd);
+    const clampedStart = isBefore(qStart, rangeStart)
+      ? rangeStart
+      : startOfDay(qStart);
+    const clampedEnd = isAfter(startOfDay(qEnd), rangeEnd)
+      ? rangeEnd
+      : startOfDay(qEnd);
     const daysInBucket = differenceInCalendarDays(clampedEnd, clampedStart) + 1;
 
     buckets.push({

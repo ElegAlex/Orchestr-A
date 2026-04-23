@@ -42,6 +42,7 @@ describe('LeavesService', () => {
     user: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
     },
     leaveTypeConfig: {
       findUnique: vi.fn(),
@@ -53,6 +54,7 @@ describe('LeavesService', () => {
       findMany: vi.fn().mockResolvedValue([]),
       create: vi.fn(),
       upsert: vi.fn(),
+      update: vi.fn(),
       delete: vi.fn(),
     },
     roleConfig: {
@@ -168,6 +170,7 @@ describe('LeavesService', () => {
     // quand update()/remove()/cancel() déclenchent getLeaveBalance pour un
     // congé CP mais que le test ne mocke pas explicitement user.findUnique.
     mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+    mockPrismaService.user.findMany.mockResolvedValue([]);
     // Restore dynamic permissions mock — ADMIN/RESPONSABLE détiennent
     // `leaves:manage_any` (bypass périmètre), MANAGER conserve uniquement
     // `leaves:approve` (périmètre services).
@@ -1068,7 +1071,9 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findMany.mockResolvedValue([]);
       mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
       // getManagedUserIds: 1st call = manager's services, 2nd call = users in those services
-      mockPrismaService.service.findMany.mockResolvedValue([{ id: 'service-1' }]);
+      mockPrismaService.service.findMany.mockResolvedValue([
+        { id: 'service-1' },
+      ]);
       mockPrismaService.userService.findMany
         .mockResolvedValueOnce([{ serviceId: 'service-1' }])
         .mockResolvedValueOnce([{ userId: mockLeave.userId }]);
@@ -1177,7 +1182,11 @@ describe('LeavesService', () => {
         .mockResolvedValueOnce([{ serviceId: 'service-1' }])
         .mockResolvedValueOnce([{ userId: mockLeave.userId }]);
 
-      const result = await service.remove('leave-1', 'resp-user-id', 'RESPONSABLE');
+      const result = await service.remove(
+        'leave-1',
+        'resp-user-id',
+        'RESPONSABLE',
+      );
       expect(result.message).toBe('Demande de congé supprimée avec succès');
     });
 
@@ -1186,7 +1195,9 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
       mockPrismaService.leave.delete.mockResolvedValue(approvedLeave);
       // getManagedUserIds: 1st call = manager's services, 2nd call = users in those services
-      mockPrismaService.service.findMany.mockResolvedValue([{ id: 'service-1' }]);
+      mockPrismaService.service.findMany.mockResolvedValue([
+        { id: 'service-1' },
+      ]);
       mockPrismaService.userService.findMany
         .mockResolvedValueOnce([{ serviceId: 'service-1' }]) // manager's own services
         .mockResolvedValueOnce([{ userId: mockLeave.userId }]); // users in perimeter
@@ -1210,7 +1221,11 @@ describe('LeavesService', () => {
     });
 
     it('should throw BadRequestException when non-management role deletes approved leave', async () => {
-      const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED, userId: 'contrib-user-id' };
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        userId: 'contrib-user-id',
+      };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
 
       await expect(
@@ -1219,17 +1234,30 @@ describe('LeavesService', () => {
     });
 
     it('should still allow any role to delete PENDING leaves', async () => {
-      const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING, userId: 'contrib-user-id' };
+      const pendingLeave = {
+        ...mockLeave,
+        status: LeaveStatus.PENDING,
+        userId: 'contrib-user-id',
+      };
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
       mockPrismaService.leave.delete.mockResolvedValue(pendingLeave);
 
-      const result = await service.remove('leave-1', 'contrib-user-id', 'CONTRIBUTEUR');
+      const result = await service.remove(
+        'leave-1',
+        'contrib-user-id',
+        'CONTRIBUTEUR',
+      );
       expect(result.message).toBe('Demande de congé supprimée avec succès');
     });
 
     it('should allow management roles to delete a cancellation-requested leave', async () => {
-      const cancelRequestedLeave = { ...mockLeave, status: LeaveStatus.CANCELLATION_REQUESTED };
-      mockPrismaService.leave.findUnique.mockResolvedValue(cancelRequestedLeave);
+      const cancelRequestedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.CANCELLATION_REQUESTED,
+      };
+      mockPrismaService.leave.findUnique.mockResolvedValue(
+        cancelRequestedLeave,
+      );
       mockPrismaService.leave.delete.mockResolvedValue(cancelRequestedLeave);
 
       const result = await service.remove('leave-1', 'admin-user-id', 'ADMIN');
@@ -1911,6 +1939,818 @@ describe('LeavesService', () => {
       const result = await service.getLeaveBalance('user-1');
 
       expect(result.pending).toBe(5);
+    });
+  });
+
+  // ============================================
+  // GET BALANCES
+  // ============================================
+  describe('getBalances', () => {
+    it('should return all balances without filters', async () => {
+      const mockBalances = [
+        {
+          id: 'bal-1',
+          totalDays: 25,
+          leaveType: mockLeaveTypeConfig,
+          user: mockUser,
+        },
+      ];
+      mockPrismaService.leaveBalance.findMany.mockResolvedValue(mockBalances);
+
+      const result = await service.getBalances();
+
+      expect(result).toHaveLength(1);
+      expect(mockPrismaService.leaveBalance.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: {} }),
+      );
+    });
+
+    it('should filter by year when provided', async () => {
+      mockPrismaService.leaveBalance.findMany.mockResolvedValue([]);
+
+      await service.getBalances(2025);
+
+      expect(mockPrismaService.leaveBalance.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { year: 2025 } }),
+      );
+    });
+
+    it('should filter by userId when provided as non-null string', async () => {
+      mockPrismaService.leaveBalance.findMany.mockResolvedValue([]);
+
+      await service.getBalances(undefined, 'user-1');
+
+      expect(mockPrismaService.leaveBalance.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: 'user-1' } }),
+      );
+    });
+
+    it('should filter by null userId when "null" string is provided', async () => {
+      mockPrismaService.leaveBalance.findMany.mockResolvedValue([]);
+
+      await service.getBalances(undefined, 'null');
+
+      expect(mockPrismaService.leaveBalance.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: null } }),
+      );
+    });
+
+    it('should filter by both year and userId', async () => {
+      mockPrismaService.leaveBalance.findMany.mockResolvedValue([]);
+
+      await service.getBalances(2025, 'user-1');
+
+      expect(mockPrismaService.leaveBalance.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { year: 2025, userId: 'user-1' } }),
+      );
+    });
+  });
+
+  // ============================================
+  // GET DEFAULT BALANCES
+  // ============================================
+  describe('getDefaultBalances', () => {
+    it('should return default balances without year filter', async () => {
+      const mockBalances = [{ id: 'bal-1', userId: null, totalDays: 25 }];
+      mockPrismaService.leaveBalance.findMany.mockResolvedValue(mockBalances);
+
+      const result = await service.getDefaultBalances();
+
+      expect(result).toHaveLength(1);
+      expect(mockPrismaService.leaveBalance.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: null } }),
+      );
+    });
+
+    it('should filter by year when provided', async () => {
+      mockPrismaService.leaveBalance.findMany.mockResolvedValue([]);
+
+      await service.getDefaultBalances(2025);
+
+      expect(mockPrismaService.leaveBalance.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: null, year: 2025 } }),
+      );
+    });
+  });
+
+  // ============================================
+  // UPSERT BALANCE
+  // ============================================
+  describe('upsertBalance', () => {
+    const baseDto = {
+      leaveTypeId: 'leave-type-1',
+      year: 2025,
+      totalDays: 25,
+    };
+
+    it('should throw NotFoundException when leaveType not found', async () => {
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.upsertBalance({ ...baseDto, userId: 'user-1' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when userId provided but user not found', async () => {
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.upsertBalance({ ...baseDto, userId: 'unknown-user' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should use leaveBalance.upsert when userId is provided', async () => {
+      const upsertedBalance = { id: 'bal-1', userId: 'user-1', totalDays: 25 };
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveBalance.upsert.mockResolvedValue(upsertedBalance);
+
+      const result = await service.upsertBalance({
+        ...baseDto,
+        userId: 'user-1',
+      });
+
+      expect(result).toEqual(upsertedBalance);
+      expect(mockPrismaService.leaveBalance.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId_leaveTypeId_year: {
+              userId: 'user-1',
+              leaveTypeId: 'leave-type-1',
+              year: 2025,
+            },
+          },
+          create: expect.objectContaining({ totalDays: 25 }),
+          update: { totalDays: 25 },
+        }),
+      );
+    });
+
+    it('should update existing global balance when userId is null and balance exists', async () => {
+      const existingBalance = { id: 'bal-global', userId: null, totalDays: 20 };
+      const updatedBalance = { ...existingBalance, totalDays: 25 };
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValue(
+        existingBalance,
+      );
+      mockPrismaService.leaveBalance.update.mockResolvedValue(updatedBalance);
+
+      const result = await service.upsertBalance({ ...baseDto });
+
+      expect(result).toEqual(updatedBalance);
+      expect(mockPrismaService.leaveBalance.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'bal-global' },
+          data: { totalDays: 25 },
+        }),
+      );
+    });
+
+    it('should create new global balance when userId is null and no existing balance', async () => {
+      const createdBalance = { id: 'bal-new', userId: null, totalDays: 25 };
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValue(null);
+      mockPrismaService.leaveBalance.create.mockResolvedValue(createdBalance);
+
+      const result = await service.upsertBalance({ ...baseDto });
+
+      expect(result).toEqual(createdBalance);
+      expect(mockPrismaService.leaveBalance.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ userId: null, totalDays: 25 }),
+        }),
+      );
+    });
+  });
+
+  // ============================================
+  // DELETE BALANCE
+  // ============================================
+  describe('deleteBalance', () => {
+    it('should delete a balance successfully', async () => {
+      const balance = { id: 'bal-1', userId: 'user-1', totalDays: 25 };
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue(balance);
+      mockPrismaService.leaveBalance.delete.mockResolvedValue(balance);
+
+      const result = await service.deleteBalance('bal-1');
+
+      expect(result).toEqual({ message: 'Solde supprimé avec succès' });
+      expect(mockPrismaService.leaveBalance.delete).toHaveBeenCalledWith({
+        where: { id: 'bal-1' },
+      });
+    });
+
+    it('should throw NotFoundException when balance not found', async () => {
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue(null);
+
+      await expect(service.deleteBalance('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  // ============================================
+  // GET IMPORT TEMPLATE
+  // ============================================
+  describe('getImportTemplate', () => {
+    it('should return a CSV template string with headers and example rows', () => {
+      const result = service.getImportTemplate();
+
+      expect(typeof result).toBe('string');
+      // Validate headers are present
+      const lines = result.split('\n');
+      expect(lines.length).toBe(3);
+      expect(lines[0]).toContain('userEmail');
+      expect(lines[0]).toContain('leaveTypeName');
+      expect(lines[0]).toContain('startDate');
+      expect(lines[0]).toContain('endDate');
+      expect(lines[0]).toContain('halfDay');
+      expect(lines[0]).toContain('comment');
+      // Delimiters are semicolons
+      expect(lines[0]).toContain(';');
+    });
+  });
+
+  // ============================================
+  // VALIDATE LEAVES IMPORT
+  // ============================================
+  describe('validateLeavesImport', () => {
+    const activeUser = {
+      id: 'user-1',
+      email: 'user@example.com',
+      firstName: 'John',
+      lastName: 'Doe',
+    };
+    const activeLeaveType = {
+      id: 'lt-1',
+      name: 'Congé Payé',
+      code: 'CP',
+    };
+
+    beforeEach(() => {
+      mockPrismaService.user.findMany.mockResolvedValue([activeUser]);
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        activeLeaveType,
+      ]);
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+    });
+
+    it('should return error when userEmail is missing', async () => {
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: '',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      expect(result.summary.errors).toBe(1);
+      expect(result.errors[0].messages[0]).toMatch(/email/i);
+    });
+
+    it('should return error when leaveTypeName is missing', async () => {
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: '',
+          startDate: '2026-03-01',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      expect(result.summary.errors).toBe(1);
+      expect(result.errors[0].messages[0]).toMatch(/type de congé/i);
+    });
+
+    it('should return error when startDate is missing', async () => {
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      expect(result.summary.errors).toBe(1);
+      expect(result.errors[0].messages[0]).toMatch(/début/i);
+    });
+
+    it('should return error when endDate is missing', async () => {
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01',
+          endDate: '',
+        },
+      ]);
+
+      expect(result.summary.errors).toBe(1);
+      expect(result.errors[0].messages[0]).toMatch(/fin/i);
+    });
+
+    it('should return error when user email is not found', async () => {
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'unknown@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      expect(result.summary.errors).toBe(1);
+      expect(result.errors[0].messages[0]).toMatch(/introuvable/i);
+    });
+
+    it('should return error when leave type name is not found', async () => {
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Type Inconnu',
+          startDate: '2026-03-01',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      expect(result.summary.errors).toBe(1);
+      expect(result.errors[0].messages[0]).toMatch(/introuvable/i);
+    });
+
+    it('should return error when startDate is invalid format', async () => {
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: 'not-a-date',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      expect(result.summary.errors).toBe(1);
+      expect(result.errors[0].messages[0]).toMatch(/invalide/i);
+    });
+
+    it('should return error when endDate is invalid format', async () => {
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01',
+          endDate: 'not-a-date',
+        },
+      ]);
+
+      expect(result.summary.errors).toBe(1);
+      expect(result.errors[0].messages[0]).toMatch(/invalide/i);
+    });
+
+    it('should return error when endDate is before startDate', async () => {
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-10',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      expect(result.summary.errors).toBe(1);
+      expect(result.errors[0].messages[0]).toMatch(/postérieure/i);
+    });
+
+    it('should return warning when halfDay is set for multi-day leave', async () => {
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01',
+          endDate: '2026-03-05',
+          halfDay: 'MORNING',
+        },
+      ]);
+
+      expect(result.summary.warnings).toBe(1);
+      expect(result.warnings[0].messages[0]).toMatch(/ignoré/i);
+    });
+
+    it('should return duplicate when overlap with existing leave', async () => {
+      // Existing leave overlaps with the request range
+      mockPrismaService.leave.findMany.mockResolvedValue([
+        {
+          userId: 'user-1',
+          startDate: new Date('2026-03-01'),
+          endDate: new Date('2026-03-10'),
+        },
+      ]);
+
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-03',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      expect(result.summary.duplicates).toBe(1);
+      expect(result.duplicates[0].messages[0]).toMatch(/chevauchement/i);
+    });
+
+    it('should return duplicate when overlap detected within the same file', async () => {
+      // First entry is valid, second overlaps with first
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01',
+          endDate: '2026-03-05',
+        },
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-03',
+          endDate: '2026-03-07',
+        },
+      ]);
+
+      expect(result.summary.valid).toBe(1);
+      expect(result.summary.duplicates).toBe(1);
+      expect(result.duplicates[0].messages[0]).toMatch(/fichier/i);
+    });
+
+    it('should mark item as valid when all fields are correct', async () => {
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      expect(result.summary.valid).toBe(1);
+      expect(result.summary.errors).toBe(0);
+      expect(result.valid[0].resolvedUser?.id).toBe('user-1');
+      expect(result.valid[0].resolvedLeaveType?.id).toBe('lt-1');
+    });
+
+    it('should return correct summary totals for mixed entries', async () => {
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01',
+          endDate: '2026-03-05',
+        },
+        {
+          userEmail: '',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      expect(result.summary.total).toBe(2);
+      expect(result.summary.valid).toBe(1);
+      expect(result.summary.errors).toBe(1);
+    });
+  });
+
+  // ============================================
+  // IMPORT LEAVES
+  // ============================================
+  describe('importLeaves', () => {
+    const activeUser = {
+      id: 'user-1',
+      email: 'user@example.com',
+      firstName: 'John',
+      lastName: 'Doe',
+      department: {
+        id: 'dept-1',
+        managerId: 'manager-1',
+        manager: { id: 'manager-1' },
+      },
+    };
+
+    const activeLeaveTypeRequiresApproval = {
+      id: 'lt-1',
+      name: 'Congé Payé',
+      code: 'CP',
+      requiresApproval: true,
+    };
+
+    const activeLeaveTypeNoApproval = {
+      id: 'lt-2',
+      name: 'RTT',
+      code: 'RTT',
+      requiresApproval: false,
+    };
+
+    beforeEach(() => {
+      mockPrismaService.user.findMany.mockResolvedValue([activeUser]);
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        activeLeaveTypeRequiresApproval,
+      ]);
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.role.findMany.mockResolvedValue([]);
+      mockPrismaService.leave.create.mockResolvedValue({ id: 'leave-new' });
+    });
+
+    it('should skip when user email not found', async () => {
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'unknown@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-01',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.skipped).toBe(1);
+      expect(result.errorDetails[0]).toMatch(/introuvable/i);
+    });
+
+    it('should skip when leave type name not found', async () => {
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([]);
+
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Type Inconnu',
+            startDate: '2026-03-01',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.skipped).toBe(1);
+      expect(result.errorDetails[0]).toMatch(/introuvable/i);
+    });
+
+    it('should skip when dates are invalid', async () => {
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: 'invalid',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.skipped).toBe(1);
+      expect(result.errorDetails[0]).toMatch(/invalide/i);
+    });
+
+    it('should skip when endDate is before startDate', async () => {
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-10',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.skipped).toBe(1);
+      expect(result.errorDetails[0]).toMatch(/antérieure/i);
+    });
+
+    it('should skip when overlap with existing leave', async () => {
+      mockPrismaService.leave.findMany.mockResolvedValue([
+        {
+          userId: 'user-1',
+          startDate: new Date('2026-03-01'),
+          endDate: new Date('2026-03-10'),
+        },
+      ]);
+
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-03',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.skipped).toBe(1);
+      expect(result.errorDetails[0]).toMatch(/chevauchement/i);
+    });
+
+    it('should skip second entry when overlap detected in file', async () => {
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-01',
+            endDate: '2026-03-05',
+          },
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-03',
+            endDate: '2026-03-07',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.created).toBe(1);
+      expect(result.skipped).toBe(1);
+      expect(result.errorDetails[0]).toMatch(/fichier/i);
+    });
+
+    it('should create leave with PENDING status when requiresApproval is true', async () => {
+      // findValidatorForUser: user.findUnique returns user with department.managerId
+      mockPrismaService.user.findUnique.mockResolvedValue(activeUser);
+
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-03',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.created).toBe(1);
+      expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 'PENDING',
+            validatorId: 'manager-1',
+          }),
+        }),
+      );
+    });
+
+    it('should create leave with APPROVED status when requiresApproval is false', async () => {
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        activeLeaveTypeNoApproval,
+      ]);
+
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'RTT',
+            startDate: '2026-03-03',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.created).toBe(1);
+      expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 'APPROVED',
+            validatorId: null,
+          }),
+        }),
+      );
+    });
+
+    it('should use LeaveType.OTHER for unknown enum code', async () => {
+      const leaveTypeUnknownCode = {
+        id: 'lt-x',
+        name: 'Congé Spécial',
+        code: 'UNKNOWN_CODE',
+        requiresApproval: false,
+      };
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        leaveTypeUnknownCode,
+      ]);
+
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Spécial',
+            startDate: '2026-03-03',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.created).toBe(1);
+      expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ type: LeaveType.OTHER }),
+        }),
+      );
+    });
+
+    it('should apply halfDay MORNING for single-day leave', async () => {
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-03',
+            endDate: '2026-03-03',
+            halfDay: 'MORNING',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.created).toBe(1);
+      expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ halfDay: 'MORNING', days: 0.5 }),
+        }),
+      );
+    });
+
+    it('should ignore halfDay when leave spans multiple days', async () => {
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-03',
+            endDate: '2026-03-05',
+            halfDay: 'MORNING',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.created).toBe(1);
+      // halfDay should be null/undefined for multi-day, and days should be > 0.5
+      expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ halfDay: undefined }),
+        }),
+      );
+    });
+
+    it('should increment errors and capture message when leave.create throws', async () => {
+      mockPrismaService.leave.create.mockRejectedValue(new Error('DB error'));
+
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-03',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.errors).toBe(1);
+      expect(result.errorDetails[0]).toMatch(/DB error/i);
+    });
+
+    it('should return summary with correct created/skipped/errors counts', async () => {
+      const result = await service.importLeaves([], 'admin-1');
+
+      expect(result.created).toBe(0);
+      expect(result.skipped).toBe(0);
+      expect(result.errors).toBe(0);
+      expect(result.errorDetails).toHaveLength(0);
     });
   });
 });

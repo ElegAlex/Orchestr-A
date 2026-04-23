@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -115,7 +114,9 @@ export class RolesService {
       where: { code: dto.code },
     });
     if (existing) {
-      throw new ConflictException(`Role avec le code "${dto.code}" existe déjà`);
+      throw new ConflictException(
+        `Role avec le code "${dto.code}" existe déjà`,
+      );
     }
 
     if (dto.isDefault) {
@@ -169,7 +170,12 @@ export class RolesService {
   async deleteRole(id: string): Promise<void> {
     const existing = await this.prisma.role.findUnique({
       where: { id },
-      include: { users: { select: { id: true, email: true, firstName: true, lastName: true }, take: 50 } },
+      include: {
+        users: {
+          select: { id: true, email: true, firstName: true, lastName: true },
+          take: 50,
+        },
+      },
     });
     if (!existing) throw new NotFoundException(`Role ${id} introuvable`);
     if (existing.isSystem) {
@@ -225,7 +231,9 @@ export class RolesService {
       isDefault: row.isDefault,
       userCount: row._count.users,
       permissionsCount: tpl ? tpl.permissions.length : 0,
-      category: tpl ? tpl.category : ('STANDARD_USER' as RoleTemplate['category']),
+      category: tpl
+        ? tpl.category
+        : ('STANDARD_USER' as RoleTemplate['category']),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };

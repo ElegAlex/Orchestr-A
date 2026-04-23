@@ -12,26 +12,27 @@
 
 ## File Map
 
-| Action | File | Responsibility |
-|--------|------|----------------|
-| Create | `packages/database/prisma/migrations/YYYYMMDD_add_subtasks/migration.sql` | DB schema |
-| Modify | `packages/database/prisma/schema.prisma` | Subtask model + Task relation |
-| Create | `apps/api/src/tasks/dto/create-subtask.dto.ts` | Validation DTO |
-| Create | `apps/api/src/tasks/dto/update-subtask.dto.ts` | Partial update DTO |
-| Modify | `apps/api/src/tasks/tasks.controller.ts` | Subtask CRUD endpoints |
-| Modify | `apps/api/src/tasks/tasks.service.ts` | Subtask business logic + progress recalc |
-| Create | `apps/api/src/tasks/tasks-subtasks.spec.ts` | API unit tests |
-| Modify | `apps/web/src/types/index.ts` | Subtask interface + Task.subtasks |
-| Modify | `apps/web/src/services/tasks.service.ts` | Subtask API client methods |
-| Modify | `apps/web/src/components/TaskModal.tsx` | Checklist UI in task detail |
-| Modify | `apps/web/src/components/tasks/TaskLineCard.tsx` | Subtask count badge |
-| Create | `e2e/tests/workflows/subtasks.spec.ts` | E2E tests |
+| Action | File                                                                      | Responsibility                           |
+| ------ | ------------------------------------------------------------------------- | ---------------------------------------- |
+| Create | `packages/database/prisma/migrations/YYYYMMDD_add_subtasks/migration.sql` | DB schema                                |
+| Modify | `packages/database/prisma/schema.prisma`                                  | Subtask model + Task relation            |
+| Create | `apps/api/src/tasks/dto/create-subtask.dto.ts`                            | Validation DTO                           |
+| Create | `apps/api/src/tasks/dto/update-subtask.dto.ts`                            | Partial update DTO                       |
+| Modify | `apps/api/src/tasks/tasks.controller.ts`                                  | Subtask CRUD endpoints                   |
+| Modify | `apps/api/src/tasks/tasks.service.ts`                                     | Subtask business logic + progress recalc |
+| Create | `apps/api/src/tasks/tasks-subtasks.spec.ts`                               | API unit tests                           |
+| Modify | `apps/web/src/types/index.ts`                                             | Subtask interface + Task.subtasks        |
+| Modify | `apps/web/src/services/tasks.service.ts`                                  | Subtask API client methods               |
+| Modify | `apps/web/src/components/TaskModal.tsx`                                   | Checklist UI in task detail              |
+| Modify | `apps/web/src/components/tasks/TaskLineCard.tsx`                          | Subtask count badge                      |
+| Create | `e2e/tests/workflows/subtasks.spec.ts`                                    | E2E tests                                |
 
 ---
 
 ### Task 1: Prisma Schema — Add Subtask Model
 
 **Files:**
+
 - Modify: `packages/database/prisma/schema.prisma`
 
 - [ ] **Step 1: Add Subtask model to schema.prisma**
@@ -65,6 +66,7 @@ Add relation to the Task model (inside the relations block, after `raci`):
 - [ ] **Step 2: Generate and apply migration**
 
 Run:
+
 ```bash
 cd /home/alex/Documents/REPO/ORCHESTRA && pnpm run db:migrate --name add_subtasks
 ```
@@ -74,6 +76,7 @@ Expected: Migration created, `subtasks` table created with columns id, title, de
 - [ ] **Step 3: Verify Prisma client generation**
 
 Run:
+
 ```bash
 cd /home/alex/Documents/REPO/ORCHESTRA/packages/database && pnpm prisma generate
 ```
@@ -92,6 +95,7 @@ git commit -m "feat(db): add Subtask model for task checklists"
 ### Task 2: API DTOs — Create and Update Subtask
 
 **Files:**
+
 - Create: `apps/api/src/tasks/dto/create-subtask.dto.ts`
 - Create: `apps/api/src/tasks/dto/update-subtask.dto.ts`
 
@@ -100,7 +104,7 @@ git commit -m "feat(db): add Subtask model for task checklists"
 File: `apps/api/src/tasks/dto/create-subtask.dto.ts`
 
 ```typescript
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from "@nestjs/swagger";
 import {
   IsString,
   IsNotEmpty,
@@ -110,27 +114,30 @@ import {
   MaxLength,
   MinLength,
   Min,
-} from 'class-validator';
+} from "class-validator";
 
 export class CreateSubtaskDto {
-  @ApiProperty({ description: 'Titre de la sous-tâche', example: 'Vérifier les prérequis' })
+  @ApiProperty({
+    description: "Titre de la sous-tâche",
+    example: "Vérifier les prérequis",
+  })
   @IsString()
   @IsNotEmpty()
   @MinLength(1)
   @MaxLength(500)
   title: string;
 
-  @ApiProperty({ description: 'Description optionnelle', required: false })
+  @ApiProperty({ description: "Description optionnelle", required: false })
   @IsString()
   @IsOptional()
   description?: string;
 
-  @ApiProperty({ description: 'Cochée ou non', default: false })
+  @ApiProperty({ description: "Cochée ou non", default: false })
   @IsBoolean()
   @IsOptional()
   isCompleted?: boolean;
 
-  @ApiProperty({ description: 'Position dans la liste', default: 0 })
+  @ApiProperty({ description: "Position dans la liste", default: 0 })
   @IsInt()
   @IsOptional()
   @Min(0)
@@ -143,8 +150,8 @@ export class CreateSubtaskDto {
 File: `apps/api/src/tasks/dto/update-subtask.dto.ts`
 
 ```typescript
-import { PartialType } from '@nestjs/swagger';
-import { CreateSubtaskDto } from './create-subtask.dto';
+import { PartialType } from "@nestjs/swagger";
+import { CreateSubtaskDto } from "./create-subtask.dto";
 
 export class UpdateSubtaskDto extends PartialType(CreateSubtaskDto) {}
 ```
@@ -161,6 +168,7 @@ git commit -m "feat(api): add subtask DTOs"
 ### Task 3: API Service — Subtask CRUD + Progress Recalculation
 
 **Files:**
+
 - Modify: `apps/api/src/tasks/tasks.service.ts`
 
 - [ ] **Step 1: Add subtask CRUD methods to TasksService**
@@ -253,8 +261,8 @@ Add at the end of the `TasksService` class (before the closing `}`):
 At the top of `tasks.service.ts`, add:
 
 ```typescript
-import { CreateSubtaskDto } from './dto/create-subtask.dto';
-import { UpdateSubtaskDto } from './dto/update-subtask.dto';
+import { CreateSubtaskDto } from "./dto/create-subtask.dto";
+import { UpdateSubtaskDto } from "./dto/update-subtask.dto";
 ```
 
 - [ ] **Step 3: Include subtasks in findOne()**
@@ -289,6 +297,7 @@ git commit -m "feat(api): add subtask CRUD + auto-progress recalculation"
 ### Task 4: API Controller — Subtask Endpoints
 
 **Files:**
+
 - Modify: `apps/api/src/tasks/tasks.controller.ts`
 
 - [ ] **Step 1: Add imports**
@@ -296,8 +305,8 @@ git commit -m "feat(api): add subtask CRUD + auto-progress recalculation"
 At the top of `tasks.controller.ts`, add:
 
 ```typescript
-import { CreateSubtaskDto } from './dto/create-subtask.dto';
-import { UpdateSubtaskDto } from './dto/update-subtask.dto';
+import { CreateSubtaskDto } from "./dto/create-subtask.dto";
+import { UpdateSubtaskDto } from "./dto/update-subtask.dto";
 ```
 
 - [ ] **Step 2: Add subtask endpoints**
@@ -369,6 +378,7 @@ git commit -m "feat(api): add subtask CRUD endpoints under /tasks/:taskId/subtas
 ### Task 5: API Unit Tests
 
 **Files:**
+
 - Create: `apps/api/src/tasks/tasks-subtasks.spec.ts`
 
 - [ ] **Step 1: Write unit tests**
@@ -376,12 +386,12 @@ git commit -m "feat(api): add subtask CRUD endpoints under /tasks/:taskId/subtas
 File: `apps/api/src/tasks/tasks-subtasks.spec.ts`
 
 ```typescript
-import { Test, TestingModule } from '@nestjs/testing';
-import { TasksService } from './tasks.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from "@nestjs/testing";
+import { TasksService } from "./tasks.service";
+import { PrismaService } from "../prisma/prisma.service";
+import { NotFoundException } from "@nestjs/common";
 
-describe('TasksService - Subtasks', () => {
+describe("TasksService - Subtasks", () => {
   let service: TasksService;
   let prisma: PrismaService;
 
@@ -414,12 +424,16 @@ describe('TasksService - Subtasks', () => {
 
   afterEach(() => vi.clearAllMocks());
 
-  describe('createSubtask', () => {
-    it('should create a subtask and recalculate progress', async () => {
-      mockPrisma.task.findUnique.mockResolvedValue({ id: 'task-1' });
+  describe("createSubtask", () => {
+    it("should create a subtask and recalculate progress", async () => {
+      mockPrisma.task.findUnique.mockResolvedValue({ id: "task-1" });
       mockPrisma.subtask.count.mockResolvedValue(2);
       mockPrisma.subtask.create.mockResolvedValue({
-        id: 'sub-1', title: 'Check prérequis', isCompleted: false, position: 2, taskId: 'task-1',
+        id: "sub-1",
+        title: "Check prérequis",
+        isCompleted: false,
+        position: 2,
+        taskId: "task-1",
       });
       mockPrisma.subtask.findMany.mockResolvedValue([
         { isCompleted: true },
@@ -428,84 +442,110 @@ describe('TasksService - Subtasks', () => {
       ]);
       mockPrisma.task.update.mockResolvedValue({});
 
-      const result = await service.createSubtask('task-1', { title: 'Check prérequis' });
+      const result = await service.createSubtask("task-1", {
+        title: "Check prérequis",
+      });
 
-      expect(result.title).toBe('Check prérequis');
+      expect(result.title).toBe("Check prérequis");
       expect(result.position).toBe(2);
       expect(mockPrisma.task.update).toHaveBeenCalledWith({
-        where: { id: 'task-1' },
+        where: { id: "task-1" },
         data: { progress: 33 },
       });
     });
 
-    it('should throw NotFoundException for invalid task', async () => {
+    it("should throw NotFoundException for invalid task", async () => {
       mockPrisma.task.findUnique.mockResolvedValue(null);
-      await expect(service.createSubtask('bad-id', { title: 'test' }))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.createSubtask("bad-id", { title: "test" }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
-  describe('updateSubtask', () => {
-    it('should toggle isCompleted and recalculate progress', async () => {
-      mockPrisma.subtask.findFirst.mockResolvedValue({ id: 'sub-1', taskId: 'task-1' });
-      mockPrisma.subtask.update.mockResolvedValue({ id: 'sub-1', isCompleted: true });
+  describe("updateSubtask", () => {
+    it("should toggle isCompleted and recalculate progress", async () => {
+      mockPrisma.subtask.findFirst.mockResolvedValue({
+        id: "sub-1",
+        taskId: "task-1",
+      });
+      mockPrisma.subtask.update.mockResolvedValue({
+        id: "sub-1",
+        isCompleted: true,
+      });
       mockPrisma.subtask.findMany.mockResolvedValue([
         { isCompleted: true },
         { isCompleted: true },
       ]);
       mockPrisma.task.update.mockResolvedValue({});
 
-      const result = await service.updateSubtask('task-1', 'sub-1', { isCompleted: true });
+      const result = await service.updateSubtask("task-1", "sub-1", {
+        isCompleted: true,
+      });
 
       expect(result.isCompleted).toBe(true);
       expect(mockPrisma.task.update).toHaveBeenCalledWith({
-        where: { id: 'task-1' },
+        where: { id: "task-1" },
         data: { progress: 100 },
       });
     });
   });
 
-  describe('deleteSubtask', () => {
-    it('should delete and recalculate progress', async () => {
-      mockPrisma.subtask.findFirst.mockResolvedValue({ id: 'sub-1', taskId: 'task-1' });
+  describe("deleteSubtask", () => {
+    it("should delete and recalculate progress", async () => {
+      mockPrisma.subtask.findFirst.mockResolvedValue({
+        id: "sub-1",
+        taskId: "task-1",
+      });
       mockPrisma.subtask.delete.mockResolvedValue({});
       mockPrisma.subtask.findMany.mockResolvedValue([]);
       // No subtasks left → recalcTaskProgress returns early
 
-      const result = await service.deleteSubtask('task-1', 'sub-1');
-      expect(result.message).toBe('Sous-tâche supprimée');
+      const result = await service.deleteSubtask("task-1", "sub-1");
+      expect(result.message).toBe("Sous-tâche supprimée");
     });
   });
 
-  describe('progress calculation', () => {
-    it('should calculate 0% when no subtasks completed', async () => {
-      mockPrisma.task.findUnique.mockResolvedValue({ id: 'task-1' });
+  describe("progress calculation", () => {
+    it("should calculate 0% when no subtasks completed", async () => {
+      mockPrisma.task.findUnique.mockResolvedValue({ id: "task-1" });
       mockPrisma.subtask.count.mockResolvedValue(0);
-      mockPrisma.subtask.create.mockResolvedValue({ id: 'sub-1', title: 'A', isCompleted: false, position: 0, taskId: 'task-1' });
+      mockPrisma.subtask.create.mockResolvedValue({
+        id: "sub-1",
+        title: "A",
+        isCompleted: false,
+        position: 0,
+        taskId: "task-1",
+      });
       mockPrisma.subtask.findMany.mockResolvedValue([{ isCompleted: false }]);
       mockPrisma.task.update.mockResolvedValue({});
 
-      await service.createSubtask('task-1', { title: 'A' });
+      await service.createSubtask("task-1", { title: "A" });
 
       expect(mockPrisma.task.update).toHaveBeenCalledWith({
-        where: { id: 'task-1' },
+        where: { id: "task-1" },
         data: { progress: 0 },
       });
     });
 
-    it('should calculate 50% when half completed', async () => {
-      mockPrisma.subtask.findFirst.mockResolvedValue({ id: 'sub-1', taskId: 'task-1' });
-      mockPrisma.subtask.update.mockResolvedValue({ id: 'sub-1', isCompleted: true });
+    it("should calculate 50% when half completed", async () => {
+      mockPrisma.subtask.findFirst.mockResolvedValue({
+        id: "sub-1",
+        taskId: "task-1",
+      });
+      mockPrisma.subtask.update.mockResolvedValue({
+        id: "sub-1",
+        isCompleted: true,
+      });
       mockPrisma.subtask.findMany.mockResolvedValue([
         { isCompleted: true },
         { isCompleted: false },
       ]);
       mockPrisma.task.update.mockResolvedValue({});
 
-      await service.updateSubtask('task-1', 'sub-1', { isCompleted: true });
+      await service.updateSubtask("task-1", "sub-1", { isCompleted: true });
 
       expect(mockPrisma.task.update).toHaveBeenCalledWith({
-        where: { id: 'task-1' },
+        where: { id: "task-1" },
         data: { progress: 50 },
       });
     });
@@ -533,6 +573,7 @@ git commit -m "test(api): add subtask CRUD unit tests"
 ### Task 6: Frontend Types & API Client
 
 **Files:**
+
 - Modify: `apps/web/src/types/index.ts`
 - Modify: `apps/web/src/services/tasks.service.ts`
 
@@ -593,7 +634,14 @@ In `apps/web/src/services/tasks.service.ts`, add before the closing `}`:
 Add the `Subtask` import at the top:
 
 ```typescript
-import { User, PaginatedResponse, Task, TaskStatus, Priority, Subtask } from "@/types";
+import {
+  User,
+  PaginatedResponse,
+  Task,
+  TaskStatus,
+  Priority,
+  Subtask,
+} from "@/types";
 ```
 
 - [ ] **Step 3: Commit**
@@ -608,6 +656,7 @@ git commit -m "feat(web): add Subtask type and API client methods"
 ### Task 7: Frontend — Checklist UI in TaskModal
 
 **Files:**
+
 - Modify: `apps/web/src/components/TaskModal.tsx`
 
 - [ ] **Step 1: Add subtask state and handlers**
@@ -615,8 +664,8 @@ git commit -m "feat(web): add Subtask type and API client methods"
 In `TaskModal.tsx`, add state after the existing `formData` state (around line 73):
 
 ```typescript
-  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 ```
 
 Add import at the top:
@@ -629,13 +678,16 @@ import { tasksService } from "@/services/tasks.service";
 In the `useEffect` that populates form data when `task` changes (around line 78), add after the form population:
 
 ```typescript
-    if (task?.subtasks) {
-      setSubtasks(task.subtasks);
-    } else if (task?.id) {
-      tasksService.getSubtasks(task.id).then(setSubtasks).catch(() => setSubtasks([]));
-    } else {
-      setSubtasks([]);
-    }
+if (task?.subtasks) {
+  setSubtasks(task.subtasks);
+} else if (task?.id) {
+  tasksService
+    .getSubtasks(task.id)
+    .then(setSubtasks)
+    .catch(() => setSubtasks([]));
+} else {
+  setSubtasks([]);
+}
 ```
 
 - [ ] **Step 2: Add subtask handler functions**
@@ -643,38 +695,40 @@ In the `useEffect` that populates form data when `task` changes (around line 78)
 Add inside the component, after the existing handlers:
 
 ```typescript
-  const handleAddSubtask = async () => {
-    if (!newSubtaskTitle.trim() || !task?.id) return;
-    try {
-      const created = await tasksService.createSubtask(task.id, { title: newSubtaskTitle.trim() });
-      setSubtasks((prev) => [...prev, created]);
-      setNewSubtaskTitle("");
-    } catch {
-      // silently fail
-    }
-  };
+const handleAddSubtask = async () => {
+  if (!newSubtaskTitle.trim() || !task?.id) return;
+  try {
+    const created = await tasksService.createSubtask(task.id, {
+      title: newSubtaskTitle.trim(),
+    });
+    setSubtasks((prev) => [...prev, created]);
+    setNewSubtaskTitle("");
+  } catch {
+    // silently fail
+  }
+};
 
-  const handleToggleSubtask = async (subtask: Subtask) => {
-    if (!task?.id) return;
-    try {
-      const updated = await tasksService.updateSubtask(task.id, subtask.id, {
-        isCompleted: !subtask.isCompleted,
-      });
-      setSubtasks((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-    } catch {
-      // silently fail
-    }
-  };
+const handleToggleSubtask = async (subtask: Subtask) => {
+  if (!task?.id) return;
+  try {
+    const updated = await tasksService.updateSubtask(task.id, subtask.id, {
+      isCompleted: !subtask.isCompleted,
+    });
+    setSubtasks((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+  } catch {
+    // silently fail
+  }
+};
 
-  const handleDeleteSubtask = async (subtaskId: string) => {
-    if (!task?.id) return;
-    try {
-      await tasksService.deleteSubtask(task.id, subtaskId);
-      setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
-    } catch {
-      // silently fail
-    }
-  };
+const handleDeleteSubtask = async (subtaskId: string) => {
+  if (!task?.id) return;
+  try {
+    await tasksService.deleteSubtask(task.id, subtaskId);
+    setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
+  } catch {
+    // silently fail
+  }
+};
 ```
 
 - [ ] **Step 3: Add checklist UI in the modal body**
@@ -682,66 +736,83 @@ Add inside the component, after the existing handlers:
 Add the checklist section in the modal JSX, after the description field and before the submit button area. Find the `description` textarea block and add after it:
 
 ```tsx
-          {/* Subtasks Checklist */}
-          {task?.id && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Sous-tâches ({subtasks.filter((s) => s.isCompleted).length}/{subtasks.length})
-              </label>
-              <div className="space-y-1 mb-2">
-                {subtasks.map((subtask) => (
-                  <div
-                    key={subtask.id}
-                    className="flex items-center gap-2 group px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={subtask.isCompleted}
-                      onChange={() => handleToggleSubtask(subtask)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span
-                      className={`flex-1 text-sm ${subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900 dark:text-gray-100"}`}
-                    >
-                      {subtask.title}
-                    </span>
-                    {subtask.description && (
-                      <span className="text-xs text-gray-400 truncate max-w-[200px]">
-                        {subtask.description}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSubtask(subtask.id)}
-                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newSubtaskTitle}
-                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddSubtask())}
-                  placeholder="Ajouter une sous-tâche..."
-                  className="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+{
+  /* Subtasks Checklist */
+}
+{
+  task?.id && (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Sous-tâches ({subtasks.filter((s) => s.isCompleted).length}/
+        {subtasks.length})
+      </label>
+      <div className="space-y-1 mb-2">
+        {subtasks.map((subtask) => (
+          <div
+            key={subtask.id}
+            className="flex items-center gap-2 group px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <input
+              type="checkbox"
+              checked={subtask.isCompleted}
+              onChange={() => handleToggleSubtask(subtask)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span
+              className={`flex-1 text-sm ${subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900 dark:text-gray-100"}`}
+            >
+              {subtask.title}
+            </span>
+            {subtask.description && (
+              <span className="text-xs text-gray-400 truncate max-w-[200px]">
+                {subtask.description}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => handleDeleteSubtask(subtask.id)}
+              className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
                 />
-                <button
-                  type="button"
-                  onClick={handleAddSubtask}
-                  disabled={!newSubtaskTitle.trim()}
-                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          )}
+              </svg>
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={newSubtaskTitle}
+          onChange={(e) => setNewSubtaskTitle(e.target.value)}
+          onKeyDown={(e) =>
+            e.key === "Enter" && (e.preventDefault(), handleAddSubtask())
+          }
+          placeholder="Ajouter une sous-tâche..."
+          className="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+        />
+        <button
+          type="button"
+          onClick={handleAddSubtask}
+          disabled={!newSubtaskTitle.trim()}
+          className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
 ```
 
 - [ ] **Step 4: Commit**
@@ -756,6 +827,7 @@ git commit -m "feat(web): add subtask checklist UI in task detail modal"
 ### Task 8: Frontend — Subtask Count Badge on TaskLineCard
 
 **Files:**
+
 - Modify: `apps/web/src/components/tasks/TaskLineCard.tsx`
 
 - [ ] **Step 1: Add subtask count badge**
@@ -763,11 +835,14 @@ git commit -m "feat(web): add subtask checklist UI in task detail modal"
 In `TaskLineCard.tsx`, find the title `<h4>` element (line 83-85). Add a subtask count badge after it:
 
 ```tsx
-        {task.subtasks && task.subtasks.length > 0 && (
-          <span className="text-xs text-gray-500 shrink-0" title="Sous-tâches">
-            ☑ {task.subtasks.filter((s) => s.isCompleted).length}/{task.subtasks.length}
-          </span>
-        )}
+{
+  task.subtasks && task.subtasks.length > 0 && (
+    <span className="text-xs text-gray-500 shrink-0" title="Sous-tâches">
+      ☑ {task.subtasks.filter((s) => s.isCompleted).length}/
+      {task.subtasks.length}
+    </span>
+  );
+}
 ```
 
 - [ ] **Step 2: Commit**
@@ -782,6 +857,7 @@ git commit -m "feat(web): show subtask progress badge on task line cards"
 ### Task 9: Prevent Status-Based Progress Override
 
 **Files:**
+
 - Modify: `apps/api/src/tasks/tasks.service.ts`
 
 - [ ] **Step 1: Skip status-based progress when subtasks exist**
@@ -789,21 +865,23 @@ git commit -m "feat(web): show subtask progress badge on task line cards"
 In the `update()` method of `tasks.service.ts`, find where progress is set from status (around line 599):
 
 ```typescript
-    if (taskData.status) {
-      updateData.progress = getTaskProgress(taskData.status);
-    }
+if (taskData.status) {
+  updateData.progress = getTaskProgress(taskData.status);
+}
 ```
 
 Replace with:
 
 ```typescript
-    if (taskData.status) {
-      // Don't override progress if task has subtasks (progress driven by checklist)
-      const subtaskCount = await this.prisma.subtask.count({ where: { taskId: id } });
-      if (subtaskCount === 0) {
-        updateData.progress = getTaskProgress(taskData.status);
-      }
-    }
+if (taskData.status) {
+  // Don't override progress if task has subtasks (progress driven by checklist)
+  const subtaskCount = await this.prisma.subtask.count({
+    where: { taskId: id },
+  });
+  if (subtaskCount === 0) {
+    updateData.progress = getTaskProgress(taskData.status);
+  }
+}
 ```
 
 Same in the `create()` method (around line 182), replace:

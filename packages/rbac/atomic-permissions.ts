@@ -36,132 +36,132 @@
 
 export type PermissionCode =
   // comments (4)
-  | 'comments:create'
-  | 'comments:delete'
-  | 'comments:read'
-  | 'comments:update'
+  | "comments:create"
+  | "comments:delete"
+  | "comments:read"
+  | "comments:update"
   // departments (4 — :edit et :view supprimés D4 A)
-  | 'departments:create'
-  | 'departments:delete'
-  | 'departments:read'
-  | 'departments:update'
+  | "departments:create"
+  | "departments:delete"
+  | "departments:read"
+  | "departments:update"
   // documents (5 — :manage_any ajouté D6 #4)
-  | 'documents:create'
-  | 'documents:delete'
-  | 'documents:manage_any'
-  | 'documents:read'
-  | 'documents:update'
+  | "documents:create"
+  | "documents:delete"
+  | "documents:manage_any"
+  | "documents:read"
+  | "documents:update"
   // epics (4)
-  | 'epics:create'
-  | 'epics:delete'
-  | 'epics:read'
-  | 'epics:update'
+  | "epics:create"
+  | "epics:delete"
+  | "epics:read"
+  | "epics:update"
   // events (6)
-  | 'events:create'
-  | 'events:delete'
-  | 'events:manage_any'
-  | 'events:read'
-  | 'events:readAll'
-  | 'events:update'
+  | "events:create"
+  | "events:delete"
+  | "events:manage_any"
+  | "events:read"
+  | "events:readAll"
+  | "events:update"
   // holidays (4)
-  | 'holidays:create'
-  | 'holidays:delete'
-  | 'holidays:read'
-  | 'holidays:update'
+  | "holidays:create"
+  | "holidays:delete"
+  | "holidays:read"
+  | "holidays:update"
   // leaves (10 — :view supprimé D4 A)
-  | 'leaves:approve'
-  | 'leaves:create'
-  | 'leaves:declare_for_others'
-  | 'leaves:delete'
-  | 'leaves:manage'
-  | 'leaves:manage_any'
-  | 'leaves:manage_delegations'
-  | 'leaves:read'
-  | 'leaves:readAll'
-  | 'leaves:update'
+  | "leaves:approve"
+  | "leaves:create"
+  | "leaves:declare_for_others"
+  | "leaves:delete"
+  | "leaves:manage"
+  | "leaves:manage_any"
+  | "leaves:manage_delegations"
+  | "leaves:read"
+  | "leaves:readAll"
+  | "leaves:update"
   // milestones (4)
-  | 'milestones:create'
-  | 'milestones:delete'
-  | 'milestones:read'
-  | 'milestones:update'
+  | "milestones:create"
+  | "milestones:delete"
+  | "milestones:read"
+  | "milestones:update"
   // predefined_tasks (5)
-  | 'predefined_tasks:assign'
-  | 'predefined_tasks:create'
-  | 'predefined_tasks:delete'
-  | 'predefined_tasks:edit'
-  | 'predefined_tasks:view'
+  | "predefined_tasks:assign"
+  | "predefined_tasks:create"
+  | "predefined_tasks:delete"
+  | "predefined_tasks:edit"
+  | "predefined_tasks:view"
   // projects (6 — :edit et :view supprimés D4 A)
-  | 'projects:create'
-  | 'projects:delete'
-  | 'projects:manage_any'
-  | 'projects:manage_members'
-  | 'projects:read'
-  | 'projects:update'
+  | "projects:create"
+  | "projects:delete"
+  | "projects:manage_any"
+  | "projects:manage_members"
+  | "projects:read"
+  | "projects:update"
   // reports (2 — remplace analytics:* supprimés D5)
-  | 'reports:export'
-  | 'reports:view'
+  | "reports:export"
+  | "reports:view"
   // school_vacations (4)
-  | 'school_vacations:create'
-  | 'school_vacations:delete'
-  | 'school_vacations:read'
-  | 'school_vacations:update'
+  | "school_vacations:create"
+  | "school_vacations:delete"
+  | "school_vacations:read"
+  | "school_vacations:update"
   // services (4)
-  | 'services:create'
-  | 'services:delete'
-  | 'services:read'
-  | 'services:update'
+  | "services:create"
+  | "services:delete"
+  | "services:read"
+  | "services:update"
   // settings (2)
-  | 'settings:read'
-  | 'settings:update'
+  | "settings:read"
+  | "settings:update"
   // skills (5 — :edit et :view supprimés D4 A)
-  | 'skills:create'
-  | 'skills:delete'
-  | 'skills:manage_matrix'
-  | 'skills:read'
-  | 'skills:update'
+  | "skills:create"
+  | "skills:delete"
+  | "skills:manage_matrix"
+  | "skills:read"
+  | "skills:update"
   // tasks (9)
-  | 'tasks:assign_any_user'
-  | 'tasks:create'
-  | 'tasks:create_in_project'
-  | 'tasks:create_orphan'
-  | 'tasks:delete'
-  | 'tasks:manage_any'
-  | 'tasks:read'
-  | 'tasks:readAll'
-  | 'tasks:update'
+  | "tasks:assign_any_user"
+  | "tasks:create"
+  | "tasks:create_in_project"
+  | "tasks:create_orphan"
+  | "tasks:delete"
+  | "tasks:manage_any"
+  | "tasks:read"
+  | "tasks:readAll"
+  | "tasks:update"
   // telework (7 — :view et :manage_recurring supprimés D4 / :manage_others renommé en :manage_any D7)
-  | 'telework:create'
-  | 'telework:delete'
-  | 'telework:manage_any'
-  | 'telework:read'
-  | 'telework:readAll'
-  | 'telework:read_team'
-  | 'telework:update'
+  | "telework:create"
+  | "telework:delete"
+  | "telework:manage_any"
+  | "telework:read"
+  | "telework:readAll"
+  | "telework:read_team"
+  | "telework:update"
   // third_parties (6)
-  | 'third_parties:assign_to_project'
-  | 'third_parties:assign_to_task'
-  | 'third_parties:create'
-  | 'third_parties:delete'
-  | 'third_parties:read'
-  | 'third_parties:update'
+  | "third_parties:assign_to_project"
+  | "third_parties:assign_to_task"
+  | "third_parties:create"
+  | "third_parties:delete"
+  | "third_parties:read"
+  | "third_parties:update"
   // time_tracking (8)
-  | 'time_tracking:create'
-  | 'time_tracking:declare_for_third_party'
-  | 'time_tracking:delete'
-  | 'time_tracking:manage_any'
-  | 'time_tracking:read'
-  | 'time_tracking:read_reports'
-  | 'time_tracking:update'
-  | 'time_tracking:view_any'
+  | "time_tracking:create"
+  | "time_tracking:declare_for_third_party"
+  | "time_tracking:delete"
+  | "time_tracking:manage_any"
+  | "time_tracking:read"
+  | "time_tracking:read_reports"
+  | "time_tracking:update"
+  | "time_tracking:view_any"
   // users (8 — :edit et :view supprimés D4 A)
-  | 'users:create'
-  | 'users:delete'
-  | 'users:import'
-  | 'users:manage'
-  | 'users:manage_roles'
-  | 'users:read'
-  | 'users:reset_password'
-  | 'users:update';
+  | "users:create"
+  | "users:delete"
+  | "users:import"
+  | "users:manage"
+  | "users:manage_roles"
+  | "users:read"
+  | "users:reset_password"
+  | "users:update";
 
 // ============================================================================
 // 2. Atomiques — blocs de composition
@@ -181,9 +181,9 @@ export type PermissionCode =
  * IT_INFRASTRUCTURE, OBSERVER_*, STAGIAIRE_ALTERNANT, ADMIN_DELEGATED, ADMIN.
  */
 export const ANNUAIRE_READ = [
-  'users:read',
-  'departments:read',
-  'services:read',
+  "users:read",
+  "departments:read",
+  "services:read",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -193,8 +193,8 @@ export const ANNUAIRE_READ = [
  * contexte restreint.
  */
 export const CALENDAR_CONTEXT_READ = [
-  'holidays:read',
-  'school_vacations:read',
+  "holidays:read",
+  "school_vacations:read",
 ] as const satisfies readonly PermissionCode[];
 
 // --- 2.b Lectures projet (épics, milestones, docs, comments) -------------
@@ -210,13 +210,13 @@ export const CALENDAR_CONTEXT_READ = [
  * HR_OFFICER, etc.) utilisent à la place `COLLABORATION_READ` seul.
  */
 export const PROJECT_STRUCTURE_READ = [
-  'projects:read',
-  'epics:read',
-  'milestones:read',
-  'documents:read',
-  'comments:read',
-  'skills:read',
-  'third_parties:read',
+  "projects:read",
+  "epics:read",
+  "milestones:read",
+  "documents:read",
+  "comments:read",
+  "skills:read",
+  "third_parties:read",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -235,10 +235,10 @@ export const PROJECT_STRUCTURE_READ = [
  * qui inclut déjà ces 4 permissions.
  */
 export const COLLABORATION_READ = [
-  'comments:read',
-  'documents:read',
-  'epics:read',
-  'milestones:read',
+  "comments:read",
+  "documents:read",
+  "epics:read",
+  "milestones:read",
 ] as const satisfies readonly PermissionCode[];
 
 // --- 2.c Self-service standard --------------------------------------------
@@ -249,9 +249,9 @@ export const COLLABORATION_READ = [
  * elle étend le scope organisationnel.
  */
 export const LEAVES_SELF_SERVICE = [
-  'leaves:create',
-  'leaves:read',
-  'leaves:readAll',
+  "leaves:create",
+  "leaves:read",
+  "leaves:readAll",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -259,19 +259,19 @@ export const LEAVES_SELF_SERVICE = [
  * `telework:readAll` inclus pour afficher le planning de l'équipe (norme métier).
  */
 export const TELEWORK_SELF_SERVICE = [
-  'telework:create',
-  'telework:update',
-  'telework:delete',
-  'telework:read',
-  'telework:readAll',
+  "telework:create",
+  "telework:update",
+  "telework:delete",
+  "telework:read",
+  "telework:readAll",
 ] as const satisfies readonly PermissionCode[];
 
 /**
  * Droits d'action sur son propre temps (saisie, consultation).
  */
 export const TIME_TRACKING_SELF_SERVICE = [
-  'time_tracking:create',
-  'time_tracking:read',
+  "time_tracking:create",
+  "time_tracking:read",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -279,10 +279,10 @@ export const TIME_TRACKING_SELF_SERVICE = [
  * suppression). `events:readAll` inclus pour vue partagée du planning.
  */
 export const EVENTS_SELF_SERVICE = [
-  'events:create',
-  'events:update',
-  'events:read',
-  'events:readAll',
+  "events:create",
+  "events:update",
+  "events:read",
+  "events:readAll",
 ] as const satisfies readonly PermissionCode[];
 
 // --- 2.d Tâches ------------------------------------------------------------
@@ -291,8 +291,8 @@ export const EVENTS_SELF_SERVICE = [
  * Lecture des tâches (ses propres + toutes via readAll).
  */
 export const TASKS_READ = [
-  'tasks:read',
-  'tasks:readAll',
+  "tasks:read",
+  "tasks:readAll",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -300,8 +300,8 @@ export const TASKS_READ = [
  * Utilisé par BASIC_USER et tous templates standards.
  */
 export const TASKS_SELF_AUTHORING = [
-  'tasks:create_orphan',
-  'tasks:update',
+  "tasks:create_orphan",
+  "tasks:update",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -309,9 +309,9 @@ export const TASKS_SELF_AUTHORING = [
  * suppression, gestion des assignments).
  */
 export const TASKS_PROJECT_CRUD = [
-  'tasks:create',
-  'tasks:create_in_project',
-  'tasks:delete',
+  "tasks:create",
+  "tasks:create_in_project",
+  "tasks:delete",
 ] as const satisfies readonly PermissionCode[];
 
 // --- 2.e Projet (épics, milestones, membres) ------------------------------
@@ -320,55 +320,55 @@ export const TASKS_PROJECT_CRUD = [
  * CRUD complet projets (création, édition, suppression, membres).
  */
 export const PROJECTS_CRUD = [
-  'projects:create',
-  'projects:update',
-  'projects:delete',
-  'projects:manage_members',
+  "projects:create",
+  "projects:update",
+  "projects:delete",
+  "projects:manage_members",
 ] as const satisfies readonly PermissionCode[];
 
 /**
  * CRUD complet epics + milestones.
  */
 export const EPICS_MILESTONES_CRUD = [
-  'epics:create',
-  'epics:update',
-  'epics:delete',
-  'milestones:create',
-  'milestones:update',
-  'milestones:delete',
+  "epics:create",
+  "epics:update",
+  "epics:delete",
+  "milestones:create",
+  "milestones:update",
+  "milestones:delete",
 ] as const satisfies readonly PermissionCode[];
 
 /**
  * CRUD complet documents (upload, modification, suppression).
  */
 export const DOCUMENTS_CRUD = [
-  'documents:create',
-  'documents:update',
-  'documents:delete',
+  "documents:create",
+  "documents:update",
+  "documents:delete",
 ] as const satisfies readonly PermissionCode[];
 
 /**
  * CRUD complet commentaires (écriture, édition, suppression).
  */
 export const COMMENTS_CRUD = [
-  'comments:create',
-  'comments:update',
-  'comments:delete',
+  "comments:create",
+  "comments:update",
+  "comments:delete",
 ] as const satisfies readonly PermissionCode[];
 
 /**
  * Time-tracking avancé (modification et suppression des saisies).
  */
 export const TIME_TRACKING_EDIT = [
-  'time_tracking:update',
-  'time_tracking:delete',
+  "time_tracking:update",
+  "time_tracking:delete",
 ] as const satisfies readonly PermissionCode[];
 
 /**
  * Suppression des événements.
  */
 export const EVENTS_DELETE = [
-  'events:delete',
+  "events:delete",
 ] as const satisfies readonly PermissionCode[];
 
 // --- 2.f Périmètre management (bypass ownership + scope étendu) ----------
@@ -384,27 +384,27 @@ export const EVENTS_DELETE = [
  * selon D7.
  */
 export const OWNERSHIP_BYPASS_ALL = [
-  'tasks:manage_any',
-  'projects:manage_any',
-  'events:manage_any',
-  'time_tracking:manage_any',
-  'telework:manage_any',
-  'documents:manage_any',
+  "tasks:manage_any",
+  "projects:manage_any",
+  "events:manage_any",
+  "time_tracking:manage_any",
+  "telework:manage_any",
+  "documents:manage_any",
 ] as const satisfies readonly PermissionCode[];
 
 /**
  * Scope étendu lecture time-tracking (cross-user) et reports associés.
  */
 export const TIME_TRACKING_SCOPE_READ = [
-  'time_tracking:view_any',
-  'time_tracking:read_reports',
+  "time_tracking:view_any",
+  "time_tracking:read_reports",
 ] as const satisfies readonly PermissionCode[];
 
 /**
  * Management d'équipe sur télétravail (voir équipe).
  */
 export const TELEWORK_TEAM_READ = [
-  'telework:read_team',
+  "telework:read_team",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -413,12 +413,12 @@ export const TELEWORK_TEAM_READ = [
  * par le RBAC — cf. audit-03.
  */
 export const LEAVES_MANAGEMENT = [
-  'leaves:approve',
-  'leaves:manage',
-  'leaves:declare_for_others',
-  'leaves:update',
-  'leaves:delete',
-  'leaves:manage_delegations',
+  "leaves:approve",
+  "leaves:manage",
+  "leaves:declare_for_others",
+  "leaves:update",
+  "leaves:delete",
+  "leaves:manage_delegations",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -427,14 +427,14 @@ export const LEAVES_MANAGEMENT = [
  * reste scoped services.
  */
 export const LEAVES_GLOBAL = [
-  'leaves:manage_any',
+  "leaves:manage_any",
 ] as const satisfies readonly PermissionCode[];
 
 /**
  * Assignation cross-user sans restriction (tasks).
  */
 export const TASKS_CROSS_ASSIGN = [
-  'tasks:assign_any_user',
+  "tasks:assign_any_user",
 ] as const satisfies readonly PermissionCode[];
 
 // --- 2.g Reporting & analytics --------------------------------------------
@@ -444,8 +444,8 @@ export const TASKS_CROSS_ASSIGN = [
  * codes `analytics:read`/`analytics:export` sont supprimés D5 (redondants).
  */
 export const REPORTS_FULL = [
-  'reports:view',
-  'reports:export',
+  "reports:view",
+  "reports:export",
 ] as const satisfies readonly PermissionCode[];
 
 // --- 2.h Tâches prédéfinies (administration) -----------------------------
@@ -454,17 +454,17 @@ export const REPORTS_FULL = [
  * Lecture des templates de tâches prédéfinies (standard pour tout user).
  */
 export const PREDEFINED_TASKS_VIEW = [
-  'predefined_tasks:view',
+  "predefined_tasks:view",
 ] as const satisfies readonly PermissionCode[];
 
 /**
  * Administration des tâches prédéfinies + assignment aux agents.
  */
 export const PREDEFINED_TASKS_ADMIN = [
-  'predefined_tasks:create',
-  'predefined_tasks:edit',
-  'predefined_tasks:delete',
-  'predefined_tasks:assign',
+  "predefined_tasks:create",
+  "predefined_tasks:edit",
+  "predefined_tasks:delete",
+  "predefined_tasks:assign",
 ] as const satisfies readonly PermissionCode[];
 
 // --- 2.i Tiers / prestataires ---------------------------------------------
@@ -473,18 +473,18 @@ export const PREDEFINED_TASKS_ADMIN = [
  * CRUD complet tiers + assignments.
  */
 export const THIRD_PARTIES_CRUD = [
-  'third_parties:create',
-  'third_parties:update',
-  'third_parties:delete',
-  'third_parties:assign_to_project',
-  'third_parties:assign_to_task',
+  "third_parties:create",
+  "third_parties:update",
+  "third_parties:delete",
+  "third_parties:assign_to_project",
+  "third_parties:assign_to_task",
 ] as const satisfies readonly PermissionCode[];
 
 /**
  * Déclaration de temps pour le compte d'un tiers (prestataire facturable).
  */
 export const TIME_TRACKING_FOR_THIRD_PARTY = [
-  'time_tracking:declare_for_third_party',
+  "time_tracking:declare_for_third_party",
 ] as const satisfies readonly PermissionCode[];
 
 // --- 2.j Skills / référentiel de compétences ------------------------------
@@ -493,10 +493,10 @@ export const TIME_TRACKING_FOR_THIRD_PARTY = [
  * Administration de la matrice de compétences (hors référentiel).
  */
 export const SKILLS_ADMIN = [
-  'skills:create',
-  'skills:update',
-  'skills:delete',
-  'skills:manage_matrix',
+  "skills:create",
+  "skills:update",
+  "skills:delete",
+  "skills:manage_matrix",
 ] as const satisfies readonly PermissionCode[];
 
 // --- 2.k Administration système -------------------------------------------
@@ -511,7 +511,7 @@ export const SKILLS_ADMIN = [
  * préservation de `users:manage` sur MANAGER sans lui ouvrir le CRUD).
  */
 export const USERS_PAGE_ACCESS = [
-  'users:manage',
+  "users:manage",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -523,11 +523,11 @@ export const USERS_PAGE_ACCESS = [
  * ici : elle est réservée à ADMIN via `SYSTEM_ADMIN_WRITE`.
  */
 export const USERS_CRUD = [
-  'users:create',
-  'users:update',
-  'users:delete',
-  'users:import',
-  'users:reset_password',
+  "users:create",
+  "users:update",
+  "users:delete",
+  "users:import",
+  "users:reset_password",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -535,20 +535,20 @@ export const USERS_CRUD = [
  * départements/services, jours fériés, vacances scolaires.
  */
 export const SYSTEM_ADMIN_WRITE = [
-  'users:manage_roles',
-  'settings:update',
-  'departments:create',
-  'departments:update',
-  'departments:delete',
-  'services:create',
-  'services:update',
-  'services:delete',
-  'holidays:create',
-  'holidays:update',
-  'holidays:delete',
-  'school_vacations:create',
-  'school_vacations:update',
-  'school_vacations:delete',
+  "users:manage_roles",
+  "settings:update",
+  "departments:create",
+  "departments:update",
+  "departments:delete",
+  "services:create",
+  "services:update",
+  "services:delete",
+  "holidays:create",
+  "holidays:update",
+  "holidays:delete",
+  "school_vacations:create",
+  "school_vacations:update",
+  "school_vacations:delete",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -556,7 +556,7 @@ export const SYSTEM_ADMIN_WRITE = [
  * OBSERVER_FULL).
  */
 export const SETTINGS_READ = [
-  'settings:read',
+  "settings:read",
 ] as const satisfies readonly PermissionCode[];
 
 // ============================================================================
@@ -576,132 +576,132 @@ export const SETTINGS_READ = [
  */
 export const CATALOG_PERMISSIONS = [
   // comments
-  'comments:create',
-  'comments:delete',
-  'comments:read',
-  'comments:update',
+  "comments:create",
+  "comments:delete",
+  "comments:read",
+  "comments:update",
   // departments
-  'departments:create',
-  'departments:delete',
-  'departments:read',
-  'departments:update',
+  "departments:create",
+  "departments:delete",
+  "departments:read",
+  "departments:update",
   // documents
-  'documents:create',
-  'documents:delete',
-  'documents:manage_any',
-  'documents:read',
-  'documents:update',
+  "documents:create",
+  "documents:delete",
+  "documents:manage_any",
+  "documents:read",
+  "documents:update",
   // epics
-  'epics:create',
-  'epics:delete',
-  'epics:read',
-  'epics:update',
+  "epics:create",
+  "epics:delete",
+  "epics:read",
+  "epics:update",
   // events
-  'events:create',
-  'events:delete',
-  'events:manage_any',
-  'events:read',
-  'events:readAll',
-  'events:update',
+  "events:create",
+  "events:delete",
+  "events:manage_any",
+  "events:read",
+  "events:readAll",
+  "events:update",
   // holidays
-  'holidays:create',
-  'holidays:delete',
-  'holidays:read',
-  'holidays:update',
+  "holidays:create",
+  "holidays:delete",
+  "holidays:read",
+  "holidays:update",
   // leaves
-  'leaves:approve',
-  'leaves:create',
-  'leaves:declare_for_others',
-  'leaves:delete',
-  'leaves:manage',
-  'leaves:manage_any',
-  'leaves:manage_delegations',
-  'leaves:read',
-  'leaves:readAll',
-  'leaves:update',
+  "leaves:approve",
+  "leaves:create",
+  "leaves:declare_for_others",
+  "leaves:delete",
+  "leaves:manage",
+  "leaves:manage_any",
+  "leaves:manage_delegations",
+  "leaves:read",
+  "leaves:readAll",
+  "leaves:update",
   // milestones
-  'milestones:create',
-  'milestones:delete',
-  'milestones:read',
-  'milestones:update',
+  "milestones:create",
+  "milestones:delete",
+  "milestones:read",
+  "milestones:update",
   // predefined_tasks
-  'predefined_tasks:assign',
-  'predefined_tasks:create',
-  'predefined_tasks:delete',
-  'predefined_tasks:edit',
-  'predefined_tasks:view',
+  "predefined_tasks:assign",
+  "predefined_tasks:create",
+  "predefined_tasks:delete",
+  "predefined_tasks:edit",
+  "predefined_tasks:view",
   // projects
-  'projects:create',
-  'projects:delete',
-  'projects:manage_any',
-  'projects:manage_members',
-  'projects:read',
-  'projects:update',
+  "projects:create",
+  "projects:delete",
+  "projects:manage_any",
+  "projects:manage_members",
+  "projects:read",
+  "projects:update",
   // reports
-  'reports:export',
-  'reports:view',
+  "reports:export",
+  "reports:view",
   // school_vacations
-  'school_vacations:create',
-  'school_vacations:delete',
-  'school_vacations:read',
-  'school_vacations:update',
+  "school_vacations:create",
+  "school_vacations:delete",
+  "school_vacations:read",
+  "school_vacations:update",
   // services
-  'services:create',
-  'services:delete',
-  'services:read',
-  'services:update',
+  "services:create",
+  "services:delete",
+  "services:read",
+  "services:update",
   // settings
-  'settings:read',
-  'settings:update',
+  "settings:read",
+  "settings:update",
   // skills
-  'skills:create',
-  'skills:delete',
-  'skills:manage_matrix',
-  'skills:read',
-  'skills:update',
+  "skills:create",
+  "skills:delete",
+  "skills:manage_matrix",
+  "skills:read",
+  "skills:update",
   // tasks
-  'tasks:assign_any_user',
-  'tasks:create',
-  'tasks:create_in_project',
-  'tasks:create_orphan',
-  'tasks:delete',
-  'tasks:manage_any',
-  'tasks:read',
-  'tasks:readAll',
-  'tasks:update',
+  "tasks:assign_any_user",
+  "tasks:create",
+  "tasks:create_in_project",
+  "tasks:create_orphan",
+  "tasks:delete",
+  "tasks:manage_any",
+  "tasks:read",
+  "tasks:readAll",
+  "tasks:update",
   // telework
-  'telework:create',
-  'telework:delete',
-  'telework:manage_any',
-  'telework:read',
-  'telework:readAll',
-  'telework:read_team',
-  'telework:update',
+  "telework:create",
+  "telework:delete",
+  "telework:manage_any",
+  "telework:read",
+  "telework:readAll",
+  "telework:read_team",
+  "telework:update",
   // third_parties
-  'third_parties:assign_to_project',
-  'third_parties:assign_to_task',
-  'third_parties:create',
-  'third_parties:delete',
-  'third_parties:read',
-  'third_parties:update',
+  "third_parties:assign_to_project",
+  "third_parties:assign_to_task",
+  "third_parties:create",
+  "third_parties:delete",
+  "third_parties:read",
+  "third_parties:update",
   // time_tracking
-  'time_tracking:create',
-  'time_tracking:declare_for_third_party',
-  'time_tracking:delete',
-  'time_tracking:manage_any',
-  'time_tracking:read',
-  'time_tracking:read_reports',
-  'time_tracking:update',
-  'time_tracking:view_any',
+  "time_tracking:create",
+  "time_tracking:declare_for_third_party",
+  "time_tracking:delete",
+  "time_tracking:manage_any",
+  "time_tracking:read",
+  "time_tracking:read_reports",
+  "time_tracking:update",
+  "time_tracking:view_any",
   // users
-  'users:create',
-  'users:delete',
-  'users:import',
-  'users:manage',
-  'users:manage_roles',
-  'users:read',
-  'users:reset_password',
-  'users:update',
+  "users:create",
+  "users:delete",
+  "users:import",
+  "users:manage",
+  "users:manage_roles",
+  "users:read",
+  "users:reset_password",
+  "users:update",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -714,12 +714,10 @@ export const CATALOG_PERMISSIONS = [
  * runtime). Si la contrainte est violée, le compilateur produit une erreur
  * "Type '...' is not assignable to type 'never'".
  */
-type CatalogCheck = Exclude<
-  PermissionCode,
-  (typeof CATALOG_PERMISSIONS)[number]
-> extends never
-  ? true
-  : ['Missing from CATALOG_PERMISSIONS'];
+type CatalogCheck =
+  Exclude<PermissionCode, (typeof CATALOG_PERMISSIONS)[number]> extends never
+    ? true
+    : ["Missing from CATALOG_PERMISSIONS"];
 
 // Assertion : doit être `true`, sinon compilation échoue
 const _catalogCheck: CatalogCheck = true;

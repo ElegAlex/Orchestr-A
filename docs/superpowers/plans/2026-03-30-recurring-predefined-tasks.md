@@ -15,6 +15,7 @@
 ## Task 1: Prisma Schema Migration — Add `weekInterval`
 
 **Files:**
+
 - Modify: `packages/database/prisma/schema.prisma:793-813`
 
 - [ ] **Step 1: Add `weekInterval` field to PredefinedTaskRecurringRule model**
@@ -34,6 +35,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA && pnpm run db:migrate --name add-week-in
 ```
 
 Expected: Migration created successfully. The SQL should contain:
+
 ```sql
 ALTER TABLE "predefined_task_recurring_rules" ADD COLUMN "weekInterval" INTEGER NOT NULL DEFAULT 1;
 ```
@@ -57,6 +59,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA && git add packages/database/prisma/schem
 ## Task 2: Backend — Update Existing DTOs with `weekInterval`
 
 **Files:**
+
 - Modify: `apps/api/src/predefined-tasks/dto/create-recurring-rule.dto.ts`
 
 - [ ] **Step 1: Write the failing test for weekInterval in createRecurringRule**
@@ -64,52 +67,58 @@ cd /home/alex/Documents/REPO/ORCHESTRA && git add packages/database/prisma/schem
 In `apps/api/src/predefined-tasks/predefined-tasks.service.spec.ts`, add this test inside the existing `describe` block (after the existing tests, around line ~260):
 
 ```typescript
-  describe('createRecurringRule with weekInterval', () => {
-    it('devrait créer une règle récurrente avec weekInterval', async () => {
-      const ruleWithInterval = { ...mockRecurringRule, weekInterval: 2 };
-      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
-      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(ruleWithInterval);
+describe("createRecurringRule with weekInterval", () => {
+  it("devrait créer une règle récurrente avec weekInterval", async () => {
+    const ruleWithInterval = { ...mockRecurringRule, weekInterval: 2 };
+    mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+    mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(
+      ruleWithInterval,
+    );
 
-      const dto = {
-        predefinedTaskId: 'task-1',
-        userId: 'user-1',
-        dayOfWeek: 0,
-        period: 'FULL_DAY',
-        startDate: '2026-01-06T00:00:00Z',
-        weekInterval: 2,
-      };
+    const dto = {
+      predefinedTaskId: "task-1",
+      userId: "user-1",
+      dayOfWeek: 0,
+      period: "FULL_DAY",
+      startDate: "2026-01-06T00:00:00Z",
+      weekInterval: 2,
+    };
 
-      const result = await service.createRecurringRule('admin-1', dto);
+    const result = await service.createRecurringRule("admin-1", dto);
 
-      expect(mockPrismaService.predefinedTaskRecurringRule.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            weekInterval: 2,
-          }),
+    expect(
+      mockPrismaService.predefinedTaskRecurringRule.create,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          weekInterval: 2,
         }),
-      );
-      expect(result.weekInterval).toBe(2);
-    });
-
-    it('devrait utiliser weekInterval=1 par défaut', async () => {
-      const ruleDefault = { ...mockRecurringRule, weekInterval: 1 };
-      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
-      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(ruleDefault);
-
-      const dto = {
-        predefinedTaskId: 'task-1',
-        userId: 'user-1',
-        dayOfWeek: 0,
-        period: 'FULL_DAY',
-        startDate: '2026-01-06T00:00:00Z',
-        // no weekInterval — should default to 1
-      };
-
-      const result = await service.createRecurringRule('admin-1', dto);
-
-      expect(result.weekInterval).toBe(1);
-    });
+      }),
+    );
+    expect(result.weekInterval).toBe(2);
   });
+
+  it("devrait utiliser weekInterval=1 par défaut", async () => {
+    const ruleDefault = { ...mockRecurringRule, weekInterval: 1 };
+    mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+    mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(
+      ruleDefault,
+    );
+
+    const dto = {
+      predefinedTaskId: "task-1",
+      userId: "user-1",
+      dayOfWeek: 0,
+      period: "FULL_DAY",
+      startDate: "2026-01-06T00:00:00Z",
+      // no weekInterval — should default to 1
+    };
+
+    const result = await service.createRecurringRule("admin-1", dto);
+
+    expect(result.weekInterval).toBe(1);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -193,6 +202,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA && git add apps/api/src/predefined-tasks/
 ## Task 3: Backend — Update Generation Algorithm with weekInterval
 
 **Files:**
+
 - Modify: `apps/api/src/predefined-tasks/predefined-tasks.service.ts:367-433`
 - Modify: `apps/api/src/predefined-tasks/predefined-tasks.service.spec.ts`
 
@@ -201,77 +211,91 @@ cd /home/alex/Documents/REPO/ORCHESTRA && git add apps/api/src/predefined-tasks/
 In `apps/api/src/predefined-tasks/predefined-tasks.service.spec.ts`, add:
 
 ```typescript
-  describe('generateFromRules with weekInterval', () => {
-    it('devrait respecter weekInterval=2 (bihebdo) et ne generer que les semaines paires', async () => {
-      // Rule: every 2 weeks on Monday, starting 2026-01-05 (a Monday)
-      const biweeklyRule = {
-        ...mockRecurringRule,
-        id: 'rule-biweekly',
-        dayOfWeek: 0, // Monday
-        weekInterval: 2,
-        startDate: new Date('2026-01-05'), // Monday
-        endDate: null,
-      };
-      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([biweeklyRule]);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(mockAssignment);
+describe("generateFromRules with weekInterval", () => {
+  it("devrait respecter weekInterval=2 (bihebdo) et ne generer que les semaines paires", async () => {
+    // Rule: every 2 weeks on Monday, starting 2026-01-05 (a Monday)
+    const biweeklyRule = {
+      ...mockRecurringRule,
+      id: "rule-biweekly",
+      dayOfWeek: 0, // Monday
+      weekInterval: 2,
+      startDate: new Date("2026-01-05"), // Monday
+      endDate: null,
+    };
+    mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
+      biweeklyRule,
+    ]);
+    mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
+      mockAssignment,
+    );
 
-      // Generate for 4 weeks: Jan 5 - Jan 31
-      const result = await service.generateFromRules('admin-1', {
-        startDate: '2026-01-05T00:00:00Z',
-        endDate: '2026-01-31T00:00:00Z',
-      });
-
-      // 4 Mondays in range: Jan 5, 12, 19, 26
-      // With weekInterval=2, anchor=Jan 5: Jan 5 (week 0, 0%2=0 YES), Jan 12 (week 1, 1%2=1 NO), Jan 19 (week 2, 2%2=0 YES), Jan 26 (week 3, 3%2=1 NO)
-      expect(result.created).toBe(2);
-      expect(mockPrismaService.predefinedTaskAssignment.create).toHaveBeenCalledTimes(2);
+    // Generate for 4 weeks: Jan 5 - Jan 31
+    const result = await service.generateFromRules("admin-1", {
+      startDate: "2026-01-05T00:00:00Z",
+      endDate: "2026-01-31T00:00:00Z",
     });
 
-    it('devrait generer chaque semaine quand weekInterval=1 (defaut)', async () => {
-      const weeklyRule = {
-        ...mockRecurringRule,
-        id: 'rule-weekly',
-        dayOfWeek: 0, // Monday
-        weekInterval: 1,
-        startDate: new Date('2026-01-05'),
-        endDate: null,
-      };
-      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([weeklyRule]);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(mockAssignment);
-
-      const result = await service.generateFromRules('admin-1', {
-        startDate: '2026-01-05T00:00:00Z',
-        endDate: '2026-01-31T00:00:00Z',
-      });
-
-      // 4 Mondays in range, all generated
-      expect(result.created).toBe(4);
-    });
-
-    it('devrait calculer le weekInterval relativement au startDate de la regle, pas au debut de la plage', async () => {
-      // Rule starts Jan 5 (Monday), weekInterval=2
-      // Generate range starts Jan 19 (2 weeks later)
-      const rule = {
-        ...mockRecurringRule,
-        dayOfWeek: 0,
-        weekInterval: 2,
-        startDate: new Date('2026-01-05'),
-        endDate: null,
-      };
-      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([rule]);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(mockAssignment);
-
-      const result = await service.generateFromRules('admin-1', {
-        startDate: '2026-01-19T00:00:00Z', // 2 weeks after rule start
-        endDate: '2026-02-15T00:00:00Z',
-      });
-
-      // Mondays in range: Jan 19, 26, Feb 2, 9
-      // Weeks since anchor (Jan 5): 2, 3, 4, 5
-      // 2%2=0 YES, 3%2=1 NO, 4%2=0 YES, 5%2=1 NO
-      expect(result.created).toBe(2);
-    });
+    // 4 Mondays in range: Jan 5, 12, 19, 26
+    // With weekInterval=2, anchor=Jan 5: Jan 5 (week 0, 0%2=0 YES), Jan 12 (week 1, 1%2=1 NO), Jan 19 (week 2, 2%2=0 YES), Jan 26 (week 3, 3%2=1 NO)
+    expect(result.created).toBe(2);
+    expect(
+      mockPrismaService.predefinedTaskAssignment.create,
+    ).toHaveBeenCalledTimes(2);
   });
+
+  it("devrait generer chaque semaine quand weekInterval=1 (defaut)", async () => {
+    const weeklyRule = {
+      ...mockRecurringRule,
+      id: "rule-weekly",
+      dayOfWeek: 0, // Monday
+      weekInterval: 1,
+      startDate: new Date("2026-01-05"),
+      endDate: null,
+    };
+    mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
+      weeklyRule,
+    ]);
+    mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
+      mockAssignment,
+    );
+
+    const result = await service.generateFromRules("admin-1", {
+      startDate: "2026-01-05T00:00:00Z",
+      endDate: "2026-01-31T00:00:00Z",
+    });
+
+    // 4 Mondays in range, all generated
+    expect(result.created).toBe(4);
+  });
+
+  it("devrait calculer le weekInterval relativement au startDate de la regle, pas au debut de la plage", async () => {
+    // Rule starts Jan 5 (Monday), weekInterval=2
+    // Generate range starts Jan 19 (2 weeks later)
+    const rule = {
+      ...mockRecurringRule,
+      dayOfWeek: 0,
+      weekInterval: 2,
+      startDate: new Date("2026-01-05"),
+      endDate: null,
+    };
+    mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
+      rule,
+    ]);
+    mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
+      mockAssignment,
+    );
+
+    const result = await service.generateFromRules("admin-1", {
+      startDate: "2026-01-19T00:00:00Z", // 2 weeks after rule start
+      endDate: "2026-02-15T00:00:00Z",
+    });
+
+    // Mondays in range: Jan 19, 26, Feb 2, 9
+    // Weeks since anchor (Jan 5): 2, 3, 4, 5
+    // 2%2=0 YES, 3%2=1 NO, 4%2=0 YES, 5%2=1 NO
+    expect(result.created).toBe(2);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -385,6 +409,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA && git add apps/api/src/predefined-tasks/
 ## Task 4: Backend — Bulk Recurring Rules Endpoint
 
 **Files:**
+
 - Create: `apps/api/src/predefined-tasks/dto/create-bulk-recurring-rules.dto.ts`
 - Modify: `apps/api/src/predefined-tasks/predefined-tasks.service.ts`
 - Modify: `apps/api/src/predefined-tasks/predefined-tasks.controller.ts`
@@ -395,75 +420,89 @@ cd /home/alex/Documents/REPO/ORCHESTRA && git add apps/api/src/predefined-tasks/
 In `apps/api/src/predefined-tasks/predefined-tasks.service.spec.ts`, add:
 
 ```typescript
-  describe('bulkCreateRecurringRules', () => {
-    it('devrait creer N users x M jours regles atomiques', async () => {
-      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
-      // Mock $transaction to execute the callback
-      (mockPrismaService as any).$transaction = vi.fn(async (callback: (tx: any) => Promise<any>) => {
+describe("bulkCreateRecurringRules", () => {
+  it("devrait creer N users x M jours regles atomiques", async () => {
+    mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+    // Mock $transaction to execute the callback
+    (mockPrismaService as any).$transaction = vi.fn(
+      async (callback: (tx: any) => Promise<any>) => {
         return callback(mockPrismaService);
-      });
-      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(mockRecurringRule);
+      },
+    );
+    mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(
+      mockRecurringRule,
+    );
 
-      const dto = {
-        predefinedTaskId: 'task-1',
-        userIds: ['user-1', 'user-2'],
-        daysOfWeek: [0, 2], // Monday, Wednesday
-        period: 'FULL_DAY',
-        weekInterval: 2,
-        startDate: '2026-01-06T00:00:00Z',
-      };
+    const dto = {
+      predefinedTaskId: "task-1",
+      userIds: ["user-1", "user-2"],
+      daysOfWeek: [0, 2], // Monday, Wednesday
+      period: "FULL_DAY",
+      weekInterval: 2,
+      startDate: "2026-01-06T00:00:00Z",
+    };
 
-      const result = await service.bulkCreateRecurringRules('admin-1', dto);
+    const result = await service.bulkCreateRecurringRules("admin-1", dto);
 
-      // 2 users x 2 days = 4 rules
-      expect(result.created).toBe(4);
-      expect(mockPrismaService.predefinedTaskRecurringRule.create).toHaveBeenCalledTimes(4);
-    });
-
-    it('devrait lever NotFoundException si la tache est inactive', async () => {
-      mockPrismaService.predefinedTask.findUnique.mockResolvedValue({
-        ...mockTask,
-        isActive: false,
-      });
-
-      const dto = {
-        predefinedTaskId: 'task-1',
-        userIds: ['user-1'],
-        daysOfWeek: [0],
-        period: 'FULL_DAY',
-        startDate: '2026-01-06T00:00:00Z',
-      };
-
-      await expect(service.bulkCreateRecurringRules('admin-1', dto)).rejects.toThrow(NotFoundException);
-    });
-
-    it('devrait utiliser weekInterval=1 par defaut', async () => {
-      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
-      (mockPrismaService as any).$transaction = vi.fn(async (callback: (tx: any) => Promise<any>) => {
-        return callback(mockPrismaService);
-      });
-      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(mockRecurringRule);
-
-      const dto = {
-        predefinedTaskId: 'task-1',
-        userIds: ['user-1'],
-        daysOfWeek: [0],
-        period: 'FULL_DAY',
-        startDate: '2026-01-06T00:00:00Z',
-        // no weekInterval
-      };
-
-      await service.bulkCreateRecurringRules('admin-1', dto);
-
-      expect(mockPrismaService.predefinedTaskRecurringRule.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            weekInterval: 1,
-          }),
-        }),
-      );
-    });
+    // 2 users x 2 days = 4 rules
+    expect(result.created).toBe(4);
+    expect(
+      mockPrismaService.predefinedTaskRecurringRule.create,
+    ).toHaveBeenCalledTimes(4);
   });
+
+  it("devrait lever NotFoundException si la tache est inactive", async () => {
+    mockPrismaService.predefinedTask.findUnique.mockResolvedValue({
+      ...mockTask,
+      isActive: false,
+    });
+
+    const dto = {
+      predefinedTaskId: "task-1",
+      userIds: ["user-1"],
+      daysOfWeek: [0],
+      period: "FULL_DAY",
+      startDate: "2026-01-06T00:00:00Z",
+    };
+
+    await expect(
+      service.bulkCreateRecurringRules("admin-1", dto),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it("devrait utiliser weekInterval=1 par defaut", async () => {
+    mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+    (mockPrismaService as any).$transaction = vi.fn(
+      async (callback: (tx: any) => Promise<any>) => {
+        return callback(mockPrismaService);
+      },
+    );
+    mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(
+      mockRecurringRule,
+    );
+
+    const dto = {
+      predefinedTaskId: "task-1",
+      userIds: ["user-1"],
+      daysOfWeek: [0],
+      period: "FULL_DAY",
+      startDate: "2026-01-06T00:00:00Z",
+      // no weekInterval
+    };
+
+    await service.bulkCreateRecurringRules("admin-1", dto);
+
+    expect(
+      mockPrismaService.predefinedTaskRecurringRule.create,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          weekInterval: 1,
+        }),
+      }),
+    );
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -479,7 +518,7 @@ Expected: FAIL — `service.bulkCreateRecurringRules is not a function`.
 Create `apps/api/src/predefined-tasks/dto/create-bulk-recurring-rules.dto.ts`:
 
 ```typescript
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsArray,
   ArrayMinSize,
@@ -492,28 +531,28 @@ import {
   IsIn,
   IsDateString,
   IsOptional,
-} from 'class-validator';
+} from "class-validator";
 
 export class CreateBulkRecurringRulesDto {
   @ApiProperty({
-    description: 'ID de la tache predéfinie',
-    example: 'uuid-predefined-task',
+    description: "ID de la tache predéfinie",
+    example: "uuid-predefined-task",
   })
   @IsUUID()
   @IsNotEmpty()
   predefinedTaskId: string;
 
   @ApiProperty({
-    description: 'IDs des utilisateurs',
-    example: ['uuid-user-1', 'uuid-user-2'],
+    description: "IDs des utilisateurs",
+    example: ["uuid-user-1", "uuid-user-2"],
   })
   @IsArray()
   @ArrayMinSize(1)
-  @IsUUID('all', { each: true })
+  @IsUUID("all", { each: true })
   userIds: string[];
 
   @ApiProperty({
-    description: 'Jours de la semaine (0=Lundi, ..., 6=Dimanche)',
+    description: "Jours de la semaine (0=Lundi, ..., 6=Dimanche)",
     example: [0, 2],
   })
   @IsArray()
@@ -524,17 +563,17 @@ export class CreateBulkRecurringRulesDto {
   daysOfWeek: number[];
 
   @ApiProperty({
-    description: 'Période',
-    enum: ['MORNING', 'AFTERNOON', 'FULL_DAY'],
-    example: 'FULL_DAY',
+    description: "Période",
+    enum: ["MORNING", "AFTERNOON", "FULL_DAY"],
+    example: "FULL_DAY",
   })
   @IsString()
   @IsNotEmpty()
-  @IsIn(['MORNING', 'AFTERNOON', 'FULL_DAY'])
+  @IsIn(["MORNING", "AFTERNOON", "FULL_DAY"])
   period: string;
 
   @ApiPropertyOptional({
-    description: 'Intervalle en semaines (1=hebdo, 2=bihebdo)',
+    description: "Intervalle en semaines (1=hebdo, 2=bihebdo)",
     example: 1,
     minimum: 1,
     maximum: 52,
@@ -547,16 +586,16 @@ export class CreateBulkRecurringRulesDto {
   weekInterval?: number;
 
   @ApiProperty({
-    description: 'Date de début (ISO)',
-    example: '2026-01-06T00:00:00Z',
+    description: "Date de début (ISO)",
+    example: "2026-01-06T00:00:00Z",
   })
   @IsDateString()
   @IsNotEmpty()
   startDate: string;
 
   @ApiPropertyOptional({
-    description: 'Date de fin (ISO)',
-    example: '2026-12-31T00:00:00Z',
+    description: "Date de fin (ISO)",
+    example: "2026-12-31T00:00:00Z",
   })
   @IsDateString()
   @IsOptional()
@@ -569,7 +608,7 @@ export class CreateBulkRecurringRulesDto {
 In `apps/api/src/predefined-tasks/predefined-tasks.service.ts`, add this import at the top (line 1):
 
 ```typescript
-import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
+import { CreateBulkRecurringRulesDto } from "./dto/create-bulk-recurring-rules.dto";
 ```
 
 Then add this method after `createRecurringRule` (after line ~323):
@@ -632,7 +671,7 @@ Then add this method after `createRecurringRule` (after line ~323):
 In `apps/api/src/predefined-tasks/predefined-tasks.controller.ts`, add the import (line ~30 area):
 
 ```typescript
-import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
+import { CreateBulkRecurringRulesDto } from "./dto/create-bulk-recurring-rules.dto";
 ```
 
 Then add this endpoint after the `createRecurringRule` method (after line ~208):
@@ -672,6 +711,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA && git add apps/api/src/predefined-tasks/
 ## Task 5: Frontend — Update Service Types and Add Bulk Method
 
 **Files:**
+
 - Modify: `apps/web/src/services/predefined-tasks.service.ts`
 
 - [ ] **Step 1: Add `weekInterval` to `PredefinedTaskRecurringRule` interface**
@@ -764,6 +804,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA && git add apps/web/src/services/predefin
 ## Task 6: Frontend — Enhanced RecurringRulesModal
 
 **Files:**
+
 - Modify: `apps/web/src/components/predefined-tasks/RecurringRulesModal.tsx`
 
 - [ ] **Step 1: Update imports and add new types/constants**
@@ -826,14 +867,14 @@ interface RuleFormData {
 Update the initial `formData` in the component (line ~57):
 
 ```typescript
-  const [formData, setFormData] = useState<RuleFormData>({
-    userIds: [],
-    daysOfWeek: [],
-    duration: task.defaultDuration,
-    weekInterval: 1,
-    startDate: new Date().toISOString().slice(0, 10),
-    endDate: "",
-  });
+const [formData, setFormData] = useState<RuleFormData>({
+  userIds: [],
+  daysOfWeek: [],
+  duration: task.defaultDuration,
+  weekInterval: 1,
+  startDate: new Date().toISOString().slice(0, 10),
+  endDate: "",
+});
 ```
 
 - [ ] **Step 3: Update `handleCreate` to call bulk endpoint**
@@ -841,51 +882,51 @@ Update the initial `formData` in the component (line ~57):
 Replace the `handleCreate` function (lines 85-113):
 
 ```typescript
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.userIds.length === 0) {
-      toast.error("Selectionnez au moins un collaborateur");
-      return;
-    }
-    if (formData.daysOfWeek.length === 0) {
-      toast.error("Selectionnez au moins un jour");
-      return;
-    }
-    setSaving(true);
-    try {
-      const result = await predefinedTasksService.bulkCreateRecurringRules({
-        predefinedTaskId: task.id,
-        userIds: formData.userIds,
-        daysOfWeek: formData.daysOfWeek,
-        duration: formData.duration,
-        weekInterval: formData.weekInterval,
-        startDate: formData.startDate,
-        endDate: formData.endDate || undefined,
-      });
-      const nUsers = formData.userIds.length;
-      const nDays = formData.daysOfWeek.length;
-      toast.success(
-        `${result.created} regle${result.created > 1 ? "s" : ""} creee${result.created > 1 ? "s" : ""} (${nUsers} collaborateur${nUsers > 1 ? "s" : ""} x ${nDays} jour${nDays > 1 ? "s" : ""})`,
-      );
-      setShowForm(false);
-      setFormData({
-        userIds: [],
-        daysOfWeek: [],
-        duration: task.defaultDuration,
-        weekInterval: 1,
-        startDate: new Date().toISOString().slice(0, 10),
-        endDate: "",
-      });
-      await onRulesChanged();
-    } catch (err) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        axiosError.response?.data?.message || "Erreur lors de la creation",
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+const handleCreate = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (formData.userIds.length === 0) {
+    toast.error("Selectionnez au moins un collaborateur");
+    return;
+  }
+  if (formData.daysOfWeek.length === 0) {
+    toast.error("Selectionnez au moins un jour");
+    return;
+  }
+  setSaving(true);
+  try {
+    const result = await predefinedTasksService.bulkCreateRecurringRules({
+      predefinedTaskId: task.id,
+      userIds: formData.userIds,
+      daysOfWeek: formData.daysOfWeek,
+      duration: formData.duration,
+      weekInterval: formData.weekInterval,
+      startDate: formData.startDate,
+      endDate: formData.endDate || undefined,
+    });
+    const nUsers = formData.userIds.length;
+    const nDays = formData.daysOfWeek.length;
+    toast.success(
+      `${result.created} regle${result.created > 1 ? "s" : ""} creee${result.created > 1 ? "s" : ""} (${nUsers} collaborateur${nUsers > 1 ? "s" : ""} x ${nDays} jour${nDays > 1 ? "s" : ""})`,
+    );
+    setShowForm(false);
+    setFormData({
+      userIds: [],
+      daysOfWeek: [],
+      duration: task.defaultDuration,
+      weekInterval: 1,
+      startDate: new Date().toISOString().slice(0, 10),
+      endDate: "",
+    });
+    await onRulesChanged();
+  } catch (err) {
+    const axiosError = err as { response?: { data?: { message?: string } } };
+    toast.error(
+      axiosError.response?.data?.message || "Erreur lors de la creation",
+    );
+  } finally {
+    setSaving(false);
+  }
+};
 ```
 
 - [ ] **Step 4: Update the rule list display to show weekInterval**
@@ -910,189 +951,197 @@ Update the rule display text (line ~202-207). Replace the `<p className="text-xs
 Replace the entire form content (lines 241-360) — from `<form` to `</form>` — with:
 
 ```tsx
-          <form
-            onSubmit={handleCreate}
-            className="border border-gray-200 rounded-lg p-4 space-y-4"
+<form
+  onSubmit={handleCreate}
+  className="border border-gray-200 rounded-lg p-4 space-y-4"
+>
+  <h3 className="font-semibold text-gray-900 text-sm">
+    Nouvelles regles recurrentes
+  </h3>
+
+  {/* Multi-user select */}
+  <div>
+    <label className="block text-xs font-medium text-gray-700 mb-1">
+      Collaborateurs *
+    </label>
+    <div className="border border-gray-300 rounded-lg p-2 max-h-40 overflow-y-auto space-y-1">
+      {users.map((u) => (
+        <label
+          key={u.id}
+          className="flex items-center space-x-2 px-2 py-1 rounded hover:bg-gray-50 cursor-pointer"
+        >
+          <input
+            type="checkbox"
+            checked={formData.userIds.includes(u.id)}
+            onChange={(e) => {
+              setFormData((prev) => ({
+                ...prev,
+                userIds: e.target.checked
+                  ? [...prev.userIds, u.id]
+                  : prev.userIds.filter((id) => id !== u.id),
+              }));
+            }}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-sm text-gray-900">
+            {u.firstName} {u.lastName}
+          </span>
+        </label>
+      ))}
+    </div>
+    {formData.userIds.length > 0 && (
+      <p className="text-xs text-gray-500 mt-1">
+        {formData.userIds.length} selectionne
+        {formData.userIds.length > 1 ? "s" : ""}
+      </p>
+    )}
+  </div>
+
+  {/* Multi-day toggle pills */}
+  <div>
+    <label className="block text-xs font-medium text-gray-700 mb-1">
+      Jours de la semaine *
+    </label>
+    <div className="flex flex-wrap gap-2">
+      {DAY_OF_WEEK_OPTIONS.map(({ value, short }) => {
+        const selected = formData.daysOfWeek.includes(value);
+        return (
+          <button
+            key={value}
+            type="button"
+            onClick={() =>
+              setFormData((prev) => ({
+                ...prev,
+                daysOfWeek: selected
+                  ? prev.daysOfWeek.filter((d) => d !== value)
+                  : [...prev.daysOfWeek, value],
+              }))
+            }
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+              selected
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
           >
-            <h3 className="font-semibold text-gray-900 text-sm">
-              Nouvelles regles recurrentes
-            </h3>
+            {short}
+          </button>
+        );
+      })}
+    </div>
+  </div>
 
-            {/* Multi-user select */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Collaborateurs *
-              </label>
-              <div className="border border-gray-300 rounded-lg p-2 max-h-40 overflow-y-auto space-y-1">
-                {users.map((u) => (
-                  <label
-                    key={u.id}
-                    className="flex items-center space-x-2 px-2 py-1 rounded hover:bg-gray-50 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.userIds.includes(u.id)}
-                      onChange={(e) => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          userIds: e.target.checked
-                            ? [...prev.userIds, u.id]
-                            : prev.userIds.filter((id) => id !== u.id),
-                        }));
-                      }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-900">
-                      {u.firstName} {u.lastName}
-                    </span>
-                  </label>
-                ))}
-              </div>
-              {formData.userIds.length > 0 && (
-                <p className="text-xs text-gray-500 mt-1">
-                  {formData.userIds.length} selectionne{formData.userIds.length > 1 ? "s" : ""}
-                </p>
-              )}
-            </div>
+  <div className="grid grid-cols-2 gap-3">
+    {/* Week interval */}
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">
+        Frequence *
+      </label>
+      <select
+        value={formData.weekInterval}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            weekInterval: parseInt(e.target.value, 10),
+          })
+        }
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
+      >
+        {Object.entries(WEEK_INTERVAL_LABELS).map(([val, label]) => (
+          <option key={val} value={val}>
+            {label}
+          </option>
+        ))}
+      </select>
+    </div>
 
-            {/* Multi-day toggle pills */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Jours de la semaine *
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {DAY_OF_WEEK_OPTIONS.map(({ value, short }) => {
-                  const selected = formData.daysOfWeek.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          daysOfWeek: selected
-                            ? prev.daysOfWeek.filter((d) => d !== value)
-                            : [...prev.daysOfWeek, value],
-                        }))
-                      }
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
-                        selected
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      {short}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+    {/* Duration */}
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">
+        Duree *
+      </label>
+      <select
+        value={formData.duration}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            duration: e.target.value as TaskDuration,
+          })
+        }
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="FULL_DAY">Journee entiere</option>
+        <option value="HALF_DAY">Demi-journee</option>
+      </select>
+    </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {/* Week interval */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Frequence *
-                </label>
-                <select
-                  value={formData.weekInterval}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      weekInterval: parseInt(e.target.value, 10),
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
-                >
-                  {Object.entries(WEEK_INTERVAL_LABELS).map(([val, label]) => (
-                    <option key={val} value={val}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+    {/* Start date */}
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">
+        Date de debut *
+      </label>
+      <input
+        type="date"
+        required
+        value={formData.startDate}
+        onChange={(e) =>
+          setFormData({ ...formData, startDate: e.target.value })
+        }
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
 
-              {/* Duration */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Duree *
-                </label>
-                <select
-                  value={formData.duration}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      duration: e.target.value as TaskDuration,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="FULL_DAY">Journee entiere</option>
-                  <option value="HALF_DAY">Demi-journee</option>
-                </select>
-              </div>
+    {/* End date */}
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">
+        Date de fin (optionnel)
+      </label>
+      <input
+        type="date"
+        value={formData.endDate}
+        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  </div>
 
-              {/* Start date */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Date de debut *
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.startDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startDate: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+  {/* Summary */}
+  {formData.userIds.length > 0 && formData.daysOfWeek.length > 0 && (
+    <div className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
+      {formData.userIds.length} collaborateur
+      {formData.userIds.length > 1 ? "s" : ""}
+      {" x "}
+      {formData.daysOfWeek.length} jour
+      {formData.daysOfWeek.length > 1 ? "s" : ""}
+      {" = "}
+      <strong>
+        {formData.userIds.length * formData.daysOfWeek.length} regles
+      </strong>
+      {formData.weekInterval > 1 &&
+        ` (toutes les ${formData.weekInterval} semaines)`}
+    </div>
+  )}
 
-              {/* End date */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Date de fin (optionnel)
-                </label>
-                <input
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, endDate: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* Summary */}
-            {formData.userIds.length > 0 && formData.daysOfWeek.length > 0 && (
-              <div className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
-                {formData.userIds.length} collaborateur{formData.userIds.length > 1 ? "s" : ""}
-                {" x "}
-                {formData.daysOfWeek.length} jour{formData.daysOfWeek.length > 1 ? "s" : ""}
-                {" = "}
-                <strong>{formData.userIds.length * formData.daysOfWeek.length} regles</strong>
-                {formData.weekInterval > 1 && ` (toutes les ${formData.weekInterval} semaines)`}
-              </div>
-            )}
-
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={saving || formData.userIds.length === 0 || formData.daysOfWeek.length === 0}
-                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-              >
-                {saving ? "Creation..." : "Creer les regles"}
-              </button>
-            </div>
-          </form>
+  <div className="flex justify-end space-x-3">
+    <button
+      type="button"
+      onClick={() => setShowForm(false)}
+      className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+    >
+      Annuler
+    </button>
+    <button
+      type="submit"
+      disabled={
+        saving ||
+        formData.userIds.length === 0 ||
+        formData.daysOfWeek.length === 0
+      }
+      className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+    >
+      {saving ? "Creation..." : "Creer les regles"}
+    </button>
+  </div>
+</form>
 ```
 
 - [ ] **Step 6: Verify build**
@@ -1114,6 +1163,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA && git add apps/web/src/components/predef
 ## Task 7: E2E Permission Matrix — Add Missing Entry
 
 **Files:**
+
 - Modify: `e2e/fixtures/permission-matrix.ts`
 
 - [ ] **Step 1: Add `predefined_tasks:assign` entry to the permission matrix**

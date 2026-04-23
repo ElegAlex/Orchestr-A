@@ -273,7 +273,13 @@ describe('ProjectsController', () => {
 
     const caller = {
       id: 'admin-1',
-      role: { id: 'role-1', code: 'ADMIN', label: 'Administrateur', templateKey: 'ADMIN', isSystem: true },
+      role: {
+        id: 'role-1',
+        code: 'ADMIN',
+        label: 'Administrateur',
+        templateKey: 'ADMIN',
+        isSystem: true,
+      },
     } as any;
 
     it('should update a project successfully', async () => {
@@ -323,7 +329,13 @@ describe('ProjectsController', () => {
   describe('remove', () => {
     const caller = {
       id: 'admin-1',
-      role: { id: 'role-1', code: 'ADMIN', label: 'Administrateur', templateKey: 'ADMIN', isSystem: true },
+      role: {
+        id: 'role-1',
+        code: 'ADMIN',
+        label: 'Administrateur',
+        templateKey: 'ADMIN',
+        isSystem: true,
+      },
     } as any;
 
     it('should soft delete a project (set status to CANCELLED)', async () => {
@@ -333,10 +345,10 @@ describe('ProjectsController', () => {
       const result = await controller.remove('project-id-1', caller);
 
       expect(result.status).toBe('CANCELLED');
-      expect(mockProjectsService.remove).toHaveBeenCalledWith(
-        'project-id-1',
-        { id: 'admin-1', role: 'ADMIN' },
-      );
+      expect(mockProjectsService.remove).toHaveBeenCalledWith('project-id-1', {
+        id: 'admin-1',
+        role: 'ADMIN',
+      });
     });
 
     it('should throw NotFoundException when project not found', async () => {
@@ -437,7 +449,13 @@ describe('ProjectsController', () => {
   describe('removeMember', () => {
     const caller = {
       id: 'admin-1',
-      role: { id: 'role-1', code: 'ADMIN', label: 'Administrateur', templateKey: 'ADMIN', isSystem: true },
+      role: {
+        id: 'role-1',
+        code: 'ADMIN',
+        label: 'Administrateur',
+        templateKey: 'ADMIN',
+        isSystem: true,
+      },
     } as any;
 
     it('should remove a member from project', async () => {

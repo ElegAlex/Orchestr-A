@@ -21,8 +21,8 @@ export interface PredefinedTask {
   color: string;
   icon: string;
   defaultDuration: TaskDuration;
-  startTime?: string | null;  // Format "HH:mm"
-  endTime?: string | null;    // Format "HH:mm"
+  startTime?: string | null; // Format "HH:mm"
+  endTime?: string | null; // Format "HH:mm"
   isExternalIntervention: boolean;
   isActive: boolean;
   createdAt: string;

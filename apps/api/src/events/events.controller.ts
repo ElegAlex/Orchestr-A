@@ -186,7 +186,7 @@ export class EventsController {
   })
   @ApiResponse({
     status: 403,
-    description: "Non créateur et sans permission events:manage_any",
+    description: 'Non créateur et sans permission events:manage_any',
   })
   @ApiResponse({
     status: 404,
@@ -218,7 +218,7 @@ export class EventsController {
   })
   @ApiResponse({
     status: 403,
-    description: "Non créateur et sans permission events:manage_any",
+    description: 'Non créateur et sans permission events:manage_any',
   })
   @ApiResponse({
     status: 404,
@@ -245,7 +245,7 @@ export class EventsController {
   })
   @ApiResponse({
     status: 403,
-    description: "Non créateur et sans permission events:manage_any",
+    description: 'Non créateur et sans permission events:manage_any',
   })
   @ApiResponse({ status: 404, description: 'Événement introuvable' })
   stopRecurrence(
@@ -253,7 +253,11 @@ export class EventsController {
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
-    return this.eventsService.stopRecurrence(id, currentUserId, currentUserRole);
+    return this.eventsService.stopRecurrence(
+      id,
+      currentUserId,
+      currentUserRole,
+    );
   }
 
   @Post(':id/participants')
@@ -271,7 +275,7 @@ export class EventsController {
   })
   @ApiResponse({
     status: 403,
-    description: "Non créateur et sans permission events:manage_any",
+    description: 'Non créateur et sans permission events:manage_any',
   })
   @ApiResponse({
     status: 404,
@@ -307,7 +311,7 @@ export class EventsController {
   })
   @ApiResponse({
     status: 403,
-    description: "Non créateur et sans permission events:manage_any",
+    description: 'Non créateur et sans permission events:manage_any',
   })
   @ApiResponse({
     status: 404,

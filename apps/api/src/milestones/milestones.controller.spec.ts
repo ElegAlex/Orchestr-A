@@ -31,6 +31,10 @@ describe('MilestonesController', () => {
     update: vi.fn(),
     remove: vi.fn(),
     complete: vi.fn(),
+    validateImport: vi.fn(),
+    importMilestones: vi.fn(),
+    exportProjectMilestonesCsv: vi.fn(),
+    getImportTemplate: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -245,7 +249,11 @@ describe('MilestonesController', () => {
         message: 'Milestone supprimé',
       });
 
-      const result = await controller.remove('milestone-id-1', 'user-1', 'ADMIN');
+      const result = await controller.remove(
+        'milestone-id-1',
+        'user-1',
+        'ADMIN',
+      );
 
       expect(result.message).toBe('Milestone supprimé');
       expect(mockMilestonesService.remove).toHaveBeenCalledWith(
@@ -260,9 +268,83 @@ describe('MilestonesController', () => {
         new NotFoundException('Milestone introuvable'),
       );
 
-      await expect(controller.remove('nonexistent', 'user-1', 'ADMIN')).rejects.toThrow(
-        NotFoundException,
+      await expect(
+        controller.remove('nonexistent', 'user-1', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('validateImport', () => {
+    it('should validate milestones import and return preview', async () => {
+      const preview = { valid: 2, errors: [] };
+      mockMilestonesService.validateImport.mockResolvedValue(preview);
+
+      const result = await controller.validateImport('project-id-1', {
+        milestones: [],
+      } as any);
+
+      expect(mockMilestonesService.validateImport).toHaveBeenCalledWith(
+        'project-id-1',
+        [],
       );
+      expect(result).toEqual(preview);
+    });
+  });
+
+  describe('importMilestones', () => {
+    it('should import milestones and return result', async () => {
+      const importResult = { created: 3, errors: [] };
+      mockMilestonesService.importMilestones.mockResolvedValue(importResult);
+
+      const result = await controller.importMilestones('project-id-1', {
+        milestones: [],
+      } as any);
+
+      expect(mockMilestonesService.importMilestones).toHaveBeenCalledWith(
+        'project-id-1',
+        [],
+      );
+      expect(result).toEqual(importResult);
+    });
+  });
+
+  describe('exportProjectMilestones', () => {
+    it('should export milestones as CSV and send response', async () => {
+      mockMilestonesService.exportProjectMilestonesCsv.mockResolvedValue({
+        csv: 'name;dueDate\nMilestone 1;2025-01-01',
+        filename: 'milestones_project-id-1.csv',
+      });
+
+      const mockReply = {
+        header: vi.fn().mockReturnThis(),
+        send: vi.fn(),
+      } as any;
+
+      await controller.exportProjectMilestones('project-id-1', mockReply);
+
+      expect(mockReply.header).toHaveBeenCalledWith(
+        'Content-Type',
+        'text/csv; charset=utf-8',
+      );
+      expect(mockReply.header).toHaveBeenCalledWith(
+        'Content-Disposition',
+        expect.stringContaining('milestones_project-id-1.csv'),
+      );
+      expect(mockReply.send).toHaveBeenCalledWith(
+        'name;dueDate\nMilestone 1;2025-01-01',
+      );
+    });
+  });
+
+  describe('getImportTemplate', () => {
+    it('should return the import template', () => {
+      const csvTemplate = 'name;description;dueDate;status';
+      mockMilestonesService.getImportTemplate.mockReturnValue(csvTemplate);
+
+      const result = controller.getImportTemplate();
+
+      expect(mockMilestonesService.getImportTemplate).toHaveBeenCalled();
+      expect(result).toEqual({ template: csvTemplate });
     });
   });
 });

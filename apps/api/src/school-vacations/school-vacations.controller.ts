@@ -50,7 +50,9 @@ export class SchoolVacationsController {
     example: 2025,
   })
   @ApiResponse({ status: 200, description: 'Liste des vacances scolaires' })
-  async findAll(@Query('year', new ParseIntPipe({ optional: true })) year?: number) {
+  async findAll(
+    @Query('year', new ParseIntPipe({ optional: true })) year?: number,
+  ) {
     return this.schoolVacationsService.findAll(year);
   }
 
@@ -84,7 +86,8 @@ export class SchoolVacationsController {
   @ApiResponse({ status: 201, description: 'Vacances scolaires créées' })
   @ApiResponse({
     status: 409,
-    description: 'Des vacances scolaires avec ce nom, zone et année existent déjà',
+    description:
+      'Des vacances scolaires avec ce nom, zone et année existent déjà',
   })
   async create(
     @Body() createDto: CreateSchoolVacationDto,
@@ -125,7 +128,11 @@ export class SchoolVacationsController {
       'A',
     );
     const zone = zoneStr as SchoolVacationZone;
-    return this.schoolVacationsService.importFromOpenData(dto.year, zone, user.id);
+    return this.schoolVacationsService.importFromOpenData(
+      dto.year,
+      zone,
+      user.id,
+    );
   }
 
   @Patch(':id')

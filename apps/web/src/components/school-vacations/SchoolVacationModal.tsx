@@ -237,7 +237,9 @@ export function SchoolVacationModal({
               max={2100}
             />
             <p className="mt-1 text-sm text-gray-500">
-              {t("fields.yearHint", { year: `${formData.year}-${formData.year + 1}` })}
+              {t("fields.yearHint", {
+                year: `${formData.year}-${formData.year + 1}`,
+              })}
             </p>
           </div>
 

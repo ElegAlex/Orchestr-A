@@ -5,6 +5,7 @@
 **SHA baseline** : `c3601bd4f987ea7fd61265d0ec22ec8ba57c698c`
 **Branche de base** : `master`
 **Contraintes** :
+
 - 1 branche par chantier, PRs non mergées
 - Commits conventionnels atomiques, file-by-file staging
 - Scope local + GitHub, pas de VPS
@@ -18,12 +19,12 @@
 
 ### Résultats baseline
 
-| Check | Résultat |
-|---|---|
-| `git rev-parse HEAD` | `c3601bd` ✅ |
-| `git status` | Dette préexistante `backlog/rbac-refactor/` (D files) + `.claude/settings.local.json` modifié, working tree documenté |
-| `pnpm run build` | ✅ FULL TURBO cached (advisor flag : cached ≠ executed) |
-| `pnpm run test` | ✅ FULL TURBO cached (idem) |
+| Check                | Résultat                                                                                                              |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `git rev-parse HEAD` | `c3601bd` ✅                                                                                                          |
+| `git status`         | Dette préexistante `backlog/rbac-refactor/` (D files) + `.claude/settings.local.json` modifié, working tree documenté |
+| `pnpm run build`     | ✅ FULL TURBO cached (advisor flag : cached ≠ executed)                                                               |
+| `pnpm run test`      | ✅ FULL TURBO cached (idem)                                                                                           |
 
 ### Advisor verdict
 
@@ -56,11 +57,11 @@ Entry point `seed-permissions.ts` (script `db:seed:permissions`) n'importait que
 
 ### Cleanup appliqué
 
-| Fichier | Changement |
-|---|---|
-| `packages/database/prisma/seed.ts` | Suppression fonction `seedPermissionsAndRoles` (lignes 9–1466) + appel dans `main()` + 3 lignes de commentaire d'appel |
-| `packages/database/prisma/seed-permissions.ts` | Supprimé (dead entry point) |
-| `packages/database/package.json` | Script `db:seed:permissions` retiré |
+| Fichier                                        | Changement                                                                                                             |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `packages/database/prisma/seed.ts`             | Suppression fonction `seedPermissionsAndRoles` (lignes 9–1466) + appel dans `main()` + 3 lignes de commentaire d'appel |
+| `packages/database/prisma/seed-permissions.ts` | Supprimé (dead entry point)                                                                                            |
+| `packages/database/package.json`               | Script `db:seed:permissions` retiré                                                                                    |
 
 Total : 3 fichiers seed (0 non-seed), 1489 lignes supprimées, 0 ajoutées.
 
@@ -76,12 +77,12 @@ Détectés lors de l'audit mais hors périmètre RBAC-only du chantier C1 :
 
 ### Gate C1
 
-| Check | Résultat |
-|---|---|
-| `pnpm run build --force` | ✅ 3 tasks successful, 18.6s, 0 cached |
-| `pnpm run test` | ✅ 48 test files / 1087 tests passed côté API (run avant commit) |
-| Fichiers touchés | 3 (tous seed) — escape threshold (>5 non-seed) respecté |
-| Référence morte restante | 0 (`grep "seedPermissionsAndRoles"` sans résultat) |
+| Check                    | Résultat                                                         |
+| ------------------------ | ---------------------------------------------------------------- |
+| `pnpm run build --force` | ✅ 3 tasks successful, 18.6s, 0 cached                           |
+| `pnpm run test`          | ✅ 48 test files / 1087 tests passed côté API (run avant commit) |
+| Fichiers touchés         | 3 (tous seed) — escape threshold (>5 non-seed) respecté          |
+| Référence morte restante | 0 (`grep "seedPermissionsAndRoles"` sans résultat)               |
 
 **Statut** : `C1 PASS`. Branche prête à PR. **PR #7** ouvert : https://github.com/ElegAlex/Orchestr-A/pull/7
 
@@ -122,12 +123,12 @@ Vérif globale avant fix : total 1953 tests (7 specs racine silencieusement igno
 
 ### Gate C2
 
-| Check | Résultat |
-|---|---|
-| `npx playwright test --project=chromium --list` | ✅ 45 tests détectés (vs 0) |
-| `npx playwright test --list` (total) | ✅ 1998 tests (vs 1953) |
+| Check                                              | Résultat                                                                        |
+| -------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `npx playwright test --project=chromium --list`    | ✅ 45 tests détectés (vs 0)                                                     |
+| `npx playwright test --list` (total)               | ✅ 1998 tests (vs 1953)                                                         |
 | Fuite de specs depuis `e2e/tests/**` vers chromium | ✅ Aucune (vérifié par énumération : 45 entries = 7 fichiers racine exactement) |
-| `auth.setup.ts` non dans chromium | ✅ (extension `.setup.ts`, pas `.spec.ts`) |
+| `auth.setup.ts` non dans chromium                  | ✅ (extension `.setup.ts`, pas `.spec.ts`)                                      |
 
 **Statut** : `C2 PASS`. Branche prête à PR. **PR #8** ouvert : https://github.com/ElegAlex/Orchestr-A/pull/8
 
@@ -143,11 +144,11 @@ Sur conseil advisor « prove they execute, not just collect ». Stack locale com
 npx playwright test --project=chromium e2e/auth.spec.ts
 ```
 
-| Test | Résultat |
-|---|---|
-| `should display login page` | ✅ 714ms |
-| `should show error on invalid credentials` | ✅ 610ms |
-| `should login with valid credentials` | ❌ timeout 15s sur `waitForURL("**/dashboard")` |
+| Test                                       | Résultat                                        |
+| ------------------------------------------ | ----------------------------------------------- |
+| `should display login page`                | ✅ 714ms                                        |
+| `should show error on invalid credentials` | ✅ 610ms                                        |
+| `should login with valid credentials`      | ❌ timeout 15s sur `waitForURL("**/dashboard")` |
 
 **Interprétation** : bit-rot pré-existant, pas régression. Le test hardcode `admin/admin123` alors que le seed moderne génère un password admin aléatoire (ou utilise `SEED_ADMIN_PASSWORD`). Alternative : locale prefix `/fr/dashboard` qui ne matche pas le wildcard.
 
@@ -165,6 +166,7 @@ Le PR #8 reste correct : c'est un unbreak de config, et il **expose** la dette s
 - `GAPS-gantt-vs-gabarit.md` n'existe pas non plus
 
 Vérifications exhaustives (toutes négatives) :
+
 - `find backlog/ .superpowers/ docs/ -iname "*gantt*"` → zéro fichier de spec
 - `git log --all --diff-filter=D -- "**gantt**"` → aucun fichier supprimé récupérable
 - `git stash list` → aucun stash contenant ces docs
@@ -173,10 +175,10 @@ Vérifications exhaustives (toutes négatives) :
 ### Décision
 
 Non démarré. Nécessite clarification utilisateur :
+
 1. Où se trouvent les docs (vault Obsidian `CPAM 92/PILOTAGE/` ? machine séparée ?)
 2. Ou abandon du chantier (le Gantt actuel tient-il la route ?)
 
 Advisor verdict : « Don't audit-by-guess. No spec = no C3. »
 
 ---
-

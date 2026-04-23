@@ -1336,14 +1336,18 @@ export default function ProjectDetailPage() {
               <TaskListView
                 tasks={filteredTasks}
                 onStatusChange={handleTaskStatusChange}
-                onTaskClick={(task) => router.push(`/${locale}/tasks/${task.id}`)}
+                onTaskClick={(task) =>
+                  router.push(`/${locale}/tasks/${task.id}`)
+                }
                 onDelete={handleDeleteTask}
                 onDateChange={handleTaskDateChange}
               />
             ) : (
               <TaskKanban
                 tasks={filteredTasks}
-                onTaskClick={(task) => router.push(`/${locale}/tasks/${task.id}`)}
+                onTaskClick={(task) =>
+                  router.push(`/${locale}/tasks/${task.id}`)
+                }
                 onAfterStatusChange={async () => {
                   const tasksData = await tasksService.getByProject(projectId);
                   setTasks(Array.isArray(tasksData) ? tasksData : []);
@@ -1425,13 +1429,23 @@ export default function ProjectDetailPage() {
                                 const newRole = e.target.value.trim();
                                 if (newRole !== (member.role || "")) {
                                   try {
-                                    await projectsService.updateMember(project.id, member.userId, { role: newRole });
-                                    const updated = await projectsService.getById(project.id);
+                                    await projectsService.updateMember(
+                                      project.id,
+                                      member.userId,
+                                      { role: newRole },
+                                    );
+                                    const updated =
+                                      await projectsService.getById(project.id);
                                     setProject(updated);
-                                  } catch { /* silent */ }
+                                  } catch {
+                                    /* silent */
+                                  }
                                 }
                               }}
-                              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter")
+                                  (e.target as HTMLInputElement).blur();
+                              }}
                               className="text-sm text-gray-600 bg-transparent border-none outline-none focus:bg-white focus:border focus:border-blue-300 focus:rounded focus:px-1 w-full"
                             />
                           </div>
@@ -1448,13 +1462,23 @@ export default function ProjectDetailPage() {
                                 const val = parseInt(e.target.value);
                                 if (!isNaN(val) && val !== member.allocation) {
                                   try {
-                                    await projectsService.updateMember(project.id, member.userId, { allocation: val });
-                                    const updated = await projectsService.getById(project.id);
+                                    await projectsService.updateMember(
+                                      project.id,
+                                      member.userId,
+                                      { allocation: val },
+                                    );
+                                    const updated =
+                                      await projectsService.getById(project.id);
                                     setProject(updated);
-                                  } catch { /* silent */ }
+                                  } catch {
+                                    /* silent */
+                                  }
                                 }
                               }}
-                              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter")
+                                  (e.target as HTMLInputElement).blur();
+                              }}
                               className="text-sm text-gray-600 bg-transparent border-none outline-none focus:bg-white focus:border focus:border-blue-300 focus:rounded focus:px-1 w-12 text-right"
                             />
                             <span className="text-sm text-gray-400">%</span>

@@ -63,13 +63,15 @@ describe('EventsService', () => {
       isOwner: vi.fn().mockResolvedValue(false),
     };
     permissionsService = {
-      getPermissionsForRole: vi.fn().mockResolvedValue([
-        'events:read',
-        'events:readAll',
-        'tasks:readAll',
-        'leaves:readAll',
-        'telework:readAll',
-      ]),
+      getPermissionsForRole: vi
+        .fn()
+        .mockResolvedValue([
+          'events:read',
+          'events:readAll',
+          'tasks:readAll',
+          'leaves:readAll',
+          'telework:readAll',
+        ]),
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -491,6 +493,87 @@ describe('EventsService', () => {
           service.addParticipant('1', 'user-2', 'other-user', 'CONTRIBUTEUR'),
         ).rejects.toThrow(ForbiddenException);
       });
+    });
+  });
+
+  describe('addParticipant - user not found', () => {
+    it('should throw NotFoundException when user does not exist', async () => {
+      mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
+      ownershipService.isOwner.mockResolvedValue(true);
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.addParticipant('1', 'nonexistent-user', 'user-1', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('stopRecurrence', () => {
+    const recurringEvent = {
+      ...mockEvent,
+      isRecurring: true,
+      parentEventId: null,
+    };
+
+    beforeEach(() => {
+      // Mock deleteMany and update for stopRecurrence
+      (mockPrismaService.event as any).deleteMany = vi
+        .fn()
+        .mockResolvedValue({ count: 0 });
+    });
+
+    it('should stop recurrence of a parent recurring event', async () => {
+      mockPrismaService.event.findUnique.mockResolvedValue(recurringEvent);
+      ownershipService.isOwner.mockResolvedValue(true);
+      mockPrismaService.event.update.mockResolvedValue({
+        ...recurringEvent,
+        isRecurring: false,
+      });
+
+      const result = await service.stopRecurrence('1', 'user-1', 'ADMIN');
+
+      expect(result).toEqual({ message: 'Récurrence arrêtée avec succès' });
+      expect((mockPrismaService.event as any).deleteMany).toHaveBeenCalled();
+      expect(mockPrismaService.event.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: '1' },
+          data: { isRecurring: false },
+        }),
+      );
+    });
+
+    it('should throw NotFoundException when event not found', async () => {
+      mockPrismaService.event.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.stopRecurrence('nonexistent', 'user-1', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException when event is not a recurring parent', async () => {
+      mockPrismaService.event.findUnique.mockResolvedValue({
+        ...mockEvent,
+        isRecurring: false,
+        parentEventId: null,
+      });
+      ownershipService.isOwner.mockResolvedValue(true);
+
+      await expect(
+        service.stopRecurrence('1', 'user-1', 'ADMIN'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when event is a child (has parentEventId)', async () => {
+      mockPrismaService.event.findUnique.mockResolvedValue({
+        ...mockEvent,
+        isRecurring: true,
+        parentEventId: 'parent-event-id',
+      });
+      ownershipService.isOwner.mockResolvedValue(true);
+
+      await expect(
+        service.stopRecurrence('1', 'user-1', 'ADMIN'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

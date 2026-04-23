@@ -366,12 +366,9 @@ export class ExportService {
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0);
-    doc.text(
-      "Rapports & Analytics — Vue d'ensemble",
-      pageWidth / 2,
-      currentY,
-      { align: "center" },
-    );
+    doc.text("Rapports & Analytics — Vue d'ensemble", pageWidth / 2, currentY, {
+      align: "center",
+    });
 
     currentY += 8;
     doc.setFontSize(10);
@@ -451,9 +448,7 @@ export class ExportService {
     data.taskStatusData.forEach((status, i) => {
       const x = marginLeft + i * statusItemWidth;
       const pct =
-        totalTasks > 0
-          ? ((status.value / totalTasks) * 100).toFixed(1)
-          : "0";
+        totalTasks > 0 ? ((status.value / totalTasks) * 100).toFixed(1) : "0";
 
       const hexColor = status.color.replace("#", "");
       const r = parseInt(hexColor.substring(0, 2), 16) || 100;
@@ -500,14 +495,7 @@ export class ExportService {
           currentY = 20;
         }
 
-        doc.addImage(
-          dataUrl,
-          "PNG",
-          marginLeft,
-          currentY,
-          imgWidth,
-          imgHeight,
-        );
+        doc.addImage(dataUrl, "PNG", marginLeft, currentY, imgWidth, imgHeight);
         currentY += imgHeight + 8;
         chartRendered = true;
       } catch (err) {
@@ -666,10 +654,17 @@ export class ExportService {
     // Temporarily expand the container so the full Gantt is captured (no overflow clipping)
     // Remove overflow clipping from both the scroll container (.overflow-auto)
     // and the rounded-corner clip container (.overflow-hidden) so the full Gantt is captured
-    const overflowEls = ganttElement.querySelectorAll<HTMLElement>(".overflow-auto, .overflow-hidden");
-    const savedStyles: { el: HTMLElement; overflow: string; height: string }[] = [];
+    const overflowEls = ganttElement.querySelectorAll<HTMLElement>(
+      ".overflow-auto, .overflow-hidden",
+    );
+    const savedStyles: { el: HTMLElement; overflow: string; height: string }[] =
+      [];
     overflowEls.forEach((el) => {
-      savedStyles.push({ el, overflow: el.style.overflow, height: el.style.height });
+      savedStyles.push({
+        el,
+        overflow: el.style.overflow,
+        height: el.style.height,
+      });
       el.style.overflow = "visible";
       el.style.height = "auto";
     });

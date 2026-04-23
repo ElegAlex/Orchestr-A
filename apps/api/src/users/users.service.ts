@@ -1455,7 +1455,7 @@ export class UsersService {
   }
 
   async setAvatarPreset(userId: string, preset: string) {
-    if (!(VALID_PRESETS as readonly string[]).includes(preset)) {
+    if (!VALID_PRESETS.includes(preset)) {
       throw new BadRequestException('Preset invalide');
     }
 

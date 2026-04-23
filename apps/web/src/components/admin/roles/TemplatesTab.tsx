@@ -120,41 +120,41 @@ export function TemplatesTab({
         </div>
       ) : (
         <div className="space-y-8">
-          {CATEGORY_ORDER.filter(
-            (cat) => templatesByCategory[cat]?.length,
-          ).map((cat) => {
-            const cfg = CATEGORY_CONFIG[cat];
-            const group = templatesByCategory[cat] ?? [];
-            return (
-              <div
-                key={cat}
-                data-testid="category-section"
-                data-category={cat}
-              >
-                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.badgeClass}`}
-                  >
-                    {cfg.label}
-                  </span>
-                  <span className="text-xs font-normal text-gray-500">
-                    {group.length} template{group.length > 1 ? "s" : ""}
-                  </span>
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {group.map((tpl) => (
-                    <TemplateCard
-                      key={tpl.key}
-                      template={tpl}
-                      roleCount={roleCountByTemplate[tpl.key] ?? 0}
-                      onClick={() => onOpenDetails(tpl)}
-                      onRoleCountClick={() => onRoleCountClick(tpl.key)}
-                    />
-                  ))}
+          {CATEGORY_ORDER.filter((cat) => templatesByCategory[cat]?.length).map(
+            (cat) => {
+              const cfg = CATEGORY_CONFIG[cat];
+              const group = templatesByCategory[cat] ?? [];
+              return (
+                <div
+                  key={cat}
+                  data-testid="category-section"
+                  data-category={cat}
+                >
+                  <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.badgeClass}`}
+                    >
+                      {cfg.label}
+                    </span>
+                    <span className="text-xs font-normal text-gray-500">
+                      {group.length} template{group.length > 1 ? "s" : ""}
+                    </span>
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {group.map((tpl) => (
+                      <TemplateCard
+                        key={tpl.key}
+                        template={tpl}
+                        roleCount={roleCountByTemplate[tpl.key] ?? 0}
+                        onClick={() => onOpenDetails(tpl)}
+                        onRoleCountClick={() => onRoleCountClick(tpl.key)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            },
+          )}
         </div>
       )}
     </div>

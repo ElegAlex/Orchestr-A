@@ -106,7 +106,7 @@ describe('RolesService — V3 F', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('si isDefault=true, désactive l\'ancien default', async () => {
+    it("si isDefault=true, désactive l'ancien default", async () => {
       prisma.role.findUnique.mockResolvedValue(null);
       prisma.role.create.mockResolvedValue({
         id: 'r-new',
@@ -282,6 +282,146 @@ describe('RolesService — V3 F', () => {
       await expect(service.deleteRole('r-x')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('listRoles', () => {
+    it('should return roles enriched with stats', async () => {
+      prisma.role.findMany.mockResolvedValue([
+        {
+          id: 'r-1',
+          code: 'ADMIN',
+          label: 'Administrateur',
+          templateKey: 'ADMIN',
+          description: null,
+          isSystem: true,
+          isDefault: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          _count: { users: 5 },
+        },
+        {
+          id: 'r-2',
+          code: 'CUSTOM_LEAD',
+          label: 'Chef de projet',
+          templateKey: 'PROJECT_LEAD',
+          description: 'Custom role',
+          isSystem: false,
+          isDefault: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          _count: { users: 2 },
+        },
+      ]);
+
+      const result = await service.listRoles();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('r-1');
+      expect(result[0].userCount).toBe(5);
+      expect(result[1].id).toBe('r-2');
+    });
+
+    it('should return empty array when no roles exist', async () => {
+      prisma.role.findMany.mockResolvedValue([]);
+
+      const result = await service.listRoles();
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('getRoleById', () => {
+    it('should return role with stats by id', async () => {
+      prisma.role.findUnique.mockResolvedValue({
+        id: 'r-1',
+        code: 'ADMIN',
+        label: 'Administrateur',
+        templateKey: 'ADMIN',
+        description: null,
+        isSystem: true,
+        isDefault: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        _count: { users: 5 },
+      });
+
+      const result = await service.getRoleById('r-1');
+
+      expect(result.id).toBe('r-1');
+      expect(result.code).toBe('ADMIN');
+      expect(result.userCount).toBe(5);
+    });
+
+    it('should throw NotFoundException when role not found', async () => {
+      prisma.role.findUnique.mockResolvedValue(null);
+
+      await expect(service.getRoleById('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('updateRole — isDefault transition', () => {
+    it('should call unsetCurrentDefault when isDefault transitions to true', async () => {
+      prisma.role.findUnique.mockResolvedValue({
+        id: 'r-1',
+        code: 'CUSTOM',
+        isSystem: false,
+        templateKey: 'BASIC_USER',
+        label: 'Custom',
+        description: null,
+        isDefault: false, // currently not default
+      });
+      prisma.role.update.mockResolvedValue({
+        id: 'r-1',
+        code: 'CUSTOM',
+        label: 'Custom',
+        templateKey: 'BASIC_USER',
+        description: null,
+        isSystem: false,
+        isDefault: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        _count: { users: 0 },
+      });
+
+      await service.updateRole('r-1', { isDefault: true });
+
+      // Should call updateMany to unset current default
+      expect(prisma.role.updateMany).toHaveBeenCalledWith({
+        where: { isDefault: true },
+        data: { isDefault: false },
+      });
+    });
+
+    it('should NOT call unsetCurrentDefault when isDefault is already true', async () => {
+      prisma.role.findUnique.mockResolvedValue({
+        id: 'r-1',
+        code: 'CUSTOM',
+        isSystem: false,
+        templateKey: 'BASIC_USER',
+        label: 'Custom',
+        description: null,
+        isDefault: true, // already default
+      });
+      prisma.role.update.mockResolvedValue({
+        id: 'r-1',
+        code: 'CUSTOM',
+        label: 'Custom',
+        templateKey: 'BASIC_USER',
+        description: null,
+        isSystem: false,
+        isDefault: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        _count: { users: 0 },
+      });
+
+      await service.updateRole('r-1', { isDefault: true });
+
+      // updateMany should NOT be called since isDefault is already true
+      expect(prisma.role.updateMany).not.toHaveBeenCalled();
     });
   });
 });

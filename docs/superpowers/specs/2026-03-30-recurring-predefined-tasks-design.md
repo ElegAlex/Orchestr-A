@@ -9,6 +9,7 @@
 The CPAM needs to schedule recurring "permanences" (Permanence accueil, Permanence telephonique, etc.) — named activity templates assigned to specific collaborators on specific recurring days.
 
 The existing `PredefinedTask` system already handles:
+
 - Task templates (name, color, icon, duration)
 - Assignments (user + date + period)
 - Recurring rules (dayOfWeek, startDate, endDate)
@@ -16,6 +17,7 @@ The existing `PredefinedTask` system already handles:
 - Display in the planning grid (DayCell)
 
 Three gaps were identified:
+
 1. No `weekInterval` on recurring rules (only weekly, no biweekly)
 2. Rules are per-user — no multi-user creation in one operation
 3. No multi-day rule creation in one shot (e.g. Monday AND Wednesday)
@@ -88,6 +90,7 @@ The anchor is always relative to the rule's startDate, ensuring biweekly rules s
 ### 2e. Permission verification
 
 `predefined_tasks:assign` exists in seed (line 1593) and is granted to:
+
 - **ADMIN**: all permissions
 - **RESPONSABLE**: all permissions except users:manage_roles and settings:update
 - **MANAGER**: explicitly listed (line 1715)
@@ -100,16 +103,17 @@ Missing: E2E permission matrix entry for `predefined_tasks:assign` — to be add
 
 The current modal creates 1 rule (1 user x 1 day). Extended to:
 
-| Current field | New field |
-|---|---|
-| Collaborateur (single select) | Collaborateurs (multi-select with chips, filterable by service) |
-| Jour de la semaine (single select) | Jours de la semaine (7 toggle-pill buttons, multi-select) |
-| Duree (HALF_DAY / FULL_DAY) | Unchanged |
-| Date de debut | Unchanged |
-| Date de fin (optional) | Unchanged |
-| — | **Frequence**: Chaque semaine / Toutes les 2 semaines / Toutes les 3 semaines / Toutes les 4 semaines |
+| Current field                      | New field                                                                                             |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Collaborateur (single select)      | Collaborateurs (multi-select with chips, filterable by service)                                       |
+| Jour de la semaine (single select) | Jours de la semaine (7 toggle-pill buttons, multi-select)                                             |
+| Duree (HALF_DAY / FULL_DAY)        | Unchanged                                                                                             |
+| Date de debut                      | Unchanged                                                                                             |
+| Date de fin (optional)             | Unchanged                                                                                             |
+| —                                  | **Frequence**: Chaque semaine / Toutes les 2 semaines / Toutes les 3 semaines / Toutes les 4 semaines |
 
 Behavior:
+
 - Multi-user: dropdown with checkboxes, filter by service
 - Multi-day: 7 toggle buttons Lun-Dim (pill style, highlighted when selected)
 - Frequency: select dropdown, values 1-4 (covers 99% of real cases; API accepts up to 52)
@@ -119,6 +123,7 @@ Behavior:
 ### 3b. weekInterval display in rules list
 
 Each rule in the list shows frequency:
+
 - `weekInterval === 1`: "Chaque lundi" (no visual change)
 - `weekInterval === 2`: "Un lundi sur deux"
 - `weekInterval === 3`: "Un lundi sur trois"
@@ -126,12 +131,14 @@ Each rule in the list shows frequency:
 ### 3c. Service update
 
 Add to `predefined-tasks.service.ts`:
+
 - Type `PredefinedTaskRecurringRule`: add `weekInterval: number`
 - New method `bulkCreateRecurringRules(data)` calling `POST /recurring-rules/bulk`
 
 ## 4. Files to modify
 
 ### Backend
+
 - `packages/database/prisma/schema.prisma` — add weekInterval field
 - `apps/api/src/predefined-tasks/dto/create-recurring-rule.dto.ts` — add weekInterval
 - `apps/api/src/predefined-tasks/dto/` — new `create-bulk-recurring-rules.dto.ts`
@@ -139,10 +146,12 @@ Add to `predefined-tasks.service.ts`:
 - `apps/api/src/predefined-tasks/predefined-tasks.service.ts` — bulk creation + generation fix
 
 ### Frontend
+
 - `apps/web/src/services/predefined-tasks.service.ts` — types + bulkCreateRecurringRules method
 - `apps/web/src/components/predefined-tasks/RecurringRulesModal.tsx` — enhanced form
 
 ### Tests
+
 - `e2e/fixtures/permission-matrix.ts` — add predefined_tasks:assign entry
 - Backend specs for new endpoint + generation algorithm
 - E2E tests for bulk rule creation flow

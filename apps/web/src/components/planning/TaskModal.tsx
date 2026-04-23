@@ -50,7 +50,9 @@ export const TaskModal = ({
       const updated = await tasksService.updateSubtask(task.id, subtask.id, {
         isCompleted: !subtask.isCompleted,
       });
-      setSubtasks((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      setSubtasks((prev) =>
+        prev.map((s) => (s.id === updated.id ? updated : s)),
+      );
     } catch {
       // silently fail
     }
@@ -165,7 +167,8 @@ export const TaskModal = ({
         {subtasks.length > 0 && (
           <div className="mt-4">
             <h3 className="font-semibold text-gray-900 mb-2">
-              Sous-tâches ({subtasks.filter((s) => s.isCompleted).length}/{subtasks.length})
+              Sous-tâches ({subtasks.filter((s) => s.isCompleted).length}/
+              {subtasks.length})
             </h3>
             <div className="space-y-1">
               {subtasks.map((subtask) => (

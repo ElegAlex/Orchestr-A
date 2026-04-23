@@ -45,7 +45,12 @@ function isTaskOverdue(task: Task): boolean {
 }
 
 const CalendarIcon = () => (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -56,7 +61,12 @@ const CalendarIcon = () => (
 );
 
 const ClockIcon = () => (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -195,9 +205,7 @@ export function TaskCard({
               <div className="flex items-center gap-1.5">
                 <ClockIcon />
                 <span className="font-medium">{t("tasks.estimated")}</span>
-                <span>
-                  {t("tasks.hours", { hours: task.estimatedHours })}
-                </span>
+                <span>{t("tasks.hours", { hours: task.estimatedHours })}</span>
               </div>
             )}
           </div>

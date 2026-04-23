@@ -64,7 +64,7 @@ export class RolesController {
 
   @Get(':id')
   @RequirePermissions('users:manage_roles')
-  @ApiOperation({ summary: 'Détail d\'un rôle' })
+  @ApiOperation({ summary: "Détail d'un rôle" })
   @ApiResponse({ status: 200, description: 'Rôle' })
   @ApiResponse({ status: 404, description: 'Rôle introuvable' })
   getOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -74,7 +74,10 @@ export class RolesController {
   @Post()
   @RequirePermissions('users:manage_roles')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Crée un rôle (isSystem forcé à false). Les permissions sont strictement celles du template choisi.' })
+  @ApiOperation({
+    summary:
+      'Crée un rôle (isSystem forcé à false). Les permissions sont strictement celles du template choisi.',
+  })
   @ApiResponse({ status: 201, description: 'Rôle créé' })
   @ApiResponse({ status: 409, description: 'Code déjà existant' })
   create(@Body() dto: CreateRoleDto) {
@@ -90,10 +93,7 @@ export class RolesController {
   @ApiResponse({ status: 200, description: 'Rôle mis à jour' })
   @ApiResponse({ status: 403, description: 'Rôle système non modifiable' })
   @ApiResponse({ status: 404, description: 'Rôle introuvable' })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateRoleDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRoleDto) {
     return this.rolesService.updateRole(id, dto);
   }
 

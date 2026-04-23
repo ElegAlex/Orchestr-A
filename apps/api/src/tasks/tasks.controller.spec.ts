@@ -307,7 +307,10 @@ describe('TasksController', () => {
     it('should return empty array when user has no tasks', async () => {
       mockTasksService.getTasksByAssignee.mockResolvedValue([]);
 
-      const result = await controller.getTasksByAssignee('user-without-tasks', mockUser);
+      const result = await controller.getTasksByAssignee(
+        'user-without-tasks',
+        mockUser,
+      );
 
       expect(result).toEqual([]);
     });
@@ -364,7 +367,11 @@ describe('TasksController', () => {
       const updatedTask = { ...mockTask, ...updateTaskDto };
       mockTasksService.update.mockResolvedValue(updatedTask);
 
-      const result = await controller.update('task-id-1', updateTaskDto, mockUser);
+      const result = await controller.update(
+        'task-id-1',
+        updateTaskDto,
+        mockUser,
+      );
 
       expect(result).toEqual(updatedTask);
       expect(result.title).toBe('Updated Task Title');
@@ -393,10 +400,14 @@ describe('TasksController', () => {
       const completedTask = { ...mockTask, status: 'DONE', progress: 100 };
       mockTasksService.update.mockResolvedValue(completedTask);
 
-      const result = await controller.update('task-id-1', {
-        status: 'DONE',
-        progress: 100,
-      }, mockUser);
+      const result = await controller.update(
+        'task-id-1',
+        {
+          status: 'DONE',
+          progress: 100,
+        },
+        mockUser,
+      );
 
       expect(result.status).toBe('DONE');
       expect(result.progress).toBe(100);
@@ -413,7 +424,10 @@ describe('TasksController', () => {
       const result = await controller.remove('task-id-1', mockUser);
 
       expect(result.message).toBe('Tâche supprimée');
-      expect(mockTasksService.remove).toHaveBeenCalledWith('task-id-1', normalizedUser);
+      expect(mockTasksService.remove).toHaveBeenCalledWith(
+        'task-id-1',
+        normalizedUser,
+      );
     });
 
     it('should throw NotFoundException when task not found', async () => {
@@ -433,9 +447,9 @@ describe('TasksController', () => {
         ),
       );
 
-      await expect(controller.remove('task-with-dependents', mockUser)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        controller.remove('task-with-dependents', mockUser),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

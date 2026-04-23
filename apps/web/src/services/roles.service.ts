@@ -7,11 +7,7 @@
  */
 
 import { api } from "@/lib/api";
-import type {
-  PermissionCode,
-  RoleTemplateKey,
-  RoleCategoryKey,
-} from "rbac";
+import type { PermissionCode, RoleTemplateKey, RoleCategoryKey } from "rbac";
 
 /**
  * Vue d'un template telle que renvoyée par `GET /api/roles/templates`.
@@ -79,10 +75,7 @@ export const rolesService = {
     return response.data;
   },
 
-  async updateRole(
-    id: string,
-    dto: UpdateRoleV2Dto,
-  ): Promise<RoleWithStats> {
+  async updateRole(id: string, dto: UpdateRoleV2Dto): Promise<RoleWithStats> {
     const response = await api.patch<RoleWithStats>(`/roles/${id}`, dto);
     return response.data;
   },

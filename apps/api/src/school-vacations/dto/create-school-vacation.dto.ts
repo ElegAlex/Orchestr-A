@@ -48,7 +48,7 @@ export class CreateSchoolVacationDto {
   zone?: SchoolVacationZone;
 
   @ApiProperty({
-    description: "Année scolaire de début",
+    description: 'Année scolaire de début',
     example: 2025,
     minimum: 2020,
     maximum: 2100,

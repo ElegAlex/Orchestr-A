@@ -189,7 +189,9 @@ describe("QuickTimeEntryInput", () => {
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
     // No "…" trigger when permission is missing (V5 : i18n key surfaced via mock).
     expect(
-      screen.queryByRole("button", { name: /openModalLabel|Ouvrir la saisie/i }),
+      screen.queryByRole("button", {
+        name: /openModalLabel|Ouvrir la saisie/i,
+      }),
     ).not.toBeInTheDocument();
     // Cumul still visible.
     expect(screen.getByText(/4\.00\s*h/)).toBeInTheDocument();

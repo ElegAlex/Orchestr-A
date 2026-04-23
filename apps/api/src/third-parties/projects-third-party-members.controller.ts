@@ -28,7 +28,7 @@ export class ProjectsThirdPartyMembersController {
 
   @Get()
   @RequirePermissions('third_parties:read')
-  @ApiOperation({ summary: "Lister les tiers rattachés à un projet" })
+  @ApiOperation({ summary: 'Lister les tiers rattachés à un projet' })
   list(@Param('projectId', ParseUUIDPipe) projectId: string) {
     return this.thirdPartiesService.listProjectMembers(projectId);
   }

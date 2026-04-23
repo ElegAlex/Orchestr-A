@@ -227,15 +227,14 @@ export class TeleworkService {
             const dateOnly = new Date(cursor);
             dateOnly.setHours(0, 0, 0, 0);
 
-            const existing =
-              await this.prisma.teleworkSchedule.findUnique({
-                where: {
-                  userId_date: {
-                    userId: rule.userId,
-                    date: dateOnly,
-                  },
+            const existing = await this.prisma.teleworkSchedule.findUnique({
+              where: {
+                userId_date: {
+                  userId: rule.userId,
+                  date: dateOnly,
                 },
-              });
+              },
+            });
 
             if (!existing) {
               await this.prisma.teleworkSchedule.create({
@@ -258,7 +257,11 @@ export class TeleworkService {
   /**
    * Récupérer un télétravail par ID
    */
-  async findOne(id: string, currentUserId?: string, currentUserRole?: string | null) {
+  async findOne(
+    id: string,
+    currentUserId?: string,
+    currentUserRole?: string | null,
+  ) {
     const telework = await this.prisma.teleworkSchedule.findUnique({
       where: { id },
       include: {
@@ -477,7 +480,11 @@ export class TeleworkService {
   /**
    * Supprimer un télétravail
    */
-  async remove(id: string, currentUserId: string, currentUserRole: string | null) {
+  async remove(
+    id: string,
+    currentUserId: string,
+    currentUserRole: string | null,
+  ) {
     const telework = await this.prisma.teleworkSchedule.findUnique({
       where: { id },
     });

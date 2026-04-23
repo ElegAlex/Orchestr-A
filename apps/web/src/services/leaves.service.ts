@@ -209,14 +209,16 @@ export const leavesService = {
     await api.delete(`/leaves/balances/${id}`);
   },
 
-  async getSubordinates(): Promise<Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    login: string;
-    email: string;
-  }>> {
-    const response = await api.get('/leaves/subordinates');
+  async getSubordinates(): Promise<
+    Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      login: string;
+      email: string;
+    }>
+  > {
+    const response = await api.get("/leaves/subordinates");
     return response.data;
   },
 

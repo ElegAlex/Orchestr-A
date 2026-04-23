@@ -2,7 +2,11 @@ import { Task, TaskStatus } from "@/types";
 import { Event } from "@/services/events.service";
 import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
 import { DayCell as DayCellData } from "@/hooks/usePlanningData";
-import { getPriorityColor, getStatusIcon, getStatusDotColor } from "@/lib/planning-utils";
+import {
+  getPriorityColor,
+  getStatusIcon,
+  getStatusDotColor,
+} from "@/lib/planning-utils";
 import { usePlanningViewStore } from "@/stores/planningView.store";
 import { isToday, getDay } from "date-fns";
 import { useTranslations } from "next-intl";
@@ -59,15 +63,23 @@ export const DayCell = ({
 
   // Selectors granulaires : un par filtre lu, pour éviter les re-renders globaux au toggle.
   const showTodo = usePlanningViewStore((s) => s.legendFilters.todo);
-  const showInProgress = usePlanningViewStore((s) => s.legendFilters.inProgress);
+  const showInProgress = usePlanningViewStore(
+    (s) => s.legendFilters.inProgress,
+  );
   const showInReview = usePlanningViewStore((s) => s.legendFilters.inReview);
   const showDone = usePlanningViewStore((s) => s.legendFilters.done);
   const showBlocked = usePlanningViewStore((s) => s.legendFilters.blocked);
-  const showProjectTask = usePlanningViewStore((s) => s.legendFilters.projectTask);
-  const showOrphanTask = usePlanningViewStore((s) => s.legendFilters.orphanTask);
+  const showProjectTask = usePlanningViewStore(
+    (s) => s.legendFilters.projectTask,
+  );
+  const showOrphanTask = usePlanningViewStore(
+    (s) => s.legendFilters.orphanTask,
+  );
   const showTelework = usePlanningViewStore((s) => s.legendFilters.telework);
   const showOffice = usePlanningViewStore((s) => s.legendFilters.office);
-  const showLeavePending = usePlanningViewStore((s) => s.legendFilters.leavePending);
+  const showLeavePending = usePlanningViewStore(
+    (s) => s.legendFilters.leavePending,
+  );
   const leaveTypeFilters = usePlanningViewStore((s) => s.leaveTypeFilters);
   const showEvent = usePlanningViewStore((s) => s.legendFilters.event);
   const showExternalIntervention = usePlanningViewStore(
@@ -198,12 +210,15 @@ export const DayCell = ({
       )}
 
       {/* External Intervention Background Overlay */}
-      {cell.isExternalIntervention && showExternalIntervention && !leaveVisible && !cell.isHoliday && (
-        <div
-          className="absolute inset-0 z-0 bg-red-100/40 border-2 border-red-400 rounded-sm pointer-events-none"
-          aria-hidden="true"
-        />
-      )}
+      {cell.isExternalIntervention &&
+        showExternalIntervention &&
+        !leaveVisible &&
+        !cell.isHoliday && (
+          <div
+            className="absolute inset-0 z-0 bg-red-100/40 border-2 border-red-400 rounded-sm pointer-events-none"
+            aria-hidden="true"
+          />
+        )}
 
       {/* Telework Background Overlay - en arrière-plan pour que les tâches restent visibles.
           Masqué si le bg Intervention extérieure occupe déjà la cellule, pour préserver l'exclusivité visuelle actuelle. */}
@@ -223,13 +238,18 @@ export const DayCell = ({
       >
         {/* Telework toggle - visible uniquement si pas de congé, jour férié, ni événement toute la journée.
             Le glyphe 🏠 (TT) est gouverné par showTelework, le glyphe 🏢 (bureau) par showOffice. */}
-        {!leaveVisible && !cell.isHoliday && !hasAllDayEvent && canToggleTelework && (
+        {!leaveVisible &&
+          !cell.isHoliday &&
+          !hasAllDayEvent &&
+          canToggleTelework &&
           (cell.isTelework ? showTelework : showOffice) && (
             <div className="flex flex-col items-center justify-center">
               <button
                 onClick={() => onTeleworkToggle(userId, cell.date)}
                 className={`${viewMode === "month" ? "text-[10px]" : "text-lg"} transition ${
-                  cell.isTelework ? "opacity-100" : "opacity-30 hover:opacity-60"
+                  cell.isTelework
+                    ? "opacity-100"
+                    : "opacity-30 hover:opacity-60"
                 }`}
                 title={
                   cell.isTelework ? t("telework.label") : t("telework.office")
@@ -238,29 +258,39 @@ export const DayCell = ({
                 {cell.isTelework ? "🏠" : "🏢"}
               </button>
               {cell.isTelework && viewMode === "week" && (
-                <span className="text-[9px] text-gray-500 leading-tight">{t("telework.label")}</span>
+                <span className="text-[9px] text-gray-500 leading-tight">
+                  {t("telework.label")}
+                </span>
               )}
             </div>
-          )
-        )}
+          )}
         {/* Telework indicator (read-only) for users without toggle permission */}
-        {!leaveVisible && !cell.isHoliday && !hasAllDayEvent && !canToggleTelework && cell.isTelework && showTelework && (
-          <div className="flex flex-col items-center justify-center">
-            <span
-              className={`${viewMode === "month" ? "text-[10px]" : "text-lg"}`}
-              title={t("telework.label")}
-            >
-              🏠
-            </span>
-            {viewMode === "week" && (
-              <span className="text-[9px] text-gray-500 leading-tight">{t("telework.label")}</span>
-            )}
-          </div>
-        )}
+        {!leaveVisible &&
+          !cell.isHoliday &&
+          !hasAllDayEvent &&
+          !canToggleTelework &&
+          cell.isTelework &&
+          showTelework && (
+            <div className="flex flex-col items-center justify-center">
+              <span
+                className={`${viewMode === "month" ? "text-[10px]" : "text-lg"}`}
+                title={t("telework.label")}
+              >
+                🏠
+              </span>
+              {viewMode === "week" && (
+                <span className="text-[9px] text-gray-500 leading-tight">
+                  {t("telework.label")}
+                </span>
+              )}
+            </div>
+          )}
 
         {/* Tasks - masquées si congé, jour férié, ou événement toute la journée.
             Chaque tâche est filtrée par son statut, son type (projet/orphan) et son caractère externe. */}
-        {!leaveVisible && !cell.isHoliday && !hasAllDayEvent &&
+        {!leaveVisible &&
+          !cell.isHoliday &&
+          !hasAllDayEvent &&
           cell.tasks.filter(isTaskVisible).map((task) => {
             // Style spécial pour intervention extérieure
             const isExternal = task.isExternalIntervention;
@@ -303,7 +333,9 @@ export const DayCell = ({
                     <div className="flex items-center gap-1 mt-0.5">
                       {!isOrphan && (
                         <span className="inline-flex items-center gap-0.5 text-[9px] text-gray-500">
-                          <span className={`inline-block w-1.5 h-1.5 rounded-full ${getStatusDotColor(task.status)}`} />
+                          <span
+                            className={`inline-block w-1.5 h-1.5 rounded-full ${getStatusDotColor(task.status)}`}
+                          />
                           {tCommon(`taskStatus.${task.status}`)}
                         </span>
                       )}
@@ -337,55 +369,71 @@ export const DayCell = ({
 
         {/* Predefined Task Assignments - masquées si congé, jour férié, ou événement toute la journée.
             Les assignations externes sont filtrées par showExternalIntervention. */}
-        {!leaveVisible && !cell.isHoliday && !hasAllDayEvent &&
+        {!leaveVisible &&
+          !cell.isHoliday &&
+          !hasAllDayEvent &&
           cell.predefinedTaskAssignments
             .filter((assignment) => {
               const pt = assignment.predefinedTask;
               if (!pt) return false;
-              if (pt.isExternalIntervention && !showExternalIntervention) return false;
+              if (pt.isExternalIntervention && !showExternalIntervention)
+                return false;
               return true;
             })
             .map((assignment) => {
-            const pt = assignment.predefinedTask;
-            if (!pt) return null;
-            const isExternal = pt.isExternalIntervention;
-            return (
-              <div
-                key={assignment.id}
-                onClick={() => onPredefinedTaskClick(assignment, cell.date)}
-                className={`rounded border-2 cursor-pointer hover:shadow-md transition ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
-                style={isExternal
-                  ? { borderColor: "#f87171", backgroundColor: "#fee2e2", color: "#7f1d1d" }
-                  : { borderColor: pt.color, backgroundColor: `${pt.color}20`, color: pt.color }
-                }
-              >
-                {viewMode === "month" ? (
-                  <div className="text-center" title={pt.name}>
-                    <span>{isExternal ? "🔴" : pt.icon}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-start space-x-1">
-                    <span className="text-sm flex-shrink-0">{isExternal ? "🔴" : pt.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium line-clamp-1">{pt.name}</p>
-                      <p className="text-[10px] opacity-80">
-                        {pt.defaultDuration === "TIME_SLOT" && pt.startTime && pt.endTime
-                          ? `${pt.startTime} - ${pt.endTime}`
-                          : assignment.period === "FULL_DAY"
-                            ? "Journée"
-                            : "Demi-journée"}
-                      </p>
-                      {isExternal && (
-                        <p className="text-[10px] font-bold text-red-800 mt-0.5">
-                          🔴 {t("dayCell.externalIntervention")}
-                        </p>
-                      )}
+              const pt = assignment.predefinedTask;
+              if (!pt) return null;
+              const isExternal = pt.isExternalIntervention;
+              return (
+                <div
+                  key={assignment.id}
+                  onClick={() => onPredefinedTaskClick(assignment, cell.date)}
+                  className={`rounded border-2 cursor-pointer hover:shadow-md transition ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
+                  style={
+                    isExternal
+                      ? {
+                          borderColor: "#f87171",
+                          backgroundColor: "#fee2e2",
+                          color: "#7f1d1d",
+                        }
+                      : {
+                          borderColor: pt.color,
+                          backgroundColor: `${pt.color}20`,
+                          color: pt.color,
+                        }
+                  }
+                >
+                  {viewMode === "month" ? (
+                    <div className="text-center" title={pt.name}>
+                      <span>{isExternal ? "🔴" : pt.icon}</span>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  ) : (
+                    <div className="flex items-start space-x-1">
+                      <span className="text-sm flex-shrink-0">
+                        {isExternal ? "🔴" : pt.icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium line-clamp-1">{pt.name}</p>
+                        <p className="text-[10px] opacity-80">
+                          {pt.defaultDuration === "TIME_SLOT" &&
+                          pt.startTime &&
+                          pt.endTime
+                            ? `${pt.startTime} - ${pt.endTime}`
+                            : assignment.period === "FULL_DAY"
+                              ? "Journée"
+                              : "Demi-journée"}
+                        </p>
+                        {isExternal && (
+                          <p className="text-[10px] font-bold text-red-800 mt-0.5">
+                            🔴 {t("dayCell.externalIntervention")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
         {/* Bouton ajout tâche prédéfinie */}
         {!leaveVisible && !cell.isHoliday && canAssignPredefinedTask && (
@@ -402,61 +450,66 @@ export const DayCell = ({
 
         {/* Events - visible uniquement si pas de congé ni jour férié.
             Filtrés : événements standards par showEvent, interventions externes par showExternalIntervention. */}
-        {!leaveVisible && !cell.isHoliday &&
+        {!leaveVisible &&
+          !cell.isHoliday &&
           cell.events
             .filter((event) =>
-              event.isExternalIntervention ? showExternalIntervention : showEvent,
+              event.isExternalIntervention
+                ? showExternalIntervention
+                : showEvent,
             )
             .map((event) => {
-            const isExtEvent = event.isExternalIntervention;
-            const eventBorderClass = isExtEvent
-              ? "border-red-400 bg-red-100 text-red-900"
-              : "border-purple-400 bg-purple-100 text-purple-900";
-            const eventTimeClass = isExtEvent
-              ? "text-red-700"
-              : "text-purple-700";
+              const isExtEvent = event.isExternalIntervention;
+              const eventBorderClass = isExtEvent
+                ? "border-red-400 bg-red-100 text-red-900"
+                : "border-purple-400 bg-purple-100 text-purple-900";
+              const eventTimeClass = isExtEvent
+                ? "text-red-700"
+                : "text-purple-700";
 
-            return (
-              <div
-                key={event.id}
-                onClick={() => onEventClick(event)}
-                className={`rounded border-2 cursor-pointer hover:shadow-md transition ${eventBorderClass} ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
-              >
-                {viewMode === "month" ? (
-                  <div className="text-center" title={event.title}>
-                    <span>{isExtEvent ? "🔴" : "📅"}</span>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-start space-x-1">
-                      <span className="text-xs">
-                        {isExtEvent ? "🔴" : "📅"}
-                      </span>
-                      <span className="flex-1 font-medium line-clamp-2">
-                        {event.title}
-                      </span>
+              return (
+                <div
+                  key={event.id}
+                  onClick={() => onEventClick(event)}
+                  className={`rounded border-2 cursor-pointer hover:shadow-md transition ${eventBorderClass} ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
+                >
+                  {viewMode === "month" ? (
+                    <div className="text-center" title={event.title}>
+                      <span>{isExtEvent ? "🔴" : "📅"}</span>
                     </div>
-                    {isExtEvent && (
-                      <div className="text-[10px] font-bold text-red-800 mt-1">
-                        {t("dayCell.externalIntervention")}
-                      </div>
-                    )}
-                    <div
-                      className={`flex items-center space-x-2 text-[10px] ${eventTimeClass} mt-1`}
-                    >
-                      {(event.startTime || event.endTime) && (
-                        <span>
-                          🕐 {event.startTime || "--:--"} -{" "}
-                          {event.endTime || "--:--"}
+                  ) : (
+                    <>
+                      <div className="flex items-start space-x-1">
+                        <span className="text-xs">
+                          {isExtEvent ? "🔴" : "📅"}
                         </span>
+                        <span className="flex-1 font-medium line-clamp-2">
+                          {event.title}
+                        </span>
+                      </div>
+                      {isExtEvent && (
+                        <div className="text-[10px] font-bold text-red-800 mt-1">
+                          {t("dayCell.externalIntervention")}
+                        </div>
                       )}
-                      {event.isAllDay && <span>📆 {t("dayCell.allDay")}</span>}
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
+                      <div
+                        className={`flex items-center space-x-2 text-[10px] ${eventTimeClass} mt-1`}
+                      >
+                        {(event.startTime || event.endTime) && (
+                          <span>
+                            🕐 {event.startTime || "--:--"} -{" "}
+                            {event.endTime || "--:--"}
+                          </span>
+                        )}
+                        {event.isAllDay && (
+                          <span>📆 {t("dayCell.allDay")}</span>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
       </div>
     </div>
   );

@@ -55,24 +55,24 @@
 
 ### Frontend (apps/web)
 
-| Composant                    | Version       | Usage                        |
-| ---------------------------- | ------------- | ---------------------------- |
-| Next.js                      | 16.1.1        | Framework React (App Router) |
-| React                        | 19.2.3        | Bibliothèque UI              |
-| Tailwind CSS                 | 4.x           | Styling utilitaire           |
-| TanStack Query               | 5.90.6        | Gestion état serveur         |
-| Zustand                      | 5.0.8         | Gestion état client          |
-| Axios                        | 1.13.2        | Client HTTP                  |
-| React Hook Form              | 7.66.0        | Gestion formulaires          |
-| Zod                          | 4.1.12        | Validation schémas           |
-| Radix UI                     | Latest        | Composants accessibles       |
-| Lucide React                 | 0.552.0       | Icônes                       |
-| Recharts                     | 3.3.0         | Graphiques                   |
-| react-hot-toast              | 2.6.0         | Notifications                |
-| jspdf + jspdf-autotable      | 3.0.3 / 5.0.2 | Export PDF                   |
-| xlsx                         | 0.18.5        | Export Excel                 |
-| Jest                         | 30.0.0        | Tests unitaires              |
-| Playwright                   | 1.56.1        | Tests E2E                    |
+| Composant               | Version       | Usage                        |
+| ----------------------- | ------------- | ---------------------------- |
+| Next.js                 | 16.1.1        | Framework React (App Router) |
+| React                   | 19.2.3        | Bibliothèque UI              |
+| Tailwind CSS            | 4.x           | Styling utilitaire           |
+| TanStack Query          | 5.90.6        | Gestion état serveur         |
+| Zustand                 | 5.0.8         | Gestion état client          |
+| Axios                   | 1.13.2        | Client HTTP                  |
+| React Hook Form         | 7.66.0        | Gestion formulaires          |
+| Zod                     | 4.1.12        | Validation schémas           |
+| Radix UI                | Latest        | Composants accessibles       |
+| Lucide React            | 0.552.0       | Icônes                       |
+| Recharts                | 3.3.0         | Graphiques                   |
+| react-hot-toast         | 2.6.0         | Notifications                |
+| jspdf + jspdf-autotable | 3.0.3 / 5.0.2 | Export PDF                   |
+| xlsx                    | 0.18.5        | Export Excel                 |
+| Jest                    | 30.0.0        | Tests unitaires              |
+| Playwright              | 1.56.1        | Tests E2E                    |
 
 ### Infrastructure
 

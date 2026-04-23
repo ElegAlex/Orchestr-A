@@ -118,9 +118,9 @@ describe('TeleworkService', () => {
       const result = await service.create('admin-1', 'ADMIN', createDto);
 
       expect(result.userId).toBe('user-2');
-      expect(
-        mockPermissionsService.getPermissionsForRole,
-      ).toHaveBeenCalledWith('ADMIN');
+      expect(mockPermissionsService.getPermissionsForRole).toHaveBeenCalledWith(
+        'ADMIN',
+      );
     });
 
     it('should throw ForbiddenException when creating for others without telework:manage_any', async () => {
@@ -138,9 +138,9 @@ describe('TeleworkService', () => {
       await expect(
         service.create('user-1', 'CONTRIBUTEUR', createDto),
       ).rejects.toThrow(ForbiddenException);
-      expect(
-        mockPermissionsService.getPermissionsForRole,
-      ).toHaveBeenCalledWith('CONTRIBUTEUR');
+      expect(mockPermissionsService.getPermissionsForRole).toHaveBeenCalledWith(
+        'CONTRIBUTEUR',
+      );
     });
 
     it('un CONTRIBUTEUR ne peut pas déclarer du télétravail pour un autre userId', async () => {
@@ -164,9 +164,9 @@ describe('TeleworkService', () => {
       ).rejects.toThrow(ForbiddenException);
 
       // Le service doit interroger les permissions du rôle CONTRIBUTEUR
-      expect(
-        mockPermissionsService.getPermissionsForRole,
-      ).toHaveBeenCalledWith('CONTRIBUTEUR');
+      expect(mockPermissionsService.getPermissionsForRole).toHaveBeenCalledWith(
+        'CONTRIBUTEUR',
+      );
 
       // Aucun accès BDD ne doit avoir été effectué après le contrôle de permission
       expect(mockPrismaService.teleworkSchedule.create).not.toHaveBeenCalled();
@@ -337,9 +337,9 @@ describe('TeleworkService', () => {
       await expect(
         service.findOne('telework-1', 'user-1', 'CONTRIBUTEUR'),
       ).rejects.toThrow(ForbiddenException);
-      expect(
-        mockPermissionsService.getPermissionsForRole,
-      ).toHaveBeenCalledWith('CONTRIBUTEUR');
+      expect(mockPermissionsService.getPermissionsForRole).toHaveBeenCalledWith(
+        'CONTRIBUTEUR',
+      );
     });
 
     it("should allow ADMIN to read another user's telework via telework:manage_any", async () => {
@@ -355,9 +355,9 @@ describe('TeleworkService', () => {
       const result = await service.findOne('telework-1', 'admin-1', 'ADMIN');
 
       expect(result).toBeDefined();
-      expect(
-        mockPermissionsService.getPermissionsForRole,
-      ).toHaveBeenCalledWith('ADMIN');
+      expect(mockPermissionsService.getPermissionsForRole).toHaveBeenCalledWith(
+        'ADMIN',
+      );
     });
   });
 
@@ -482,9 +482,9 @@ describe('TeleworkService', () => {
       await expect(
         service.update('telework-1', 'user-1', 'CONTRIBUTEUR', updateDto),
       ).rejects.toThrow(ForbiddenException);
-      expect(
-        mockPermissionsService.getPermissionsForRole,
-      ).toHaveBeenCalledWith('CONTRIBUTEUR');
+      expect(mockPermissionsService.getPermissionsForRole).toHaveBeenCalledWith(
+        'CONTRIBUTEUR',
+      );
     });
 
     it("should update other's telework when having telework:manage_any permission", async () => {
@@ -512,9 +512,9 @@ describe('TeleworkService', () => {
       );
 
       expect(result.isTelework).toBe(false);
-      expect(
-        mockPermissionsService.getPermissionsForRole,
-      ).toHaveBeenCalledWith('ADMIN');
+      expect(mockPermissionsService.getPermissionsForRole).toHaveBeenCalledWith(
+        'ADMIN',
+      );
     });
 
     it('should update date when provided', async () => {
@@ -618,9 +618,9 @@ describe('TeleworkService', () => {
       await expect(
         service.remove('telework-1', 'user-1', 'CONTRIBUTEUR'),
       ).rejects.toThrow(ForbiddenException);
-      expect(
-        mockPermissionsService.getPermissionsForRole,
-      ).toHaveBeenCalledWith('CONTRIBUTEUR');
+      expect(mockPermissionsService.getPermissionsForRole).toHaveBeenCalledWith(
+        'CONTRIBUTEUR',
+      );
     });
 
     it("should delete other's telework when having telework:manage_any permission", async () => {
@@ -638,9 +638,9 @@ describe('TeleworkService', () => {
       const result = await service.remove('telework-1', 'admin-1', 'ADMIN');
 
       expect(result.message).toBe('Télétravail supprimé avec succès');
-      expect(
-        mockPermissionsService.getPermissionsForRole,
-      ).toHaveBeenCalledWith('ADMIN');
+      expect(mockPermissionsService.getPermissionsForRole).toHaveBeenCalledWith(
+        'ADMIN',
+      );
     });
   });
 

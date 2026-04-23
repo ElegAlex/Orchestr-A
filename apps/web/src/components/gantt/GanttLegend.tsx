@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { HEALTH_COLORS } from './tokens';
-import type { HealthStatus } from './types';
+import { HEALTH_COLORS } from "./tokens";
+import type { HealthStatus } from "./types";
 
 const LABELS: Record<HealthStatus, string> = {
-  'on-track': 'En bonne voie',
-  'at-risk': 'À risque',
-  'late': 'En retard',
-  'upcoming': 'À venir',
-  'done': 'Terminé',
+  "on-track": "En bonne voie",
+  "at-risk": "À risque",
+  late: "En retard",
+  upcoming: "À venir",
+  done: "Terminé",
 };
 
 interface GanttLegendProps {
-  scope: 'portfolio' | 'project';
+  scope: "portfolio" | "project";
 }
 
 export default function GanttLegend({ scope }: GanttLegendProps) {
-  if (scope !== 'portfolio') return null;
+  if (scope !== "portfolio") return null;
 
   return (
     <div className="flex items-center gap-4 px-4 py-2 border-t bg-gray-50 text-xs text-gray-600">

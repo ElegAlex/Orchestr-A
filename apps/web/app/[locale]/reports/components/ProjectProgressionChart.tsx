@@ -56,10 +56,12 @@ export function ProjectProgressionChart({
       const res = await api.get("/projects");
       const data = res.data;
 
-      const activeProjects: ProjectData[] = (Array.isArray(data) ? data : data.data || [])
+      const activeProjects: ProjectData[] = (
+        Array.isArray(data) ? data : data.data || []
+      )
         .filter(
           (p: ProjectData) =>
-            p.status === "ACTIVE" || p.status === "IN_PROGRESS"
+            p.status === "ACTIVE" || p.status === "IN_PROGRESS",
         )
         .filter((p: ProjectData) => p.status !== "COMPLETED")
         .map((p: ProjectData) => ({
@@ -111,9 +113,7 @@ export function ProjectProgressionChart({
         <h3 className="text-lg font-semibold mb-4">
           📈 {t("projectProgression")}
         </h3>
-        <p className="text-sm text-gray-500 text-center py-8">
-          {t("noData")}
-        </p>
+        <p className="text-sm text-gray-500 text-center py-8">{t("noData")}</p>
       </div>
     );
   }
@@ -136,7 +136,7 @@ export function ProjectProgressionChart({
         acc[project.id] = project.progress;
         return acc;
       },
-      { month: capitalizedMonth } as Record<string, string | number>
+      { month: capitalizedMonth } as Record<string, string | number>,
     ),
   ];
 

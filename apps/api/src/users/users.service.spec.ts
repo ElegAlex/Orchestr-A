@@ -8,6 +8,23 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+
+// Mock fs/promises for avatar tests
+vi.mock('fs', async () => {
+  return {
+    promises: {
+      mkdir: vi.fn().mockResolvedValue(undefined),
+      readdir: vi.fn().mockResolvedValue([]),
+      unlink: vi.fn().mockResolvedValue(undefined),
+      writeFile: vi.fn().mockResolvedValue(undefined),
+    },
+  };
+});
+
+// Mock assertMagicBytes so it doesn't need real file bytes
+vi.mock('../common/upload/magic-bytes.validator', () => ({
+  assertMagicBytes: vi.fn().mockResolvedValue(undefined),
+}));
 import { RefreshTokenService } from '../auth/refresh-token.service';
 
 describe('UsersService', () => {
@@ -45,6 +62,7 @@ describe('UsersService', () => {
       deleteMany: vi.fn(),
     },
     leave: {
+      findMany: vi.fn(),
       count: vi.fn(),
       deleteMany: vi.fn(),
     },
@@ -61,12 +79,17 @@ describe('UsersService', () => {
       deleteMany: vi.fn(),
     },
     teleworkSchedule: {
+      findMany: vi.fn(),
       deleteMany: vi.fn(),
+    },
+    event: {
+      findMany: vi.fn(),
     },
     leaveValidationDelegate: {
       deleteMany: vi.fn(),
     },
     task: {
+      findMany: vi.fn(),
       count: vi.fn(),
       deleteMany: vi.fn(),
     },
@@ -860,6 +883,244 @@ describe('UsersService', () => {
       // Verify it has at least header line and example line
       const lines = template.split('\n');
       expect(lines.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('getUsersPresence', () => {
+    const mockUsers = [
+      {
+        id: 'user-1',
+        firstName: 'Jean',
+        lastName: 'Dupont',
+        avatarUrl: null,
+        avatarPreset: null,
+        department: { name: 'IT' },
+        userServices: [{ service: { name: 'Développement' } }],
+      },
+      {
+        id: 'user-2',
+        firstName: 'Marie',
+        lastName: 'Martin',
+        avatarUrl: null,
+        avatarPreset: null,
+        department: null,
+        userServices: [],
+      },
+      {
+        id: 'user-3',
+        firstName: 'Pierre',
+        lastName: 'Bernard',
+        avatarUrl: null,
+        avatarPreset: null,
+        department: null,
+        userServices: [],
+      },
+      {
+        id: 'user-4',
+        firstName: 'Sophie',
+        lastName: 'Leroy',
+        avatarUrl: null,
+        avatarPreset: null,
+        department: null,
+        userServices: [],
+      },
+    ];
+
+    beforeEach(() => {
+      mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
+        { userId: 'user-2' },
+      ]);
+      mockPrismaService.leave.findMany.mockResolvedValue([
+        { userId: 'user-3' },
+      ]);
+      mockPrismaService.task.findMany.mockResolvedValue([
+        { assignees: [{ userId: 'user-4' }] },
+      ]);
+      mockPrismaService.event.findMany.mockResolvedValue([]);
+    });
+
+    it('should return presence data with all four categories', async () => {
+      const result = await service.getUsersPresence('2025-01-15');
+
+      expect(result).toHaveProperty('onSite');
+      expect(result).toHaveProperty('remote');
+      expect(result).toHaveProperty('absent');
+      expect(result).toHaveProperty('external');
+      expect(result).toHaveProperty('date');
+      expect(result).toHaveProperty('totals');
+
+      // user-1 is onSite (not remote, not absent, not external)
+      expect(result.onSite.some((u: any) => u.id === 'user-1')).toBe(true);
+      // user-2 is remote (telework)
+      expect(result.remote.some((u: any) => u.id === 'user-2')).toBe(true);
+      // user-3 is absent (approved leave)
+      expect(result.absent.some((u: any) => u.id === 'user-3')).toBe(true);
+      // user-4 is external (external task)
+      expect(result.external.some((u: any) => u.id === 'user-4')).toBe(true);
+    });
+
+    it('should use current date when no dateStr provided', async () => {
+      const result = await service.getUsersPresence();
+
+      expect(result).toHaveProperty('date');
+      expect(result.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it('should return correct totals', async () => {
+      const result = await service.getUsersPresence('2025-01-15');
+
+      expect(result.totals.total).toBe(4);
+      expect(result.totals.onSite).toBe(1);
+      expect(result.totals.remote).toBe(1);
+      expect(result.totals.absent).toBe(1);
+      expect(result.totals.external).toBe(1);
+    });
+  });
+
+  describe('uploadAvatar', () => {
+    it('should throw BadRequestException for unsupported MIME type', async () => {
+      const mockFile = {
+        mimetype: 'image/gif',
+        toBuffer: vi.fn().mockResolvedValue(Buffer.from('fake')),
+      } as any;
+
+      await expect(service.uploadAvatar('user-1', mockFile)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.uploadAvatar('user-1', mockFile)).rejects.toThrow(
+        'Format non supporté',
+      );
+    });
+
+    it('should upload a PNG avatar and update the user', async () => {
+      const mockFile = {
+        mimetype: 'image/png',
+        toBuffer: vi.fn().mockResolvedValue(Buffer.from('fake-png')),
+      } as any;
+
+      const updatedUser = {
+        id: 'user-1',
+        avatarUrl: '/api/uploads/avatars/user-1.png',
+        avatarPreset: null,
+      };
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      const result = await service.uploadAvatar('user-1', mockFile);
+
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: expect.objectContaining({
+            avatarUrl: expect.stringContaining('user-1.png'),
+            avatarPreset: null,
+          }),
+        }),
+      );
+      expect(result.avatarUrl).toContain('user-1.png');
+    });
+
+    it('should upload a JPEG avatar and update the user', async () => {
+      const mockFile = {
+        mimetype: 'image/jpeg',
+        toBuffer: vi.fn().mockResolvedValue(Buffer.from('fake-jpeg')),
+      } as any;
+
+      const updatedUser = {
+        id: 'user-1',
+        avatarUrl: '/api/uploads/avatars/user-1.jpg',
+        avatarPreset: null,
+      };
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      const result = await service.uploadAvatar('user-1', mockFile);
+
+      expect(result.avatarUrl).toContain('user-1.jpg');
+    });
+
+    it('should upload a WEBP avatar and update the user', async () => {
+      const mockFile = {
+        mimetype: 'image/webp',
+        toBuffer: vi.fn().mockResolvedValue(Buffer.from('fake-webp')),
+      } as any;
+
+      const updatedUser = {
+        id: 'user-1',
+        avatarUrl: '/api/uploads/avatars/user-1.webp',
+        avatarPreset: null,
+      };
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      const result = await service.uploadAvatar('user-1', mockFile);
+
+      expect(result.avatarUrl).toContain('user-1.webp');
+    });
+  });
+
+  describe('setAvatarPreset', () => {
+    it('should throw BadRequestException for invalid preset', async () => {
+      await expect(
+        service.setAvatarPreset('user-1', 'invalid_preset_xyz'),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.setAvatarPreset('user-1', 'invalid_preset_xyz'),
+      ).rejects.toThrow('Preset invalide');
+    });
+
+    it('should set a valid avatar preset and clear avatarUrl', async () => {
+      // Import VALID_PRESETS to get a real valid value
+      const { VALID_PRESETS } = await import('./dto/avatar-preset.dto');
+      const validPreset = VALID_PRESETS[0];
+
+      const updatedUser = {
+        id: 'user-1',
+        avatarPreset: validPreset,
+        avatarUrl: null,
+      };
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      const result = await service.setAvatarPreset('user-1', validPreset);
+
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: { avatarPreset: validPreset, avatarUrl: null },
+        }),
+      );
+      expect(result.avatarPreset).toBe(validPreset);
+    });
+  });
+
+  describe('deleteAvatar', () => {
+    it('should delete avatar file and clear DB fields when avatarUrl exists', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        avatarUrl: '/api/uploads/avatars/user-1.png',
+      });
+      const updatedUser = { id: 'user-1', avatarUrl: null, avatarPreset: null };
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      const result = await service.deleteAvatar('user-1');
+
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: { avatarUrl: null, avatarPreset: null },
+        }),
+      );
+      expect(result.avatarUrl).toBeNull();
+    });
+
+    it('should clear DB fields even when user has no avatarUrl', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        avatarUrl: null,
+      });
+      const updatedUser = { id: 'user-1', avatarUrl: null, avatarPreset: null };
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+      const result = await service.deleteAvatar('user-1');
+
+      expect(mockPrismaService.user.update).toHaveBeenCalled();
+      expect(result.avatarUrl).toBeNull();
     });
   });
 });

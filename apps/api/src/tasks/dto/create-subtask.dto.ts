@@ -11,7 +11,10 @@ import {
 } from 'class-validator';
 
 export class CreateSubtaskDto {
-  @ApiProperty({ description: 'Titre de la sous-tâche', example: 'Vérifier les prérequis' })
+  @ApiProperty({
+    description: 'Titre de la sous-tâche',
+    example: 'Vérifier les prérequis',
+  })
   @IsString()
   @IsNotEmpty()
   @MinLength(1)

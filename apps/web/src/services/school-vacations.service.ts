@@ -19,7 +19,10 @@ export const schoolVacationsService = {
   /**
    * Recupere les vacances scolaires sur une periode
    */
-  async getByRange(startDate: string, endDate: string): Promise<SchoolVacation[]> {
+  async getByRange(
+    startDate: string,
+    endDate: string,
+  ): Promise<SchoolVacation[]> {
     const response = await api.get<SchoolVacation[]>(
       `/school-vacations/range?startDate=${startDate}&endDate=${endDate}`,
     );
@@ -45,8 +48,14 @@ export const schoolVacationsService = {
   /**
    * Met a jour une vacance scolaire
    */
-  async update(id: string, data: UpdateSchoolVacationDto): Promise<SchoolVacation> {
-    const response = await api.patch<SchoolVacation>(`/school-vacations/${id}`, data);
+  async update(
+    id: string,
+    data: UpdateSchoolVacationDto,
+  ): Promise<SchoolVacation> {
+    const response = await api.patch<SchoolVacation>(
+      `/school-vacations/${id}`,
+      data,
+    );
     return response.data;
   },
 

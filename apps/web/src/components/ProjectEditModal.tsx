@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Project, ProjectStatus, Priority, UpdateProjectDto, User } from "@/types";
+import {
+  Project,
+  ProjectStatus,
+  Priority,
+  UpdateProjectDto,
+  User,
+} from "@/types";
 import { useTranslations } from "next-intl";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import { usersService } from "@/services/users.service";
@@ -58,10 +64,13 @@ export function ProjectEditModal({
       setError(null);
 
       // Fetch users for manager/sponsor dropdowns
-      usersService.getAll().then((response) => {
-        const usersData = Array.isArray(response) ? response : response.data;
-        setUsers(usersData);
-      }).catch(() => setUsers([]));
+      usersService
+        .getAll()
+        .then((response) => {
+          const usersData = Array.isArray(response) ? response : response.data;
+          setUsers(usersData);
+        })
+        .catch(() => setUsers([]));
     }
   }, [project, isOpen]);
 
@@ -114,9 +123,7 @@ export function ProjectEditModal({
             <div className="flex items-center gap-2">
               <EmojiPicker
                 value={formData.icon}
-                onChange={(emoji) =>
-                  setFormData({ ...formData, icon: emoji })
-                }
+                onChange={(emoji) => setFormData({ ...formData, icon: emoji })}
               />
               <input
                 type="text"

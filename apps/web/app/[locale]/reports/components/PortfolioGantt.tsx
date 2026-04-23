@@ -3,7 +3,11 @@
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
-import { Gantt, type GanttPortfolioRow, type GanttView } from "@/components/gantt";
+import {
+  Gantt,
+  type GanttPortfolioRow,
+  type GanttView,
+} from "@/components/gantt";
 import { classify } from "@/components/gantt/status-classifier";
 import type { UserSummary } from "@/types";
 
@@ -37,7 +41,12 @@ function projectsToPortfolioRows(projects: Project[]): GanttPortfolioRow[] {
     .map((p) => {
       const startDate = new Date(p.startDate);
       const endDate = p.dueDate ? new Date(p.dueDate) : new Date();
-      const health = classify({ startDate, endDate, progress: p.progress, status: p.status });
+      const health = classify({
+        startDate,
+        endDate,
+        progress: p.progress,
+        status: p.status,
+      });
       return {
         id: p.id,
         name: p.name,
@@ -77,7 +86,7 @@ const PortfolioGantt = React.forwardRef<HTMLDivElement, PortfolioGanttProps>(
         />
       </div>
     );
-  }
+  },
 );
 
 PortfolioGantt.displayName = "PortfolioGantt";

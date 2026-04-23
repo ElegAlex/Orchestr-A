@@ -129,7 +129,10 @@ export default function TaskDetailPage() {
         if (taskData.subtasks) {
           setSubtasks(taskData.subtasks);
         } else {
-          tasksService.getSubtasks(taskData.id).then(setSubtasks).catch(() => setSubtasks([]));
+          tasksService
+            .getSubtasks(taskData.id)
+            .then(setSubtasks)
+            .catch(() => setSubtasks([]));
         }
 
         // Fetch all users
@@ -314,7 +317,9 @@ export default function TaskDetailPage() {
   const handleAddSubtask = async () => {
     if (!newSubtaskTitle.trim() || !task?.id) return;
     try {
-      const created = await tasksService.createSubtask(task.id, { title: newSubtaskTitle.trim() });
+      const created = await tasksService.createSubtask(task.id, {
+        title: newSubtaskTitle.trim(),
+      });
       setSubtasks((prev) => [...prev, created]);
       setNewSubtaskTitle("");
     } catch {
@@ -328,7 +333,9 @@ export default function TaskDetailPage() {
       const updated = await tasksService.updateSubtask(task.id, subtask.id, {
         isCompleted: !subtask.isCompleted,
       });
-      setSubtasks((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      setSubtasks((prev) =>
+        prev.map((s) => (s.id === updated.id ? updated : s)),
+      );
     } catch {
       toast.error("Erreur lors de la modification de la sous-tâche");
     }
@@ -567,7 +574,8 @@ export default function TaskDetailPage() {
             {/* Subtasks Checklist */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Sous-tâches ({subtasks.filter((s) => s.isCompleted).length}/{subtasks.length})
+                Sous-tâches ({subtasks.filter((s) => s.isCompleted).length}/
+                {subtasks.length})
               </h2>
               <div className="space-y-1 mb-3">
                 {subtasks.length === 0 && (
@@ -589,13 +597,31 @@ export default function TaskDetailPage() {
                       defaultValue={subtask.title}
                       onBlur={(e) => {
                         const newTitle = e.target.value.trim();
-                        if (newTitle && newTitle !== subtask.title && task?.id) {
-                          tasksService.updateSubtask(task.id, subtask.id, { title: newTitle })
-                            .then((updated) => setSubtasks((prev) => prev.map((s) => (s.id === updated.id ? updated : s))))
-                            .catch(() => { e.target.value = subtask.title; });
+                        if (
+                          newTitle &&
+                          newTitle !== subtask.title &&
+                          task?.id
+                        ) {
+                          tasksService
+                            .updateSubtask(task.id, subtask.id, {
+                              title: newTitle,
+                            })
+                            .then((updated) =>
+                              setSubtasks((prev) =>
+                                prev.map((s) =>
+                                  s.id === updated.id ? updated : s,
+                                ),
+                              ),
+                            )
+                            .catch(() => {
+                              e.target.value = subtask.title;
+                            });
                         }
                       }}
-                      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter")
+                          (e.target as HTMLInputElement).blur();
+                      }}
                       className={`flex-1 text-sm bg-transparent border-none outline-none focus:bg-white focus:border focus:border-blue-300 focus:rounded focus:px-1 ${subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900"}`}
                     />
                     {subtask.description && (
@@ -608,8 +634,18 @@ export default function TaskDetailPage() {
                       onClick={() => handleDeleteSubtask(subtask.id)}
                       className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -620,7 +656,10 @@ export default function TaskDetailPage() {
                   type="text"
                   value={newSubtaskTitle}
                   onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddSubtask())}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" &&
+                    (e.preventDefault(), handleAddSubtask())
+                  }
                   placeholder="Ajouter une sous-tâche..."
                   className="flex-1 text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -993,10 +1032,7 @@ export default function TaskDetailPage() {
                           className="flex items-center space-x-3"
                         >
                           {assignment.user && (
-                            <UserAvatar
-                              user={assignment.user}
-                              size="md"
-                            />
+                            <UserAvatar user={assignment.user} size="md" />
                           )}
                           <div>
                             <p className="font-medium text-gray-900">
@@ -1011,10 +1047,7 @@ export default function TaskDetailPage() {
                       ))
                     : task.assignee && (
                         <div className="flex items-center space-x-3">
-                          <UserAvatar
-                            user={task.assignee}
-                            size="md"
-                          />
+                          <UserAvatar user={task.assignee} size="md" />
                           <div>
                             <p className="font-medium text-gray-900">
                               {task.assignee.firstName} {task.assignee.lastName}

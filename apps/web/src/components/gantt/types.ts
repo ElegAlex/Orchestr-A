@@ -2,17 +2,22 @@
 // GANTT COMPONENT — SHARED TYPES
 // ===========================
 
-import type { TaskStatus, UserSummary } from '@/types';
+import type { TaskStatus, UserSummary } from "@/types";
 
 // ===========================
 // ENUMS & LITERALS
 // ===========================
 
-export type GanttView = 'day' | 'week' | 'month' | 'quarter';
+export type GanttView = "day" | "week" | "month" | "quarter";
 
-export type GanttGrouping = 'milestone' | 'epic' | 'none';
+export type GanttGrouping = "milestone" | "epic" | "none";
 
-export type HealthStatus = 'on-track' | 'at-risk' | 'late' | 'upcoming' | 'done';
+export type HealthStatus =
+  | "on-track"
+  | "at-risk"
+  | "late"
+  | "upcoming"
+  | "done";
 
 // ===========================
 // ROW TYPES
@@ -89,13 +94,13 @@ export interface GanttGroup {
 
 export type GanttProps =
   | {
-      scope: 'portfolio';
+      scope: "portfolio";
       rows: GanttPortfolioRow[];
       view: GanttView;
       onRowClick?: (row: GanttPortfolioRow) => void;
     }
   | {
-      scope: 'project';
+      scope: "project";
       rows: GanttTaskRow[];
       view: GanttView;
       dependencies?: GanttDependency[];

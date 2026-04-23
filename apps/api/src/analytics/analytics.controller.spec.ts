@@ -71,5 +71,4 @@ describe('AnalyticsController', () => {
       expect(result).toEqual(mockExport);
     });
   });
-
 });

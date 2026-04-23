@@ -80,7 +80,9 @@ export function AssignmentModal({
   };
 
   // Convertir defaultDuration (config tâche) en period (assignment API)
-  const toPeriod = (duration: TaskDuration): "MORNING" | "AFTERNOON" | "FULL_DAY" => {
+  const toPeriod = (
+    duration: TaskDuration,
+  ): "MORNING" | "AFTERNOON" | "FULL_DAY" => {
     if (duration === "HALF_DAY") return "MORNING";
     return "FULL_DAY"; // FULL_DAY et TIME_SLOT → FULL_DAY
   };

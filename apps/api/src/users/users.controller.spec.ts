@@ -6,6 +6,7 @@ import {
   NotFoundException,
   ConflictException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 
 // Caller passé au controller.update() — forme RBAC V4 (objet role avec code).
@@ -49,6 +50,14 @@ describe('UsersController', () => {
     getUsersByRole: vi.fn(),
     changePassword: vi.fn(),
     resetPassword: vi.fn(),
+    uploadAvatar: vi.fn(),
+    setAvatarPreset: vi.fn(),
+    deleteAvatar: vi.fn(),
+    validateImport: vi.fn(),
+    importUsers: vi.fn(),
+    getImportTemplate: vi.fn(),
+    getUsersPresence: vi.fn(),
+    checkDependencies: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -400,10 +409,9 @@ describe('UsersController', () => {
         message: 'Mot de passe réinitialisé',
       });
 
-      const result = await controller.resetPassword(
-        'user-id-1',
-        { newPassword: 'newpassword123' } as any,
-      );
+      const result = await controller.resetPassword('user-id-1', {
+        newPassword: 'newpassword123',
+      } as any);
 
       expect(result.message).toBe('Mot de passe réinitialisé');
       expect(mockUsersService.resetPassword).toHaveBeenCalledWith(
@@ -418,8 +426,215 @@ describe('UsersController', () => {
       );
 
       await expect(
-        controller.resetPassword('nonexistent', { newPassword: 'newpassword123' } as any),
+        controller.resetPassword('nonexistent', {
+          newPassword: 'newpassword123',
+        } as any),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('uploadAvatar', () => {
+    it('should throw BadRequestException when request is not multipart', async () => {
+      const req = {
+        isMultipart: vi.fn().mockReturnValue(false),
+        file: vi.fn(),
+      } as any;
+
+      await expect(controller.uploadAvatar('user-id-1', req)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(req.file).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when no file is provided', async () => {
+      const req = {
+        isMultipart: vi.fn().mockReturnValue(true),
+        file: vi.fn().mockResolvedValue(null),
+      } as any;
+
+      await expect(controller.uploadAvatar('user-id-1', req)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockUsersService.uploadAvatar).not.toHaveBeenCalled();
+    });
+
+    it('should call usersService.uploadAvatar when file is provided', async () => {
+      const mockFile = { mimetype: 'image/png', toBuffer: vi.fn() };
+      const req = {
+        isMultipart: vi.fn().mockReturnValue(true),
+        file: vi.fn().mockResolvedValue(mockFile),
+      } as any;
+
+      mockUsersService.uploadAvatar.mockResolvedValue({
+        avatarUrl: '/uploads/avatars/user-id-1.png',
+      });
+
+      const result = await controller.uploadAvatar('user-id-1', req);
+
+      expect(mockUsersService.uploadAvatar).toHaveBeenCalledWith(
+        'user-id-1',
+        mockFile,
+      );
+      expect(result).toHaveProperty('avatarUrl');
+    });
+  });
+
+  describe('setAvatarPreset', () => {
+    it('should call usersService.setAvatarPreset with userId and preset', async () => {
+      mockUsersService.setAvatarPreset.mockResolvedValue({
+        avatarPreset: 'avatar_01',
+        avatarUrl: null,
+      });
+
+      const result = await controller.setAvatarPreset('user-id-1', {
+        preset: 'avatar_01',
+      } as any);
+
+      expect(mockUsersService.setAvatarPreset).toHaveBeenCalledWith(
+        'user-id-1',
+        'avatar_01',
+      );
+      expect(result).toHaveProperty('avatarPreset');
+    });
+  });
+
+  describe('deleteAvatar', () => {
+    it('should call usersService.deleteAvatar with userId', async () => {
+      mockUsersService.deleteAvatar.mockResolvedValue({
+        avatarUrl: null,
+        avatarPreset: null,
+      });
+
+      const result = await controller.deleteAvatar('user-id-1');
+
+      expect(mockUsersService.deleteAvatar).toHaveBeenCalledWith('user-id-1');
+      expect(result).toHaveProperty('avatarUrl', null);
+    });
+  });
+
+  describe('validateImport', () => {
+    it('should validate import users and return preview', async () => {
+      const preview = { valid: 2, invalid: 0, users: [] };
+      mockUsersService.validateImport.mockResolvedValue(preview);
+
+      const result = await controller.validateImport({ users: [] } as any);
+
+      expect(mockUsersService.validateImport).toHaveBeenCalledWith([]);
+      expect(result).toEqual(preview);
+    });
+  });
+
+  describe('importUsers', () => {
+    it('should import users and return result', async () => {
+      const importResult = { created: 2, failed: 0, errors: [] };
+      mockUsersService.importUsers.mockResolvedValue(importResult);
+
+      const result = await controller.importUsers({ users: [] } as any);
+
+      expect(mockUsersService.importUsers).toHaveBeenCalledWith([]);
+      expect(result).toEqual(importResult);
+    });
+  });
+
+  describe('getImportTemplate', () => {
+    it('should return CSV template string', async () => {
+      const csvTemplate =
+        'email;login;password;firstName;lastName;roleCode;departmentName;serviceNames';
+      mockUsersService.getImportTemplate.mockReturnValue(csvTemplate);
+
+      const result = controller.getImportTemplate();
+
+      expect(mockUsersService.getImportTemplate).toHaveBeenCalled();
+      expect(result).toBe(csvTemplate);
+    });
+  });
+
+  describe('getUsersPresence', () => {
+    it('should return presence data for a given date', async () => {
+      const presenceData = {
+        onSite: [],
+        remote: [],
+        absent: [],
+        external: [],
+        date: '2025-01-15',
+        totals: {},
+      };
+      mockUsersService.getUsersPresence.mockResolvedValue(presenceData);
+
+      const result = await controller.getUsersPresence('2025-01-15');
+
+      expect(mockUsersService.getUsersPresence).toHaveBeenCalledWith(
+        '2025-01-15',
+      );
+      expect(result).toEqual(presenceData);
+    });
+
+    it('should call getUsersPresence with undefined when no date provided', async () => {
+      const presenceData = {
+        onSite: [],
+        remote: [],
+        absent: [],
+        external: [],
+        date: '2025-01-23',
+        totals: {},
+      };
+      mockUsersService.getUsersPresence.mockResolvedValue(presenceData);
+
+      await controller.getUsersPresence(undefined);
+
+      expect(mockUsersService.getUsersPresence).toHaveBeenCalledWith(undefined);
+    });
+  });
+
+  describe('checkDependencies', () => {
+    it('should return user dependency info', async () => {
+      const depInfo = {
+        userId: 'user-id-1',
+        canDelete: true,
+        dependencies: [],
+      };
+      mockUsersService.checkDependencies.mockResolvedValue(depInfo);
+
+      const result = await controller.checkDependencies('user-id-1');
+
+      expect(mockUsersService.checkDependencies).toHaveBeenCalledWith(
+        'user-id-1',
+      );
+      expect(result.canDelete).toBe(true);
+    });
+  });
+
+  describe('update - caller with no role', () => {
+    it('should handle caller with null role (no roleCode)', async () => {
+      const updatedUser = { ...mockUser, firstName: 'Updated' };
+      mockUsersService.update.mockResolvedValue(updatedUser);
+
+      const callerWithNoRole = { role: null };
+      const result = await controller.update(
+        'user-id-1',
+        { firstName: 'Updated' },
+        callerWithNoRole,
+      );
+
+      expect(mockUsersService.update).toHaveBeenCalledWith(
+        'user-id-1',
+        { firstName: 'Updated' },
+        undefined,
+      );
+      expect(result.firstName).toBe('Updated');
+    });
+
+    it('should handle caller with undefined role', async () => {
+      const updatedUser = { ...mockUser, firstName: 'Updated' };
+      mockUsersService.update.mockResolvedValue(updatedUser);
+
+      await controller.update('user-id-1', { firstName: 'Updated' }, {} as any);
+
+      expect(mockUsersService.update).toHaveBeenCalledWith(
+        'user-id-1',
+        { firstName: 'Updated' },
+        undefined,
+      );
     });
   });
 });

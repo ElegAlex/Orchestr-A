@@ -267,7 +267,7 @@ export class TasksController {
   })
   @ApiResponse({
     status: 403,
-    description: "Pas la permission de supprimer cette tâche",
+    description: 'Pas la permission de supprimer cette tâche',
   })
   @ApiResponse({
     status: 404,
@@ -480,7 +480,9 @@ export class TasksController {
 
   @Patch(':taskId/subtasks/:subtaskId')
   @RequirePermissions('tasks:update')
-  @ApiOperation({ summary: 'Modifier une sous-tâche (cocher/décocher, renommer)' })
+  @ApiOperation({
+    summary: 'Modifier une sous-tâche (cocher/décocher, renommer)',
+  })
   updateSubtask(
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Param('subtaskId', ParseUUIDPipe) subtaskId: string,

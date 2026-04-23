@@ -274,9 +274,7 @@ test.describe("Gantt Projet", () => {
     await expect(firstHeader).toHaveAttribute("aria-expanded", "true");
 
     // Count visible task rows before collapse
-    const allRows = ganttContainer.locator(
-      '[role="row"]:not([aria-expanded])',
-    );
+    const allRows = ganttContainer.locator('[role="row"]:not([aria-expanded])');
     const rowCountBefore = await allRows.count();
 
     // Click to collapse

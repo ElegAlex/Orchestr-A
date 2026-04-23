@@ -134,9 +134,7 @@ export class CommentsService {
       const permissions = (await this.permissionsService.getPermissionsForRole(
         userRole,
       )) as readonly string[];
-      const canDeleteAny = permissions.some(
-        (p) => p === 'comments:delete_any',
-      );
+      const canDeleteAny = permissions.some((p) => p === 'comments:delete_any');
       if (!canDeleteAny) {
         throw new ForbiddenException(
           'Vous ne pouvez supprimer que vos propres commentaires',

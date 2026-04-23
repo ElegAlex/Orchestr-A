@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 interface GanttEmptyStateProps {
   message?: string;
@@ -22,7 +22,7 @@ export default function GanttEmptyState({ message }: GanttEmptyStateProps) {
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 3.75v16.5" />
       </svg>
-      <p className="text-sm">{message ?? 'Aucun élément à afficher'}</p>
+      <p className="text-sm">{message ?? "Aucun élément à afficher"}</p>
     </div>
   );
 }

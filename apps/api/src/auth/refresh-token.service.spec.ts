@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UnauthorizedException } from '@nestjs/common';
 import * as crypto from 'crypto';
-import {
-  RefreshTokenService,
-  parseDurationMs,
-} from './refresh-token.service';
+import { RefreshTokenService, parseDurationMs } from './refresh-token.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 
@@ -33,13 +30,13 @@ describe('RefreshTokenService', () => {
       update: vi.fn(),
       updateMany: vi.fn(),
     },
-    $transaction: vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => cb(mockPrisma)),
+    $transaction: vi.fn(async (cb: (tx: unknown) => Promise<unknown>) =>
+      cb(mockPrisma),
+    ),
   };
 
   const mockConfig = {
-    get: vi.fn((key: string) =>
-      key === 'JWT_REFRESH_TTL' ? '7d' : undefined,
-    ),
+    get: vi.fn((key: string) => (key === 'JWT_REFRESH_TTL' ? '7d' : undefined)),
   };
 
   beforeEach(() => {

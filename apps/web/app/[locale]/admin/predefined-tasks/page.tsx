@@ -600,7 +600,10 @@ function TaskFormModal({
               id="isExternalIntervention"
               checked={formData.isExternalIntervention}
               onChange={(e) =>
-                onChange({ ...formData, isExternalIntervention: e.target.checked })
+                onChange({
+                  ...formData,
+                  isExternalIntervention: e.target.checked,
+                })
               }
               className="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
             />
@@ -705,7 +708,9 @@ function TaskFormModal({
                     color: formData.color,
                   }}
                 >
-                  {formData.defaultDuration === "TIME_SLOT" && formData.startTime && formData.endTime
+                  {formData.defaultDuration === "TIME_SLOT" &&
+                  formData.startTime &&
+                  formData.endTime
                     ? `${formData.startTime} - ${formData.endTime}`
                     : DURATION_LABELS[formData.defaultDuration]}
                 </span>

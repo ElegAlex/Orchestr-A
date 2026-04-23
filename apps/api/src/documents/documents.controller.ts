@@ -70,7 +70,10 @@ export class DocumentsController {
   @Patch(':id')
   @RequirePermissions('documents:update')
   @UseGuards(JwtAuthGuard, OwnershipGuard)
-  @OwnershipCheck({ resource: 'document', bypassPermission: 'documents:manage_any' })
+  @OwnershipCheck({
+    resource: 'document',
+    bypassPermission: 'documents:manage_any',
+  })
   @ApiOperation({ summary: 'Modifier un document' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -82,7 +85,10 @@ export class DocumentsController {
   @Delete(':id')
   @RequirePermissions('documents:delete')
   @UseGuards(JwtAuthGuard, OwnershipGuard)
-  @OwnershipCheck({ resource: 'document', bypassPermission: 'documents:manage_any' })
+  @OwnershipCheck({
+    resource: 'document',
+    bypassPermission: 'documents:manage_any',
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un document' })
   remove(@Param('id', ParseUUIDPipe) id: string) {

@@ -125,7 +125,12 @@ export default function GanttChart({
     useState<FullTask | null>(null);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const rows = tasksToGanttRows(tasks, milestones, projectStartDate, projectEndDate);
+  const rows = tasksToGanttRows(
+    tasks,
+    milestones,
+    projectStartDate,
+    projectEndDate,
+  );
   const dependencies = dependenciesToGantt(tasks);
 
   const findFullTask = useCallback(

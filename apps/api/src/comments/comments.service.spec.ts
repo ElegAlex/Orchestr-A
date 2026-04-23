@@ -34,7 +34,11 @@ describe('CommentsService', () => {
         },
         {
           provide: PermissionsService,
-          useValue: { getPermissionsForRole: vi.fn().mockResolvedValue(['comments:delete_any']) },
+          useValue: {
+            getPermissionsForRole: vi
+              .fn()
+              .mockResolvedValue(['comments:delete_any']),
+          },
         },
       ],
     }).compile();

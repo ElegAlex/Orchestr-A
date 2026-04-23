@@ -72,8 +72,8 @@ export function ThirdPartyDeleteConfirmModal({
         <div className="p-6 space-y-4">
           <p className="text-gray-800">
             Cette action est <strong>irréversible</strong>. Le tiers{" "}
-            <strong>{thirdParty.organizationName}</strong> et toutes ses
-            données liées seront supprimés :
+            <strong>{thirdParty.organizationName}</strong> et toutes ses données
+            liées seront supprimés :
           </p>
 
           {loading ? (

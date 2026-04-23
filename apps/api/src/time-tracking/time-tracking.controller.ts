@@ -233,8 +233,7 @@ export class TimeTrackingController {
   })
   @ApiResponse({
     status: 403,
-    description:
-      'Non propriétaire et sans permission time_tracking:manage_any',
+    description: 'Non propriétaire et sans permission time_tracking:manage_any',
   })
   @ApiResponse({
     status: 404,
@@ -267,8 +266,7 @@ export class TimeTrackingController {
   })
   @ApiResponse({
     status: 403,
-    description:
-      'Non propriétaire et sans permission time_tracking:manage_any',
+    description: 'Non propriétaire et sans permission time_tracking:manage_any',
   })
   @ApiResponse({
     status: 404,

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useCallback } from 'react';
-import type { GanttPortfolioRow, GanttTaskRow, GanttView } from './types';
+import { useCallback } from "react";
+import type { GanttPortfolioRow, GanttTaskRow, GanttView } from "./types";
 import {
   LEFT_COLUMN_WIDTH,
   PROJECT_ROW_HEIGHT,
@@ -9,13 +9,13 @@ import {
   TASK_STATUS_COLORS,
   TASK_STATUS_DEFAULT_COLOR,
   getRowHeight as getViewRowHeight,
-} from './tokens';
-import { dateToX } from './timeline-math';
-import GanttBar from './GanttBar';
+} from "./tokens";
+import { dateToX } from "./timeline-math";
+import GanttBar from "./GanttBar";
 
 interface GanttRowProps {
   row: GanttPortfolioRow | GanttTaskRow;
-  scope: 'portfolio' | 'project';
+  scope: "portfolio" | "project";
   rangeStart: Date;
   view: GanttView;
   pixelsPerUnit: number;
@@ -26,16 +26,23 @@ interface GanttRowProps {
 }
 
 function isTaskRow(row: GanttPortfolioRow | GanttTaskRow): row is GanttTaskRow {
-  return 'isMilestone' in row;
+  return "isMilestone" in row;
 }
 
-function getRowHeight(row: GanttPortfolioRow | GanttTaskRow, scope: 'portfolio' | 'project', view: GanttView): number {
-  if (scope === 'portfolio') return PROJECT_ROW_HEIGHT;
+function getRowHeight(
+  row: GanttPortfolioRow | GanttTaskRow,
+  scope: "portfolio" | "project",
+  view: GanttView,
+): number {
+  if (scope === "portfolio") return PROJECT_ROW_HEIGHT;
   return getViewRowHeight(view);
 }
 
-function getBarColor(row: GanttPortfolioRow | GanttTaskRow, scope: 'portfolio' | 'project'): string {
-  if (scope === 'portfolio') {
+function getBarColor(
+  row: GanttPortfolioRow | GanttTaskRow,
+  scope: "portfolio" | "project",
+): string {
+  if (scope === "portfolio") {
     return HEALTH_COLORS[(row as GanttPortfolioRow).health];
   }
   const taskRow = row as GanttTaskRow;
@@ -64,7 +71,7 @@ export default function GanttRow({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
+      if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         onClick?.();
       }
@@ -89,7 +96,7 @@ export default function GanttRow({
         style={{ width: LEFT_COLUMN_WIDTH, minWidth: LEFT_COLUMN_WIDTH }}
       >
         <span className="truncate text-sm text-gray-800">{row.name}</span>
-        {scope === 'portfolio' && (
+        {scope === "portfolio" && (
           <span
             className="ml-auto shrink-0 h-2 w-2 rounded-full"
             style={{ backgroundColor: color }}

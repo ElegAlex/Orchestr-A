@@ -91,7 +91,10 @@ export function TemplateCard({
             {roleCount > 1 ? "rôles rattachés" : "rôle rattaché"}
           </span>
         ) : (
-          <span data-testid="template-role-count" data-template-key={template.key}>
+          <span
+            data-testid="template-role-count"
+            data-template-key={template.key}
+          >
             <span className="font-semibold text-gray-700">{roleCount}</span>{" "}
             {roleCount > 1 ? "rôles" : "rôle"}
           </span>

@@ -1,4 +1,4 @@
-import type { HealthStatus } from './types';
+import type { HealthStatus } from "./types";
 
 export interface ClassifiableRow {
   startDate: Date;
@@ -15,19 +15,22 @@ export function classify(row: ClassifiableRow, today?: Date): HealthStatus {
   const now = today ?? new Date();
 
   // 1. Completed or cancelled → done
-  if (row.status && ['completed', 'cancelled'].includes(row.status.toLowerCase())) {
-    return 'done';
+  if (
+    row.status &&
+    ["completed", "cancelled"].includes(row.status.toLowerCase())
+  ) {
+    return "done";
   }
 
   // 2. Future start date → upcoming
   if (row.startDate > now) {
-    return 'upcoming';
+    return "upcoming";
   }
 
   // 3. Zero or negative duration → on-track
   const totalDuration = row.endDate.getTime() - row.startDate.getTime();
   if (totalDuration <= 0) {
-    return 'on-track';
+    return "on-track";
   }
 
   // 4. Calculate time elapsed percentage (capped at 100)
@@ -36,12 +39,12 @@ export function classify(row: ClassifiableRow, today?: Date): HealthStatus {
 
   // 5. Classify by gap between progress and elapsed time
   if (row.progress >= timeElapsedPct - 10) {
-    return 'on-track';
+    return "on-track";
   }
 
   if (row.progress >= timeElapsedPct - 25) {
-    return 'at-risk';
+    return "at-risk";
   }
 
-  return 'late';
+  return "late";
 }

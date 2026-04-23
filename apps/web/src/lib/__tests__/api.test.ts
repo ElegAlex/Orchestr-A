@@ -6,7 +6,11 @@
  * deduplicates concurrent refresh attempts behind a single promise.
  */
 
-type AxiosConfig = { url: string; headers: Record<string, string>; data?: unknown };
+type AxiosConfig = {
+  url: string;
+  headers: Record<string, string>;
+  data?: unknown;
+};
 type AxiosResult = { data: unknown; config?: AxiosConfig };
 type MockAxios = {
   create: jest.Mock;
@@ -65,12 +69,16 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
         data: { access_token: "new-at", refresh_token: "new-rt" },
       }));
 
-    const instancePost = jest.fn().mockImplementation(async (url: string, body: unknown) => {
-      return requestHandler({ url, data: body, headers: {} });
-    });
-    const instanceRequest = jest.fn().mockImplementation(async (cfg: AxiosConfig) => {
-      return requestHandler(cfg);
-    });
+    const instancePost = jest
+      .fn()
+      .mockImplementation(async (url: string, body: unknown) => {
+        return requestHandler({ url, data: body, headers: {} });
+      });
+    const instanceRequest = jest
+      .fn()
+      .mockImplementation(async (cfg: AxiosConfig) => {
+        return requestHandler(cfg);
+      });
     const instance = {
       post: instancePost,
       request: instanceRequest,
@@ -83,9 +91,11 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
     jest.doMock("axios", () => {
       const mockAxios: MockAxios = {
         create: jest.fn(() => instance),
-        post: jest.fn().mockImplementation(async (_url: string, body: unknown) => {
-          return refreshHandler(body);
-        }),
+        post: jest
+          .fn()
+          .mockImplementation(async (_url: string, body: unknown) => {
+            return refreshHandler(body);
+          }),
         default: undefined as unknown as MockAxios,
       };
       mockAxios.default = mockAxios;

@@ -69,12 +69,14 @@ export default function LeavesPage() {
 
   // "Pour qui?" — declare for others
   const [createForUserId, setCreateForUserId] = useState<string>("");
-  const [subordinates, setSubordinates] = useState<Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    login: string;
-  }>>([]);
+  const [subordinates, setSubordinates] = useState<
+    Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      login: string;
+    }>
+  >([]);
 
   // Balances management state
   const [balances, setBalances] = useState<LeaveBalanceRecord[]>([]);
@@ -750,16 +752,18 @@ export default function LeavesPage() {
                 </button>
               </>
             )}
-            {!showValidationActions && (leave as Leave & { canEdit?: boolean }).canEdit && (
-              <button
-                onClick={() => openEditModal(leave)}
-                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                title={t("actions.edit")}
-              >
-                ✏️
-              </button>
-            )}
-            {!showValidationActions && (leave as Leave & { canDelete?: boolean }).canDelete && (
+            {!showValidationActions &&
+              (leave as Leave & { canEdit?: boolean }).canEdit && (
+                <button
+                  onClick={() => openEditModal(leave)}
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                  title={t("actions.edit")}
+                >
+                  ✏️
+                </button>
+              )}
+            {!showValidationActions &&
+              (leave as Leave & { canDelete?: boolean }).canDelete && (
                 <button
                   onClick={() => handleDelete(leave.id)}
                   className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
@@ -779,22 +783,23 @@ export default function LeavesPage() {
                   ↩️
                 </button>
               )}
-            {showValidationActions && leave.status === LeaveStatus.CANCELLATION_REQUESTED && (
-              <>
-                <button
-                  onClick={() => handleCancelLeave(leave.id)}
-                  className="px-3 py-1.5 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition"
-                >
-                  Approuver l&apos;annulation
-                </button>
-                <button
-                  onClick={() => handleRejectCancellation(leave.id)}
-                  className="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition"
-                >
-                  Refuser l&apos;annulation
-                </button>
-              </>
-            )}
+            {showValidationActions &&
+              leave.status === LeaveStatus.CANCELLATION_REQUESTED && (
+                <>
+                  <button
+                    onClick={() => handleCancelLeave(leave.id)}
+                    className="px-3 py-1.5 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition"
+                  >
+                    Approuver l&apos;annulation
+                  </button>
+                  <button
+                    onClick={() => handleRejectCancellation(leave.id)}
+                    className="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition"
+                  >
+                    Refuser l&apos;annulation
+                  </button>
+                </>
+              )}
             {showValidationActions && leave.status === LeaveStatus.APPROVED && (
               <button
                 onClick={() => handleCancelLeave(leave.id)}

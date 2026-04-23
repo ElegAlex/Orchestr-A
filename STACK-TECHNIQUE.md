@@ -204,12 +204,12 @@ api/
 
 ### Visualisations & Composants métier
 
-| Composant                        | Version    | Usage                                    |
-| -------------------------------- | ---------- | ---------------------------------------- |
-| **Gantt custom** (`components/gantt/`)  | —          | Diagramme de Gantt unifié Portfolio + Projet |
-| **Recharts**                     | **3.x**    | Graphiques (Burndown, Vélocité, KPIs)    |
-| **React Big Calendar**           | **1.x**    | Calendrier multi-projets                 |
-| **@dnd-kit**                     | **6.x**    | Drag & drop Kanban (moderne, performant) |
+| Composant                              | Version | Usage                                        |
+| -------------------------------------- | ------- | -------------------------------------------- |
+| **Gantt custom** (`components/gantt/`) | —       | Diagramme de Gantt unifié Portfolio + Projet |
+| **Recharts**                           | **3.x** | Graphiques (Burndown, Vélocité, KPIs)        |
+| **React Big Calendar**                 | **1.x** | Calendrier multi-projets                     |
+| **@dnd-kit**                           | **6.x** | Drag & drop Kanban (moderne, performant)     |
 
 ### Fonctionnalités Gantt
 

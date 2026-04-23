@@ -7,14 +7,7 @@ import { MainLayout } from "@/components/MainLayout";
 import { useAuthStore } from "@/stores/auth.store";
 import { tasksService } from "@/services/tasks.service";
 import { projectsService } from "@/services/projects.service";
-import {
-  Task,
-  TaskStatus,
-  Priority,
-  Project,
-  User,
-  Service,
-} from "@/types";
+import { Task, TaskStatus, Priority, Project, User, Service } from "@/types";
 import { usePermissions } from "@/hooks/usePermissions";
 import { usersService } from "@/services/users.service";
 import { servicesService } from "@/services/services.service";
@@ -388,7 +381,9 @@ export default function TasksPage() {
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              <span className={`w-2 h-2 rounded-full mr-2 ${overdueFilter ? "bg-red-500" : "bg-gray-400"}`} />
+              <span
+                className={`w-2 h-2 rounded-full mr-2 ${overdueFilter ? "bg-red-500" : "bg-gray-400"}`}
+              />
               {t("filters.overdue")}
             </button>
             {statusFilter !== "ALL" && (
@@ -441,8 +436,18 @@ export default function TasksPage() {
                   onClick={() => setShowCreateModal(false)}
                   className="text-gray-400 hover:text-gray-600 transition"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -467,8 +472,13 @@ export default function TasksPage() {
                   await fetchData();
                   return created;
                 } catch (err) {
-                  const axiosError = err as { response?: { data?: { message?: string } } };
-                  toast.error(axiosError.response?.data?.message || t("messages.createError"));
+                  const axiosError = err as {
+                    response?: { data?: { message?: string } };
+                  };
+                  toast.error(
+                    axiosError.response?.data?.message ||
+                      t("messages.createError"),
+                  );
                   throw err;
                 }
               }}

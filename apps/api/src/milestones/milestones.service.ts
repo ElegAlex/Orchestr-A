@@ -1,4 +1,8 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
@@ -82,7 +86,12 @@ export class MilestonesService {
     return milestone;
   }
 
-  async update(id: string, updateMilestoneDto: UpdateMilestoneDto, currentUserId?: string, currentUserRole?: string | null) {
+  async update(
+    id: string,
+    updateMilestoneDto: UpdateMilestoneDto,
+    currentUserId?: string,
+    currentUserRole?: string | null,
+  ) {
     if (currentUserId) {
       await this.assertProjectMembership(id, currentUserId, currentUserRole);
     }
@@ -99,7 +108,11 @@ export class MilestonesService {
     });
   }
 
-  async remove(id: string, currentUserId?: string, currentUserRole?: string | null) {
+  async remove(
+    id: string,
+    currentUserId?: string,
+    currentUserRole?: string | null,
+  ) {
     if (currentUserId) {
       await this.assertProjectMembership(id, currentUserId, currentUserRole);
     }

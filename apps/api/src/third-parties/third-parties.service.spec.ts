@@ -434,7 +434,9 @@ describe('ThirdPartiesService', () => {
         id: 'assign-1',
       });
       await service.assignToTask('task-1', 'tp-1', 'user-1');
-      expect(mockPrismaService.taskThirdPartyAssignee.create).toHaveBeenCalled();
+      expect(
+        mockPrismaService.taskThirdPartyAssignee.create,
+      ).toHaveBeenCalled();
     });
 
     it('throws NotFoundException when task missing', async () => {
@@ -506,9 +508,9 @@ describe('ThirdPartiesService', () => {
       mockPrismaService.projectThirdPartyMember.findUnique.mockResolvedValue(
         null,
       );
-      await expect(
-        service.detachFromProject('proj-1', 'tp-1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.detachFromProject('proj-1', 'tp-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -530,9 +532,9 @@ describe('ThirdPartiesService', () => {
       mockPrismaService.taskThirdPartyAssignee.findUnique.mockResolvedValue(
         null,
       );
-      await expect(
-        service.unassignFromTask('task-1', 'tp-1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.unassignFromTask('task-1', 'tp-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

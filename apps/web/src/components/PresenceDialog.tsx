@@ -26,14 +26,19 @@ function PresenceList({
   return (
     <div className="max-h-[300px] overflow-y-auto space-y-1 pr-2">
       {users.map((user) => (
-        <div key={user.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+        <div
+          key={user.id}
+          className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+        >
           <UserAvatar user={user} size="md" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">
               {user.firstName} {user.lastName}
             </p>
             {user.serviceName && (
-              <p className="text-xs text-gray-500 truncate">{user.serviceName}</p>
+              <p className="text-xs text-gray-500 truncate">
+                {user.serviceName}
+              </p>
             )}
           </div>
         </div>

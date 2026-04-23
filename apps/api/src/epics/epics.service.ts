@@ -1,4 +1,8 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEpicDto } from './dto/create-epic.dto';
 import { UpdateEpicDto } from './dto/update-epic.dto';
@@ -61,7 +65,12 @@ export class EpicsService {
     return epic;
   }
 
-  async update(id: string, updateEpicDto: UpdateEpicDto, currentUserId?: string, currentUserRole?: string | null) {
+  async update(
+    id: string,
+    updateEpicDto: UpdateEpicDto,
+    currentUserId?: string,
+    currentUserRole?: string | null,
+  ) {
     if (currentUserId) {
       await this.assertProjectMembership(id, currentUserId, currentUserRole);
     }
@@ -73,7 +82,11 @@ export class EpicsService {
     });
   }
 
-  async remove(id: string, currentUserId?: string, currentUserRole?: string | null) {
+  async remove(
+    id: string,
+    currentUserId?: string,
+    currentUserRole?: string | null,
+  ) {
     if (currentUserId) {
       await this.assertProjectMembership(id, currentUserId, currentUserRole);
     }

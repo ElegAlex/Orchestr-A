@@ -53,8 +53,9 @@ export class PlanningService {
     endDate: string,
     currentUser: { id: string; role: string | null },
   ): Promise<PlanningOverview> {
-    const permissions =
-      await this.permissionsService.getPermissionsForRole(currentUser.role);
+    const permissions = await this.permissionsService.getPermissionsForRole(
+      currentUser.role,
+    );
     const canViewPredefinedTasks = permissions.includes(
       'predefined_tasks:view',
     );

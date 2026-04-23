@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
@@ -11,6 +11,24 @@ import { MyTasksUpcomingList } from "./MyTasksUpcomingList";
 import { MyTasksUndeclaredList } from "./MyTasksUndeclaredList";
 
 const UNDECLARED_EXPANDED_KEY = "dashboard.undeclaredExpanded";
+const UNDECLARED_EXPANDED_EVENT = "orchestra:undeclaredExpandedChanged";
+
+function subscribeUndeclaredExpanded(callback: () => void) {
+  window.addEventListener(UNDECLARED_EXPANDED_EVENT, callback);
+  return () => window.removeEventListener(UNDECLARED_EXPANDED_EVENT, callback);
+}
+
+function getUndeclaredExpandedSnapshot(): boolean {
+  try {
+    return window.localStorage.getItem(UNDECLARED_EXPANDED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function getUndeclaredExpandedServerSnapshot(): boolean {
+  return false;
+}
 
 type Props = {
   /** Tâches non terminées, triées par endDate asc (parent gère tri/slice). */
@@ -52,36 +70,25 @@ export function MyTasksSection({
   const { hasPermission } = usePermissions();
   const canLogTime = hasPermission("time_tracking:create");
 
-  // État du collapse — init "replié", hydratation depuis localStorage.
-  // On garde l'état replié par défaut côté SSR pour éviter tout mismatch
-  // d'hydratation (localStorage n'est pas dispo côté serveur).
-  const [undeclaredExpanded, setUndeclaredExpanded] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const stored = window.localStorage.getItem(UNDECLARED_EXPANDED_KEY);
-      if (stored === "true") setUndeclaredExpanded(true);
-    } catch {
-      // Accès localStorage refusé (mode privé, etc.) — on reste replié.
-    }
-  }, []);
+  // État du collapse — SSR-safe via useSyncExternalStore.
+  // getServerSnapshot retourne false (replié) ; le client lit localStorage.
+  const undeclaredExpanded = useSyncExternalStore(
+    subscribeUndeclaredExpanded,
+    getUndeclaredExpandedSnapshot,
+    getUndeclaredExpandedServerSnapshot,
+  );
 
   const toggleUndeclared = () => {
-    setUndeclaredExpanded((prev) => {
-      const next = !prev;
-      try {
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(
-            UNDECLARED_EXPANDED_KEY,
-            next ? "true" : "false",
-          );
-        }
-      } catch {
-        // Persistance best-effort.
-      }
-      return next;
-    });
+    const next = !undeclaredExpanded;
+    try {
+      window.localStorage.setItem(
+        UNDECLARED_EXPANDED_KEY,
+        next ? "true" : "false",
+      );
+    } catch {
+      // Persistance best-effort.
+    }
+    window.dispatchEvent(new Event(UNDECLARED_EXPANDED_EVENT));
   };
 
   const undeclaredCountSuffix =

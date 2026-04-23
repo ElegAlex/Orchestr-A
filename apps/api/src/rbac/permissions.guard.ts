@@ -74,10 +74,7 @@ export class PermissionsGuardV2 implements CanActivate {
     const klass = context.getClass();
 
     if (
-      this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-        handler,
-        klass,
-      ])
+      this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [handler, klass])
     ) {
       return true;
     }
@@ -128,13 +125,13 @@ export class PermissionsGuardV2 implements CanActivate {
     const set = new Set<string>(perms);
 
     if (hasAll) {
-      for (const p of requireAll!) {
+      for (const p of requireAll) {
         if (!set.has(p)) return false;
       }
     }
     if (hasAny) {
       let matched = false;
-      for (const p of requireAny!) {
+      for (const p of requireAny) {
         if (set.has(p)) {
           matched = true;
           break;

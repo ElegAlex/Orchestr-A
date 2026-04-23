@@ -34,11 +34,11 @@ L'atomique `THIRD_PARTIES_CRUD` (`packages/rbac/atomic-permissions.ts:475–481`
 ```typescript
 // packages/rbac/atomic-permissions.ts:475–481
 export const THIRD_PARTIES_CRUD = [
-  'third_parties:create',
-  'third_parties:update',
-  'third_parties:delete',
-  'third_parties:assign_to_project',
-  'third_parties:assign_to_task',
+  "third_parties:create",
+  "third_parties:update",
+  "third_parties:delete",
+  "third_parties:assign_to_project",
+  "third_parties:assign_to_task",
 ] as const satisfies readonly PermissionCode[];
 ```
 
@@ -60,34 +60,34 @@ Après la migration `20260420120000_rbac_v4_drop_legacy`, les tables `role_confi
 
 Source : `packages/rbac/templates.ts:293–918` (champ `defaultLabel` de chaque template) et `packages/database/prisma/seed.ts:1488–1505` (seed V0).
 
-| Code RBAC | `defaultLabel` |
-|---|---|
-| `ADMIN` | Administrateur |
-| `ADMIN_DELEGATED` | Directeur adjoint |
-| `PORTFOLIO_MANAGER` | Manager de portefeuille |
-| `MANAGER` | Manager |
-| `MANAGER_PROJECT_FOCUS` | Manager projet |
-| `MANAGER_HR_FOCUS` | Chef de service |
-| `PROJECT_LEAD` | Chef de projet |
-| `PROJECT_LEAD_JUNIOR` | Chef de projet junior |
-| `TECHNICAL_LEAD` | Référent technique |
-| `PROJECT_CONTRIBUTOR` | Contributeur projet |
+| Code RBAC                   | `defaultLabel`             |
+| --------------------------- | -------------------------- |
+| `ADMIN`                     | Administrateur             |
+| `ADMIN_DELEGATED`           | Directeur adjoint          |
+| `PORTFOLIO_MANAGER`         | Manager de portefeuille    |
+| `MANAGER`                   | Manager                    |
+| `MANAGER_PROJECT_FOCUS`     | Manager projet             |
+| `MANAGER_HR_FOCUS`          | Chef de service            |
+| `PROJECT_LEAD`              | Chef de projet             |
+| `PROJECT_LEAD_JUNIOR`       | Chef de projet junior      |
+| `TECHNICAL_LEAD`            | Référent technique         |
+| `PROJECT_CONTRIBUTOR`       | Contributeur projet        |
 | `PROJECT_CONTRIBUTOR_LIGHT` | Contributeur projet junior |
-| `FUNCTIONAL_REFERENT` | Référent fonctionnel |
-| `HR_OFFICER` | Gestionnaire RH |
-| `HR_OFFICER_LIGHT` | Assistant RH |
-| `THIRD_PARTY_MANAGER` | Gestionnaire prestataires |
-| `CONTROLLER` | Contrôleur de gestion |
-| `BUDGET_ANALYST` | Analyste budgétaire |
-| `DATA_ANALYST` | Analyste données |
-| `IT_SUPPORT` | Technicien support |
-| `IT_INFRASTRUCTURE` | Équipe infrastructure |
-| `OBSERVER_FULL` | Observateur global |
-| `OBSERVER_PROJECTS_ONLY` | Sponsor projet |
-| `OBSERVER_HR_ONLY` | Audit social |
-| `BASIC_USER` | Utilisateur standard |
-| `EXTERNAL_PRESTATAIRE` | Prestataire externe |
-| `STAGIAIRE_ALTERNANT` | Stagiaire / alternant |
+| `FUNCTIONAL_REFERENT`       | Référent fonctionnel       |
+| `HR_OFFICER`                | Gestionnaire RH            |
+| `HR_OFFICER_LIGHT`          | Assistant RH               |
+| `THIRD_PARTY_MANAGER`       | Gestionnaire prestataires  |
+| `CONTROLLER`                | Contrôleur de gestion      |
+| `BUDGET_ANALYST`            | Analyste budgétaire        |
+| `DATA_ANALYST`              | Analyste données           |
+| `IT_SUPPORT`                | Technicien support         |
+| `IT_INFRASTRUCTURE`         | Équipe infrastructure      |
+| `OBSERVER_FULL`             | Observateur global         |
+| `OBSERVER_PROJECTS_ONLY`    | Sponsor projet             |
+| `OBSERVER_HR_ONLY`          | Audit social               |
+| `BASIC_USER`                | Utilisateur standard       |
+| `EXTERNAL_PRESTATAIRE`      | Prestataire externe        |
+| `STAGIAIRE_ALTERNANT`       | Stagiaire / alternant      |
 
 ### Mapping « RESPONSABLE » → RBAC
 
@@ -124,6 +124,7 @@ ADMIN_DELEGATED: {
 ```
 
 Traduction i18n legacy (ancien code encore présent dans les locales) :
+
 - `apps/web/messages/fr/common.json:40` → `"RESPONSABLE": "Responsable"`
 - `apps/web/messages/en/common.json:40` → `"RESPONSABLE": "Supervisor"`
 
@@ -159,6 +160,7 @@ PROJECT_LEAD: {
 ```
 
 Traductions i18n legacy :
+
 - `apps/web/messages/fr/common.json:43` → `"CHEF_DE_PROJET": "Chef de projet"`
 - `apps/web/messages/en/common.json:43` → `"CHEF_DE_PROJET": "Project Manager"`
 
@@ -187,14 +189,14 @@ apps/api/src/third-parties/
 
 ### Endpoints du controller principal (`third-parties.controller.ts`)
 
-| Méthode | Path | Décorateur de permission |
-|---|---|---|
-| `POST` | `/third-parties` | `@RequirePermissions('third_parties:create')` |
-| `GET` | `/third-parties` | `@RequirePermissions('third_parties:read')` |
-| `GET` | `/third-parties/:id` | `@RequirePermissions('third_parties:read')` |
-| `GET` | `/third-parties/:id/deletion-impact` | `@RequirePermissions('third_parties:delete')` |
-| `PATCH` | `/third-parties/:id` | `@RequirePermissions('third_parties:update')` |
-| `DELETE` | `/third-parties/:id` | `@RequirePermissions('third_parties:delete')` |
+| Méthode  | Path                                 | Décorateur de permission                      |
+| -------- | ------------------------------------ | --------------------------------------------- |
+| `POST`   | `/third-parties`                     | `@RequirePermissions('third_parties:create')` |
+| `GET`    | `/third-parties`                     | `@RequirePermissions('third_parties:read')`   |
+| `GET`    | `/third-parties/:id`                 | `@RequirePermissions('third_parties:read')`   |
+| `GET`    | `/third-parties/:id/deletion-impact` | `@RequirePermissions('third_parties:delete')` |
+| `PATCH`  | `/third-parties/:id`                 | `@RequirePermissions('third_parties:update')` |
+| `DELETE` | `/third-parties/:id`                 | `@RequirePermissions('third_parties:delete')` |
 
 Source : `apps/api/src/third-parties/third-parties.controller.ts:33–93`.
 
@@ -272,28 +274,28 @@ apps/web/app/[locale]/third-parties/
 
 **Section principale** (`navigation`, lignes 29–42) :
 
-| Ordre | `key` | `icon` | `permission` |
-|---|---|---|---|
-| 1 | `dashboard` | `🎯` | — |
-| 2 | `projects` | `📁` | `projects:read` |
-| 3 | `tasks` | `✓` | `tasks:read` |
-| 4 | `events` | `📣` | `events:read` |
-| 5 | `planning` | `🗓️` | — |
-| 6 | `timeTracking` | `⏱️` | `time_tracking:read` |
-| 7 | `leaves` | `🏖️` | `leaves:read` |
-| 8 | `telework` | `🏠` | `telework:read` |
+| Ordre | `key`          | `icon` | `permission`         |
+| ----- | -------------- | ------ | -------------------- |
+| 1     | `dashboard`    | `🎯`   | —                    |
+| 2     | `projects`     | `📁`   | `projects:read`      |
+| 3     | `tasks`        | `✓`    | `tasks:read`         |
+| 4     | `events`       | `📣`   | `events:read`        |
+| 5     | `planning`     | `🗓️`   | —                    |
+| 6     | `timeTracking` | `⏱️`   | `time_tracking:read` |
+| 7     | `leaves`       | `🏖️`   | `leaves:read`        |
+| 8     | `telework`     | `🏠`   | `telework:read`      |
 
 **Section Administration** (`adminNavigation`, lignes 44–87) :
 
-| Ordre | `key` | `icon` | `permission` / `adminOnly` |
-|---|---|---|---|
-| 1 | `reports` | `📊` | `reports:view` |
-| 2 | `users` | `👥` | `users:manage` |
-| 3 | `departments` | `🏢` | `departments:read` |
-| 4 | `skills` | `⭐` | `skills:read` |
-| 5 | `thirdParties` | `🤝` | `third_parties:read` |
-| 6 | `roleManagement` | `🛡️` | `adminOnly: true` |
-| 7 | `settings` | `⚙️` | `adminOnly: true` |
+| Ordre | `key`            | `icon` | `permission` / `adminOnly` |
+| ----- | ---------------- | ------ | -------------------------- |
+| 1     | `reports`        | `📊`   | `reports:view`             |
+| 2     | `users`          | `👥`   | `users:manage`             |
+| 3     | `departments`    | `🏢`   | `departments:read`         |
+| 4     | `skills`         | `⭐`   | `skills:read`              |
+| 5     | `thirdParties`   | `🤝`   | `third_parties:read`       |
+| 6     | `roleManagement` | `🛡️`   | `adminOnly: true`          |
+| 7     | `settings`       | `⚙️`   | `adminOnly: true`          |
 
 Source : `apps/web/src/components/MainLayout.tsx:28–87`.
 
@@ -386,6 +388,7 @@ redis-cli DEL "role-permissions:*"   # flush si stale
 ```
 
 Pour les nouvelles permissions `clients:*`, aucune table SQL n'est à vérifier. Il faut s'assurer que :
+
 1. Le code `clients:read` (et les 4 autres) est ajouté à `PermissionCode` dans `packages/rbac/atomic-permissions.ts`
 2. Les templates concernés dans `packages/rbac/templates.ts` incluent bien ces permissions
 3. Le cache Redis est flushed après déploiement
@@ -446,12 +449,14 @@ Les pages et composants `third-parties` utilisent le namespace `"common"` et les
 Les composants utilisent `useTranslations("common")` (alias `tc`) et accèdent aux clés d'actions génériques :
 
 - `apps/web/src/components/third-parties/ThirdPartyModal.tsx:5,32` :
+
   ```typescript
   import { useTranslations } from "next-intl";
   const t = useTranslations("common");
   ```
 
 - `apps/web/app/[locale]/third-parties/page.tsx:5,32` :
+
   ```typescript
   import { useTranslations } from "next-intl";
   const tc = useTranslations("common");
