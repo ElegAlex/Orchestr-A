@@ -312,6 +312,18 @@ Le projet `[chromium]` de `playwright.config.ts` (testDir `./e2e`, testMatch rac
 
 **Statut** : `W5 PASS partiel` — suite écrite, matrix à jour, 360 tests RBAC générés, exécution Playwright déférée.
 
+### Validation CI Playwright (vérifiée post-audit)
+
+Confirmation par lecture de `.github/workflows/ci.yml` : job 4 « E2E Tests (Playwright) » existe et lance `pnpm --filter web exec playwright test --config ../../playwright.config.ts` après DB seed. Donc en CI :
+
+- ✅ **Les 360 tests RBAC auto-générés** (depuis `permission-matrix.ts` via `e2e/tests/rbac/api-permissions.spec.ts` dans le projet `[admin]`) **s'exécuteront au prochain run CI**.
+- ❌ **Les 24 tests dédiés de `e2e/clients.spec.ts`** **ne s'exécuteront PAS** tant que la config `[chromium]` ne détecte aucun spec à la racine de `e2e/`. Dette commune à 5 anciens specs racine (leaves/projects/tasks/permissions/auth), pas spécifique au module Clients.
+
+Vérifications advisor réalisées avant clôture :
+- `git status --short` : 50 lignes toutes pré-existantes (backlog rbac-refactor + .claude + audits orphelins + plans V4 antérieurs) — aucun stray de subagent.
+- `tsc --noEmit e2e/fixtures/permission-matrix.ts` : 0 erreur.
+- Working tree propre dans le sens « aucun changement non tracké issu de mes commits ».
+
 ### Dette remontée
 
 1. **Config Playwright `[chromium]`** : le projet ne détecte aucun test alors que testDir + testMatch devraient matcher les specs racine. Impact historique (affecte déjà les 4 autres specs racine) — pas un bug introduit par Clients.
