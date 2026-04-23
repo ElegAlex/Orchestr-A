@@ -231,5 +231,40 @@ Escape criteria de l'advisor : « if the legacy seed references cross more than 
 
 ---
 
+## Wave 3 — Frontend (2 subagents Sonnet sérialisés)
+
+Sérialisation W3-A → W3-B confirmée par l'advisor (W3-B consomme `clients.service.ts` + `ClientSelector` livrés par W3-A).
+
+### W3-A — Référentiel Clients (subagent Sonnet)
+- **SHA** : `3524719`
+- **Fichiers créés** (7) : `clients.service.ts`, pages `/clients` + `/clients/[id]`, `ClientModal`, `ClientDeleteConfirmModal`, `ClientSelector`, test Jest du service
+- **Fichiers modifiés** (4) : `types/index.ts` (section CLIENTS), `MainLayout.tsx` (🏛️ dans adminNavigation après Tiers, gate `clients:read`), `fr/common.json` + `en/common.json` (`nav.clients`)
+- **Tests** : +14 nouveaux (528 total)
+- **Décisions ad-hoc** :
+  - Bouton export = stub `toast("disponible prochainement W4")` (wiring ExportService en W4)
+  - `ClientSelector` multi-select interface `{ value: string[], onChange: (ids: string[]) => void }` (pattern `ServiceMultiSelect`)
+  - `ClientDeleteConfirmModal` désactive le bouton si `projectsCount > 0` (avertissement amber, API 409 attendu)
+  - Framework test corrigé Vitest → Jest (le brief mentionnait Vitest mais le frontend utilise Jest — cohérent avec CLAUDE.md)
+
+### W3-B — Intégrations Projets (subagent Sonnet)
+- **SHA** : `7a77df4`
+- **Fichiers modifiés** (3) : `projects/[id]/page.tsx` (onglet Clients après Tiers, lazy load + `hasPermission('clients:read')`), `projects/page.tsx` (filtre multi-select + tags coloré indigo sur cartes), `types/index.ts` (ajout `clients?: Array<{id, name}>` sur `interface Project` — manquait depuis W2-B)
+- **Tests** : pas de modif (528 total, baseline inchangée)
+- **Décisions ad-hoc** :
+  - Filtre URL `?clients=` en client-side (cohérent avec le pattern status/priority existant, pas d'adoption server-side même si l'API le supporte — polish candidate)
+  - UI filtre = `<select multiple size={1}>` natif (même pattern que status/priority, UX dégradée vs ClientSelector, hors scope V1)
+  - Tags = `bg-indigo-100 text-indigo-800`, max 2 visibles + `+N`
+  - Non-modif de `projects/__tests__/page.test.tsx` (mock autonome ne testant pas le vrai code, l'adaptation n'aurait testé que le mock — E2E en W5 couvriront)
+
+### Gate W3
+- `pnpm run build` : ✅ 3 tasks successful, 20.4s
+- `pnpm run test` : ✅ 6 tasks, 1128 api + 108 rbac + 528 web = 0 failed
+- `pnpm --filter web run lint` : ❌ 13 errors (non-bloquant par spec §16, **100 % préexistantes** — vérifié par `git stash -u` sur master, même compte d'erreurs sans W3). 2 warnings `react-hooks/exhaustive-deps` introduits par nos fichiers, cosmétiques.
+
+**Statut** : `W3 PASS` (gate core vert, lint préexistant déclaré non bloquant par spec).
+
+---
+
+
 
 
