@@ -10,7 +10,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { ProjectStatus, TaskStatus } from '../__mocks__/database';
+import { ProjectStatus, TaskStatus, MilestoneStatus } from '../__mocks__/database';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -33,6 +33,10 @@ describe('ProjectsService', () => {
       findUnique: vi.fn(),
     },
     timeEntry: {
+      findMany: vi.fn(),
+    },
+    projectSnapshot: {
+      create: vi.fn(),
       findMany: vi.fn(),
     },
     $transaction: vi.fn(),
@@ -1221,6 +1225,139 @@ describe('ProjectsService', () => {
           }),
         );
       }
+    });
+  });
+
+  // ============================================
+  // CAPTURE SNAPSHOTS (Wave 1.B)
+  // ============================================
+  describe('captureSnapshots', () => {
+    const past = new Date('2025-01-01');
+    const future = new Date('2099-12-31');
+
+    const projectWithMixedData = {
+      id: 'p-mixed',
+      status: ProjectStatus.ACTIVE,
+      tasks: [
+        { status: TaskStatus.DONE },
+        { status: TaskStatus.DONE },
+        { status: TaskStatus.IN_PROGRESS },
+        { status: TaskStatus.IN_PROGRESS },
+        { status: TaskStatus.IN_PROGRESS },
+        { status: TaskStatus.BLOCKED },
+        { status: TaskStatus.TODO },
+        { status: TaskStatus.IN_REVIEW },
+      ],
+      milestones: [
+        { status: MilestoneStatus.COMPLETED, dueDate: past },
+        { status: MilestoneStatus.COMPLETED, dueDate: future },
+        { status: MilestoneStatus.PENDING, dueDate: past },
+        { status: MilestoneStatus.IN_PROGRESS, dueDate: past },
+        { status: MilestoneStatus.PENDING, dueDate: future },
+      ],
+    };
+
+    const emptyProject = {
+      id: 'p-empty',
+      status: ProjectStatus.ACTIVE,
+      tasks: [],
+      milestones: [],
+    };
+
+    beforeEach(() => {
+      mockPrismaService.projectSnapshot.create.mockImplementation(
+        ({ data }) => Promise.resolve({ id: 'snap-id', ...data }),
+      );
+    });
+
+    it('only fetches ACTIVE projects with tasks + milestones in one query (no N+1)', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+
+      await service.captureSnapshots();
+
+      expect(mockPrismaService.project.findMany).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.project.findMany).toHaveBeenCalledWith({
+        where: { status: 'ACTIVE' },
+        include: {
+          tasks: { select: { status: true } },
+          milestones: { select: { status: true, dueDate: true } },
+        },
+      });
+    });
+
+    it('computes the 5 enriched counters correctly for a project with mixed data', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([
+        projectWithMixedData,
+      ]);
+
+      await service.captureSnapshots();
+
+      expect(mockPrismaService.projectSnapshot.create).toHaveBeenCalledWith({
+        data: {
+          projectId: 'p-mixed',
+          progress: 25, // 2 done / 8 total = 25%
+          tasksDone: 2,
+          tasksTotal: 8,
+          tasksInProgress: 3,
+          tasksBlocked: 1,
+          milestonesReached: 2, // both COMPLETED count regardless of dueDate
+          milestonesOverdue: 2, // PENDING + IN_PROGRESS, both with past dueDate
+          milestonesUpcoming: 1, // PENDING with future dueDate
+        },
+      });
+    });
+
+    it('produces all-zero counters and progress=0 for a project with no tasks/milestones', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([emptyProject]);
+
+      await service.captureSnapshots();
+
+      expect(mockPrismaService.projectSnapshot.create).toHaveBeenCalledWith({
+        data: {
+          projectId: 'p-empty',
+          progress: 0,
+          tasksDone: 0,
+          tasksTotal: 0,
+          tasksInProgress: 0,
+          tasksBlocked: 0,
+          milestonesReached: 0,
+          milestonesOverdue: 0,
+          milestonesUpcoming: 0,
+        },
+      });
+    });
+
+    it('returns the count of created snapshots', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([
+        projectWithMixedData,
+        emptyProject,
+      ]);
+
+      const result = await service.captureSnapshots();
+
+      expect(result).toEqual({ captured: 2 });
+      expect(mockPrismaService.projectSnapshot.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('rounds progress to nearest integer', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([
+        {
+          id: 'p-round',
+          status: ProjectStatus.ACTIVE,
+          tasks: [
+            { status: TaskStatus.DONE },
+            { status: TaskStatus.DONE },
+            { status: TaskStatus.TODO },
+          ],
+          milestones: [],
+        },
+      ]);
+
+      await service.captureSnapshots();
+
+      const arg =
+        mockPrismaService.projectSnapshot.create.mock.calls[0][0].data;
+      expect(arg.progress).toBe(67); // 2/3 = 66.66 → rounded to 67
     });
   });
 });
