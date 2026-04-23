@@ -165,7 +165,9 @@ Pas de cache dédié V1 — requête Prisma avec `aggregate`. Si perf problème 
 - **Frontend** (Vitest, `clients.service.test.ts`, composants)
 - **E2E** (Playwright, `e2e/clients.spec.ts`) : enregistrement dans `permission-matrix.ts` pour les 6 rôles test (admin/responsable/manager/référent/contributeur/observateur). Vérifier 403 vs 2xx sur chaque endpoint.
 
-## 11. Seed
+## 11. Seed (historique — remplacé par §15 R2)
+
+> ⚠️ Cette section est conservée pour traçabilité mais a été **annulée et remplacée** par §15 R2 après l'audit Phase 0. Les tables `permissions` et `role_permissions` n'existent plus depuis la migration `20260420120000_rbac_v4_drop_legacy`. Voir §15 pour la procédure réelle.
 
 Enregistrer les 5 nouvelles permissions dans `atomic-permissions.ts` + leur distribution dans les templates. Le seed idempotent doit :
 - créer les 5 `permissions` si absentes
@@ -226,3 +228,79 @@ Locales fr.json / en.json : touchées en W3-A (à arbitrer sinon merge conflict 
 **Livrable attendu** : `docs/superpowers/specs/2026-04-23-clients-module-design.md`, ce document.
 
 **Prochaine étape** : déclenchement Phase 0 par Alexandre.
+
+---
+
+## 15. Ratifications Phase 0 (ajoutées après audit)
+
+L'audit Phase 0 (`docs/superpowers/audits/2026-04-23-clients-audit.md`) a révélé 4 écarts entre le spec V1 initial et la réalité du code. Arbitrage PO consolidé :
+
+### R1 — Computed flags `canEdit` / `canDelete` → **aligné sur third-parties**
+
+Le module `third-parties` ne calcule PAS de computed flags (contrairement à ce qu'annonçait §5). La ratification retient le **principe KISS** : le module Clients ne calcule pas de computed flags. Les permissions sont vérifiées côté frontend via `hasPermission('clients:...')` directement. §5 du spec — la phrase « Computed flags : réponses liste clients incluent `canEdit`, `canDelete` calculés côté API (pattern module `third-parties`) » — est **annulée**.
+
+### R2 — Architecture RBAC V4 : §11 obsolète + Wave 1.5 de nettoyage
+
+La migration `20260420120000_rbac_v4_drop_legacy` a supprimé les tables `permissions`, `role_configs`, `role_permissions`. Les permissions sont résolues 100 % en mémoire via `ROLE_TEMPLATES[templateKey].permissions`. §11 du spec (vérification SQL post-seed) est **annulée et remplacée par** :
+
+**Nouvelle procédure post-seed** :
+1. Vérifier que les 5 nouveaux codes sont dans `PermissionCode` (type TS dans `packages/rbac/atomic-permissions.ts`).
+2. Vérifier que `CLIENTS_CRUD` est défini et exporté.
+3. Vérifier que chaque template de `packages/rbac/templates.ts` touché contient la bonne distribution (grep du code source).
+4. Après déploiement, **flush Redis** : `redis-cli DEL "role-permissions:*"` (TTL 5 min, sinon attendre expiration).
+5. Smoke test API : `GET /api/auth/me/permissions` sur un utilisateur ADMIN doit renvoyer `clients:read|create|update|delete|assign_to_project`.
+
+**Wave 1.5 ajoutée au plan** : nettoyage de la fonction `seedPermissionsAndRoles` dans `packages/database/prisma/seed.ts` qui appelle encore `prisma.permission.upsert()` et `prisma.rolePermission.createMany()` sur des modèles Prisma supprimés — bug latent à neutraliser avant qu'il crashe un `pnpm run db:seed` post-V4. Escape hatch : si le nettoyage touche plus de 2 callers ou des modules non-Clients, abandonner W1.5 et ouvrir un issue GitHub dédié.
+
+### R3 — i18n : strings littérales FR (pas de namespace `clients.json`)
+
+Les pages `third-parties` utilisent `useTranslations("common")` + clés `actions.*` génériques + **strings littérales FR** pour les libellés spécifiques (il n'y a pas de namespace `thirdParties.*` dédié). Ratification : le module Clients **clone ce (non-)pattern**. Contribution i18n limitée à une seule clé : `nav.clients` dans `apps/web/messages/{fr,en}/common.json`. Tout le reste des libellés (`"Clients"`, `"Aucun client"`, `"+ Ajouter un client"`, etc.) est en dur en français dans le JSX.
+
+### R4 — Sidebar : emoji 🏛️ (pas `lucide-react`)
+
+La sidebar utilise des emoji Unicode, pas des composants `lucide-react`. Ratification : icône **🏛️** (institution / commanditaire public) pour l'entrée « Clients ». Emplacement : **section `adminNavigation`** dans `MainLayout.tsx`, juste après `thirdParties` (🤝). Gate : `clients:read`.
+
+---
+
+## 16. Plan d'exécution mis à jour (post-ratifications Phase 0)
+
+### Table révisée
+
+| Wave | Périmètre | Parallélisme | Dépendance |
+|---|---|---|---|
+| 0 | Audit Claude Code → `clients-audit.md` | Solo | — (fait) |
+| 0.5 | Baseline check (build+test+docker+migrations) | Solo | W0 validé |
+| 0.7 | Fix baseline 5 suites rouges préexistantes (si nécessaire) | Solo | W0.5 rouge |
+| 1 | Migration Prisma + RBAC permissions + distribution templates | Solo (`schema.prisma` + `atomic-permissions.ts` + `templates.ts`) | W0.7 validé |
+| 1.5 | Nettoyage `seedPermissionsAndRoles` (retrait appels Prisma morts) | Solo (`seed.ts`) | W1 ; escape hatch si > 2 callers |
+| 2-A | Backend module `clients/*` (controller+service+DTO+tests) | Parallèle avec 2-B | W1 |
+| 2-B | Backend extensions `projects` (filter + enrichment `clients: {id,name}[]`) | Parallèle avec 2-A | W1 |
+| 3-A | Frontend référentiel Clients (pages + composants + sidebar + `nav.clients`) | **Séquentiel avant 3-B** (3-B consomme `clients.service.ts` + `ClientSelector`) | W2 |
+| 3-B | Frontend intégrations Projets (onglet + filtre + tags) | Séquentiel après 3-A | W3-A commit |
+| 4 | Exports (`ExportService` + `PortfolioGantt` tooltip) | Solo | W2, W3 |
+| 5 | E2E Playwright + `permission-matrix.ts` | Solo | W4 |
+
+**Correction vs §13 initial** : W3 n'est plus parallélisé (B importe du code produit par A). Advisor avait flagué cette dépendance ; ratifié.
+
+### Matrice de conflits fichiers (W1.5 ajoutée)
+
+| Fichier | W1 | W1.5 | W2-A | W2-B | W3-A | W3-B | W4 | W5 |
+|---|---|---|---|---|---|---|---|---|
+| `schema.prisma` | ✏️ | | | | | | | |
+| `atomic-permissions.ts`, `templates.ts` | ✏️ | | | | | | | |
+| `seed.ts` | | ✏️ | | | | | | |
+| `apps/api/src/clients/*` | | | ✏️ | | | | | |
+| `apps/api/src/projects/projects.service.ts` | | | | ✏️ | | | | |
+| `apps/api/src/projects/dto/*` | | | | ✏️ | | | | |
+| `apps/web/app/[locale]/clients/*` | | | | | ✏️ | | | |
+| `apps/web/src/components/clients/*` | | | | | ✏️ | | | |
+| `apps/web/src/services/clients.service.ts` | | | | | ✏️ | | | |
+| `apps/web/src/components/MainLayout.tsx` | | | | | ✏️ | | | |
+| `apps/web/messages/{fr,en}/common.json` | | | | | ✏️ | | | |
+| `apps/web/app/[locale]/projects/[id]/page.tsx` | | | | | | ✏️ | | |
+| `apps/web/app/[locale]/projects/page.tsx` | | | | | | ✏️ | | |
+| `ExportService.ts`, `PortfolioGantt`, `GanttTooltip.tsx`, `types.ts` | | | | | | | ✏️ | |
+| `e2e/clients.spec.ts`, `e2e/fixtures/permission-matrix.ts` | | | | | | | | ✏️ |
+
+Pas de conflit de locale à arbitrer (§14 note levée par R3 : une seule clé `nav.clients`, pas de namespace).
+

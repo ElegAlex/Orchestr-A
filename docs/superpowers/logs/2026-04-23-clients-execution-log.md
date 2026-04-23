@@ -79,3 +79,40 @@ Risque spécifique : `projects.service.test.ts` est sur le chemin direct du modu
 **Statut actuel** : `BLOCKED: baseline rouge préexistante — arbitrage utilisateur requis`.
 
 ---
+
+## Wave 0.7 — Fix baseline 5 suites test (option 2 retenue)
+
+**Exécuté** : 2026-04-23, 15 min 24 sec (cap 90 min respecté)
+**Contrainte** : commits séparés sur master, pas de modification du code de production, sortie de secours si test rouge révèle un bug prod.
+
+### Commits produits
+
+| SHA | Suite fixée | Nature |
+|---|---|---|
+| `45078f4` | `milestones.service.test.ts` | Snapshot stale : URL `/milestones` → `/milestones?limit=1000` (le service applique un limit par défaut). |
+| `0c2f5d7` | `projects.service.test.ts` | 5 tests rouges — (a) URLs getAll alignées sur l'ordre `limit|page|status` produit par URLSearchParams, (b) expectedStats enrichi de `thirdPartyLoggedHours: 0` (nouveau champ post-V4 time-tracking tiers). |
+| `b0b243e` | `app/[locale]/users/__tests__/page.test.tsx` | (a) Mock next-intl enrichi de `useLocale`, (b) mock `next/navigation` ajouté (useRouter + useSearchParams + usePathname), (c) mockAuthState.permissions peuplé des 4 permissions que la page gate (`users:create|update|delete|reset_password`). |
+| `5550b62` | `app/[locale]/tasks/__tests__/page.test.tsx` | (a) Mock `next/navigation` complété (useSearchParams + usePathname), (b) clés i18n `kanban.columns.*` + `kanban.messages.*` + `kanban.noTasks` ajoutées (depuis l'extraction de `<TaskKanban>`), (c) mockAuthState.permissions avec les 6 permissions nécessaires. |
+| `cb2cdca` | `src/hooks/__tests__/usePlanningData.test.ts` | Alignement sur le refactor "un seul appel agrégé" : mock `planningService.getOverview()`, assertions remplacées par `expect(planningService.getOverview).toHaveBeenCalled()`, test "error handling" fait désormais reject sur getOverview, test "different response formats" renommé en "should extract users correctly from planning overview response". mockUser-2 reçoit un `userServices` non vide (le filter prod resserré à `u.userServices.length > 0` l'excluait). |
+
+### Diagnostic systémique
+
+Aucun bug de production détecté. Toutes les suites rouges relevaient de la dette de test post-refactor V4 (commit `88eb9fe`) + post-refactor Kanban (commits récents) + post-refactor "aggregated planning overview". Le code de production reste cohérent avec son intention.
+
+### Note métier remontée (pour arbitrage futur hors scope)
+
+Le filter des utilisateurs dans `usePlanningData.ts:188` a été resserré : auparavant `u.isActive && (u.departmentId || (u.userServices && u.userServices.length > 0))`, désormais `u.isActive && u.userServices && u.userServices.length > 0`. **Conséquence** : un manager qui manage un service sans en être membre (cas `managedServices` seulement) n'apparaît plus dans le planning. Si c'est involontaire, prévoir un ticket de correction. Si c'est volontaire, la décision est durable et cohérente.
+
+### Gate W0.7
+
+| Check | Résultat |
+|---|---|
+| `pnpm run build` | ✅ 3 tasks successful, 15.0s |
+| `pnpm run test` | ✅ **41 suites passed, 514 tests passed, 14 skipped, 0 failed** |
+
+**Statut** : `W0.7 PASS — baseline verte, W1 peut démarrer`.
+
+SHA tête master après W0.7 : `cb2cdca`.
+
+---
+
