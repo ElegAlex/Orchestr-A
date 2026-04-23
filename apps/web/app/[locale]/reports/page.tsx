@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { MainLayout } from "@/components/MainLayout";
 import { MetricCard } from "./components/MetricCard";
 import PortfolioGantt from "./components/PortfolioGantt";
+import AdvancedAnalyticsTab from "./components/advanced/AdvancedAnalyticsTab";
 import { AnalyticsData, DateRange } from "./types";
 import { format } from "date-fns";
 import { ExportService } from "@/services/export.service";
@@ -322,12 +323,8 @@ export default function ReportsPage() {
           </div>
         )}
 
-        {/* Tab: Analytics Avancés — assemblé en W3.3 via AdvancedAnalyticsTab */}
-        {activeTab === 1 && (
-          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-sm text-gray-500">
-            Refonte Analytics Avancés en cours (W3.3)
-          </div>
-        )}
+        {/* Tab: Analytics Avancés (refonte W3) */}
+        {activeTab === 1 && <AdvancedAnalyticsTab />}
 
         {/* Tab: Gantt Portfolio */}
         {activeTab === 2 && (
