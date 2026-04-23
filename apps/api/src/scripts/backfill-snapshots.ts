@@ -20,8 +20,10 @@ async function backfill() {
   }
 }
 
-backfill().catch((err) => {
-  // eslint-disable-next-line no-console
-  console.error('Backfill failed:', err);
-  process.exit(1);
-});
+backfill()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error('Backfill failed:', err);
+    process.exit(1);
+  });
