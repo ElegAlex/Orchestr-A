@@ -157,6 +157,7 @@ model Project {
   sponsor           User?                     @relation("ProjectSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
   members           ProjectMember[]
   thirdPartyMembers ProjectThirdPartyMember[]
+  clients           ProjectClient[]
   epics             Epic[]
   milestones        Milestone[]
   tasks             Task[]
@@ -490,6 +491,38 @@ model ProjectThirdPartyMember {
   @@index([projectId])
   @@index([thirdPartyId])
   @@map("project_third_party_members")
+}
+
+// ===========================
+// CLIENTS
+// ===========================
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects ProjectClient[]
+
+  @@index([isActive])
+  @@index([name])
+  @@map("clients")
+}
+
+model ProjectClient {
+  projectId String
+  clientId  String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  client  Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, clientId])
+  @@index([projectId])
+  @@index([clientId])
+  @@map("project_clients")
 }
 
 // ===========================
