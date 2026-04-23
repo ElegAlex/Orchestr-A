@@ -503,6 +503,161 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
   // tester au niveau matrix (un PLACEHOLDER projet inexistant renverrait
   // 404 avant le check de permission). Couverture assurée par les
   // scenarios dans time-tracking-third-parties.spec.ts.
+
+  // ═══════════════════════════════════════════════════════════
+  // CLIENTS (Commanditaires) — Module Clients V1 (W5)
+  // ═══════════════════════════════════════════════════════════
+  //
+  // Mapping rôles de test → templates V4 (confirmé par lecture de
+  // packages/rbac/templates.ts + atomic-permissions.ts) :
+  //   admin        → ADMIN           (CATALOG_PERMISSIONS — toutes les perms)
+  //   responsable  → ADMIN_DELEGATED (catalog minus 3 perms non-clients)
+  //   manager      → MANAGER         (clients:assign_to_project explicite ; pas CLIENTS_CRUD)
+  //   referent     → TECHNICAL_LEAD  (PROJECT_STRUCTURE_READ → clients:read seulement)
+  //   contributeur → PROJECT_CONTRIBUTOR (PROJECT_CONTRIB_CAPACITIES → PROJECT_STRUCTURE_READ → clients:read)
+  //   observateur  → OBSERVER_FULL   (PROJECT_STRUCTURE_READ → clients:read)
+  //
+  // clients:create/update/delete  → ADMIN, ADMIN_DELEGATED uniquement (CLIENTS_CRUD)
+  // clients:assign_to_project     → ADMIN, ADMIN_DELEGATED, MANAGER (+ PROJECT_LEAD hors scope 6 rôles)
+  // clients:read                  → tous les 6 rôles via PROJECT_STRUCTURE_READ
+
+  {
+    action: "clients:create",
+    resource: "clients",
+    method: "POST",
+    apiEndpoint: "/api/clients",
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+    testBody: {
+      name: "Client Test RBAC",
+    },
+    description:
+      "Créer un client commanditaire — Admin, Responsable uniquement (CLIENTS_CRUD via ADMIN/ADMIN_DELEGATED)",
+  },
+  {
+    action: "clients:read",
+    resource: "clients",
+    method: "GET",
+    apiEndpoint: "/api/clients",
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
+    deniedRoles: [],
+    description:
+      "Lister les clients — tous les rôles (clients:read via PROJECT_STRUCTURE_READ quasi-universel)",
+  },
+  {
+    action: "clients:read",
+    resource: "clients",
+    method: "GET",
+    apiEndpoint: `/api/clients/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
+    deniedRoles: [],
+    description:
+      "Détail d'un client — tous les rôles (clients:read). 404 = autorisé mais ressource absente",
+  },
+  {
+    action: "clients:read",
+    resource: "clients",
+    method: "GET",
+    apiEndpoint: `/api/clients/${PLACEHOLDER_UUID_V4}/projects`,
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
+    deniedRoles: [],
+    description:
+      "Projets d'un client — tous les rôles (clients:read AND projects:read, les deux présents dans PROJECT_STRUCTURE_READ)",
+  },
+  {
+    action: "clients:delete",
+    resource: "clients",
+    method: "GET",
+    apiEndpoint: `/api/clients/${PLACEHOLDER_UUID_V4}/deletion-impact`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+    description:
+      "Vérifier l'impact avant suppression d'un client — Admin, Responsable uniquement (clients:delete requis)",
+  },
+  {
+    action: "clients:update",
+    resource: "clients",
+    method: "PATCH",
+    apiEndpoint: `/api/clients/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+    testBody: {
+      name: "Client modifié RBAC",
+    },
+    description:
+      "Modifier un client — Admin, Responsable uniquement (clients:update via CLIENTS_CRUD)",
+  },
+  {
+    action: "clients:delete",
+    resource: "clients",
+    method: "DELETE",
+    apiEndpoint: `/api/clients/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+    description:
+      "Supprimer un client (hard delete) — Admin, Responsable uniquement (clients:delete via CLIENTS_CRUD)",
+  },
+  {
+    action: "clients:read",
+    resource: "clients",
+    method: "GET",
+    apiEndpoint: `/api/projects/${PLACEHOLDER_UUID_V4}/clients`,
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
+    deniedRoles: [],
+    description:
+      "Lister les clients d'un projet — tous les rôles (clients:read). 404 projet inexistant = autorisé",
+  },
+  {
+    action: "clients:assign_to_project",
+    resource: "clients",
+    method: "POST",
+    apiEndpoint: `/api/projects/${PLACEHOLDER_UUID_V4}/clients`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+    testBody: {
+      clientId: PLACEHOLDER_UUID_V4,
+    },
+    description:
+      "Rattacher un client à un projet — Admin, Responsable, Manager (clients:assign_to_project). PROJECT_LEAD hors scope 6 rôles de test",
+  },
+  {
+    action: "clients:assign_to_project",
+    resource: "clients",
+    method: "DELETE",
+    apiEndpoint: `/api/projects/${PLACEHOLDER_UUID_V4}/clients/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+    description:
+      "Détacher un client d'un projet — Admin, Responsable, Manager (clients:assign_to_project). 404 = autorisé mais rattachement absent",
+  },
 ];
 
 /**
