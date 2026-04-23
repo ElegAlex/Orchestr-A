@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  QueryClient,
-  QueryClientProvider,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
-import { RefreshCw } from "lucide-react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WorkloadChart } from "./WorkloadChart";
 import MilestonesCompletion from "./MilestonesCompletion";
 import { RecentActivity } from "./RecentActivity";
@@ -18,27 +12,8 @@ const queryClient = new QueryClient({
 });
 
 function TabContent() {
-  const tFilters = useTranslations("admin.reports");
-  const queryClient = useQueryClient();
-
-  const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["analytics", "advanced"] });
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleRefresh}
-          className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          data-testid="advanced-refresh-btn"
-        >
-          <RefreshCw className="h-4 w-4" />
-          {tFilters("filters.refresh")}
-        </button>
-      </div>
-
       <RecentActivity />
       <WorkloadChart />
       <MilestonesCompletion />
