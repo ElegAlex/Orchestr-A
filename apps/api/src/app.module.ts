@@ -29,6 +29,7 @@ import { AuditModule } from './audit/audit.module';
 import { PredefinedTasksModule } from './predefined-tasks/predefined-tasks.module';
 import { SchoolVacationsModule } from './school-vacations/school-vacations.module';
 import { ThirdPartiesModule } from './third-parties/third-parties.module';
+import { ClientsModule } from './clients/clients.module';
 import { PlanningModule } from './planning/planning.module';
 import { CommonModule } from './common/common.module';
 
@@ -76,6 +77,7 @@ import { CommonModule } from './common/common.module';
     PredefinedTasksModule,
     SchoolVacationsModule,
     ThirdPartiesModule,
+    ClientsModule,
     PlanningModule,
     CommonModule,
   ],

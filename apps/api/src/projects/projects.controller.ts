@@ -74,6 +74,12 @@ export class ProjectsController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'status', required: false, enum: ProjectStatus })
+  @ApiQuery({
+    name: 'clients',
+    required: false,
+    type: String,
+    description: "CSV d'UUIDs de clients (filtre OR)",
+  })
   @ApiResponse({
     status: 200,
     description: 'Liste des projets',
@@ -84,6 +90,7 @@ export class ProjectsController {
     @Query('status') status?: ProjectStatus,
     @CurrentUser('id') userId?: string,
     @CurrentUserRoleCode() userRole?: string | null,
+    @Query('clients') clients?: string,
   ) {
     return this.projectsService.findAll(
       page,
@@ -91,6 +98,7 @@ export class ProjectsController {
       status,
       userId,
       userRole ?? undefined,
+      clients,
     );
   }
 

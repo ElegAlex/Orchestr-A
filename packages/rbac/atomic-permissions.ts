@@ -31,10 +31,16 @@
  */
 
 // ============================================================================
-// 1. PermissionCode — type union strict (107 entrées)
+// 1. PermissionCode — type union strict (112 entrées)
 // ============================================================================
 
 export type PermissionCode =
+  // clients (5)
+  | "clients:assign_to_project"
+  | "clients:create"
+  | "clients:delete"
+  | "clients:read"
+  | "clients:update"
   // comments (4)
   | "comments:create"
   | "comments:delete"
@@ -217,6 +223,7 @@ export const PROJECT_STRUCTURE_READ = [
   "comments:read",
   "skills:read",
   "third_parties:read",
+  "clients:read",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -480,6 +487,20 @@ export const THIRD_PARTIES_CRUD = [
   "third_parties:assign_to_task",
 ] as const satisfies readonly PermissionCode[];
 
+// --- 2.i-bis Clients / commanditaires -------------------------------------
+
+/**
+ * CRUD complet clients + attribution à un projet.
+ * Un client = entité commanditaire (interne ou externe) pour laquelle le
+ * projet est réalisé. Distinct du tiers (réalisateur / prestataire).
+ */
+export const CLIENTS_CRUD = [
+  "clients:create",
+  "clients:update",
+  "clients:delete",
+  "clients:assign_to_project",
+] as const satisfies readonly PermissionCode[];
+
 /**
  * Déclaration de temps pour le compte d'un tiers (prestataire facturable).
  */
@@ -564,7 +585,7 @@ export const SETTINGS_READ = [
 // ============================================================================
 
 /**
- * Liste exhaustive des 107 permissions canoniques, triée alphabétiquement par
+ * Liste exhaustive des 112 permissions canoniques, triée alphabétiquement par
  * `module:action`. Sert de source unique pour :
  *   - le seed DB (Spec 2 Vague 0) ;
  *   - la génération de migrations (drop permissions mortes, rename
@@ -575,6 +596,12 @@ export const SETTINGS_READ = [
  * Le compilateur garantit la cohérence via `satisfies`.
  */
 export const CATALOG_PERMISSIONS = [
+  // clients
+  "clients:assign_to_project",
+  "clients:create",
+  "clients:delete",
+  "clients:read",
+  "clients:update",
   // comments
   "comments:create",
   "comments:delete",

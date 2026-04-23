@@ -249,6 +249,7 @@ export interface Project {
   milestones?: Milestone[];
   tasks?: Task[];
   documents?: Document[];
+  clients?: Array<{ id: string; name: string }>;
 }
 
 export interface ProjectMember {
@@ -576,6 +577,72 @@ export interface ProjectThirdPartyMember {
   assignedById: string;
   createdAt: string;
   thirdParty?: ThirdParty;
+}
+
+// ===========================
+// CLIENTS
+// ===========================
+
+export interface Client {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    projects: number;
+  };
+}
+
+export interface CreateClientDto {
+  name: string;
+}
+
+export interface UpdateClientDto {
+  name?: string;
+  isActive?: boolean;
+}
+
+export interface QueryClientDto {
+  search?: string;
+  isActive?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+export interface ClientDeletionImpact {
+  projectsCount: number;
+}
+
+export interface ProjectClient {
+  projectId: string;
+  clientId: string;
+  client: Client;
+  createdAt: string;
+}
+
+export interface ClientProjectsSummary {
+  projectsActive: number;
+  projectsTotal: number;
+  budgetHoursTotal: number;
+  hoursLoggedTotal: number;
+  varianceHours: number;
+}
+
+export interface ClientProjectItem {
+  id: string;
+  name: string;
+  status: string;
+  manager: { id: string; firstName: string; lastName: string } | null;
+  startDate: string | null;
+  endDate: string | null;
+  budgetHours: number | null;
+  hoursLogged: number;
+}
+
+export interface ClientProjectsResponse {
+  projects: ClientProjectItem[];
+  summary: ClientProjectsSummary;
 }
 
 // ===========================

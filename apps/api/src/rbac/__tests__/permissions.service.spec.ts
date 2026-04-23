@@ -238,8 +238,8 @@ describe('PermissionsService — V4', () => {
   });
 
   describe('Catalogue (sanity check)', () => {
-    it('CATALOG_PERMISSIONS contient 107 permissions', () => {
-      expect(CATALOG_PERMISSIONS.length).toBe(107);
+    it('CATALOG_PERMISSIONS contient 112 permissions', () => {
+      expect(CATALOG_PERMISSIONS.length).toBe(112);
     });
   });
 

@@ -24,6 +24,7 @@ interface Project {
   manager?: UserSummary | null;
   managerDepartment?: string;
   priority?: string;
+  clients?: Array<{ id: string; name: string }>;
 }
 
 interface PortfolioGanttProps {
@@ -60,6 +61,7 @@ function projectsToPortfolioRows(projects: Project[]): GanttPortfolioRow[] {
         manager: p.manager ?? null,
         code: p.code,
         priority: p.priority,
+        clientName: p.clients?.map((c) => c.name).join(", ") || undefined,
       };
     });
 }

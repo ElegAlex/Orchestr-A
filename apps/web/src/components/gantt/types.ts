@@ -40,6 +40,7 @@ export interface GanttPortfolioRow {
   manager?: UserSummary | null;
   code?: string;
   priority?: string;
+  clientName?: string;
 }
 
 export interface GanttTaskRow {
