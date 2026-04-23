@@ -170,16 +170,23 @@ model Project {
 }
 
 model ProjectSnapshot {
-  id         String   @id @default(uuid())
-  projectId  String
-  progress   Float
-  tasksDone  Int
-  tasksTotal Int
-  date       DateTime @default(now())
-  createdAt  DateTime @default(now())
+  id                 String   @id @default(uuid())
+  projectId          String
+  progress           Float
+  tasksDone          Int
+  tasksTotal         Int
+  tasksInProgress    Int      @default(0)
+  tasksBlocked       Int      @default(0)
+  milestonesReached  Int      @default(0)
+  milestonesOverdue  Int      @default(0)
+  milestonesUpcoming Int      @default(0)
+  date               DateTime @default(now())
+  createdAt          DateTime @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  @@index([projectId, date])
+  @@index([date])
   @@map("project_snapshots")
 }
 
