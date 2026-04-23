@@ -50,6 +50,8 @@ function uniqueLabel(prefix: string) {
 // ─── Suite 1 : CRUD admin + /projects endpoint ───────────────────────────────
 
 test.describe("Clients — CRUD admin @smoke", () => {
+  test.describe.configure({ mode: "serial" });
+
   let clientId: string;
   let adminToken: string;
   let baseURL: string;
@@ -234,6 +236,8 @@ test.describe("Clients — GET :id/projects structure summary", () => {
 // ─── Suite 3 : Assignation manager ↔ projet ──────────────────────────────────
 
 test.describe("Clients — Assignation client ↔ projet (manager) @smoke", () => {
+  test.describe.configure({ mode: "serial" });
+
   let clientId: string;
   let projectId: string;
   const adminToken = () => getToken("admin");
