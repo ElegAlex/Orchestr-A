@@ -67,6 +67,21 @@ jest.mock("next-intl", () => ({
     t.rich = t;
     return t;
   },
+  useLocale: () => "fr",
+}));
+
+// Mock next/navigation
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    refresh: jest.fn(),
+    prefetch: jest.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/fr/users",
 }));
 
 // Mock du store auth
@@ -87,7 +102,12 @@ const mockCurrentUser = {
 
 const mockAuthState = {
   user: mockCurrentUser,
-  permissions: [] as string[],
+  permissions: [
+    "users:create",
+    "users:update",
+    "users:delete",
+    "users:reset_password",
+  ] as string[],
   permissionsLoaded: true,
 };
 jest.mock("@/stores/auth.store", () => ({
