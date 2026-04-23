@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import toast from "react-hot-toast";
@@ -9,6 +9,7 @@ import { ClientDeleteConfirmModal } from "@/components/clients/ClientDeleteConfi
 import { ClientModal } from "@/components/clients/ClientModal";
 import { usePermissions } from "@/hooks/usePermissions";
 import { clientsService } from "@/services/clients.service";
+import { ExportService } from "@/services/export.service";
 import { Client, CreateClientDto, UpdateClientDto } from "@/types";
 
 export default function ClientsPage() {
@@ -28,6 +29,9 @@ export default function ClientsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [deleting, setDeleting] = useState<Client | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -87,8 +91,80 @@ export default function ClientsPage() {
     }
   };
 
-  const handleExport = () => {
-    toast("Export disponible prochainement (Wave 4)", { icon: "ℹ️" });
+  const buildClientExportData = () =>
+    clients.map((c) => ({
+      id: c.id,
+      name: c.name,
+      isActive: c.isActive,
+      createdAt: c.createdAt,
+      projectsCount: c._count?.projects ?? 0,
+    }));
+
+  const handleExportPDF = async () => {
+    setExportMenuOpen(false);
+    if (clients.length === 0) {
+      toast.error("Aucun client à exporter");
+      return;
+    }
+    setExporting(true);
+    try {
+      ExportService.exportClientsToPDF(buildClientExportData());
+    } catch (err) {
+      console.error("Export PDF error:", err);
+      toast.error("Erreur lors de l'export PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setExportMenuOpen(false);
+    if (clients.length === 0) {
+      toast.error("Aucun client à exporter");
+      return;
+    }
+    setExporting(true);
+    try {
+      const activeClients = clients.filter((c) => c.isActive);
+      const cap = activeClients.slice(0, 50);
+      const projectRows: Array<{
+        clientId: string;
+        clientName: string;
+        projectId: string;
+        projectName: string;
+        projectStatus: string;
+      }> = [];
+
+      const results = await Promise.all(
+        cap.map((c) =>
+          clientsService
+            .getProjectsWithSummary(c.id)
+            .then((res) => ({ clientId: c.id, clientName: c.name, res }))
+            .catch(() => ({ clientId: c.id, clientName: c.name, res: null })),
+        ),
+      );
+
+      for (const { clientId, clientName, res } of results) {
+        if (res) {
+          for (const p of res.projects) {
+            projectRows.push({
+              clientId,
+              clientName,
+              projectId: p.id,
+              projectName: p.name,
+              projectStatus: p.status,
+            });
+          }
+        }
+      }
+
+      ExportService.exportClientsToExcel(buildClientExportData(), projectRows);
+    } catch (err) {
+      console.error("Export Excel error:", err);
+      toast.error("Erreur lors de l'export Excel");
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -102,13 +178,34 @@ export default function ClientsPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleExport}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
-            >
-              Exporter
-            </button>
+            <div className="relative" ref={exportMenuRef}>
+              <button
+                type="button"
+                onClick={() => setExportMenuOpen((v) => !v)}
+                disabled={exporting}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm disabled:opacity-50"
+              >
+                {exporting ? "Export en cours…" : "Exporter ▾"}
+              </button>
+              {exportMenuOpen && (
+                <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                  <button
+                    type="button"
+                    onClick={handleExportPDF}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Exporter PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportExcel}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Exporter Excel
+                  </button>
+                </div>
+              )}
+            </div>
             {canCreate && (
               <button
                 type="button"

@@ -25,6 +25,7 @@ interface AnalyticsData {
     startDate: string;
     dueDate?: string;
     isOverdue: boolean;
+    clients?: string[];
   }>;
 }
 
@@ -133,6 +134,7 @@ export class ExportService {
       `${p.progress}%`,
       `${p.completedTasks}/${p.totalTasks}`,
       p.projectManager || "-",
+      p.clients?.join(", ") || "-",
       `${p.loggedHours}h / ${p.budgetHours}h`,
       p.isOverdue ? "⚠️ Retard" : "✅",
     ]);
@@ -146,6 +148,7 @@ export class ExportService {
           "Progression",
           "Tâches",
           "Manager",
+          "Clients",
           "Heures",
           "Échéance",
         ],
@@ -155,13 +158,14 @@ export class ExportService {
       headStyles: { fillColor: [102, 126, 234] },
       styles: { fontSize: 8 },
       columnStyles: {
-        0: { cellWidth: 40 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 20 },
-        4: { cellWidth: 35 },
-        5: { cellWidth: 30 },
-        6: { cellWidth: 20 },
+        0: { cellWidth: 35 },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 18 },
+        3: { cellWidth: 18 },
+        4: { cellWidth: 28 },
+        5: { cellWidth: 28 },
+        6: { cellWidth: 25 },
+        7: { cellWidth: 18 },
       },
     });
 
@@ -231,6 +235,7 @@ export class ExportService {
       "Tâches Complétées",
       "Tâches Totales",
       "Chef de Projet",
+      "Clients",
       "Heures Consommées",
       "Heures Budgétées",
       "Date Début",
@@ -246,6 +251,7 @@ export class ExportService {
       p.completedTasks,
       p.totalTasks,
       p.projectManager || "",
+      p.clients?.join(", ") || "",
       p.loggedHours,
       p.budgetHours,
       format(new Date(p.startDate), "dd/MM/yyyy"),
@@ -264,6 +270,7 @@ export class ExportService {
       { wch: 12 },
       { wch: 12 },
       { wch: 20 },
+      { wch: 25 },
       { wch: 15 },
       { wch: 15 },
       { wch: 12 },
@@ -716,6 +723,135 @@ export class ExportService {
 
     const filename = `orchestr-a-gantt-portfolio-${format(now, "yyyy-MM-dd")}.pdf`;
     doc.save(filename);
+  }
+
+  /**
+   * Export clients list to PDF
+   */
+  static exportClientsToPDF(
+    clients: Array<{
+      id: string;
+      name: string;
+      isActive: boolean;
+      createdAt: string;
+      projectsCount: number;
+    }>,
+  ): void {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const now = new Date();
+    let currentY = 20;
+
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Référentiel Clients — ORCHESTR'A", pageWidth / 2, currentY, {
+      align: "center",
+    });
+
+    currentY += 8;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      `Généré le ${format(now, "dd MMMM yyyy à HH:mm", { locale: fr })}`,
+      pageWidth / 2,
+      currentY,
+      { align: "center" },
+    );
+
+    currentY += 12;
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [["Nom", "Statut", "Projets", "Créé le"]],
+      body: clients.map((c) => [
+        c.name,
+        c.isActive ? "Actif" : "Archivé",
+        String(c.projectsCount),
+        format(new Date(c.createdAt), "dd/MM/yyyy"),
+      ]),
+      theme: "striped",
+      headStyles: { fillColor: [102, 126, 234] },
+      styles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 80 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 30 },
+      },
+    });
+
+    const pageCount = doc.internal.pages.length - 1;
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128);
+      doc.text(
+        `Page ${i} / ${pageCount}`,
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: "center" },
+      );
+    }
+
+    doc.save(`orchestr-a-clients-${format(now, "yyyy-MM-dd-HHmm")}.pdf`);
+  }
+
+  /**
+   * Export clients list to Excel (2 sheets: Clients + Projets par client)
+   */
+  static exportClientsToExcel(
+    clients: Array<{
+      id: string;
+      name: string;
+      isActive: boolean;
+      createdAt: string;
+      projectsCount: number;
+    }>,
+    projectsByClient: Array<{
+      clientId: string;
+      clientName: string;
+      projectId: string;
+      projectName: string;
+      projectStatus: string;
+    }>,
+  ): void {
+    const now = new Date();
+    const workbook = XLSX.utils.book_new();
+
+    // Sheet 1: Clients
+    const clientsHeader = ["ID", "Nom", "Statut", "Nb Projets", "Créé le"];
+    const clientsRows = clients.map((c) => [
+      c.id,
+      c.name,
+      c.isActive ? "Actif" : "Archivé",
+      c.projectsCount,
+      format(new Date(c.createdAt), "dd/MM/yyyy"),
+    ]);
+    const ws1 = XLSX.utils.aoa_to_sheet([clientsHeader, ...clientsRows]);
+    ws1["!cols"] = [
+      { wch: 36 },
+      { wch: 30 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 14 },
+    ];
+    XLSX.utils.book_append_sheet(workbook, ws1, "Clients");
+
+    // Sheet 2: Projets par client
+    const projectsHeader = ["Client", "Projet", "Statut Projet"];
+    const projectsRows = projectsByClient.map((r) => [
+      r.clientName,
+      r.projectName,
+      r.projectStatus,
+    ]);
+    const ws2 = XLSX.utils.aoa_to_sheet([projectsHeader, ...projectsRows]);
+    ws2["!cols"] = [{ wch: 30 }, { wch: 40 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(workbook, ws2, "Projets par client");
+
+    XLSX.writeFile(
+      workbook,
+      `orchestr-a-clients-${format(now, "yyyy-MM-dd-HHmm")}.xlsx`,
+    );
   }
 
   /**

@@ -215,6 +215,11 @@ function PortfolioTooltip({ row }: { row: GanttPortfolioRow }) {
           {Math.round(row.progress)}%
         </span>
       </Row>
+      {row.clientName && (
+        <Row label="Client">
+          <span style={{ fontSize: 12, color: '#334155' }}>{row.clientName}</span>
+        </Row>
+      )}
     </>
   );
 }
