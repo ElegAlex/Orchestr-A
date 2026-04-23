@@ -91,7 +91,58 @@ monthlyDayOfMonth  Int?     // 1 à 31 pour MONTHLY_DAY
 | `AssignmentStatusBadge` | Badge de statut d'exécution sur `DayCell`. |
 | `WeightInput` | Sélecteur de poids (1 à 5) dans le formulaire `PredefinedTask`. |
 
-### 6.4 Nouvelles permissions RBAC
+### 6.4 Surface UI : principe directeur
+
+Aucune nouvelle page d'administration n'est introduite. La convention existante d'Orchestr'A est conservée : toute la configuration et l'exploitation se font depuis la vue planning, via des modales ouvertes depuis `PlanningGrid`. Les composants existants `AssignmentModal` et `RecurringRulesModal` sont enrichis ; un unique nouveau composant modal `BalancedPlanningModal` est ajouté, ainsi qu'un composant de rendu `ActivityGrid` pour la Vue Activité.
+
+**Principe fondamental d'unicité des données** : une assignation (`PredefinedTaskAssignment`) est une entité unique en base. Les trois modes d'affichage (`week`, `month`, `activity`) et toutes les modales lisent la même source via `GET /planning/overview`. Toute création, modification ou suppression, quel que soit le point d'entrée UI, se répercute instantanément dans toutes les vues. Il n'existe aucune synchronisation à gérer, aucune duplication de données.
+
+Cartographie complète des surfaces UI :
+
+| Surface | État | Rôle | Évolutions apportées |
+|---|---|---|---|
+| `PlanningView` mode `week` | Existe | Vue planning utilisateurs en lignes x jours en colonnes, semaine | Badge de statut d'exécution (E3) et indicateur de poids (E1) dans `DayCell`. La structure reste identique. |
+| `PlanningView` mode `month` | Existe | Vue planning utilisateurs en lignes x jours en colonnes, mois | Idem (E3, E1). |
+| `PlanningView` mode `activity` | **Nouveau** | Vue planning jours en lignes x tâches en colonnes, lecture par activité | Troisième bouton « Vue activité » ajouté à côté de `Semaine` / `Mois`. Accès gaté par la permission `planning:activity-view`. Composant `ActivityGrid` dédié (E5). |
+| Formulaire de gabarit `PredefinedTask` | Existe | Créer et éditer un gabarit de tâche prédéfinie (nom, icône, durée, créneau) | Ajout d'un sélecteur de poids 1 à 5 (`WeightInput`) (E1). |
+| `RecurringRulesModal` | Existe | Gérer les règles récurrentes par tâche et utilisateur | Ajout des modes de récurrence `MONTHLY_ORDINAL` et `MONTHLY_DAY` avec contrôles adaptés (E2). |
+| `AssignmentModal` | Existe | Affecter ou retirer ponctuellement une tâche à un agent | Ajout de la transition de statut d'exécution (E3). |
+| `BalancedPlanningModal` | **Nouveau** | Configurer et prévisualiser un planning équilibré, puis l'appliquer | Entièrement nouveau (E4). Entrée via un bouton « Générer un planning équilibré » ajouté dans la barre de contrôle de `PlanningView`, visible uniquement avec la permission `predefined_tasks:balance`. |
+| `AssignmentStatusBadge` | **Nouveau** | Badge visuel de statut d'exécution rendu dans `DayCell` et `ActivityGrid` | Entièrement nouveau (E3). |
+
+### 6.5 Parcours utilisateur cibles
+
+Trois parcours couvrent les cas d'usage et doivent rester sans ambiguïté pour l'implémentation.
+
+#### Parcours A - Configurer une tâche récurrente (responsable de service)
+
+1. Ouvrir la section Planning.
+2. Ouvrir la modale de gestion des tâches prédéfinies depuis `PlanningView`.
+3. Créer ou éditer un gabarit : nom, icône, durée, créneau, **poids 1 à 5**.
+4. Enregistrer. Retour à la vue planning.
+5. Depuis la vue planning, ouvrir `RecurringRulesModal`, créer une règle en choisissant :
+   - agents concernés,
+   - récurrence : hebdomadaire, bi-hebdomadaire, **mensuelle à date fixe** ou **mensuelle ordinale**,
+   - plage de validité.
+6. Enregistrer. Les occurrences peuvent être matérialisées via le bouton « Générer » existant.
+
+#### Parcours B - Générer un planning équilibré (responsable de service)
+
+1. Depuis `PlanningView`, cliquer sur **Générer un planning équilibré** (bouton nouveau, visible si permission `predefined_tasks:balance`).
+2. `BalancedPlanningModal` s'ouvre : choisir la plage, le service ou la liste d'agents, la liste des tâches à équilibrer.
+3. Cliquer **Prévisualiser** : l'heuristique s'exécute, la modale affiche la charge pondérée prévue par agent et le ratio d'équité. Aucune écriture en base à cette étape.
+4. Si satisfaisant, cliquer **Appliquer** : les assignations sont créées en transaction. En cas d'échec partiel, rollback complet.
+5. Retour à la vue planning. Les assignations générées apparaissent immédiatement dans les modes `week`, `month` et `activity` (source de données commune).
+6. À tout moment, une assignation peut être ajustée manuellement via `AssignmentModal` (en cas d'absence imprévue par exemple).
+
+#### Parcours C - Suivre et réaliser son planning (agent)
+
+1. Ouvrir la section Planning, basculer si souhaité en **Vue activité** pour une lecture compacte par tâche.
+2. Cliquer sur une assignation du jour : `AssignmentStatusBadge` ou `AssignmentModal` permet la transition `NOT_DONE` vers `IN_PROGRESS` vers `DONE` ou `NOT_APPLICABLE` (avec commentaire de justification).
+3. Les assignations passées toujours en `NOT_DONE` apparaissent en badge d'alerte après le seuil paramétrable (par défaut J+1 ouvré).
+4. Aucune notification externe n'est émise en V1 ; le signalement est purement visuel dans l'interface.
+
+### 6.6 Nouvelles permissions RBAC
 
 | Permission | Description |
 |---|---|
