@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { MainLayout } from "@/components/MainLayout";
 import { MetricCard } from "./components/MetricCard";
+import { ProjectProgressChart } from "./components/ProjectProgressChart";
+import { TaskStatusCards } from "./components/TaskStatusCards";
+import { ProjectsDetailTable } from "./components/ProjectsDetailTable";
 import PortfolioGantt from "./components/PortfolioGantt";
 import AdvancedAnalyticsTab from "./components/advanced/AdvancedAnalyticsTab";
 import { AnalyticsData, DateRange } from "./types";
@@ -32,6 +35,7 @@ export default function ReportsPage() {
   );
   const [exporting, setExporting] = useState(false);
   const [clientsFilter, setClientsFilter] = useState<string[]>([]);
+  const progressChartRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<HTMLDivElement>(null);
 
   const canView = !permissionsLoaded || hasPermission("reports:view");
@@ -60,6 +64,7 @@ export default function ReportsPage() {
       const analyticsData = response.data;
       setData(analyticsData);
 
+      // Load projects for filter if not already loaded
       loadProjects();
     } catch (error) {
       console.error("Error loading analytics:", error);
@@ -84,11 +89,25 @@ export default function ReportsPage() {
         case "pdf":
           setExporting(true);
           try {
-            if (activeTab === 2 && ganttRef.current) {
-              await ExportService.exportGanttPortfolioToPDF(
-                ganttRef.current,
+            if (activeTab === 0) {
+              await ExportService.exportOverviewToPDF(
+                {
+                  metrics: data.metrics,
+                  projectDetails: data.projectDetails,
+                  taskStatusData: data.taskStatusData,
+                  projectProgressData: data.projectProgressData,
+                },
                 dateRange,
+                selectedProject !== "all" ? selectedProject : undefined,
+                progressChartRef.current,
               );
+            } else if (activeTab === 2) {
+              if (ganttRef.current) {
+                await ExportService.exportGanttPortfolioToPDF(
+                  ganttRef.current,
+                  dateRange,
+                );
+              }
             } else {
               await ExportService.exportToPDF(
                 data,
@@ -133,6 +152,7 @@ export default function ReportsPage() {
     }
   };
 
+  // Permission guard
   if (permissionsLoaded && !canView) {
     return (
       <MainLayout>
@@ -178,6 +198,12 @@ export default function ReportsPage() {
       0,
     ) || 0;
 
+  const projectIdFilter =
+    selectedProject !== "all" ? selectedProject : undefined;
+
+  // Client-side filter par client(s) : s'applique à la Detail Table et au
+  // Gantt Portfolio. Les agrégats/charts de la vue d'ensemble restent sur
+  // tous les projets (filter côté backend = scope évolution).
   const visibleProjectDetails =
     clientsFilter.length > 0
       ? data.projectDetails.filter((p) =>
@@ -188,6 +214,7 @@ export default function ReportsPage() {
   return (
     <MainLayout>
       <div className="p-8 space-y-8">
+        {/* Header: title + tabs */}
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">{t("title")}</h1>
           <div className="flex border-b border-gray-200">
@@ -224,6 +251,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
+        {/* Toolbar: filters + actions */}
         <div className="flex items-center gap-3 flex-wrap">
           <select
             value={dateRange}
@@ -293,9 +321,10 @@ export default function ReportsPage() {
           )}
         </div>
 
-        {/* Tab: Vue d'ensemble — V1 conserve metrics + alerts uniquement (W3.1) */}
+        {/* Tab: Vue d'ensemble */}
         {activeTab === 0 && (
           <div className="space-y-8">
+            {/* Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {data.metrics.map((metric, index) => (
                 <MetricCard
@@ -310,6 +339,22 @@ export default function ReportsPage() {
               ))}
             </div>
 
+            {/* Task status cards — compact row */}
+            <TaskStatusCards data={data.taskStatusData} />
+
+            {/* Project progress — full width, horizontal bars */}
+            <div ref={progressChartRef}>
+              <ProjectProgressChart data={data.projectProgressData} />
+            </div>
+
+            {/* Projects Detail Table (fusion santé + détail) */}
+            <ProjectsDetailTable
+              projects={visibleProjectDetails}
+              dateRange={dateRange}
+              projectId={projectIdFilter}
+            />
+
+            {/* Alerts */}
             {overdueTasks > 0 && (
               <div className="border-l-4 border-red-500 bg-red-50 p-4">
                 <h3 className="font-semibold text-red-800">
