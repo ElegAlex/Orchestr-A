@@ -46,7 +46,7 @@ describe("milestonesService", () => {
 
       const result = await milestonesService.getAll();
 
-      expect(api.get).toHaveBeenCalledWith("/milestones");
+      expect(api.get).toHaveBeenCalledWith("/milestones?limit=1000");
       expect(result).toEqual(mockPaginatedResponse);
     });
   });
