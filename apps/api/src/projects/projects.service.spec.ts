@@ -55,6 +55,7 @@ describe('ProjectsService', () => {
     epics: [],
     milestones: [],
     tasks: [],
+    clients: [],
     _count: { members: 0, tasks: 0, epics: 0, milestones: 0 },
   };
 
@@ -440,6 +441,66 @@ describe('ProjectsService', () => {
         );
       });
     });
+
+    // ------------------------------------------
+    // Filtre clients (CSV d'UUIDs)
+    // ------------------------------------------
+    describe('clients filter', () => {
+      const clientId1 = '550e8400-e29b-41d4-a716-446655440001';
+      const clientId2 = '550e8400-e29b-41d4-a716-446655440002';
+
+      it('should apply clients OR filter when clients param is provided', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([mockProject]);
+        mockPrismaService.project.count.mockResolvedValue(1);
+
+        await service.findAll(1, 10, undefined, undefined, undefined, `${clientId1},${clientId2}`);
+
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              clients: { some: { clientId: { in: [clientId1, clientId2] } } },
+            },
+          }),
+        );
+      });
+
+      it('should not apply clients filter when clients param is absent', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([mockProject]);
+        mockPrismaService.project.count.mockResolvedValue(1);
+
+        await service.findAll(1, 10);
+
+        const callArg = mockPrismaService.project.findMany.mock.calls[0][0] as { where: Record<string, unknown> };
+        expect(callArg.where).not.toHaveProperty('clients');
+      });
+
+      it('should throw BadRequestException when clients param contains invalid UUIDs', async () => {
+        await expect(
+          service.findAll(1, 10, undefined, undefined, undefined, 'not-a-uuid,also-bad'),
+        ).rejects.toThrow(BadRequestException);
+
+        expect(mockPrismaService.project.findMany).not.toHaveBeenCalled();
+      });
+
+      it('should return clients enriched as flat [{id, name}] array in findAll', async () => {
+        const projectWithClients = {
+          ...mockProject,
+          clients: [
+            { client: { id: clientId1, name: 'ACME Corp' } },
+            { client: { id: clientId2, name: 'Beta SA' } },
+          ],
+        };
+        mockPrismaService.project.findMany.mockResolvedValue([projectWithClients]);
+        mockPrismaService.project.count.mockResolvedValue(1);
+
+        const result = await service.findAll(1, 10);
+
+        expect(result.data[0].clients).toEqual([
+          { id: clientId1, name: 'ACME Corp' },
+          { id: clientId2, name: 'Beta SA' },
+        ]);
+      });
+    });
   });
 
   // ============================================
@@ -461,6 +522,29 @@ describe('ProjectsService', () => {
       await expect(service.findOne('nonexistent')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('should return clients as flat [{id, name}] array', async () => {
+      const clientId = '550e8400-e29b-41d4-a716-446655440001';
+      const projectWithClients = {
+        ...mockProject,
+        clients: [
+          { client: { id: clientId, name: 'ACME Corp' } },
+        ],
+      };
+      mockPrismaService.project.findUnique.mockResolvedValue(projectWithClients);
+
+      const result = await service.findOne('project-1');
+
+      expect(result.clients).toEqual([{ id: clientId, name: 'ACME Corp' }]);
+    });
+
+    it('should return empty clients array when project has no clients', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+
+      const result = await service.findOne('project-1');
+
+      expect(result.clients).toEqual([]);
     });
   });
 

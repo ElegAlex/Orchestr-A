@@ -146,6 +146,7 @@ describe('ProjectsController', () => {
         undefined,
         undefined,
         undefined,
+        undefined,
       );
     });
 
@@ -165,6 +166,7 @@ describe('ProjectsController', () => {
         1,
         10,
         'ACTIVE',
+        undefined,
         undefined,
         undefined,
       );

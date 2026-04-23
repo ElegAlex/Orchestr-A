@@ -5,6 +5,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -176,6 +177,7 @@ export class ProjectsService {
    * Récupérer tous les projets avec pagination.
    * - ADMIN, RESPONSABLE, MANAGER : voient TOUS les projets.
    * - REFERENT_TECHNIQUE, CONTRIBUTEUR, OBSERVATEUR (et inconnu) : filtrés par membership.
+   * - clients (CSV d'UUIDs) : filtre OR — projets ayant au moins un des clients listés.
    */
   async findAll(
     page = 1,
@@ -183,6 +185,7 @@ export class ProjectsService {
     status?: ProjectStatus,
     userId?: string,
     userRole?: string,
+    clients?: string,
   ) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
@@ -201,7 +204,24 @@ export class ProjectsService {
     const membershipFilter =
       !hasFullVisibility && userId ? { members: { some: { userId } } } : {};
 
-    const where = { ...baseFilter, ...membershipFilter };
+    // Filtre clients : parse CSV, valider UUIDs, filtrer OR sur ProjectClient
+    let clientsFilter: { clients?: { some: { clientId: { in: string[] } } } } = {};
+    if (clients) {
+      const tokens = clients.split(',').map((s) => s.trim()).filter(Boolean);
+      if (tokens.length > 0) {
+        const invalidTokens = tokens.filter((t) => !isUUID(t));
+        if (invalidTokens.length > 0) {
+          throw new BadRequestException(
+            `Valeurs UUID invalides dans le paramètre clients : ${invalidTokens.join(', ')}`,
+          );
+        }
+        clientsFilter = {
+          clients: { some: { clientId: { in: tokens } } },
+        };
+      }
+    }
+
+    const where = { ...baseFilter, ...membershipFilter, ...clientsFilter };
 
     const [projects, total] = await Promise.all([
       this.prisma.project.findMany({
@@ -252,6 +272,13 @@ export class ProjectsService {
               },
             },
           },
+          clients: {
+            include: {
+              client: {
+                select: { id: true, name: true },
+              },
+            },
+          },
           tasks: {
             select: {
               status: true,
@@ -273,8 +300,9 @@ export class ProjectsService {
       this.prisma.project.count({ where }),
     ]);
 
-    const projectsWithProgress = projects.map(({ tasks, ...project }) => ({
+    const projectsWithProgress = projects.map(({ tasks, clients: projectClients, ...project }) => ({
       ...project,
+      clients: projectClients.map((pc) => pc.client),
       progress:
         tasks.length > 0
           ? Math.round(
@@ -345,6 +373,13 @@ export class ProjectsService {
             },
           },
         },
+        clients: {
+          include: {
+            client: {
+              select: { id: true, name: true },
+            },
+          },
+        },
         epics: {
           select: {
             id: true,
@@ -386,7 +421,11 @@ export class ProjectsService {
       throw new NotFoundException('Projet introuvable');
     }
 
-    return project;
+    const { clients: projectClients, ...rest } = project;
+    return {
+      ...rest,
+      clients: projectClients.map((pc) => pc.client),
+    };
   }
 
   /**
