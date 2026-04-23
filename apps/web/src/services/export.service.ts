@@ -25,7 +25,7 @@ interface AnalyticsData {
     startDate: string;
     dueDate?: string;
     isOverdue: boolean;
-    clients?: string[];
+    clients?: Array<{ id: string; name: string }>;
   }>;
 }
 

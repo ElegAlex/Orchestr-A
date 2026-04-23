@@ -20,6 +20,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/usePermissions";
 import { api } from "@/lib/api";
+import { ClientSelector } from "@/components/clients/ClientSelector";
 
 export default function ReportsPage() {
   const t = useTranslations("admin.reports");
@@ -38,11 +39,13 @@ export default function ReportsPage() {
     "pdf",
   );
   const [exporting, setExporting] = useState(false);
+  const [clientsFilter, setClientsFilter] = useState<string[]>([]);
   const progressChartRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<HTMLDivElement>(null);
 
   const canView = !permissionsLoaded || hasPermission("reports:view");
   const canExport = hasPermission("reports:export");
+  const canReadClients = hasPermission("clients:read");
 
   const loadProjects = useCallback(async () => {
     try {
@@ -203,6 +206,16 @@ export default function ReportsPage() {
   const projectIdFilter =
     selectedProject !== "all" ? selectedProject : undefined;
 
+  // Client-side filter par client(s) : s'applique à la Detail Table et au
+  // Gantt Portfolio. Les agrégats/charts de la vue d'ensemble restent sur
+  // tous les projets (filter côté backend = scope évolution).
+  const visibleProjectDetails =
+    clientsFilter.length > 0
+      ? data.projectDetails.filter((p) =>
+          (p.clients ?? []).some((c) => clientsFilter.includes(c.id)),
+        )
+      : data.projectDetails;
+
   return (
     <MainLayout>
       <div className="p-8 space-y-8">
@@ -269,6 +282,16 @@ export default function ReportsPage() {
             ))}
           </select>
 
+          {canReadClients && (
+            <div className="min-w-[220px]">
+              <ClientSelector
+                value={clientsFilter}
+                onChange={setClientsFilter}
+                placeholder="Filtrer par client(s)…"
+              />
+            </div>
+          )}
+
           <button
             onClick={loadAnalytics}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition"
@@ -331,7 +354,7 @@ export default function ReportsPage() {
 
             {/* Projects Detail Table (fusion santé + détail) */}
             <ProjectsDetailTable
-              projects={data.projectDetails}
+              projects={visibleProjectDetails}
               dateRange={dateRange}
               projectId={projectIdFilter}
             />
@@ -394,7 +417,7 @@ export default function ReportsPage() {
         {/* Tab: Gantt Portfolio */}
         {activeTab === 2 && (
           <div className="min-h-[600px]">
-            <PortfolioGantt ref={ganttRef} projects={data.projectDetails} />
+            <PortfolioGantt ref={ganttRef} projects={visibleProjectDetails} />
           </div>
         )}
       </div>

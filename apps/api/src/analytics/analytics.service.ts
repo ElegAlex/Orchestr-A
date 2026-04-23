@@ -42,6 +42,7 @@ interface ProjectWithDetails {
   } | null;
   _count: { tasks: number };
   members: ProjectMember[];
+  clients?: Array<{ client: { id: string; name: string } }>;
 }
 
 @Injectable()
@@ -121,6 +122,11 @@ export class AnalyticsService {
                 },
               },
             },
+          },
+        },
+        clients: {
+          select: {
+            client: { select: { id: true, name: true } },
           },
         },
       },
@@ -359,6 +365,7 @@ export class AnalyticsService {
         priority: project.priority,
         managerId: project.manager?.id ?? undefined,
         managerDepartment: project.manager?.department?.name ?? undefined,
+        clients: (project.clients ?? []).map((pc) => pc.client),
       };
     });
   }

@@ -43,6 +43,7 @@ export interface ProjectDetail {
   startDate: string;
   dueDate?: string;
   isOverdue: boolean;
+  clients?: Array<{ id: string; name: string }>;
 }
 
 export interface AnalyticsData {
