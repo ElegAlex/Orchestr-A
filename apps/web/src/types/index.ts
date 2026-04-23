@@ -249,6 +249,7 @@ export interface Project {
   milestones?: Milestone[];
   tasks?: Task[];
   documents?: Document[];
+  clients?: Array<{ id: string; name: string }>;
 }
 
 export interface ProjectMember {

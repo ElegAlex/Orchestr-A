@@ -20,6 +20,8 @@ import {
 import { usePermissions } from "@/hooks/usePermissions";
 import { ProjectIcon } from "@/components/ProjectIcon";
 import toast from "react-hot-toast";
+import { clientsService } from "@/services/clients.service";
+import { Client } from "@/types";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -43,6 +45,11 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [managers, setManagers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const initialClientsParam = searchParams.get("clients");
+  const [clientsFilter, setClientsFilter] = useState<string[]>(
+    initialClientsParam ? initialClientsParam.split(",").filter(Boolean) : [],
+  );
+  const [allClients, setAllClients] = useState<Client[]>([]);
 
   const [formData, setFormData] = useState<
     CreateProjectDto & {
@@ -117,6 +124,26 @@ export default function ProjectsPage() {
     fetchProjects();
   }, [fetchProjects]);
 
+  // Load available clients for filter
+  useEffect(() => {
+    clientsService
+      .getAll({ isActive: true, limit: 500 })
+      .then((res) => setAllClients(res.data))
+      .catch(() => setAllClients([]));
+  }, []);
+
+  // Sync clientsFilter to URL
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (clientsFilter.length > 0) {
+      params.set("clients", clientsFilter.join(","));
+    } else {
+      params.delete("clients");
+    }
+    router.replace(`?${params.toString()}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientsFilter]);
+
   // Filtrage des projets
   useEffect(() => {
     let filtered = projects;
@@ -141,8 +168,15 @@ export default function ProjectsPage() {
       );
     }
 
+    // Filtre par clients (OR : le projet doit avoir au moins un des clients sélectionnés)
+    if (clientsFilter.length > 0) {
+      filtered = filtered.filter((p) =>
+        (p.clients ?? []).some((c) => clientsFilter.includes(c.id)),
+      );
+    }
+
     setFilteredProjects(filtered);
-  }, [projects, statusFilter, priorityFilter, searchQuery]);
+  }, [projects, statusFilter, priorityFilter, searchQuery, clientsFilter]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -317,7 +351,7 @@ export default function ProjectsPage() {
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Search */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -382,6 +416,40 @@ export default function ProjectsPage() {
                 <option value={Priority.LOW}>{t("priority.LOW")}</option>
               </select>
             </div>
+
+            {/* Clients Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Clients
+              </label>
+              <select
+                multiple
+                value={clientsFilter}
+                onChange={(e) => {
+                  const selected = Array.from(e.target.selectedOptions).map(
+                    (o) => o.value,
+                  );
+                  setClientsFilter(selected);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm h-[42px]"
+                size={1}
+              >
+                {allClients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {clientsFilter.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setClientsFilter([])}
+                  className="mt-1 text-xs text-blue-600 hover:underline"
+                >
+                  Effacer ({clientsFilter.length})
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -444,6 +512,24 @@ export default function ProjectsPage() {
                     <span className="text-xs text-gray-500 shrink-0 hidden md:inline">
                       ⏱️ {t("card.budgetHours", { hours: project.budgetHours })}
                     </span>
+                  )}
+                  {/* Client tags — max 2 visible + +N */}
+                  {(project.clients ?? []).length > 0 && (
+                    <div className="flex items-center gap-1 shrink-0 hidden sm:flex">
+                      {(project.clients ?? []).slice(0, 2).map((c) => (
+                        <span
+                          key={c.id}
+                          className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800"
+                        >
+                          {c.name}
+                        </span>
+                      ))}
+                      {(project.clients ?? []).length > 2 && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                          +{(project.clients ?? []).length - 2}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
                 <p className="text-sm text-gray-500 truncate mt-0.5">
