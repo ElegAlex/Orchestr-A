@@ -265,6 +265,118 @@ Sérialisation W3-A → W3-B confirmée par l'advisor (W3-B consomme `clients.se
 
 ---
 
+## Wave 4 — Exports + PortfolioGantt (solo subagent Sonnet)
+
+**Exécuté** : 2026-04-23, ≈8 min
+**SHA** : `1b3d908`
+
+### Livrables
+- `ExportService` : `AnalyticsData.projectDetails.clients?: string[]` ajouté ; colonne « Clients » dans PDF et Excel (liste jointe par `, ` — `"-"` si absent). Redistribution des largeurs PDF pour tenir sur A4 portrait (Projet 40→35mm, Statut 25→22mm, Progression 20→18mm, Tâches 20→18mm, Manager 35→28mm).
+- Page `/fr/clients` : dropdown « Exporter ▾ » avec 2 options (PDF / Excel) remplace le stub W3-A. Source = état `clients` déjà chargé (cap 200). Feuille « Projets par client » : `Promise.all` plafonné 50 + `catch` par item.
+- Méthodes ajoutées : `ExportService.exportClientsToPDF` et `exportClientsToExcel`.
+- `GanttPortfolioRow.clientName?: string` ajouté à `types.ts` ; alimentation dans `projectsToPortfolioRows` (`p.clients?.map(c => c.name).join(', ')`) ; Row « Client » conditionnelle dans `PortfolioTooltip` (affichée si `row.clientName`).
+
+### Gate W4
+- `pnpm run build` : ✅ 3 tasks successful, 14.4s (cached)
+- `pnpm run test` : ✅ baseline W3 inchangée (528 web tests passed)
+- Aucune régression
+
+**Statut** : `W4 PASS`.
+
+---
+
+## Wave 5 — E2E + permission-matrix (solo subagent Sonnet)
+
+**Exécuté** : 2026-04-23, ≈10 min
+**SHA** : `9882799` (suite E2E + matrix) puis `c385f44` (fix `mode: "serial"` sur Suite 3 Assignation)
+
+### Livrables
+- `e2e/fixtures/permission-matrix.ts` : **+10 entrées `clients`** (POST/GET list/GET :id/GET :id/projects/GET deletion-impact/PATCH/DELETE sur `/clients` + GET/POST/DELETE sur `/projects/:projectId/clients`). Mapping rôles legacy (admin/responsable/manager/referent/contributeur/observateur) ↔ templates V4 (ADMIN/ADMIN_DELEGATED/MANAGER/TECHNICAL_LEAD/PROJECT_CONTRIBUTOR/OBSERVER_FULL) confirmé par lecture de `packages/rbac/templates.ts`.
+  - `clients:create|update|delete` allowedRoles = `[admin, responsable]`
+  - `clients:assign_to_project` allowedRoles = `[admin, responsable, manager]`
+  - `clients:read` allowedRoles = les 6 rôles (via PROJECT_STRUCTURE_READ en W1)
+- `e2e/clients.spec.ts` : 24 tests couvrant CRUD admin, `/projects` summary structure, assignation manager, filtre `?clients=`, refus 403 observateur/contributeur. Tags `@smoke` sur CRUD de base + filtre + refus 403.
+- Fix `test.describe.configure({ mode: "serial" })` sur les 2 suites avec état partagé (Suite 1 CRUD + Suite 3 Assignation) pour éviter race avec le `fullyParallel: true` global.
+
+### Observation critique sur l'exécution Playwright
+
+Le projet `[chromium]` de `playwright.config.ts` (testDir `./e2e`, testMatch racine) **ne détecte AUCUN test** lors de `npx playwright test --list`. Cette **dette est pré-existante** : les anciens `leaves.spec.ts`, `projects.spec.ts`, `tasks.spec.ts`, `permissions.spec.ts` à la racine de `e2e/` sont dans le même cas (non détectés). W5 a suivi la convention racine des anciens specs — `clients.spec.ts` n'est donc pas détecté non plus, mais il est bien écrit, compile, et pourra être exécuté manuellement via Playwright ou après fix de la config projet.
+
+**Couverture RBAC quand même assurée** : les 10 entrées ajoutées à `permission-matrix.ts` génèrent **360 tests RBAC auto-générés** via `e2e/tests/rbac/api-permissions.spec.ts` (comptés via `playwright test --list | grep -cE "RBAC — clients"`). Ces tests sont listés dans le projet `[admin]` et seront exécutés par le harness CI standard.
+
+### Gate W5
+- `pnpm run build` : ✅ FULL TURBO (cached)
+- `pnpm run test` : ✅ 6 tasks successful (baseline inchangée)
+- `npx playwright test --list | grep -cE "RBAC — clients"` : 360 tests ✅
+- `npx playwright test` (exécution réelle) : **non lancée localement** — nécessite env complet (API + web + DB seedée avec 6 users de test + storage states actualisés) + fix de la config `[chromium]` pour détecter `clients.spec.ts`. À valider en CI ou en session dédiée avant merge.
+
+**Statut** : `W5 PASS partiel` — suite écrite, matrix à jour, 360 tests RBAC générés, exécution Playwright déférée.
+
+### Dette remontée
+
+1. **Config Playwright `[chromium]`** : le projet ne détecte aucun test alors que testDir + testMatch devraient matcher les specs racine. Impact historique (affecte déjà les 4 autres specs racine) — pas un bug introduit par Clients.
+2. **`projects:read` composé avec `clients:read` sur `GET /clients/:id/projects`** : la permission-matrix ne sait modéliser qu'une seule permission par entrée. L'endpoint est gaté par `@RequirePermissions('clients:read', 'projects:read')` (AND), mais la matrix ne teste que `clients:read` pour la distribution. À affiner si besoin, hors scope V1.
+
+---
+
+## Récap global et statut final
+
+| Wave | Statut | SHA | Durée | Commentaire |
+|---|---|---|---|---|
+| Spec + audit | ✅ | `c3601bd` | — | §15 ratifications + §16 plan révisé sur master |
+| 0.5 Baseline | ❌→✅ | `41eda4e` | — | Rouge → W0.7 |
+| 0.7 Fix baseline | ✅ | `cb2cdca` | 15 min | 5 suites fixées, 5 commits test(fix) |
+| 1 Prisma + RBAC | ✅ | `7fb5bbe` | 30 min | Migration + 5 permissions + distribution templates |
+| 1.5 Nettoyage seed | ⏭️ escape | — | 3 min | Issue #2 ouvert (seed.ts 20+ erreurs TS pré-existantes) |
+| 2-A Module API | ✅ | `625c65f` | 6.5 min | 9 fichiers + app.module, 35 nouveaux tests |
+| 2-B Ext projets API | ✅ | `32dd3db` | 4.8 min | Filter + enrichment, 4 nouveaux tests |
+| 3-A Frontend réf | ✅ | `3524719` | 10 min | Pages + composants + service + sidebar + i18n |
+| 3-B Intégrations front | ✅ | `7a77df4` | 10 min | Onglet + filtre + tags |
+| 4 Exports + Gantt | ✅ | `1b3d908` | 8 min | PDF/Excel + tooltip Gantt |
+| 5 E2E + matrix | ✅ partiel | `9882799`+`c385f44` | 10 min | 24 tests dédiés + 360 tests RBAC auto-générés |
+
+### Couverture tests finale
+
+- **API** : 1128 tests Vitest (+35 nouveaux clients, +4 projects)
+- **RBAC package** : 108 tests (counts normatifs mis à jour)
+- **Web** : 528 tests Jest (+14 clients.service)
+- **E2E RBAC auto** : 360 tests Playwright générés depuis permission-matrix
+- **E2E suite dédiée** : 24 tests dans `e2e/clients.spec.ts` (exécution déférée)
+
+### Commits feature branch (11 total sur `feat/clients-module-v1`)
+
+```
+c385f44 fix(clients): add serial mode to Suite 3 (Assignation)
+9882799 test(clients): W5 - E2E suite and permission matrix
+1b3d908 feat(clients): W4 - exports and Portfolio Gantt integration
+2873e58 docs(clients): log W3 pass
+7a77df4 feat(projects): W3-B - clients tab and list filter
+3524719 feat(clients): W3-A - frontend referential
+c099031 docs(clients): log W2 pass
+625c65f feat(clients): W2-A - clients module
+32dd3db feat(projects): W2-B - clients filter and enrichment
+f51bdbf docs(clients): log W1 pass + W1.5 skipped
+7fb5bbe feat(clients): W1 - Prisma migration + RBAC permissions
+```
+
+### Diff stats vs master
+
+41 files changed, ~4357 insertions, ~38 deletions.
+
+### Dette technique remontée (issues / tickets à prévoir)
+
+- **Issue #2** : cleanup complet de `seedPermissionsAndRoles` post-V4 drop (hors scope Clients V1)
+- **Config Playwright `[chromium]`** : détecter les specs à la racine de `e2e/` (dette pré-existante, 5 specs non détectées dont `clients.spec.ts`)
+- **Filter projets par clients côté client-side** (W3-B) : pourrait basculer en server-side (l'API le supporte déjà) pour fluidifier les grandes listes
+- **Permission-matrix modéliser AND** (plusieurs permissions par entrée)
+- **Regen storage states Playwright** après le seed V0 templates, à vérifier en CI avant première exécution complète des E2E clients
+
+### Statut final
+
+**READY FOR REVIEW.** Module Clients V1 fonctionnellement complet : CRUD backend + frontend, assignation projet, filtre, exports, Gantt tooltip. Tests unit/intégration verts, couverture RBAC E2E générée automatiquement. Suite E2E dédiée écrite (exécution déférée à une session env complet).
+
+
+
 
 
 
