@@ -853,17 +853,38 @@ export class ProjectsService {
   async captureSnapshots() {
     const projects = await this.prisma.project.findMany({
       where: { status: 'ACTIVE' },
-      include: { tasks: { select: { status: true } } },
+      include: {
+        tasks: { select: { status: true } },
+        milestones: { select: { status: true, dueDate: true } },
+      },
     });
 
+    const now = new Date();
+
     const snapshots = await Promise.all(
-      projects.map(async (project) => {
+      projects.map((project) => {
         const tasksTotal = project.tasks.length;
         const tasksDone = project.tasks.filter(
           (t) => t.status === 'DONE',
         ).length;
+        const tasksInProgress = project.tasks.filter(
+          (t) => t.status === 'IN_PROGRESS',
+        ).length;
+        const tasksBlocked = project.tasks.filter(
+          (t) => t.status === 'BLOCKED',
+        ).length;
         const progress =
           tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
+
+        const milestonesReached = project.milestones.filter(
+          (m) => m.status === 'COMPLETED',
+        ).length;
+        const milestonesOverdue = project.milestones.filter(
+          (m) => m.status !== 'COMPLETED' && m.dueDate < now,
+        ).length;
+        const milestonesUpcoming = project.milestones.filter(
+          (m) => m.status !== 'COMPLETED' && m.dueDate >= now,
+        ).length;
 
         return this.prisma.projectSnapshot.create({
           data: {
@@ -871,6 +892,11 @@ export class ProjectsService {
             progress,
             tasksDone,
             tasksTotal,
+            tasksInProgress,
+            tasksBlocked,
+            milestonesReached,
+            milestonesOverdue,
+            milestonesUpcoming,
           },
         });
       }),
