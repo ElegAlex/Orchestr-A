@@ -10,9 +10,7 @@ import { useTranslations } from "next-intl";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
 import { ProjectsProgressionChart } from "./ProjectsProgressionChart";
-import { ProgressTrendChart } from "./ProgressTrendChart";
 import { WorkloadChart } from "./WorkloadChart";
-import { ProjectHealthTable } from "./ProjectHealthTable";
 import MilestonesCompletion from "./MilestonesCompletion";
 import { TasksBreakdown } from "./TasksBreakdown";
 import { RecentActivity } from "./RecentActivity";
@@ -169,6 +167,7 @@ function TabContent() {
           value={dateRange}
           onChange={(e) => setDateRange(e.target.value as DateRange)}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          data-testid="advanced-period-select"
         >
           <option value="7d">7 jours</option>
           <option value="30d">30 jours</option>
@@ -187,37 +186,29 @@ function TabContent() {
           type="button"
           onClick={handleRefresh}
           className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          data-testid="advanced-refresh-btn"
         >
           <RefreshCw className="h-4 w-4" />
           {tFilters("filters.refresh")}
         </button>
       </div>
 
-      {/* Row 1 — Bloc 1 + Bloc 2 */}
+      {/* Row 1 — Progression projets + Workload */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ProjectsProgressionChart
           dateRange={dateRange}
           projectIds={projectIdsForFilter}
         />
-        <ProgressTrendChart
-          dateRange={dateRange}
-          projectIds={projectIdsForFilter}
-        />
-      </div>
-
-      {/* Row 2 — Bloc 3 (Workload) + Bloc 4 (Project Health) */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <WorkloadChart />
-        <ProjectHealthTable />
       </div>
 
-      {/* Row 3 — Bloc 5 (Milestones) + Bloc 6 (Tasks Breakdown) */}
+      {/* Row 2 — Milestones + TasksBreakdown */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <MilestonesCompletion />
         <TasksBreakdown projectIds={projectIdsForFilter} />
       </div>
 
-      {/* Row 4 — Bloc 7 (Recent Activity, full width) */}
+      {/* Row 3 — RecentActivity full width */}
       <RecentActivity days={days} />
 
       {/* unused t suppression — keep import resolved */}
