@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import {
   analyticsService,
   MilestoneByProject,
@@ -81,14 +82,52 @@ export default function MilestonesCompletion() {
                 </span>
               </p>
 
-              {/* Sous-ligne */}
-              <p className="text-sm text-gray-600 mt-2">
-                {t("kpi.summary", {
-                  completed: data.completed,
-                  overdue: data.overdue,
-                  upcoming: data.upcoming,
-                })}
-              </p>
+              {/* Alerte en haut si jalons en retard */}
+              {data.overdue > 0 && (
+                <div className="mt-4 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <p className="text-sm font-semibold text-red-800">
+                    {data.overdue} jalon{data.overdue > 1 ? "s" : ""} en retard
+                  </p>
+                </div>
+              )}
+
+              {/* 3 badges visuels colorés */}
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <div>
+                    <div className="text-xl font-bold text-green-700">
+                      {data.completed}
+                    </div>
+                    <div className="text-xs text-green-700/80">
+                      {t("completed")}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <div>
+                    <div className="text-xl font-bold text-red-700">
+                      {data.overdue}
+                    </div>
+                    <div className="text-xs text-red-700/80">
+                      {t("late")}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <Clock className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <div className="text-xl font-bold text-gray-700">
+                      {data.upcoming}
+                    </div>
+                    <div className="text-xs text-gray-700/80">
+                      {t("upcoming")}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* Liste byProject */}
               {data.byProject.length === 0 ? (
@@ -96,7 +135,7 @@ export default function MilestonesCompletion() {
                   {t("noMilestoneDefined")}
                 </p>
               ) : (
-                <ul className="mt-4 space-y-3">
+                <ul className="mt-6 space-y-3">
                   {[...data.byProject]
                     .sort((a: MilestoneByProject, b: MilestoneByProject) => {
                       const ra = a.total > 0 ? a.reached / a.total : 0;

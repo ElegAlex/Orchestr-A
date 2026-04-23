@@ -9,10 +9,8 @@ import {
 import { useTranslations } from "next-intl";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
-import { ProjectsProgressionChart } from "./ProjectsProgressionChart";
 import { WorkloadChart } from "./WorkloadChart";
 import MilestonesCompletion from "./MilestonesCompletion";
-import { TasksBreakdown } from "./TasksBreakdown";
 import { RecentActivity } from "./RecentActivity";
 
 type DateRange = "7d" | "30d" | "90d" | "1y";
@@ -193,23 +191,14 @@ function TabContent() {
         </button>
       </div>
 
-      {/* Row 1 — Activité récente full width (top) */}
+      {/* Row 1 — Activité récente */}
       <RecentActivity days={days} />
 
-      {/* Row 2 — Progression projets + Workload */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ProjectsProgressionChart
-          dateRange={dateRange}
-          projectIds={projectIdsForFilter}
-        />
-        <WorkloadChart />
-      </div>
+      {/* Row 2 — Répartition de charge (full) */}
+      <WorkloadChart />
 
-      {/* Row 3 — Milestones + TasksBreakdown */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <MilestonesCompletion />
-        <TasksBreakdown projectIds={projectIdsForFilter} />
-      </div>
+      {/* Row 3 — Complétion jalons (full) */}
+      <MilestonesCompletion />
 
       {/* unused t suppression — keep import resolved */}
       <span className="hidden">{t("recentActivity")}</span>
