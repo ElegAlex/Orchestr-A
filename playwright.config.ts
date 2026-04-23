@@ -30,7 +30,7 @@ export default defineConfig({
     {
       name: "chromium",
       testDir: "./e2e",
-      testMatch: /^[^/\\]+\.spec\.[jt]s$/,
+      testMatch: /[/\\]e2e[/\\][^/\\]+\.spec\.[jt]s$/,
       use: { ...devices["Desktop Chrome"] },
     },
 
