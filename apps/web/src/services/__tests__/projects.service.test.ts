@@ -50,6 +50,7 @@ describe("projectsService", () => {
     progress: 50,
     totalHours: 100,
     loggedHours: 50,
+    thirdPartyLoggedHours: 0,
     remainingHours: 50,
     membersCount: 5,
     epicsCount: 2,
@@ -66,7 +67,7 @@ describe("projectsService", () => {
 
       const result = await projectsService.getAll();
 
-      expect(api.get).toHaveBeenCalledWith("/projects?");
+      expect(api.get).toHaveBeenCalledWith("/projects?limit=1000");
       expect(result).toEqual(mockPaginatedResponse);
     });
 
@@ -75,7 +76,7 @@ describe("projectsService", () => {
 
       await projectsService.getAll(1, 10);
 
-      expect(api.get).toHaveBeenCalledWith("/projects?page=1&limit=10");
+      expect(api.get).toHaveBeenCalledWith("/projects?limit=10&page=1");
     });
 
     it("should filter by status", async () => {
@@ -83,7 +84,7 @@ describe("projectsService", () => {
 
       await projectsService.getAll(undefined, undefined, ProjectStatus.ACTIVE);
 
-      expect(api.get).toHaveBeenCalledWith("/projects?status=ACTIVE");
+      expect(api.get).toHaveBeenCalledWith("/projects?limit=1000&status=ACTIVE");
     });
 
     it("should combine all parameters", async () => {
@@ -92,7 +93,7 @@ describe("projectsService", () => {
       await projectsService.getAll(2, 20, ProjectStatus.DRAFT);
 
       expect(api.get).toHaveBeenCalledWith(
-        "/projects?page=2&limit=20&status=DRAFT",
+        "/projects?limit=20&page=2&status=DRAFT",
       );
     });
   });
