@@ -98,6 +98,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       permission: "third_parties:read",
     },
     {
+      key: "clients",
+      href: `/${locale}/clients`,
+      icon: "🏛️",
+      permission: "clients:read",
+    },
+    {
       key: "roleManagement",
       href: `/${locale}/admin/roles`,
       icon: "🛡️",
