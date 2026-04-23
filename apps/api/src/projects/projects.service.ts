@@ -205,9 +205,13 @@ export class ProjectsService {
       !hasFullVisibility && userId ? { members: { some: { userId } } } : {};
 
     // Filtre clients : parse CSV, valider UUIDs, filtrer OR sur ProjectClient
-    let clientsFilter: { clients?: { some: { clientId: { in: string[] } } } } = {};
+    let clientsFilter: { clients?: { some: { clientId: { in: string[] } } } } =
+      {};
     if (clients) {
-      const tokens = clients.split(',').map((s) => s.trim()).filter(Boolean);
+      const tokens = clients
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
       if (tokens.length > 0) {
         const invalidTokens = tokens.filter((t) => !isUUID(t));
         if (invalidTokens.length > 0) {
@@ -300,17 +304,20 @@ export class ProjectsService {
       this.prisma.project.count({ where }),
     ]);
 
-    const projectsWithProgress = projects.map(({ tasks, clients: projectClients, ...project }) => ({
-      ...project,
-      clients: projectClients.map((pc) => pc.client),
-      progress:
-        tasks.length > 0
-          ? Math.round(
-              (tasks.filter((t) => t.status === 'DONE').length / tasks.length) *
-                100,
-            )
-          : 0,
-    }));
+    const projectsWithProgress = projects.map(
+      ({ tasks, clients: projectClients, ...project }) => ({
+        ...project,
+        clients: projectClients.map((pc) => pc.client),
+        progress:
+          tasks.length > 0
+            ? Math.round(
+                (tasks.filter((t) => t.status === 'DONE').length /
+                  tasks.length) *
+                  100,
+              )
+            : 0,
+      }),
+    );
 
     return {
       data: projectsWithProgress,

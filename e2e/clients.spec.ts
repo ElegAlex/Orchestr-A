@@ -96,9 +96,9 @@ test.describe("Clients — CRUD admin @smoke", () => {
       expect(res.status()).toBe(200);
       const body = await res.json();
       expect(body.data).toBeDefined();
-      expect(
-        body.data.some((c: { id: string }) => c.id === clientId),
-      ).toBe(true);
+      expect(body.data.some((c: { id: string }) => c.id === clientId)).toBe(
+        true,
+      );
     },
   );
 
@@ -162,10 +162,9 @@ test.describe("Clients — CRUD admin @smoke", () => {
       expect(res.status()).toBe(204);
 
       // Verify 404 post-delete
-      const getRes = await request.get(
-        `${baseURL}/api/clients/${clientId}`,
-        { headers: authHeadersNoBody(adminToken) },
-      );
+      const getRes = await request.get(`${baseURL}/api/clients/${clientId}`, {
+        headers: authHeadersNoBody(adminToken),
+      });
       expect(getRes.status()).toBe(404);
 
       // Mark cleaned up
@@ -271,7 +270,8 @@ test.describe("Clients — Assignation client ↔ projet (manager) @smoke", () =
     "POST /api/projects/:projectId/clients — manager assigne un client (201) @smoke",
     { tag: "@smoke" },
     async ({ request }) => {
-      const baseURL = test.info().project.use.baseURL ?? "http://localhost:4001";
+      const baseURL =
+        test.info().project.use.baseURL ?? "http://localhost:4001";
 
       const res = await request.post(
         `${baseURL}/api/projects/${projectId}/clients`,
@@ -310,7 +310,8 @@ test.describe("Clients — Assignation client ↔ projet (manager) @smoke", () =
     "DELETE /api/projects/:projectId/clients/:clientId — manager détache (204) @smoke",
     { tag: "@smoke" },
     async ({ request }) => {
-      const baseURL = test.info().project.use.baseURL ?? "http://localhost:4001";
+      const baseURL =
+        test.info().project.use.baseURL ?? "http://localhost:4001";
 
       const res = await request.delete(
         `${baseURL}/api/projects/${projectId}/clients/${clientId}`,
@@ -359,7 +360,8 @@ test.describe("Clients — Filtre projets par client @smoke", () => {
     "GET /api/projects?clients=<uuid> retourne uniquement les projets rattachés @smoke",
     { tag: "@smoke" },
     async ({ request }) => {
-      const baseURL = test.info().project.use.baseURL ?? "http://localhost:4001";
+      const baseURL =
+        test.info().project.use.baseURL ?? "http://localhost:4001";
       const adminToken = getToken("admin");
 
       // Créer un client
@@ -456,7 +458,8 @@ test.describe("Clients — Refus 403 par rôle @smoke", () => {
     "OBSERVATEUR ne peut PAS créer un client (403) @smoke",
     { tag: "@smoke" },
     async ({ request }) => {
-      const baseURL = test.info().project.use.baseURL ?? "http://localhost:4001";
+      const baseURL =
+        test.info().project.use.baseURL ?? "http://localhost:4001";
       const observateurToken = getToken("observateur");
 
       const res = await request.post(`${baseURL}/api/clients`, {
@@ -472,7 +475,8 @@ test.describe("Clients — Refus 403 par rôle @smoke", () => {
     "OBSERVATEUR ne peut PAS modifier un client (403) @smoke",
     { tag: "@smoke" },
     async ({ request }) => {
-      const baseURL = test.info().project.use.baseURL ?? "http://localhost:4001";
+      const baseURL =
+        test.info().project.use.baseURL ?? "http://localhost:4001";
       const observateurToken = getToken("observateur");
       const adminToken = getToken("admin");
 
@@ -505,7 +509,8 @@ test.describe("Clients — Refus 403 par rôle @smoke", () => {
     "OBSERVATEUR ne peut PAS supprimer un client (403) @smoke",
     { tag: "@smoke" },
     async ({ request }) => {
-      const baseURL = test.info().project.use.baseURL ?? "http://localhost:4001";
+      const baseURL =
+        test.info().project.use.baseURL ?? "http://localhost:4001";
       const observateurToken = getToken("observateur");
       const adminToken = getToken("admin");
 
@@ -661,7 +666,8 @@ test.describe("Clients — Lecture autorisée pour tous les rôles", () => {
 
   for (const role of allRoles) {
     test(`GET /api/clients — 200 pour ${role}`, async ({ request }) => {
-      const baseURL = test.info().project.use.baseURL ?? "http://localhost:4001";
+      const baseURL =
+        test.info().project.use.baseURL ?? "http://localhost:4001";
       const token = getToken(role);
 
       const res = await request.get(`${baseURL}/api/clients`, {

@@ -217,7 +217,9 @@ function PortfolioTooltip({ row }: { row: GanttPortfolioRow }) {
       </Row>
       {row.clientName && (
         <Row label="Client">
-          <span style={{ fontSize: 12, color: '#334155' }}>{row.clientName}</span>
+          <span style={{ fontSize: 12, color: "#334155" }}>
+            {row.clientName}
+          </span>
         </Row>
       )}
     </>

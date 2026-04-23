@@ -115,7 +115,9 @@ export default function ClientDetailPage() {
       const message =
         (err as { response?: { data?: { message?: string } } }).response?.data
           ?.message ?? "Suppression impossible";
-      toast.error(typeof message === "string" ? message : "Suppression impossible");
+      toast.error(
+        typeof message === "string" ? message : "Suppression impossible",
+      );
       throw err;
     }
   };
@@ -124,9 +126,7 @@ export default function ClientDetailPage() {
     if (!client) return;
     try {
       await clientsService.update(client.id, { isActive: !client.isActive });
-      toast.success(
-        client.isActive ? "Client archivé" : "Client réactivé",
-      );
+      toast.success(client.isActive ? "Client archivé" : "Client réactivé");
       await fetchData();
     } catch (err) {
       console.error("Error toggling client active:", err);

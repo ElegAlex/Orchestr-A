@@ -51,8 +51,8 @@ const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
   STAGIAIRE_ALTERNANT: 27,
 };
 
-describe('rbac — conformité contrats Phase 1', () => {
-  it('CATALOG_PERMISSIONS contient exactement 112 permissions', () => {
+describe("rbac — conformité contrats Phase 1", () => {
+  it("CATALOG_PERMISSIONS contient exactement 112 permissions", () => {
     expect(CATALOG_PERMISSIONS.length).toBe(112);
   });
 

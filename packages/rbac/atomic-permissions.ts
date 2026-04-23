@@ -36,11 +36,11 @@
 
 export type PermissionCode =
   // clients (5)
-  | 'clients:assign_to_project'
-  | 'clients:create'
-  | 'clients:delete'
-  | 'clients:read'
-  | 'clients:update'
+  | "clients:assign_to_project"
+  | "clients:create"
+  | "clients:delete"
+  | "clients:read"
+  | "clients:update"
   // comments (4)
   | "comments:create"
   | "comments:delete"
@@ -216,14 +216,14 @@ export const CALENDAR_CONTEXT_READ = [
  * HR_OFFICER, etc.) utilisent à la place `COLLABORATION_READ` seul.
  */
 export const PROJECT_STRUCTURE_READ = [
-  'projects:read',
-  'epics:read',
-  'milestones:read',
-  'documents:read',
-  'comments:read',
-  'skills:read',
-  'third_parties:read',
-  'clients:read',
+  "projects:read",
+  "epics:read",
+  "milestones:read",
+  "documents:read",
+  "comments:read",
+  "skills:read",
+  "third_parties:read",
+  "clients:read",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -495,10 +495,10 @@ export const THIRD_PARTIES_CRUD = [
  * projet est réalisé. Distinct du tiers (réalisateur / prestataire).
  */
 export const CLIENTS_CRUD = [
-  'clients:create',
-  'clients:update',
-  'clients:delete',
-  'clients:assign_to_project',
+  "clients:create",
+  "clients:update",
+  "clients:delete",
+  "clients:assign_to_project",
 ] as const satisfies readonly PermissionCode[];
 
 /**
@@ -597,11 +597,11 @@ export const SETTINGS_READ = [
  */
 export const CATALOG_PERMISSIONS = [
   // clients
-  'clients:assign_to_project',
-  'clients:create',
-  'clients:delete',
-  'clients:read',
-  'clients:update',
+  "clients:assign_to_project",
+  "clients:create",
+  "clients:delete",
+  "clients:read",
+  "clients:update",
   // comments
   "comments:create",
   "comments:delete",

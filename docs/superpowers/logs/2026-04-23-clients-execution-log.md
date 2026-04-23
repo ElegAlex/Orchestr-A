@@ -122,6 +122,7 @@ SHA tête master après W0.7 : `cb2cdca`.
 Commit `c3601bd` sur master : ratifications Phase 0 (R1=A, R2=B, R3=A, R4=A) et plan révisé avec W0.5/W0.7/W1.5/W3 sérialisé.
 
 Advisor ciblé consulté (6 risques opérationnels intégrés aux prompts subagents) :
+
 - W2 parallèle OK avec règle "uniquement W2-A touche app.module.ts"
 - W3 sérialisé A→B confirmé
 - Migration : forme `pnpm --filter database exec prisma migrate dev --name add_clients_module`
@@ -140,6 +141,7 @@ Branche `feat/clients-module-v1` créée depuis `c3601bd`.
 **SHA commit** : `7fb5bbe` (branche `feat/clients-module-v1`)
 
 ### Livrables
+
 - Migration Prisma `20260423075303_add_clients_module` appliquée en local (DB `orchestr_a_v2` @ localhost:5433)
 - Modèles `Client` + `ProjectClient` créés, relation `clients` ajoutée à `Project`
 - 5 nouvelles permissions atomiques : `clients:read|create|update|delete|assign_to_project`
@@ -149,6 +151,7 @@ Branche `feat/clients-module-v1` créée depuis `c3601bd`.
 - Tests de conformité RBAC mis à jour : `CATALOG_PERMISSIONS.length` 107→112, `EXPECTED_COUNTS` (Spec 2 V0 B) — 26 templates réalignés
 
 ### Gate W1
+
 - `pnpm run build` : ✅ 3 tasks successful, 20.2s
 - `pnpm run test` : ✅ 1087 api + 108 rbac + 514 web — 0 failed
 - `pnpm --filter database exec prisma migrate status` : DB up-to-date
@@ -175,6 +178,7 @@ Type errors RoleCreateNestedOneWithoutUsersInput (9 occurrences lignes 1597-1821
 ```
 
 Le seed est cassé à deux niveaux :
+
 1. Tables RBAC supprimées (V4 drop)
 2. Refactor `user.role` de `Role` enum vers `RoleRef` (V4 drop legacy)
 
@@ -183,6 +187,7 @@ Le build global passe uniquement parce que le package `database` n'a pas de scri
 Escape criteria de l'advisor : « if the legacy seed references cross more than 2 callers or touch anything outside the seed file, abandon W1.5 ». Ici les 2 callers (`seed.ts` + `seed-permissions.ts`) sont respectés, mais la volumétrie dépasse largement un simple retrait d'appels : c'est une réécriture du seed.
 
 ### Issue GitHub
+
 `https://github.com/ElegAlex/Orchestr-A/issues/2` — `cleanup(seed): seedPermissionsAndRoles and demo users seed broken after RBAC V4 drop`
 
 ### Risque résiduel
@@ -198,6 +203,7 @@ Escape criteria de l'advisor : « if the legacy seed references cross more than 
 **Exécuté** : 2026-04-23, ≈7 min en parallèle (W2-B 4min48s, W2-A 6min33s)
 
 ### W2-A (subagent Sonnet) — Module `clients/*`
+
 - **SHA** : `625c65f`
 - **Fichiers créés** : 9 (`clients.module.ts`, `clients.controller.ts`, `clients.service.ts`, `projects-clients.controller.ts`, 3 DTOs, 2 specs Vitest)
 - **Fichier modifié** : `apps/api/src/app.module.ts` (ajout `ClientsModule` dans imports)
@@ -209,6 +215,7 @@ Escape criteria de l'advisor : « if the legacy seed references cross more than 
   - `GET /clients/:id/projects` gaté par `@RequirePermissions('clients:read', 'projects:read')` (AND)
 
 ### W2-B (subagent Sonnet) — Extensions `projects`
+
 - **SHA** : `32dd3db`
 - **Fichier créé** : `apps/api/src/projects/dto/query-projects.dto.ts`
 - **Fichiers modifiés** : `projects.service.ts` (+ `clients` filter + enrichment N:M flatten), `projects.controller.ts` (6e `@Query('clients')` + `@ApiQuery`), `projects.service.spec.ts` (+ 4 tests clients), `projects.controller.spec.ts` (2 tests ajustés pour nouveau nombre d'args)
@@ -218,11 +225,13 @@ Escape criteria de l'advisor : « if the legacy seed references cross more than 
   - UUIDs invalides rejetés via `isUUID` (class-validator, déjà dépendance)
 
 ### Règle de non-conflit respectée
+
 - W2-A : `apps/api/src/clients/*` + `app.module.ts` (seul)
 - W2-B : `apps/api/src/projects/*` uniquement
 - Aucun fichier commun, pas de merge conflict lors des 2 commits successifs.
 
 ### Gate W2
+
 - `pnpm run build` : ✅ 3 tasks successful, 5.9s (cached)
 - `pnpm run test` : ✅ 6 tasks successful (api 1128 tests, rbac 108 tests, web 514 tests — tous verts)
 - `grep -c @RequirePermissions` : 7 dans clients.controller + 3 dans projects-clients.controller = 10 endpoints protégés
@@ -236,6 +245,7 @@ Escape criteria de l'advisor : « if the legacy seed references cross more than 
 Sérialisation W3-A → W3-B confirmée par l'advisor (W3-B consomme `clients.service.ts` + `ClientSelector` livrés par W3-A).
 
 ### W3-A — Référentiel Clients (subagent Sonnet)
+
 - **SHA** : `3524719`
 - **Fichiers créés** (7) : `clients.service.ts`, pages `/clients` + `/clients/[id]`, `ClientModal`, `ClientDeleteConfirmModal`, `ClientSelector`, test Jest du service
 - **Fichiers modifiés** (4) : `types/index.ts` (section CLIENTS), `MainLayout.tsx` (🏛️ dans adminNavigation après Tiers, gate `clients:read`), `fr/common.json` + `en/common.json` (`nav.clients`)
@@ -247,6 +257,7 @@ Sérialisation W3-A → W3-B confirmée par l'advisor (W3-B consomme `clients.se
   - Framework test corrigé Vitest → Jest (le brief mentionnait Vitest mais le frontend utilise Jest — cohérent avec CLAUDE.md)
 
 ### W3-B — Intégrations Projets (subagent Sonnet)
+
 - **SHA** : `7a77df4`
 - **Fichiers modifiés** (3) : `projects/[id]/page.tsx` (onglet Clients après Tiers, lazy load + `hasPermission('clients:read')`), `projects/page.tsx` (filtre multi-select + tags coloré indigo sur cartes), `types/index.ts` (ajout `clients?: Array<{id, name}>` sur `interface Project` — manquait depuis W2-B)
 - **Tests** : pas de modif (528 total, baseline inchangée)
@@ -257,6 +268,7 @@ Sérialisation W3-A → W3-B confirmée par l'advisor (W3-B consomme `clients.se
   - Non-modif de `projects/__tests__/page.test.tsx` (mock autonome ne testant pas le vrai code, l'adaptation n'aurait testé que le mock — E2E en W5 couvriront)
 
 ### Gate W3
+
 - `pnpm run build` : ✅ 3 tasks successful, 20.4s
 - `pnpm run test` : ✅ 6 tasks, 1128 api + 108 rbac + 528 web = 0 failed
 - `pnpm --filter web run lint` : ❌ 13 errors (non-bloquant par spec §16, **100 % préexistantes** — vérifié par `git stash -u` sur master, même compte d'erreurs sans W3). 2 warnings `react-hooks/exhaustive-deps` introduits par nos fichiers, cosmétiques.
@@ -271,12 +283,14 @@ Sérialisation W3-A → W3-B confirmée par l'advisor (W3-B consomme `clients.se
 **SHA** : `1b3d908`
 
 ### Livrables
+
 - `ExportService` : `AnalyticsData.projectDetails.clients?: string[]` ajouté ; colonne « Clients » dans PDF et Excel (liste jointe par `, ` — `"-"` si absent). Redistribution des largeurs PDF pour tenir sur A4 portrait (Projet 40→35mm, Statut 25→22mm, Progression 20→18mm, Tâches 20→18mm, Manager 35→28mm).
 - Page `/fr/clients` : dropdown « Exporter ▾ » avec 2 options (PDF / Excel) remplace le stub W3-A. Source = état `clients` déjà chargé (cap 200). Feuille « Projets par client » : `Promise.all` plafonné 50 + `catch` par item.
 - Méthodes ajoutées : `ExportService.exportClientsToPDF` et `exportClientsToExcel`.
 - `GanttPortfolioRow.clientName?: string` ajouté à `types.ts` ; alimentation dans `projectsToPortfolioRows` (`p.clients?.map(c => c.name).join(', ')`) ; Row « Client » conditionnelle dans `PortfolioTooltip` (affichée si `row.clientName`).
 
 ### Gate W4
+
 - `pnpm run build` : ✅ 3 tasks successful, 14.4s (cached)
 - `pnpm run test` : ✅ baseline W3 inchangée (528 web tests passed)
 - Aucune régression
@@ -291,6 +305,7 @@ Sérialisation W3-A → W3-B confirmée par l'advisor (W3-B consomme `clients.se
 **SHA** : `9882799` (suite E2E + matrix) puis `c385f44` (fix `mode: "serial"` sur Suite 3 Assignation)
 
 ### Livrables
+
 - `e2e/fixtures/permission-matrix.ts` : **+10 entrées `clients`** (POST/GET list/GET :id/GET :id/projects/GET deletion-impact/PATCH/DELETE sur `/clients` + GET/POST/DELETE sur `/projects/:projectId/clients`). Mapping rôles legacy (admin/responsable/manager/referent/contributeur/observateur) ↔ templates V4 (ADMIN/ADMIN_DELEGATED/MANAGER/TECHNICAL_LEAD/PROJECT_CONTRIBUTOR/OBSERVER_FULL) confirmé par lecture de `packages/rbac/templates.ts`.
   - `clients:create|update|delete` allowedRoles = `[admin, responsable]`
   - `clients:assign_to_project` allowedRoles = `[admin, responsable, manager]`
@@ -305,6 +320,7 @@ Le projet `[chromium]` de `playwright.config.ts` (testDir `./e2e`, testMatch rac
 **Couverture RBAC quand même assurée** : les 10 entrées ajoutées à `permission-matrix.ts` génèrent **360 tests RBAC auto-générés** via `e2e/tests/rbac/api-permissions.spec.ts` (comptés via `playwright test --list | grep -cE "RBAC — clients"`). Ces tests sont listés dans le projet `[admin]` et seront exécutés par le harness CI standard.
 
 ### Gate W5
+
 - `pnpm run build` : ✅ FULL TURBO (cached)
 - `pnpm run test` : ✅ 6 tasks successful (baseline inchangée)
 - `npx playwright test --list | grep -cE "RBAC — clients"` : 360 tests ✅
@@ -320,6 +336,7 @@ Confirmation par lecture de `.github/workflows/ci.yml` : job 4 « E2E Tests (Pla
 - ❌ **Les 24 tests dédiés de `e2e/clients.spec.ts`** **ne s'exécuteront PAS** tant que la config `[chromium]` ne détecte aucun spec à la racine de `e2e/`. Dette commune à 5 anciens specs racine (leaves/projects/tasks/permissions/auth), pas spécifique au module Clients.
 
 Vérifications advisor réalisées avant clôture :
+
 - `git status --short` : 50 lignes toutes pré-existantes (backlog rbac-refactor + .claude + audits orphelins + plans V4 antérieurs) — aucun stray de subagent.
 - `tsc --noEmit e2e/fixtures/permission-matrix.ts` : 0 erreur.
 - Working tree propre dans le sens « aucun changement non tracké issu de mes commits ».
@@ -333,19 +350,19 @@ Vérifications advisor réalisées avant clôture :
 
 ## Récap global et statut final
 
-| Wave | Statut | SHA | Durée | Commentaire |
-|---|---|---|---|---|
-| Spec + audit | ✅ | `c3601bd` | — | §15 ratifications + §16 plan révisé sur master |
-| 0.5 Baseline | ❌→✅ | `41eda4e` | — | Rouge → W0.7 |
-| 0.7 Fix baseline | ✅ | `cb2cdca` | 15 min | 5 suites fixées, 5 commits test(fix) |
-| 1 Prisma + RBAC | ✅ | `7fb5bbe` | 30 min | Migration + 5 permissions + distribution templates |
-| 1.5 Nettoyage seed | ⏭️ escape | — | 3 min | Issue #2 ouvert (seed.ts 20+ erreurs TS pré-existantes) |
-| 2-A Module API | ✅ | `625c65f` | 6.5 min | 9 fichiers + app.module, 35 nouveaux tests |
-| 2-B Ext projets API | ✅ | `32dd3db` | 4.8 min | Filter + enrichment, 4 nouveaux tests |
-| 3-A Frontend réf | ✅ | `3524719` | 10 min | Pages + composants + service + sidebar + i18n |
-| 3-B Intégrations front | ✅ | `7a77df4` | 10 min | Onglet + filtre + tags |
-| 4 Exports + Gantt | ✅ | `1b3d908` | 8 min | PDF/Excel + tooltip Gantt |
-| 5 E2E + matrix | ✅ partiel | `9882799`+`c385f44` | 10 min | 24 tests dédiés + 360 tests RBAC auto-générés |
+| Wave                   | Statut     | SHA                 | Durée   | Commentaire                                             |
+| ---------------------- | ---------- | ------------------- | ------- | ------------------------------------------------------- |
+| Spec + audit           | ✅         | `c3601bd`           | —       | §15 ratifications + §16 plan révisé sur master          |
+| 0.5 Baseline           | ❌→✅      | `41eda4e`           | —       | Rouge → W0.7                                            |
+| 0.7 Fix baseline       | ✅         | `cb2cdca`           | 15 min  | 5 suites fixées, 5 commits test(fix)                    |
+| 1 Prisma + RBAC        | ✅         | `7fb5bbe`           | 30 min  | Migration + 5 permissions + distribution templates      |
+| 1.5 Nettoyage seed     | ⏭️ escape  | —                   | 3 min   | Issue #2 ouvert (seed.ts 20+ erreurs TS pré-existantes) |
+| 2-A Module API         | ✅         | `625c65f`           | 6.5 min | 9 fichiers + app.module, 35 nouveaux tests              |
+| 2-B Ext projets API    | ✅         | `32dd3db`           | 4.8 min | Filter + enrichment, 4 nouveaux tests                   |
+| 3-A Frontend réf       | ✅         | `3524719`           | 10 min  | Pages + composants + service + sidebar + i18n           |
+| 3-B Intégrations front | ✅         | `7a77df4`           | 10 min  | Onglet + filtre + tags                                  |
+| 4 Exports + Gantt      | ✅         | `1b3d908`           | 8 min   | PDF/Excel + tooltip Gantt                               |
+| 5 E2E + matrix         | ✅ partiel | `9882799`+`c385f44` | 10 min  | 24 tests dédiés + 360 tests RBAC auto-générés           |
 
 ### Couverture tests finale
 
@@ -386,9 +403,3 @@ f51bdbf docs(clients): log W1 pass + W1.5 skipped
 ### Statut final
 
 **READY FOR REVIEW.** Module Clients V1 fonctionnellement complet : CRUD backend + frontend, assignation projet, filtre, exports, Gantt tooltip. Tests unit/intégration verts, couverture RBAC E2E générée automatiquement. Suite E2E dédiée écrite (exécution déférée à une session env complet).
-
-
-
-
-
-

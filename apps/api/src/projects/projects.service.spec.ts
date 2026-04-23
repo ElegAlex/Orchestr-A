@@ -453,7 +453,14 @@ describe('ProjectsService', () => {
         mockPrismaService.project.findMany.mockResolvedValue([mockProject]);
         mockPrismaService.project.count.mockResolvedValue(1);
 
-        await service.findAll(1, 10, undefined, undefined, undefined, `${clientId1},${clientId2}`);
+        await service.findAll(
+          1,
+          10,
+          undefined,
+          undefined,
+          undefined,
+          `${clientId1},${clientId2}`,
+        );
 
         expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -470,13 +477,22 @@ describe('ProjectsService', () => {
 
         await service.findAll(1, 10);
 
-        const callArg = mockPrismaService.project.findMany.mock.calls[0][0] as { where: Record<string, unknown> };
+        const callArg = mockPrismaService.project.findMany.mock.calls[0][0] as {
+          where: Record<string, unknown>;
+        };
         expect(callArg.where).not.toHaveProperty('clients');
       });
 
       it('should throw BadRequestException when clients param contains invalid UUIDs', async () => {
         await expect(
-          service.findAll(1, 10, undefined, undefined, undefined, 'not-a-uuid,also-bad'),
+          service.findAll(
+            1,
+            10,
+            undefined,
+            undefined,
+            undefined,
+            'not-a-uuid,also-bad',
+          ),
         ).rejects.toThrow(BadRequestException);
 
         expect(mockPrismaService.project.findMany).not.toHaveBeenCalled();
@@ -490,7 +506,9 @@ describe('ProjectsService', () => {
             { client: { id: clientId2, name: 'Beta SA' } },
           ],
         };
-        mockPrismaService.project.findMany.mockResolvedValue([projectWithClients]);
+        mockPrismaService.project.findMany.mockResolvedValue([
+          projectWithClients,
+        ]);
         mockPrismaService.project.count.mockResolvedValue(1);
 
         const result = await service.findAll(1, 10);
@@ -528,11 +546,11 @@ describe('ProjectsService', () => {
       const clientId = '550e8400-e29b-41d4-a716-446655440001';
       const projectWithClients = {
         ...mockProject,
-        clients: [
-          { client: { id: clientId, name: 'ACME Corp' } },
-        ],
+        clients: [{ client: { id: clientId, name: 'ACME Corp' } }],
       };
-      mockPrismaService.project.findUnique.mockResolvedValue(projectWithClients);
+      mockPrismaService.project.findUnique.mockResolvedValue(
+        projectWithClients,
+      );
 
       const result = await service.findOne('project-1');
 

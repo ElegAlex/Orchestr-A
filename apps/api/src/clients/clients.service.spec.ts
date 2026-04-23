@@ -121,14 +121,19 @@ describe('ClientsService', () => {
 
   describe('findOne', () => {
     it('returns the client when found', async () => {
-      mockPrismaService.client.findUnique.mockResolvedValue({ id: 'c-1', name: 'X' });
+      mockPrismaService.client.findUnique.mockResolvedValue({
+        id: 'c-1',
+        name: 'X',
+      });
       const result = await service.findOne('c-1');
       expect(result).toEqual({ id: 'c-1', name: 'X' });
     });
 
     it('throws NotFoundException when missing', async () => {
       mockPrismaService.client.findUnique.mockResolvedValue(null);
-      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -249,8 +254,15 @@ describe('ClientsService', () => {
   describe('update', () => {
     it('updates the client fields', async () => {
       mockPrismaService.client.findUnique.mockResolvedValue({ id: 'c-1' });
-      mockPrismaService.client.update.mockResolvedValue({ id: 'c-1', name: 'New', isActive: false });
-      const result = await service.update('c-1', { name: 'New', isActive: false });
+      mockPrismaService.client.update.mockResolvedValue({
+        id: 'c-1',
+        name: 'New',
+        isActive: false,
+      });
+      const result = await service.update('c-1', {
+        name: 'New',
+        isActive: false,
+      });
       expect(result.name).toBe('New');
       expect(mockPrismaService.client.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 'c-1' } }),
@@ -281,7 +293,9 @@ describe('ClientsService', () => {
     it('throws ConflictException when projects are linked', async () => {
       mockPrismaService.client.findUnique.mockResolvedValue({ id: 'c-1' });
       mockPrismaService.projectClient.count.mockResolvedValue(2);
-      await expect(service.hardDelete('c-1')).rejects.toThrow(ConflictException);
+      await expect(service.hardDelete('c-1')).rejects.toThrow(
+        ConflictException,
+      );
       expect(mockPrismaService.client.delete).not.toHaveBeenCalled();
     });
 
@@ -301,7 +315,9 @@ describe('ClientsService', () => {
         id: 'c-1',
         isActive: true,
       });
-      await expect(service.assertExistsAndActive('c-1')).resolves.toBeUndefined();
+      await expect(
+        service.assertExistsAndActive('c-1'),
+      ).resolves.toBeUndefined();
     });
 
     it('throws NotFoundException when client missing', async () => {
@@ -345,7 +361,10 @@ describe('ClientsService', () => {
   describe('assignClientToProject', () => {
     it('creates a project-client link', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({ id: 'p-1' });
-      mockPrismaService.client.findUnique.mockResolvedValue({ id: 'c-1', isActive: true });
+      mockPrismaService.client.findUnique.mockResolvedValue({
+        id: 'c-1',
+        isActive: true,
+      });
       mockPrismaService.projectClient.create.mockResolvedValue({
         projectId: 'p-1',
         clientId: 'c-1',
@@ -369,23 +388,29 @@ describe('ClientsService', () => {
 
     it('throws BadRequestException when client is archived', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({ id: 'p-1' });
-      mockPrismaService.client.findUnique.mockResolvedValue({ id: 'c-1', isActive: false });
-      await expect(
-        service.assignClientToProject('p-1', 'c-1'),
-      ).rejects.toThrow(BadRequestException);
+      mockPrismaService.client.findUnique.mockResolvedValue({
+        id: 'c-1',
+        isActive: false,
+      });
+      await expect(service.assignClientToProject('p-1', 'c-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException on duplicate (P2002)', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({ id: 'p-1' });
-      mockPrismaService.client.findUnique.mockResolvedValue({ id: 'c-1', isActive: true });
+      mockPrismaService.client.findUnique.mockResolvedValue({
+        id: 'c-1',
+        isActive: true,
+      });
       const p2002 = new Prisma.PrismaClientKnownRequestError('Unique', {
         code: 'P2002',
         clientVersion: '6.0.0',
       });
       mockPrismaService.projectClient.create.mockRejectedValue(p2002);
-      await expect(
-        service.assignClientToProject('p-1', 'c-1'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.assignClientToProject('p-1', 'c-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 

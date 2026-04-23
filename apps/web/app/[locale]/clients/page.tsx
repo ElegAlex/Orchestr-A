@@ -86,7 +86,9 @@ export default function ClientsPage() {
       const message =
         (err as { response?: { data?: { message?: string } } }).response?.data
           ?.message ?? "Suppression impossible";
-      toast.error(typeof message === "string" ? message : "Suppression impossible");
+      toast.error(
+        typeof message === "string" ? message : "Suppression impossible",
+      );
       throw err;
     }
   };

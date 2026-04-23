@@ -64,7 +64,7 @@ export class ClientsController {
   @Get(':id/deletion-impact')
   @RequirePermissions('clients:delete')
   @ApiOperation({
-    summary: "Compter les projets rattachés au client (pre-delete check)",
+    summary: 'Compter les projets rattachés au client (pre-delete check)',
   })
   @ApiResponse({ status: 404, description: 'Client introuvable' })
   getDeletionImpact(@Param('id', ParseUUIDPipe) id: string) {
@@ -75,10 +75,7 @@ export class ClientsController {
   @RequirePermissions('clients:update')
   @ApiOperation({ summary: 'Modifier un client (nom, isActive)' })
   @ApiResponse({ status: 404, description: 'Client introuvable' })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateClientDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateClientDto) {
     return this.clientsService.update(id, dto);
   }
 

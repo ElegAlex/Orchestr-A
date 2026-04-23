@@ -61,7 +61,7 @@ function projectsToPortfolioRows(projects: Project[]): GanttPortfolioRow[] {
         manager: p.manager ?? null,
         code: p.code,
         priority: p.priority,
-        clientName: p.clients?.map((c) => c.name).join(', ') || undefined,
+        clientName: p.clients?.map((c) => c.name).join(", ") || undefined,
       };
     });
 }

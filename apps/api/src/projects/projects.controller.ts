@@ -74,7 +74,12 @@ export class ProjectsController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'status', required: false, enum: ProjectStatus })
-  @ApiQuery({ name: 'clients', required: false, type: String, description: 'CSV d\'UUIDs de clients (filtre OR)' })
+  @ApiQuery({
+    name: 'clients',
+    required: false,
+    type: String,
+    description: "CSV d'UUIDs de clients (filtre OR)",
+  })
   @ApiResponse({
     status: 200,
     description: 'Liste des projets',
@@ -87,7 +92,14 @@ export class ProjectsController {
     @CurrentUserRoleCode() userRole?: string | null,
     @Query('clients') clients?: string,
   ) {
-    return this.projectsService.findAll(page, limit, status, userId, userRole ?? undefined, clients);
+    return this.projectsService.findAll(
+      page,
+      limit,
+      status,
+      userId,
+      userRole ?? undefined,
+      clients,
+    );
   }
 
   @Post('snapshots/capture')

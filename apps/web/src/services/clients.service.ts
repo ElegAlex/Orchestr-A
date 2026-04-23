@@ -11,9 +11,7 @@ import {
 } from "@/types";
 
 export const clientsService = {
-  async getAll(
-    query: QueryClientDto = {},
-  ): Promise<PaginatedResponse<Client>> {
+  async getAll(query: QueryClientDto = {}): Promise<PaginatedResponse<Client>> {
     const params = new URLSearchParams();
     if (query.isActive !== undefined)
       params.append("isActive", String(query.isActive));
@@ -80,10 +78,7 @@ export const clientsService = {
     return response.data;
   },
 
-  async detachFromProject(
-    projectId: string,
-    clientId: string,
-  ): Promise<void> {
+  async detachFromProject(projectId: string, clientId: string): Promise<void> {
     await api.delete(`/projects/${projectId}/clients/${clientId}`);
   },
 };

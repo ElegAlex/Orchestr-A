@@ -88,9 +88,7 @@ describe("clientsService", () => {
 
       const result = await clientsService.getDeletionImpact("client-1");
 
-      expect(api.get).toHaveBeenCalledWith(
-        "/clients/client-1/deletion-impact",
-      );
+      expect(api.get).toHaveBeenCalledWith("/clients/client-1/deletion-impact");
       expect(result).toEqual(mockImpact);
     });
   });
@@ -133,7 +131,9 @@ describe("clientsService", () => {
 
       const result = await clientsService.create({ name: "Mairie de Lyon" });
 
-      expect(api.post).toHaveBeenCalledWith("/clients", { name: "Mairie de Lyon" });
+      expect(api.post).toHaveBeenCalledWith("/clients", {
+        name: "Mairie de Lyon",
+      });
       expect(result).toEqual(mockClient);
     });
   });

@@ -397,9 +397,9 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       USERS_PAGE_ACCESS, // Correction PO 2026-04-19 (users:manage sans CRUD)
       SETTINGS_READ, // §NOTE 3
       [
-        'telework:manage_any', // D7 rename
-        'tasks:manage_any', // memory: MANAGER a tasks:manage_any (cluster 3)
-        'clients:assign_to_project', // Module Clients V1 (§15)
+        "telework:manage_any", // D7 rename
+        "tasks:manage_any", // memory: MANAGER a tasks:manage_any (cluster 3)
+        "clients:assign_to_project", // Module Clients V1 (§15)
       ],
     ),
   },
@@ -474,8 +474,8 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       THIRD_PARTIES_CRUD,
       TIME_TRACKING_FOR_THIRD_PARTY, // Correction PO 2026-04-19
       [
-        'telework:manage_any', // D7
-        'clients:assign_to_project', // Module Clients V1 (§15)
+        "telework:manage_any", // D7
+        "clients:assign_to_project", // Module Clients V1 (§15)
       ],
     ),
   },
@@ -939,7 +939,7 @@ function DRAFT_MANAGER(): readonly PermissionCode[] {
     THIRD_PARTIES_CRUD,
     USERS_PAGE_ACCESS, // Correction PO 2026-04-19
     SETTINGS_READ,
-    ['telework:manage_any', 'tasks:manage_any', 'clients:assign_to_project'],
+    ["telework:manage_any", "tasks:manage_any", "clients:assign_to_project"],
   );
 }
 
@@ -953,7 +953,7 @@ function DRAFT_PROJECT_LEAD(): readonly PermissionCode[] {
     REPORTS_FULL,
     THIRD_PARTIES_CRUD,
     TIME_TRACKING_FOR_THIRD_PARTY, // Correction PO 2026-04-19
-    ['telework:manage_any', 'clients:assign_to_project'],
+    ["telework:manage_any", "clients:assign_to_project"],
   );
 }
 
