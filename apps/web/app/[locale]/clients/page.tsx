@@ -123,10 +123,16 @@ export default function ClientsPage() {
       toast.error("Aucun client à exporter");
       return;
     }
+    const activeClients = clients.filter((c) => c.isActive);
+    if (activeClients.length > 100) {
+      const ok = window.confirm(
+        `Export de ${activeClients.length} clients actifs (peut prendre quelques secondes). Continuer ?`,
+      );
+      if (!ok) return;
+    }
     setExporting(true);
     try {
-      const activeClients = clients.filter((c) => c.isActive);
-      const cap = activeClients.slice(0, 50);
+      const cap = activeClients;
       const projectRows: Array<{
         clientId: string;
         clientName: string;

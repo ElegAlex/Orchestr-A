@@ -1,10 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsString, Length } from 'class-validator';
 
 export class CreateClientDto {
   @ApiProperty({ example: 'Mairie de Lyon', maxLength: 255 })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
-  @IsNotEmpty()
-  @MaxLength(255)
+  @Length(1, 255)
   name!: string;
 }
