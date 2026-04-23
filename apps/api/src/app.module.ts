@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -20,6 +21,7 @@ import { MilestonesModule } from './milestones/milestones.module';
 import { DocumentsModule } from './documents/documents.module';
 import { CommentsModule } from './comments/comments.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AnalyticsAdvancedModule } from './analytics/advanced/analytics-advanced.module';
 import { PersonalTodosModule } from './personal-todos/personal-todos.module';
 import { SettingsModule } from './settings/settings.module';
 import { HolidaysModule } from './holidays/holidays.module';
@@ -51,6 +53,7 @@ import { CommonModule } from './common/common.module';
         limit: 600,
       },
     ]),
+    ScheduleModule.forRoot(),
     AuditModule,
     PrismaModule,
     AuthModule,
@@ -69,6 +72,7 @@ import { CommonModule } from './common/common.module';
     DocumentsModule,
     CommentsModule,
     AnalyticsModule,
+    AnalyticsAdvancedModule,
     PersonalTodosModule,
     SettingsModule,
     HolidaysModule,
