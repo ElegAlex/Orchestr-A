@@ -135,6 +135,24 @@ Vérif globale avant fix : total 1953 tests (7 specs racine silencieusement igno
 
 Les 24 futurs tests Clients (PR #3 non-mergée) seront automatiquement détectés après merge de PR #3, sans nouvelle intervention sur la config.
 
+### Post-PR smoke-run (validation advisor)
+
+Sur conseil advisor « prove they execute, not just collect ». Stack locale complète : `orchestr-a-db` + `orchestr-a-redis` + `pnpm --filter web dev --port 4001`.
+
+```
+npx playwright test --project=chromium e2e/auth.spec.ts
+```
+
+| Test | Résultat |
+|---|---|
+| `should display login page` | ✅ 714ms |
+| `should show error on invalid credentials` | ✅ 610ms |
+| `should login with valid credentials` | ❌ timeout 15s sur `waitForURL("**/dashboard")` |
+
+**Interprétation** : bit-rot pré-existant, pas régression. Le test hardcode `admin/admin123` alors que le seed moderne génère un password admin aléatoire (ou utilise `SEED_ADMIN_PASSWORD`). Alternative : locale prefix `/fr/dashboard` qui ne matche pas le wildcard.
+
+Le PR #8 reste correct : c'est un unbreak de config, et il **expose** la dette silencieusement cachée (meilleur qu'un skip silencieux). Triage des 45 tests récupérés = follow-up séparé hors scope C2. Note ajoutée à la description de PR #8.
+
 ---
 
 ## Chantier 3 — Gantt unification
