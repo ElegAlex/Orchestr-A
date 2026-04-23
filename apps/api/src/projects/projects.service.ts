@@ -848,7 +848,9 @@ export class ProjectsService {
   }
 
   /**
-   * Capture un snapshot de progression pour tous les projets actifs
+   * Capture un snapshot de progression pour tous les projets actifs.
+   * Idempotent à la journée : un projet déjà snapshotté aujourd'hui est skippé.
+   * Pas de contrainte DB (race conditions tolérées en V1, pas de 500).
    */
   async captureSnapshots() {
     const projects = await this.prisma.project.findMany({
@@ -860,9 +862,18 @@ export class ProjectsService {
     });
 
     const now = new Date();
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
 
-    const snapshots = await Promise.all(
-      projects.map((project) => {
+    const results = await Promise.all(
+      projects.map(async (project) => {
+        const existing = await this.prisma.projectSnapshot.findFirst({
+          where: { projectId: project.id, date: { gte: startOfDay } },
+        });
+        if (existing) {
+          return { created: false };
+        }
+
         const tasksTotal = project.tasks.length;
         const tasksDone = project.tasks.filter(
           (t) => t.status === 'DONE',
@@ -886,7 +897,7 @@ export class ProjectsService {
           (m) => m.status !== 'COMPLETED' && m.dueDate >= now,
         ).length;
 
-        return this.prisma.projectSnapshot.create({
+        await this.prisma.projectSnapshot.create({
           data: {
             projectId: project.id,
             progress,
@@ -899,10 +910,12 @@ export class ProjectsService {
             milestonesUpcoming,
           },
         });
+        return { created: true };
       }),
     );
 
-    return { captured: snapshots.length };
+    const captured = results.filter((r) => r.created).length;
+    return { captured };
   }
 
   /**

@@ -37,6 +37,7 @@ describe('ProjectsService', () => {
     },
     projectSnapshot: {
       create: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
     },
     $transaction: vi.fn(),
@@ -1268,6 +1269,8 @@ describe('ProjectsService', () => {
       mockPrismaService.projectSnapshot.create.mockImplementation(
         ({ data }) => Promise.resolve({ id: 'snap-id', ...data }),
       );
+      // Default: no snapshot exists yet today (W1.F idempotency guard)
+      mockPrismaService.projectSnapshot.findFirst.mockResolvedValue(null);
     });
 
     it('only fetches ACTIVE projects with tasks + milestones in one query (no N+1)', async () => {
@@ -1358,6 +1361,47 @@ describe('ProjectsService', () => {
       const arg =
         mockPrismaService.projectSnapshot.create.mock.calls[0][0].data;
       expect(arg.progress).toBe(67); // 2/3 = 66.66 → rounded to 67
+    });
+
+    // W1.F — Idempotency guard
+    it('should skip creation if snapshot already exists today for project', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([
+        projectWithMixedData,
+      ]);
+      mockPrismaService.projectSnapshot.findFirst.mockResolvedValue({
+        id: 'existing-snap',
+        projectId: 'p-mixed',
+        progress: 25,
+        date: new Date(),
+      });
+
+      const result = await service.captureSnapshots();
+
+      expect(mockPrismaService.projectSnapshot.create).not.toHaveBeenCalled();
+      expect(result).toEqual({ captured: 0 });
+    });
+
+    it('should create new snapshot if only yesterday\'s exists (none today)', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([
+        projectWithMixedData,
+      ]);
+      // findFirst with date >= startOfDay returns null (yesterday's snapshot is filtered out)
+      mockPrismaService.projectSnapshot.findFirst.mockResolvedValue(null);
+
+      const result = await service.captureSnapshots();
+
+      // Verify the where clause filters by today's startOfDay
+      const findFirstCall =
+        mockPrismaService.projectSnapshot.findFirst.mock.calls[0][0];
+      expect(findFirstCall.where.projectId).toBe('p-mixed');
+      const expectedStart = new Date();
+      expectedStart.setHours(0, 0, 0, 0);
+      expect(
+        (findFirstCall.where.date.gte as Date).getTime(),
+      ).toBe(expectedStart.getTime());
+
+      expect(mockPrismaService.projectSnapshot.create).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ captured: 1 });
     });
   });
 });
