@@ -252,7 +252,7 @@
       "high": "Haute",
       "normal": "Normale",
       "low": "Basse",
-      "recentActivity": "Activité récente",
+      "recentActivity": "Activité récente des 30 derniers jours",
       "completed": "Terminées",
       "created": "Créées",
       "becameOverdue": "Passées en retard",

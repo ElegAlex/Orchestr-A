@@ -193,7 +193,10 @@ function TabContent() {
         </button>
       </div>
 
-      {/* Row 1 — Progression projets + Workload */}
+      {/* Row 1 — Activité récente full width (top) */}
+      <RecentActivity days={days} />
+
+      {/* Row 2 — Progression projets + Workload */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ProjectsProgressionChart
           dateRange={dateRange}
@@ -202,14 +205,11 @@ function TabContent() {
         <WorkloadChart />
       </div>
 
-      {/* Row 2 — Milestones + TasksBreakdown */}
+      {/* Row 3 — Milestones + TasksBreakdown */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <MilestonesCompletion />
         <TasksBreakdown projectIds={projectIdsForFilter} />
       </div>
-
-      {/* Row 3 — RecentActivity full width */}
-      <RecentActivity days={days} />
 
       {/* unused t suppression — keep import resolved */}
       <span className="hidden">{t("recentActivity")}</span>
