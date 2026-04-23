@@ -207,12 +207,14 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
     };
   }, [isOpen]);
 
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
     if (!isOpen) {
       setSearch("");
       setActiveCategory(CATEGORIES[0].key);
     }
-  }, [isOpen]);
+  }
 
   const displayed = useMemo(() => {
     const query = search.trim().toLowerCase();
