@@ -25,10 +25,7 @@
       "Bash(docker *)",
       "Bash(docker-compose *)"
     ],
-    "deny": [
-      "Bash(rm -rf /)",
-      "Bash(rm -rf /*)"
-    ]
+    "deny": ["Bash(rm -rf /)", "Bash(rm -rf /*)"]
   },
   "hooks": {
     "PostToolUse": [
