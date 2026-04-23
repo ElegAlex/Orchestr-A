@@ -116,3 +116,81 @@ Le filter des utilisateurs dans `usePlanningData.ts:188` a été resserré : aup
 SHA tête master après W0.7 : `cb2cdca`.
 
 ---
+
+## Spec §15+§16 + branche feat/clients-module-v1
+
+Commit `c3601bd` sur master : ratifications Phase 0 (R1=A, R2=B, R3=A, R4=A) et plan révisé avec W0.5/W0.7/W1.5/W3 sérialisé.
+
+Advisor ciblé consulté (6 risques opérationnels intégrés aux prompts subagents) :
+- W2 parallèle OK avec règle "uniquement W2-A touche app.module.ts"
+- W3 sérialisé A→B confirmé
+- Migration : forme `pnpm --filter database exec prisma migrate dev --name add_clients_module`
+- `prisma generate` comme dernière étape W1 (auto avec migrate dev)
+- `pnpm run db:reset` W1.5 wipe DB locale : escape si > 2 callers
+- Playwright storage states potentiellement stales W5 si reseed
+- `permission-matrix.ts` utilise legacy codes à mapper via `LEGACY_ROLE_MIGRATION`
+
+Branche `feat/clients-module-v1` créée depuis `c3601bd`.
+
+---
+
+## Wave 1 — Prisma migration + RBAC permissions (solo)
+
+**Exécuté** : 2026-04-23, ≈30 min
+**SHA commit** : `7fb5bbe` (branche `feat/clients-module-v1`)
+
+### Livrables
+- Migration Prisma `20260423075303_add_clients_module` appliquée en local (DB `orchestr_a_v2` @ localhost:5433)
+- Modèles `Client` + `ProjectClient` créés, relation `clients` ajoutée à `Project`
+- 5 nouvelles permissions atomiques : `clients:read|create|update|delete|assign_to_project`
+- Constante composée `CLIENTS_CRUD` (4 mutations)
+- `clients:read` ajoutée à `PROJECT_STRUCTURE_READ` pour héritage automatique
+- Templates modifiés : `PORTFOLIO_MANAGER` (+CLIENTS_CRUD), `MANAGER` + `DRAFT_MANAGER` (+`clients:assign_to_project`), `PROJECT_LEAD` + `DRAFT_PROJECT_LEAD` (+`clients:assign_to_project`)
+- Tests de conformité RBAC mis à jour : `CATALOG_PERMISSIONS.length` 107→112, `EXPECTED_COUNTS` (Spec 2 V0 B) — 26 templates réalignés
+
+### Gate W1
+- `pnpm run build` : ✅ 3 tasks successful, 20.2s
+- `pnpm run test` : ✅ 1087 api + 108 rbac + 514 web — 0 failed
+- `pnpm --filter database exec prisma migrate status` : DB up-to-date
+- `grep -r "clients:read" packages/rbac/` : présent dans atomic-permissions.ts (type, PROJECT_STRUCTURE_READ, CATALOG_PERMISSIONS) ET dans les templates distribués
+
+**Statut** : `W1 PASS`.
+
+---
+
+## Wave 1.5 — Nettoyage seed RBAC : ESCAPE HATCH DÉCLENCHÉ
+
+**Décision** : abandon W1.5, création d'un issue GitHub dédié `#2`.
+
+### Pourquoi
+
+`pnpm --filter database exec tsc --noEmit` sur `packages/database/prisma/seed.ts` révèle **20+ erreurs de compilation TypeScript** — bien au-delà des 5 appels Prisma morts identifiés dans l'audit :
+
+```
+prisma.permission (1 occurrence ligne 721)
+prisma.roleConfig (2 occurrences lignes 1352, 1357)
+prisma.rolePermission (3 occurrences lignes 1390, 1397, 1421)
+prisma.roleEntity (3 occurrences lignes 1520, 1525, 1532)
+Type errors RoleCreateNestedOneWithoutUsersInput (9 occurrences lignes 1597-1821)
+```
+
+Le seed est cassé à deux niveaux :
+1. Tables RBAC supprimées (V4 drop)
+2. Refactor `user.role` de `Role` enum vers `RoleRef` (V4 drop legacy)
+
+Le build global passe uniquement parce que le package `database` n'a pas de script `build` TypeScript (juste `prisma generate`), et `seed.ts` est exécuté via `ts-node` au runtime.
+
+Escape criteria de l'advisor : « if the legacy seed references cross more than 2 callers or touch anything outside the seed file, abandon W1.5 ». Ici les 2 callers (`seed.ts` + `seed-permissions.ts`) sont respectés, mais la volumétrie dépasse largement un simple retrait d'appels : c'est une réécriture du seed.
+
+### Issue GitHub
+`https://github.com/ElegAlex/Orchestr-A/issues/2` — `cleanup(seed): seedPermissionsAndRoles and demo users seed broken after RBAC V4 drop`
+
+### Risque résiduel
+
+`pnpm run db:seed` et `pnpm run db:seed:permissions` crashent immédiatement si exécutés. Contournement : ne pas les lancer, partir d'un dump prod assaini pour l'onboarding dev.
+
+**Statut** : `W1.5 SKIPPED — issue #2 ouverte, passage direct à W2`.
+
+---
+
+
