@@ -409,10 +409,9 @@ describe('UsersController', () => {
         message: 'Mot de passe réinitialisé',
       });
 
-      const result = await controller.resetPassword(
-        'user-id-1',
-        { newPassword: 'newpassword123' } as any,
-      );
+      const result = await controller.resetPassword('user-id-1', {
+        newPassword: 'newpassword123',
+      } as any);
 
       expect(result.message).toBe('Mot de passe réinitialisé');
       expect(mockUsersService.resetPassword).toHaveBeenCalledWith(
@@ -427,7 +426,9 @@ describe('UsersController', () => {
       );
 
       await expect(
-        controller.resetPassword('nonexistent', { newPassword: 'newpassword123' } as any),
+        controller.resetPassword('nonexistent', {
+          newPassword: 'newpassword123',
+        } as any),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -464,11 +465,16 @@ describe('UsersController', () => {
         file: vi.fn().mockResolvedValue(mockFile),
       } as any;
 
-      mockUsersService.uploadAvatar.mockResolvedValue({ avatarUrl: '/uploads/avatars/user-id-1.png' });
+      mockUsersService.uploadAvatar.mockResolvedValue({
+        avatarUrl: '/uploads/avatars/user-id-1.png',
+      });
 
       const result = await controller.uploadAvatar('user-id-1', req);
 
-      expect(mockUsersService.uploadAvatar).toHaveBeenCalledWith('user-id-1', mockFile);
+      expect(mockUsersService.uploadAvatar).toHaveBeenCalledWith(
+        'user-id-1',
+        mockFile,
+      );
       expect(result).toHaveProperty('avatarUrl');
     });
   });
@@ -480,16 +486,24 @@ describe('UsersController', () => {
         avatarUrl: null,
       });
 
-      const result = await controller.setAvatarPreset('user-id-1', { preset: 'avatar_01' } as any);
+      const result = await controller.setAvatarPreset('user-id-1', {
+        preset: 'avatar_01',
+      } as any);
 
-      expect(mockUsersService.setAvatarPreset).toHaveBeenCalledWith('user-id-1', 'avatar_01');
+      expect(mockUsersService.setAvatarPreset).toHaveBeenCalledWith(
+        'user-id-1',
+        'avatar_01',
+      );
       expect(result).toHaveProperty('avatarPreset');
     });
   });
 
   describe('deleteAvatar', () => {
     it('should call usersService.deleteAvatar with userId', async () => {
-      mockUsersService.deleteAvatar.mockResolvedValue({ avatarUrl: null, avatarPreset: null });
+      mockUsersService.deleteAvatar.mockResolvedValue({
+        avatarUrl: null,
+        avatarPreset: null,
+      });
 
       const result = await controller.deleteAvatar('user-id-1');
 
@@ -524,7 +538,8 @@ describe('UsersController', () => {
 
   describe('getImportTemplate', () => {
     it('should return CSV template string', async () => {
-      const csvTemplate = 'email;login;password;firstName;lastName;roleCode;departmentName;serviceNames';
+      const csvTemplate =
+        'email;login;password;firstName;lastName;roleCode;departmentName;serviceNames';
       mockUsersService.getImportTemplate.mockReturnValue(csvTemplate);
 
       const result = controller.getImportTemplate();
@@ -536,17 +551,33 @@ describe('UsersController', () => {
 
   describe('getUsersPresence', () => {
     it('should return presence data for a given date', async () => {
-      const presenceData = { onSite: [], remote: [], absent: [], external: [], date: '2025-01-15', totals: {} };
+      const presenceData = {
+        onSite: [],
+        remote: [],
+        absent: [],
+        external: [],
+        date: '2025-01-15',
+        totals: {},
+      };
       mockUsersService.getUsersPresence.mockResolvedValue(presenceData);
 
       const result = await controller.getUsersPresence('2025-01-15');
 
-      expect(mockUsersService.getUsersPresence).toHaveBeenCalledWith('2025-01-15');
+      expect(mockUsersService.getUsersPresence).toHaveBeenCalledWith(
+        '2025-01-15',
+      );
       expect(result).toEqual(presenceData);
     });
 
     it('should call getUsersPresence with undefined when no date provided', async () => {
-      const presenceData = { onSite: [], remote: [], absent: [], external: [], date: '2025-01-23', totals: {} };
+      const presenceData = {
+        onSite: [],
+        remote: [],
+        absent: [],
+        external: [],
+        date: '2025-01-23',
+        totals: {},
+      };
       mockUsersService.getUsersPresence.mockResolvedValue(presenceData);
 
       await controller.getUsersPresence(undefined);
@@ -566,7 +597,9 @@ describe('UsersController', () => {
 
       const result = await controller.checkDependencies('user-id-1');
 
-      expect(mockUsersService.checkDependencies).toHaveBeenCalledWith('user-id-1');
+      expect(mockUsersService.checkDependencies).toHaveBeenCalledWith(
+        'user-id-1',
+      );
       expect(result.canDelete).toBe(true);
     });
   });
@@ -577,9 +610,17 @@ describe('UsersController', () => {
       mockUsersService.update.mockResolvedValue(updatedUser);
 
       const callerWithNoRole = { role: null };
-      const result = await controller.update('user-id-1', { firstName: 'Updated' }, callerWithNoRole);
+      const result = await controller.update(
+        'user-id-1',
+        { firstName: 'Updated' },
+        callerWithNoRole,
+      );
 
-      expect(mockUsersService.update).toHaveBeenCalledWith('user-id-1', { firstName: 'Updated' }, undefined);
+      expect(mockUsersService.update).toHaveBeenCalledWith(
+        'user-id-1',
+        { firstName: 'Updated' },
+        undefined,
+      );
       expect(result.firstName).toBe('Updated');
     });
 
@@ -587,9 +628,13 @@ describe('UsersController', () => {
       const updatedUser = { ...mockUser, firstName: 'Updated' };
       mockUsersService.update.mockResolvedValue(updatedUser);
 
-      const result = await controller.update('user-id-1', { firstName: 'Updated' }, {} as any);
+      await controller.update('user-id-1', { firstName: 'Updated' }, {} as any);
 
-      expect(mockUsersService.update).toHaveBeenCalledWith('user-id-1', { firstName: 'Updated' }, undefined);
+      expect(mockUsersService.update).toHaveBeenCalledWith(
+        'user-id-1',
+        { firstName: 'Updated' },
+        undefined,
+      );
     });
   });
 });

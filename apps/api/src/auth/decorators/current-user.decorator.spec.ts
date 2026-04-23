@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { ExecutionContext } from '@nestjs/common';
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { CurrentUser, CurrentUserRoleCode } from './current-user.decorator';
@@ -15,7 +15,9 @@ function getDecoratorFactory(decorator: any) {
   // NestJS param decorators store their factory in metadata
   // We can call the decorator to get the metadata key, then retrieve the factory
   class Dummy {
-    handler(@decorator() _user: any) {}
+    handler(@decorator() _user: any) {
+      void _user;
+    }
   }
   const args = Reflect.getMetadata(ROUTE_ARGS_METADATA, Dummy, 'handler');
   if (!args) return null;

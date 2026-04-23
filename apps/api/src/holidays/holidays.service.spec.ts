@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { HolidaysService } from './holidays.service';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { NotFoundException, ConflictException } from '@nestjs/common';
 import { HolidayType, Prisma } from 'database';
 
 describe('HolidaysService', () => {
@@ -226,7 +223,9 @@ describe('HolidaysService', () => {
       const updated = { ...mockHoliday, name: 'Updated Name' };
       mockPrismaService.holiday.update.mockResolvedValue(updated);
 
-      const result = await service.update('holiday-1', { name: 'Updated Name' });
+      const result = await service.update('holiday-1', {
+        name: 'Updated Name',
+      });
 
       expect(result.name).toBe('Updated Name');
       expect(mockPrismaService.holiday.update).toHaveBeenCalledWith(
@@ -243,7 +242,7 @@ describe('HolidaysService', () => {
       const updated = { ...mockHoliday, date: new Date('2025-03-15') };
       mockPrismaService.holiday.update.mockResolvedValue(updated);
 
-      const result = await service.update('holiday-1', { date: '2025-03-15' });
+      await service.update('holiday-1', { date: '2025-03-15' });
 
       expect(mockPrismaService.holiday.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -281,7 +280,7 @@ describe('HolidaysService', () => {
       };
       mockPrismaService.holiday.update.mockResolvedValue(updated);
 
-      const result = await service.update('holiday-1', {
+      await service.update('holiday-1', {
         isWorkDay: true,
         type: HolidayType.LOCAL,
         description: 'New description',
