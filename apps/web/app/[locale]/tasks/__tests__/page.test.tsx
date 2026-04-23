@@ -15,6 +15,15 @@ jest.mock("next-intl", () => ({
         "columns.IN_REVIEW": "En revue",
         "columns.DONE": "Terminé",
         "columns.BLOCKED": "Bloqué",
+        "kanban.columns.TODO": "À faire",
+        "kanban.columns.IN_PROGRESS": "En cours",
+        "kanban.columns.IN_REVIEW": "En revue",
+        "kanban.columns.DONE": "Terminé",
+        "kanban.columns.BLOCKED": "Bloqué",
+        "kanban.messages.statusUpdateSuccess": "Statut mis à jour",
+        "kanban.messages.statusUpdateError": "Erreur mise à jour statut",
+        "kanban.noTasks": "Aucune tâche",
+        "kanban.emptyColumn": "Aucune tâche",
         "status.TODO": "À faire",
         "status.IN_PROGRESS": "En cours",
         "status.IN_REVIEW": "En revue",
@@ -64,7 +73,12 @@ jest.mock("next/navigation", () => ({
     push: mockPush,
     replace: jest.fn(),
     prefetch: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    refresh: jest.fn(),
   }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/fr/tasks",
 }));
 
 // Mock du store auth
@@ -79,7 +93,14 @@ const mockUser = {
 
 const mockAuthState = {
   user: mockUser,
-  permissions: [] as string[],
+  permissions: [
+    "projects:read",
+    "tasks:readAll",
+    "tasks:create",
+    "tasks:update",
+    "users:read",
+    "third_parties:assign_to_task",
+  ] as string[],
   permissionsLoaded: true,
 };
 jest.mock("@/stores/auth.store", () => ({
