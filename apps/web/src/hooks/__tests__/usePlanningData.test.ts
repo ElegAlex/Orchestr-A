@@ -7,6 +7,7 @@ import { teleworkService } from "@/services/telework.service";
 import { servicesService } from "@/services/services.service";
 import { holidaysService } from "@/services/holidays.service";
 import { eventsService } from "@/services/events.service";
+import { planningService } from "@/services/planning.service";
 import { TaskStatus, Priority, LeaveStatus, LeaveType } from "@/types";
 
 const roleContributor = {
@@ -64,6 +65,12 @@ jest.mock("@/services/holidays.service", () => ({
 jest.mock("@/services/events.service", () => ({
   eventsService: {
     getByRange: jest.fn(),
+  },
+}));
+
+jest.mock("@/services/planning.service", () => ({
+  planningService: {
+    getOverview: jest.fn(),
   },
 }));
 
@@ -126,7 +133,7 @@ describe("usePlanningData", () => {
       createdAt: "2025-01-01",
       updatedAt: "2025-01-01",
       departmentId: "dept-1",
-      userServices: [],
+      userServices: [{ service: { id: "service-1", name: "Development" } }],
       managedServices: [{ id: "service-1", name: "Development" }],
     },
     {
@@ -203,6 +210,17 @@ describe("usePlanningData", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockVisibleDays = [1, 2, 3, 4, 5];
+    (planningService.getOverview as jest.Mock).mockResolvedValue({
+      users: mockUsers,
+      services: mockServices,
+      tasks: mockTasks,
+      leaves: mockLeaves,
+      events: [],
+      telework: mockTelework,
+      holidays: [],
+      schoolVacations: [],
+      predefinedAssignments: [],
+    });
     (usersService.getAll as jest.Mock).mockResolvedValue(mockUsers);
     (tasksService.getByDateRange as jest.Mock).mockResolvedValue(mockTasks);
     (leavesService.getByDateRange as jest.Mock).mockResolvedValue(mockLeaves);
@@ -237,11 +255,7 @@ describe("usePlanningData", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(usersService.getAll).toHaveBeenCalled();
-    expect(tasksService.getByDateRange).toHaveBeenCalled();
-    expect(leavesService.getByDateRange).toHaveBeenCalled();
-    expect(teleworkService.getByDateRange).toHaveBeenCalled();
-    expect(servicesService.getAll).toHaveBeenCalled();
+    expect(planningService.getOverview).toHaveBeenCalled();
   });
 
   it("should filter out inactive users", async () => {
@@ -421,14 +435,8 @@ describe("usePlanningData", () => {
   });
 
   it("should handle API errors gracefully", async () => {
-    // Mock ALL services to reject to simulate full API failure
-    (usersService.getAll as jest.Mock).mockRejectedValue(
-      new Error("API Error"),
-    );
-    (tasksService.getByDateRange as jest.Mock).mockRejectedValue(
-      new Error("API Error"),
-    );
-    (leavesService.getByDateRange as jest.Mock).mockRejectedValue(
+    // Mock planningService to reject (hook fait 1 seul appel agrégé)
+    (planningService.getOverview as jest.Mock).mockRejectedValue(
       new Error("API Error"),
     );
 
@@ -447,13 +455,10 @@ describe("usePlanningData", () => {
     expect(result.current.users).toEqual([]);
   });
 
-  it("should handle different data response formats", async () => {
-    // Test with paginated response format
-    (usersService.getAll as jest.Mock).mockResolvedValue({
-      data: mockUsers,
-      meta: { total: 3 },
-    });
-
+  it("should extract users correctly from planning overview response", async () => {
+    // Depuis le refactor "un seul appel agrégé", le hook consomme
+    // planningService.getOverview() qui retourne un payload complet.
+    // Ce test valide que les utilisateurs sont correctement extraits.
     const { result } = renderHook(() =>
       usePlanningData({
         currentDate: new Date(),
@@ -465,7 +470,6 @@ describe("usePlanningData", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Should still extract users correctly
     expect(result.current.users.length).toBeGreaterThan(0);
   });
 
