@@ -1,32 +1,44 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import {
   analyticsService,
-  MilestoneByProject,
+  MilestoneDetail,
 } from "@/services/analytics.service";
 
-function ratioColorClass(ratio: number): string {
-  if (ratio >= 0.8) return "text-green-600";
-  if (ratio >= 0.5) return "text-orange-500";
-  return "text-red-600";
+const COLORS = {
+  success: "#1D9E75",
+  successText: "#0f6e56",
+  blocked: "#E24B4A",
+  dangerText: "#a32d2d",
+  info: "#378ADD",
+  infoText: "#185fa5",
+};
+
+function formatDateShort(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "short",
+    });
+  } catch {
+    return iso;
+  }
 }
 
-function ProgressBar({ reached, total }: { reached: number; total: number }) {
-  const pct = total > 0 ? Math.round((reached / total) * 100) : 0;
+function Skeleton() {
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
-        <div
-          className="h-full rounded-full bg-blue-500 transition-all"
-          style={{ width: `${pct}%` }}
-        />
+    <div className="space-y-3 animate-pulse">
+      <div className="h-8 w-3/4 rounded bg-gray-200" />
+      <div className="h-4 w-1/2 rounded bg-gray-200" />
+      <div className="grid grid-cols-3 gap-3 mt-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-20 rounded bg-gray-200" />
+        ))}
       </div>
-      <span className="text-xs text-gray-700 whitespace-nowrap">
-        {reached} / {total}
-      </span>
     </div>
   );
 }
@@ -40,27 +52,41 @@ export default function MilestonesCompletion() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Sépare en 2 groupes : en retard / dans les temps (upcoming, le plus proche par projet)
+  const { lateItems, ontimeItems } = useMemo(() => {
+    if (!data) return { lateItems: [], ontimeItems: [] };
+
+    const late = data.details.filter((d) => d.status === "OVERDUE");
+
+    // Pour "dans les temps" : pour chaque projet sans jalon en retard, prendre le plus proche upcoming
+    const lateProjectIds = new Set(late.map((d) => d.projectId));
+    const upcomingByProject = new Map<string, MilestoneDetail>();
+    for (const d of data.details) {
+      if (d.status !== "UPCOMING") continue;
+      if (lateProjectIds.has(d.projectId)) continue;
+      const existing = upcomingByProject.get(d.projectId);
+      if (!existing || d.daysFromNow < existing.daysFromNow) {
+        upcomingByProject.set(d.projectId, d);
+      }
+    }
+    const ontime = Array.from(upcomingByProject.values()).sort(
+      (a, b) => a.daysFromNow - b.daysFromNow,
+    );
+
+    // Tri "en retard" par retard décroissant (le plus en retard en premier)
+    const sortedLate = late.sort((a, b) => a.daysFromNow - b.daysFromNow);
+
+    return { lateItems: sortedLate, ontimeItems: ontime };
+  }, [data]);
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-      <h3 className="mb-4 text-base font-semibold text-gray-900">
+    <div className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm">
+      <h3 className="text-base font-medium text-gray-900">
         {t("milestoneCompletion")}
       </h3>
 
-      {isLoading && (
-        <div className="space-y-3 animate-pulse">
-          <div className="h-8 w-3/4 rounded bg-gray-200" />
-          <div className="h-4 w-1/2 rounded bg-gray-200" />
-          <div className="mt-4 space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-5 rounded bg-gray-200" />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {isError && (
-        <p className="text-sm text-red-600">{t("loadError")}</p>
-      )}
+      {isLoading && <Skeleton />}
+      {isError && <p className="text-sm text-red-600">{t("loadError")}</p>}
 
       {!isLoading && !isError && data && (
         <>
@@ -68,99 +94,173 @@ export default function MilestonesCompletion() {
             <p className="text-sm text-gray-500">{t("noMilestoneDefined")}</p>
           ) : (
             <>
-              {/* KPI principal */}
-              <p className="text-3xl font-bold text-gray-900">
-                {t("kpi.onTimeOver", {
-                  onTime: data.onTime,
-                  total: data.total,
-                })}{" "}
+              {/* Sous-titre dense */}
+              <p className="mb-5 text-[13px] text-gray-500">
+                {data.onTime} / {data.total} atteints à temps{" "}
                 <span
-                  className={ratioColorClass(data.ratio)}
-                  data-testid="ratio-value"
+                  style={{ color: COLORS.successText }}
+                  className="font-medium"
                 >
-                  ({Math.round(data.ratio * 100)}%)
+                  ({Math.round(data.ratio * 100)} %)
                 </span>
+                {data.overdue > 0 && (
+                  <>
+                    {" · "}
+                    <span style={{ color: COLORS.dangerText }}>
+                      {data.overdue} en retard à traiter en priorité
+                    </span>
+                  </>
+                )}
               </p>
 
-              {/* Alerte en haut si jalons en retard */}
-              {data.overdue > 0 && (
-                <div className="mt-4 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-3">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                  <p className="text-sm font-semibold text-red-800">
-                    {data.overdue} jalon{data.overdue > 1 ? "s" : ""} en retard
-                  </p>
-                </div>
-              )}
-
-              {/* 3 badges visuels colorés */}
-              <div className="mt-4 grid grid-cols-3 gap-3">
-                <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <div>
-                    <div className="text-xl font-bold text-green-700">
-                      {data.completed}
-                    </div>
-                    <div className="text-xs text-green-700/80">
-                      {t("completed")}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                  <div>
-                    <div className="text-xl font-bold text-red-700">
-                      {data.overdue}
-                    </div>
-                    <div className="text-xs text-red-700/80">
-                      {t("late")}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                  <Clock className="h-5 w-5 text-gray-600" />
-                  <div>
-                    <div className="text-xl font-bold text-gray-700">
-                      {data.upcoming}
-                    </div>
-                    <div className="text-xs text-gray-700/80">
-                      {t("upcoming")}
-                    </div>
-                  </div>
-                </div>
+              {/* 3 KPI tiles */}
+              <div className="mb-5 grid grid-cols-3 gap-3">
+                <KpiTile
+                  dotColor={COLORS.success}
+                  textColor={COLORS.successText}
+                  label="Terminés"
+                  value={data.completed}
+                />
+                <KpiTile
+                  dotColor={COLORS.blocked}
+                  textColor={COLORS.dangerText}
+                  label="En retard"
+                  value={data.overdue}
+                />
+                <KpiTile
+                  dotColor={COLORS.info}
+                  textColor={COLORS.infoText}
+                  label="À venir"
+                  value={data.upcoming}
+                />
               </div>
 
-              {/* Liste byProject */}
-              {data.byProject.length === 0 ? (
-                <p className="mt-4 text-sm text-gray-500">
-                  {t("noMilestoneDefined")}
-                </p>
-              ) : (
-                <ul className="mt-6 space-y-3">
-                  {[...data.byProject]
-                    .sort((a: MilestoneByProject, b: MilestoneByProject) => {
-                      const ra = a.total > 0 ? a.reached / a.total : 0;
-                      const rb = b.total > 0 ? b.reached / b.total : 0;
-                      return rb - ra;
-                    })
-                    .map((project: MilestoneByProject) => (
-                      <li key={project.projectId}>
-                        <div className="mb-1">
-                          <span className="text-sm text-gray-800">
-                            {project.name}
-                          </span>
-                        </div>
-                        <ProgressBar
-                          reached={project.reached}
-                          total={project.total}
-                        />
-                      </li>
-                    ))}
-                </ul>
+              {/* Group: En retard */}
+              {lateItems.length > 0 && (
+                <>
+                  <p className="mb-2.5 mt-5 text-[11px] font-medium uppercase tracking-wider text-gray-500">
+                    En retard — action requise
+                  </p>
+                  {lateItems.map((m) => (
+                    <LateItem key={m.milestoneId} milestone={m} />
+                  ))}
+                </>
+              )}
+
+              {/* Group: Dans les temps */}
+              {ontimeItems.length > 0 && (
+                <>
+                  <p className="mb-2.5 mt-5 text-[11px] font-medium uppercase tracking-wider text-gray-500">
+                    Dans les temps
+                  </p>
+                  {ontimeItems.map((m) => (
+                    <OnTimeItem key={m.milestoneId} milestone={m} />
+                  ))}
+                </>
               )}
             </>
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function KpiTile({
+  dotColor,
+  textColor,
+  label,
+  value,
+}: {
+  dotColor: string;
+  textColor: string;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="rounded-lg bg-gray-50 px-4 py-3.5">
+      <p className="mb-1.5 flex items-center gap-1.5 text-xs text-gray-500">
+        <span
+          className="inline-block h-2 w-2 rounded-full"
+          style={{ backgroundColor: dotColor }}
+        />
+        {label}
+      </p>
+      <p
+        className="m-0 text-2xl font-medium leading-none tabular-nums"
+        style={{ color: textColor }}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function LateItem({ milestone }: { milestone: MilestoneDetail }) {
+  const daysLate = Math.abs(milestone.daysFromNow);
+  const pct =
+    milestone.totalInProject > 0
+      ? (milestone.reachedInProject / milestone.totalInProject) * 100
+      : 0;
+  const latePct = milestone.totalInProject > 0 ? 100 / milestone.totalInProject : 0;
+
+  return (
+    <div
+      className="mb-2 rounded-lg border px-3.5 py-3"
+      style={{
+        borderColor: "rgba(226, 75, 74, 0.35)",
+        backgroundColor: "#fdf0f0",
+      }}
+    >
+      <div className="mb-2.5 flex items-baseline justify-between gap-3">
+        <span className="text-[13px] font-medium text-gray-900">
+          {milestone.projectName} — {milestone.milestoneName}
+        </span>
+        <span
+          className="whitespace-nowrap text-xs font-medium tabular-nums"
+          style={{ color: COLORS.dangerText }}
+        >
+          Dû il y a {daysLate} j · {milestone.reachedInProject}/
+          {milestone.totalInProject}
+        </span>
+      </div>
+      <div className="flex h-1.5 overflow-hidden rounded-full bg-gray-200">
+        <span
+          className="h-full"
+          style={{ width: `${pct}%`, backgroundColor: COLORS.success }}
+        />
+        <span
+          className="h-full"
+          style={{ width: `${latePct}%`, backgroundColor: COLORS.blocked }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function OnTimeItem({ milestone }: { milestone: MilestoneDetail }) {
+  const pct =
+    milestone.totalInProject > 0
+      ? (milestone.reachedInProject / milestone.totalInProject) * 100
+      : 0;
+
+  return (
+    <div className="mb-2 rounded-lg border border-gray-200 px-3.5 py-3 transition hover:border-gray-300">
+      <div className="mb-2.5 flex items-baseline justify-between gap-3">
+        <span className="text-[13px] font-medium text-gray-900">
+          {milestone.projectName} — {milestone.milestoneName}
+        </span>
+        <span className="whitespace-nowrap text-xs text-gray-500 tabular-nums">
+          Prochain : {formatDateShort(milestone.dueDate)} ·{" "}
+          {milestone.reachedInProject}/{milestone.totalInProject}
+        </span>
+      </div>
+      <div className="flex h-1.5 overflow-hidden rounded-full bg-gray-200">
+        <span
+          className="h-full"
+          style={{ width: `${pct}%`, backgroundColor: COLORS.success }}
+        />
+      </div>
     </div>
   );
 }

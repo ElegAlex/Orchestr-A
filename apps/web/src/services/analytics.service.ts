@@ -124,6 +124,20 @@ export interface MilestoneByProject {
   total: number;
 }
 
+export type MilestoneDetailStatus = "COMPLETED" | "OVERDUE" | "UPCOMING";
+
+export interface MilestoneDetail {
+  milestoneId: string;
+  milestoneName: string;
+  projectId: string;
+  projectName: string;
+  dueDate: string;
+  daysFromNow: number;
+  status: MilestoneDetailStatus;
+  reachedInProject: number;
+  totalInProject: number;
+}
+
 export interface MilestonesCompletionResponse {
   onTime: number;
   total: number;
@@ -132,6 +146,7 @@ export interface MilestonesCompletionResponse {
   overdue: number;
   upcoming: number;
   byProject: MilestoneByProject[];
+  details: MilestoneDetail[];
 }
 
 export interface PriorityBreakdown {

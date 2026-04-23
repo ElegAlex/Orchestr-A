@@ -4,7 +4,11 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import {
   MilestonesCompletionResponseDto,
   MilestoneByProjectDto,
+  MilestoneDetailDto,
+  MilestoneDetailStatus,
 } from '../dto/milestones-completion.dto';
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 @Injectable()
 export class MilestonesCompletionService {
@@ -15,9 +19,7 @@ export class MilestonesCompletionService {
 
     const milestones = await this.prisma.milestone.findMany({
       include: {
-        project: {
-          select: { id: true, name: true },
-        },
+        project: { select: { id: true, name: true } },
       },
     });
 
@@ -25,7 +27,6 @@ export class MilestonesCompletionService {
     let overdue = 0;
     let upcoming = 0;
 
-    // Accumulate byProject data: projectId → { name, reached, total }
     const projectMap = new Map<
       string,
       { name: string; reached: number; total: number }
@@ -35,15 +36,10 @@ export class MilestonesCompletionService {
       const isCompleted = milestone.status === MilestoneStatus.COMPLETED;
       const isPastDue = milestone.dueDate < now;
 
-      if (isCompleted) {
-        completed++;
-      } else if (isPastDue) {
-        overdue++;
-      } else {
-        upcoming++;
-      }
+      if (isCompleted) completed++;
+      else if (isPastDue) overdue++;
+      else upcoming++;
 
-      // Accumulate byProject
       const projectId = milestone.project.id;
       const projectName = milestone.project.name;
 
@@ -53,22 +49,14 @@ export class MilestonesCompletionService {
 
       const entry = projectMap.get(projectId)!;
       entry.total++;
-      if (isCompleted) {
-        entry.reached++;
-      }
+      if (isCompleted) entry.reached++;
     }
 
-    // total (échus) = completed + overdue
     const total = completed + overdue;
-    // onTime = completed (by convention — no completedAt field)
     const onTime = completed;
     const ratio = total > 0 ? onTime / total : 0;
 
-    // byProject: exclude projects with 0 milestones (projectMap only contains
-    // projects that have at least one milestone), sorted alphabetically by name
-    const byProject: MilestoneByProjectDto[] = Array.from(
-      projectMap.entries(),
-    )
+    const byProject: MilestoneByProjectDto[] = Array.from(projectMap.entries())
       .map(([projectId, { name, reached, total: projectTotal }]) => ({
         projectId,
         name,
@@ -77,6 +65,42 @@ export class MilestonesCompletionService {
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    return { onTime, total, ratio, completed, overdue, upcoming, byProject };
+    // Détails individuels — utiles côté UI pour grouper "en retard" vs "à venir"
+    const details: MilestoneDetailDto[] = milestones.map((milestone) => {
+      const isCompleted = milestone.status === MilestoneStatus.COMPLETED;
+      const isPastDue = milestone.dueDate < now;
+      let status: MilestoneDetailStatus;
+      if (isCompleted) status = 'COMPLETED';
+      else if (isPastDue) status = 'OVERDUE';
+      else status = 'UPCOMING';
+
+      const dayMs = milestone.dueDate.getTime() - now.getTime();
+      const daysFromNow = Math.round(dayMs / MS_PER_DAY);
+
+      const projectAgg = projectMap.get(milestone.project.id)!;
+
+      return {
+        milestoneId: milestone.id,
+        milestoneName: milestone.name,
+        projectId: milestone.project.id,
+        projectName: milestone.project.name,
+        dueDate: milestone.dueDate.toISOString(),
+        daysFromNow,
+        status,
+        reachedInProject: projectAgg.reached,
+        totalInProject: projectAgg.total,
+      };
+    });
+
+    return {
+      onTime,
+      total,
+      ratio,
+      completed,
+      overdue,
+      upcoming,
+      byProject,
+      details,
+    };
   }
 }

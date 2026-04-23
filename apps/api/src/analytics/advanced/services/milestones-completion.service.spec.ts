@@ -87,6 +87,7 @@ describe('MilestonesCompletionService', () => {
       overdue: 0,
       upcoming: 0,
       byProject: [],
+      details: [],
     });
   });
 
