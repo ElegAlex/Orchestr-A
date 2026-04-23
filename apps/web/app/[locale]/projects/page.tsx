@@ -22,6 +22,7 @@ import { ProjectIcon } from "@/components/ProjectIcon";
 import toast from "react-hot-toast";
 import { clientsService } from "@/services/clients.service";
 import { Client } from "@/types";
+import { ClientSelector } from "@/components/clients/ClientSelector";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -73,6 +74,9 @@ export default function ProjectsPage() {
     budgetHours: undefined,
     estimatedHours: undefined,
   });
+  const [createClientIds, setCreateClientIds] = useState<string[]>([]);
+  const canAssignClients = hasPermission("clients:assign_to_project");
+  const canReadClients = hasPermission("clients:read");
 
   const memberMeFilter = searchParams.get("member") === "me";
 
@@ -193,6 +197,7 @@ export default function ProjectsPage() {
         managerId?: string;
         sponsorId?: string | null;
         budgetHours?: number;
+        clientIds?: string[];
       } = {
         name: formData.name,
         description: formData.description,
@@ -208,6 +213,10 @@ export default function ProjectsPage() {
       // Ajouter budgetHours s'il existe
       if (formData.estimatedHours) {
         projectData.budgetHours = formData.estimatedHours;
+      }
+
+      if (canAssignClients && createClientIds.length > 0) {
+        projectData.clientIds = createClientIds;
       }
 
       await projectsService.create(projectData);
@@ -260,6 +269,7 @@ export default function ProjectsPage() {
       budgetHours: undefined,
       estimatedHours: undefined,
     });
+    setCreateClientIds([]);
   };
 
   const getStatusBadgeColor = (status: ProjectStatus) => {
@@ -783,6 +793,27 @@ export default function ProjectsPage() {
                   />
                 </div>
               </div>
+
+              {canReadClients && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Clients (commanditaires)
+                  </label>
+                  <ClientSelector
+                    value={createClientIds}
+                    onChange={setCreateClientIds}
+                    placeholder="Sélectionner un ou plusieurs clients…"
+                    disabled={!canAssignClients}
+                  />
+                  {!canAssignClients && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Lecture seule — permission{" "}
+                      <code>clients:assign_to_project</code> requise pour
+                      rattacher.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
                 <button

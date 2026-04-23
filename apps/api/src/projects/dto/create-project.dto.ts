@@ -5,8 +5,10 @@ import {
   IsOptional,
   IsEnum,
   IsDateString,
+  IsArray,
   MaxLength,
   MinLength,
+  ArrayUnique,
 } from 'class-validator';
 import { ProjectStatus, Priority } from 'database';
 
@@ -99,4 +101,16 @@ export class CreateProjectDto {
   @IsString()
   @IsOptional()
   sponsorId?: string;
+
+  @ApiProperty({
+    description: 'IDs des clients (commanditaires) rattachés au projet',
+    example: ['uuid-client-1', 'uuid-client-2'],
+    required: false,
+    isArray: true,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayUnique()
+  clientIds?: string[];
 }

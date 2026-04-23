@@ -78,13 +78,28 @@ export class ProjectsService {
    * Le créateur est automatiquement ajouté comme membre avec le rôle "Chef de projet"
    */
   async create(createProjectDto: CreateProjectDto, creatorId: string) {
-    const { startDate, endDate, ...projectData } = createProjectDto;
+    const { startDate, endDate, clientIds, ...projectData } = createProjectDto;
 
     // Vérifier que la date de fin est après la date de début
     if (endDate && startDate && new Date(endDate) <= new Date(startDate)) {
       throw new BadRequestException(
         'La date de fin doit être postérieure à la date de début',
       );
+    }
+
+    // Si des clients sont demandés, vérifier qu'ils existent et sont actifs
+    if (clientIds && clientIds.length > 0) {
+      const found = await this.prisma.client.findMany({
+        where: { id: { in: clientIds }, isActive: true },
+        select: { id: true },
+      });
+      if (found.length !== clientIds.length) {
+        const foundIds = new Set(found.map((c) => c.id));
+        const missing = clientIds.filter((id) => !foundIds.has(id));
+        throw new BadRequestException(
+          `Clients introuvables ou inactifs : ${missing.join(', ')}`,
+        );
+      }
     }
 
     // Créer le projet et ajouter le créateur comme membre dans une transaction
@@ -111,6 +126,17 @@ export class ProjectsService {
           allocation: 100,
         },
       });
+
+      // Rattacher les clients si fournis
+      if (clientIds && clientIds.length > 0) {
+        await tx.projectClient.createMany({
+          data: clientIds.map((clientId) => ({
+            projectId: newProject.id,
+            clientId,
+          })),
+          skipDuplicates: true,
+        });
+      }
 
       // Retourner le projet avec toutes les relations
       return tx.project.findUnique({
@@ -166,10 +192,22 @@ export class ProjectsService {
               title: true,
             },
           },
+          clients: {
+            select: {
+              client: { select: { id: true, name: true } },
+            },
+          },
         },
       });
     });
 
+    // Aplatir clients pour matcher le shape frontend
+    if (project) {
+      return {
+        ...project,
+        clients: project.clients.map((pc) => pc.client),
+      };
+    }
     return project;
   }
 
@@ -461,6 +499,7 @@ export class ProjectsService {
       endDate,
       hiddenStatuses,
       visibleStatuses,
+      clientIds,
       ...projectData
     } = updateProjectDto;
 
@@ -483,6 +522,21 @@ export class ProjectsService {
       }
     }
 
+    // Si clientIds fourni, valider existence + activité avant l'update
+    if (clientIds !== undefined && clientIds.length > 0) {
+      const found = await this.prisma.client.findMany({
+        where: { id: { in: clientIds }, isActive: true },
+        select: { id: true },
+      });
+      if (found.length !== clientIds.length) {
+        const foundIds = new Set(found.map((c) => c.id));
+        const missing = clientIds.filter((id) => !foundIds.has(id));
+        throw new BadRequestException(
+          `Clients introuvables ou inactifs : ${missing.join(', ')}`,
+        );
+      }
+    }
+
     const project = await this.prisma.project.update({
       where: { id },
       data: {
@@ -492,42 +546,23 @@ export class ProjectsService {
         ...(hiddenStatuses !== undefined && { hiddenStatuses }),
         ...(visibleStatuses !== undefined && { visibleStatuses }),
       },
-      include: {
-        manager: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-          },
-        },
-        sponsor: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-          },
-        },
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                avatarUrl: true,
-                avatarPreset: true,
-                email: true,
-              },
-            },
-          },
-        },
-      },
     });
 
+    // Sync clients hors transaction : on remplace complètement l'ensemble si
+    // clientIds est fourni. `undefined` = pas touché. `[]` = tout détaché.
+    if (clientIds !== undefined) {
+      await this.prisma.projectClient.deleteMany({ where: { projectId: id } });
+      if (clientIds.length > 0) {
+        await this.prisma.projectClient.createMany({
+          data: clientIds.map((clientId) => ({ projectId: id, clientId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    // Le sync clients est en DB ; le client récupérera la liste mise à jour
+    // via GET /projects/:id. Le retour reste identique au comportement
+    // antérieur pour éviter toute régression sur les consumers.
     return project;
   }
 

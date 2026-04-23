@@ -11,6 +11,8 @@ import {
 import { useTranslations } from "next-intl";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import { usersService } from "@/services/users.service";
+import { ClientSelector } from "@/components/clients/ClientSelector";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface ProjectEditModalProps {
   isOpen: boolean;
@@ -42,6 +44,10 @@ export function ProjectEditModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [clientIds, setClientIds] = useState<string[]>([]);
+  const { hasPermission } = usePermissions();
+  const canAssignClients = hasPermission("clients:assign_to_project");
+  const canReadClients = hasPermission("clients:read");
 
   useEffect(() => {
     if (project && isOpen) {
@@ -61,6 +67,7 @@ export function ProjectEditModal({
         sponsorId: project.sponsorId || "",
         budgetHours: project.budgetHours || undefined,
       });
+      setClientIds((project.clients || []).map((c) => c.id));
       setError(null);
 
       // Fetch users for manager/sponsor dropdowns
@@ -80,12 +87,20 @@ export function ProjectEditModal({
     setSaving(true);
 
     try {
-      const payload = {
+      const payload: UpdateProjectDto & {
+        icon?: string | null;
+        managerId?: string | null;
+        sponsorId?: string | null;
+        clientIds?: string[];
+      } = {
         ...formData,
         icon: formData.icon || null,
         managerId: formData.managerId || null,
         sponsorId: formData.sponsorId || null,
       };
+      if (canAssignClients) {
+        payload.clientIds = clientIds;
+      }
       await onSave(payload);
       onClose();
     } catch (err) {
@@ -317,6 +332,26 @@ export function ProjectEditModal({
               placeholder={t("projectEditModal.budgetHoursPlaceholder")}
             />
           </div>
+
+          {canReadClients && (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                Clients (commanditaires)
+              </label>
+              <ClientSelector
+                value={clientIds}
+                onChange={setClientIds}
+                placeholder="Sélectionner un ou plusieurs clients…"
+                disabled={!canAssignClients}
+              />
+              {!canAssignClients && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Lecture seule — permission{" "}
+                  <code>clients:assign_to_project</code> requise pour modifier.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
             <button
