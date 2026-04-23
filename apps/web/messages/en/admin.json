@@ -262,7 +262,42 @@
       "noData": "No data available for this period.",
       "progress": "Progress",
       "project": "Project",
-      "status": "Status"
+      "status": "Status",
+      "loadError": "Failed to load data",
+      "tooManyProjectsWarning": "Display limited to the first 10 projects for readability",
+      "noActiveTasks": "No active tasks to display",
+      "noProjectsToDisplay": "No projects to display",
+      "noTasksToDisplay": "No tasks to display",
+      "noCompletionsRecent": "No completions in this period",
+      "byPriority": "By priority",
+      "byStatus": "By status",
+      "todo": "To do",
+      "inProgress": "In progress",
+      "inReview": "In review",
+      "blocked": "Blocked",
+      "done": "Done",
+      "total": "Total",
+      "completedTooltip": "Tasks completed in the period",
+      "createdTooltip": "Tasks created in the period",
+      "overdueTooltip": "Tasks that became overdue in the period",
+      "ratioTooltip": "Ratio of completed vs created tasks",
+      "completedLastNDays": "Completed (last {count} days)",
+      "health": {
+        "green": "Good",
+        "orange": "Warning",
+        "red": "Critical"
+      },
+      "cols": {
+        "project": "Project",
+        "progress": "Completion %",
+        "milestones": "Milestones",
+        "activeTasks": "Active tasks",
+        "health": "Health"
+      },
+      "kpi": {
+        "onTimeOver": "{onTime} milestones reached on time of {total} due",
+        "summary": "{completed} done · {overdue} late · {upcoming} upcoming"
+      }
     },
     "ganttPortfolio": {
       "title": "Portfolio Gantt - Projects Overview",

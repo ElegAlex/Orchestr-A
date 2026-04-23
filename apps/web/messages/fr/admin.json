@@ -262,7 +262,42 @@
       "noData": "Aucune donnée disponible pour cette période.",
       "progress": "Progression",
       "project": "Projet",
-      "status": "Statut"
+      "status": "Statut",
+      "loadError": "Erreur lors du chargement des données",
+      "tooManyProjectsWarning": "Affichage limité aux 10 premiers projets pour lisibilité",
+      "noActiveTasks": "Aucune tâche active à afficher",
+      "noProjectsToDisplay": "Aucun projet à afficher",
+      "noTasksToDisplay": "Aucune tâche à afficher",
+      "noCompletionsRecent": "Aucune complétion sur la période",
+      "byPriority": "Par priorité",
+      "byStatus": "Par statut",
+      "todo": "À faire",
+      "inProgress": "En cours",
+      "inReview": "En révision",
+      "blocked": "Bloquée",
+      "done": "Terminé",
+      "total": "Total",
+      "completedTooltip": "Tâches terminées sur la période",
+      "createdTooltip": "Tâches créées sur la période",
+      "overdueTooltip": "Tâches passées en retard sur la période",
+      "ratioTooltip": "Ratio tâches terminées / créées",
+      "completedLastNDays": "Terminées ({count} derniers jours)",
+      "health": {
+        "green": "Bon",
+        "orange": "Attention",
+        "red": "Critique"
+      },
+      "cols": {
+        "project": "Projet",
+        "progress": "% complétion",
+        "milestones": "Jalons",
+        "activeTasks": "Tâches actives",
+        "health": "Santé"
+      },
+      "kpi": {
+        "onTimeOver": "{onTime} jalons atteints à temps sur {total} échus",
+        "summary": "{completed} terminés · {overdue} en retard · {upcoming} à venir"
+      }
     },
     "ganttPortfolio": {
       "title": "Gantt Portfolio - Vue d'ensemble des Projets",
