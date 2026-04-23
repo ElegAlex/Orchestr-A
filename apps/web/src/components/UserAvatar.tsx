@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { getGradient, getInitials } from "@/lib/avatar";
 import type { UserSummary } from "@/types";
 
@@ -31,9 +31,9 @@ export function UserAvatar({ user, size = "md", badge, className = "" }: UserAva
   const fullName = `${user.firstName} ${user.lastName}`.trim();
   const [imageFailed, setImageFailed] = useState(false);
 
-  const prevUserIdRef = useRef(user.id);
-  if (prevUserIdRef.current !== user.id) {
-    prevUserIdRef.current = user.id;
+  const [prevUserId, setPrevUserId] = useState(user.id);
+  if (prevUserId !== user.id) {
+    setPrevUserId(user.id);
     setImageFailed(false);
   }
 
