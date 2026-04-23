@@ -330,4 +330,135 @@ describe('SchoolVacationsService', () => {
       expect(mockPrismaService.schoolVacation.delete).not.toHaveBeenCalled();
     });
   });
+
+  describe('importFromOpenData', () => {
+    const mockApiResponse = {
+      total_count: 2,
+      results: [
+        {
+          description: 'Vacances de Noël',
+          start_date: '2025-12-20T00:00:00',
+          end_date: '2026-01-05T00:00:00',
+        },
+        {
+          description: 'Vacances de la Toussaint',
+          start_date: '2025-10-18T00:00:00',
+          end_date: '2025-11-03T00:00:00',
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      // Stub global fetch
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: vi.fn().mockResolvedValue(mockApiResponse),
+        }),
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('should import school vacations from open data and return counts', async () => {
+      mockPrismaService.schoolVacation.create.mockResolvedValue({});
+
+      const result = await service.importFromOpenData(
+        2025,
+        SchoolVacationZone.A,
+        'user-1',
+      );
+
+      expect(result.created).toBe(2);
+      expect(result.skipped).toBe(0);
+      expect(mockPrismaService.schoolVacation.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('should skip vacations that already exist (P2002)', async () => {
+      const prismaError = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        { code: 'P2002', clientVersion: '6.0.0', meta: {} },
+      );
+      mockPrismaService.schoolVacation.create.mockRejectedValue(prismaError);
+
+      const result = await service.importFromOpenData(
+        2025,
+        SchoolVacationZone.A,
+        'user-1',
+      );
+
+      expect(result.created).toBe(0);
+      expect(result.skipped).toBe(2);
+    });
+
+    it('should rethrow non-P2002 errors', async () => {
+      const genericError = new Error('DB connection failed');
+      mockPrismaService.schoolVacation.create.mockRejectedValue(genericError);
+
+      await expect(
+        service.importFromOpenData(2025, SchoolVacationZone.A, 'user-1'),
+      ).rejects.toThrow('DB connection failed');
+    });
+
+    it('should throw when fetch response is not ok', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+        }),
+      );
+
+      await expect(
+        service.importFromOpenData(2025, SchoolVacationZone.A, 'user-1'),
+      ).rejects.toThrow('Open Data API error');
+    });
+
+    it('should deduplicate records with same description taking widest range', async () => {
+      const duplicateApiResponse = {
+        total_count: 3,
+        results: [
+          {
+            description: 'Vacances de Noël',
+            start_date: '2025-12-22T00:00:00',
+            end_date: '2026-01-03T00:00:00',
+          },
+          {
+            description: 'Vacances de Noël',
+            start_date: '2025-12-20T00:00:00', // earlier start
+            end_date: '2026-01-05T00:00:00', // later end
+          },
+          {
+            description: 'Vacances de Noël',
+            start_date: '2025-12-23T00:00:00',
+            end_date: '2025-12-31T00:00:00',
+          },
+        ],
+      };
+
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: vi.fn().mockResolvedValue(duplicateApiResponse),
+        }),
+      );
+
+      mockPrismaService.schoolVacation.create.mockResolvedValue({});
+
+      const result = await service.importFromOpenData(
+        2025,
+        SchoolVacationZone.A,
+        'user-1',
+      );
+
+      // 3 records with same description → deduplicated to 1
+      expect(result.created).toBe(1);
+      expect(mockPrismaService.schoolVacation.create).toHaveBeenCalledTimes(1);
+    });
+  });
 });
