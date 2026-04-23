@@ -227,6 +227,7 @@ jobs:
         run: pnpm --filter database db:seed
         env:
           DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
+          E2E_SEED: "true"
 
       - name: Build Applications
         run: pnpm run build
