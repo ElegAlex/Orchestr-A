@@ -144,8 +144,7 @@ export default function PredefinedTasksAdminPage() {
       startTime: task.startTime ?? "09:00",
       endTime: task.endTime ?? "12:00",
       isExternalIntervention: task.isExternalIntervention ?? false,
-      // FIXME(W1.3): remove cast once PredefinedTask interface has weight field
-      weight: (task as PredefinedTask & { weight?: number }).weight ?? 1,
+      weight: task.weight ?? 1,
     });
     setShowEditModal(true);
   };
@@ -154,8 +153,7 @@ export default function PredefinedTasksAdminPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      // FIXME(W1.3): remove cast once CreatePredefinedTaskDto has weight field
-      const dto = {
+      const dto: CreatePredefinedTaskDto = {
         name: formData.name,
         description: formData.description || undefined,
         color: formData.color,
@@ -167,7 +165,7 @@ export default function PredefinedTasksAdminPage() {
           startTime: formData.startTime,
           endTime: formData.endTime,
         }),
-      } as CreatePredefinedTaskDto & { weight: number };
+      };
       await predefinedTasksService.create(dto);
       toast.success("Tâche prédéfinie créée");
       setShowCreateModal(false);
@@ -187,8 +185,7 @@ export default function PredefinedTasksAdminPage() {
     if (!editingTask) return;
     setSaving(true);
     try {
-      // FIXME(W1.3): remove cast once UpdatePredefinedTaskDto has weight field
-      const dto = {
+      const dto: UpdatePredefinedTaskDto = {
         name: formData.name,
         description: formData.description || undefined,
         color: formData.color,
@@ -200,7 +197,7 @@ export default function PredefinedTasksAdminPage() {
           startTime: formData.startTime,
           endTime: formData.endTime,
         }),
-      } as UpdatePredefinedTaskDto & { weight: number };
+      };
       await predefinedTasksService.update(editingTask.id, dto);
       toast.success("Tâche prédéfinie mise à jour");
       setShowEditModal(false);

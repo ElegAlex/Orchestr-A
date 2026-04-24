@@ -25,6 +25,7 @@ export interface PredefinedTask {
   endTime?: string | null; // Format "HH:mm"
   isExternalIntervention: boolean;
   isActive: boolean;
+  weight: number; // 1..5, pondération pour équilibrage
   createdAt: string;
   updatedAt: string;
 }
@@ -83,6 +84,7 @@ export interface CreatePredefinedTaskDto {
   startTime?: string;
   endTime?: string;
   isExternalIntervention?: boolean;
+  weight?: number; // 1..5, défaut 1 côté API
 }
 
 export interface UpdatePredefinedTaskDto {
@@ -95,6 +97,7 @@ export interface UpdatePredefinedTaskDto {
   endTime?: string;
   isExternalIntervention?: boolean;
   isActive?: boolean;
+  weight?: number; // 1..5
 }
 
 export type AssignmentPeriod = "MORNING" | "AFTERNOON" | "FULL_DAY";
