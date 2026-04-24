@@ -4,8 +4,15 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { PredefinedTasksService } from './predefined-tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { CreatePredefinedTaskDto } from './dto/create-predefined-task.dto';
+import { UpdateCompletionStatusDto } from './dto/update-completion-status.dto';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { PermissionsService } from '../rbac/permissions.service';
 
 describe('PredefinedTasksService', () => {
   let service: PredefinedTasksService;
@@ -32,6 +39,21 @@ describe('PredefinedTasksService', () => {
       update: vi.fn(),
       delete: vi.fn(),
     },
+    service: {
+      findMany: vi.fn(),
+    },
+    userService: {
+      findMany: vi.fn(),
+    },
+    $transaction: vi.fn(),
+  };
+
+  const mockAuditPersistenceService = {
+    log: vi.fn(),
+  };
+
+  const mockPermissionsService = {
+    getPermissionsForRole: vi.fn(),
   };
 
   const mockUser = {
@@ -80,7 +102,11 @@ describe('PredefinedTasksService', () => {
     id: 'rule-1',
     predefinedTaskId: 'task-1',
     userId: 'user-1',
+    recurrenceType: 'WEEKLY',
     dayOfWeek: 0,
+    weekInterval: 1,
+    monthlyOrdinal: null,
+    monthlyDayOfMonth: null,
     period: 'FULL_DAY',
     startDate: new Date('2026-01-06'),
     endDate: null,
@@ -105,6 +131,14 @@ describe('PredefinedTasksService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: AuditPersistenceService,
+          useValue: mockAuditPersistenceService,
+        },
+        {
+          provide: PermissionsService,
+          useValue: mockPermissionsService,
         },
       ],
     }).compile();
@@ -965,6 +999,199 @@ describe('PredefinedTasksService', () => {
       await expect(service.removeRecurringRule('unknown-id')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  // ===========================
+  // DTO UpdateCompletionStatusDto — validation
+  // ===========================
+
+  describe('UpdateCompletionStatusDto — validation', () => {
+    it('DTO-1: status DONE sans reason → valide', async () => {
+      const dto = plainToInstance(UpdateCompletionStatusDto, {
+        status: 'DONE',
+      });
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('DTO-2: status NOT_APPLICABLE sans reason → erreur (reason requise)', async () => {
+      const dto = plainToInstance(UpdateCompletionStatusDto, {
+        status: 'NOT_APPLICABLE',
+      });
+      const errors = await validate(dto);
+      const reasonError = errors.find((e) => e.property === 'reason');
+      expect(reasonError).toBeDefined();
+    });
+
+    it('DTO-3: status NOT_APPLICABLE avec reason ≥ 3 chars → valide', async () => {
+      const dto = plainToInstance(UpdateCompletionStatusDto, {
+        status: 'NOT_APPLICABLE',
+        reason: 'abc',
+      });
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('DTO-4: status INVALID → erreur IsIn', async () => {
+      const dto = plainToInstance(UpdateCompletionStatusDto, {
+        status: 'INVALID',
+      });
+      const errors = await validate(dto);
+      const statusError = errors.find((e) => e.property === 'status');
+      expect(statusError).toBeDefined();
+    });
+  });
+
+  // ===========================
+  // updateCompletionStatus — tests service
+  // ===========================
+
+  describe('updateCompletionStatus', () => {
+    const ownerUser = {
+      id: 'user-1',
+      role: { code: 'CONTRIBUTEUR', templateKey: 'CONTRIBUTEUR', id: 'r1', label: 'Contributeur', isSystem: true },
+    };
+
+    const managerUser = {
+      id: 'manager-1',
+      role: { code: 'MANAGER', templateKey: 'MANAGER', id: 'r2', label: 'Manager', isSystem: true },
+    };
+
+    const assignmentNotDone = {
+      id: 'assignment-1',
+      userId: 'user-1',
+      predefinedTaskId: 'task-1',
+      completionStatus: 'NOT_DONE',
+      completedAt: null,
+      completedById: null,
+      notApplicableReason: null,
+      date: new Date('2026-04-24'),
+      period: 'FULL_DAY',
+      assignedById: 'manager-1',
+      isRecurring: false,
+      recurringRuleId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const assignmentDone = {
+      ...assignmentNotDone,
+      completionStatus: 'DONE',
+      completedAt: new Date(),
+      completedById: 'user-1',
+    };
+
+    it('a. propriétaire marque NOT_DONE → DONE : ok, audit log créé', async () => {
+      mockPrismaService.predefinedTaskAssignment.findUnique.mockResolvedValue(
+        assignmentNotDone,
+      );
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'predefined_tasks:update-own-status',
+        'predefined_tasks:view',
+      ]);
+      const updatedAssignment = { ...assignmentNotDone, completionStatus: 'DONE', completedAt: expect.any(Date), completedById: 'user-1' };
+      mockPrismaService.$transaction.mockImplementation(
+        async (cb: (tx: typeof mockPrismaService) => Promise<unknown>) => cb(mockPrismaService),
+      );
+      mockPrismaService.predefinedTaskAssignment.update.mockResolvedValue(updatedAssignment);
+      mockAuditPersistenceService.log.mockResolvedValue(undefined);
+
+      const result = await service.updateCompletionStatus(
+        'assignment-1',
+        { status: 'DONE' },
+        ownerUser as any,
+      );
+
+      expect(result.completionStatus).toBe('DONE');
+      expect(mockAuditPersistenceService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'ASSIGNMENT_STATUS_CHANGED',
+          entityId: 'assignment-1',
+          actorId: 'user-1',
+          payload: expect.objectContaining({ before: 'NOT_DONE', after: 'DONE' }),
+        }),
+      );
+    });
+
+    it('b. non-propriétaire sans permission → ForbiddenException', async () => {
+      const otherAssignment = { ...assignmentNotDone, userId: 'user-OTHER' };
+      mockPrismaService.predefinedTaskAssignment.findUnique.mockResolvedValue(otherAssignment);
+      // manager n'a que update-own-status, pas update-any-status
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'predefined_tasks:update-own-status',
+      ]);
+
+      await expect(
+        service.updateCompletionStatus('assignment-1', { status: 'DONE' }, ownerUser as any),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('c. non-propriétaire avec update-any-status mais user hors périmètre → ForbiddenException', async () => {
+      const otherAssignment = { ...assignmentNotDone, userId: 'user-OTHER' };
+      mockPrismaService.predefinedTaskAssignment.findUnique.mockResolvedValue(otherAssignment);
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'predefined_tasks:update-own-status',
+        'predefined_tasks:update-any-status',
+      ]);
+      // manager ne gère aucun service
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findMany.mockResolvedValue([]);
+
+      await expect(
+        service.updateCompletionStatus('assignment-1', { status: 'DONE' }, managerUser as any),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('d. transition DONE → IN_PROGRESS (invalide) → ConflictException', async () => {
+      const donAssignment = { ...assignmentNotDone, completionStatus: 'DONE' };
+      mockPrismaService.predefinedTaskAssignment.findUnique.mockResolvedValue(donAssignment);
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'predefined_tasks:update-own-status',
+      ]);
+
+      await expect(
+        service.updateCompletionStatus('assignment-1', { status: 'IN_PROGRESS' }, ownerUser as any),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('e. transition NOT_DONE → NOT_APPLICABLE sans reason → erreur DTO (BadRequest)', async () => {
+      const dto = plainToInstance(UpdateCompletionStatusDto, {
+        status: 'NOT_APPLICABLE',
+      });
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+    });
+
+    it('f. NOT_FOUND sur id inexistant → NotFoundException', async () => {
+      mockPrismaService.predefinedTaskAssignment.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateCompletionStatus('unknown-id', { status: 'DONE' }, ownerUser as any),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('g. audit log inséré à chaque transition réussie', async () => {
+      mockPrismaService.predefinedTaskAssignment.findUnique.mockResolvedValue(
+        assignmentNotDone,
+      );
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'predefined_tasks:update-own-status',
+      ]);
+      const updated = { ...assignmentNotDone, completionStatus: 'IN_PROGRESS' };
+      mockPrismaService.$transaction.mockImplementation(
+        async (cb: (tx: typeof mockPrismaService) => Promise<unknown>) => cb(mockPrismaService),
+      );
+      mockPrismaService.predefinedTaskAssignment.update.mockResolvedValue(updated);
+      mockAuditPersistenceService.log.mockResolvedValue(undefined);
+
+      await service.updateCompletionStatus(
+        'assignment-1',
+        { status: 'IN_PROGRESS' },
+        ownerUser as any,
+      );
+
+      expect(mockAuditPersistenceService.log).toHaveBeenCalledTimes(1);
     });
   });
 });

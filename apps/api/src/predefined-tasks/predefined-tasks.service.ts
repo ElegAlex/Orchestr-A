@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePredefinedTaskDto } from './dto/create-predefined-task.dto';
@@ -15,10 +16,96 @@ import {
   GenerateFromRulesDto,
 } from './dto/create-recurring-rule.dto';
 import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
+import {
+  generateOccurrences,
+  RuleLike,
+} from './occurrence-generator';
+import { UpdateCompletionStatusDto } from './dto/update-completion-status.dto';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { PermissionsService } from '../rbac/permissions.service';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
+import type { PredefinedTaskAssignment } from 'database';
+
+/**
+ * Transitions de statut autorisées pour les assignations de tâches prédéfinies.
+ * Fonction pure exportée pour réutilisation dans planning.service.ts.
+ */
+export function isValidTransition(before: string, after: string): boolean {
+  const transitions: Record<string, string[]> = {
+    NOT_DONE: ['IN_PROGRESS', 'DONE', 'NOT_APPLICABLE'],
+    IN_PROGRESS: ['DONE', 'NOT_APPLICABLE'],
+    DONE: ['NOT_APPLICABLE', 'NOT_DONE'],
+    NOT_APPLICABLE: ['NOT_DONE'],
+  };
+  return transitions[before]?.includes(after) ?? false;
+}
+
+/**
+ * Vérifie si un utilisateur peut mettre à jour le statut d'une assignation.
+ * Fonction pure exportée pour réutilisation dans planning.service.ts
+ * (calcul de canUpdateStatus côté API computed flags).
+ */
+export function canUpdateAssignmentStatus(
+  assignmentUserId: string,
+  currentUserId: string,
+  permissions: readonly string[],
+  managedUserIds: Set<string> | 'all',
+): boolean {
+  const isOwn = assignmentUserId === currentUserId;
+  const hasOwnPerm = permissions.includes('predefined_tasks:update-own-status');
+  const hasAnyPerm = permissions.includes('predefined_tasks:update-any-status');
+
+  if (isOwn) return hasOwnPerm;
+
+  if (!hasAnyPerm) return false;
+
+  if (managedUserIds === 'all') return true;
+  return managedUserIds.has(assignmentUserId);
+}
 
 @Injectable()
 export class PredefinedTasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditPersistence: AuditPersistenceService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
+
+  /**
+   * Résout le périmètre de gestion d'un utilisateur :
+   * services managés (managerId) + services membres (user_services) → Set<userId>.
+   *
+   * NOTE: logique dupliquée de LeavesService.getManagedUserIds (privé, non partagé).
+   * TODO: extraire dans un helper RBAC partagé (packages/rbac ou apps/api/src/rbac/helpers/).
+   */
+  private async getManagedUserIds(
+    currentUserId: string,
+  ): Promise<Set<string>> {
+    const managedServices = await this.prisma.service.findMany({
+      where: { managerId: currentUserId },
+      select: { id: true },
+    });
+    const userServices = await this.prisma.userService.findMany({
+      where: { userId: currentUserId },
+      select: { serviceId: true },
+    });
+
+    const serviceIds = [
+      ...new Set([
+        ...managedServices.map((s) => s.id),
+        ...userServices.map((us) => us.serviceId),
+      ]),
+    ];
+
+    if (serviceIds.length === 0) return new Set<string>();
+
+    const usersInServices = await this.prisma.userService.findMany({
+      where: { serviceId: { in: serviceIds } },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    return new Set(usersInServices.map((us) => us.userId));
+  }
 
   // ===========================
   // CRUD Tâches Prédéfinies
@@ -354,7 +441,10 @@ export class PredefinedTasksService {
       data: {
         predefinedTaskId: dto.predefinedTaskId,
         userId: dto.userId,
-        dayOfWeek: dto.dayOfWeek,
+        recurrenceType: dto.recurrenceType ?? 'WEEKLY',
+        dayOfWeek: dto.dayOfWeek ?? null,
+        monthlyOrdinal: dto.monthlyOrdinal ?? null,
+        monthlyDayOfMonth: dto.monthlyDayOfMonth ?? null,
         period: dto.period,
         weekInterval: dto.weekInterval ?? 1,
         startDate: new Date(dto.startDate),
@@ -438,8 +528,20 @@ export class PredefinedTasksService {
     return this.prisma.predefinedTaskRecurringRule.update({
       where: { id },
       data: {
+        ...(dto.recurrenceType !== undefined && {
+          recurrenceType: dto.recurrenceType,
+        }),
         ...(dto.dayOfWeek !== undefined && { dayOfWeek: dto.dayOfWeek }),
+        ...(dto.monthlyOrdinal !== undefined && {
+          monthlyOrdinal: dto.monthlyOrdinal,
+        }),
+        ...(dto.monthlyDayOfMonth !== undefined && {
+          monthlyDayOfMonth: dto.monthlyDayOfMonth,
+        }),
         ...(dto.period !== undefined && { period: dto.period }),
+        ...(dto.weekInterval !== undefined && {
+          weekInterval: dto.weekInterval,
+        }),
         ...(dto.startDate !== undefined && {
           startDate: new Date(dto.startDate),
         }),
@@ -484,62 +586,128 @@ export class PredefinedTasksService {
     const results = { created: 0, skipped: 0 };
 
     for (const rule of rules) {
-      // Compute anchor: first day matching rule.dayOfWeek on or after rule.startDate
-      const anchor = new Date(rule.startDate);
-      const anchorJsDay = anchor.getDay();
-      const anchorOurDay = anchorJsDay === 0 ? 6 : anchorJsDay - 1;
-      const daysUntilTarget = (rule.dayOfWeek - anchorOurDay + 7) % 7;
-      anchor.setDate(anchor.getDate() + daysUntilTarget);
+      // Adapter Prisma record → RuleLike interface
+      const ruleLike: RuleLike = {
+        id: rule.id,
+        recurrenceType: (rule.recurrenceType ?? 'WEEKLY') as
+          | 'WEEKLY'
+          | 'MONTHLY_ORDINAL'
+          | 'MONTHLY_DAY',
+        dayOfWeek: rule.dayOfWeek,
+        weekInterval: rule.weekInterval ?? 1,
+        monthlyOrdinal: rule.monthlyOrdinal,
+        monthlyDayOfMonth: rule.monthlyDayOfMonth,
+        startDate: rule.startDate,
+        endDate: rule.endDate ?? null,
+        isActive: rule.isActive,
+      };
 
-      const weekInterval = rule.weekInterval ?? 1;
+      const dates = generateOccurrences(ruleLike, rangeStart, rangeEnd);
 
-      const current = new Date(rangeStart);
-      while (current <= rangeEnd) {
-        const jsDayOfWeek = current.getDay();
-        const ourDayOfWeek = jsDayOfWeek === 0 ? 6 : jsDayOfWeek - 1;
-
-        if (ourDayOfWeek === rule.dayOfWeek) {
-          const ruleStart = new Date(rule.startDate);
-          const ruleEnd = rule.endDate ? new Date(rule.endDate) : null;
-
-          if (current >= ruleStart && (!ruleEnd || current <= ruleEnd)) {
-            const diffMs = current.getTime() - anchor.getTime();
-            const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
-
-            if (diffWeeks % weekInterval === 0) {
-              try {
-                await this.prisma.predefinedTaskAssignment.create({
-                  data: {
-                    predefinedTaskId: rule.predefinedTaskId,
-                    userId: rule.userId,
-                    date: new Date(current),
-                    period: rule.period,
-                    assignedById,
-                    isRecurring: true,
-                    recurringRuleId: rule.id,
-                  },
-                });
-                results.created++;
-              } catch (error: unknown) {
-                if (
-                  typeof error === 'object' &&
-                  error !== null &&
-                  'code' in error &&
-                  (error as { code: string }).code === 'P2002'
-                ) {
-                  results.skipped++;
-                } else {
-                  throw error;
-                }
-              }
-            }
+      for (const date of dates) {
+        try {
+          await this.prisma.predefinedTaskAssignment.create({
+            data: {
+              predefinedTaskId: rule.predefinedTaskId,
+              userId: rule.userId,
+              date,
+              period: rule.period,
+              assignedById,
+              isRecurring: true,
+              recurringRuleId: rule.id,
+            },
+          });
+          results.created++;
+        } catch (error: unknown) {
+          if (
+            typeof error === 'object' &&
+            error !== null &&
+            'code' in error &&
+            (error as { code: string }).code === 'P2002'
+          ) {
+            results.skipped++;
+          } else {
+            throw error;
           }
         }
-
-        current.setDate(current.getDate() + 1);
       }
     }
 
     return { ...results, rulesProcessed: rules.length };
+  }
+
+  // ===========================
+  // Completion Status
+  // ===========================
+
+  async updateCompletionStatus(
+    assignmentId: string,
+    dto: UpdateCompletionStatusDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<PredefinedTaskAssignment> {
+    // 1. Charger l'assignation
+    const assignment = await this.prisma.predefinedTaskAssignment.findUnique({
+      where: { id: assignmentId },
+    });
+    if (!assignment) {
+      throw new NotFoundException(`Assignation ${assignmentId} introuvable`);
+    }
+
+    // 2. Vérifier les permissions
+    const permissions = await this.permissionsService.getPermissionsForRole(
+      currentUser.role?.code,
+    );
+    const hasAnyPerm = permissions.includes('predefined_tasks:update-any-status');
+    // Résolution du périmètre uniquement si nécessaire (optimisation + sécurité)
+    const managedUserIds: Set<string> | 'all' = hasAnyPerm
+      ? await this.getManagedUserIds(currentUser.id)
+      : new Set<string>();
+    const allowed = canUpdateAssignmentStatus(
+      assignment.userId,
+      currentUser.id,
+      permissions,
+      managedUserIds,
+    );
+    if (!allowed) {
+      throw new ForbiddenException(
+        'Vous ne disposez pas des droits pour modifier le statut de cette assignation',
+      );
+    }
+
+    // 3. Valider la transition
+    if (!isValidTransition(assignment.completionStatus, dto.status)) {
+      throw new ConflictException(
+        `Transition ${assignment.completionStatus} → ${dto.status} non autorisée`,
+      );
+    }
+
+    // 4. Mettre à jour en transaction
+    const updated = await this.prisma.$transaction(async (tx) => {
+      return tx.predefinedTaskAssignment.update({
+        where: { id: assignmentId },
+        data: {
+          completionStatus: dto.status,
+          completedAt: dto.status === 'DONE' ? new Date() : null,
+          completedById: dto.status === 'DONE' ? currentUser.id : null,
+          notApplicableReason:
+            dto.status === 'NOT_APPLICABLE' ? dto.reason ?? null : null,
+        },
+      });
+    });
+
+    // 5. Persister l'audit log (hors transaction — acceptable pour un log de statut)
+    await this.auditPersistence.log({
+      action: 'ASSIGNMENT_STATUS_CHANGED',
+      entityType: 'PredefinedTaskAssignment',
+      entityId: assignmentId,
+      actorId: currentUser.id,
+      payload: {
+        before: assignment.completionStatus,
+        after: dto.status,
+        reason: dto.reason ?? null,
+      },
+    });
+
+    return updated as PredefinedTaskAssignment;
   }
 }
