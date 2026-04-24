@@ -21,6 +21,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     settings: (await import(`../../messages/${locale}/settings.json`)).default,
     profile: (await import(`../../messages/${locale}/profile.json`)).default,
     suivi: (await import(`../../messages/${locale}/suivi.json`)).default,
+    predefinedTasks: (await import(`../../messages/${locale}/predefinedTasks.json`)).default,
   };
 
   return {

@@ -1,0 +1,14 @@
+{
+  "weight": {
+    "label": "Poids / charge",
+    "hint": "Pondération utilisée par l'équilibrage automatique (1 = très légère, 5 = très lourde)",
+    "ariaLabel": "Niveau de poids : {level}",
+    "levels": {
+      "1": "Très légère",
+      "2": "Légère",
+      "3": "Normale",
+      "4": "Lourde",
+      "5": "Très lourde"
+    }
+  }
+}

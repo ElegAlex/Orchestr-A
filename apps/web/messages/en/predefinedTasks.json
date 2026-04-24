@@ -1,0 +1,14 @@
+{
+  "weight": {
+    "label": "Weight / workload",
+    "hint": "Weight used by automatic balancing (1 = very light, 5 = very heavy)",
+    "ariaLabel": "Weight level: {level}",
+    "levels": {
+      "1": "Very light",
+      "2": "Light",
+      "3": "Normal",
+      "4": "Heavy",
+      "5": "Very heavy"
+    }
+  }
+}

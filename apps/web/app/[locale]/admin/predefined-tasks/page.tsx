@@ -13,6 +13,7 @@ import {
 } from "@/services/predefined-tasks.service";
 import toast from "react-hot-toast";
 import { RecurringRulesModal } from "@/components/predefined-tasks/RecurringRulesModal";
+import { WeightInput } from "@/components/predefined-tasks/WeightInput";
 
 const DURATION_LABELS: Record<TaskDuration, string> = {
   HALF_DAY: "Demi-journée",
@@ -65,6 +66,7 @@ interface TaskFormData {
   startTime: string;
   endTime: string;
   isExternalIntervention: boolean;
+  weight: number;
 }
 
 const EMPTY_FORM: TaskFormData = {
@@ -76,6 +78,7 @@ const EMPTY_FORM: TaskFormData = {
   startTime: "09:00",
   endTime: "12:00",
   isExternalIntervention: false,
+  weight: 1,
 };
 
 function formatDuration(task: PredefinedTask): string {
@@ -141,6 +144,8 @@ export default function PredefinedTasksAdminPage() {
       startTime: task.startTime ?? "09:00",
       endTime: task.endTime ?? "12:00",
       isExternalIntervention: task.isExternalIntervention ?? false,
+      // FIXME(W1.3): remove cast once PredefinedTask interface has weight field
+      weight: (task as PredefinedTask & { weight?: number }).weight ?? 1,
     });
     setShowEditModal(true);
   };
@@ -149,18 +154,20 @@ export default function PredefinedTasksAdminPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const dto: CreatePredefinedTaskDto = {
+      // FIXME(W1.3): remove cast once CreatePredefinedTaskDto has weight field
+      const dto = {
         name: formData.name,
         description: formData.description || undefined,
         color: formData.color,
         icon: formData.icon,
         defaultDuration: formData.defaultDuration,
         isExternalIntervention: formData.isExternalIntervention,
+        weight: formData.weight,
         ...(formData.defaultDuration === "TIME_SLOT" && {
           startTime: formData.startTime,
           endTime: formData.endTime,
         }),
-      };
+      } as CreatePredefinedTaskDto & { weight: number };
       await predefinedTasksService.create(dto);
       toast.success("Tâche prédéfinie créée");
       setShowCreateModal(false);
@@ -180,18 +187,20 @@ export default function PredefinedTasksAdminPage() {
     if (!editingTask) return;
     setSaving(true);
     try {
-      const dto: UpdatePredefinedTaskDto = {
+      // FIXME(W1.3): remove cast once UpdatePredefinedTaskDto has weight field
+      const dto = {
         name: formData.name,
         description: formData.description || undefined,
         color: formData.color,
         icon: formData.icon,
         defaultDuration: formData.defaultDuration,
         isExternalIntervention: formData.isExternalIntervention,
+        weight: formData.weight,
         ...(formData.defaultDuration === "TIME_SLOT" && {
           startTime: formData.startTime,
           endTime: formData.endTime,
         }),
-      };
+      } as UpdatePredefinedTaskDto & { weight: number };
       await predefinedTasksService.update(editingTask.id, dto);
       toast.success("Tâche prédéfinie mise à jour");
       setShowEditModal(false);
@@ -613,6 +622,16 @@ function TaskFormModal({
             >
               🔴 Intervention extérieure
             </label>
+          </div>
+
+          {/* Weight */}
+          <div>
+            <WeightInput
+              id="pt-weight"
+              value={formData.weight}
+              onChange={(v) => onChange({ ...formData, weight: v })}
+              disabled={saving}
+            />
           </div>
 
           {/* Icon picker */}
