@@ -74,6 +74,7 @@ model User {
   managedProjects                  Project[]                     @relation("ProjectManager")
   sponsoredProjects                Project[]                     @relation("ProjectSponsor")
   auditLogs                        AuditLog[]                    @relation("AuditActor")
+  completedAssignments             PredefinedTaskAssignment[]    @relation("AssignmentCompletedBy")
 
   @@map("users")
 }
@@ -961,40 +962,50 @@ model PredefinedTask {
 }
 
 model PredefinedTaskAssignment {
-  id               String   @id @default(uuid())
-  predefinedTaskId String
-  userId           String
-  date             DateTime
-  period           String // "MORNING" | "AFTERNOON" | "FULL_DAY"
-  assignedById     String
-  isRecurring      Boolean  @default(false)
-  recurringRuleId  String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                  String    @id @default(uuid())
+  predefinedTaskId    String
+  userId              String
+  date                DateTime
+  period              String // "MORNING" | "AFTERNOON" | "FULL_DAY"
+  assignedById        String
+  isRecurring         Boolean   @default(false)
+  recurringRuleId     String?
+  completionStatus    String    @default("NOT_DONE") // NOT_DONE | IN_PROGRESS | DONE | NOT_APPLICABLE
+  completedAt         DateTime?
+  completedById       String?
+  notApplicableReason String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   // Relations
   predefinedTask PredefinedTask               @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
   user           User                         @relation("PredefinedTaskAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
   assignedBy     User                         @relation("PredefinedTaskAssignmentAssigner", fields: [assignedById], references: [id], onDelete: Cascade)
   recurringRule  PredefinedTaskRecurringRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
+  completedBy    User?                        @relation("AssignmentCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
 
   @@unique([predefinedTaskId, userId, date, period])
+  @@index([date, userId])
+  @@index([completionStatus, date])
   @@map("predefined_task_assignments")
 }
 
 model PredefinedTaskRecurringRule {
-  id               String    @id @default(uuid())
-  predefinedTaskId String
-  userId           String
-  dayOfWeek        Int // 0=Monday, 1=Tuesday, ..., 6=Sunday
-  period           String // "MORNING" | "AFTERNOON" | "FULL_DAY"
-  weekInterval     Int       @default(1) // 1=weekly, 2=biweekly, 3=every 3 weeks...
-  startDate        DateTime
-  endDate          DateTime?
-  isActive         Boolean   @default(true)
-  createdById      String
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  predefinedTaskId  String
+  userId            String
+  dayOfWeek         Int? // 0=Monday..6=Sunday ; NULL pour MONTHLY_DAY
+  period            String // "MORNING" | "AFTERNOON" | "FULL_DAY"
+  weekInterval      Int       @default(1) // 1=weekly, 2=biweekly... pour WEEKLY uniquement
+  recurrenceType    String    @default("WEEKLY") // WEEKLY | MONTHLY_ORDINAL | MONTHLY_DAY
+  monthlyOrdinal    Int? // 1..5 (5 = dernière occurrence du mois) pour MONTHLY_ORDINAL
+  monthlyDayOfMonth Int? // 1..31 pour MONTHLY_DAY
+  startDate         DateTime
+  endDate           DateTime?
+  isActive          Boolean   @default(true)
+  createdById       String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // Relations
   predefinedTask PredefinedTask             @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
