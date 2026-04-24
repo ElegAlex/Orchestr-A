@@ -10,5 +10,43 @@
       "4": "Heavy",
       "5": "Very heavy"
     }
+  },
+  "recurrence": {
+    "type": {
+      "label": "Recurrence type",
+      "WEEKLY": "Weekly",
+      "MONTHLY_DAY": "Monthly on day",
+      "MONTHLY_ORDINAL": "Monthly on N-th day"
+    },
+    "monthlyDay": {
+      "label": "Day of month",
+      "hint": "If the day does not exist (e.g. February 31), the assignment is clamped to the last day of the month"
+    },
+    "monthlyOrdinal": {
+      "label": "Occurrence in month",
+      "options": {
+        "1": "1st",
+        "2": "2nd",
+        "3": "3rd",
+        "4": "4th",
+        "5": "Last"
+      }
+    },
+    "dayOfWeek": {
+      "label": "Day of week",
+      "options": {
+        "MONDAY": "Monday",
+        "TUESDAY": "Tuesday",
+        "WEDNESDAY": "Wednesday",
+        "THURSDAY": "Thursday",
+        "FRIDAY": "Friday",
+        "SATURDAY": "Saturday",
+        "SUNDAY": "Sunday"
+      }
+    },
+    "weekInterval": {
+      "label": "Frequency",
+      "hint": "1 = every week, 2 = every 2 weeks, etc."
+    }
   }
 }

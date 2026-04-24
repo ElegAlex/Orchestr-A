@@ -10,5 +10,43 @@
       "4": "Lourde",
       "5": "Très lourde"
     }
+  },
+  "recurrence": {
+    "type": {
+      "label": "Type de récurrence",
+      "WEEKLY": "Hebdomadaire",
+      "MONTHLY_DAY": "Mensuelle à date fixe",
+      "MONTHLY_ORDINAL": "Mensuelle ordinale"
+    },
+    "monthlyDay": {
+      "label": "Jour du mois",
+      "hint": "Si le jour n'existe pas (ex: 31 février), l'assignation est clampée au dernier jour du mois"
+    },
+    "monthlyOrdinal": {
+      "label": "Occurrence dans le mois",
+      "options": {
+        "1": "1er",
+        "2": "2e",
+        "3": "3e",
+        "4": "4e",
+        "5": "Dernier"
+      }
+    },
+    "dayOfWeek": {
+      "label": "Jour de la semaine",
+      "options": {
+        "MONDAY": "Lundi",
+        "TUESDAY": "Mardi",
+        "WEDNESDAY": "Mercredi",
+        "THURSDAY": "Jeudi",
+        "FRIDAY": "Vendredi",
+        "SATURDAY": "Samedi",
+        "SUNDAY": "Dimanche"
+      }
+    },
+    "weekInterval": {
+      "label": "Fréquence",
+      "hint": "1 = chaque semaine, 2 = toutes les 2 semaines, etc."
+    }
   }
 }

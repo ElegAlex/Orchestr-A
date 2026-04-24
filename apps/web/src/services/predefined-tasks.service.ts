@@ -14,6 +14,8 @@ export type DayOfWeek =
   | "SATURDAY"
   | "SUNDAY";
 
+export type RecurrenceType = "WEEKLY" | "MONTHLY_DAY" | "MONTHLY_ORDINAL";
+
 export interface PredefinedTask {
   id: string;
   name: string;
@@ -53,7 +55,10 @@ export interface PredefinedTaskRecurringRule {
   id: string;
   predefinedTaskId: string;
   userId: string;
+  recurrenceType?: RecurrenceType;
   dayOfWeek: DayOfWeek;
+  monthlyDayOfMonth?: number | null;
+  monthlyOrdinal?: number | null;
   period: TaskDuration;
   weekInterval: number;
   startDate: string;
@@ -121,15 +126,23 @@ export interface BulkAssignmentDto {
 export interface CreateRecurringRuleDto {
   predefinedTaskId: string;
   userId: string;
-  dayOfWeek: DayOfWeek;
+  recurrenceType?: RecurrenceType;
+  dayOfWeek?: DayOfWeek | null;
+  monthlyDayOfMonth?: number | null;
+  monthlyOrdinal?: number | null;
   period: TaskDuration;
-  weekInterval?: number;
+  weekInterval?: number | null;
   startDate: string;
   endDate?: string;
 }
 
 export interface UpdateRecurringRuleDto {
+  recurrenceType?: RecurrenceType;
+  dayOfWeek?: DayOfWeek | null;
+  monthlyDayOfMonth?: number | null;
+  monthlyOrdinal?: number | null;
   period?: TaskDuration;
+  weekInterval?: number | null;
   startDate?: string;
   endDate?: string;
   isActive?: boolean;
@@ -149,6 +162,7 @@ export interface BulkCreateRecurringRulesDto {
   weekInterval?: number;
   startDate: string;
   endDate?: string;
+  recurrenceType?: RecurrenceType;
 }
 
 export interface BulkCreateRecurringRulesResponse {
