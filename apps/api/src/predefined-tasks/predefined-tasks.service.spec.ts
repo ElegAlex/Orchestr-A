@@ -245,10 +245,12 @@ describe('PredefinedTasksService', () => {
 
       const result = await service.create('user-1', dto);
 
-      // weight passed to Prisma should be 1 (default) or absent (DB default)
+      // Le service applique explicitement `dto.weight ?? 1`, donc Prisma reçoit
+      // weight=1 à coup sûr. Vérification stricte pour que toute régression
+      // retirant le default côté service soit attrapée (vs. laisser le seul
+      // DB default, qui masquerait l'erreur côté API contract).
       const callArg = mockPrismaService.predefinedTask.create.mock.calls[0][0];
-      const weightSent = callArg.data.weight;
-      expect(weightSent === undefined || weightSent === 1).toBe(true);
+      expect(callArg.data.weight).toBe(1);
       expect(result.weight).toBe(1);
     });
   });

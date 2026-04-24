@@ -44,17 +44,43 @@ describe("WeightInput", () => {
     expect(radios).toHaveLength(5);
   });
 
-  // b. Le bouton correspondant à `value` a aria-pressed="true", les autres false
-  it("sets aria-pressed=true only on the active button", () => {
+  // b. Le bouton correspondant à `value` a aria-checked="true", les autres false
+  // (WAI-ARIA radio group uses aria-checked — pas aria-pressed qui est pour role=button)
+  it("sets aria-checked=true only on the active button", () => {
     render(<WeightInput value={3} onChange={onChange} />);
 
     const radios = screen.getAllByRole("radio");
     // radios[0]=1, [1]=2, [2]=3, [3]=4, [4]=5
-    expect(radios[0]).toHaveAttribute("aria-pressed", "false");
-    expect(radios[1]).toHaveAttribute("aria-pressed", "false");
-    expect(radios[2]).toHaveAttribute("aria-pressed", "true");
-    expect(radios[3]).toHaveAttribute("aria-pressed", "false");
-    expect(radios[4]).toHaveAttribute("aria-pressed", "false");
+    expect(radios[0]).toHaveAttribute("aria-checked", "false");
+    expect(radios[1]).toHaveAttribute("aria-checked", "false");
+    expect(radios[2]).toHaveAttribute("aria-checked", "true");
+    expect(radios[3]).toHaveAttribute("aria-checked", "false");
+    expect(radios[4]).toHaveAttribute("aria-checked", "false");
+  });
+
+  // b-bis. Roving tabindex : seul le bouton actif est tabbable
+  it("applies roving tabindex (active=0, others=-1)", () => {
+    render(<WeightInput value={4} onChange={onChange} />);
+
+    const radios = screen.getAllByRole("radio");
+    expect(radios[0]).toHaveAttribute("tabindex", "-1");
+    expect(radios[1]).toHaveAttribute("tabindex", "-1");
+    expect(radios[2]).toHaveAttribute("tabindex", "-1");
+    expect(radios[3]).toHaveAttribute("tabindex", "0");
+    expect(radios[4]).toHaveAttribute("tabindex", "-1");
+  });
+
+  // b-ter. Navigation clavier ArrowRight/ArrowLeft sélectionne la valeur suivante
+  it("arrow keys move selection and call onChange", () => {
+    render(<WeightInput value={3} onChange={onChange} />);
+
+    const radios = screen.getAllByRole("radio");
+    fireEvent.keyDown(radios[2], { key: "ArrowRight" });
+    expect(onChange).toHaveBeenCalledWith(4);
+
+    onChange.mockClear();
+    fireEvent.keyDown(radios[2], { key: "ArrowLeft" });
+    expect(onChange).toHaveBeenCalledWith(2);
   });
 
   // c. Click sur un bouton appelle onChange(n) avec le bon n (1..5)
