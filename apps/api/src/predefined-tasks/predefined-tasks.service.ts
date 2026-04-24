@@ -267,6 +267,7 @@ export class PredefinedTasksService {
             startTime: true,
             endTime: true,
             isExternalIntervention: true,
+            weight: true,
           },
         },
         user: {
@@ -278,6 +279,14 @@ export class PredefinedTasksService {
       },
       orderBy: [{ date: 'asc' }, { period: 'asc' }],
     });
+  }
+
+  /**
+   * Résout le périmètre de gestion d'un utilisateur (wrapper public de
+   * `getManagedUserIds` pour réutilisation depuis PlanningService — W2.5).
+   */
+  async resolveManagedUserIds(currentUserId: string): Promise<Set<string>> {
+    return this.getManagedUserIds(currentUserId);
   }
 
   async createAssignment(assignedById: string, dto: CreateAssignmentDto) {

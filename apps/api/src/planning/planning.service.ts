@@ -7,7 +7,10 @@ import { EventsService } from '../events/events.service';
 import { TeleworkService } from '../telework/telework.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { SchoolVacationsService } from '../school-vacations/school-vacations.service';
-import { PredefinedTasksService } from '../predefined-tasks/predefined-tasks.service';
+import {
+  PredefinedTasksService,
+  canUpdateAssignmentStatus,
+} from '../predefined-tasks/predefined-tasks.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { SettingsService } from '../settings/settings.service';
 
@@ -139,6 +142,26 @@ export class PlanningService {
       1,
     );
 
+    // W2.5 : enrichir chaque assignment avec canUpdateStatus (RBAC computed flag).
+    // Le front ne recalcule pas la permission (cf. feedback_api_computed_flags).
+    const hasAnyPerm = permissions.includes(
+      'predefined_tasks:update-any-status',
+    );
+    const managedUserIds = hasAnyPerm
+      ? await this.predefinedTasksService.resolveManagedUserIds(currentUser.id)
+      : new Set<string>();
+    const enrichedAssignments = (
+      predefinedAssignments as Array<{ userId: string }>
+    ).map((a) => ({
+      ...a,
+      canUpdateStatus: canUpdateAssignmentStatus(
+        a.userId,
+        currentUser.id,
+        permissions,
+        managedUserIds,
+      ),
+    }));
+
     return {
       users: usersResult.data,
       services: servicesResult.data,
@@ -148,7 +171,7 @@ export class PlanningService {
       telework: teleworkResult.data,
       holidays,
       schoolVacations,
-      predefinedAssignments,
+      predefinedAssignments: enrichedAssignments,
       settings: { lateThresholdDays: Math.max(0, Math.floor(lateThresholdDays ?? 1)) },
     };
   }

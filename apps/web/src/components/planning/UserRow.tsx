@@ -16,6 +16,7 @@ interface UserRowProps {
   canManageOthersTelework: boolean;
   canAssignPredefinedTask: boolean;
   lateThresholdDays: number;
+  onAssignmentStatusChanged?: () => void;
   getDayCell: (userId: string, date: Date) => DayCellData;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
@@ -40,6 +41,7 @@ export const UserRow = ({
   canManageOthersTelework,
   canAssignPredefinedTask,
   lateThresholdDays,
+  onAssignmentStatusChanged,
   getDayCell,
   onTeleworkToggle,
   onDragStart,
@@ -96,6 +98,7 @@ export const UserRow = ({
             }
             canAssignPredefinedTask={canAssignPredefinedTask}
             lateThresholdDays={lateThresholdDays}
+            onAssignmentStatusChanged={onAssignmentStatusChanged}
             onTeleworkToggle={onTeleworkToggle}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}

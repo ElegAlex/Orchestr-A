@@ -52,6 +52,8 @@ export interface PredefinedTaskAssignment {
   completedAt?: string | null;
   completedById?: string | null;
   notApplicableReason?: string | null;
+  /** Calculé côté API (computed flag RBAC) — indique si l'utilisateur courant peut changer le statut */
+  canUpdateStatus?: boolean;
   predefinedTask?: PredefinedTask;
   user?: {
     id: string;
@@ -59,6 +61,11 @@ export interface PredefinedTaskAssignment {
     lastName: string;
     email: string;
   };
+}
+
+export interface UpdateCompletionStatusDto {
+  status: CompletionStatus;
+  reason?: string;
 }
 
 export interface PredefinedTaskRecurringRule {
@@ -286,6 +293,17 @@ export const predefinedTasksService = {
 
   async deleteAssignment(id: string): Promise<void> {
     await api.delete(`/predefined-tasks/assignments/${id}`);
+  },
+
+  async updateCompletionStatus(
+    id: string,
+    dto: UpdateCompletionStatusDto,
+  ): Promise<PredefinedTaskAssignment> {
+    const response = await api.patch<PredefinedTaskAssignment>(
+      `/predefined-tasks/assignments/${id}/completion`,
+      dto,
+    );
+    return response.data;
   },
 
   // --- Règles récurrentes ---

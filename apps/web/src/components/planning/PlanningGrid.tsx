@@ -39,6 +39,7 @@ interface CollapsibleServiceSectionProps {
   canManageOthersTelework: boolean;
   canAssignPredefinedTask: boolean;
   lateThresholdDays: number;
+  onAssignmentStatusChanged?: () => void;
   getDayCell: (userId: string, date: Date) => DayCell;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
@@ -64,6 +65,7 @@ const CollapsibleServiceSection = ({
   canManageOthersTelework,
   canAssignPredefinedTask,
   lateThresholdDays,
+  onAssignmentStatusChanged,
   getDayCell,
   onTeleworkToggle,
   onDragStart,
@@ -95,6 +97,7 @@ const CollapsibleServiceSection = ({
             canManageOthersTelework={canManageOthersTelework}
             canAssignPredefinedTask={canAssignPredefinedTask}
             lateThresholdDays={lateThresholdDays}
+            onAssignmentStatusChanged={onAssignmentStatusChanged}
             getDayCell={getDayCell}
             onTeleworkToggle={onTeleworkToggle}
             onDragStart={onDragStart}
@@ -509,6 +512,7 @@ export const PlanningGrid = ({
                     canManageOthersTelework={canManageOthersTelework}
                     canAssignPredefinedTask={canAssignPredefinedTask}
                     lateThresholdDays={lateThresholdDays}
+                    onAssignmentStatusChanged={silentRefetch}
                     getDayCell={getDayCell}
                     onTeleworkToggle={handleTeleworkToggle}
                     onDragStart={handleDragStart}

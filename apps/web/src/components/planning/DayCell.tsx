@@ -1,7 +1,12 @@
 import { Task, TaskStatus } from "@/types";
 import { Event } from "@/services/events.service";
-import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
+import {
+  PredefinedTaskAssignment,
+  CompletionStatus,
+} from "@/services/predefined-tasks.service";
 import { DayCell as DayCellData } from "@/hooks/usePlanningData";
+import { AssignmentStatusBadge } from "@/components/predefined-tasks/AssignmentStatusBadge";
+import { useUpdateAssignmentStatus } from "@/hooks/useUpdateAssignmentStatus";
 import {
   getPriorityColor,
   getStatusIcon,
@@ -73,6 +78,7 @@ interface DayCellProps {
   canToggleTelework: boolean;
   canAssignPredefinedTask: boolean;
   lateThresholdDays: number;
+  onAssignmentStatusChanged?: () => void;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
   onDragEnd: () => void;
@@ -94,6 +100,7 @@ export const DayCell = ({
   canToggleTelework,
   canAssignPredefinedTask,
   lateThresholdDays,
+  onAssignmentStatusChanged,
   onTeleworkToggle,
   onDragStart,
   onDragEnd,
@@ -130,6 +137,9 @@ export const DayCell = ({
   const showExternalIntervention = usePlanningViewStore(
     (s) => s.legendFilters.externalIntervention,
   );
+
+  const { mutate: mutateStatus, isPending: statusMutationPending } =
+    useUpdateAssignmentStatus({ onSuccess: onAssignmentStatusChanged });
 
   const statusFilterMap = {
     todo: showTodo,
@@ -459,18 +469,22 @@ export const DayCell = ({
                           }
                   }
                 >
-                  {late && (
-                    <span
-                      className="absolute -top-1 -right-1 inline-flex items-center justify-center w-3 h-3 rounded-full bg-red-500 text-white text-[8px] font-bold leading-none"
-                      aria-label={t("dayCell.assignmentLate")}
-                      title={t("dayCell.assignmentLate")}
-                    >
-                      !
-                    </span>
-                  )}
                   {viewMode === "month" ? (
                     <div className="text-center" title={pt.name}>
                       <span>{isExternal ? "🔴" : pt.icon}</span>
+                      <AssignmentStatusBadge
+                        assignment={assignment}
+                        isLate={late}
+                        onTransition={(to: CompletionStatus, reason?: string) =>
+                          mutateStatus({
+                            assignmentId: assignment.id,
+                            status: to,
+                            reason,
+                          })
+                        }
+                        disabled={statusMutationPending}
+                        viewMode="month"
+                      />
                     </div>
                   ) : (
                     <div className="flex items-start space-x-1">
@@ -482,6 +496,22 @@ export const DayCell = ({
                           <p className="font-medium line-clamp-1 flex-1">
                             {pt.name}
                           </p>
+                          <AssignmentStatusBadge
+                            assignment={assignment}
+                            isLate={late}
+                            onTransition={(
+                              to: CompletionStatus,
+                              reason?: string,
+                            ) =>
+                              mutateStatus({
+                                assignmentId: assignment.id,
+                                status: to,
+                                reason,
+                              })
+                            }
+                            disabled={statusMutationPending}
+                            viewMode="week"
+                          />
                           <WeightDot
                             weight={pt.weight}
                             color={isExternal ? "#b91c1c" : pt.color}
