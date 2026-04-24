@@ -321,6 +321,7 @@ export const PlanningView = ({
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setViewMode("week")}
+                aria-pressed={viewMode === "week"}
                 className={`px-3 py-1 rounded text-sm transition ${
                   viewMode === "week"
                     ? "bg-white shadow-sm font-medium"
@@ -331,6 +332,7 @@ export const PlanningView = ({
               </button>
               <button
                 onClick={() => setViewMode("month")}
+                aria-pressed={viewMode === "month"}
                 className={`px-3 py-1 rounded text-sm transition ${
                   viewMode === "month"
                     ? "bg-white shadow-sm font-medium"
@@ -339,6 +341,19 @@ export const PlanningView = ({
               >
                 {t("month")}
               </button>
+              {hasPermission("planning:activity-view") && (
+                <button
+                  onClick={() => setViewMode("activity")}
+                  aria-pressed={viewMode === "activity"}
+                  className={`px-3 py-1 rounded text-sm transition ${
+                    viewMode === "activity"
+                      ? "bg-white shadow-sm font-medium"
+                      : "text-gray-600"
+                  }`}
+                >
+                  {t("activity")}
+                </button>
+              )}
             </div>
             <button
               onClick={() =>

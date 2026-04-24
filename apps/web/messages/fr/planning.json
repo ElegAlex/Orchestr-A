@@ -2,6 +2,7 @@
   "title": "Planning des Ressources",
   "week": "Semaine",
   "month": "Mois",
+  "activity": "Vue activité",
   "today": "Aujourd'hui",
   "create": "Créer",
   "createMenu": {
