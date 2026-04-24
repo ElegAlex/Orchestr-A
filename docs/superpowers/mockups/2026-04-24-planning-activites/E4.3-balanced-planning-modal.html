@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup E4.3 — Modale Planning équilibré</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Simulated focus ring for accessibility illustration */
+    .focus-demo:focus-within { outline: 2px solid #2563eb; outline-offset: 2px; }
+    /* Custom scrollbar for overflow zones */
+    .scroll-zone { max-height: 320px; overflow-y: auto; }
+    .scroll-zone::-webkit-scrollbar { width: 6px; }
+    .scroll-zone::-webkit-scrollbar-track { background: #f4f4f5; }
+    .scroll-zone::-webkit-scrollbar-thumb { background: #a1a1aa; border-radius: 3px; }
+    /* Horizontal progress bar */
+    .charge-bar { transition: width 0.3s ease; }
+    /* Tag pill */
+    .tag-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; }
+    /* Stepper connector */
+    .step-line { flex: 1; height: 2px; background: #e4e4e7; }
+    .step-line.done { background: #2563eb; }
+  </style>
+</head>
+<body class="bg-zinc-100 p-8 space-y-20 font-sans text-zinc-800">
+
+  <!-- ===== HEADER GLOBAL ===== -->
+  <header class="text-center space-y-1">
+    <h1 class="text-2xl font-bold text-zinc-900">Mockup E4.3 — Modale Planning équilibré</h1>
+    <p class="text-sm text-zinc-500">Surface UI : <code class="bg-zinc-200 px-1 rounded">BalancedPlanningModal</code> — Orchestr'A · Contrôle de Gestion · <time datetime="2026-04-24">2026-04-24</time></p>
+    <p class="text-xs text-zinc-400 mt-2">3 variantes · Données CDG réalistes · Sans JS</p>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       VARIANTE A — 2 panneaux empilés dans une même modale (scroll interne)
+       ══════════════════════════════════════════════════════════════════════ -->
+  <section class="space-y-4">
+    <h2 class="text-xl font-semibold text-zinc-900 border-b border-zinc-200 pb-2">Variante A — Panneaux empilés (config → aperçu, scroll interne)</h2>
+    <p class="text-sm text-zinc-600">
+      <strong>Avantages :</strong> Parcours linéaire naturel, tout visible en une seule modale, configuration toujours accessible en scrollant.
+      <strong>Inconvénients :</strong> Modale haute, tension UX si l'aperçu est dense ; l'utilisateur perd de vue la config une fois l'aperçu affiché.
+    </p>
+
+    <!-- Overlay + Card -->
+    <div class="relative rounded-xl overflow-hidden bg-zinc-900/10 p-6">
+      <!-- Overlay simulation -->
+      <div class="absolute inset-0 bg-zinc-900/50 rounded-xl pointer-events-none"></div>
+
+      <!-- Modal card -->
+      <div class="relative mx-auto max-w-3xl bg-white rounded-xl shadow-2xl overflow-hidden">
+
+        <!-- Header modale -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+          <div class="flex items-center gap-2 text-blue-600">
+            <!-- Sparkles icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
+            <h3 class="font-semibold text-zinc-900 text-base">Planning équilibré automatique</h3>
+          </div>
+          <button class="text-zinc-400 hover:text-zinc-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-600" aria-label="Fermer">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <!-- Scroll zone interne -->
+        <div class="scroll-zone px-6 py-5 space-y-6">
+
+          <!-- ── PANNEAU 1 : CONFIGURATION ── -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-2 text-zinc-700">
+              <!-- ListTodo icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              <span class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Configuration</span>
+            </div>
+
+            <!-- DateRange -->
+            <fieldset class="space-y-1">
+              <legend class="text-sm font-medium text-zinc-700 flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Plage de dates
+              </legend>
+              <div class="flex gap-3">
+                <div class="flex-1">
+                  <label class="text-xs text-zinc-500 mb-0.5 block">Du</label>
+                  <div class="border border-zinc-200 rounded-lg px-3 py-2 text-sm bg-zinc-50 text-zinc-700">01/05/2026</div>
+                </div>
+                <div class="flex-1">
+                  <label class="text-xs text-zinc-500 mb-0.5 block">Au</label>
+                  <div class="border border-zinc-200 rounded-lg px-3 py-2 text-sm bg-zinc-50 text-zinc-700">31/05/2026</div>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- Agents / Service -->
+            <div class="space-y-1">
+              <label class="text-sm font-medium text-zinc-700 flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Agents (ou service)
+              </label>
+              <div class="border border-zinc-200 rounded-lg px-3 py-2 bg-zinc-50 flex flex-wrap gap-1.5 min-h-[42px]">
+                <span class="tag-pill bg-blue-100 text-blue-700">Marie D. <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+                <span class="tag-pill bg-blue-100 text-blue-700">Paul L. <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+                <span class="tag-pill bg-blue-100 text-blue-700">Sophie M. <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+                <span class="tag-pill bg-blue-100 text-blue-700">Karim B. <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+                <span class="text-xs text-zinc-400 self-center">+ Ajouter…</span>
+              </div>
+              <p class="text-xs text-zinc-400">Ou sélectionner un service : <span class="underline cursor-pointer text-blue-600">Contrôle de Gestion</span></p>
+            </div>
+
+            <!-- Tâches -->
+            <div class="space-y-1">
+              <label class="text-sm font-medium text-zinc-700 flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="m9 12 2 2 4-4"/></svg>
+                Tâches à équilibrer
+              </label>
+              <div class="border border-zinc-200 rounded-lg px-3 py-2 bg-zinc-50 flex flex-wrap gap-1.5 min-h-[42px]">
+                <span class="tag-pill bg-zinc-200 text-zinc-700">Permanence <span class="text-zinc-400 ml-0.5">poids 1</span></span>
+                <span class="tag-pill bg-zinc-200 text-zinc-700">Saisie mensuelle <span class="text-zinc-400 ml-0.5">poids 3</span></span>
+                <span class="tag-pill bg-zinc-200 text-zinc-700">Reporting <span class="text-zinc-400 ml-0.5">poids 5</span></span>
+                <span class="text-xs text-zinc-400 self-center">+ Ajouter…</span>
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-1">
+              <button class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+                Prévisualiser
+              </button>
+            </div>
+          </div>
+
+          <!-- Séparateur -->
+          <div class="border-t border-zinc-100"></div>
+
+          <!-- ── PANNEAU 2 : APERÇU ── -->
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 text-zinc-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <span class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Aperçu — Mai 2026</span>
+              </div>
+              <!-- Equity badge: emerald 0.87 -->
+              <div class="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1 rounded-full text-xs font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Ratio d'équité : 0.87
+              </div>
+            </div>
+
+            <!-- Tableau charges par agent -->
+            <div class="overflow-hidden rounded-lg border border-zinc-200">
+              <table class="w-full text-sm">
+                <thead class="bg-zinc-50 text-xs text-zinc-500 uppercase tracking-wide">
+                  <tr>
+                    <th class="text-left px-4 py-2 font-medium">Agent</th>
+                    <th class="text-right px-4 py-2 font-medium">Charge</th>
+                    <th class="text-right px-4 py-2 font-medium">Assignations</th>
+                    <th class="px-4 py-2 font-medium w-32">Répartition</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-100">
+                  <tr class="hover:bg-zinc-50">
+                    <td class="px-4 py-2.5 font-medium">Marie D.</td>
+                    <td class="px-4 py-2.5 text-right text-zinc-700">42</td>
+                    <td class="px-4 py-2.5 text-right text-zinc-700">11</td>
+                    <td class="px-4 py-2.5">
+                      <div class="bg-zinc-100 rounded-full h-2 w-full">
+                        <div class="charge-bar bg-blue-500 h-2 rounded-full" style="width:100%"></div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-zinc-50">
+                    <td class="px-4 py-2.5 font-medium">Paul L.</td>
+                    <td class="px-4 py-2.5 text-right text-zinc-700">39</td>
+                    <td class="px-4 py-2.5 text-right text-zinc-700">10</td>
+                    <td class="px-4 py-2.5">
+                      <div class="bg-zinc-100 rounded-full h-2 w-full">
+                        <div class="charge-bar bg-blue-500 h-2 rounded-full" style="width:93%"></div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-zinc-50">
+                    <td class="px-4 py-2.5 font-medium">Sophie M.</td>
+                    <td class="px-4 py-2.5 text-right text-zinc-700">38</td>
+                    <td class="px-4 py-2.5 text-right text-zinc-700">10</td>
+                    <td class="px-4 py-2.5">
+                      <div class="bg-zinc-100 rounded-full h-2 w-full">
+                        <div class="charge-bar bg-blue-500 h-2 rounded-full" style="width:90%"></div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-zinc-50">
+                    <td class="px-4 py-2.5 font-medium">Karim B.</td>
+                    <td class="px-4 py-2.5 text-right text-zinc-700">36</td>
+                    <td class="px-4 py-2.5 text-right text-zinc-700">9</td>
+                    <td class="px-4 py-2.5">
+                      <div class="bg-zinc-100 rounded-full h-2 w-full">
+                        <div class="charge-bar bg-blue-500 h-2 rounded-full" style="width:86%"></div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Assignations proposées (repliable simulé) -->
+            <details open class="border border-zinc-200 rounded-lg overflow-hidden">
+              <summary class="flex items-center justify-between px-4 py-2.5 bg-zinc-50 cursor-pointer text-sm font-medium text-zinc-700 select-none">
+                <span class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="m9 12 2 2 4-4"/></svg>
+                  Assignations proposées (40)
+                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </summary>
+              <div class="divide-y divide-zinc-100 text-xs">
+                <div class="grid grid-cols-5 px-4 py-2 bg-zinc-50/70 font-medium text-zinc-500 uppercase tracking-wide">
+                  <span>Date</span><span>Tâche</span><span>Agent</span><span>Période</span><span class="text-right">Poids</span>
+                </div>
+                <div class="grid grid-cols-5 px-4 py-2 hover:bg-zinc-50">
+                  <span class="text-zinc-600">05/05/2026</span><span>Reporting</span><span class="text-blue-700">Marie D.</span><span class="text-zinc-500">FULL_DAY</span><span class="text-right font-medium">5</span>
+                </div>
+                <div class="grid grid-cols-5 px-4 py-2 hover:bg-zinc-50">
+                  <span class="text-zinc-600">05/05/2026</span><span>Saisie mensuelle</span><span class="text-blue-700">Paul L.</span><span class="text-zinc-500">MORNING</span><span class="text-right font-medium">3</span>
+                </div>
+                <div class="grid grid-cols-5 px-4 py-2 hover:bg-zinc-50">
+                  <span class="text-zinc-600">06/05/2026</span><span>Permanence</span><span class="text-blue-700">Sophie M.</span><span class="text-zinc-500">AFTERNOON</span><span class="text-right font-medium">1</span>
+                </div>
+                <div class="grid grid-cols-5 px-4 py-2 hover:bg-zinc-50">
+                  <span class="text-zinc-600">07/05/2026</span><span>Saisie mensuelle</span><span class="text-blue-700">Karim B.</span><span class="text-zinc-500">FULL_DAY</span><span class="text-right font-medium">3</span>
+                </div>
+                <div class="grid grid-cols-5 px-4 py-2 hover:bg-zinc-50">
+                  <span class="text-zinc-600">12/05/2026</span><span>Reporting</span><span class="text-blue-700">Paul L.</span><span class="text-zinc-500">FULL_DAY</span><span class="text-right font-medium">5</span>
+                </div>
+                <div class="px-4 py-2 text-zinc-400 italic text-center">… 35 autres assignations</div>
+              </div>
+            </details>
+
+            <!-- Non-assignées -->
+            <div class="border border-amber-200 bg-amber-50 rounded-lg overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-2.5 border-b border-amber-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span class="text-sm font-medium text-amber-700">2 occurrences non assignées</span>
+              </div>
+              <div class="divide-y divide-amber-100 text-xs">
+                <div class="grid grid-cols-3 px-4 py-2 font-medium text-amber-600 uppercase tracking-wide">
+                  <span>Date</span><span>Tâche</span><span>Raison</span>
+                </div>
+                <div class="grid grid-cols-3 px-4 py-2">
+                  <span class="text-zinc-600">20/05/2026</span><span>Reporting</span><span class="text-red-600">Aucun agent éligible</span>
+                </div>
+                <div class="grid grid-cols-3 px-4 py-2">
+                  <span class="text-zinc-600">28/05/2026</span><span>Permanence</span><span class="text-red-600">Aucun agent éligible</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer modale -->
+        <div class="flex items-center justify-between px-6 py-4 border-t border-zinc-100 bg-zinc-50">
+          <p class="text-xs text-zinc-400">Appuyez sur <kbd class="bg-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded text-xs font-mono">Échap</kbd> pour fermer sans enregistrer</p>
+          <div class="flex gap-3">
+            <button class="inline-flex items-center gap-2 border border-zinc-200 bg-white text-zinc-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+              Modifier la configuration
+            </button>
+            <button class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Appliquer (40 assignations)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       VARIANTE B — Wizard 2 étapes avec stepper horizontal
+       ══════════════════════════════════════════════════════════════════════ -->
+  <section class="space-y-4">
+    <h2 class="text-xl font-semibold text-zinc-900 border-b border-zinc-200 pb-2">Variante B — Wizard 2 étapes (stepper horizontal)</h2>
+    <p class="text-sm text-zinc-600">
+      <strong>Avantages :</strong> Progression claire, chaque étape a un seul focus, idéal si la config est complexe à saisir. Sentiment de "flow" guidé.
+      <strong>Inconvénients :</strong> Impossible de voir config et aperçu simultanément ; aller-retour nécessite une navigation explicite ; deux clics pour arriver à l'aperçu.
+    </p>
+
+    <div class="space-y-8">
+
+      <!-- ── B.1 : Étape 1 – Configuration ── -->
+      <div class="space-y-2">
+        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">État : Étape 1 / 2 — Configuration</p>
+        <div class="relative rounded-xl overflow-hidden bg-zinc-900/10 p-6">
+          <div class="absolute inset-0 bg-zinc-900/50 rounded-xl pointer-events-none"></div>
+          <div class="relative mx-auto max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+                <h3 class="font-semibold text-zinc-900 text-base">Planning équilibré automatique</h3>
+              </div>
+              <button class="text-zinc-400 hover:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-600 rounded" aria-label="Fermer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <!-- Stepper -->
+            <div class="px-6 pt-5 pb-1">
+              <div class="flex items-center gap-0">
+                <!-- Step 1 - active -->
+                <div class="flex flex-col items-center gap-1">
+                  <div class="w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center">1</div>
+                  <span class="text-xs font-medium text-blue-600">Configuration</span>
+                </div>
+                <div class="step-line done mb-5 mx-2"></div>
+                <!-- Step 2 - inactive -->
+                <div class="flex flex-col items-center gap-1">
+                  <div class="w-8 h-8 rounded-full bg-zinc-200 text-zinc-400 text-sm font-bold flex items-center justify-center">2</div>
+                  <span class="text-xs font-medium text-zinc-400">Aperçu</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content step 1 -->
+            <div class="px-6 py-4 space-y-4">
+              <fieldset class="space-y-1">
+                <legend class="text-sm font-medium text-zinc-700">Plage de dates</legend>
+                <div class="flex gap-3">
+                  <div class="flex-1">
+                    <label class="text-xs text-zinc-500 block mb-0.5">Du</label>
+                    <div class="border border-zinc-200 rounded-lg px-3 py-2 text-sm bg-zinc-50">01/05/2026</div>
+                  </div>
+                  <div class="flex-1">
+                    <label class="text-xs text-zinc-500 block mb-0.5">Au</label>
+                    <div class="border border-zinc-200 rounded-lg px-3 py-2 text-sm bg-zinc-50">31/05/2026</div>
+                  </div>
+                </div>
+              </fieldset>
+              <div class="space-y-1">
+                <label class="text-sm font-medium text-zinc-700">Agents</label>
+                <div class="border border-zinc-200 rounded-lg px-3 py-2 bg-zinc-50 flex flex-wrap gap-1.5">
+                  <span class="tag-pill bg-blue-100 text-blue-700">Marie D.</span>
+                  <span class="tag-pill bg-blue-100 text-blue-700">Paul L.</span>
+                  <span class="tag-pill bg-blue-100 text-blue-700">Sophie M.</span>
+                  <span class="tag-pill bg-blue-100 text-blue-700">Karim B.</span>
+                </div>
+              </div>
+              <div class="space-y-1">
+                <label class="text-sm font-medium text-zinc-700">Tâches à équilibrer</label>
+                <div class="border border-zinc-200 rounded-lg px-3 py-2 bg-zinc-50 flex flex-wrap gap-1.5">
+                  <span class="tag-pill bg-zinc-200 text-zinc-700">Permanence <span class="text-zinc-400">poids 1</span></span>
+                  <span class="tag-pill bg-zinc-200 text-zinc-700">Saisie mensuelle <span class="text-zinc-400">poids 3</span></span>
+                  <span class="tag-pill bg-zinc-200 text-zinc-700">Reporting <span class="text-zinc-400">poids 5</span></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer step 1 -->
+            <div class="flex items-center justify-between px-6 py-4 border-t border-zinc-100 bg-zinc-50">
+              <p class="text-xs text-zinc-400"><kbd class="bg-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded font-mono">Échap</kbd> pour fermer</p>
+              <button class="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+                Prévisualiser →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── B.2 : Étape 2 – Aperçu (ratio ambre 0.72) ── -->
+      <div class="space-y-2">
+        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">État : Étape 2 / 2 — Aperçu (ratio ambre 0.72)</p>
+        <div class="relative rounded-xl overflow-hidden bg-zinc-900/10 p-6">
+          <div class="absolute inset-0 bg-zinc-900/50 rounded-xl pointer-events-none"></div>
+          <div class="relative mx-auto max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+                <h3 class="font-semibold text-zinc-900 text-base">Planning équilibré automatique</h3>
+              </div>
+              <button class="text-zinc-400 hover:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-600 rounded" aria-label="Fermer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <!-- Stepper étape 2 -->
+            <div class="px-6 pt-5 pb-1">
+              <div class="flex items-center gap-0">
+                <div class="flex flex-col items-center gap-1">
+                  <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <span class="text-xs font-medium text-blue-400">Configuration</span>
+                </div>
+                <div class="step-line done mb-5 mx-2"></div>
+                <div class="flex flex-col items-center gap-1">
+                  <div class="w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center">2</div>
+                  <span class="text-xs font-medium text-blue-600">Aperçu</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content step 2 -->
+            <div class="px-6 py-4 space-y-4">
+              <!-- Equity badge amber 0.72 -->
+              <div class="flex items-center justify-between">
+                <p class="text-sm font-medium text-zinc-700">Résultat pour mai 2026</p>
+                <div class="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full text-xs font-semibold">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Ratio d'équité : 0.72
+                </div>
+              </div>
+
+              <!-- Tableau charges -->
+              <div class="overflow-hidden rounded-lg border border-zinc-200">
+                <table class="w-full text-sm">
+                  <thead class="bg-zinc-50 text-xs text-zinc-500 uppercase tracking-wide">
+                    <tr>
+                      <th class="text-left px-4 py-2 font-medium">Agent</th>
+                      <th class="text-right px-3 py-2 font-medium">Charge</th>
+                      <th class="text-right px-3 py-2 font-medium">Assign.</th>
+                      <th class="px-3 py-2 font-medium w-28">Répartition</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-zinc-100">
+                    <tr class="hover:bg-zinc-50">
+                      <td class="px-4 py-2.5 font-medium">Marie D.</td>
+                      <td class="px-3 py-2.5 text-right text-zinc-700">52</td>
+                      <td class="px-3 py-2.5 text-right text-zinc-700">13</td>
+                      <td class="px-3 py-2.5"><div class="bg-zinc-100 rounded-full h-2"><div class="charge-bar bg-amber-500 h-2 rounded-full" style="width:100%"></div></div></td>
+                    </tr>
+                    <tr class="hover:bg-zinc-50">
+                      <td class="px-4 py-2.5 font-medium">Paul L.</td>
+                      <td class="px-3 py-2.5 text-right text-zinc-700">41</td>
+                      <td class="px-3 py-2.5 text-right text-zinc-700">10</td>
+                      <td class="px-3 py-2.5"><div class="bg-zinc-100 rounded-full h-2"><div class="charge-bar bg-amber-500 h-2 rounded-full" style="width:79%"></div></div></td>
+                    </tr>
+                    <tr class="hover:bg-zinc-50">
+                      <td class="px-4 py-2.5 font-medium">Sophie M.</td>
+                      <td class="px-3 py-2.5 text-right text-zinc-700">37</td>
+                      <td class="px-3 py-2.5 text-right text-zinc-700">9</td>
+                      <td class="px-3 py-2.5"><div class="bg-zinc-100 rounded-full h-2"><div class="charge-bar bg-amber-500 h-2 rounded-full" style="width:71%"></div></div></td>
+                    </tr>
+                    <tr class="hover:bg-zinc-50">
+                      <td class="px-4 py-2.5 font-medium">Karim B.</td>
+                      <td class="px-3 py-2.5 text-right text-zinc-700">30</td>
+                      <td class="px-3 py-2.5 text-right text-zinc-700">8</td>
+                      <td class="px-3 py-2.5"><div class="bg-zinc-100 rounded-full h-2"><div class="charge-bar bg-amber-500 h-2 rounded-full" style="width:58%"></div></div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Assignations -->
+              <details class="border border-zinc-200 rounded-lg overflow-hidden">
+                <summary class="flex items-center justify-between px-4 py-2.5 bg-zinc-50 cursor-pointer text-sm font-medium text-zinc-700 select-none">
+                  <span>Assignations proposées (38)</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </summary>
+                <div class="text-xs divide-y divide-zinc-100">
+                  <div class="grid grid-cols-5 px-4 py-1.5 bg-zinc-50/70 font-medium text-zinc-500 uppercase">
+                    <span>Date</span><span>Tâche</span><span>Agent</span><span>Période</span><span class="text-right">Poids</span>
+                  </div>
+                  <div class="grid grid-cols-5 px-4 py-2 hover:bg-zinc-50">
+                    <span class="text-zinc-600">05/05/2026</span><span>Reporting</span><span class="text-blue-700">Marie D.</span><span class="text-zinc-500">FULL_DAY</span><span class="text-right">5</span>
+                  </div>
+                  <div class="grid grid-cols-5 px-4 py-2 hover:bg-zinc-50">
+                    <span class="text-zinc-600">06/05/2026</span><span>Permanence</span><span class="text-blue-700">Paul L.</span><span class="text-zinc-500">MORNING</span><span class="text-right">1</span>
+                  </div>
+                  <div class="px-4 py-2 text-zinc-400 italic text-center">… 36 autres</div>
+                </div>
+              </details>
+
+              <!-- Non assignées -->
+              <div class="border border-amber-200 bg-amber-50 rounded-lg px-4 py-3">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span class="text-sm font-medium text-amber-700">2 occurrences non assignées</span>
+                </div>
+                <div class="text-xs space-y-1">
+                  <div class="flex gap-4"><span class="text-zinc-500 w-24">22/05/2026</span><span>Saisie mensuelle</span><span class="text-red-600 ml-auto">Aucun agent éligible</span></div>
+                  <div class="flex gap-4"><span class="text-zinc-500 w-24">29/05/2026</span><span>Reporting</span><span class="text-red-600 ml-auto">Aucun agent éligible</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer step 2 -->
+            <div class="flex items-center justify-between px-6 py-4 border-t border-zinc-100 bg-zinc-50">
+              <p class="text-xs text-zinc-400"><kbd class="bg-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded font-mono">Échap</kbd> pour fermer</p>
+              <div class="flex gap-3">
+                <button class="inline-flex items-center gap-1.5 border border-zinc-200 bg-white text-zinc-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                  ← Modifier la configuration
+                </button>
+                <button class="inline-flex items-center gap-1.5 bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  Appliquer (38 assignations)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       VARIANTE C — Split layout (config gauche, aperçu droite)
+       ══════════════════════════════════════════════════════════════════════ -->
+  <section class="space-y-4">
+    <h2 class="text-xl font-semibold text-zinc-900 border-b border-zinc-200 pb-2">Variante C — Split layout (config à gauche, aperçu à droite)</h2>
+    <p class="text-sm text-zinc-600">
+      <strong>Avantages :</strong> Config et aperçu visibles simultanément, itération rapide, aucun scroll contextuel pour passer d'une zone à l'autre. Sentiment de "live preview".
+      <strong>Inconvénients :</strong> Modale très large (max-w-5xl), peu adapté aux petits écrans ; la zone aperçu vide à l'état initial peut sembler pauvre.
+    </p>
+
+    <div class="space-y-8">
+
+      <!-- C.1 : État initial (aperçu vide) -->
+      <div class="space-y-2">
+        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">État C.1 — Configuration (aperçu en attente)</p>
+        <div class="relative rounded-xl overflow-hidden bg-zinc-900/10 p-6">
+          <div class="absolute inset-0 bg-zinc-900/50 rounded-xl pointer-events-none"></div>
+          <div class="relative mx-auto bg-white rounded-xl shadow-2xl overflow-hidden" style="max-width:900px">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+                <h3 class="font-semibold text-zinc-900 text-base">Planning équilibré automatique</h3>
+              </div>
+              <button class="text-zinc-400 hover:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-600 rounded" aria-label="Fermer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <!-- Split body -->
+            <div class="flex" style="min-height:420px">
+
+              <!-- Colonne gauche : Config -->
+              <div class="w-96 flex-shrink-0 border-r border-zinc-100 px-6 py-5 space-y-4">
+                <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Configuration</p>
+
+                <fieldset class="space-y-1">
+                  <legend class="text-sm font-medium text-zinc-700">Plage de dates</legend>
+                  <div class="flex gap-2">
+                    <div class="flex-1">
+                      <label class="text-xs text-zinc-500 block">Du</label>
+                      <div class="border border-zinc-200 rounded-lg px-2 py-1.5 text-sm bg-zinc-50">01/05/2026</div>
+                    </div>
+                    <div class="flex-1">
+                      <label class="text-xs text-zinc-500 block">Au</label>
+                      <div class="border border-zinc-200 rounded-lg px-2 py-1.5 text-sm bg-zinc-50">31/05/2026</div>
+                    </div>
+                  </div>
+                </fieldset>
+
+                <div class="space-y-1">
+                  <label class="text-sm font-medium text-zinc-700">Agents</label>
+                  <div class="border border-zinc-200 rounded-lg px-2 py-2 bg-zinc-50 flex flex-wrap gap-1">
+                    <span class="tag-pill bg-blue-100 text-blue-700">Marie D.</span>
+                    <span class="tag-pill bg-blue-100 text-blue-700">Paul L.</span>
+                    <span class="tag-pill bg-blue-100 text-blue-700">Sophie M.</span>
+                    <span class="tag-pill bg-blue-100 text-blue-700">Karim B.</span>
+                  </div>
+                </div>
+
+                <div class="space-y-1">
+                  <label class="text-sm font-medium text-zinc-700">Tâches à équilibrer</label>
+                  <div class="border border-zinc-200 rounded-lg px-2 py-2 bg-zinc-50 flex flex-wrap gap-1">
+                    <span class="tag-pill bg-zinc-200 text-zinc-700">Permanence <span class="text-zinc-400">×1</span></span>
+                    <span class="tag-pill bg-zinc-200 text-zinc-700">Saisie mensuelle <span class="text-zinc-400">×3</span></span>
+                    <span class="tag-pill bg-zinc-200 text-zinc-700">Reporting <span class="text-zinc-400">×5</span></span>
+                  </div>
+                </div>
+
+                <button class="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+                  Prévisualiser
+                </button>
+              </div>
+
+              <!-- Colonne droite : Aperçu vide -->
+              <div class="flex-1 flex flex-col items-center justify-center text-center p-8 bg-zinc-50/60">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-3"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+                <p class="text-sm text-zinc-400 font-medium">L'aperçu apparaîtra ici</p>
+                <p class="text-xs text-zinc-300 mt-1">Configurez les paramètres puis cliquez sur "Prévisualiser"</p>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-3 border-t border-zinc-100 bg-zinc-50 flex justify-between items-center">
+              <p class="text-xs text-zinc-400"><kbd class="bg-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded font-mono">Échap</kbd> pour fermer</p>
+              <button class="inline-flex items-center gap-1.5 bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-lg opacity-40 cursor-not-allowed" disabled>
+                Appliquer le planning
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- C.2 : Après prévisualisation (ratio rouge 0.65) -->
+      <div class="space-y-2">
+        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">État C.2 — Aperçu chargé (ratio rouge 0.65)</p>
+        <div class="relative rounded-xl overflow-hidden bg-zinc-900/10 p-6">
+          <div class="absolute inset-0 bg-zinc-900/50 rounded-xl pointer-events-none"></div>
+          <div class="relative mx-auto bg-white rounded-xl shadow-2xl overflow-hidden" style="max-width:900px">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+                <h3 class="font-semibold text-zinc-900 text-base">Planning équilibré automatique</h3>
+              </div>
+              <button class="text-zinc-400 hover:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-600 rounded" aria-label="Fermer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <!-- Split body -->
+            <div class="flex" style="min-height:480px">
+
+              <!-- Colonne gauche : Config (sticky) -->
+              <div class="w-80 flex-shrink-0 border-r border-zinc-100 px-5 py-4 space-y-3 bg-zinc-50/40">
+                <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Configuration</p>
+
+                <!-- Récap compact de la config -->
+                <div class="space-y-2 text-xs text-zinc-600">
+                  <div class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span class="text-zinc-500">01/05 → 31/05/2026</span>
+                  </div>
+                  <div class="flex flex-wrap gap-1">
+                    <span class="tag-pill bg-blue-100 text-blue-700">Marie D.</span>
+                    <span class="tag-pill bg-blue-100 text-blue-700">Paul L.</span>
+                    <span class="tag-pill bg-blue-100 text-blue-700">Sophie M.</span>
+                    <span class="tag-pill bg-blue-100 text-blue-700">Karim B.</span>
+                  </div>
+                  <div class="flex flex-wrap gap-1">
+                    <span class="tag-pill bg-zinc-200 text-zinc-600">Permanence</span>
+                    <span class="tag-pill bg-zinc-200 text-zinc-600">Saisie mensuelle</span>
+                    <span class="tag-pill bg-zinc-200 text-zinc-600">Reporting</span>
+                  </div>
+                </div>
+
+                <button class="w-full inline-flex items-center justify-center gap-2 border border-zinc-200 bg-white text-zinc-700 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Modifier la configuration
+                </button>
+
+                <button class="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+                  Re-prévisualiser
+                </button>
+              </div>
+
+              <!-- Colonne droite : Résultats -->
+              <div class="flex-1 px-5 py-4 space-y-4 overflow-y-auto" style="max-height:480px">
+                <!-- Equity badge red 0.65 -->
+                <div class="flex items-center justify-between">
+                  <p class="text-sm font-semibold text-zinc-700">Résultat — Mai 2026</p>
+                  <div class="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    Ratio d'équité : 0.65
+                  </div>
+                </div>
+
+                <!-- Banner alerte déséquilibre -->
+                <div class="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <p class="text-xs text-red-700">Déséquilibre significatif détecté. Envisagez d'ajuster les contraintes ou d'ajouter des agents disponibles.</p>
+                </div>
+
+                <!-- Tableau charges -->
+                <div class="overflow-hidden rounded-lg border border-zinc-200">
+                  <table class="w-full text-sm">
+                    <thead class="bg-zinc-50 text-xs text-zinc-500 uppercase tracking-wide">
+                      <tr>
+                        <th class="text-left px-3 py-2 font-medium">Agent</th>
+                        <th class="text-right px-3 py-2 font-medium">Charge</th>
+                        <th class="text-right px-3 py-2 font-medium">Assign.</th>
+                        <th class="px-3 py-2 font-medium">Répartition</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-100">
+                      <tr class="hover:bg-zinc-50">
+                        <td class="px-3 py-2 font-medium">Marie D.</td>
+                        <td class="px-3 py-2 text-right text-zinc-700">60</td>
+                        <td class="px-3 py-2 text-right text-zinc-700">15</td>
+                        <td class="px-3 py-2"><div class="bg-zinc-100 rounded-full h-2"><div class="charge-bar bg-red-500 h-2 rounded-full" style="width:100%"></div></div></td>
+                      </tr>
+                      <tr class="hover:bg-zinc-50">
+                        <td class="px-3 py-2 font-medium">Paul L.</td>
+                        <td class="px-3 py-2 text-right text-zinc-700">42</td>
+                        <td class="px-3 py-2 text-right text-zinc-700">11</td>
+                        <td class="px-3 py-2"><div class="bg-zinc-100 rounded-full h-2"><div class="charge-bar bg-red-400 h-2 rounded-full" style="width:70%"></div></div></td>
+                      </tr>
+                      <tr class="hover:bg-zinc-50">
+                        <td class="px-3 py-2 font-medium">Sophie M.</td>
+                        <td class="px-3 py-2 text-right text-zinc-700">36</td>
+                        <td class="px-3 py-2 text-right text-zinc-700">9</td>
+                        <td class="px-3 py-2"><div class="bg-zinc-100 rounded-full h-2"><div class="charge-bar bg-red-300 h-2 rounded-full" style="width:60%"></div></div></td>
+                      </tr>
+                      <tr class="hover:bg-zinc-50">
+                        <td class="px-3 py-2 font-medium">Karim B.</td>
+                        <td class="px-3 py-2 text-right text-zinc-700">24</td>
+                        <td class="px-3 py-2 text-right text-zinc-700">6</td>
+                        <td class="px-3 py-2"><div class="bg-zinc-100 rounded-full h-2"><div class="charge-bar bg-red-300 h-2 rounded-full" style="width:40%"></div></div></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Assignations -->
+                <details class="border border-zinc-200 rounded-lg overflow-hidden">
+                  <summary class="flex items-center justify-between px-4 py-2.5 bg-zinc-50 cursor-pointer text-sm font-medium text-zinc-700 select-none">
+                    <span>Assignations proposées (36)</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </summary>
+                  <div class="text-xs divide-y divide-zinc-100">
+                    <div class="grid grid-cols-5 px-3 py-1.5 bg-zinc-50/70 font-medium text-zinc-500 uppercase">
+                      <span>Date</span><span>Tâche</span><span>Agent</span><span>Période</span><span class="text-right">Poids</span>
+                    </div>
+                    <div class="grid grid-cols-5 px-3 py-2 hover:bg-zinc-50">
+                      <span class="text-zinc-600">05/05/2026</span><span>Reporting</span><span class="text-blue-700">Marie D.</span><span class="text-zinc-500">FULL_DAY</span><span class="text-right">5</span>
+                    </div>
+                    <div class="grid grid-cols-5 px-3 py-2 hover:bg-zinc-50">
+                      <span class="text-zinc-600">07/05/2026</span><span>Permanence</span><span class="text-blue-700">Marie D.</span><span class="text-zinc-500">MORNING</span><span class="text-right">1</span>
+                    </div>
+                    <div class="grid grid-cols-5 px-3 py-2 hover:bg-zinc-50">
+                      <span class="text-zinc-600">08/05/2026</span><span>Saisie mensuelle</span><span class="text-blue-700">Paul L.</span><span class="text-zinc-500">FULL_DAY</span><span class="text-right">3</span>
+                    </div>
+                    <div class="px-3 py-2 text-zinc-400 italic text-center">… 33 autres</div>
+                  </div>
+                </details>
+
+                <!-- Non assignées -->
+                <div class="border border-red-200 bg-red-50 rounded-lg px-4 py-3">
+                  <div class="flex items-center gap-2 mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span class="text-sm font-medium text-red-700">2 occurrences non assignées</span>
+                  </div>
+                  <div class="text-xs space-y-1">
+                    <div class="flex gap-3"><span class="text-zinc-500 w-24">15/05/2026</span><span>Reporting</span><span class="text-red-600 ml-auto">Aucun agent éligible</span></div>
+                    <div class="flex gap-3"><span class="text-zinc-500 w-24">26/05/2026</span><span>Saisie mensuelle</span><span class="text-red-600 ml-auto">Aucun agent éligible</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-3 border-t border-zinc-100 bg-zinc-50 flex justify-between items-center">
+              <p class="text-xs text-zinc-400"><kbd class="bg-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded font-mono">Échap</kbd> pour fermer</p>
+              <button class="inline-flex items-center gap-1.5 bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Appliquer (36 assignations)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer global -->
+  <footer class="text-center text-xs text-zinc-400 pb-8 space-y-1">
+    <p>Mockup E4.3 — BalancedPlanningModal · Orchestr'A V2 · Contrôle de Gestion CPAM 92</p>
+    <p>Rendu statique — aucune interaction JS. Focus trap : outline blue-600 sur :focus-within (illustré via .focus-demo). Esc ferme la modale (libellé dans chaque footer de modale).</p>
+    <p>Variante recommandée : <strong class="text-zinc-600">C (split layout)</strong> pour les écrans ≥ 1280px, <strong class="text-zinc-600">B (wizard)</strong> pour les cas d'usage guidés ou mobiles.</p>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mockup E3.2 — Popover de transition de statut</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Lucide icons inline via SVG sprite-like approach */
+    .icon { display: inline-block; vertical-align: middle; }
+
+    /* Popover animation CSS only */
+    @keyframes popover-in {
+      from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .popover-enter { animation: popover-in 0.15s ease-out forwards; }
+
+    @keyframes pulse-late {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      50%       { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+    }
+    .badge-late { animation: pulse-late 2s infinite; }
+
+    /* Focus visible ring */
+    button:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+
+    /* Separator */
+    .sep { border-top: 1px solid #e4e4e7; margin: 4px 0; }
+
+    /* Motif input highlight */
+    .motif-input:focus { border-color: #2563eb; }
+  </style>
+</head>
+<body class="bg-zinc-100 p-8 space-y-16 font-sans text-zinc-800">
+
+  <!-- ═══════════════════════════════════════════════════════════ HEADER -->
+  <header class="border-b border-zinc-300 pb-4">
+    <h1 class="text-xl font-semibold text-zinc-900">Mockup E3.2 — Popover de transition de statut</h1>
+    <p class="text-sm text-zinc-500 mt-1">Planning d'activités · Assignation de tâche prédéfinie · 24 avril 2026</p>
+    <div class="mt-3 flex flex-wrap gap-4 text-xs text-zinc-500">
+      <span>Statuts : <code class="bg-zinc-200 px-1 rounded">NOT_DONE</code> <code class="bg-zinc-200 px-1 rounded">IN_PROGRESS</code> <code class="bg-zinc-200 px-1 rounded">DONE</code> <code class="bg-zinc-200 px-1 rounded">NOT_APPLICABLE</code></span>
+      <span>Transitions : NOT_DONE→IP|DONE · IN_PROGRESS→DONE · any→NOT_APPLICABLE (motif) · any→NOT_DONE (reset)</span>
+    </div>
+
+    <!-- Légende badges -->
+    <div class="mt-4 flex flex-wrap gap-3 text-xs">
+      <span class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-zinc-400 inline-block"></span>NOT_DONE
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>NOT_DONE isLate
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>IN_PROGRESS
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>DONE
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-violet-400 inline-block"></span>NOT_APPLICABLE
+      </span>
+    </div>
+  </header>
+
+
+  <!-- ═══════════════════════════════════════════════════════════ VARIANTE A -->
+  <section aria-label="Variante A">
+    <h2 class="text-base font-semibold text-zinc-900 mb-1">Variante A — Popover flottant (Radix-like)</h2>
+    <p class="text-sm text-zinc-500 mb-6">Panneau flottant ancré sous le badge, liste verticale de boutons de transition avec libellé + icône. Adapté aux workspaces avec accessibilité renforcée.</p>
+
+    <!-- Grille de 4 sous-vues -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+
+      <!-- A1 : NOT_DONE – popover ouvert -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">A1 · NOT_DONE → popover</p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 relative w-64">
+          <!-- DayCell simulée -->
+          <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-zinc-50 border border-zinc-200">
+            <!-- Badge NOT_DONE -->
+            <button
+              aria-label="Statut : Non réalisée. Cliquer pour changer"
+              aria-pressed="false"
+              class="flex-shrink-0 w-5 h-5 rounded-full bg-zinc-400 hover:bg-zinc-500 focus-visible:ring-2 focus-visible:ring-blue-600 transition-colors"
+            >
+            </button>
+            <span class="text-xs text-zinc-700 truncate">Rapport mensuel CG</span>
+            <span class="ml-auto text-xs text-zinc-400">09h</span>
+          </div>
+
+          <!-- Popover flottant -->
+          <div
+            role="dialog"
+            aria-label="Changer le statut de Rapport mensuel CG"
+            class="popover-enter absolute left-2 top-full mt-1.5 w-56 bg-white rounded-lg border border-zinc-200 shadow-lg z-10 py-1"
+          >
+            <p class="px-3 pt-1.5 pb-0.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Changer le statut</p>
+
+            <button aria-label="Marquer En cours" class="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 transition-colors">
+              <!-- Clock icon -->
+              <svg class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              En cours
+            </button>
+
+            <button aria-label="Marquer Réalisée" class="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+              <!-- Check icon -->
+              <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Réalisée
+            </button>
+
+            <div class="sep"></div>
+
+            <button aria-label="Marquer Non applicable" class="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-700 hover:bg-violet-50 hover:text-violet-700 transition-colors">
+              <!-- Minus icon -->
+              <svg class="w-3.5 h-3.5 text-violet-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Non applicable…
+            </button>
+
+            <p class="px-3 pt-1 pb-1 text-[9px] text-zinc-400">Échap pour fermer</p>
+          </div>
+
+          <div class="mt-24"></div><!-- espace pour le popover -->
+        </div>
+      </div>
+
+      <!-- A2 : IN_PROGRESS – popover ouvert -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">A2 · IN_PROGRESS → popover</p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 relative w-64">
+          <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-zinc-50 border border-zinc-200">
+            <button
+              aria-label="Statut : En cours. Cliquer pour changer"
+              class="flex-shrink-0 w-5 h-5 rounded-full bg-amber-500 hover:bg-amber-600 transition-colors"
+            ></button>
+            <span class="text-xs text-zinc-700 truncate">Saisie tableaux bord</span>
+            <span class="ml-auto text-xs text-zinc-400">14h</span>
+          </div>
+
+          <div
+            role="dialog"
+            aria-label="Changer le statut de Saisie tableaux bord"
+            class="popover-enter absolute left-2 top-full mt-1.5 w-56 bg-white rounded-lg border border-zinc-200 shadow-lg z-10 py-1"
+          >
+            <p class="px-3 pt-1.5 pb-0.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Changer le statut</p>
+
+            <button aria-label="Marquer Réalisée" class="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+              <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Réalisée
+            </button>
+
+            <div class="sep"></div>
+
+            <button aria-label="Marquer Non applicable" class="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-700 hover:bg-violet-50 hover:text-violet-700 transition-colors">
+              <svg class="w-3.5 h-3.5 text-violet-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Non applicable…
+            </button>
+
+            <button aria-label="Remettre en Non réalisée" class="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600 transition-colors">
+              <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
+              Remettre en attente
+            </button>
+
+            <p class="px-3 pt-1 pb-1 text-[9px] text-zinc-400">Échap pour fermer</p>
+          </div>
+
+          <div class="mt-24"></div>
+        </div>
+      </div>
+
+      <!-- A3 : NOT_DONE isLate -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">A3 · NOT_DONE <span class="text-red-500">isLate</span></p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 relative w-64">
+          <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-red-50 border border-red-200">
+            <button
+              aria-label="Statut : Non réalisée – en retard. Cliquer pour changer"
+              class="flex-shrink-0 w-5 h-5 rounded-full bg-red-500 badge-late hover:bg-red-600 transition-colors"
+            ></button>
+            <span class="text-xs text-red-700 font-medium truncate">Clôture exercice N-1</span>
+            <span class="ml-auto">
+              <!-- AlertTriangle icon small -->
+              <svg class="w-3 h-3 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="En retard"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+          </div>
+
+          <div
+            role="dialog"
+            aria-label="Changer le statut de Clôture exercice N-1"
+            class="popover-enter absolute left-2 top-full mt-1.5 w-56 bg-white rounded-lg border border-zinc-200 shadow-lg z-10 py-1"
+          >
+            <div class="px-3 py-1.5 bg-red-50 border-b border-red-100 flex items-center gap-1.5">
+              <svg class="w-3 h-3 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <p class="text-[10px] text-red-600 font-medium">Tâche en retard — échéance dépassée</p>
+            </div>
+
+            <p class="px-3 pt-1.5 pb-0.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Changer le statut</p>
+
+            <button aria-label="Marquer En cours" class="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 transition-colors">
+              <svg class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              En cours
+            </button>
+            <button aria-label="Marquer Réalisée" class="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+              <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Réalisée (hors délai)
+            </button>
+            <div class="sep"></div>
+            <button aria-label="Marquer Non applicable" class="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-700 hover:bg-violet-50 hover:text-violet-700 transition-colors">
+              <svg class="w-3.5 h-3.5 text-violet-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Non applicable…
+            </button>
+            <p class="px-3 pt-1 pb-1 text-[9px] text-zinc-400">Échap pour fermer</p>
+          </div>
+
+          <div class="mt-28"></div>
+        </div>
+      </div>
+
+      <!-- A4 : NOT_APPLICABLE – saisie motif -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">A4 · Saisie motif NOT_APPLICABLE</p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 relative w-64">
+          <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-zinc-50 border border-zinc-200">
+            <button
+              aria-label="Statut : Non applicable. Cliquer pour changer"
+              class="flex-shrink-0 w-5 h-5 rounded-full bg-violet-400 hover:bg-violet-500 transition-colors"
+            ></button>
+            <span class="text-xs text-zinc-700 truncate">Rapport mensuel CG</span>
+          </div>
+
+          <div
+            role="dialog"
+            aria-label="Saisir le motif de non-applicabilité"
+            class="popover-enter absolute left-2 top-full mt-1.5 w-64 bg-white rounded-lg border border-zinc-200 shadow-lg z-10 py-2 px-3"
+          >
+            <div class="flex items-center gap-1.5 mb-2">
+              <svg class="w-3.5 h-3.5 text-violet-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <p class="text-xs font-semibold text-zinc-700">Non applicable — motif obligatoire</p>
+            </div>
+            <textarea
+              aria-label="Motif de non-applicabilité (minimum 3 caractères)"
+              placeholder="Ex : report décision tutelle, tâche supprimée…"
+              class="motif-input w-full text-xs rounded-md border border-zinc-300 px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-blue-600 text-zinc-700 placeholder-zinc-400"
+              rows="3"
+            >Tâche remplacée par procédure dématérialisée</textarea>
+            <p class="text-[9px] text-zinc-400 mt-1">42 caractères · minimum 3</p>
+            <div class="flex gap-2 mt-2">
+              <button aria-label="Annuler" class="flex-1 text-xs py-1 px-2 rounded-md border border-zinc-200 text-zinc-500 hover:bg-zinc-50 transition-colors">Annuler</button>
+              <button aria-label="Confirmer non applicable" class="flex-1 text-xs py-1 px-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium">Confirmer</button>
+            </div>
+          </div>
+
+          <div class="mt-36"></div>
+        </div>
+      </div>
+
+    </div><!-- /grid -->
+
+    <p class="text-sm text-zinc-600 mt-4 max-w-2xl">
+      <strong>Avantages :</strong> liste complète des transitions lisibles, banderole contextuelle pour isLate, accessible (roles ARIA dialog, Échap fermable). Parfait pour les agents peu habitués à l'UI.<br>
+      <strong>Inconvénients :</strong> panneau large (56px+) qui déborde en bord de grille ; deux étapes pour NOT_APPLICABLE (clic → sous-formulaire) ajoute un rebond.
+    </p>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════════ VARIANTE B -->
+  <section aria-label="Variante B">
+    <h2 class="text-base font-semibold text-zinc-900 mb-1">Variante B — Menu icônes horizontal (ultra-compact)</h2>
+    <p class="text-sm text-zinc-500 mb-6">Tooltip-popover minimaliste avec 4 boutons icône-only en ligne, idéal pour un planning dense à petites cellules. Hover révèle le libellé.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+
+      <!-- B1 : NOT_DONE popover icônes -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">B1 · NOT_DONE → icônes</p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 relative w-72">
+          <!-- Ligne DayCell complète simulée -->
+          <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-zinc-50 border border-zinc-200">
+            <button
+              aria-label="Statut : Non réalisée. Cliquer pour changer"
+              class="flex-shrink-0 w-4 h-4 rounded-full bg-zinc-400 hover:bg-zinc-500 transition-colors"
+            ></button>
+            <span class="text-xs text-zinc-700 flex-1 truncate">Rapport mensuel CG</span>
+            <span class="text-xs text-zinc-400">09h · Martin</span>
+          </div>
+
+          <!-- Popover icônes horizontal -->
+          <div
+            role="dialog"
+            aria-label="Transition de statut"
+            class="popover-enter absolute left-8 top-full mt-1 bg-white rounded-lg border border-zinc-200 shadow-lg z-10 flex items-center gap-0.5 p-1"
+          >
+            <!-- IP -->
+            <button
+              aria-label="Marquer En cours"
+              title="En cours"
+              class="group relative flex items-center justify-center w-7 h-7 rounded-md hover:bg-amber-50 transition-colors"
+            >
+              <svg class="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap bg-zinc-800 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">En cours</span>
+            </button>
+
+            <!-- DONE -->
+            <button
+              aria-label="Marquer Réalisée"
+              title="Réalisée"
+              class="group relative flex items-center justify-center w-7 h-7 rounded-md hover:bg-emerald-50 transition-colors"
+            >
+              <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap bg-zinc-800 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Réalisée</span>
+            </button>
+
+            <div class="w-px h-5 bg-zinc-200 mx-0.5"></div>
+
+            <!-- NOT_APPLICABLE -->
+            <button
+              aria-label="Marquer Non applicable (motif requis)"
+              title="Non applicable"
+              class="group relative flex items-center justify-center w-7 h-7 rounded-md hover:bg-violet-50 transition-colors"
+            >
+              <svg class="w-4 h-4 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap bg-zinc-800 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Non applicable…</span>
+            </button>
+          </div>
+
+          <div class="mt-14"></div>
+        </div>
+      </div>
+
+      <!-- B2 : IN_PROGRESS -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">B2 · IN_PROGRESS → icônes</p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 relative w-72">
+          <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-zinc-50 border border-zinc-200">
+            <button
+              aria-label="Statut : En cours. Cliquer pour changer"
+              class="flex-shrink-0 w-4 h-4 rounded-full bg-amber-500 hover:bg-amber-600 transition-colors"
+            ></button>
+            <span class="text-xs text-zinc-700 flex-1 truncate">Saisie tableaux bord</span>
+            <span class="text-xs text-zinc-400">14h · Dupont</span>
+          </div>
+
+          <div
+            role="dialog"
+            aria-label="Transition de statut"
+            class="popover-enter absolute left-8 top-full mt-1 bg-white rounded-lg border border-zinc-200 shadow-lg z-10 flex items-center gap-0.5 p-1"
+          >
+            <!-- DONE -->
+            <button aria-label="Marquer Réalisée" title="Réalisée" class="group relative flex items-center justify-center w-7 h-7 rounded-md hover:bg-emerald-50 transition-colors">
+              <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap bg-zinc-800 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Réalisée</span>
+            </button>
+            <div class="w-px h-5 bg-zinc-200 mx-0.5"></div>
+            <!-- NOT_APPLICABLE -->
+            <button aria-label="Non applicable" title="Non applicable" class="group relative flex items-center justify-center w-7 h-7 rounded-md hover:bg-violet-50 transition-colors">
+              <svg class="w-4 h-4 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap bg-zinc-800 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Non applicable…</span>
+            </button>
+            <!-- RESET -->
+            <button aria-label="Remettre en attente" title="Remettre en attente" class="group relative flex items-center justify-center w-7 h-7 rounded-md hover:bg-zinc-50 transition-colors">
+              <svg class="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
+              <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap bg-zinc-800 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">En attente</span>
+            </button>
+          </div>
+
+          <div class="mt-14"></div>
+        </div>
+      </div>
+
+      <!-- B3 : isLate -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">B3 · NOT_DONE <span class="text-red-500">isLate</span></p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 relative w-72">
+          <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-red-50 border border-red-200">
+            <button
+              aria-label="Statut : Non réalisée – en retard. Cliquer pour changer"
+              class="flex-shrink-0 w-4 h-4 rounded-full bg-red-500 badge-late hover:bg-red-600 transition-colors"
+            ></button>
+            <span class="text-xs text-red-700 font-medium flex-1 truncate">Clôture exercice N-1</span>
+            <svg class="w-3 h-3 text-red-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="En retard"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+
+          <div
+            role="dialog"
+            aria-label="Transition de statut — tâche en retard"
+            class="popover-enter absolute left-8 top-full mt-1 bg-white rounded-lg border border-red-300 shadow-lg z-10 flex flex-col p-1"
+          >
+            <p class="text-[9px] text-red-500 font-medium px-1 pb-0.5">Retard — action requise</p>
+            <div class="flex items-center gap-0.5">
+              <button aria-label="En cours" title="En cours" class="group relative flex items-center justify-center w-7 h-7 rounded-md hover:bg-amber-50 transition-colors">
+                <svg class="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap bg-zinc-800 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">En cours</span>
+              </button>
+              <button aria-label="Réalisée (hors délai)" title="Réalisée (hors délai)" class="group relative flex items-center justify-center w-7 h-7 rounded-md hover:bg-emerald-50 transition-colors">
+                <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap bg-zinc-800 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Réalisée (hors délai)</span>
+              </button>
+              <div class="w-px h-5 bg-zinc-200 mx-0.5"></div>
+              <button aria-label="Non applicable" title="Non applicable" class="group relative flex items-center justify-center w-7 h-7 rounded-md hover:bg-violet-50 transition-colors">
+                <svg class="w-4 h-4 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap bg-zinc-800 text-white px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Non applicable…</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-16"></div>
+        </div>
+      </div>
+
+      <!-- B4 : NOT_APPLICABLE motif (inline expansion) -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">B4 · Saisie motif (inline)</p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 relative w-72">
+          <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-zinc-50 border border-zinc-200 opacity-50">
+            <span class="flex-shrink-0 w-4 h-4 rounded-full bg-zinc-400 border border-zinc-300"></span>
+            <span class="text-xs text-zinc-700 flex-1 truncate">Rapport mensuel CG</span>
+          </div>
+
+          <!-- Mini-formulaire inline compact -->
+          <div
+            role="dialog"
+            aria-label="Saisir le motif"
+            class="popover-enter absolute left-8 top-full mt-1 w-60 bg-white rounded-lg border border-zinc-200 shadow-lg z-10 p-2"
+          >
+            <div class="flex items-center gap-1 mb-1.5">
+              <svg class="w-3 h-3 text-violet-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span class="text-[10px] font-semibold text-zinc-600">Motif obligatoire</span>
+            </div>
+            <input
+              type="text"
+              aria-label="Motif de non-applicabilité"
+              value="Report décision tutelle"
+              class="motif-input w-full text-xs rounded-md border border-blue-400 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-600 text-zinc-700"
+            >
+            <p class="text-[9px] text-zinc-400 mt-0.5">24 car. · min 3</p>
+            <div class="flex gap-1.5 mt-1.5">
+              <button aria-label="Annuler" class="flex-1 text-[10px] py-1 rounded-md border border-zinc-200 text-zinc-400 hover:bg-zinc-50">Annuler</button>
+              <button aria-label="Valider" class="flex-1 text-[10px] py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 font-medium">Valider</button>
+            </div>
+          </div>
+
+          <div class="mt-24"></div>
+        </div>
+      </div>
+
+    </div><!-- /grid -->
+
+    <p class="text-sm text-zinc-600 mt-4 max-w-2xl">
+      <strong>Avantages :</strong> empreinte minimale (popover ~120px), parfait pour un planning haute densité, libellé via tooltip au survol pour ne pas surcharger l'UI.<br>
+      <strong>Inconvénients :</strong> icônes seules peu explicites sans hover (risque d'erreur de clic) ; la saisie du motif force un sous-popover ou un inline-input qui peut surprendre ; apprentissage requis.
+    </p>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════════ VARIANTE C -->
+  <section aria-label="Variante C">
+    <h2 class="text-base font-semibold text-zinc-900 mb-1">Variante C — Expansion inline dans la cellule</h2>
+    <p class="text-sm text-zinc-500 mb-6">Le badge se transforme en inline widget directement dans la cellule DayCell, sans popover flottant. La cellule s'agrandit temporairement pour révéler les options. Moins de superposition, zéro débordement.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+
+      <!-- C1 : NOT_DONE – cellule expandée -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">C1 · NOT_DONE → expansion</p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 w-72">
+          <!-- Cellule expanded : ring + padding ouvert -->
+          <div class="rounded-md border-2 border-blue-400 bg-blue-50 shadow-inner px-2 py-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="flex-shrink-0 w-4 h-4 rounded-full bg-zinc-400 border-2 border-blue-300"></span>
+              <span class="text-xs text-zinc-800 font-medium flex-1">Rapport mensuel CG</span>
+              <button aria-label="Fermer (Échap)" class="text-zinc-400 hover:text-zinc-600 transition-colors">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <!-- Chips de transition -->
+            <div class="flex flex-wrap gap-1.5">
+              <button aria-label="Marquer En cours" class="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200 transition-colors">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                En cours
+              </button>
+              <button aria-label="Marquer Réalisée" class="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-200 transition-colors">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                Réalisée
+              </button>
+              <button aria-label="Marquer Non applicable" class="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-200 hover:bg-violet-200 transition-colors">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                N/A…
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- C2 : IN_PROGRESS – expansion -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">C2 · IN_PROGRESS → expansion</p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 w-72">
+          <div class="rounded-md border-2 border-blue-400 bg-blue-50 px-2 py-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="flex-shrink-0 w-4 h-4 rounded-full bg-amber-500 border-2 border-blue-300"></span>
+              <span class="text-xs text-zinc-800 font-medium flex-1">Saisie tableaux bord</span>
+              <button aria-label="Fermer" class="text-zinc-400 hover:text-zinc-600">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <button aria-label="Marquer Réalisée" class="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-200 transition-colors">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                Réalisée
+              </button>
+              <button aria-label="Non applicable" class="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-200 hover:bg-violet-200 transition-colors">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                N/A…
+              </button>
+              <button aria-label="Remettre en attente" class="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500 border border-zinc-200 hover:bg-zinc-200 transition-colors">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
+                En attente
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- C3 : isLate -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">C3 · NOT_DONE <span class="text-red-500">isLate</span></p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 w-72">
+          <div class="rounded-md border-2 border-red-400 bg-red-50 px-2 py-2">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="flex-shrink-0 w-4 h-4 rounded-full bg-red-500 badge-late border-2 border-red-300"></span>
+              <span class="text-xs text-red-800 font-semibold flex-1">Clôture exercice N-1</span>
+              <button aria-label="Fermer" class="text-zinc-400 hover:text-zinc-600">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="flex items-center gap-1 mb-2">
+              <svg class="w-2.5 h-2.5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span class="text-[9px] text-red-600 font-medium">Échéance dépassée — action requise</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <button aria-label="En cours" class="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200 transition-colors">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                En cours
+              </button>
+              <button aria-label="Réalisée (hors délai)" class="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-200 transition-colors">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                Réalisée ★
+              </button>
+              <button aria-label="Non applicable" class="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-200 hover:bg-violet-200 transition-colors">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                N/A…
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- C4 : NOT_APPLICABLE – motif inline dans la cellule -->
+      <div class="flex flex-col gap-2">
+        <p class="text-xs font-medium text-zinc-500 uppercase tracking-wide">C4 · Motif N/A inline cellule</p>
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 w-72">
+          <div class="rounded-md border-2 border-violet-300 bg-violet-50 px-2 py-2">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="flex-shrink-0 w-4 h-4 rounded-full bg-violet-400 border-2 border-violet-200"></span>
+              <span class="text-xs text-violet-800 font-medium flex-1">Rapport mensuel CG</span>
+              <button aria-label="Fermer" class="text-zinc-400 hover:text-zinc-600">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <label class="text-[10px] text-violet-700 font-semibold block mb-0.5" for="motif-c4">Motif obligatoire</label>
+            <input
+              id="motif-c4"
+              type="text"
+              value="Tâche remplacée par dématérialisation"
+              aria-label="Motif de non-applicabilité"
+              aria-required="true"
+              class="w-full text-xs rounded border border-violet-300 px-1.5 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-violet-500 text-zinc-700"
+            >
+            <p class="text-[9px] text-violet-500 mt-0.5">38 car. · min 3</p>
+            <div class="flex gap-1.5 mt-1.5">
+              <button aria-label="Annuler" class="flex-1 text-[10px] py-1 rounded border border-zinc-200 text-zinc-400 hover:bg-white">Annuler</button>
+              <button aria-label="Confirmer" class="flex-1 text-[10px] py-1 rounded bg-violet-600 text-white hover:bg-violet-700 font-medium">Confirmer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /grid -->
+
+    <p class="text-sm text-zinc-600 mt-4 max-w-2xl">
+      <strong>Avantages :</strong> zéro superposition (pas de z-index battle), la cellule reste dans le flux, le contexte visuel est toujours visible, les chips de statut sont lisibles sans survol. Cohérent avec le pattern "edit-in-place".<br>
+      <strong>Inconvénients :</strong> le planning "saute" visuellement quand la cellule s'élargit (layout shift), nécessite un CSS transition soigné ; peut être difficile sur des lignes très compactes (hauteur fixe).
+    </p>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════════ RÉCAPITULATIF -->
+  <section aria-label="Récapitulatif comparatif" class="border-t border-zinc-300 pt-6">
+    <h2 class="text-base font-semibold text-zinc-900 mb-3">Tableau comparatif rapide</h2>
+    <table class="text-xs border-collapse w-full max-w-3xl">
+      <thead>
+        <tr class="bg-zinc-200 text-zinc-700">
+          <th class="text-left px-3 py-2 rounded-tl-md font-semibold">Critère</th>
+          <th class="text-center px-3 py-2 font-semibold">A — Popover liste</th>
+          <th class="text-center px-3 py-2 font-semibold">B — Icônes</th>
+          <th class="text-center px-3 py-2 rounded-tr-md font-semibold">C — Inline expand</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-zinc-200">
+        <tr class="bg-white">
+          <td class="px-3 py-2 text-zinc-600">Lisibilité transitions</td>
+          <td class="px-3 py-2 text-center text-emerald-600 font-medium">Excellent</td>
+          <td class="px-3 py-2 text-center text-amber-600 font-medium">Moyen (hover)</td>
+          <td class="px-3 py-2 text-center text-emerald-600 font-medium">Bon (chips)</td>
+        </tr>
+        <tr class="bg-zinc-50">
+          <td class="px-3 py-2 text-zinc-600">Empreinte spatiale</td>
+          <td class="px-3 py-2 text-center text-red-600 font-medium">Grande</td>
+          <td class="px-3 py-2 text-center text-emerald-600 font-medium">Minimale</td>
+          <td class="px-3 py-2 text-center text-amber-600 font-medium">Variable</td>
+        </tr>
+        <tr class="bg-white">
+          <td class="px-3 py-2 text-zinc-600">Accessibilité AA</td>
+          <td class="px-3 py-2 text-center text-emerald-600 font-medium">Excellent</td>
+          <td class="px-3 py-2 text-center text-amber-600 font-medium">Moyen</td>
+          <td class="px-3 py-2 text-center text-emerald-600 font-medium">Bon</td>
+        </tr>
+        <tr class="bg-zinc-50">
+          <td class="px-3 py-2 text-zinc-600">isLate awareness</td>
+          <td class="px-3 py-2 text-center text-emerald-600 font-medium">Banderole</td>
+          <td class="px-3 py-2 text-center text-amber-600 font-medium">Badge couleur</td>
+          <td class="px-3 py-2 text-center text-emerald-600 font-medium">Border + texte</td>
+        </tr>
+        <tr class="bg-white">
+          <td class="px-3 py-2 text-zinc-600">Saisie motif N/A</td>
+          <td class="px-3 py-2 text-center text-amber-600 font-medium">Sous-popover</td>
+          <td class="px-3 py-2 text-center text-amber-600 font-medium">Mini-form</td>
+          <td class="px-3 py-2 text-center text-emerald-600 font-medium">Inline cellule</td>
+        </tr>
+        <tr class="bg-zinc-50">
+          <td class="px-3 py-2 text-zinc-600">Complexité impl.</td>
+          <td class="px-3 py-2 text-center text-amber-600 font-medium">Moyenne</td>
+          <td class="px-3 py-2 text-center text-emerald-600 font-medium">Faible</td>
+          <td class="px-3 py-2 text-center text-red-600 font-medium">Plus élevée</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="text-xs text-zinc-500 mt-3 max-w-2xl">Recommandation PO : la <strong>Variante A</strong> est la plus sûre pour un premier MVP (lisibilité + accessibilité) ; la <strong>Variante C</strong> est la plus cohérente avec une UX planning avancée.</p>
+  </section>
+
+  <footer class="text-xs text-zinc-400 border-t border-zinc-200 pt-4">
+    Mockup statique — aucun JS · Orchestr'A V2 · E3.2 · 24 avril 2026
+  </footer>
+
+</body>
+</html>
