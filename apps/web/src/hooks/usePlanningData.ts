@@ -92,6 +92,7 @@ interface UsePlanningDataReturn {
   lateThresholdDays: number;
   silentRefetch: () => Promise<void>;
   getGroupTaskCount: (groupUsers: User[]) => number;
+  predefinedAssignments: PredefinedTaskAssignment[];
 }
 
 export const usePlanningData = ({
@@ -563,5 +564,6 @@ export const usePlanningData = ({
     silentRefetch: () => fetchData(true),
     getGroupTaskCount,
     lateThresholdDays,
+    predefinedAssignments,
   };
 };

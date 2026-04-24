@@ -167,5 +167,20 @@
   },
   "roles": {
     "REFERENT_TECHNIQUE_SHORT": "Réf. Tech."
+  },
+  "activityGrid": {
+    "caption": "Grille d'activité — jours en lignes, tâches en colonnes",
+    "dateCol": "Jour",
+    "emptyCell": "—",
+    "moreUsers": "+{count}",
+    "print": "Imprimer",
+    "emptyState": "Aucune tâche prédéfinie active"
+  },
+  "status": {
+    "DONE": "Fait",
+    "IN_PROGRESS": "En cours",
+    "NOT_DONE": "À faire",
+    "LATE": "Retard",
+    "NOT_APPLICABLE": "N/A"
   }
 }

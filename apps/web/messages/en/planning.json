@@ -167,5 +167,20 @@
   },
   "roles": {
     "REFERENT_TECHNIQUE_SHORT": "Tech Lead"
+  },
+  "activityGrid": {
+    "caption": "Activity grid — days as rows, tasks as columns",
+    "dateCol": "Day",
+    "emptyCell": "—",
+    "moreUsers": "+{count}",
+    "print": "Print",
+    "emptyState": "No active predefined tasks"
+  },
+  "status": {
+    "DONE": "Done",
+    "IN_PROGRESS": "In progress",
+    "NOT_DONE": "To do",
+    "LATE": "Late",
+    "NOT_APPLICABLE": "N/A"
   }
 }

@@ -4,11 +4,14 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { addWeeks, subWeeks, format } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import { PlanningGrid } from "./PlanningGrid";
+import { ActivityGrid } from "./ActivityGrid";
 import { TaskCreateModal } from "./TaskCreateModal";
 import { EventCreateModal } from "./EventCreateModal";
 import { LegendFilterPopover } from "./LegendFilterPopover";
 import { BalancedPlanningModal } from "@/components/predefined-tasks/BalancedPlanningModal";
 import { usePlanningData, DisplayFilters } from "@/hooks/usePlanningData";
+import { predefinedTasksService } from "@/services/predefined-tasks.service";
+import type { PredefinedTask } from "@/services/predefined-tasks.service";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
@@ -61,6 +64,7 @@ export const PlanningView = ({
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showBalancer, setShowBalancer] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [predefinedTasks, setPredefinedTasks] = useState<PredefinedTask[]>([]);
   const createMenuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const displayDropdownRef = useRef<HTMLDivElement>(null);
@@ -90,7 +94,16 @@ export const PlanningView = ({
   // Le pivot jours × tâches est réalisé côté composant, pas côté hook.
   const dataViewMode: "week" | "month" =
     viewMode === "activity" ? "week" : viewMode;
-  const { displayDays, users, groupedUsers, refetch } = usePlanningData({
+  const {
+    displayDays,
+    users,
+    groupedUsers,
+    refetch,
+    silentRefetch,
+    predefinedAssignments,
+    getHolidayForDate,
+    lateThresholdDays,
+  } = usePlanningData({
     currentDate,
     viewMode: dataViewMode,
     filterUserId: effectiveFilterUserId,
@@ -98,6 +111,17 @@ export const PlanningView = ({
     viewFilter,
     displayFilters,
   });
+
+  // Charger les tâches prédéfinies actives pour la Vue Activité (W4.3).
+  // On les charge une seule fois au mount (elles changent rarement).
+  useEffect(() => {
+    predefinedTasksService
+      .getAll(1, 100)
+      .then((res) => setPredefinedTasks(res.data.filter((t) => t.isActive)))
+      .catch(() => {
+        /* silently ignore — ActivityGrid affiche emptyState */
+      });
+  }, []);
 
   // Calculer les IDs des services visibles
   const serviceIds = useMemo(
@@ -685,7 +709,19 @@ export const PlanningView = ({
           showGroupHeaders={showGroupHeaders}
           refreshTrigger={refreshTrigger}
         />
-      ) : null /* W4.3 : <ActivityGrid ... /> */}
+      ) : (
+        <ActivityGrid
+          days={displayDays}
+          tasks={predefinedTasks}
+          assignments={predefinedAssignments}
+          users={users}
+          lateThresholdDays={lateThresholdDays}
+          currentUserId={currentUser?.id ?? ""}
+          onAssignmentStatusChanged={silentRefetch}
+          isHoliday={(d) => !!getHolidayForDate(d)}
+          isWeekend={(d) => [0, 6].includes(d.getDay())}
+        />
+      )}
 
       {/* Task Create Modal */}
       <TaskCreateModal

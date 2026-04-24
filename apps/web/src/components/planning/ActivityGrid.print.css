@@ -1,0 +1,14 @@
+@media print {
+  /* Cacher tout ce qui n'est pas le tableau */
+  .activity-grid-no-print { display: none !important; }
+  /* Policy : 10pt pour tenir sur A4 paysage */
+  .activity-grid { font-size: 10pt; }
+  /* Répéter l'entête sur chaque page */
+  .activity-grid thead { display: table-header-group; }
+  /* Éviter qu'une ligne soit coupée */
+  .activity-grid tr { page-break-inside: avoid; }
+  /* Masquer le bouton Imprimer */
+  .no-print { display: none !important; }
+  /* Padding de body réduit pour l'impression */
+  body { margin: 0; padding: 1cm; }
+}
