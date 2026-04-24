@@ -39,6 +39,50 @@
       "5": "Très lourde"
     }
   },
+  "balancer": {
+    "openButton": "Générer un planning équilibré",
+    "title": "Planning équilibré automatique",
+    "description": "Répartit les occurrences de tâches récurrentes entre les agents sur la plage choisie.",
+    "config": {
+      "range": "Plage",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "service": "Service",
+      "users": "Agents",
+      "tasks": "Tâches à équilibrer",
+      "preview": "Prévisualiser",
+      "apply": "Appliquer",
+      "validation": {
+        "noAgent": "Sélectionnez au moins un agent ou un service",
+        "noTask": "Sélectionnez au moins une tâche",
+        "datesInvalid": "Plage de dates invalide"
+      }
+    },
+    "preview": {
+      "empty": "Cliquez sur Prévisualiser pour voir la proposition d'équilibrage",
+      "loading": "Calcul en cours...",
+      "equityRatio": "Ratio d'équité",
+      "workloadByAgent": "Charge par agent",
+      "agent": "Agent",
+      "load": "Charge pondérée",
+      "count": "Nombre d'occurrences",
+      "proposedAssignments": "Assignations proposées",
+      "unassignedOccurrences": "Occurrences non assignées",
+      "reasons": {
+        "NO_ELIGIBLE_AGENT": "Aucun agent éligible (absences ou compétences manquantes)"
+      },
+      "warningLowEquity": "Équilibre faible — envisagez d'ajuster la configuration"
+    },
+    "toast": {
+      "applied": "{count} assignation(s) créée(s)",
+      "appliedIdempotent": "Aucune nouvelle assignation (plage déjà couverte)",
+      "forbidden": "Permission refusée",
+      "error": "Erreur lors de la génération"
+    },
+    "footer": {
+      "escHint": "Échap pour fermer"
+    }
+  },
   "recurrence": {
     "type": {
       "label": "Type de récurrence",

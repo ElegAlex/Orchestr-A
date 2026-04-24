@@ -79,6 +79,7 @@ describe('PredefinedTasksController', () => {
     removeRecurringRule: vi.fn(),
     generateFromRules: vi.fn(),
     updateCompletionStatus: vi.fn(),
+    generateBalanced: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -422,6 +423,45 @@ describe('PredefinedTasksController', () => {
         mockPredefinedTasksService.updateCompletionStatus,
       ).toHaveBeenCalledWith('assignment-1', { status: 'DONE' }, mockUser);
       expect(result.completionStatus).toBe('DONE');
+    });
+  });
+
+  // ===========================
+  // generateBalanced — smoke test (W3.2)
+  // ===========================
+
+  describe('generateBalanced', () => {
+    it('smoke: POST retourne 200 avec le résultat du service', async () => {
+      const mockUser = {
+        id: 'admin-1',
+        role: { code: 'ADMIN', templateKey: 'ADMIN', id: 'r-admin', label: 'Admin', isSystem: true },
+      };
+      const balancedResult = {
+        mode: 'preview',
+        proposedAssignments: [],
+        workloadByAgent: [],
+        equityRatio: 1,
+        unassignedOccurrences: [],
+        assignmentsCreated: 0,
+      };
+      mockPredefinedTasksService.generateBalanced.mockResolvedValue(balancedResult);
+
+      const dto = {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        userIds: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
+        taskIds: ['11111111-1111-1111-1111-111111111111'],
+        mode: 'preview' as const,
+      };
+
+      const result = await controller.generateBalanced(dto as any, mockUser as any);
+
+      expect(mockPredefinedTasksService.generateBalanced).toHaveBeenCalledWith(
+        dto,
+        mockUser,
+      );
+      expect(result.mode).toBe('preview');
+      expect(result.assignmentsCreated).toBe(0);
     });
   });
 });

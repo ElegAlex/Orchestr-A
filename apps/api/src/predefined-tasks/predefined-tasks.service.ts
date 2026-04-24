@@ -25,6 +25,10 @@ import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import type { PredefinedTaskAssignment } from 'database';
+import { PlanningBalancerService } from './planning-balancer.service';
+import type { BalancerOccurrence } from './planning-balancer.types';
+import { LeavesService } from '../leaves/leaves.service';
+import { GenerateBalancedDto, GenerateBalancedResult } from './dto/generate-balanced.dto';
 
 /**
  * Transitions de statut autorisées pour les assignations de tâches prédéfinies.
@@ -69,6 +73,8 @@ export class PredefinedTasksService {
     private readonly prisma: PrismaService,
     private readonly auditPersistence: AuditPersistenceService,
     private readonly permissionsService: PermissionsService,
+    private readonly planningBalancer: PlanningBalancerService,
+    private readonly leavesService: LeavesService,
   ) {}
 
   /**
@@ -643,6 +649,213 @@ export class PredefinedTasksService {
     }
 
     return { ...results, rulesProcessed: rules.length };
+  }
+
+  // ===========================
+  // Génération équilibrée (W3.2)
+  // ===========================
+
+  /**
+   * Orchestre PlanningBalancerService pour générer des assignations équilibrées
+   * à partir des règles récurrentes actives sur une plage donnée.
+   *
+   * Mode preview : retourne le plan sans écriture DB.
+   * Mode apply   : crée transactionnellement les assignations (idempotence via skipDuplicates)
+   *                et persiste un audit log BALANCER_APPLIED.
+   */
+  async generateBalanced(
+    dto: GenerateBalancedDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<GenerateBalancedResult> {
+    // ── 1. Résolution du périmètre user ──────────────────────────────────────
+
+    if (!dto.serviceId && (!dto.userIds || dto.userIds.length === 0)) {
+      throw new BadRequestException(
+        'Au moins un serviceId ou userIds doit être fourni',
+      );
+    }
+
+    const startDate = new Date(dto.startDate);
+    const endDate = new Date(dto.endDate);
+
+    let userIds: string[];
+
+    if (dto.serviceId && dto.userIds && dto.userIds.length > 0) {
+      // Intersection : membres du service ∩ userIds fournis
+      const membersInService = await this.prisma.userService.findMany({
+        where: { serviceId: dto.serviceId },
+        select: { userId: true },
+      });
+      const memberSet = new Set(membersInService.map((m) => m.userId));
+      userIds = dto.userIds.filter((id) => memberSet.has(id));
+    } else if (dto.serviceId) {
+      const membersInService = await this.prisma.userService.findMany({
+        where: { serviceId: dto.serviceId },
+        select: { userId: true },
+      });
+      userIds = membersInService.map((m) => m.userId);
+    } else {
+      userIds = dto.userIds!;
+    }
+
+    // ── RBAC scope : si pas de projects:manage_any → vérifier périmètre ─────
+    const permissions = await this.permissionsService.getPermissionsForRole(
+      currentUser.role?.code,
+    );
+    if (!permissions.includes('projects:manage_any')) {
+      const managedUserIds = await this.getManagedUserIds(currentUser.id);
+      const outsideScope = userIds.filter((id) => !managedUserIds.has(id));
+      if (outsideScope.length > 0) {
+        throw new ForbiddenException(
+          'Certains utilisateurs sont hors de votre périmètre de gestion',
+        );
+      }
+    }
+
+    // ── 2. Charger les tâches actives ─────────────────────────────────────────
+    const tasks = await this.prisma.predefinedTask.findMany({
+      where: { id: { in: dto.taskIds }, isActive: true },
+    });
+
+    if (tasks.length !== dto.taskIds.length) {
+      const foundIds = new Set(tasks.map((t) => t.id));
+      const missingIds = dto.taskIds.filter((id) => !foundIds.has(id));
+      throw new NotFoundException(
+        `Tâches introuvables ou inactives : ${missingIds.join(', ')}`,
+      );
+    }
+
+    // ── 3. Charger les règles récurrentes actives ─────────────────────────────
+    const rules = await this.prisma.predefinedTaskRecurringRule.findMany({
+      where: {
+        predefinedTaskId: { in: dto.taskIds },
+        userId: { in: userIds },
+        isActive: true,
+        startDate: { lte: endDate },
+        OR: [{ endDate: null }, { endDate: { gte: startDate } }],
+      },
+    });
+
+    // ── 4. Matérialiser les occurrences ───────────────────────────────────────
+    const taskWeightMap = new Map(tasks.map((t) => [t.id, t.weight]));
+
+    const occurrences: BalancerOccurrence[] = [];
+    for (const rule of rules) {
+      const ruleLike: RuleLike = {
+        id: rule.id,
+        recurrenceType: (rule.recurrenceType ?? 'WEEKLY') as
+          | 'WEEKLY'
+          | 'MONTHLY_ORDINAL'
+          | 'MONTHLY_DAY',
+        dayOfWeek: rule.dayOfWeek,
+        weekInterval: rule.weekInterval ?? 1,
+        monthlyOrdinal: rule.monthlyOrdinal,
+        monthlyDayOfMonth: rule.monthlyDayOfMonth,
+        startDate: rule.startDate,
+        endDate: rule.endDate ?? null,
+        isActive: rule.isActive,
+      };
+
+      const dates = generateOccurrences(ruleLike, startDate, endDate);
+      const weight = taskWeightMap.get(rule.predefinedTaskId) ?? 1;
+
+      for (const date of dates) {
+        occurrences.push({
+          taskId: rule.predefinedTaskId,
+          weight,
+          date,
+          period: rule.period as 'MORNING' | 'AFTERNOON' | 'FULL_DAY',
+        });
+      }
+    }
+
+    // ── 5. Charger les absences approuvées ───────────────────────────────────
+    const rawLeavesResult = await this.leavesService.findAll(
+      1,
+      1000,
+      undefined,
+      'APPROVED' as any,
+      undefined,
+      dto.startDate,
+      dto.endDate,
+    );
+    // findAll retourne un tableau brut quand startDate/endDate est fourni
+    const rawLeaves: any[] = Array.isArray(rawLeavesResult)
+      ? rawLeavesResult
+      : (rawLeavesResult as any).data ?? [];
+
+    const userIdSet = new Set(userIds);
+    const absencesMap = new Map<string, Array<{ startDate: Date; endDate: Date }>>();
+    for (const userId of userIds) {
+      absencesMap.set(userId, []);
+    }
+    for (const leave of rawLeaves) {
+      if (leave.userId && userIdSet.has(leave.userId)) {
+        absencesMap.get(leave.userId)!.push({
+          startDate: new Date(leave.startDate),
+          endDate: new Date(leave.endDate),
+        });
+      }
+    }
+
+    // ── 6. Skills — V1 non câblé ────────────────────────────────────────────
+    // V2: intégrer PredefinedTask.requiredSkills
+
+    // ── 7. Appel du balancer ─────────────────────────────────────────────────
+    const agents = userIds.map((userId) => ({ userId }));
+    const output = this.planningBalancer.balance({
+      occurrences,
+      agents,
+      absences: absencesMap,
+      taskRequiredSkills: undefined,
+    });
+
+    // ── 8. Mode preview ──────────────────────────────────────────────────────
+    if (dto.mode === 'preview') {
+      return {
+        mode: 'preview',
+        ...output,
+        assignmentsCreated: 0,
+      };
+    }
+
+    // ── 9. Mode apply ────────────────────────────────────────────────────────
+    const count = await this.prisma.$transaction(async (tx) => {
+      const result = await (tx as any).predefinedTaskAssignment.createMany({
+        data: output.proposedAssignments.map((a) => ({
+          predefinedTaskId: a.taskId,
+          userId: a.userId,
+          date: a.date,
+          period: a.period,
+          assignedById: currentUser.id,
+          isRecurring: false,
+        })),
+        skipDuplicates: true,
+      });
+
+      await this.auditPersistence.log({
+        action: 'BALANCER_APPLIED',
+        entityType: 'PredefinedTaskRange',
+        entityId: `${dto.startDate}_${dto.endDate}`,
+        actorId: currentUser.id,
+        payload: {
+          range: { startDate: dto.startDate, endDate: dto.endDate },
+          taskIds: dto.taskIds,
+          userIds,
+          assignmentsProposed: output.proposedAssignments.length,
+          assignmentsCreated: result.count,
+          equityRatio: output.equityRatio,
+        },
+      });
+
+      return result.count;
+    });
+
+    return {
+      mode: 'apply',
+      ...output,
+      assignmentsCreated: count,
+    };
   }
 
   // ===========================

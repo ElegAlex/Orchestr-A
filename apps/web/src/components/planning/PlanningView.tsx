@@ -7,6 +7,7 @@ import { PlanningGrid } from "./PlanningGrid";
 import { TaskCreateModal } from "./TaskCreateModal";
 import { EventCreateModal } from "./EventCreateModal";
 import { LegendFilterPopover } from "./LegendFilterPopover";
+import { BalancedPlanningModal } from "@/components/predefined-tasks/BalancedPlanningModal";
 import { usePlanningData, DisplayFilters } from "@/hooks/usePlanningData";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -40,6 +41,7 @@ export const PlanningView = ({
   initialViewMode = "week",
 }: PlanningViewProps) => {
   const t = useTranslations("planning");
+  const tPredefined = useTranslations("predefinedTasks");
   const locale = useLocale();
   const dateLocale = locale === "en" ? enUS : fr;
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -54,6 +56,7 @@ export const PlanningView = ({
   const [showTaskCreateModal, setShowTaskCreateModal] = useState(false);
   const [showEventCreateModal, setShowEventCreateModal] = useState(false);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const [showBalancer, setShowBalancer] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const createMenuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -239,6 +242,28 @@ export const PlanningView = ({
         </div>
         {showControls && (
           <div className="flex items-center space-x-4">
+            {/* Bouton Planning équilibré — gated sur predefined_tasks:balance */}
+            {hasPermission("predefined_tasks:balance") && (
+              <button
+                onClick={() => setShowBalancer(true)}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm flex items-center gap-1.5"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+                </svg>
+                {tPredefined("balancer.openButton")}
+              </button>
+            )}
             {/* Bouton Créer avec dropdown */}
             <div className="relative" ref={createMenuRef}>
               <button
@@ -651,6 +676,14 @@ export const PlanningView = ({
         isOpen={showEventCreateModal}
         onClose={() => setShowEventCreateModal(false)}
         onSuccess={() => {
+          refetch();
+          setRefreshTrigger((prev) => prev + 1);
+        }}
+      />
+      <BalancedPlanningModal
+        open={showBalancer}
+        onClose={() => setShowBalancer(false)}
+        onApplied={() => {
           refetch();
           setRefreshTrigger((prev) => prev + 1);
         }}

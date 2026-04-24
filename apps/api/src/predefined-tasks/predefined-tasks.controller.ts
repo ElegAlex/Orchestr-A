@@ -30,6 +30,7 @@ import {
 } from './dto/create-recurring-rule.dto';
 import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
 import { UpdateCompletionStatusDto } from './dto/update-completion-status.dto';
+import { GenerateBalancedDto } from './dto/generate-balanced.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import {
   CurrentUser,
@@ -271,6 +272,27 @@ export class PredefinedTasksController {
       userId,
       generateFromRulesDto,
     );
+  }
+
+  @Post('recurring-rules/generate-balanced')
+  @RequirePermissions('predefined_tasks:balance')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Générer des assignations équilibrées via PlanningBalancerService (preview ou apply)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Plan d\'assignations équilibrées (preview) ou assignations créées (apply)',
+  })
+  @ApiResponse({ status: 400, description: 'Données invalides ou périmètre manquant' })
+  @ApiResponse({ status: 403, description: 'Utilisateurs hors périmètre' })
+  @ApiResponse({ status: 404, description: 'Tâches introuvables ou inactives' })
+  generateBalanced(
+    @Body() dto: GenerateBalancedDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.predefinedTasksService.generateBalanced(dto, user);
   }
 
   // ===========================

@@ -39,6 +39,50 @@
       "5": "Very heavy"
     }
   },
+  "balancer": {
+    "openButton": "Generate a balanced schedule",
+    "title": "Automatic balanced planning",
+    "description": "Distributes recurring task occurrences among agents over the selected date range.",
+    "config": {
+      "range": "Range",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "service": "Department",
+      "users": "Agents",
+      "tasks": "Tasks to balance",
+      "preview": "Preview",
+      "apply": "Apply",
+      "validation": {
+        "noAgent": "Select at least one agent or a department",
+        "noTask": "Select at least one task",
+        "datesInvalid": "Invalid date range"
+      }
+    },
+    "preview": {
+      "empty": "Click Preview to see the balancing proposal",
+      "loading": "Computing...",
+      "equityRatio": "Equity ratio",
+      "workloadByAgent": "Workload by agent",
+      "agent": "Agent",
+      "load": "Weighted load",
+      "count": "Occurrences count",
+      "proposedAssignments": "Proposed assignments",
+      "unassignedOccurrences": "Unassigned occurrences",
+      "reasons": {
+        "NO_ELIGIBLE_AGENT": "No eligible agent (absences or missing skills)"
+      },
+      "warningLowEquity": "Low balance — consider adjusting the configuration"
+    },
+    "toast": {
+      "applied": "{count} assignment(s) created",
+      "appliedIdempotent": "No new assignments (range already covered)",
+      "forbidden": "Permission denied",
+      "error": "Error generating balanced schedule"
+    },
+    "footer": {
+      "escHint": "Press Escape to close"
+    }
+  },
   "recurrence": {
     "type": {
       "label": "Recurrence type",

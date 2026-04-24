@@ -171,6 +171,41 @@ export interface GenerateAssignmentsDto {
   ruleId?: string;
 }
 
+// ===========================
+// BALANCER TYPES
+// ===========================
+
+export interface GenerateBalancedDto {
+  startDate: string;
+  endDate: string;
+  serviceId?: string;
+  userIds?: string[];
+  taskIds: string[];
+  mode: "preview" | "apply";
+}
+
+export interface BalancerProposedAssignment {
+  taskId: string;
+  userId: string;
+  date: string;
+  period: AssignmentPeriod;
+  weight: number;
+}
+
+export interface BalancerResult {
+  mode: "preview" | "apply";
+  proposedAssignments: BalancerProposedAssignment[];
+  workloadByAgent: Array<{ userId: string; weightedLoad: number }>;
+  equityRatio: number;
+  unassignedOccurrences: Array<{
+    taskId: string;
+    date: string;
+    period: AssignmentPeriod;
+    reason: string;
+  }>;
+  assignmentsCreated: number;
+}
+
 export interface BulkCreateRecurringRulesDto {
   // Bulk = WEEKLY-only (cf. W2.2 ADR-01, daysOfWeek[] est fondamentalement hebdo).
   // Pas de recurrenceType: le backend applique WEEKLY par défaut et rejette les champs
@@ -369,5 +404,13 @@ export const predefinedTasksService = {
       data,
     );
     return response.data;
+  },
+
+  async generateBalanced(dto: GenerateBalancedDto): Promise<BalancerResult> {
+    const res = await api.post<BalancerResult>(
+      "/predefined-tasks/recurring-rules/generate-balanced",
+      dto,
+    );
+    return res.data;
   },
 };

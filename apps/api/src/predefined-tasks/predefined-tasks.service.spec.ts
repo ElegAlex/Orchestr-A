@@ -8,12 +8,15 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { CreatePredefinedTaskDto } from './dto/create-predefined-task.dto';
 import { UpdateCompletionStatusDto } from './dto/update-completion-status.dto';
 import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { PermissionsService } from '../rbac/permissions.service';
+import { PlanningBalancerService } from './planning-balancer.service';
+import { LeavesService } from '../leaves/leaves.service';
 
 describe('PredefinedTasksService', () => {
   let service: PredefinedTasksService;
@@ -32,6 +35,7 @@ describe('PredefinedTasksService', () => {
       findUnique: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+      createMany: vi.fn(),
     },
     predefinedTaskRecurringRule: {
       create: vi.fn(),
@@ -47,6 +51,14 @@ describe('PredefinedTasksService', () => {
       findMany: vi.fn(),
     },
     $transaction: vi.fn(),
+  };
+
+  const mockPlanningBalancerService = {
+    balance: vi.fn(),
+  };
+
+  const mockLeavesService = {
+    findAll: vi.fn(),
   };
 
   const mockAuditPersistenceService = {
@@ -140,6 +152,14 @@ describe('PredefinedTasksService', () => {
         {
           provide: PermissionsService,
           useValue: mockPermissionsService,
+        },
+        {
+          provide: PlanningBalancerService,
+          useValue: mockPlanningBalancerService,
+        },
+        {
+          provide: LeavesService,
+          useValue: mockLeavesService,
         },
       ],
     }).compile();
@@ -1318,6 +1338,325 @@ describe('PredefinedTasksService', () => {
       const errors = await validate(dto);
       const crossError = errors.find((e) => e.property === 'recurrenceType');
       expect(crossError).toBeUndefined();
+    });
+  });
+
+  // ===========================
+  // generateBalanced — W3.2
+  // ===========================
+
+  describe('generateBalanced', () => {
+    const taskId1 = '11111111-1111-1111-1111-111111111111';
+    const userId1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    const userId2 = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+
+    const mockActiveTask = {
+      id: taskId1,
+      name: 'Tâche test',
+      isActive: true,
+      weight: 2,
+    };
+
+    const mockRule = {
+      id: 'rule-bal-1',
+      predefinedTaskId: taskId1,
+      userId: userId1,
+      recurrenceType: 'WEEKLY',
+      dayOfWeek: 0, // Lundi
+      weekInterval: 1,
+      monthlyOrdinal: null,
+      monthlyDayOfMonth: null,
+      period: 'MORNING',
+      startDate: new Date('2026-04-01'),
+      endDate: null,
+      isActive: true,
+    };
+
+    const mockBalancerOutput = {
+      proposedAssignments: [
+        {
+          taskId: taskId1,
+          userId: userId1,
+          date: new Date('2026-04-06'),
+          period: 'MORNING',
+          weight: 2,
+        },
+      ],
+      workloadByAgent: [{ userId: userId1, weightedLoad: 2 }],
+      equityRatio: 1,
+      unassignedOccurrences: [],
+    };
+
+    const adminUser = {
+      id: 'admin-uuid',
+      role: { code: 'ADMIN', templateKey: 'ADMIN', id: 'r-admin', label: 'Admin', isSystem: true },
+      permissions: ['projects:manage_any', 'predefined_tasks:balance'],
+    };
+
+    const responsableUser = {
+      id: 'resp-uuid',
+      role: { code: 'RESPONSABLE', templateKey: 'RESPONSABLE', id: 'r-resp', label: 'Responsable', isSystem: true },
+      permissions: ['predefined_tasks:balance'],
+    };
+
+    beforeEach(() => {
+      // Par défaut : tâches actives, règles, pas d'absences, balancer output
+      mockPrismaService.predefinedTask.findMany.mockResolvedValue([mockActiveTask]);
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([mockRule]);
+      mockLeavesService.findAll.mockResolvedValue([]);
+      mockPlanningBalancerService.balance.mockReturnValue(mockBalancerOutput);
+      // Pour RBAC scope : service.findMany et userService.findMany
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findMany.mockResolvedValue([]);
+    });
+
+    it('GB-1: mode preview — renvoie balancerOutput sans écrire en DB', async () => {
+      const dto = {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        userIds: [userId1],
+        taskIds: [taskId1],
+        mode: 'preview' as const,
+      };
+
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+        'predefined_tasks:balance',
+      ]);
+
+      const result = await service.generateBalanced(dto, adminUser as any);
+
+      expect(result.mode).toBe('preview');
+      expect(result.assignmentsCreated).toBe(0);
+      expect(result.proposedAssignments).toHaveLength(1);
+      expect(mockPrismaService.predefinedTaskAssignment.createMany).not.toHaveBeenCalled();
+      expect(mockAuditPersistenceService.log).not.toHaveBeenCalled();
+    });
+
+    it('GB-2: mode apply — createMany appelé avec skipDuplicates, audit log BALANCER_APPLIED inséré', async () => {
+      const dto = {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        userIds: [userId1],
+        taskIds: [taskId1],
+        mode: 'apply' as const,
+      };
+
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+        'predefined_tasks:balance',
+      ]);
+
+      const txMock = {
+        predefinedTaskAssignment: {
+          createMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
+      };
+      mockPrismaService.$transaction.mockImplementation(
+        async (cb: (tx: any) => Promise<any>) => cb(txMock),
+      );
+      mockAuditPersistenceService.log.mockResolvedValue(undefined);
+
+      const result = await service.generateBalanced(dto, adminUser as any);
+
+      expect(result.mode).toBe('apply');
+      expect(result.assignmentsCreated).toBe(1);
+      expect(txMock.predefinedTaskAssignment.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skipDuplicates: true }),
+      );
+      expect(mockAuditPersistenceService.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'BALANCER_APPLIED' }),
+      );
+    });
+
+    it('GB-3: idempotence — replay apply → createMany appelé, count=0 (skipDuplicates)', async () => {
+      const dto = {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        userIds: [userId1],
+        taskIds: [taskId1],
+        mode: 'apply' as const,
+      };
+
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+        'predefined_tasks:balance',
+      ]);
+
+      const txMock = {
+        predefinedTaskAssignment: {
+          createMany: vi.fn().mockResolvedValue({ count: 0 }),
+        },
+      };
+      mockPrismaService.$transaction.mockImplementation(
+        async (cb: (tx: any) => Promise<any>) => cb(txMock),
+      );
+      mockAuditPersistenceService.log.mockResolvedValue(undefined);
+
+      const result = await service.generateBalanced(dto, adminUser as any);
+
+      expect(txMock.predefinedTaskAssignment.createMany).toHaveBeenCalled();
+      expect(result.assignmentsCreated).toBe(0);
+    });
+
+    it('GB-4: RBAC scope — RESPONSABLE, userIds hors périmètre → ForbiddenException', async () => {
+      const outOfScopeUserId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+      const dto = {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        userIds: [outOfScopeUserId],
+        taskIds: [taskId1],
+        mode: 'preview' as const,
+      };
+
+      // RESPONSABLE n'a pas projects:manage_any
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'predefined_tasks:balance',
+      ]);
+      // Périmètre du RESPONSABLE : ne contient pas outOfScopeUserId
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findMany.mockResolvedValue([]);
+
+      await expect(
+        service.generateBalanced(dto, responsableUser as any),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('GB-5: ADMIN global (projects:manage_any) peut balancer n\'importe quel user', async () => {
+      const dto = {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        userIds: [userId1, userId2],
+        taskIds: [taskId1],
+        mode: 'preview' as const,
+      };
+
+      // ADMIN a projects:manage_any → pas de vérification de périmètre
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+        'predefined_tasks:balance',
+      ]);
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([]);
+      mockPlanningBalancerService.balance.mockReturnValue({
+        ...mockBalancerOutput,
+        proposedAssignments: [],
+        workloadByAgent: [
+          { userId: userId1, weightedLoad: 0 },
+          { userId: userId2, weightedLoad: 0 },
+        ],
+      });
+
+      const result = await service.generateBalanced(dto, adminUser as any);
+
+      expect(result).toBeDefined();
+      // Pas de ForbiddenException
+    });
+
+    it('GB-6: taskId inexistant ou isActive=false → NotFoundException', async () => {
+      const dto = {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        userIds: [userId1],
+        taskIds: ['99999999-9999-9999-9999-999999999999'],
+        mode: 'preview' as const,
+      };
+
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+      ]);
+      // Tâche non trouvée (findMany retourne tableau vide — taskId absent)
+      mockPrismaService.predefinedTask.findMany.mockResolvedValue([]);
+
+      await expect(
+        service.generateBalanced(dto, adminUser as any),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('GB-7: ni serviceId ni userIds → BadRequestException', async () => {
+      const dto = {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        taskIds: [taskId1],
+        mode: 'preview' as const,
+      } as any;
+
+      await expect(
+        service.generateBalanced(dto, adminUser as any),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('GB-8: serviceId + userIds → intersection filtrée sur membres du service', async () => {
+      const serviceId = 'srv-1111-1111-1111-111111111111';
+      const dto = {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        serviceId,
+        userIds: [userId1, userId2],
+        taskIds: [taskId1],
+        mode: 'preview' as const,
+      };
+
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+      ]);
+
+      // Le service contient uniquement userId1 (userId2 hors service → filtré)
+      mockPrismaService.userService.findMany.mockImplementation((args: any) => {
+        if (args?.where?.serviceId === serviceId) {
+          // membres du service demandé
+          return Promise.resolve([{ userId: userId1 }]);
+        }
+        if (args?.where?.userId) {
+          // services d'appartenance du currentUser (pour getManagedUserIds)
+          return Promise.resolve([]);
+        }
+        return Promise.resolve([]);
+      });
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([]);
+      mockPlanningBalancerService.balance.mockReturnValue({
+        ...mockBalancerOutput,
+        proposedAssignments: [],
+        workloadByAgent: [{ userId: userId1, weightedLoad: 0 }],
+      });
+
+      const result = await service.generateBalanced(dto, adminUser as any);
+
+      // balance() appelé avec uniquement userId1 dans agents (userId2 filtré)
+      const balanceCall = mockPlanningBalancerService.balance.mock.calls[0][0];
+      expect(balanceCall.agents).toHaveLength(1);
+      expect(balanceCall.agents[0].userId).toBe(userId1);
+      expect(result).toBeDefined();
+    });
+
+    it('GB-9: transaction rollback — createMany throw → audit log NOT créé', async () => {
+      const dto = {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        userIds: [userId1],
+        taskIds: [taskId1],
+        mode: 'apply' as const,
+      };
+
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+      ]);
+
+      const txMock = {
+        predefinedTaskAssignment: {
+          createMany: vi.fn().mockRejectedValue(new Error('DB error')),
+        },
+      };
+      mockPrismaService.$transaction.mockImplementation(
+        async (cb: (tx: any) => Promise<any>) => cb(txMock),
+      );
+
+      await expect(
+        service.generateBalanced(dto, adminUser as any),
+      ).rejects.toThrow('DB error');
+
+      // Audit log PAS créé car transaction a échoué (audit est DANS la transaction)
+      expect(mockAuditPersistenceService.log).not.toHaveBeenCalled();
     });
   });
 });
