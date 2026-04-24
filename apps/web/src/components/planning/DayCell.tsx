@@ -22,6 +22,33 @@ const STATUS_FILTER_KEY: Record<
   [TaskStatus.BLOCKED]: "blocked",
 };
 
+// Pastille visuelle discrète pour le poids d'une tâche prédéfinie.
+// 3 tailles : weight 4-5 = large, 2-3 = medium, 1 = petit. Valeurs hors [1..5] clampées.
+const WEIGHT_DOT_SIZE: Record<1 | 2 | 3 | 4 | 5, string> = {
+  1: "h-1.5 w-1.5",
+  2: "h-2 w-2",
+  3: "h-2 w-2",
+  4: "h-3 w-3",
+  5: "h-3 w-3",
+};
+
+function WeightDot({ weight, color }: { weight: number; color: string }) {
+  const clamped = (Math.min(5, Math.max(1, Math.round(weight))) || 1) as
+    | 1
+    | 2
+    | 3
+    | 4
+    | 5;
+  return (
+    <span
+      className={`inline-block rounded-full flex-shrink-0 ${WEIGHT_DOT_SIZE[clamped]}`}
+      style={{ backgroundColor: color }}
+      aria-label={`Poids ${clamped} sur 5`}
+      title={`Poids ${clamped}/5`}
+    />
+  );
+}
+
 interface DayCellProps {
   cell: DayCellData;
   userId: string;
@@ -413,7 +440,15 @@ export const DayCell = ({
                         {isExternal ? "🔴" : pt.icon}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium line-clamp-1">{pt.name}</p>
+                        <div className="flex items-center gap-1">
+                          <p className="font-medium line-clamp-1 flex-1">
+                            {pt.name}
+                          </p>
+                          <WeightDot
+                            weight={pt.weight}
+                            color={isExternal ? "#b91c1c" : pt.color}
+                          />
+                        </div>
                         <p className="text-[10px] opacity-80">
                           {pt.defaultDuration === "TIME_SLOT" &&
                           pt.startTime &&
