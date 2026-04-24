@@ -73,6 +73,7 @@ model User {
   refreshTokens                    RefreshToken[]
   managedProjects                  Project[]                     @relation("ProjectManager")
   sponsoredProjects                Project[]                     @relation("ProjectSponsor")
+  auditLogs                        AuditLog[]                    @relation("AuditActor")
 
   @@map("users")
 }
@@ -946,6 +947,7 @@ model PredefinedTask {
   endTime                String? // Format "HH:mm", utilisé quand defaultDuration = "TIME_SLOT"
   isExternalIntervention Boolean  @default(false)
   isActive               Boolean  @default(true)
+  weight                 Int      @default(1) // 1..5, pondération pour équilibrage
   createdById            String
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
@@ -1076,4 +1078,27 @@ model Role {
   @@map("roles")
   @@index([templateKey])
   @@index([isDefault])
+}
+
+/// Journal d'audit persistant pour traçabilité RGPD des actions métier.
+/// Scope V1 strict : ASSIGNMENT_STATUS_CHANGED et BALANCER_APPLIED (cf. ADR-02).
+/// Table append-only par convention applicative (aucun update, aucun delete via service).
+model AuditLog {
+  id         String   @id @default(uuid())
+  /// Code de l'action (ex. ASSIGNMENT_STATUS_CHANGED, BALANCER_APPLIED).
+  action     String
+  /// Type de la ressource concernée (ex. PredefinedTaskAssignment, PredefinedTaskRange).
+  entityType String
+  /// Id de la ressource (ou id composite en string pour une plage).
+  entityId   String
+  /// Utilisateur à l'origine de l'action, nullable pour actions système (cron, job).
+  actorId    String?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  /// Payload contextuel (before/after, raison, plage...). JSONB côté Postgres.
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
 }
