@@ -751,6 +751,7 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       EVENTS_SELF_SERVICE,
       TASKS_READ,
       TASKS_SELF_AUTHORING,
+      PREDEFINED_TASKS_STATUS_OWN,
     ),
   },
 
@@ -770,6 +771,7 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       EVENTS_SELF_SERVICE,
       TASKS_READ,
       TASKS_SELF_AUTHORING,
+      PREDEFINED_TASKS_STATUS_OWN,
       SETTINGS_READ, // §NOTE 3
       [
         "holidays:create",
