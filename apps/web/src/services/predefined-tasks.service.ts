@@ -56,7 +56,7 @@ export interface PredefinedTaskRecurringRule {
   predefinedTaskId: string;
   userId: string;
   recurrenceType?: RecurrenceType;
-  dayOfWeek: DayOfWeek;
+  dayOfWeek: DayOfWeek | null;
   monthlyDayOfMonth?: number | null;
   monthlyOrdinal?: number | null;
   period: TaskDuration;

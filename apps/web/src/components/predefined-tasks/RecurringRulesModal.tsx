@@ -107,13 +107,14 @@ function defaultFormData(task: PredefinedTask): RuleFormData {
 
 function formDataFromRule(rule: PredefinedTaskRecurringRule): Partial<RuleFormData> {
   const type: RecurrenceType = rule.recurrenceType ?? "WEEKLY";
+  const dow: DayOfWeek = rule.dayOfWeek ?? "MONDAY";
   return {
     recurrenceType: type,
-    daysOfWeek: [rule.dayOfWeek],
+    daysOfWeek: rule.dayOfWeek ? [rule.dayOfWeek] : [],
     weekInterval: rule.weekInterval ?? 1,
     monthlyDayOfMonth: rule.monthlyDayOfMonth ?? 1,
     monthlyOrdinal: rule.monthlyOrdinal ?? 1,
-    dayOfWeek: rule.dayOfWeek,
+    dayOfWeek: dow,
     userIds: [rule.userId],
     duration: rule.period,
     startDate: rule.startDate ? rule.startDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -350,15 +351,18 @@ export function RecurringRulesModal({
     if (type === "MONTHLY_DAY") {
       return `Le ${rule.monthlyDayOfMonth ?? "?"} du mois`;
     }
+    const dowLabel = rule.dayOfWeek
+      ? (DAY_OF_WEEK_LABELS[rule.dayOfWeek]?.toLowerCase() ?? rule.dayOfWeek)
+      : "?";
     if (type === "MONTHLY_ORDINAL") {
       const ordinalLabels: Record<number, string> = { 1: "1er", 2: "2e", 3: "3e", 4: "4e", 5: "Dernier" };
       const ord = rule.monthlyOrdinal ?? 1;
-      return `${ordinalLabels[ord] ?? ord} ${DAY_OF_WEEK_LABELS[rule.dayOfWeek]?.toLowerCase() ?? rule.dayOfWeek}`;
+      return `${ordinalLabels[ord] ?? ord} ${dowLabel}`;
     }
     // WEEKLY
     return rule.weekInterval && rule.weekInterval > 1
-      ? `Un ${DAY_OF_WEEK_LABELS[rule.dayOfWeek]?.toLowerCase() ?? rule.dayOfWeek} sur ${rule.weekInterval}`
-      : `Chaque ${DAY_OF_WEEK_LABELS[rule.dayOfWeek]?.toLowerCase() ?? rule.dayOfWeek}`;
+      ? `Un ${dowLabel} sur ${rule.weekInterval}`
+      : `Chaque ${dowLabel}`;
   };
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -488,40 +492,64 @@ export function RecurringRulesModal({
             </h3>
 
             {/* ── Recurrence type radio group ─────────────────────────────── */}
-            <fieldset>
-              <legend
-                id="recurrence-type-legend"
-                className="block text-xs font-medium text-gray-700 mb-2"
-              >
-                {t("recurrence.type.label")}
-              </legend>
-              <div
-                role="radiogroup"
-                aria-labelledby="recurrence-type-legend"
-                className="flex flex-wrap gap-2"
-              >
-                {(["WEEKLY", "MONTHLY_DAY", "MONTHLY_ORDINAL"] as RecurrenceType[]).map(
-                  (type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      role="radio"
-                      aria-checked={formData.recurrenceType === type}
-                      tabIndex={formData.recurrenceType === type ? 0 : -1}
-                      onClick={() => setField("recurrenceType", type)}
-                      className={[
-                        "px-3 py-1.5 rounded-lg text-sm font-medium border transition focus:outline-none focus:ring-2 focus:ring-blue-500",
-                        formData.recurrenceType === type
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-zinc-100 text-zinc-800 border-zinc-200 hover:border-zinc-400",
-                      ].join(" ")}
-                    >
-                      {t(`recurrence.type.${type}`)}
-                    </button>
-                  ),
-                )}
-              </div>
-            </fieldset>
+            {(() => {
+              const RECURRENCE_TYPES: RecurrenceType[] = ["WEEKLY", "MONTHLY_DAY", "MONTHLY_ORDINAL"];
+              const handleRecurrenceKeyDown = (
+                e: React.KeyboardEvent<HTMLButtonElement>,
+                current: RecurrenceType,
+              ) => {
+                const idx = RECURRENCE_TYPES.indexOf(current);
+                let next: number | null = null;
+                if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+                  next = (idx + 1) % RECURRENCE_TYPES.length;
+                } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                  next = (idx - 1 + RECURRENCE_TYPES.length) % RECURRENCE_TYPES.length;
+                } else if (e.key === "Home") {
+                  next = 0;
+                } else if (e.key === "End") {
+                  next = RECURRENCE_TYPES.length - 1;
+                }
+                if (next !== null) {
+                  e.preventDefault();
+                  setField("recurrenceType", RECURRENCE_TYPES[next]);
+                }
+              };
+              return (
+                <fieldset>
+                  <legend
+                    id="recurrence-type-legend"
+                    className="block text-xs font-medium text-gray-700 mb-2"
+                  >
+                    {t("recurrence.type.label")}
+                  </legend>
+                  <div
+                    role="radiogroup"
+                    aria-labelledby="recurrence-type-legend"
+                    className="flex flex-wrap gap-2"
+                  >
+                    {RECURRENCE_TYPES.map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        role="radio"
+                        aria-checked={formData.recurrenceType === type}
+                        tabIndex={formData.recurrenceType === type ? 0 : -1}
+                        onClick={() => setField("recurrenceType", type)}
+                        onKeyDown={(e) => handleRecurrenceKeyDown(e, type)}
+                        className={[
+                          "px-3 py-1.5 rounded-lg text-sm font-medium border transition focus:outline-none focus:ring-2 focus:ring-blue-500",
+                          formData.recurrenceType === type
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-zinc-100 text-zinc-800 border-zinc-200 hover:border-zinc-400",
+                        ].join(" ")}
+                      >
+                        {t(`recurrence.type.${type}`)}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              );
+            })()}
 
             {/* ── User selector (hidden in edit mode — editing a single rule) ─ */}
             {!isEditing && (
@@ -573,37 +601,62 @@ export function RecurringRulesModal({
             {/* ── WEEKLY fields ─────────────────────────────────────────────── */}
             {formData.recurrenceType === "WEEKLY" && (
               <>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Jours de la semaine *
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {DAY_OF_WEEK_OPTIONS.map(({ value, short }) => {
-                      const selected = formData.daysOfWeek.includes(value);
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() =>
-                            setField(
-                              "daysOfWeek",
-                              selected
-                                ? formData.daysOfWeek.filter((d) => d !== value)
-                                : [...formData.daysOfWeek, value],
-                            )
-                          }
-                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            selected
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          }`}
-                        >
-                          {short}
-                        </button>
-                      );
-                    })}
+                {isEditing ? (
+                  /* Edit mode: single day select (updating a single existing rule) */
+                  <div>
+                    <label
+                      htmlFor="dayOfWeekWeekly"
+                      className="block text-xs font-medium text-gray-700 mb-1"
+                    >
+                      {t("recurrence.dayOfWeek.label")}
+                    </label>
+                    <select
+                      id="dayOfWeekWeekly"
+                      value={formData.dayOfWeek}
+                      onChange={(e) => setField("dayOfWeek", e.target.value as DayOfWeek)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
+                    >
+                      {DOW_FULL_OPTIONS.map((d) => (
+                        <option key={d} value={d}>
+                          {t(`recurrence.dayOfWeek.options.${d}`)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </div>
+                ) : (
+                  /* Create mode: multi-day pills for bulk creation */
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Jours de la semaine *
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {DAY_OF_WEEK_OPTIONS.map(({ value, short }) => {
+                        const selected = formData.daysOfWeek.includes(value);
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() =>
+                              setField(
+                                "daysOfWeek",
+                                selected
+                                  ? formData.daysOfWeek.filter((d) => d !== value)
+                                  : [...formData.daysOfWeek, value],
+                              )
+                            }
+                            className={`px-3 py-1.5 rounded-full text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                              selected
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                          >
+                            {short}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label
