@@ -79,12 +79,7 @@ describe("WeightInput", () => {
   it("disables all 5 buttons when disabled prop is true", () => {
     render(<WeightInput value={1} onChange={onChange} disabled />);
 
-    // When disabled, testing-library may exclude from role="radio" tree;
-    // use a direct DOM query as fallback
-    const radios =
-      screen.queryAllByRole("radio").length > 0
-        ? screen.getAllByRole("radio")
-        : Array.from(document.querySelectorAll("button"));
+    const radios = screen.getAllByRole("radio");
     expect(radios).toHaveLength(5);
     radios.forEach((btn) => {
       expect(btn).toBeDisabled();
@@ -94,10 +89,7 @@ describe("WeightInput", () => {
   it("does not call onChange when a disabled button is clicked", () => {
     render(<WeightInput value={1} onChange={onChange} disabled />);
 
-    const radios =
-      screen.queryAllByRole("radio").length > 0
-        ? screen.getAllByRole("radio")
-        : Array.from(document.querySelectorAll("button"));
+    const radios = screen.getAllByRole("radio");
     fireEvent.click(radios[2]);
     expect(onChange).not.toHaveBeenCalled();
   });
