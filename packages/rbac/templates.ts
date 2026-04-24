@@ -126,6 +126,8 @@ import {
   REPORTS_FULL,
   PREDEFINED_TASKS_VIEW,
   PREDEFINED_TASKS_ADMIN,
+  PREDEFINED_TASKS_STATUS_OWN,
+  PLANNING_ACTIVITY,
   THIRD_PARTIES_CRUD,
   CLIENTS_CRUD,
   TIME_TRACKING_FOR_THIRD_PARTY,
@@ -231,8 +233,10 @@ function compose(
  *   - `COLLABORATION_READ` : comments:read, documents:read, epics:read,
  *                             milestones:read (quasi-universelles D4 Cat B)
  *   - `PREDEFINED_TASKS_VIEW` : predefined_tasks:view
+ *   - `PLANNING_ACTIVITY` : planning:activity-view (vue de lecture sans risque
+ *                            RGPD, disponible pour tout utilisateur incl. OBSERVER)
  *
- * Taille : 10 permissions.
+ * Taille : 11 permissions.
  *
  * Note : `settings:read` n'est PAS inclus (cf. §NOTE 3 — restreint aux
  * templates qualifiés).
@@ -242,12 +246,17 @@ const COMMON_BASE = compose(
   CALENDAR_CONTEXT_READ,
   COLLABORATION_READ,
   PREDEFINED_TASKS_VIEW,
+  PLANNING_ACTIVITY,
 );
 
 /**
  * Socle self-service standard : droits d'action de base sur ses propres
- * congés, télétravail, temps, événements, tâches orphelines + lecture tâches.
- * Taille : 18 permissions.
+ * congés, télétravail, temps, événements, tâches orphelines + lecture tâches
+ * + mise à jour de ses propres statuts d'assignations prédéfinies.
+ * Taille : 19 permissions.
+ *
+ * Note : `PREDEFINED_TASKS_STATUS_OWN` n'est PAS dans `COMMON_BASE` car les
+ * OBSERVER ne doivent pas pouvoir muter.
  */
 const STANDARD_SELF_SERVICE = compose(
   LEAVES_SELF_SERVICE,
@@ -256,6 +265,7 @@ const STANDARD_SELF_SERVICE = compose(
   EVENTS_SELF_SERVICE,
   TASKS_READ,
   TASKS_SELF_AUTHORING,
+  PREDEFINED_TASKS_STATUS_OWN,
 );
 
 /**
@@ -789,6 +799,7 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       CALENDAR_CONTEXT_READ,
       PROJECT_STRUCTURE_READ, // inclut COLLABORATION_READ + projects/skills/third_parties
       PREDEFINED_TASKS_VIEW,
+      PLANNING_ACTIVITY, // Vue Activité : lecture sans risque RGPD, dispo OBSERVER
       SETTINGS_READ, // §NOTE 3 (historique)
       [
         "events:read",
@@ -818,6 +829,7 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       CALENDAR_CONTEXT_READ,
       PROJECT_STRUCTURE_READ,
       PREDEFINED_TASKS_VIEW,
+      PLANNING_ACTIVITY, // Vue Activité : lecture sans risque RGPD, dispo OBSERVER
       SETTINGS_READ, // §NOTE 3
       [
         "events:read",
@@ -844,6 +856,7 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       ANNUAIRE_READ,
       CALENDAR_CONTEXT_READ,
       PREDEFINED_TASKS_VIEW,
+      PLANNING_ACTIVITY, // Vue Activité : lecture sans risque RGPD, dispo OBSERVER
       SETTINGS_READ, // §NOTE 3
       [
         "leaves:read",

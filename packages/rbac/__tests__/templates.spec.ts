@@ -22,38 +22,43 @@ import {
 // Mise à jour 2026-04-23 : module Clients V1 ajoute 5 permissions au
 // catalogue (CATALOG_PERMISSIONS 107 → 112) et distribue selon §15
 // du spec clients-module-design.
+// Mise à jour 2026-04-24 : W0.6 — +4 permissions Planning activités récurrentes
+// (CATALOG_PERMISSIONS 112 → 116). planning:activity-view → COMMON_BASE (+1 tous
+// les templates passant par COMMON_BASE ou explicite OBSERVER). predefined_tasks:balance
+// et predefined_tasks:update-any-status → PREDEFINED_TASKS_ADMIN (+2). predefined_tasks:update-own-status
+// → STANDARD_SELF_SERVICE (+1 tous templates self-service composite).
 const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
-  ADMIN: 112,
-  ADMIN_DELEGATED: 109,
-  PORTFOLIO_MANAGER: 78,
-  MANAGER: 81,
-  MANAGER_PROJECT_FOCUS: 74,
-  MANAGER_HR_FOCUS: 45,
-  PROJECT_LEAD: 64,
-  PROJECT_LEAD_JUNIOR: 61,
-  TECHNICAL_LEAD: 46,
-  PROJECT_CONTRIBUTOR: 55,
-  PROJECT_CONTRIBUTOR_LIGHT: 47,
-  FUNCTIONAL_REFERENT: 42,
-  HR_OFFICER: 38,
-  HR_OFFICER_LIGHT: 20,
-  THIRD_PARTY_MANAGER: 53,
-  CONTROLLER: 28,
-  BUDGET_ANALYST: 17,
-  DATA_ANALYST: 14,
-  IT_SUPPORT: 28,
-  IT_INFRASTRUCTURE: 33,
-  OBSERVER_FULL: 25,
-  OBSERVER_PROJECTS_ONLY: 21,
-  OBSERVER_HR_ONLY: 13,
-  BASIC_USER: 28,
-  EXTERNAL_PRESTATAIRE: 44,
-  STAGIAIRE_ALTERNANT: 27,
+  ADMIN: 116,
+  ADMIN_DELEGATED: 113,
+  PORTFOLIO_MANAGER: 82,
+  MANAGER: 85,
+  MANAGER_PROJECT_FOCUS: 78,
+  MANAGER_HR_FOCUS: 49,
+  PROJECT_LEAD: 66,
+  PROJECT_LEAD_JUNIOR: 63,
+  TECHNICAL_LEAD: 48,
+  PROJECT_CONTRIBUTOR: 57,
+  PROJECT_CONTRIBUTOR_LIGHT: 49,
+  FUNCTIONAL_REFERENT: 44,
+  HR_OFFICER: 41,
+  HR_OFFICER_LIGHT: 21,
+  THIRD_PARTY_MANAGER: 55,
+  CONTROLLER: 29,
+  BUDGET_ANALYST: 18,
+  DATA_ANALYST: 15,
+  IT_SUPPORT: 29,
+  IT_INFRASTRUCTURE: 34,
+  OBSERVER_FULL: 26,
+  OBSERVER_PROJECTS_ONLY: 22,
+  OBSERVER_HR_ONLY: 14,
+  BASIC_USER: 30,
+  EXTERNAL_PRESTATAIRE: 46,
+  STAGIAIRE_ALTERNANT: 29,
 };
 
 describe("rbac — conformité contrats Phase 1", () => {
-  it("CATALOG_PERMISSIONS contient exactement 112 permissions", () => {
-    expect(CATALOG_PERMISSIONS.length).toBe(112);
+  it("CATALOG_PERMISSIONS contient exactement 116 permissions", () => {
+    expect(CATALOG_PERMISSIONS.length).toBe(116);
   });
 
   it("CATALOG_PERMISSIONS sans doublon", () => {

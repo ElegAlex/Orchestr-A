@@ -31,7 +31,7 @@
  */
 
 // ============================================================================
-// 1. PermissionCode — type union strict (112 entrées)
+// 1. PermissionCode — type union strict (116 entrées)
 // ============================================================================
 
 export type PermissionCode =
@@ -90,11 +90,16 @@ export type PermissionCode =
   | "milestones:delete"
   | "milestones:read"
   | "milestones:update"
-  // predefined_tasks (5)
+  // planning (1)
+  | "planning:activity-view"
+  // predefined_tasks (8)
   | "predefined_tasks:assign"
+  | "predefined_tasks:balance"
   | "predefined_tasks:create"
   | "predefined_tasks:delete"
   | "predefined_tasks:edit"
+  | "predefined_tasks:update-any-status"
+  | "predefined_tasks:update-own-status"
   | "predefined_tasks:view"
   // projects (6 — :edit et :view supprimés D4 A)
   | "projects:create"
@@ -465,13 +470,36 @@ export const PREDEFINED_TASKS_VIEW = [
 ] as const satisfies readonly PermissionCode[];
 
 /**
- * Administration des tâches prédéfinies + assignment aux agents.
+ * Administration des tâches prédéfinies + assignment aux agents + génération
+ * équilibrée + mise à jour du statut de toute assignation (scope service via
+ * @OwnershipCheck côté code).
  */
 export const PREDEFINED_TASKS_ADMIN = [
   "predefined_tasks:create",
   "predefined_tasks:edit",
   "predefined_tasks:delete",
   "predefined_tasks:assign",
+  "predefined_tasks:balance",
+  "predefined_tasks:update-any-status",
+] as const satisfies readonly PermissionCode[];
+
+/**
+ * Mise à jour du statut d'exécution de SES propres assignations de tâches
+ * prédéfinies. Distinct de `PREDEFINED_TASKS_ADMIN` pour éviter d'ouvrir la
+ * mutation aux OBSERVER et rôles en lecture seule.
+ */
+export const PREDEFINED_TASKS_STATUS_OWN = [
+  "predefined_tasks:update-own-status",
+] as const satisfies readonly PermissionCode[];
+
+// --- 2.h-bis Planning — Vue Activité --------------------------------------
+
+/**
+ * Accès au mode Vue Activité du planning. Vue de lecture sans risque RGPD,
+ * disponible pour tous les utilisateurs y compris les OBSERVER.
+ */
+export const PLANNING_ACTIVITY = [
+  "planning:activity-view",
 ] as const satisfies readonly PermissionCode[];
 
 // --- 2.i Tiers / prestataires ---------------------------------------------
@@ -585,7 +613,7 @@ export const SETTINGS_READ = [
 // ============================================================================
 
 /**
- * Liste exhaustive des 112 permissions canoniques, triée alphabétiquement par
+ * Liste exhaustive des 116 permissions canoniques, triée alphabétiquement par
  * `module:action`. Sert de source unique pour :
  *   - le seed DB (Spec 2 Vague 0) ;
  *   - la génération de migrations (drop permissions mortes, rename
@@ -651,11 +679,16 @@ export const CATALOG_PERMISSIONS = [
   "milestones:delete",
   "milestones:read",
   "milestones:update",
+  // planning
+  "planning:activity-view",
   // predefined_tasks
   "predefined_tasks:assign",
+  "predefined_tasks:balance",
   "predefined_tasks:create",
   "predefined_tasks:delete",
   "predefined_tasks:edit",
+  "predefined_tasks:update-any-status",
+  "predefined_tasks:update-own-status",
   "predefined_tasks:view",
   // projects
   "projects:create",
