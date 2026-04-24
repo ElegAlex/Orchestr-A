@@ -11,7 +11,10 @@ import { BalancedPlanningModal } from "@/components/predefined-tasks/BalancedPla
 import { usePlanningData, DisplayFilters } from "@/hooks/usePlanningData";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
-import { usePlanningViewStore } from "@/stores/planningView.store";
+import {
+  usePlanningViewStore,
+  type PlanningViewMode,
+} from "@/stores/planningView.store";
 import { useTranslations, useLocale } from "next-intl";
 
 type ViewFilter = "all" | "availability" | "activity";
@@ -29,7 +32,7 @@ interface PlanningViewProps {
   showFilters?: boolean; // Afficher les filtres (default: true)
   showControls?: boolean; // Afficher les contrôles (semaine/mois, navigation) (default: true)
   showGroupHeaders?: boolean; // Afficher les headers de groupes (default: true)
-  initialViewMode?: "week" | "month"; // Mode initial (default: 'week')
+  initialViewMode?: PlanningViewMode; // Mode initial (default: 'week')
 }
 
 export const PlanningView = ({
@@ -45,7 +48,7 @@ export const PlanningView = ({
   const locale = useLocale();
   const dateLocale = locale === "en" ? enUS : fr;
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<"week" | "month">(initialViewMode);
+  const [viewMode, setViewMode] = useState<PlanningViewMode>(initialViewMode);
   const [selectedUser, setSelectedUser] = useState<string>("ALL");
   const [viewFilter] = useState<ViewFilter>("all");
   const [displayFilters, setDisplayFilters] = useState<DisplayFilters>(
@@ -83,9 +86,13 @@ export const PlanningView = ({
   const effectiveFilterServiceIds =
     selectedServices.length > 0 ? selectedServices : undefined;
 
+  // ActivityGrid consomme les mêmes données que le mode semaine (plage hebdo courante).
+  // Le pivot jours × tâches est réalisé côté composant, pas côté hook.
+  const dataViewMode: "week" | "month" =
+    viewMode === "activity" ? "week" : viewMode;
   const { displayDays, users, groupedUsers, refetch } = usePlanningData({
     currentDate,
-    viewMode,
+    viewMode: dataViewMode,
     filterUserId: effectiveFilterUserId,
     filterServiceIds: effectiveFilterServiceIds,
     viewFilter,
@@ -651,17 +658,19 @@ export const PlanningView = ({
         </div>
       )}
 
-      {/* Planning Grid */}
-      <PlanningGrid
-        currentDate={currentDate}
-        viewMode={viewMode}
-        filterUserId={effectiveFilterUserId}
-        filterServiceIds={effectiveFilterServiceIds}
-        viewFilter={viewFilter}
-        displayFilters={displayFilters}
-        showGroupHeaders={showGroupHeaders}
-        refreshTrigger={refreshTrigger}
-      />
+      {/* Planning Grid ou Vue Activité selon viewMode */}
+      {viewMode !== "activity" ? (
+        <PlanningGrid
+          currentDate={currentDate}
+          viewMode={viewMode}
+          filterUserId={effectiveFilterUserId}
+          filterServiceIds={effectiveFilterServiceIds}
+          viewFilter={viewFilter}
+          displayFilters={displayFilters}
+          showGroupHeaders={showGroupHeaders}
+          refreshTrigger={refreshTrigger}
+        />
+      ) : null /* W4.3 : <ActivityGrid ... /> */}
 
       {/* Task Create Modal */}
       <TaskCreateModal

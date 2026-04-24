@@ -1,6 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+/**
+ * Modes d'affichage du planning.
+ * - `week` : lignes users × colonnes jours (semaine courante)
+ * - `month` : idem mais sur un mois complet
+ * - `activity` : pivot jours-lignes × tâches-colonnes (W4 Vue Activité)
+ */
+export type PlanningViewMode = "week" | "month" | "activity";
+
 export type LegendFilterKey =
   | "todo"
   | "inProgress"
