@@ -78,6 +78,7 @@ describe('PredefinedTasksController', () => {
     updateRecurringRule: vi.fn(),
     removeRecurringRule: vi.fn(),
     generateFromRules: vi.fn(),
+    updateCompletionStatus: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -387,6 +388,40 @@ describe('PredefinedTasksController', () => {
       );
       expect(result.created).toBe(5);
       expect(result.rulesProcessed).toBe(2);
+    });
+  });
+
+  // ===========================
+  // updateCompletion — smoke test
+  // ===========================
+
+  describe('updateCompletion', () => {
+    it('smoke: devrait retourner 200 avec le résultat du service', async () => {
+      const mockUser = {
+        id: 'user-1',
+        role: { code: 'CONTRIBUTEUR', templateKey: 'CONTRIBUTEUR', id: 'r1', label: 'Contributeur', isSystem: true },
+      };
+      const updatedAssignment = {
+        id: 'assignment-1',
+        userId: 'user-1',
+        completionStatus: 'DONE',
+        completedAt: new Date(),
+        completedById: 'user-1',
+      };
+      mockPredefinedTasksService.updateCompletionStatus.mockResolvedValue(
+        updatedAssignment,
+      );
+
+      const result = await controller.updateCompletion(
+        'assignment-1',
+        { status: 'DONE' },
+        mockUser as any,
+      );
+
+      expect(
+        mockPredefinedTasksService.updateCompletionStatus,
+      ).toHaveBeenCalledWith('assignment-1', { status: 'DONE' }, mockUser);
+      expect(result.completionStatus).toBe('DONE');
     });
   });
 });

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { CreatePredefinedTaskDto } from './dto/create-predefined-task.dto';
 import { UpdateCompletionStatusDto } from './dto/update-completion-status.dto';
+import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { PermissionsService } from '../rbac/permissions.service';
 
@@ -975,6 +976,26 @@ describe('PredefinedTasksService', () => {
         service.updateRecurringRule('unknown-id', {}),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('régression weekInterval : weekInterval:3 est transmis à Prisma update', async () => {
+      mockPrismaService.predefinedTaskRecurringRule.findUnique.mockResolvedValue(
+        mockRecurringRule,
+      );
+      const updated = { ...mockRecurringRule, weekInterval: 3 };
+      mockPrismaService.predefinedTaskRecurringRule.update.mockResolvedValue(
+        updated,
+      );
+
+      await service.updateRecurringRule('rule-1', { weekInterval: 3 });
+
+      expect(
+        mockPrismaService.predefinedTaskRecurringRule.update,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ weekInterval: 3 }),
+        }),
+      );
+    });
   });
 
   describe('removeRecurringRule', () => {
@@ -1192,6 +1213,111 @@ describe('PredefinedTasksService', () => {
       );
 
       expect(mockAuditPersistenceService.log).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ===========================
+  // CreateRecurringRuleDto — cross-field validator
+  // ===========================
+
+  describe('CreateRecurringRuleDto — cross-field validator (@IsValidRecurrenceConfig)', () => {
+    const baseValid = {
+      predefinedTaskId: 'uuid-task-1',
+      userId: 'uuid-user-1',
+      period: 'FULL_DAY',
+      startDate: '2026-01-06T00:00:00Z',
+    };
+
+    it('CV-1: WEEKLY sans dayOfWeek → erreur cross-field', async () => {
+      const dto = plainToInstance(CreateRecurringRuleDto, {
+        ...baseValid,
+        recurrenceType: 'WEEKLY',
+        // dayOfWeek absent intentionnellement
+      });
+      const errors = await validate(dto);
+      const crossError = errors.find((e) => e.property === 'recurrenceType');
+      expect(crossError).toBeDefined();
+    });
+
+    it("CV-2: WEEKLY avec dayOfWeek=0 → valide (pas d'erreur cross-field)", async () => {
+      const dto = plainToInstance(CreateRecurringRuleDto, {
+        ...baseValid,
+        recurrenceType: 'WEEKLY',
+        dayOfWeek: 0,
+      });
+      const errors = await validate(dto);
+      const crossError = errors.find((e) => e.property === 'recurrenceType');
+      expect(crossError).toBeUndefined();
+    });
+
+    it('CV-3: MONTHLY_DAY avec dayOfWeek présent → erreur cross-field', async () => {
+      const dto = plainToInstance(CreateRecurringRuleDto, {
+        ...baseValid,
+        recurrenceType: 'MONTHLY_DAY',
+        monthlyDayOfMonth: 15,
+        dayOfWeek: 1, // interdit pour MONTHLY_DAY
+      });
+      const errors = await validate(dto);
+      const crossError = errors.find((e) => e.property === 'recurrenceType');
+      expect(crossError).toBeDefined();
+    });
+
+    it('CV-4: MONTHLY_DAY sans monthlyDayOfMonth → erreur cross-field', async () => {
+      const dto = plainToInstance(CreateRecurringRuleDto, {
+        ...baseValid,
+        recurrenceType: 'MONTHLY_DAY',
+        // monthlyDayOfMonth absent
+      });
+      const errors = await validate(dto);
+      const crossError = errors.find((e) => e.property === 'recurrenceType');
+      expect(crossError).toBeDefined();
+    });
+
+    it("CV-5: MONTHLY_DAY valide (monthlyDayOfMonth=15, sans dayOfWeek) → pas d'erreur", async () => {
+      const dto = plainToInstance(CreateRecurringRuleDto, {
+        ...baseValid,
+        recurrenceType: 'MONTHLY_DAY',
+        monthlyDayOfMonth: 15,
+      });
+      const errors = await validate(dto);
+      const crossError = errors.find((e) => e.property === 'recurrenceType');
+      expect(crossError).toBeUndefined();
+    });
+
+    it('CV-6: MONTHLY_ORDINAL sans monthlyOrdinal → erreur cross-field', async () => {
+      const dto = plainToInstance(CreateRecurringRuleDto, {
+        ...baseValid,
+        recurrenceType: 'MONTHLY_ORDINAL',
+        dayOfWeek: 1,
+        // monthlyOrdinal absent
+      });
+      const errors = await validate(dto);
+      const crossError = errors.find((e) => e.property === 'recurrenceType');
+      expect(crossError).toBeDefined();
+    });
+
+    it('CV-7: MONTHLY_ORDINAL sans dayOfWeek → erreur cross-field', async () => {
+      const dto = plainToInstance(CreateRecurringRuleDto, {
+        ...baseValid,
+        recurrenceType: 'MONTHLY_ORDINAL',
+        monthlyOrdinal: 3,
+        // dayOfWeek absent
+      });
+      const errors = await validate(dto);
+      const crossError = errors.find((e) => e.property === 'recurrenceType');
+      expect(crossError).toBeDefined();
+    });
+
+    it("CV-8: MONTHLY_ORDINAL valide (monthlyOrdinal=3, dayOfWeek=1) → pas d'erreur", async () => {
+      const dto = plainToInstance(CreateRecurringRuleDto, {
+        ...baseValid,
+        recurrenceType: 'MONTHLY_ORDINAL',
+        monthlyOrdinal: 3,
+        dayOfWeek: 1,
+      });
+      const errors = await validate(dto);
+      const crossError = errors.find((e) => e.property === 'recurrenceType');
+      expect(crossError).toBeUndefined();
     });
   });
 });
