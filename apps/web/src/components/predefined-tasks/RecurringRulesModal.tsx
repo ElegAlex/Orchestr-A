@@ -205,7 +205,9 @@ export function RecurringRulesModal({
     setSaving(true);
     try {
       if (formData.recurrenceType === "WEEKLY") {
-        // Bulk create: multiple users × multiple days
+        // Bulk create: multiple users × multiple days (WEEKLY only, cf. ADR-01 + W2.2)
+        // recurrenceType is NOT sent: backend CreateBulkRecurringRulesDto is WEEKLY-shaped
+        // (forbidNonWhitelisted strict), default 'WEEKLY' applied at Prisma level.
         const result = await predefinedTasksService.bulkCreateRecurringRules({
           predefinedTaskId: task.id,
           userIds: formData.userIds,
@@ -214,7 +216,6 @@ export function RecurringRulesModal({
           weekInterval: formData.weekInterval,
           startDate: formData.startDate,
           endDate: formData.endDate || undefined,
-          recurrenceType: "WEEKLY",
         });
         const nUsers = formData.userIds.length;
         const nDays = formData.daysOfWeek.length;

@@ -155,6 +155,9 @@ export interface GenerateAssignmentsDto {
 }
 
 export interface BulkCreateRecurringRulesDto {
+  // Bulk = WEEKLY-only (cf. W2.2 ADR-01, daysOfWeek[] est fondamentalement hebdo).
+  // Pas de recurrenceType: le backend applique WEEKLY par défaut et rejette les champs
+  // inconnus (forbidNonWhitelisted strict).
   predefinedTaskId: string;
   userIds: string[];
   daysOfWeek: DayOfWeek[];
@@ -162,7 +165,6 @@ export interface BulkCreateRecurringRulesDto {
   weekInterval?: number;
   startDate: string;
   endDate?: string;
-  recurrenceType?: RecurrenceType;
 }
 
 export interface BulkCreateRecurringRulesResponse {
