@@ -21,6 +21,16 @@ Trois surfaces UI à densité élevée dont l'implémentation est gatée par une
    - soit par message direct.
 5. Dès validation reçue, le sous-agent UI correspondant reçoit la variante comme **contrainte d'implémentation** (pas de liberté créative supplémentaire).
 
+## Validations PO (2026-04-24)
+
+| Surface | Variante choisie | Rationale |
+|---|---|---|
+| E3.2 popover transition de statut | **C — Expansion inline dans la cellule** | Pas de z-index ni overlay, cohérent avec pattern "edit-in-place" ; la cellule DayCell s'élargit au clic, motif NOT_APPLICABLE saisi in-place |
+| E4.3 Modale Planning équilibré | **C — Split layout config à gauche, aperçu à droite** | Config + résultats visibles en même temps (≥ 1280px), itérations rapides sans scroll |
+| E5.2 Grille Vue Activité | **B — Grille aérée, avatars 32px** | Lisibilité prioritaire sur densité maximale ; badge statut textuel à droite du groupe d'avatars |
+
+Ces choix sont contraignants pour les tâches W2.5 (E3.2), W3.3 (E4.3), W4.3 (E5.2).
+
 ## Principes techniques communs aux 3 mockups
 
 - **Tailwind CDN** uniquement (reproductible sans build).
