@@ -112,16 +112,18 @@ export const PlanningView = ({
     displayFilters,
   });
 
-  // Charger les tâches prédéfinies actives pour la Vue Activité (W4.3).
-  // On les charge une seule fois au mount (elles changent rarement).
+  // Charger les tâches prédéfinies actives uniquement en Vue Activité (W4.3).
+  // Guard: on ne charge qu'au premier basculement sur "activity" (lazy, pas au mount).
   useEffect(() => {
+    if (viewMode !== "activity") return;
+    if (predefinedTasks.length > 0) return; // déjà chargé
     predefinedTasksService
       .getAll(1, 100)
       .then((res) => setPredefinedTasks(res.data.filter((t) => t.isActive)))
       .catch(() => {
         /* silently ignore — ActivityGrid affiche emptyState */
       });
-  }, []);
+  }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Calculer les IDs des services visibles
   const serviceIds = useMemo(
