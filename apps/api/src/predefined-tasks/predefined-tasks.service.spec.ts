@@ -1,8 +1,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { PredefinedTasksService } from './predefined-tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotFoundException, ConflictException } from '@nestjs/common';
+import { CreatePredefinedTaskDto } from './dto/create-predefined-task.dto';
 
 describe('PredefinedTasksService', () => {
   let service: PredefinedTasksService;
@@ -45,6 +48,7 @@ describe('PredefinedTasksService', () => {
     icon: '🏢',
     defaultDuration: 'FULL_DAY',
     isActive: true,
+    weight: 1,
     createdById: 'user-1',
     createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-01'),
@@ -140,6 +144,7 @@ describe('PredefinedTasksService', () => {
           startTime: null,
           endTime: null,
           isExternalIntervention: false,
+          weight: 1,
           createdById: 'user-1',
         },
         include: {
@@ -198,6 +203,147 @@ describe('PredefinedTasksService', () => {
       const result = await service.update('task-1', { name: 'Nouveau nom' });
 
       expect(result.name).toBe('Nouveau nom');
+    });
+  });
+
+  // ===========================
+  // Test weight field (W1.3)
+  // ===========================
+
+  describe('weight — service.create()', () => {
+    it('a. devrait passer weight:3 à Prisma et retourner une tâche avec weight=3', async () => {
+      const taskWithWeight3 = { ...mockTask, weight: 3 };
+      mockPrismaService.predefinedTask.create.mockResolvedValue(taskWithWeight3);
+
+      const dto = {
+        name: 'Permanence accueil',
+        description: 'Accueil du public',
+        color: '#3B82F6',
+        icon: '🏢',
+        defaultDuration: 'FULL_DAY',
+        weight: 3,
+      };
+
+      const result = await service.create('user-1', dto);
+
+      expect(mockPrismaService.predefinedTask.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ weight: 3 }),
+        }),
+      );
+      expect(result.weight).toBe(3);
+    });
+
+    it('b. devrait utiliser weight=1 par défaut si absent du DTO', async () => {
+      const taskWithWeight1 = { ...mockTask, weight: 1 };
+      mockPrismaService.predefinedTask.create.mockResolvedValue(taskWithWeight1);
+
+      const dto = {
+        name: 'Permanence accueil',
+        defaultDuration: 'FULL_DAY',
+      };
+
+      const result = await service.create('user-1', dto);
+
+      // weight passed to Prisma should be 1 (default) or absent (DB default)
+      const callArg = mockPrismaService.predefinedTask.create.mock.calls[0][0];
+      const weightSent = callArg.data.weight;
+      expect(weightSent === undefined || weightSent === 1).toBe(true);
+      expect(result.weight).toBe(1);
+    });
+  });
+
+  describe('weight — service.update()', () => {
+    it('c. devrait passer weight:5 à Prisma lors du update', async () => {
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+      const updatedTask = { ...mockTask, weight: 5 };
+      mockPrismaService.predefinedTask.update.mockResolvedValue(updatedTask);
+
+      const result = await service.update('task-1', { weight: 5 });
+
+      expect(mockPrismaService.predefinedTask.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ weight: 5 }),
+        }),
+      );
+      expect(result.weight).toBe(5);
+    });
+
+    it("d. ne devrait PAS inclure weight dans les data Prisma si absent du DTO d'update", async () => {
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+      mockPrismaService.predefinedTask.update.mockResolvedValue(mockTask);
+
+      await service.update('task-1', { name: 'Nouveau nom' });
+
+      const callArg = mockPrismaService.predefinedTask.update.mock.calls[0][0];
+      expect(callArg.data).not.toHaveProperty('weight');
+    });
+  });
+
+  describe('weight — DTO validation', () => {
+    it('e1. devrait rejeter weight=6 (> Max 5)', async () => {
+      const dto = plainToInstance(CreatePredefinedTaskDto, {
+        name: 'Test',
+        defaultDuration: 'FULL_DAY',
+        weight: 6,
+      });
+      const errors = await validate(dto);
+      const weightError = errors.find((e) => e.property === 'weight');
+      expect(weightError).toBeDefined();
+    });
+
+    it('e2. devrait rejeter weight=0 (< Min 1)', async () => {
+      const dto = plainToInstance(CreatePredefinedTaskDto, {
+        name: 'Test',
+        defaultDuration: 'FULL_DAY',
+        weight: 0,
+      });
+      const errors = await validate(dto);
+      const weightError = errors.find((e) => e.property === 'weight');
+      expect(weightError).toBeDefined();
+    });
+
+    it('f. devrait rejeter weight=3.5 (non entier)', async () => {
+      const dto = plainToInstance(CreatePredefinedTaskDto, {
+        name: 'Test',
+        defaultDuration: 'FULL_DAY',
+        weight: 3.5,
+      });
+      const errors = await validate(dto);
+      const weightError = errors.find((e) => e.property === 'weight');
+      expect(weightError).toBeDefined();
+    });
+
+    it('devrait accepter weight absent (optionnel)', async () => {
+      const dto = plainToInstance(CreatePredefinedTaskDto, {
+        name: 'Test',
+        defaultDuration: 'FULL_DAY',
+      });
+      const errors = await validate(dto);
+      const weightError = errors.find((e) => e.property === 'weight');
+      expect(weightError).toBeUndefined();
+    });
+
+    it('devrait accepter weight=1 (valeur minimale valide)', async () => {
+      const dto = plainToInstance(CreatePredefinedTaskDto, {
+        name: 'Test',
+        defaultDuration: 'FULL_DAY',
+        weight: 1,
+      });
+      const errors = await validate(dto);
+      const weightError = errors.find((e) => e.property === 'weight');
+      expect(weightError).toBeUndefined();
+    });
+
+    it('devrait accepter weight=5 (valeur maximale valide)', async () => {
+      const dto = plainToInstance(CreatePredefinedTaskDto, {
+        name: 'Test',
+        defaultDuration: 'FULL_DAY',
+        weight: 5,
+      });
+      const errors = await validate(dto);
+      const weightError = errors.find((e) => e.property === 'weight');
+      expect(weightError).toBeUndefined();
     });
   });
 

@@ -5,8 +5,12 @@ import {
   IsOptional,
   IsIn,
   IsBoolean,
+  IsInt,
+  Min,
+  Max,
   Matches,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreatePredefinedTaskDto {
   @ApiProperty({
@@ -80,4 +84,17 @@ export class CreatePredefinedTaskDto {
   @IsBoolean()
   @IsOptional()
   isExternalIntervention?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Pondération de la tâche (1 = légère, 5 = très lourde)',
+    example: 1,
+    minimum: 1,
+    maximum: 5,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  weight?: number;
 }

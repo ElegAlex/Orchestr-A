@@ -62,6 +62,7 @@ export class PredefinedTasksService {
         startTime,
         endTime,
         isExternalIntervention: dto.isExternalIntervention ?? false,
+        weight: dto.weight ?? 1,
         createdById,
       },
       include: {
@@ -118,6 +119,7 @@ export class PredefinedTasksService {
         ...(dto.isExternalIntervention !== undefined && {
           isExternalIntervention: dto.isExternalIntervention,
         }),
+        ...(dto.weight !== undefined && { weight: dto.weight }),
         ...timeSlotData,
       },
       include: {
