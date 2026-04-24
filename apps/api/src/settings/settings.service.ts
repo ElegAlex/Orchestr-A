@@ -78,6 +78,12 @@ const DEFAULT_SETTINGS: Record<string, SettingConfig> = {
     description:
       'Jours marqués comme spéciaux (fond distinctif) - numéros 1=Lundi à 7=Dimanche',
   },
+  'planning.lateThresholdDays': {
+    value: 1,
+    category: 'planning',
+    description:
+      "Seuil (jours ouvrés) après lequel une assignation NOT_DONE est signalée en retard dans la vue planning",
+  },
 };
 
 @Injectable()

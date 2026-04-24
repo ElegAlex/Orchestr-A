@@ -89,6 +89,7 @@ interface UsePlanningDataReturn {
   getHolidayForDate: (date: Date) => Holiday | undefined;
   isSpecialDay: (date: Date) => boolean;
   refetch: () => Promise<void>;
+  lateThresholdDays: number;
   silentRefetch: () => Promise<void>;
   getGroupTaskCount: (groupUsers: User[]) => number;
 }
@@ -116,6 +117,7 @@ export const usePlanningData = ({
   const [predefinedAssignments, setPredefinedAssignments] = useState<
     PredefinedTaskAssignment[]
   >([]);
+  const [lateThresholdDays, setLateThresholdDays] = useState<number>(1);
 
   // Lire les jours visibles depuis les paramètres (ISO: 1=Lun, 7=Dim)
   const visibleDays = useSettingsStore(
@@ -206,6 +208,7 @@ export const usePlanningData = ({
         setHolidays(overview.holidays);
         setSchoolVacations(overview.schoolVacations);
         setPredefinedAssignments(overview.predefinedAssignments);
+        setLateThresholdDays(overview.settings?.lateThresholdDays ?? 1);
       } catch (err) {
         if (!silent) {
           setUsers([]);
@@ -559,5 +562,6 @@ export const usePlanningData = ({
     refetch: fetchData,
     silentRefetch: () => fetchData(true),
     getGroupTaskCount,
+    lateThresholdDays,
   };
 };

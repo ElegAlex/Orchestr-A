@@ -9,6 +9,7 @@ import { HolidaysService } from '../holidays/holidays.service';
 import { SchoolVacationsService } from '../school-vacations/school-vacations.service';
 import { PredefinedTasksService } from '../predefined-tasks/predefined-tasks.service';
 import { PermissionsService } from '../rbac/permissions.service';
+import { SettingsService } from '../settings/settings.service';
 
 export interface PlanningOverview {
   users: unknown[];
@@ -20,6 +21,9 @@ export interface PlanningOverview {
   holidays: unknown[];
   schoolVacations: unknown[];
   predefinedAssignments: unknown[];
+  settings: {
+    lateThresholdDays: number;
+  };
 }
 
 @Injectable()
@@ -37,6 +41,7 @@ export class PlanningService {
     private readonly schoolVacationsService: SchoolVacationsService,
     private readonly predefinedTasksService: PredefinedTasksService,
     private readonly permissionsService: PermissionsService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   /**
@@ -129,6 +134,11 @@ export class PlanningService {
       ? leavesResult
       : leavesResult.data;
 
+    const lateThresholdDays = await this.settingsService.getValue<number>(
+      'planning.lateThresholdDays',
+      1,
+    );
+
     return {
       users: usersResult.data,
       services: servicesResult.data,
@@ -139,6 +149,7 @@ export class PlanningService {
       holidays,
       schoolVacations,
       predefinedAssignments,
+      settings: { lateThresholdDays: Math.max(0, Math.floor(lateThresholdDays ?? 1)) },
     };
   }
 }

@@ -87,7 +87,8 @@
     "pending": "Pending",
     "externalShort": "EXT",
     "externalIntervention": "External intervention",
-    "allDay": "All day"
+    "allDay": "All day",
+    "assignmentLate": "Late — task not completed past configured threshold"
   },
   "taskModal": {
     "description": "Description",

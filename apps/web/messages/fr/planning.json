@@ -87,7 +87,8 @@
     "pending": "En attente",
     "externalShort": "EXT",
     "externalIntervention": "Intervention ext.",
-    "allDay": "Journée entière"
+    "allDay": "Journée entière",
+    "assignmentLate": "En retard — tâche non réalisée depuis le seuil configuré"
   },
   "taskModal": {
     "description": "Description",

@@ -32,6 +32,12 @@ export interface PredefinedTask {
   updatedAt: string;
 }
 
+export type CompletionStatus =
+  | "NOT_DONE"
+  | "IN_PROGRESS"
+  | "DONE"
+  | "NOT_APPLICABLE";
+
 export interface PredefinedTaskAssignment {
   id: string;
   predefinedTaskId: string;
@@ -42,6 +48,10 @@ export interface PredefinedTaskAssignment {
   createdById: string;
   createdAt: string;
   updatedAt: string;
+  completionStatus: CompletionStatus;
+  completedAt?: string | null;
+  completedById?: string | null;
+  notApplicableReason?: string | null;
   predefinedTask?: PredefinedTask;
   user?: {
     id: string;

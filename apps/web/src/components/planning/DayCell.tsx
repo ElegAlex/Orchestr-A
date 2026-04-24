@@ -8,7 +8,7 @@ import {
   getStatusDotColor,
 } from "@/lib/planning-utils";
 import { usePlanningViewStore } from "@/stores/planningView.store";
-import { isToday, getDay } from "date-fns";
+import { isToday, getDay, differenceInBusinessDays } from "date-fns";
 import { useTranslations } from "next-intl";
 
 const STATUS_FILTER_KEY: Record<
@@ -49,6 +49,22 @@ function WeightDot({ weight, color }: { weight: number; color: string }) {
   );
 }
 
+// E3.3 — Assignation en retard si NOT_DONE + date < today - thresholdDays (ouvrés).
+// Le marqueur visuel ici est provisoire : W2.5 enrichira avec AssignmentStatusBadge.
+export function isAssignmentLate(
+  assignment: { completionStatus?: string; date: string | Date },
+  now: Date,
+  thresholdDays: number,
+): boolean {
+  if (assignment.completionStatus !== "NOT_DONE") return false;
+  const assignmentDate =
+    typeof assignment.date === "string"
+      ? new Date(assignment.date)
+      : assignment.date;
+  if (isNaN(assignmentDate.getTime())) return false;
+  return differenceInBusinessDays(now, assignmentDate) > thresholdDays;
+}
+
 interface DayCellProps {
   cell: DayCellData;
   userId: string;
@@ -56,6 +72,7 @@ interface DayCellProps {
   dayIndex: number;
   canToggleTelework: boolean;
   canAssignPredefinedTask: boolean;
+  lateThresholdDays: number;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
   onDragEnd: () => void;
@@ -76,6 +93,7 @@ export const DayCell = ({
   dayIndex,
   canToggleTelework,
   canAssignPredefinedTask,
+  lateThresholdDays,
   onTeleworkToggle,
   onDragStart,
   onDragEnd,
@@ -411,11 +429,16 @@ export const DayCell = ({
               const pt = assignment.predefinedTask;
               if (!pt) return null;
               const isExternal = pt.isExternalIntervention;
+              const late = isAssignmentLate(
+                assignment,
+                new Date(),
+                lateThresholdDays,
+              );
               return (
                 <div
                   key={assignment.id}
                   onClick={() => onPredefinedTaskClick(assignment, cell.date)}
-                  className={`rounded border-2 cursor-pointer hover:shadow-md transition ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
+                  className={`relative rounded border-2 cursor-pointer hover:shadow-md transition ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
                   style={
                     isExternal
                       ? {
@@ -423,13 +446,28 @@ export const DayCell = ({
                           backgroundColor: "#fee2e2",
                           color: "#7f1d1d",
                         }
-                      : {
-                          borderColor: pt.color,
-                          backgroundColor: `${pt.color}20`,
-                          color: pt.color,
-                        }
+                      : late
+                        ? {
+                            borderColor: "#ef4444",
+                            backgroundColor: `${pt.color}20`,
+                            color: pt.color,
+                          }
+                        : {
+                            borderColor: pt.color,
+                            backgroundColor: `${pt.color}20`,
+                            color: pt.color,
+                          }
                   }
                 >
+                  {late && (
+                    <span
+                      className="absolute -top-1 -right-1 inline-flex items-center justify-center w-3 h-3 rounded-full bg-red-500 text-white text-[8px] font-bold leading-none"
+                      aria-label={t("dayCell.assignmentLate")}
+                      title={t("dayCell.assignmentLate")}
+                    >
+                      !
+                    </span>
+                  )}
                   {viewMode === "month" ? (
                     <div className="text-center" title={pt.name}>
                       <span>{isExternal ? "🔴" : pt.icon}</span>
