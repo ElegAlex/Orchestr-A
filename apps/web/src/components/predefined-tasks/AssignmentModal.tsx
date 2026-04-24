@@ -67,10 +67,7 @@ export function AssignmentModal({
       return;
     }
     try {
-      const response = await predefinedTasksService.getAll();
-      const list = Array.isArray(response)
-        ? (response as PredefinedTask[])
-        : (response.data ?? []);
+      const list = await predefinedTasksService.getAll();
       setTasks(list.filter((t) => t.isActive));
     } catch {
       setTasks([]);

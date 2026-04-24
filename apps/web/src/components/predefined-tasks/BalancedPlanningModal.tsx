@@ -94,10 +94,7 @@ export function BalancedPlanningModal({
           ? (userList as User[])
           : (userList as { data: User[] }).data ?? [];
         setUsers(allUsers.filter((u) => u.isActive));
-        const taskList = Array.isArray(taskRes)
-          ? (taskRes as PredefinedTask[])
-          : (taskRes as { data: PredefinedTask[] }).data ?? [];
-        setTasks(taskList.filter((t) => t.isActive));
+        setTasks(taskRes.filter((t) => t.isActive));
       })
       .catch(() => {
         /* silent — user will see empty selects */

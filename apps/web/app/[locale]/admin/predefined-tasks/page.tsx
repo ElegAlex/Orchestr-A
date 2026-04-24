@@ -115,10 +115,7 @@ export default function PredefinedTasksAdminPage() {
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const response = await predefinedTasksService.getAll();
-      const list = Array.isArray(response)
-        ? (response as PredefinedTask[])
-        : (response.data ?? []);
+      const list = await predefinedTasksService.getAll();
       setTasks(list);
     } catch (err) {
       console.error(err);

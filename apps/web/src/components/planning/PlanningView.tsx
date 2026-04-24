@@ -119,7 +119,7 @@ export const PlanningView = ({
     if (predefinedTasks.length > 0) return; // déjà chargé
     predefinedTasksService
       .getAll(1, 100)
-      .then((res) => setPredefinedTasks(res.data.filter((t) => t.isActive)))
+      .then((list) => setPredefinedTasks(list.filter((t) => t.isActive)))
       .catch(() => {
         /* silently ignore — ActivityGrid affiche emptyState */
       });

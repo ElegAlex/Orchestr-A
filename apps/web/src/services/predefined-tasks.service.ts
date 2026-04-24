@@ -224,14 +224,11 @@ export interface BulkCreateRecurringRulesResponse {
   rules: PredefinedTaskRecurringRule[];
 }
 
-interface PredefinedTasksResponse {
-  data: PredefinedTask[];
-  meta?: {
-    total: number;
-    page: number;
-    limit: number;
-  };
-}
+/**
+ * Le backend `GET /predefined-tasks` retourne un array brut (findMany direct),
+ * pas un wrapper `{ data, meta }`. Les params page/limit sont acceptés mais
+ * le service n'en tient pas compte — pagination non câblée côté backend en V1.
+ */
 
 interface AssignmentsResponse {
   data: PredefinedTaskAssignment[];
@@ -249,8 +246,8 @@ interface AssignmentsResponse {
 export const predefinedTasksService = {
   // --- Tâches prédéfinies ---
 
-  async getAll(page = 1, limit = 100): Promise<PredefinedTasksResponse> {
-    const response = await api.get<PredefinedTasksResponse>(
+  async getAll(page = 1, limit = 100): Promise<PredefinedTask[]> {
+    const response = await api.get<PredefinedTask[]>(
       `/predefined-tasks?page=${page}&limit=${limit}`,
     );
     return response.data;
