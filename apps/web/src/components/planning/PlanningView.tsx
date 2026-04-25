@@ -9,6 +9,7 @@ import { TaskCreateModal } from "./TaskCreateModal";
 import { EventCreateModal } from "./EventCreateModal";
 import { LegendFilterPopover } from "./LegendFilterPopover";
 import { BalancedPlanningModal } from "@/components/predefined-tasks/BalancedPlanningModal";
+import { AddUsersToTaskModal } from "./AddUsersToTaskModal";
 import { usePlanningData, DisplayFilters } from "@/hooks/usePlanningData";
 import { predefinedTasksService } from "@/services/predefined-tasks.service";
 import type { PredefinedTask } from "@/services/predefined-tasks.service";
@@ -64,6 +65,10 @@ export const PlanningView = ({
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showBalancer, setShowBalancer] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [addUsersTarget, setAddUsersTarget] = useState<{
+    task: PredefinedTask;
+    date: Date;
+  } | null>(null);
   const [predefinedTasks, setPredefinedTasks] = useState<PredefinedTask[]>([]);
   const createMenuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -102,6 +107,7 @@ export const PlanningView = ({
     silentRefetch,
     predefinedAssignments,
     getHolidayForDate,
+    leaves,
   } = usePlanningData({
     currentDate,
     viewMode: dataViewMode,
@@ -110,6 +116,8 @@ export const PlanningView = ({
     viewFilter,
     displayFilters,
   });
+
+  const canAssignPredefinedTask = hasPermission("predefined_tasks:assign");
 
   // Charger les tâches prédéfinies actives uniquement en Vue Activité (W4.3).
   // Guard: on ne charge qu'au premier basculement sur "activity" (lazy, pas au mount).
@@ -716,6 +724,13 @@ export const PlanningView = ({
           tasks={predefinedTasks}
           assignments={predefinedAssignments}
           users={users}
+          leaves={leaves}
+          canAssign={canAssignPredefinedTask}
+          onAddUsers={(taskId, dateIso) => {
+            const task = predefinedTasks.find((t) => t.id === taskId);
+            if (!task) return;
+            setAddUsersTarget({ task, date: new Date(dateIso) });
+          }}
           isHoliday={(d) => !!getHolidayForDate(d)}
           isWeekend={(d) => [0, 6].includes(d.getDay())}
         />
@@ -746,6 +761,27 @@ export const PlanningView = ({
           setRefreshTrigger((prev) => prev + 1);
         }}
       />
+      {addUsersTarget && (
+        <AddUsersToTaskModal
+          task={addUsersTarget.task}
+          date={addUsersTarget.date}
+          allUsers={users}
+          existingAssignments={predefinedAssignments.filter(
+            (a) =>
+              a.predefinedTaskId === addUsersTarget.task.id &&
+              (typeof a.date === "string"
+                ? a.date.slice(0, 10)
+                : format(a.date as unknown as Date, "yyyy-MM-dd")) ===
+                format(addUsersTarget.date, "yyyy-MM-dd"),
+          )}
+          leaves={leaves}
+          onClose={() => setAddUsersTarget(null)}
+          onSuccess={() => {
+            refetch();
+            setRefreshTrigger((prev) => prev + 1);
+          }}
+        />
+      )}
     </div>
   );
 };
