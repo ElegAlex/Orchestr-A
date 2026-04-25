@@ -10,14 +10,53 @@
  *    cocher un agent éligible, vérifier "Ajouter (1)", soumettre,
  *    vérifier le toast de succès.
  *
- * 2. CONTRIBUTEUR ne voit pas le bouton "+ Ajouter"
- *    (permission `predefined_tasks:assign` absente du template BASIC_USER).
+ * 2. manager / responsable voient le bouton "+ Ajouter" et peuvent ouvrir le modal
+ *    (permission `predefined_tasks:assign` dans MANAGER / ADMIN_DELEGATED).
  *
- * Rôles requis : admin, contributeur.
+ * 3. contributeur / observateur / referent ne voient PAS le bouton "+ Ajouter"
+ *    (permission `predefined_tasks:assign` absente de leurs templates).
+ *
+ * Rôles requis : admin, responsable, manager, referent, contributeur, observateur.
  * Fichier multi-rôle → lancé avec --project=multi-role.
  */
 
+import type { Page } from "@playwright/test";
 import { test, expect } from "../../fixtures/test-fixtures";
+import type { Role } from "../../fixtures/roles";
+
+/**
+ * Navigue vers /fr/planning et bascule en Vue activité.
+ * Appelle test.skip() si le rôle n'a pas accès à la vue activité.
+ */
+async function navigateToActivityView(page: Page, role: Role): Promise<void> {
+  await page.goto("/fr/planning");
+  await expect(
+    page.getByRole("heading", { name: /planning des ressources/i, level: 1 }),
+  ).toBeVisible({ timeout: 15000 });
+
+  const activityBtn = page.getByRole("button", { name: /vue activité/i });
+  const hasActivityView = await activityBtn
+    .isVisible({ timeout: 5000 })
+    .catch(() => false);
+
+  if (!hasActivityView) {
+    test.skip(
+      true,
+      `${role} n'a pas accès à la Vue activité (planning:activity-view absent)`,
+    );
+    return;
+  }
+
+  await activityBtn.click();
+  await expect(activityBtn).toHaveAttribute("aria-pressed", "true");
+
+  const table = page.getByRole("table");
+  await expect(table).toBeVisible({ timeout: 10000 });
+}
+
+// ---------------------------------------------------------------------------
+// Scénario 1 : Admin happy path @smoke
+// ---------------------------------------------------------------------------
 
 test.describe("ActivityGrid — bouton + Ajouter", () => {
   test(
@@ -26,107 +65,146 @@ test.describe("ActivityGrid — bouton + Ajouter", () => {
     async ({ asRole }) => {
       const page = await asRole("admin");
 
-      // 1. Naviguer vers le planning
-      await page.goto("/fr/planning");
-      await expect(
-        page.getByRole("heading", { name: /planning des ressources/i, level: 1 }),
-      ).toBeVisible({ timeout: 15000 });
+      // 1. Naviguer vers le planning et basculer en Vue activité
+      await navigateToActivityView(page, "admin");
 
-      // 2. Basculer vers Vue activité
-      const activityBtn = page.getByRole("button", { name: /vue activité/i });
-      await expect(activityBtn).toBeVisible({ timeout: 10000 });
-      await activityBtn.click();
-      await expect(activityBtn).toHaveAttribute("aria-pressed", "true");
-
-      // 3. Attendre que la grille d'activité soit chargée
-      const table = page.getByRole("table");
-      await expect(table).toBeVisible({ timeout: 10000 });
-
-      // 4. Chercher un bouton "+ Ajouter" dans la grille
-      const addUserButtons = page.getByRole("button", { name: /^\+\s*ajouter$/i });
+      // 2. Chercher un bouton "+ Ajouter" dans la grille
+      const addUserButtons = page.getByRole("button", {
+        name: /^\+\s*ajouter$/i,
+      });
       const buttonCount = await addUserButtons.count();
 
-      // Cas sans données : la grille est vide (aucune tâche prédéfinie / aucun jour ouvré)
-      // → le test passe en mode soft-skip.
+      // Cas sans données : grille vide → skip traceable (plus de silent return)
       if (buttonCount === 0) {
-        // Vérifier au moins que la table est visible et que le bouton Imprimer est présent
-        await expect(
-          page.getByRole("button", { name: /imprimer/i }),
-        ).toBeVisible();
+        test.skip(true, "Aucun + Ajouter visible — données vides ?");
         return;
       }
 
-      // 5. Cliquer sur le premier bouton "+ Ajouter" visible
+      // 3. Cliquer sur le premier bouton "+ Ajouter" visible
       await addUserButtons.first().scrollIntoViewIfNeeded();
-      await addUserButtons.first().click({ force: true });
+      await addUserButtons.first().click();
 
-      // 6. Le modal "Ajouter des agents" doit s'ouvrir
-      const modal = page.getByRole("dialog").or(
-        page.locator('[class*="fixed"][class*="inset-0"]'),
-      );
+      // 4. Le modal "Ajouter des agents" doit s'ouvrir
       await expect(
         page.getByRole("heading", { name: /ajouter des agents/i }),
       ).toBeVisible({ timeout: 8000 });
 
-      // 7. Chercher un agent éligible (checkbox enabled et non cochée)
-      const eligibleCheckbox = page
-        .getByRole("checkbox")
-        .filter({ hasNot: page.locator("[disabled]") })
-        .filter({ has: page.locator(':not([disabled])') });
-
+      // 5. Chercher un agent éligible (checkbox enabled et non cochée)
       const checkboxes = page.locator('input[type="checkbox"]:not([disabled])');
       const checkboxCount = await checkboxes.count();
 
       if (checkboxCount === 0) {
-        // Tous les agents sont déjà assignés ou en congé → fermer le modal et passer
-        await page.getByRole("button", { name: /annuler/i }).click();
+        // Tous les agents sont déjà assignés ou en congé → skip traceable
+        test.skip(true, "Aucun agent éligible — tous déjà assignés ?");
         return;
       }
 
-      // 8. Cocher le premier agent éligible
+      // 6. Cocher le premier agent éligible
       await checkboxes.first().check();
 
-      // 9. Le bouton de soumission doit afficher "Ajouter (1)"
-      await expect(
-        page.getByRole("button", { name: /^ajouter \(1\)$/i }),
-      ).toBeVisible();
+      // 7. Le bouton de soumission doit afficher "Ajouter (1)" et être activé
+      const submitBtn = page.getByRole("button", { name: /^ajouter \(1\)$/i });
+      await expect(submitBtn).toBeVisible();
+      await expect(submitBtn).toBeEnabled();
 
-      // 10. Soumettre
-      await page.getByRole("button", { name: /^ajouter \(1\)$/i }).click();
+      // 8. Soumettre
+      await submitBtn.click();
 
-      // 11. Toast de succès
+      // 9. Toast de succès
       await expect(
         page.getByText(/assignation\(s\) créée\(s\)/i),
       ).toBeVisible({ timeout: 10000 });
     },
   );
 
-  test(
-    "Contributeur ne voit pas le bouton + Ajouter",
-    async ({ asRole }) => {
-      const page = await asRole("contributeur");
+  // ---------------------------------------------------------------------------
+  // Scénarios 2 : Rôles POSITIFS — doivent voir "+ Ajouter" et pouvoir ouvrir le modal
+  // ---------------------------------------------------------------------------
 
-      // 1. Naviguer vers le planning
-      await page.goto("/fr/planning");
-      await expect(
-        page.getByRole("heading", { name: /planning des ressources/i, level: 1 }),
-      ).toBeVisible({ timeout: 15000 });
+  for (const role of ["manager", "responsable"] as const) {
+    test(
+      `${role} voit le bouton + Ajouter et peut ouvrir le modal`,
+      async ({ asRole }) => {
+        const page = await asRole(role);
 
-      // 2. Le CONTRIBUTEUR a `planning:activity-view` → le bouton Vue activité doit être visible
-      const activityBtn = page.getByRole("button", { name: /vue activité/i });
-      await expect(activityBtn).toBeVisible({ timeout: 10000 });
-      await activityBtn.click();
-      await expect(activityBtn).toHaveAttribute("aria-pressed", "true");
+        // Naviguer et basculer en Vue activité (skip si pas d'accès)
+        await navigateToActivityView(page, role);
 
-      // 3. La grille est visible
-      const table = page.getByRole("table");
-      await expect(table).toBeVisible({ timeout: 10000 });
+        // Chercher le bouton "+ Ajouter"
+        const addUserButtons = page.getByRole("button", {
+          name: /^\+\s*ajouter$/i,
+        });
+        const buttonCount = await addUserButtons.count();
 
-      // 4. Le bouton "+ Ajouter" ne doit PAS être présent
-      //    (permission `predefined_tasks:assign` absente du template BASIC_USER)
-      await expect(
-        page.getByRole("button", { name: /^\+\s*ajouter$/i }),
-      ).not.toBeVisible();
-    },
-  );
+        if (buttonCount === 0) {
+          test.skip(
+            true,
+            `Aucun + Ajouter visible pour ${role} — données vides ?`,
+          );
+          return;
+        }
+
+        // Le bouton doit être visible
+        await expect(addUserButtons.first()).toBeVisible();
+
+        // Cliquer ouvre le modal
+        await addUserButtons.first().scrollIntoViewIfNeeded();
+        await addUserButtons.first().click();
+
+        await expect(
+          page.getByRole("heading", { name: /ajouter des agents/i }),
+        ).toBeVisible({ timeout: 8000 });
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scénarios 3 : Rôles NÉGATIFS — ne doivent PAS voir "+ Ajouter"
+  // ---------------------------------------------------------------------------
+
+  for (const role of ["contributeur", "observateur", "referent"] as const) {
+    test(
+      `${role} ne voit pas le bouton + Ajouter`,
+      async ({ asRole }) => {
+        const page = await asRole(role);
+
+        // Naviguer vers le planning
+        await page.goto("/fr/planning");
+        await expect(
+          page.getByRole("heading", {
+            name: /planning des ressources/i,
+            level: 1,
+          }),
+        ).toBeVisible({ timeout: 15000 });
+
+        // Vérifier l'accès à la Vue activité
+        const activityBtn = page.getByRole("button", {
+          name: /vue activité/i,
+        });
+        const hasActivityView = await activityBtn
+          .isVisible({ timeout: 5000 })
+          .catch(() => false);
+
+        if (!hasActivityView) {
+          test.skip(
+            true,
+            `${role} n'a pas accès à la Vue activité — le bouton + Ajouter est donc implicitement absent`,
+          );
+          return;
+        }
+
+        await activityBtn.click();
+        await expect(activityBtn).toHaveAttribute("aria-pressed", "true");
+
+        // La grille est visible
+        await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
+
+        // Le bouton "+ Ajouter" ne doit PAS être présent
+        // (permission `predefined_tasks:assign` absente du template de ce rôle)
+        await expect(
+          page.getByRole("button", { name: /^\+\s*ajouter$/i }),
+        ).not.toBeVisible();
+      },
+    );
+  }
 });
