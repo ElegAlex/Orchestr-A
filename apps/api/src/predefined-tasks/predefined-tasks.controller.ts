@@ -29,7 +29,6 @@ import {
   GenerateFromRulesDto,
 } from './dto/create-recurring-rule.dto';
 import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
-import { UpdateCompletionStatusDto } from './dto/update-completion-status.dto';
 import { GenerateBalancedDto } from './dto/generate-balanced.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import {
@@ -293,28 +292,5 @@ export class PredefinedTasksController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.predefinedTasksService.generateBalanced(dto, user);
-  }
-
-  // ===========================
-  // Completion Status
-  // ===========================
-
-  @Patch('assignments/:id/completion')
-  @RequirePermissions('predefined_tasks:update-own-status')
-  @ApiOperation({
-    summary: 'Mettre à jour le statut de complétion d\'une assignation',
-    description:
-      'Permission minimale : update-own-status (own). Le scope own vs any est arbitré dans le service.',
-  })
-  @ApiResponse({ status: 200, description: 'Assignation mise à jour' })
-  @ApiResponse({ status: 403, description: 'Permission refusée ou hors périmètre' })
-  @ApiResponse({ status: 404, description: 'Assignation introuvable' })
-  @ApiResponse({ status: 409, description: 'Transition de statut invalide' })
-  updateCompletion(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateCompletionStatusDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.predefinedTasksService.updateCompletionStatus(id, dto, user);
   }
 }

@@ -21,9 +21,6 @@ export interface PlanningOverview {
   holidays: Holiday[];
   schoolVacations: SchoolVacation[];
   predefinedAssignments: PredefinedTaskAssignment[];
-  settings: {
-    lateThresholdDays: number;
-  };
 }
 
 export const planningService = {

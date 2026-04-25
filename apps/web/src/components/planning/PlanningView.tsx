@@ -102,7 +102,6 @@ export const PlanningView = ({
     silentRefetch,
     predefinedAssignments,
     getHolidayForDate,
-    lateThresholdDays,
   } = usePlanningData({
     currentDate,
     viewMode: dataViewMode,
@@ -717,9 +716,6 @@ export const PlanningView = ({
           tasks={predefinedTasks}
           assignments={predefinedAssignments}
           users={users}
-          lateThresholdDays={lateThresholdDays}
-          currentUserId={currentUser?.id ?? ""}
-          onAssignmentStatusChanged={silentRefetch}
           isHoliday={(d) => !!getHolidayForDate(d)}
           isWeekend={(d) => [0, 6].includes(d.getDay())}
         />

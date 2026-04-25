@@ -11,7 +11,6 @@ import { HolidaysService } from '../holidays/holidays.service';
 import { SchoolVacationsService } from '../school-vacations/school-vacations.service';
 import { PredefinedTasksService } from '../predefined-tasks/predefined-tasks.service';
 import { PermissionsService } from '../rbac/permissions.service';
-import { SettingsService } from '../settings/settings.service';
 
 describe('PlanningService', () => {
   let service: PlanningService;
@@ -29,12 +28,8 @@ describe('PlanningService', () => {
   const mockTeleworkService = { findAll: vi.fn() };
   const mockHolidaysService = { findByRange: vi.fn() };
   const mockSchoolVacationsService = { findByRange: vi.fn() };
-  const mockPredefinedTasksService = {
-    findAssignments: vi.fn(),
-    resolveManagedUserIds: vi.fn(),
-  };
+  const mockPredefinedTasksService = { findAssignments: vi.fn() };
   const mockPermissionsService = { getPermissionsForRole: vi.fn() };
-  const mockSettingsService = { getValue: vi.fn() };
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -50,10 +45,6 @@ describe('PlanningService', () => {
     mockPredefinedTasksService.findAssignments.mockResolvedValue([
       { id: 'pa1', userId: 'u1' },
     ]);
-    mockPredefinedTasksService.resolveManagedUserIds.mockResolvedValue(
-      new Set<string>(),
-    );
-    mockSettingsService.getValue.mockResolvedValue(1);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -74,7 +65,6 @@ describe('PlanningService', () => {
           useValue: mockPredefinedTasksService,
         },
         { provide: PermissionsService, useValue: mockPermissionsService },
-        { provide: SettingsService, useValue: mockSettingsService },
       ],
     }).compile();
 
@@ -102,10 +92,7 @@ describe('PlanningService', () => {
       telework: [{ id: 'tw1' }],
       holidays: [{ id: 'h1' }],
       schoolVacations: [{ id: 'sv1' }],
-      // W2.5 : chaque assignment enrichi avec canUpdateStatus computed flag.
-      // W2.6 : settings.lateThresholdDays exposé.
-      predefinedAssignments: [{ id: 'pa1', userId: 'u1', canUpdateStatus: false }],
-      settings: { lateThresholdDays: 1 },
+      predefinedAssignments: [{ id: 'pa1', userId: 'u1' }],
     });
   });
 

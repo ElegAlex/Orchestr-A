@@ -1,32 +1,4 @@
 {
-  "status": {
-    "NOT_DONE": "À faire",
-    "IN_PROGRESS": "En cours",
-    "DONE": "Fait",
-    "NOT_APPLICABLE": "Non applicable",
-    "LATE": "En retard",
-    "ariaLabel": {
-      "NOT_DONE": "Tâche à faire",
-      "IN_PROGRESS": "Tâche en cours",
-      "DONE": "Tâche faite",
-      "NOT_APPLICABLE": "Tâche non applicable",
-      "LATE": "Tâche en retard — à traiter"
-    },
-    "transitionTo": "Passer à : {status}",
-    "reason": {
-      "label": "Motif",
-      "placeholder": "Expliquer pourquoi cette tâche n'est pas applicable (3 caractères minimum)"
-    },
-    "confirm": "Confirmer",
-    "cancel": "Annuler",
-    "notAllowed": "Vous n'avez pas le droit de modifier cette assignation",
-    "toast": {
-      "success": "Statut mis à jour",
-      "forbidden": "Permission refusée",
-      "conflict": "Transition invalide",
-      "error": "Erreur lors de la mise à jour"
-    }
-  },
   "weight": {
     "label": "Poids / charge",
     "hint": "Pondération utilisée par l'équilibrage automatique (1 = très légère, 5 = très lourde)",

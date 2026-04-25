@@ -20,7 +20,6 @@ import {
   generateOccurrences,
   RuleLike,
 } from './occurrence-generator';
-import { UpdateCompletionStatusDto } from './dto/update-completion-status.dto';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
@@ -29,43 +28,6 @@ import { PlanningBalancerService } from './planning-balancer.service';
 import type { BalancerOccurrence } from './planning-balancer.types';
 import { LeavesService } from '../leaves/leaves.service';
 import { GenerateBalancedDto, GenerateBalancedResult } from './dto/generate-balanced.dto';
-
-/**
- * Transitions de statut autorisées pour les assignations de tâches prédéfinies.
- * Fonction pure exportée pour réutilisation dans planning.service.ts.
- */
-export function isValidTransition(before: string, after: string): boolean {
-  const transitions: Record<string, string[]> = {
-    NOT_DONE: ['IN_PROGRESS', 'DONE', 'NOT_APPLICABLE'],
-    IN_PROGRESS: ['DONE', 'NOT_APPLICABLE'],
-    DONE: ['NOT_APPLICABLE', 'NOT_DONE'],
-    NOT_APPLICABLE: ['NOT_DONE'],
-  };
-  return transitions[before]?.includes(after) ?? false;
-}
-
-/**
- * Vérifie si un utilisateur peut mettre à jour le statut d'une assignation.
- * Fonction pure exportée pour réutilisation dans planning.service.ts
- * (calcul de canUpdateStatus côté API computed flags).
- */
-export function canUpdateAssignmentStatus(
-  assignmentUserId: string,
-  currentUserId: string,
-  permissions: readonly string[],
-  managedUserIds: Set<string> | 'all',
-): boolean {
-  const isOwn = assignmentUserId === currentUserId;
-  const hasOwnPerm = permissions.includes('predefined_tasks:update-own-status');
-  const hasAnyPerm = permissions.includes('predefined_tasks:update-any-status');
-
-  if (isOwn) return hasOwnPerm;
-
-  if (!hasAnyPerm) return false;
-
-  if (managedUserIds === 'all') return true;
-  return managedUserIds.has(assignmentUserId);
-}
 
 @Injectable()
 export class PredefinedTasksService {
@@ -285,14 +247,6 @@ export class PredefinedTasksService {
       },
       orderBy: [{ date: 'asc' }, { period: 'asc' }],
     });
-  }
-
-  /**
-   * Résout le périmètre de gestion d'un utilisateur (wrapper public de
-   * `getManagedUserIds` pour réutilisation depuis PlanningService — W2.5).
-   */
-  async resolveManagedUserIds(currentUserId: string): Promise<Set<string>> {
-    return this.getManagedUserIds(currentUserId);
   }
 
   async createAssignment(assignedById: string, dto: CreateAssignmentDto) {
@@ -858,78 +812,4 @@ export class PredefinedTasksService {
     };
   }
 
-  // ===========================
-  // Completion Status
-  // ===========================
-
-  async updateCompletionStatus(
-    assignmentId: string,
-    dto: UpdateCompletionStatusDto,
-    currentUser: AuthenticatedUser,
-  ): Promise<PredefinedTaskAssignment> {
-    // 1. Charger l'assignation
-    const assignment = await this.prisma.predefinedTaskAssignment.findUnique({
-      where: { id: assignmentId },
-    });
-    if (!assignment) {
-      throw new NotFoundException(`Assignation ${assignmentId} introuvable`);
-    }
-
-    // 2. Vérifier les permissions
-    const permissions = await this.permissionsService.getPermissionsForRole(
-      currentUser.role?.code,
-    );
-    const hasAnyPerm = permissions.includes('predefined_tasks:update-any-status');
-    // Résolution du périmètre uniquement si nécessaire (optimisation + sécurité)
-    const managedUserIds: Set<string> | 'all' = hasAnyPerm
-      ? await this.getManagedUserIds(currentUser.id)
-      : new Set<string>();
-    const allowed = canUpdateAssignmentStatus(
-      assignment.userId,
-      currentUser.id,
-      permissions,
-      managedUserIds,
-    );
-    if (!allowed) {
-      throw new ForbiddenException(
-        'Vous ne disposez pas des droits pour modifier le statut de cette assignation',
-      );
-    }
-
-    // 3. Valider la transition
-    if (!isValidTransition(assignment.completionStatus, dto.status)) {
-      throw new ConflictException(
-        `Transition ${assignment.completionStatus} → ${dto.status} non autorisée`,
-      );
-    }
-
-    // 4. Mettre à jour en transaction
-    const updated = await this.prisma.$transaction(async (tx) => {
-      return tx.predefinedTaskAssignment.update({
-        where: { id: assignmentId },
-        data: {
-          completionStatus: dto.status,
-          completedAt: dto.status === 'DONE' ? new Date() : null,
-          completedById: dto.status === 'DONE' ? currentUser.id : null,
-          notApplicableReason:
-            dto.status === 'NOT_APPLICABLE' ? dto.reason ?? null : null,
-        },
-      });
-    });
-
-    // 5. Persister l'audit log (hors transaction — acceptable pour un log de statut)
-    await this.auditPersistence.log({
-      action: 'ASSIGNMENT_STATUS_CHANGED',
-      entityType: 'PredefinedTaskAssignment',
-      entityId: assignmentId,
-      actorId: currentUser.id,
-      payload: {
-        before: assignment.completionStatus,
-        after: dto.status,
-        reason: dto.reason ?? null,
-      },
-    });
-
-    return updated as PredefinedTaskAssignment;
-  }
 }

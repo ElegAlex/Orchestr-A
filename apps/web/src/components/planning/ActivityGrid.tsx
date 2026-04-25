@@ -1,11 +1,14 @@
 "use client";
 
 /**
- * ActivityGrid — W4.3
+ * ActivityGrid — W4.3 + W6.2 (refonte cellule nom+prénom)
+ *
  * Vue Activité : pivot jours-lignes × tâches-colonnes.
- * Variante B validée PO : lignes aérées, avatars 32px avec overlap,
- * badge statut pill textuel à droite du groupe d'avatars.
- * Option A (minimaliste) : read-only, pas d'interaction clic.
+ * Cellule = liste verticale des agents assignés (avatar 20px + Prénom NOM),
+ * max 3 visibles, "+N autres" en bas si surplus.
+ *
+ * Plus de status d'exécution / alerte retard / canUpdate (W6.1) — les tâches
+ * prédéfinies n'ont pas de notion de réalisation.
  */
 
 import "./ActivityGrid.print.css";
@@ -14,13 +17,11 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Printer, Check, Clock, AlertTriangle, Minus, Circle } from "lucide-react";
+import { Printer } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
-import { isAssignmentLate } from "@/components/planning/DayCell";
 import type {
   PredefinedTask,
   PredefinedTaskAssignment,
-  CompletionStatus,
 } from "@/services/predefined-tasks.service";
 import type { UserSummary } from "@/types";
 
@@ -31,151 +32,44 @@ export interface ActivityGridProps {
   tasks: PredefinedTask[];
   assignments: PredefinedTaskAssignment[];
   users: UserSummary[];
-  lateThresholdDays: number;
-  currentUserId: string;
-  onAssignmentStatusChanged?: () => void;
   isHoliday?: (date: Date) => boolean;
   isWeekend?: (date: Date) => boolean;
 }
 
-// ─── Status pill (inline, read-only, variante B) ─────────────────────────────
+// ─── Cell user row (avatar + Prénom NOM) ─────────────────────────────────────
 
-type EffectiveStatus = CompletionStatus | "LATE";
-
-/**
- * Ordre de sévérité pour "pire statut" :
- * LATE > NOT_DONE > IN_PROGRESS > DONE > NOT_APPLICABLE
- */
-const STATUS_SEVERITY: Record<EffectiveStatus, number> = {
-  LATE: 5,
-  NOT_DONE: 4,
-  IN_PROGRESS: 3,
-  DONE: 2,
-  NOT_APPLICABLE: 1,
-};
-
-function getWorstStatus(statuses: EffectiveStatus[]): EffectiveStatus {
-  if (statuses.length === 0) return "NOT_DONE";
-  return statuses.reduce((worst, s) =>
-    STATUS_SEVERITY[s] > STATUS_SEVERITY[worst] ? s : worst,
-  );
+interface UserRowItemProps {
+  user: UserSummary;
 }
 
-interface StatusPillProps {
-  status: EffectiveStatus;
-}
-
-/**
- * Pill statut read-only (variant B : icône + libellé textuel court).
- * N'utilise PAS AssignmentStatusBadge qui est interactif (week/month mode).
- */
-function StatusPill({ status }: StatusPillProps) {
-  const t = useTranslations("planning");
-
-  const CONFIG: Record<
-    EffectiveStatus,
-    {
-      bg: string;
-      text: string;
-      Icon: React.ComponentType<{ className?: string }>;
-      labelKey: string;
-    }
-  > = {
-    DONE: {
-      bg: "bg-emerald-50",
-      text: "text-emerald-700",
-      Icon: Check,
-      labelKey: "status.DONE",
-    },
-    IN_PROGRESS: {
-      bg: "bg-amber-50",
-      text: "text-amber-700",
-      Icon: Clock,
-      labelKey: "status.IN_PROGRESS",
-    },
-    NOT_DONE: {
-      bg: "bg-zinc-100",
-      text: "text-zinc-600",
-      Icon: Circle,
-      labelKey: "status.NOT_DONE",
-    },
-    LATE: {
-      bg: "bg-red-50",
-      text: "text-red-700",
-      Icon: AlertTriangle,
-      labelKey: "status.LATE",
-    },
-    NOT_APPLICABLE: {
-      bg: "bg-violet-50",
-      text: "text-violet-700",
-      Icon: Minus,
-      labelKey: "status.NOT_APPLICABLE",
-    },
-  };
-
-  const { bg, text, Icon, labelKey } = CONFIG[status];
-  const label = t(labelKey as Parameters<ReturnType<typeof useTranslations>>[0]);
-
+function UserRowItem({ user }: UserRowItemProps) {
+  const firstName = user.firstName ?? "";
+  const lastName = (user.lastName ?? "").toUpperCase();
   return (
-    <span
-      role="status"
-      aria-label={label}
-      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${bg} ${text}`}
-    >
-      <Icon className="w-3 h-3" />
-      {label}
-    </span>
+    <li className="flex items-center gap-2 py-0.5 text-xs leading-tight">
+      <UserAvatar user={user} size="sm" />
+      <span className="min-w-0 truncate">
+        <span className="font-normal text-zinc-700">{firstName}</span>{" "}
+        <span className="font-semibold text-zinc-900">{lastName}</span>
+      </span>
+    </li>
   );
 }
 
-// ─── AvatarStack ─────────────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────
 
-const MAX_VISIBLE_AVATARS = 3;
-
-interface AvatarStackProps {
-  users: UserSummary[];
-}
-
-function AvatarStack({ users }: AvatarStackProps) {
-  const visible = users.slice(0, MAX_VISIBLE_AVATARS);
-  const overflow = users.length - visible.length;
-
-  return (
-    <div className="flex items-center">
-      <div className="flex -space-x-2">
-        {visible.map((u, idx) => (
-          <div
-            key={u.id}
-            className="ring-2 ring-white rounded-full"
-            style={{ zIndex: MAX_VISIBLE_AVATARS - idx }}
-          >
-            {/* size="sm" = 28px — le plus proche des 32px du mockup sans hacker le composant */}
-            <UserAvatar user={u} size="sm" />
-          </div>
-        ))}
-      </div>
-      {overflow > 0 && (
-        <span className="ml-1 text-[10px] text-zinc-500 font-medium">
-          +{overflow}
-        </span>
-      )}
-    </div>
-  );
-}
-
-// ─── ActivityGrid ─────────────────────────────────────────────────────────────
+const MAX_VISIBLE_USERS = 3;
 
 export function ActivityGrid({
   days,
   tasks,
   assignments,
   users,
-  lateThresholdDays,
   isHoliday,
   isWeekend,
 }: ActivityGridProps) {
   const t = useTranslations("planning");
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
 
   // Map userId → UserSummary pour résolution rapide
   const userMap = useMemo(
@@ -187,9 +81,10 @@ export function ActivityGrid({
   const assignmentIndex = useMemo(() => {
     const idx = new Map<string, PredefinedTaskAssignment[]>();
     for (const a of assignments) {
-      const dateKey = typeof a.date === "string"
-        ? a.date.slice(0, 10)
-        : format(a.date as unknown as Date, "yyyy-MM-dd");
+      const dateKey =
+        typeof a.date === "string"
+          ? a.date.slice(0, 10)
+          : format(a.date as unknown as Date, "yyyy-MM-dd");
       const key = `${a.predefinedTaskId}::${dateKey}`;
       const bucket = idx.get(key) ?? [];
       bucket.push(a);
@@ -208,11 +103,11 @@ export function ActivityGrid({
     );
   }
 
-  // ─── Main render ───────────────────────────────────────────────────────────
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="activity-grid space-y-2">
-      {/* Toolbar (no-print) */}
+      {/* Toolbar */}
       <div className="activity-grid-no-print no-print flex items-center justify-end">
         <button
           type="button"
@@ -232,12 +127,9 @@ export function ActivityGrid({
             {t("activityGrid.caption" as Parameters<typeof t>[0])}
           </caption>
 
-          {/* ── thead ── */}
-          <thead
-            className="sticky top-0 z-20 bg-zinc-50 border-b-2 border-zinc-200"
-          >
+          {/* thead */}
+          <thead className="sticky top-0 z-20 bg-zinc-50 border-b-2 border-zinc-200">
             <tr>
-              {/* Date column header */}
               <th
                 scope="col"
                 className="sticky left-0 z-30 bg-zinc-50 border-r-2 border-zinc-200 px-4 py-3 text-left text-zinc-500 font-semibold min-w-[108px]"
@@ -245,18 +137,21 @@ export function ActivityGrid({
                 {t("activityGrid.dateCol" as Parameters<typeof t>[0])}
               </th>
 
-              {/* Task column headers */}
               {tasks.map((task, idx) => (
                 <th
                   key={task.id}
                   scope="col"
-                  className={`px-3 py-3 text-center min-w-[110px] font-semibold text-zinc-700${
+                  className={`px-3 py-3 text-center min-w-[160px] font-semibold text-zinc-700${
                     idx < tasks.length - 1 ? " border-r border-zinc-200" : ""
                   }`}
                 >
                   <span
                     className="block leading-tight"
-                    style={{ wordBreak: "break-word", maxWidth: "8rem", margin: "0 auto" }}
+                    style={{
+                      wordBreak: "break-word",
+                      maxWidth: "10rem",
+                      margin: "0 auto",
+                    }}
                   >
                     {task.icon && (
                       <span className="mr-0.5" aria-hidden>
@@ -265,7 +160,6 @@ export function ActivityGrid({
                     )}
                     {task.name}
                   </span>
-                  {/* Weight badge */}
                   <span className="mt-1 inline-flex items-center gap-0.5 bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 text-[10px] font-medium">
                     Poids <strong>{task.weight}</strong>
                   </span>
@@ -274,9 +168,9 @@ export function ActivityGrid({
             </tr>
           </thead>
 
-          {/* ── tbody ── */}
+          {/* tbody */}
           <tbody>
-            {days.map((day, rowIdx) => {
+            {days.map((day) => {
               const dateIso = format(day, "yyyy-MM-dd");
               const holiday = isHoliday?.(day) ?? false;
               const weekend = isWeekend?.(day) ?? false;
@@ -300,7 +194,6 @@ export function ActivityGrid({
 
               return (
                 <tr key={dateIso} className={rowClasses}>
-                  {/* Row header: date */}
                   <th
                     scope="row"
                     className={`sticky left-0 z-10 border-r-2 border-zinc-200 px-4 py-3 text-left font-semibold whitespace-nowrap${
@@ -321,13 +214,11 @@ export function ActivityGrid({
                     <div>{dateLabel}</div>
                   </th>
 
-                  {/* Task cells */}
                   {tasks.map((task, colIdx) => {
                     const key = `${task.id}::${dateIso}`;
                     const cellAssignments = assignmentIndex.get(key) ?? [];
 
                     if (isOffDay) {
-                      // On holidays/weekends, show a merge-like empty cell
                       if (colIdx === 0) {
                         return (
                           <td
@@ -339,7 +230,7 @@ export function ActivityGrid({
                           </td>
                         );
                       }
-                      return null; // merged
+                      return null;
                     }
 
                     if (cellAssignments.length === 0) {
@@ -357,33 +248,35 @@ export function ActivityGrid({
                       );
                     }
 
-                    // Resolve users for this cell
+                    // Liste verticale agents (avatar + Prénom NOM)
                     const cellUsers = cellAssignments
                       .map((a) => userMap.get(a.userId))
                       .filter((u): u is UserSummary => u !== undefined);
 
-                    // Compute worst effective status (Option A — single badge)
-                    const effectiveStatuses: EffectiveStatus[] =
-                      cellAssignments.map((a) => {
-                        const late = isAssignmentLate(a, now, lateThresholdDays);
-                        return late ? "LATE" : a.completionStatus;
-                      });
-                    const worstStatus = getWorstStatus(effectiveStatuses);
+                    const visible = cellUsers.slice(0, MAX_VISIBLE_USERS);
+                    const overflow = cellUsers.length - visible.length;
 
                     return (
                       <td
                         key={task.id}
-                        className={`px-3 py-3${
+                        className={`px-3 py-2 align-top${
                           colIdx < tasks.length - 1
                             ? " border-r border-zinc-100"
                             : ""
                         }`}
                       >
-                        {/* Variante B layout: avatars group + badge pill à droite */}
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <AvatarStack users={cellUsers} />
-                          <StatusPill status={worstStatus} />
-                        </div>
+                        <ul className="space-y-0.5">
+                          {visible.map((u) => (
+                            <UserRowItem key={u.id} user={u} />
+                          ))}
+                          {overflow > 0 && (
+                            <li className="pl-7 text-[10px] text-zinc-500 italic">
+                              {t("activityGrid.moreUsers" as Parameters<typeof t>[0], {
+                                count: overflow,
+                              })}
+                            </li>
+                          )}
+                        </ul>
                       </td>
                     );
                   })}

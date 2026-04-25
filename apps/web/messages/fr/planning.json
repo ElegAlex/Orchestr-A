@@ -88,8 +88,7 @@
     "pending": "En attente",
     "externalShort": "EXT",
     "externalIntervention": "Intervention ext.",
-    "allDay": "Journée entière",
-    "assignmentLate": "En retard — tâche non réalisée depuis le seuil configuré"
+    "allDay": "Journée entière"
   },
   "taskModal": {
     "description": "Description",
@@ -175,12 +174,5 @@
     "moreUsers": "+{count}",
     "print": "Imprimer",
     "emptyState": "Aucune tâche prédéfinie active"
-  },
-  "status": {
-    "DONE": "Fait",
-    "IN_PROGRESS": "En cours",
-    "NOT_DONE": "À faire",
-    "LATE": "Retard",
-    "NOT_APPLICABLE": "N/A"
   }
 }

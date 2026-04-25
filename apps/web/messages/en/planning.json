@@ -88,8 +88,7 @@
     "pending": "Pending",
     "externalShort": "EXT",
     "externalIntervention": "External intervention",
-    "allDay": "All day",
-    "assignmentLate": "Late — task not completed past configured threshold"
+    "allDay": "All day"
   },
   "taskModal": {
     "description": "Description",
@@ -175,12 +174,5 @@
     "moreUsers": "+{count}",
     "print": "Print",
     "emptyState": "No active predefined tasks"
-  },
-  "status": {
-    "DONE": "Done",
-    "IN_PROGRESS": "In progress",
-    "NOT_DONE": "To do",
-    "LATE": "Late",
-    "NOT_APPLICABLE": "N/A"
   }
 }

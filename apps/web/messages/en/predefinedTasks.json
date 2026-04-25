@@ -1,32 +1,4 @@
 {
-  "status": {
-    "NOT_DONE": "To do",
-    "IN_PROGRESS": "In progress",
-    "DONE": "Done",
-    "NOT_APPLICABLE": "Not applicable",
-    "LATE": "Late",
-    "ariaLabel": {
-      "NOT_DONE": "Task to do",
-      "IN_PROGRESS": "Task in progress",
-      "DONE": "Task done",
-      "NOT_APPLICABLE": "Task not applicable",
-      "LATE": "Task late — action required"
-    },
-    "transitionTo": "Switch to: {status}",
-    "reason": {
-      "label": "Reason",
-      "placeholder": "Explain why this task is not applicable (minimum 3 characters)"
-    },
-    "confirm": "Confirm",
-    "cancel": "Cancel",
-    "notAllowed": "You are not allowed to update this assignment",
-    "toast": {
-      "success": "Status updated",
-      "forbidden": "Permission denied",
-      "conflict": "Invalid transition",
-      "error": "Error updating status"
-    }
-  },
   "weight": {
     "label": "Weight / workload",
     "hint": "Weight used by automatic balancing (1 = very light, 5 = very heavy)",

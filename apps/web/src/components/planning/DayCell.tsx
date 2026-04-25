@@ -1,19 +1,14 @@
 import { Task, TaskStatus } from "@/types";
 import { Event } from "@/services/events.service";
-import {
-  PredefinedTaskAssignment,
-  CompletionStatus,
-} from "@/services/predefined-tasks.service";
+import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
 import { DayCell as DayCellData } from "@/hooks/usePlanningData";
-import { AssignmentStatusBadge } from "@/components/predefined-tasks/AssignmentStatusBadge";
-import { useUpdateAssignmentStatus } from "@/hooks/useUpdateAssignmentStatus";
 import {
   getPriorityColor,
   getStatusIcon,
   getStatusDotColor,
 } from "@/lib/planning-utils";
 import { usePlanningViewStore } from "@/stores/planningView.store";
-import { isToday, getDay, differenceInBusinessDays } from "date-fns";
+import { isToday, getDay } from "date-fns";
 import { useTranslations } from "next-intl";
 
 const STATUS_FILTER_KEY: Record<
@@ -54,22 +49,6 @@ function WeightDot({ weight, color }: { weight: number; color: string }) {
   );
 }
 
-// E3.3 — Assignation en retard si NOT_DONE + date < today - thresholdDays (ouvrés).
-// Le marqueur visuel ici est provisoire : W2.5 enrichira avec AssignmentStatusBadge.
-export function isAssignmentLate(
-  assignment: { completionStatus?: string; date: string | Date },
-  now: Date,
-  thresholdDays: number,
-): boolean {
-  if (assignment.completionStatus !== "NOT_DONE") return false;
-  const assignmentDate =
-    typeof assignment.date === "string"
-      ? new Date(assignment.date)
-      : assignment.date;
-  if (isNaN(assignmentDate.getTime())) return false;
-  return differenceInBusinessDays(now, assignmentDate) > thresholdDays;
-}
-
 interface DayCellProps {
   cell: DayCellData;
   userId: string;
@@ -77,8 +56,6 @@ interface DayCellProps {
   dayIndex: number;
   canToggleTelework: boolean;
   canAssignPredefinedTask: boolean;
-  lateThresholdDays: number;
-  onAssignmentStatusChanged?: () => void;
   onTeleworkToggle: (userId: string, date: Date) => void;
   onDragStart: (task: Task, sourceUserId: string) => void;
   onDragEnd: () => void;
@@ -99,8 +76,6 @@ export const DayCell = ({
   dayIndex,
   canToggleTelework,
   canAssignPredefinedTask,
-  lateThresholdDays,
-  onAssignmentStatusChanged,
   onTeleworkToggle,
   onDragStart,
   onDragEnd,
@@ -137,9 +112,6 @@ export const DayCell = ({
   const showExternalIntervention = usePlanningViewStore(
     (s) => s.legendFilters.externalIntervention,
   );
-
-  const { mutate: mutateStatus, isPending: statusMutationPending } =
-    useUpdateAssignmentStatus({ onSuccess: onAssignmentStatusChanged });
 
   const statusFilterMap = {
     todo: showTodo,
@@ -439,16 +411,11 @@ export const DayCell = ({
               const pt = assignment.predefinedTask;
               if (!pt) return null;
               const isExternal = pt.isExternalIntervention;
-              const late = isAssignmentLate(
-                assignment,
-                new Date(),
-                lateThresholdDays,
-              );
               return (
                 <div
                   key={assignment.id}
                   onClick={() => onPredefinedTaskClick(assignment, cell.date)}
-                  className={`relative rounded border-2 cursor-pointer hover:shadow-md transition ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
+                  className={`rounded border-2 cursor-pointer hover:shadow-md transition ${viewMode === "month" ? "text-[7px] p-0.5" : "text-xs p-2"}`}
                   style={
                     isExternal
                       ? {
@@ -456,35 +423,16 @@ export const DayCell = ({
                           backgroundColor: "#fee2e2",
                           color: "#7f1d1d",
                         }
-                      : late
-                        ? {
-                            borderColor: "#ef4444",
-                            backgroundColor: `${pt.color}20`,
-                            color: pt.color,
-                          }
-                        : {
-                            borderColor: pt.color,
-                            backgroundColor: `${pt.color}20`,
-                            color: pt.color,
-                          }
+                      : {
+                          borderColor: pt.color,
+                          backgroundColor: `${pt.color}20`,
+                          color: pt.color,
+                        }
                   }
                 >
                   {viewMode === "month" ? (
                     <div className="text-center" title={pt.name}>
                       <span>{isExternal ? "🔴" : pt.icon}</span>
-                      <AssignmentStatusBadge
-                        assignment={assignment}
-                        isLate={late}
-                        onTransition={(to: CompletionStatus, reason?: string) =>
-                          mutateStatus({
-                            assignmentId: assignment.id,
-                            status: to,
-                            reason,
-                          })
-                        }
-                        disabled={statusMutationPending}
-                        viewMode="month"
-                      />
                     </div>
                   ) : (
                     <div className="flex items-start space-x-1">
@@ -496,22 +444,6 @@ export const DayCell = ({
                           <p className="font-medium line-clamp-1 flex-1">
                             {pt.name}
                           </p>
-                          <AssignmentStatusBadge
-                            assignment={assignment}
-                            isLate={late}
-                            onTransition={(
-                              to: CompletionStatus,
-                              reason?: string,
-                            ) =>
-                              mutateStatus({
-                                assignmentId: assignment.id,
-                                status: to,
-                                reason,
-                              })
-                            }
-                            disabled={statusMutationPending}
-                            viewMode="week"
-                          />
                           <WeightDot
                             weight={pt.weight}
                             color={isExternal ? "#b91c1c" : pt.color}
