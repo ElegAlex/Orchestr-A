@@ -18,6 +18,7 @@ jest.mock("next-intl", () => ({
         "activityGrid.emptyCell": "—",
         "activityGrid.print": "Imprimer",
         "activityGrid.emptyState": "Aucune tâche prédéfinie active",
+        "activityGrid.addUsers": "Ajouter",
       };
       if (key === "activityGrid.moreUsers" && params) {
         return `+${params.count} autres`;
@@ -171,5 +172,77 @@ describe("ActivityGrid", () => {
     expect(
       screen.getByText("Aucune tâche prédéfinie active"),
     ).toBeInTheDocument();
+  });
+
+  it("+ Ajouter rendu dans cellule vide si canAssign et jour ouvré", () => {
+    const onAddUsers = jest.fn();
+    render(
+      <ActivityGrid
+        days={[day("2026-04-22")]} // mercredi
+        tasks={[buildTask("t1", "Permanence")]}
+        assignments={[]}
+        users={[]}
+        leaves={[]}
+        canAssign
+        onAddUsers={onAddUsers}
+      />,
+    );
+    const btn = screen.getByRole("button", { name: /ajouter/i });
+    fireEvent.click(btn);
+    expect(onAddUsers).toHaveBeenCalledWith("t1", "2026-04-22");
+  });
+
+  it("+ Ajouter rendu dans cellule pleine après la liste agents", () => {
+    const u1 = buildUser("u1", "Marie", "Dupont");
+    render(
+      <ActivityGrid
+        days={[day("2026-04-22")]}
+        tasks={[buildTask("t1", "Permanence")]}
+        assignments={[buildAssignment("a1", "t1", "u1", "2026-04-22")]}
+        users={[u1]}
+        leaves={[]}
+        canAssign
+        onAddUsers={jest.fn()}
+      />,
+    );
+    expect(screen.getByText("DUPONT")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /ajouter/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("+ Ajouter NON rendu si canAssign=false", () => {
+    render(
+      <ActivityGrid
+        days={[day("2026-04-22")]}
+        tasks={[buildTask("t1", "Permanence")]}
+        assignments={[]}
+        users={[]}
+        leaves={[]}
+        canAssign={false}
+        onAddUsers={jest.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: /ajouter/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("+ Ajouter NON rendu sur weekend ou férié", () => {
+    render(
+      <ActivityGrid
+        days={[day("2026-04-25")]} // samedi
+        tasks={[buildTask("t1", "Permanence")]}
+        assignments={[]}
+        users={[]}
+        leaves={[]}
+        canAssign
+        onAddUsers={jest.fn()}
+        isWeekend={(d) => [0, 6].includes(d.getDay())}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: /ajouter/i }),
+    ).not.toBeInTheDocument();
   });
 });

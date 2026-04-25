@@ -23,7 +23,7 @@ import type {
   PredefinedTask,
   PredefinedTaskAssignment,
 } from "@/services/predefined-tasks.service";
-import type { UserSummary } from "@/types";
+import type { UserSummary, Leave } from "@/types";
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -32,6 +32,9 @@ export interface ActivityGridProps {
   tasks: PredefinedTask[];
   assignments: PredefinedTaskAssignment[];
   users: UserSummary[];
+  leaves?: Leave[];
+  canAssign?: boolean;
+  onAddUsers?: (taskId: string, dateIso: string) => void;
   isHoliday?: (date: Date) => boolean;
   isWeekend?: (date: Date) => boolean;
 }
@@ -65,6 +68,9 @@ export function ActivityGrid({
   tasks,
   assignments,
   users,
+  leaves: _leaves,
+  canAssign = false,
+  onAddUsers,
   isHoliday,
   isWeekend,
 }: ActivityGridProps) {
@@ -243,7 +249,17 @@ export function ActivityGrid({
                               : ""
                           }`}
                         >
-                          {t("activityGrid.emptyCell" as Parameters<typeof t>[0])}
+                          {canAssign && onAddUsers ? (
+                            <button
+                              type="button"
+                              onClick={() => onAddUsers(task.id, dateIso)}
+                              className="no-print text-xs text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded px-2 py-0.5 transition"
+                            >
+                              + {t("activityGrid.addUsers" as Parameters<typeof t>[0])}
+                            </button>
+                          ) : (
+                            t("activityGrid.emptyCell" as Parameters<typeof t>[0])
+                          )}
                         </td>
                       );
                     }
@@ -274,6 +290,17 @@ export function ActivityGrid({
                               {t("activityGrid.moreUsers" as Parameters<typeof t>[0], {
                                 count: overflow,
                               })}
+                            </li>
+                          )}
+                          {canAssign && onAddUsers && (
+                            <li className="no-print pt-1">
+                              <button
+                                type="button"
+                                onClick={() => onAddUsers(task.id, dateIso)}
+                                className="text-xs text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded px-2 py-0.5 transition"
+                              >
+                                + {t("activityGrid.addUsers" as Parameters<typeof t>[0])}
+                              </button>
                             </li>
                           )}
                         </ul>
