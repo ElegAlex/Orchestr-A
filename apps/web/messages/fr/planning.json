@@ -183,7 +183,7 @@
       "noEligibleUsers": "Tous les agents sont déjà assignés ou en congé ce jour.",
       "selectedCount": "{count} agent(s) sélectionné(s)",
       "submit": "Ajouter ({count})",
-      "submitting": "Ajout en cours…",
+      "submitting": "Ajout en cours...",
       "cancel": "Annuler",
       "successToast": "{count} assignation(s) créée(s)",
       "errorToast": "Erreur lors de l'ajout"
