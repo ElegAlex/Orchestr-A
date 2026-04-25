@@ -1,7 +1,7 @@
 # Planning d'activités récurrentes — Guide utilisateur
 
 > Orchestr'A V2 — CPAM 92 Hauts-de-Seine
-> Version 1.1 · avril 2026
+> Version 1.2 · avril 2026
 
 ---
 
@@ -144,7 +144,24 @@ Depuis le menu latéral, cliquez sur **Planning**. Trois vues sont disponibles v
 
 Chaque assignation affiche son icône, son nom et une pastille colorée indiquant son poids (taille proportionnelle).
 
-### 2. Réajuster une assignation (responsable)
+### 2. Ajouter rapidement des agents depuis la Vue activité (responsable)
+
+Sur la **Vue activité**, chaque cellule (tâche × jour) propose un bouton **+ Ajouter** :
+
+- **Cellule vide** : `+ Ajouter` à la place du tiret.
+- **Cellule pleine** : `+ Ajouter` discret sous la liste d'agents.
+
+Au clic, une modale s'ouvre avec la liste de tous les agents :
+
+- Les agents **déjà assignés** apparaissent cochés et grisés (libellé *« déjà assigné »*).
+- Les agents **en congé validé** sur ce jour apparaissent grisés avec le type de congé (*« en congé · CA »*).
+- Les autres agents sont sélectionnables.
+
+Cochez un ou plusieurs agents puis cliquez **Ajouter (N)**. Les assignations sont créées immédiatement et apparaissent à la fois dans la Vue activité ET dans les vues Semaine / Mois des agents concernés.
+
+Cette action requiert le droit *« assignation tâches prédéfinies »* (rôles ADMIN, RESPONSABLE, MANAGER).
+
+### 3. Réajuster une assignation (responsable)
 
 Si une assignation doit changer (réaffectation suite à absence imprévue, annulation, déplacement de date), le responsable de service peut intervenir directement depuis le planning :
 
@@ -170,13 +187,16 @@ Ces ajustements sont indépendants de la règle récurrente : ils n'affectent ni
 
 ---
 
-## Vue activité — mode lecture
+## Vue activité
 
 La **Vue activité** propose un tableau croisé : les tâches en colonnes, les jours en lignes. Elle permet de voir d'un coup d'œil l'ensemble des tâches du service sur la période, indépendamment des agents.
 
 **Accès :** Cliquez sur **Vue activité** dans les boutons de vue en haut à droite du planning. Ce bouton n'est visible que pour les responsables disposant du droit « vue activité ».
 
-**Usage principal :** Lecture transversale pour identifier les journées chargées, les tâches non couvertes ou les chevauchements.
+**Usages principaux :**
+
+- Lecture transversale pour identifier les journées chargées, les tâches non couvertes ou les chevauchements.
+- Ajout rapide d'agents à une tâche via le bouton **+ Ajouter** présent dans chaque cellule (voir [Tutoriel 3 § 2](#2-ajouter-rapidement-des-agents-depuis-la-vue-activité-responsable)).
 
 **Exporter en PDF :** Cliquez sur **Imprimer** (en haut à droite de la vue activité). Le navigateur ouvre la boîte d'impression avec une mise en page optimisée A4 paysage. Imprimez ou enregistrez en PDF.
 
@@ -224,6 +244,8 @@ Pour toute question sur les droits d'accès (droit « génération de planning �
 
 ---
 
-*Guide version 1.1 — Support : DSI CPAM 92*
+*Guide version 1.2 — Support : DSI CPAM 92*
+
+> **Note V1.2 :** Ajout du bouton **+ Ajouter** dans chaque cellule de la Vue activité, permettant aux responsables de sélectionner plusieurs agents en une fois pour les affecter à une tâche prédéfinie sur un jour donné. Voir Tutoriel 3 § 2.
 
 > **Note V1.1 :** Le suivi de réalisation d'assignation (statuts Fait / Non fait / Non applicable, alerte retard) introduit en première version a été retiré. Les tâches prédéfinies servent uniquement à planifier des présences/activités récurrentes ; leur exécution effective relève du suivi managérial habituel.
