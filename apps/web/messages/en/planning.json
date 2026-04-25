@@ -173,6 +173,20 @@
     "emptyCell": "—",
     "moreUsers": "+{count}",
     "print": "Print",
-    "emptyState": "No active predefined tasks"
+    "emptyState": "No active predefined tasks",
+    "addUsers": "Add",
+    "addUsersModal": {
+      "title": "Add agents",
+      "subtitle": "{taskName} · {date}",
+      "alreadyAssigned": "already assigned",
+      "onLeave": "on leave · {type}",
+      "noEligibleUsers": "All agents are already assigned or on leave this day.",
+      "selectedCount": "{count} agent(s) selected",
+      "submit": "Add ({count})",
+      "submitting": "Adding…",
+      "cancel": "Cancel",
+      "successToast": "{count} assignment(s) created",
+      "errorToast": "Error while adding"
+    }
   }
 }
