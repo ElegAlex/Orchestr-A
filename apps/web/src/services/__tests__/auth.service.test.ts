@@ -175,8 +175,12 @@ describe("authService", () => {
 
   describe("logout", () => {
     let originalLocation: Location;
+    let consoleErrorSpy: jest.SpyInstance;
     beforeAll(() => {
       originalLocation = window.location;
+      consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       // @ts-expect-error — replace location wholesale to avoid Cannot redefine
       delete window.location;
       // @ts-expect-error — stub minimal Location shape (test only reads/writes href)
@@ -185,17 +189,16 @@ describe("authService", () => {
     afterAll(() => {
       // @ts-expect-error — restoring original Location instance
       window.location = originalLocation;
+      consoleErrorSpy.mockRestore();
     });
 
-    it("should call /auth/logout with refresh token and clear storage", async () => {
+    it("should call /auth/logout and clear storage", async () => {
       localStorageStore["refresh_token"] = "rt-xyz";
       (api.post as jest.Mock).mockResolvedValue({ data: null });
 
       await authService.logout();
 
-      expect(api.post).toHaveBeenCalledWith("/auth/logout", {
-        refreshToken: "rt-xyz",
-      });
+      expect(api.post).toHaveBeenCalledWith("/auth/logout", {});
       expect(localStorage.removeItem).toHaveBeenCalledWith(AUTH_TOKEN_KEY);
       expect(localStorage.removeItem).toHaveBeenCalledWith("refresh_token");
       expect(localStorage.removeItem).toHaveBeenCalledWith(

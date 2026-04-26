@@ -40,10 +40,13 @@ export class DocumentsController {
   @ApiOperation({ summary: 'Uploader un document' })
   @ApiResponse({ status: 201, description: 'Document créé' })
   create(
-    @CurrentUser('id') userId: string,
+    @CurrentUser() user: { id: string; role?: { code: string } | null },
     @Body() createDocumentDto: CreateDocumentDto,
   ) {
-    return this.documentsService.create(userId, createDocumentDto);
+    return this.documentsService.create(user.id, createDocumentDto, {
+      id: user.id,
+      role: user.role?.code ?? null,
+    });
   }
 
   @Get()
@@ -56,15 +59,27 @@ export class DocumentsController {
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('projectId') projectId?: string,
+    @CurrentUser() user?: { id: string; role?: { code: string } | null },
   ) {
-    return this.documentsService.findAll(page, limit, projectId);
+    return this.documentsService.findAll(
+      page,
+      limit,
+      projectId,
+      user ? { id: user.id, role: user.role?.code ?? null } : undefined,
+    );
   }
 
   @Get(':id')
   @RequirePermissions('documents:read')
   @ApiOperation({ summary: "Détails d'un document" })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.documentsService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: { id: string; role?: { code: string } | null },
+  ) {
+    return this.documentsService.findOne(id, {
+      id: user.id,
+      role: user.role?.code ?? null,
+    });
   }
 
   @Patch(':id')

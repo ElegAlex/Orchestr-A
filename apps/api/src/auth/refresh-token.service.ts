@@ -53,6 +53,10 @@ export class RefreshTokenService {
     return parseDurationMs(raw, 7 * 86_400_000); // 7d default
   }
 
+  getCookieMaxAgeSeconds(): number {
+    return Math.floor(this.getTtlMs() / 1000);
+  }
+
   async issue(userId: string, meta?: RefreshTokenMeta): Promise<string> {
     const plaintext = crypto.randomBytes(48).toString('base64url');
     const tokenHash = this.hash(plaintext);

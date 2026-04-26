@@ -62,10 +62,10 @@ cd /app/packages/database
 if npx prisma migrate deploy; then
     echo "      Migrations applied successfully"
 else
-    echo "      WARNING: migrate deploy had issues"
-    # Fallback to db push if migrations fail
-    echo "      Attempting schema sync fallback..."
-    npx prisma db push --skip-generate --accept-data-loss 2>/dev/null || true
+    echo "      ERROR: migrate deploy failed"
+    echo "      Refusing to run prisma db push in production."
+    echo "      Fix the migration or restore from backup before restarting."
+    exit 1
 fi
 
 echo ""

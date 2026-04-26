@@ -11,6 +11,13 @@ import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import { join } from 'path';
 import { fastifyLoggerOptions } from './common/fastify/redact.config';
+import { timingSafeEqual } from 'crypto';
+
+function safeEqual(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a);
+  const bBuf = Buffer.from(b);
+  return aBuf.length === bBuf.length && timingSafeEqual(aBuf, bBuf);
+}
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -43,9 +50,12 @@ async function bootstrap() {
   });
 
   // CORS
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   app.enableCors({
     origin:
-      process.env.ALLOWED_ORIGINS?.split(',') ||
+      allowedOrigins ||
       (process.env.NODE_ENV === 'production'
         ? false
         : ['http://localhost:4001', 'http://localhost:3000']),
@@ -69,6 +79,11 @@ async function bootstrap() {
   // Swagger documentation (only if enabled)
   if (process.env.SWAGGER_ENABLED === 'true') {
     if (process.env.NODE_ENV === 'production') {
+      if (!process.env.SWAGGER_USER || !process.env.SWAGGER_PASS) {
+        throw new Error(
+          'SWAGGER_USER and SWAGGER_PASS are required when Swagger is enabled in production',
+        );
+      }
       logger.warn(
         '[SECURITY WARNING] Swagger UI is enabled in production — ensure it is protected.',
       );
@@ -76,6 +91,8 @@ async function bootstrap() {
 
     // SEC-01: Protect Swagger with HTTP Basic Auth when credentials are configured
     if (process.env.SWAGGER_USER && process.env.SWAGGER_PASS) {
+      const swaggerUser = process.env.SWAGGER_USER;
+      const swaggerPass = process.env.SWAGGER_PASS;
       app
         .getHttpAdapter()
         .getInstance()
@@ -91,8 +108,8 @@ async function bootstrap() {
               .toString()
               .split(':');
             if (
-              user !== process.env.SWAGGER_USER ||
-              pass !== process.env.SWAGGER_PASS
+              !safeEqual(user, swaggerUser) ||
+              !safeEqual(pass, swaggerPass)
             ) {
               reply.code(401).send('Unauthorized');
               return;

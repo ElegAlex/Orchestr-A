@@ -5,6 +5,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
+import {
+  AccessScopeService,
+  AccessUser,
+} from '../common/services/access-scope.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 
@@ -13,13 +17,24 @@ export class CommentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissionsService: PermissionsService,
+    private readonly accessScope: AccessScopeService,
   ) {}
 
-  async create(userId: string, createCommentDto: CreateCommentDto) {
+  async create(
+    userId: string,
+    createCommentDto: CreateCommentDto,
+    currentUser?: AccessUser,
+  ) {
     const task = await this.prisma.task.findUnique({
       where: { id: createCommentDto.taskId },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(
+        createCommentDto.taskId,
+        currentUser,
+      );
+    }
 
     return this.prisma.comment.create({
       data: {
@@ -41,10 +56,18 @@ export class CommentsService {
     });
   }
 
-  async findAll(page = 1, limit = 1000, taskId?: string) {
+  async findAll(
+    page = 1,
+    limit = 1000,
+    taskId?: string,
+    currentUser?: AccessUser,
+  ) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
-    const where = taskId ? { taskId } : {};
+    const where: any = taskId ? { taskId } : {};
+    if (currentUser) {
+      where.task = await this.accessScope.taskReadWhere(currentUser);
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.comment.findMany({
@@ -79,7 +102,7 @@ export class CommentsService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, currentUser?: AccessUser) {
     const comment = await this.prisma.comment.findUnique({
       where: { id },
       include: {
@@ -96,6 +119,9 @@ export class CommentsService {
       },
     });
     if (!comment) throw new NotFoundException('Commentaire introuvable');
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(comment.taskId, currentUser);
+    }
     return comment;
   }
 
@@ -134,7 +160,7 @@ export class CommentsService {
       const permissions = (await this.permissionsService.getPermissionsForRole(
         userRole,
       )) as readonly string[];
-      const canDeleteAny = permissions.some((p) => p === 'comments:delete_any');
+      const canDeleteAny = permissions.includes('comments:delete');
       if (!canDeleteAny) {
         throw new ForbiddenException(
           'Vous ne pouvez supprimer que vos propres commentaires',

@@ -11,6 +11,10 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { OwnershipService } from '../common/services/ownership.service';
+import {
+  AccessScopeService,
+  AccessUser,
+} from '../common/services/access-scope.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { ProjectStatus, TaskStatus } from 'database';
 
@@ -34,6 +38,7 @@ export class ProjectsService {
     private readonly prisma: PrismaService,
     private readonly ownershipService: OwnershipService,
     private readonly permissionsService: PermissionsService,
+    private readonly accessScope: AccessScopeService,
   ) {}
 
   /**
@@ -371,7 +376,11 @@ export class ProjectsService {
   /**
    * Récupérer un projet par ID
    */
-  async findOne(id: string) {
+  async findOne(id: string, currentUser?: AccessUser) {
+    if (currentUser) {
+      await this.accessScope.assertCanAccessProject(id, currentUser);
+    }
+
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {
@@ -768,7 +777,7 @@ export class ProjectsService {
   /**
    * Récupérer les projets dont un utilisateur est membre
    */
-  async getProjectsByUser(userId: string) {
+  async getProjectsByUser(userId: string, currentUser?: AccessUser) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -777,14 +786,22 @@ export class ProjectsService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    const projects = await this.prisma.project.findMany({
-      where: {
-        members: {
-          some: {
-            userId,
-          },
+    const where: any = {
+      members: {
+        some: {
+          userId,
         },
       },
+    };
+    if (
+      currentUser &&
+      !(await this.accessScope.hasAny(currentUser, ['projects:manage_any']))
+    ) {
+      where.AND = [this.accessScope.projectAccessWhere(currentUser)];
+    }
+
+    const projects = await this.prisma.project.findMany({
+      where,
       include: {
         manager: {
           select: {
@@ -921,7 +938,19 @@ export class ProjectsService {
   /**
    * Récupérer les snapshots de progression d'un projet
    */
-  async getSnapshots(projectId: string, from?: string, to?: string) {
+  async getSnapshots(
+    projectId: string,
+    from?: string,
+    to?: string,
+    currentUser?: AccessUser,
+  ) {
+    if (currentUser) {
+      await this.accessScope.assertCanAccessProject(projectId, currentUser, [
+        'projects:manage_any',
+        'reports:view',
+      ]);
+    }
+
     const where: any = { projectId };
     if (from || to) {
       where.date = {};
@@ -938,7 +967,11 @@ export class ProjectsService {
   /**
    * Récupérer les statistiques d'un projet
    */
-  async getProjectStats(id: string) {
+  async getProjectStats(id: string, currentUser?: AccessUser) {
+    if (currentUser) {
+      await this.accessScope.assertCanAccessProject(id, currentUser);
+    }
+
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {

@@ -11,6 +11,8 @@ import { ProjectStatus } from 'database';
 
 describe('ProjectsController', () => {
   let controller: ProjectsController;
+  const mockCurrentUser = { id: 'user-id-1', role: { code: 'ADMIN' } };
+  const normalizedCurrentUser = { id: 'user-id-1', role: 'ADMIN' };
 
   const mockProject = {
     id: 'project-id-1',
@@ -191,10 +193,16 @@ describe('ProjectsController', () => {
     it('should return a project by id', async () => {
       mockProjectsService.findOne.mockResolvedValue(mockProject);
 
-      const result = await controller.findOne('project-id-1');
+      const result = await controller.findOne(
+        'project-id-1',
+        mockCurrentUser as any,
+      );
 
       expect(result).toEqual(mockProject);
-      expect(mockProjectsService.findOne).toHaveBeenCalledWith('project-id-1');
+      expect(mockProjectsService.findOne).toHaveBeenCalledWith(
+        'project-id-1',
+        normalizedCurrentUser,
+      );
     });
 
     it('should throw NotFoundException when project not found', async () => {
@@ -202,9 +210,9 @@ describe('ProjectsController', () => {
         new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.findOne('nonexistent', mockCurrentUser as any),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -213,11 +221,15 @@ describe('ProjectsController', () => {
       const userProjects = [mockProject];
       mockProjectsService.getProjectsByUser.mockResolvedValue(userProjects);
 
-      const result = await controller.getProjectsByUser('user-id-1');
+      const result = await controller.getProjectsByUser(
+        'user-id-1',
+        mockCurrentUser as any,
+      );
 
       expect(result).toEqual(userProjects);
       expect(mockProjectsService.getProjectsByUser).toHaveBeenCalledWith(
         'user-id-1',
+        normalizedCurrentUser,
       );
     });
 
@@ -226,6 +238,7 @@ describe('ProjectsController', () => {
 
       const result = await controller.getProjectsByUser(
         'user-without-projects',
+        mockCurrentUser as any,
       );
 
       expect(result).toEqual([]);
@@ -247,12 +260,16 @@ describe('ProjectsController', () => {
 
       mockProjectsService.getProjectStats.mockResolvedValue(projectStats);
 
-      const result = await controller.getStats('project-id-1');
+      const result = await controller.getStats(
+        'project-id-1',
+        mockCurrentUser as any,
+      );
 
       expect(result).toEqual(projectStats);
       expect(result.progress).toBe(50);
       expect(mockProjectsService.getProjectStats).toHaveBeenCalledWith(
         'project-id-1',
+        normalizedCurrentUser,
       );
     });
 
@@ -261,9 +278,9 @@ describe('ProjectsController', () => {
         new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.getStats('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.getStats('nonexistent', mockCurrentUser as any),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

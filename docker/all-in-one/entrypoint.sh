@@ -168,16 +168,24 @@ if [ "$USER_COUNT" = "0" ] || [ "$USER_COUNT" = "error" ]; then
     if [ -n "${ADMIN_PASSWORD:-}" ]; then
         ADMIN_PASS="$ADMIN_PASSWORD"
         ADMIN_PASS_SOURCE="fourni via ADMIN_PASSWORD"
+        FORCE_PASSWORD_CHANGE="false"
     else
         ADMIN_PASS=$(openssl rand -base64 16)
         ADMIN_PASS_SOURCE="généré automatiquement"
+        FORCE_PASSWORD_CHANGE="true"
     fi
 
     # Hash the password with bcrypt using node
     ADMIN_HASH=$(node -e "const bcrypt = require('bcrypt'); bcrypt.hash('${ADMIN_PASS}', 12).then(h => console.log(h));")
 
+    ADMIN_ROLE_ID=$(gosu postgres psql -d orchestr_a -tAc "SELECT id FROM roles WHERE code = 'ADMIN' LIMIT 1;" 2>/dev/null || true)
+    if [ -z "$ADMIN_ROLE_ID" ]; then
+        log_error "Impossible de créer l'admin: rôle ADMIN introuvable. Exécutez le seed RBAC."
+        exit 1
+    fi
+
     gosu postgres psql -d orchestr_a -c "
-        INSERT INTO users (id, email, login, \"passwordHash\", \"firstName\", \"lastName\", role, \"isActive\", \"createdAt\", \"updatedAt\")
+        INSERT INTO users (id, email, login, \"passwordHash\", \"firstName\", \"lastName\", \"roleId\", \"isActive\", \"forcePasswordChange\", \"createdAt\", \"updatedAt\")
         VALUES (
             gen_random_uuid()::text,
             'admin@orchestr-a.local',
@@ -185,8 +193,9 @@ if [ "$USER_COUNT" = "0" ] || [ "$USER_COUNT" = "error" ]; then
             '${ADMIN_HASH}',
             'Admin',
             'Orchestr-A',
-            'ADMIN',
+            '${ADMIN_ROLE_ID}',
             true,
+            ${FORCE_PASSWORD_CHANGE},
             NOW(),
             NOW()
         )

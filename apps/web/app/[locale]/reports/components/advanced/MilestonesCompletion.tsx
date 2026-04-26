@@ -56,12 +56,13 @@ export default function MilestonesCompletion() {
   const { lateItems, ontimeItems } = useMemo(() => {
     if (!data) return { lateItems: [], ontimeItems: [] };
 
-    const late = data.details.filter((d) => d.status === "OVERDUE");
+    const details = data.details ?? [];
+    const late = details.filter((d) => d.status === "OVERDUE");
 
     // Pour "dans les temps" : pour chaque projet sans jalon en retard, prendre le plus proche upcoming
     const lateProjectIds = new Set(late.map((d) => d.projectId));
     const upcomingByProject = new Map<string, MilestoneDetail>();
-    for (const d of data.details) {
+    for (const d of details) {
       if (d.status !== "UPCOMING") continue;
       if (lateProjectIds.has(d.projectId)) continue;
       const existing = upcomingByProject.get(d.projectId);
@@ -202,7 +203,8 @@ function LateItem({ milestone }: { milestone: MilestoneDetail }) {
     milestone.totalInProject > 0
       ? (milestone.reachedInProject / milestone.totalInProject) * 100
       : 0;
-  const latePct = milestone.totalInProject > 0 ? 100 / milestone.totalInProject : 0;
+  const latePct =
+    milestone.totalInProject > 0 ? 100 / milestone.totalInProject : 0;
 
   return (
     <div

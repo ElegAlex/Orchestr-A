@@ -6,7 +6,9 @@ import {
   HttpCode,
   HttpStatus,
   Req,
+  Res,
 } from '@nestjs/common';
+import type { FastifyReply } from 'fastify';
 import {
   ApiTags,
   ApiOperation,
@@ -29,6 +31,7 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import type { AuthenticatedUser } from './decorators/current-user.decorator';
 
 type RequestMeta = { userAgent?: string; ip?: string };
+const REFRESH_COOKIE = 'orchestr_a_refresh_token';
 
 function extractMeta(req: {
   headers?: Record<string, unknown>;
@@ -40,6 +43,37 @@ function extractMeta(req: {
     typeof userAgentRaw === 'string' ? userAgentRaw.slice(0, 512) : undefined;
   const ip = req.ips?.length ? req.ips[0] : (req.ip ?? undefined);
   return { userAgent, ip };
+}
+
+function cookieValue(req: { headers?: Record<string, unknown> }, name: string) {
+  const raw = req.headers?.cookie;
+  if (typeof raw !== 'string') return undefined;
+  const prefix = `${name}=`;
+  return raw
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix))
+    ?.slice(prefix.length);
+}
+
+function setRefreshCookie(
+  reply: FastifyReply | undefined,
+  refreshToken: string,
+  maxAge: number,
+) {
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  reply?.header(
+    'Set-Cookie',
+    `${REFRESH_COOKIE}=${encodeURIComponent(refreshToken)}; Max-Age=${maxAge}; Path=/api/auth; HttpOnly; SameSite=Lax${secure}`,
+  );
+}
+
+function clearRefreshCookie(reply: FastifyReply | undefined) {
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  reply?.header(
+    'Set-Cookie',
+    `${REFRESH_COOKIE}=; Max-Age=0; Path=/api/auth; HttpOnly; SameSite=Lax${secure}`,
+  );
 }
 
 @ApiTags('auth')
@@ -78,8 +112,18 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Login ou mot de passe incorrect' })
-  async login(@Body() loginDto: LoginDto, @Req() req: any) {
-    return this.authService.login(loginDto, extractMeta(req));
+  async login(
+    @Body() loginDto: LoginDto,
+    @Req() req: any,
+    @Res({ passthrough: true }) reply?: FastifyReply,
+  ) {
+    const result = await this.authService.login(loginDto, extractMeta(req));
+    setRefreshCookie(
+      reply,
+      result.refresh_token,
+      this.refreshTokenService.getCookieMaxAgeSeconds(),
+    );
+    return result;
   }
 
   @Public()
@@ -95,12 +139,23 @@ export class AuthController {
     description: 'Nouveau access_token + refresh_token',
   })
   @ApiResponse({ status: 401, description: 'Refresh token invalide ou expiré' })
-  async refresh(@Body() body: RefreshTokenDto, @Req() req: any) {
+  async refresh(
+    @Body() body: RefreshTokenDto,
+    @Req() req: any,
+    @Res({ passthrough: true }) reply?: FastifyReply,
+  ) {
+    const refreshToken =
+      body.refreshToken ?? cookieValue(req, REFRESH_COOKIE) ?? '';
     const { userId, newRefreshToken } = await this.refreshTokenService.rotate(
-      body.refreshToken,
+      refreshToken,
       extractMeta(req),
     );
     const access_token = await this.authService.issueAccessTokenForUser(userId);
+    setRefreshCookie(
+      reply,
+      newRefreshToken,
+      this.refreshTokenService.getCookieMaxAgeSeconds(),
+    );
     return { access_token, refresh_token: newRefreshToken };
   }
 
@@ -116,6 +171,8 @@ export class AuthController {
   async logout(
     @Body() body: LogoutDto,
     @CurrentUser() user: AuthenticatedUser,
+    @Req() req: any,
+    @Res({ passthrough: true }) reply?: FastifyReply,
   ): Promise<void> {
     if (user.jti && user.exp) {
       const remaining = user.exp - Math.floor(Date.now() / 1000);
@@ -123,9 +180,12 @@ export class AuthController {
         await this.blacklist.blacklist(user.jti, remaining);
       }
     }
-    if (body?.refreshToken) {
-      await this.refreshTokenService.revoke(body.refreshToken);
+    const refreshToken =
+      body?.refreshToken ?? cookieValue(req, REFRESH_COOKIE) ?? undefined;
+    if (refreshToken) {
+      await this.refreshTokenService.revoke(refreshToken);
     }
+    clearRefreshCookie(reply);
   }
 
   @Public()

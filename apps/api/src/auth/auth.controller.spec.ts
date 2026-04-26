@@ -37,6 +37,7 @@ describe('AuthController', () => {
     rotate: vi.fn(),
     revoke: vi.fn(),
     revokeAllForUser: vi.fn(),
+    getCookieMaxAgeSeconds: vi.fn().mockReturnValue(604800),
   };
 
   const mockBlacklist = {

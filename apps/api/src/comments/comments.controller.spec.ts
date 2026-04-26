@@ -7,6 +7,8 @@ import { REQUIRE_PERMISSIONS_KEY as PERMISSIONS_KEY } from '../rbac/decorators/r
 
 describe('CommentsController', () => {
   let controller: CommentsController;
+  const mockCurrentUser = { id: 'user-id-1', role: { code: 'ADMIN' } };
+  const normalizedCurrentUser = { id: 'user-id-1', role: 'ADMIN' };
 
   const mockComment = {
     id: 'comment-id-1',
@@ -61,12 +63,16 @@ describe('CommentsController', () => {
     it('should create a comment successfully', async () => {
       mockCommentsService.create.mockResolvedValue(mockComment);
 
-      const result = await controller.create('user-id-1', createCommentDto);
+      const result = await controller.create(
+        mockCurrentUser as any,
+        createCommentDto,
+      );
 
       expect(result).toEqual(mockComment);
       expect(mockCommentsService.create).toHaveBeenCalledWith(
         'user-id-1',
         createCommentDto,
+        normalizedCurrentUser,
       );
       expect(mockCommentsService.create).toHaveBeenCalledTimes(1);
     });
@@ -77,7 +83,7 @@ describe('CommentsController', () => {
       );
 
       await expect(
-        controller.create('user-id-1', createCommentDto),
+        controller.create(mockCurrentUser as any, createCommentDto),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -96,13 +102,19 @@ describe('CommentsController', () => {
 
       mockCommentsService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10);
+      const result = await controller.findAll(
+        1,
+        10,
+        undefined,
+        mockCurrentUser as any,
+      );
 
       expect(result).toEqual(paginatedResult);
       expect(mockCommentsService.findAll).toHaveBeenCalledWith(
         1,
         10,
         undefined,
+        normalizedCurrentUser,
       );
     });
 
@@ -114,12 +126,13 @@ describe('CommentsController', () => {
 
       mockCommentsService.findAll.mockResolvedValue(taskComments);
 
-      await controller.findAll(1, 10, 'task-id-1');
+      await controller.findAll(1, 10, 'task-id-1', mockCurrentUser as any);
 
       expect(mockCommentsService.findAll).toHaveBeenCalledWith(
         1,
         10,
         'task-id-1',
+        normalizedCurrentUser,
       );
     });
   });
@@ -128,10 +141,16 @@ describe('CommentsController', () => {
     it('should return a comment by id', async () => {
       mockCommentsService.findOne.mockResolvedValue(mockComment);
 
-      const result = await controller.findOne('comment-id-1');
+      const result = await controller.findOne(
+        'comment-id-1',
+        mockCurrentUser as any,
+      );
 
       expect(result).toEqual(mockComment);
-      expect(mockCommentsService.findOne).toHaveBeenCalledWith('comment-id-1');
+      expect(mockCommentsService.findOne).toHaveBeenCalledWith(
+        'comment-id-1',
+        normalizedCurrentUser,
+      );
     });
 
     it('should throw NotFoundException when comment not found', async () => {
@@ -139,9 +158,9 @@ describe('CommentsController', () => {
         new NotFoundException('Commentaire introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.findOne('nonexistent', mockCurrentUser as any),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

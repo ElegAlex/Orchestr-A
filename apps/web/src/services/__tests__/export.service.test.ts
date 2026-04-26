@@ -16,20 +16,13 @@ jest.mock("jspdf", () => {
 
 jest.mock("jspdf-autotable", () => jest.fn());
 
-// Mock XLSX
-jest.mock("xlsx", () => ({
-  utils: {
-    book_new: jest.fn(() => ({})),
-    aoa_to_sheet: jest.fn(() => ({})),
-    book_append_sheet: jest.fn(),
-  },
-  writeFile: jest.fn(),
-}));
-
 import { ExportService } from "../export.service";
-import * as XLSX from "xlsx";
 
 describe("ExportService", () => {
+  const createObjectURL = jest.fn(() => "blob:export");
+  const revokeObjectURL = jest.fn();
+  const click = jest.fn();
+
   const mockAnalyticsData = {
     metrics: [
       { title: "Total Projects", value: 10, change: "+5%" },
@@ -71,6 +64,28 @@ describe("ExportService", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: revokeObjectURL,
+    });
+    jest.spyOn(document, "createElement").mockImplementation((tagName) => {
+      const element = document.createElementNS(
+        "http://www.w3.org/1999/xhtml",
+        tagName,
+      ) as HTMLAnchorElement;
+      if (tagName === "a") {
+        element.click = click;
+      }
+      return element;
+    });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe("exportToPDF", () => {
@@ -98,16 +113,18 @@ describe("ExportService", () => {
     it("should generate and save Excel file", async () => {
       await ExportService.exportToExcel(mockAnalyticsData, "month");
 
-      expect(XLSX.writeFile).toHaveBeenCalled();
+      expect(createObjectURL).toHaveBeenCalled();
+      expect(click).toHaveBeenCalled();
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:export");
     });
 
     it("should handle different date ranges", async () => {
       await ExportService.exportToExcel(mockAnalyticsData, "week");
-      expect(XLSX.writeFile).toHaveBeenCalled();
+      expect(click).toHaveBeenCalled();
 
       jest.clearAllMocks();
       await ExportService.exportToExcel(mockAnalyticsData, "quarter");
-      expect(XLSX.writeFile).toHaveBeenCalled();
+      expect(click).toHaveBeenCalled();
     });
 
     it("should handle projects with no manager", async () => {
@@ -122,7 +139,7 @@ describe("ExportService", () => {
       };
 
       await ExportService.exportToExcel(dataWithNoManager, "month");
-      expect(XLSX.writeFile).toHaveBeenCalled();
+      expect(click).toHaveBeenCalled();
     });
 
     it("should handle projects with no due date", async () => {
@@ -137,7 +154,7 @@ describe("ExportService", () => {
       };
 
       await ExportService.exportToExcel(dataWithNoDueDate, "month");
-      expect(XLSX.writeFile).toHaveBeenCalled();
+      expect(click).toHaveBeenCalled();
     });
   });
 });

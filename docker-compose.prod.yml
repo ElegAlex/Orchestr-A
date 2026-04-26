@@ -18,7 +18,11 @@ services:
     networks:
       - orchestr-a-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-orchestr_a_prod}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-orchestr_a_prod}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,10 +40,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
+          cpus: "2"
           memory: 2G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
 
   # Redis Cache
@@ -73,10 +77,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
+          cpus: "1"
           memory: 512M
         reservations:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 128M
 
   # API NestJS
@@ -109,10 +113,14 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
 
       # CORS
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
 
       # API Settings
       API_PREFIX: ${API_PREFIX:-api}
+      RBAC_GUARD_MODE: enforce
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+      SWAGGER_USER: ${SWAGGER_USER:-}
+      SWAGGER_PASS: ${SWAGGER_PASS:-}
 
       # Rate Limiting
       THROTTLE_TTL: ${THROTTLE_TTL:-60}
@@ -126,7 +134,11 @@ services:
       - api_logs_prod:/app/logs
       - api_uploads_prod:/app/uploads
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:4000/api/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://127.0.0.1:4000/api/health || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -146,10 +158,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
+          cpus: "2"
           memory: 1G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 256M
       restart_policy:
         condition: on-failure
@@ -179,7 +191,11 @@ services:
     networks:
       - orchestr-a-network
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -199,10 +215,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
+          cpus: "1"
           memory: 512M
         reservations:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 128M
 
   # Nginx Reverse Proxy
@@ -243,10 +259,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 256M
         reservations:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 64M
 
   # Certbot for automatic SSL certificates

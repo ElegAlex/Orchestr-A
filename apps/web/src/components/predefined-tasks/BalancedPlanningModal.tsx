@@ -29,8 +29,7 @@ export interface BalancedPlanningModalProps {
 
 function EquityBadge({ ratio }: { ratio: number }) {
   const t = useTranslations("predefinedTasks.balancer.preview");
-  let colorClass =
-    "bg-red-50 border-red-200 text-red-700";
+  let colorClass = "bg-red-50 border-red-200 text-red-700";
   if (ratio >= 0.85) {
     colorClass = "bg-emerald-50 border-emerald-200 text-emerald-700";
   } else if (ratio >= 0.7) {
@@ -64,8 +63,10 @@ export function BalancedPlanningModal({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [serviceId, setServiceId] = useState(defaultServiceId ?? "");
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>(defaultUserIds);
-  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>(defaultTaskIds);
+  const [selectedUserIds, setSelectedUserIds] =
+    useState<string[]>(defaultUserIds);
+  const [selectedTaskIds, setSelectedTaskIds] =
+    useState<string[]>(defaultTaskIds);
 
   // Data state
   const [services, setServices] = useState<Service[]>([]);
@@ -74,7 +75,9 @@ export function BalancedPlanningModal({
   const [loadingData, setLoadingData] = useState(false);
 
   // Preview result
-  const [previewResult, setPreviewResult] = useState<BalancerResult | null>(null);
+  const [previewResult, setPreviewResult] = useState<BalancerResult | null>(
+    null,
+  );
 
   const { preview, apply, isPending } = usePlanningBalancer({ onApplied });
 
@@ -92,9 +95,12 @@ export function BalancedPlanningModal({
         setServices(svcList);
         const allUsers = Array.isArray(userList)
           ? (userList as User[])
-          : (userList as { data: User[] }).data ?? [];
+          : ((userList as { data: User[] }).data ?? []);
+        const allTasks = Array.isArray(taskRes)
+          ? taskRes
+          : ((taskRes as { data?: PredefinedTask[] }).data ?? []);
         setUsers(allUsers.filter((u) => u.isActive));
-        setTasks(taskRes.filter((t) => t.isActive));
+        setTasks(allTasks.filter((t) => t.isActive));
       })
       .catch(() => {
         /* silent — user will see empty selects */
@@ -103,13 +109,11 @@ export function BalancedPlanningModal({
   }, [open]);
 
   // Filter users by service when serviceId changes
-  const filteredUsers =
-    serviceId
-      ? users.filter(
-          (u) =>
-            u.userServices?.some((us) => us.service.id === serviceId),
-        )
-      : users;
+  const filteredUsers = serviceId
+    ? users.filter((u) =>
+        u.userServices?.some((us) => us.service.id === serviceId),
+      )
+    : users;
 
   const toggleUserId = (id: string) => {
     setSelectedUserIds((prev) =>
@@ -165,14 +169,13 @@ export function BalancedPlanningModal({
 
   // Group proposed assignments by agent for display
   const assignmentsByAgent = previewResult
-    ? previewResult.proposedAssignments.reduce<Record<string, typeof previewResult.proposedAssignments>>(
-        (acc, a) => {
-          if (!acc[a.userId]) acc[a.userId] = [];
-          acc[a.userId].push(a);
-          return acc;
-        },
-        {},
-      )
+    ? previewResult.proposedAssignments.reduce<
+        Record<string, typeof previewResult.proposedAssignments>
+      >((acc, a) => {
+        if (!acc[a.userId]) acc[a.userId] = [];
+        acc[a.userId].push(a);
+        return acc;
+      }, {})
     : {};
 
   const maxLoad =
@@ -374,7 +377,9 @@ export function BalancedPlanningModal({
                           />
                           <span>{task.icon}</span>
                           <span className="flex-1 truncate">{task.name}</span>
-                          <span className="text-xs text-zinc-400">×{task.weight}</span>
+                          <span className="text-xs text-zinc-400">
+                            ×{task.weight}
+                          </span>
                         </label>
                       ))
                     )}
@@ -462,10 +467,7 @@ export function BalancedPlanningModal({
 
                     {/* Workload table */}
                     <div className="overflow-hidden rounded-lg border border-zinc-200">
-                      <table
-                        role="table"
-                        className="w-full text-sm"
-                      >
+                      <table role="table" className="w-full text-sm">
                         <caption className="sr-only">
                           {t("preview.workloadByAgent")}
                         </caption>
@@ -480,9 +482,7 @@ export function BalancedPlanningModal({
                             <th className="text-right px-4 py-2 font-medium">
                               {t("preview.count")}
                             </th>
-                            <th className="px-4 py-2 font-medium w-28">
-                              %
-                            </th>
+                            <th className="px-4 py-2 font-medium w-28">%</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-100">
@@ -526,7 +526,10 @@ export function BalancedPlanningModal({
                       </h4>
                       {Object.entries(assignmentsByAgent).map(
                         ([userId, agentAssignments]) => (
-                          <details key={userId} className="border border-zinc-200 rounded-lg">
+                          <details
+                            key={userId}
+                            className="border border-zinc-200 rounded-lg"
+                          >
                             <summary className="px-4 py-2.5 cursor-pointer text-sm font-medium text-zinc-700 hover:bg-zinc-50">
                               {getUserName(userId)} ({agentAssignments.length})
                             </summary>
@@ -537,7 +540,9 @@ export function BalancedPlanningModal({
                                   className="flex items-center justify-between text-xs text-zinc-600 py-0.5"
                                 >
                                   <span>{a.date}</span>
-                                  <span className="text-zinc-500">{a.period}</span>
+                                  <span className="text-zinc-500">
+                                    {a.period}
+                                  </span>
                                   <span className="font-medium">
                                     {getTaskName(a.taskId)}
                                   </span>
@@ -558,7 +563,10 @@ export function BalancedPlanningModal({
                         </h4>
                         <div className="border border-red-200 bg-red-50 rounded-lg p-3 space-y-1">
                           {previewResult.unassignedOccurrences.map((uo, i) => (
-                            <div key={i} className="text-xs text-red-700 flex justify-between">
+                            <div
+                              key={i}
+                              className="text-xs text-red-700 flex justify-between"
+                            >
                               <span>
                                 {uo.date} — {uo.period}
                               </span>
@@ -582,7 +590,8 @@ export function BalancedPlanningModal({
               <span>{t("footer.escHint")}</span>
               {previewResult && (
                 <span>
-                  {previewResult.proposedAssignments.length} assignation(s) proposée(s)
+                  {previewResult.proposedAssignments.length} assignation(s)
+                  proposée(s)
                 </span>
               )}
             </div>

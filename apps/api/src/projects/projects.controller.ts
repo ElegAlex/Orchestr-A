@@ -122,8 +122,14 @@ export class ProjectsController {
     status: 404,
     description: 'Utilisateur introuvable',
   })
-  getProjectsByUser(@Param('userId', ParseUUIDPipe) userId: string) {
-    return this.projectsService.getProjectsByUser(userId);
+  getProjectsByUser(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    return this.projectsService.getProjectsByUser(userId, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get(':id')
@@ -137,8 +143,14 @@ export class ProjectsController {
     status: 404,
     description: 'Projet introuvable',
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.projectsService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    return this.projectsService.findOne(id, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get(':id/stats')
@@ -152,8 +164,14 @@ export class ProjectsController {
     status: 404,
     description: 'Projet introuvable',
   })
-  getStats(@Param('id', ParseUUIDPipe) id: string) {
-    return this.projectsService.getProjectStats(id);
+  getStats(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    return this.projectsService.getProjectStats(id, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get(':id/snapshots')
@@ -161,10 +179,14 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Get progress snapshots for a project' })
   async getSnapshots(
     @Param('id') id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
     @Query('from') from?: string,
     @Query('to') to?: string,
   ) {
-    return this.projectsService.getSnapshots(id, from, to);
+    return this.projectsService.getSnapshots(id, from, to, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Patch(':id')

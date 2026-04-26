@@ -1,6 +1,5 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toPng } from "html-to-image";
@@ -54,6 +53,63 @@ interface OverviewExportData {
 }
 
 export class ExportService {
+  private static escapeHtml(value: string | number): string {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  private static tableHtml(
+    name: string,
+    rows: Array<Array<string | number>>,
+  ): string {
+    const body = rows
+      .map(
+        (row, rowIndex) =>
+          `<tr>${row
+            .map((cell) => {
+              const tag = rowIndex === 0 ? "th" : "td";
+              return `<${tag}>${this.escapeHtml(cell)}</${tag}>`;
+            })
+            .join("")}</tr>`,
+      )
+      .join("");
+
+    return `<section><h2>${this.escapeHtml(name)}</h2><table>${body}</table></section>`;
+  }
+
+  private static saveExcelWorkbook(
+    sheets: Array<{ name: string; rows: Array<Array<string | number>> }>,
+    filename: string,
+  ): void {
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: Arial, sans-serif; }
+    section { page-break-after: always; margin-bottom: 24px; }
+    h2 { font-size: 18px; margin: 0 0 12px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; }
+    th { background: #e9eef7; font-weight: 700; }
+  </style>
+</head>
+<body>${sheets.map((sheet) => this.tableHtml(sheet.name, sheet.rows)).join("")}</body>
+</html>`;
+    const blob = new Blob([html], {
+      type: "application/vnd.ms-excel;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   /**
    * Export analytics data to PDF
    */
@@ -200,9 +256,6 @@ export class ExportService {
     data: AnalyticsData,
     dateRange: string,
   ): Promise<void> {
-    const workbook = XLSX.utils.book_new();
-
-    // Sheet 1: Metrics
     const metricsData = [
       ["Rapport Analytics - ORCHESTR'A"],
       [`Généré le: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: fr })}`],
@@ -212,21 +265,6 @@ export class ExportService {
       ...data.metrics.map((m) => [m.title, m.value, m.change || ""]),
     ];
 
-    const ws1 = XLSX.utils.aoa_to_sheet(metricsData);
-
-    // Styling: merge cells for title
-    ws1["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } },
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 2 } },
-    ];
-
-    // Column widths
-    ws1["!cols"] = [{ wch: 30 }, { wch: 15 }, { wch: 20 }];
-
-    XLSX.utils.book_append_sheet(workbook, ws1, "Indicateurs");
-
-    // Sheet 2: Projects
     const projectsHeader = [
       "Code",
       "Nom",
@@ -251,7 +289,7 @@ export class ExportService {
       p.completedTasks,
       p.totalTasks,
       p.projectManager || "",
-      p.clients?.join(", ") || "",
+      p.clients?.map((client) => client.name).join(", ") || "",
       p.loggedHours,
       p.budgetHours,
       format(new Date(p.startDate), "dd/MM/yyyy"),
@@ -259,28 +297,6 @@ export class ExportService {
       p.isOverdue ? "Oui" : "Non",
     ]);
 
-    const ws2 = XLSX.utils.aoa_to_sheet([projectsHeader, ...projectsData]);
-
-    // Column widths
-    ws2["!cols"] = [
-      { wch: 12 },
-      { wch: 30 },
-      { wch: 15 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 20 },
-      { wch: 25 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 10 },
-    ];
-
-    XLSX.utils.book_append_sheet(workbook, ws2, "Projets");
-
-    // Sheet 3: Summary Statistics
     const totalProjects = data.projectDetails.length;
     const activeProjects = data.projectDetails.filter((p) =>
       p.status.includes("ACTIVE"),
@@ -330,15 +346,14 @@ export class ExportService {
       ],
     ];
 
-    const ws3 = XLSX.utils.aoa_to_sheet(summaryData);
-    ws3["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
-    ws3["!cols"] = [{ wch: 30 }, { wch: 15 }];
-
-    XLSX.utils.book_append_sheet(workbook, ws3, "Statistiques");
-
-    // Save
-    const filename = `orchestr-a-analytics-${format(new Date(), "yyyy-MM-dd-HHmm")}.xlsx`;
-    XLSX.writeFile(workbook, filename);
+    this.saveExcelWorkbook(
+      [
+        { name: "Indicateurs", rows: metricsData },
+        { name: "Projets", rows: [projectsHeader, ...projectsData] },
+        { name: "Statistiques", rows: summaryData },
+      ],
+      `orchestr-a-analytics-${format(new Date(), "yyyy-MM-dd-HHmm")}.xls`,
+    );
   }
 
   /**
@@ -799,7 +814,7 @@ export class ExportService {
   /**
    * Export clients list to Excel (2 sheets: Clients + Projets par client)
    */
-  static exportClientsToExcel(
+  static async exportClientsToExcel(
     clients: Array<{
       id: string;
       name: string;
@@ -814,11 +829,9 @@ export class ExportService {
       projectName: string;
       projectStatus: string;
     }>,
-  ): void {
+  ): Promise<void> {
     const now = new Date();
-    const workbook = XLSX.utils.book_new();
 
-    // Sheet 1: Clients
     const clientsHeader = ["ID", "Nom", "Statut", "Nb Projets", "Créé le"];
     const clientsRows = clients.map((c) => [
       c.id,
@@ -827,30 +840,20 @@ export class ExportService {
       c.projectsCount,
       format(new Date(c.createdAt), "dd/MM/yyyy"),
     ]);
-    const ws1 = XLSX.utils.aoa_to_sheet([clientsHeader, ...clientsRows]);
-    ws1["!cols"] = [
-      { wch: 36 },
-      { wch: 30 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 14 },
-    ];
-    XLSX.utils.book_append_sheet(workbook, ws1, "Clients");
 
-    // Sheet 2: Projets par client
     const projectsHeader = ["Client", "Projet", "Statut Projet"];
     const projectsRows = projectsByClient.map((r) => [
       r.clientName,
       r.projectName,
       r.projectStatus,
     ]);
-    const ws2 = XLSX.utils.aoa_to_sheet([projectsHeader, ...projectsRows]);
-    ws2["!cols"] = [{ wch: 30 }, { wch: 40 }, { wch: 20 }];
-    XLSX.utils.book_append_sheet(workbook, ws2, "Projets par client");
 
-    XLSX.writeFile(
-      workbook,
-      `orchestr-a-clients-${format(now, "yyyy-MM-dd-HHmm")}.xlsx`,
+    this.saveExcelWorkbook(
+      [
+        { name: "Clients", rows: [clientsHeader, ...clientsRows] },
+        { name: "Projets par client", rows: [projectsHeader, ...projectsRows] },
+      ],
+      `orchestr-a-clients-${format(now, "yyyy-MM-dd-HHmm")}.xls`,
     );
   }
 

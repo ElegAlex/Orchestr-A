@@ -165,8 +165,14 @@ export class TasksController {
     status: 404,
     description: 'Projet introuvable',
   })
-  getTasksByProject(@Param('projectId', ParseUUIDPipe) projectId: string) {
-    return this.tasksService.getTasksByProject(projectId);
+  getTasksByProject(
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    return this.tasksService.getTasksByProject(projectId, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get('project/:projectId/export')
@@ -176,10 +182,16 @@ export class TasksController {
   @ApiResponse({ status: 404, description: 'Projet introuvable' })
   async exportProjectTasks(
     @Param('projectId', ParseUUIDPipe) projectId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
     @Res() reply: FastifyReply,
   ) {
-    const { csv, filename } =
-      await this.tasksService.exportProjectTasksCsv(projectId);
+    const { csv, filename } = await this.tasksService.exportProjectTasksCsv(
+      projectId,
+      {
+        id: currentUser.id,
+        role: currentUser.role?.code ?? null,
+      },
+    );
     reply
       .header('Content-Type', 'text/csv; charset=utf-8')
       .header('Content-Disposition', `attachment; filename="${filename}"`)
@@ -221,8 +233,14 @@ export class TasksController {
     status: 404,
     description: 'Tâche introuvable',
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.tasksService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    return this.tasksService.findOne(id, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Patch(':id')

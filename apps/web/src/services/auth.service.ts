@@ -5,9 +5,8 @@ import { AuthResponse, LoginDto, RegisterDto, User } from "@/types";
  * SEC-03 — Security-sensitive notes
  *
  * Only `access_token` (JWT) is persisted in localStorage (conscious project choice).
- * Since SEC-04, a short-lived `refresh_token` is also persisted alongside it — same
- * risk class as the access token (both live in localStorage). This is the same
- * conscious tradeoff; client-side XSS equivalently compromises both.
+ * Refresh tokens are held in an HttpOnly cookie set by the API. Legacy
+ * `refresh_token` localStorage entries are cleared during login/logout.
  *
  * The FULL user object (including `role`, `isActive`, `permissions`, etc.) is NEVER
  * persisted. Persisting role client-side allows trivial privilege escalation by
@@ -46,15 +45,9 @@ function toDisplayCache(user: User): AuthUserDisplay {
   };
 }
 
-function persistSession(
-  token: string,
-  user: User,
-  refreshToken?: string | null,
-) {
+function persistSession(token: string, user: User) {
   localStorage.setItem(AUTH_TOKEN_KEY, token);
-  if (refreshToken) {
-    localStorage.setItem(AUTH_REFRESH_TOKEN_KEY, refreshToken);
-  }
+  localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY);
   localStorage.setItem(
     AUTH_USER_DISPLAY_KEY,
     JSON.stringify(toDisplayCache(user)),
@@ -72,11 +65,7 @@ export const authService = {
   async login(credentials: LoginDto): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>("/auth/login", credentials);
     if (response.data.access_token) {
-      persistSession(
-        response.data.access_token,
-        response.data.user,
-        response.data.refresh_token ?? null,
-      );
+      persistSession(response.data.access_token, response.data.user);
     }
     return response.data;
   },
@@ -84,11 +73,7 @@ export const authService = {
   async register(data: RegisterDto): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>("/auth/register", data);
     if (response.data.access_token) {
-      persistSession(
-        response.data.access_token,
-        response.data.user,
-        response.data.refresh_token ?? null,
-      );
+      persistSession(response.data.access_token, response.data.user);
     }
     return response.data;
   },
@@ -104,9 +89,8 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
-    const refreshToken = localStorage.getItem(AUTH_REFRESH_TOKEN_KEY);
     try {
-      await api.post("/auth/logout", refreshToken ? { refreshToken } : {});
+      await api.post("/auth/logout", {});
     } catch {
       // Best-effort — even if the server call fails, wipe local state.
     }

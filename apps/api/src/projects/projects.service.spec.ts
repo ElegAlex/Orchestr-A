@@ -4,13 +4,18 @@ import { ProjectsService } from './projects.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { OwnershipService } from '../common/services/ownership.service';
 import { PermissionsService } from '../rbac/permissions.service';
+import { AccessScopeService } from '../common/services/access-scope.service';
 import {
   NotFoundException,
   BadRequestException,
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { ProjectStatus, TaskStatus, MilestoneStatus } from '../__mocks__/database';
+import {
+  ProjectStatus,
+  TaskStatus,
+  MilestoneStatus,
+} from '../__mocks__/database';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -95,6 +100,14 @@ describe('ProjectsService', () => {
         {
           provide: PermissionsService,
           useValue: mockPermissionsService,
+        },
+        {
+          provide: AccessScopeService,
+          useValue: {
+            projectAccessWhere: vi.fn().mockResolvedValue({}),
+            assertCanAccessProject: vi.fn().mockResolvedValue(undefined),
+            hasAny: vi.fn().mockResolvedValue(true),
+          },
         },
       ],
     }).compile();
@@ -1266,8 +1279,8 @@ describe('ProjectsService', () => {
     };
 
     beforeEach(() => {
-      mockPrismaService.projectSnapshot.create.mockImplementation(
-        ({ data }) => Promise.resolve({ id: 'snap-id', ...data }),
+      mockPrismaService.projectSnapshot.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 'snap-id', ...data }),
       );
       // Default: no snapshot exists yet today (W1.F idempotency guard)
       mockPrismaService.projectSnapshot.findFirst.mockResolvedValue(null);
@@ -1381,7 +1394,7 @@ describe('ProjectsService', () => {
       expect(result).toEqual({ captured: 0 });
     });
 
-    it('should create new snapshot if only yesterday\'s exists (none today)', async () => {
+    it("should create new snapshot if only yesterday's exists (none today)", async () => {
       mockPrismaService.project.findMany.mockResolvedValue([
         projectWithMixedData,
       ]);
@@ -1396,9 +1409,9 @@ describe('ProjectsService', () => {
       expect(findFirstCall.where.projectId).toBe('p-mixed');
       const expectedStart = new Date();
       expectedStart.setHours(0, 0, 0, 0);
-      expect(
-        (findFirstCall.where.date.gte as Date).getTime(),
-      ).toBe(expectedStart.getTime());
+      expect((findFirstCall.where.date.gte as Date).getTime()).toBe(
+        expectedStart.getTime(),
+      );
 
       expect(mockPrismaService.projectSnapshot.create).toHaveBeenCalledTimes(1);
       expect(result).toEqual({ captured: 1 });

@@ -67,6 +67,30 @@ describe("MilestonesCompletion", () => {
       completed: 26,
       overdue: 6,
       upcoming: 8,
+      details: [
+        {
+          projectId: "p2",
+          projectName: "Projet Beta",
+          milestoneId: "m2",
+          milestoneName: "Jalon Beta",
+          dueDate: "2026-03-01",
+          daysFromNow: -4,
+          status: "OVERDUE",
+          reachedInProject: 3,
+          totalInProject: 5,
+        },
+        {
+          projectId: "p1",
+          projectName: "Projet Alpha",
+          milestoneId: "m1",
+          milestoneName: "Jalon Alpha",
+          dueDate: "2026-05-01",
+          daysFromNow: 8,
+          status: "UPCOMING",
+          reachedInProject: 5,
+          totalInProject: 5,
+        },
+      ],
       byProject: [
         { projectId: "p1", name: "Projet Alpha", reached: 5, total: 5 },
         { projectId: "p2", name: "Projet Beta", reached: 3, total: 5 },
@@ -76,36 +100,22 @@ describe("MilestonesCompletion", () => {
 
     renderComponent(makeQueryClient());
 
-    // KPI principal — phrase complète interpolée
     await waitFor(() => {
-      expect(
-        screen.getByText(/26 milestones reached on time of 32 due/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/26 \/ 32 atteints à temps/)).toBeInTheDocument();
     });
 
-    // Ratio coloré — (81%)
     await waitFor(() => {
-      expect(screen.getByTestId("ratio-value")).toHaveTextContent("81%");
+      expect(screen.getByText("(81 %)")).toBeInTheDocument();
     });
 
-    // Sous-ligne
     await waitFor(() => {
-      expect(
-        screen.getByText(/26 done · 6 late · 8 upcoming/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Projet Alpha/)).toBeInTheDocument();
+      expect(screen.getByText(/Projet Beta/)).toBeInTheDocument();
     });
 
-    // Noms des projets
-    await waitFor(() => {
-      expect(screen.getByText("Projet Alpha")).toBeInTheDocument();
-      expect(screen.getByText("Projet Beta")).toBeInTheDocument();
-      expect(screen.getByText("Projet Gamma")).toBeInTheDocument();
-    });
-
-    // Textes X / Y pour les projets
-    expect(screen.getByText("5 / 5")).toBeInTheDocument();
-    expect(screen.getByText("3 / 5")).toBeInTheDocument();
-    expect(screen.getByText("1 / 4")).toBeInTheDocument();
+    expect(screen.getByText("Terminés")).toBeInTheDocument();
+    expect(screen.getByText("En retard")).toBeInTheDocument();
+    expect(screen.getByText("À venir")).toBeInTheDocument();
   });
 
   it("renders error state when the query rejects", async () => {
@@ -126,6 +136,7 @@ describe("MilestonesCompletion", () => {
       completed: 0,
       overdue: 0,
       upcoming: 0,
+      details: [],
       byProject: [],
     });
 
@@ -144,14 +155,14 @@ describe("MilestonesCompletion", () => {
       completed: 8,
       overdue: 2,
       upcoming: 0,
+      details: [],
       byProject: [{ projectId: "p1", name: "Projet X", reached: 8, total: 10 }],
     });
 
     renderComponent(makeQueryClient());
 
     await waitFor(() => {
-      const ratioEl = screen.getByTestId("ratio-value");
-      expect(ratioEl).toHaveClass("text-green-600");
+      expect(screen.getByText("(80 %)")).toBeInTheDocument();
     });
   });
 
@@ -163,14 +174,14 @@ describe("MilestonesCompletion", () => {
       completed: 6,
       overdue: 4,
       upcoming: 0,
+      details: [],
       byProject: [{ projectId: "p1", name: "Projet X", reached: 6, total: 10 }],
     });
 
     renderComponent(makeQueryClient());
 
     await waitFor(() => {
-      const ratioEl = screen.getByTestId("ratio-value");
-      expect(ratioEl).toHaveClass("text-orange-500");
+      expect(screen.getByText("(60 %)")).toBeInTheDocument();
     });
   });
 
@@ -182,14 +193,14 @@ describe("MilestonesCompletion", () => {
       completed: 3,
       overdue: 7,
       upcoming: 0,
+      details: [],
       byProject: [{ projectId: "p1", name: "Projet X", reached: 3, total: 10 }],
     });
 
     renderComponent(makeQueryClient());
 
     await waitFor(() => {
-      const ratioEl = screen.getByTestId("ratio-value");
-      expect(ratioEl).toHaveClass("text-red-600");
+      expect(screen.getByText("(30 %)")).toBeInTheDocument();
     });
   });
 });

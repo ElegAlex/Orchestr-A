@@ -9,6 +9,8 @@ import { OwnershipGuard } from '../common/guards/ownership.guard';
 
 describe('DocumentsController', () => {
   let controller: DocumentsController;
+  const mockCurrentUser = { id: 'user-id-1', role: { code: 'ADMIN' } };
+  const normalizedCurrentUser = { id: 'user-id-1', role: 'ADMIN' };
 
   const mockDocument = {
     id: 'doc-id-1',
@@ -70,12 +72,16 @@ describe('DocumentsController', () => {
     it('should create a document successfully', async () => {
       mockDocumentsService.create.mockResolvedValue(mockDocument);
 
-      const result = await controller.create('user-id-1', createDocumentDto);
+      const result = await controller.create(
+        mockCurrentUser,
+        createDocumentDto,
+      );
 
       expect(result).toEqual(mockDocument);
       expect(mockDocumentsService.create).toHaveBeenCalledWith(
         'user-id-1',
         createDocumentDto,
+        normalizedCurrentUser,
       );
       expect(mockDocumentsService.create).toHaveBeenCalledTimes(1);
     });
@@ -86,7 +92,7 @@ describe('DocumentsController', () => {
       );
 
       await expect(
-        controller.create('user-id-1', createDocumentDto),
+        controller.create(mockCurrentUser, createDocumentDto),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -105,13 +111,19 @@ describe('DocumentsController', () => {
 
       mockDocumentsService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10);
+      const result = await controller.findAll(
+        1,
+        10,
+        undefined,
+        mockCurrentUser,
+      );
 
       expect(result).toEqual(paginatedResult);
       expect(mockDocumentsService.findAll).toHaveBeenCalledWith(
         1,
         10,
         undefined,
+        normalizedCurrentUser,
       );
     });
 
@@ -123,12 +135,13 @@ describe('DocumentsController', () => {
 
       mockDocumentsService.findAll.mockResolvedValue(projectDocuments);
 
-      await controller.findAll(1, 10, 'project-id-1');
+      await controller.findAll(1, 10, 'project-id-1', mockCurrentUser);
 
       expect(mockDocumentsService.findAll).toHaveBeenCalledWith(
         1,
         10,
         'project-id-1',
+        normalizedCurrentUser,
       );
     });
   });
@@ -137,10 +150,13 @@ describe('DocumentsController', () => {
     it('should return a document by id', async () => {
       mockDocumentsService.findOne.mockResolvedValue(mockDocument);
 
-      const result = await controller.findOne('doc-id-1');
+      const result = await controller.findOne('doc-id-1', mockCurrentUser);
 
       expect(result).toEqual(mockDocument);
-      expect(mockDocumentsService.findOne).toHaveBeenCalledWith('doc-id-1');
+      expect(mockDocumentsService.findOne).toHaveBeenCalledWith(
+        'doc-id-1',
+        normalizedCurrentUser,
+      );
     });
 
     it('should throw NotFoundException when document not found', async () => {
@@ -148,9 +164,9 @@ describe('DocumentsController', () => {
         new NotFoundException('Document introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.findOne('nonexistent', mockCurrentUser),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

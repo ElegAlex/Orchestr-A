@@ -13,6 +13,7 @@ export const REFRESH_TOKEN_KEY = "refresh_token";
 export const api = axios.create({
   baseURL: API_URL,
   timeout: 30000,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -53,23 +54,24 @@ function clearAuthAndRedirect() {
 let refreshPromise: Promise<string> | null = null;
 
 async function doRefresh(): Promise<string> {
-  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-  if (!refreshToken) {
-    throw new Error("no refresh token");
-  }
   // Use a plain axios call (NOT the `api` instance) to avoid interceptor recursion.
   const response = await axios.post<{
     access_token: string;
-    refresh_token: string;
+    refresh_token?: string;
   }>(
     `${API_URL}/auth/refresh`,
-    { refreshToken },
-    { headers: { "Content-Type": "application/json" }, timeout: 30000 },
+    {},
+    {
+      headers: { "Content-Type": "application/json" },
+      timeout: 30000,
+      withCredentials: true,
+    },
   );
   const { access_token, refresh_token } = response.data;
   localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
+  // Backward compatibility while older API responses may still include it.
   if (refresh_token) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, refresh_token);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
   }
   return access_token;
 }
@@ -100,11 +102,6 @@ api.interceptors.response.use(
 
     // Don't try to refresh the refresh endpoint itself, and avoid infinite loops.
     if (isRefreshRequest(originalConfig) || originalConfig._retry) {
-      clearAuthAndRedirect();
-      return Promise.reject(error);
-    }
-
-    if (!localStorage.getItem(REFRESH_TOKEN_KEY)) {
       clearAuthAndRedirect();
       return Promise.reject(error);
     }

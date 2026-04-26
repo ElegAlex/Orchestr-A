@@ -2,7 +2,7 @@
  * Tests for the axios instance interceptors in @/lib/api.
  *
  * We verify the SEC-04 refresh flow: on 401 the interceptor calls
- * /auth/refresh, stores the new tokens, retries the original request, and
+ * /auth/refresh, stores the new access token, retries the original request, and
  * deduplicates concurrent refresh attempts behind a single promise.
  */
 
@@ -39,7 +39,9 @@ Object.defineProperty(window, "localStorage", {
 
 // Silence navigation
 const originalLocation = window.location;
+let consoleErrorSpy: jest.SpyInstance;
 beforeAll(() => {
+  consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
   // @ts-expect-error — overriding read-only window.location for test isolation
   delete window.location;
   // @ts-expect-error — stub minimal Location shape (test only reads/writes href)
@@ -48,6 +50,7 @@ beforeAll(() => {
 afterAll(() => {
   // @ts-expect-error — restoring original Location instance
   window.location = originalLocation;
+  consoleErrorSpy.mockRestore();
 });
 
 describe("api interceptors (SEC-04 refresh flow)", () => {
@@ -117,8 +120,6 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
     const { api, instance, responseErrorHandler } = loadApi({
       onRequest: async (cfg) => ({ data: "retried", config: cfg }),
     });
-    store["refresh_token"] = "rt-1";
-
     const original = {
       url: "/some-endpoint",
       headers: {},
@@ -130,9 +131,9 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
 
     const result = await responseErrorHandler(err);
     expect(result.data).toBe("retried");
-    // Refresh was stored
+    // Access token is stored; refresh token is kept in an HttpOnly cookie.
     expect(store["access_token"]).toBe("new-at");
-    expect(store["refresh_token"]).toBe("new-rt");
+    expect(store["refresh_token"]).toBeUndefined();
     // Original retried via instance.request
     expect(instance.request).toHaveBeenCalledTimes(1);
     // axios.post called once for the refresh
@@ -195,9 +196,25 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
     expect(store["refresh_token"]).toBeUndefined();
   });
 
-  it("clears auth when no refresh token is available", async () => {
+  it("attempts cookie-backed refresh when no local refresh token is available", async () => {
     const { responseErrorHandler } = loadApi({});
-    // no refresh_token in store
+    store["access_token"] = "old-at";
+
+    const result = await responseErrorHandler({
+      response: { status: 401 },
+      config: { url: "/x", headers: {} },
+    });
+
+    expect(result.data).toBe("ok");
+    expect(store["access_token"]).toBe("new-at");
+  });
+
+  it("clears auth when cookie-backed refresh fails", async () => {
+    const { responseErrorHandler } = loadApi({
+      onRefresh: async () => {
+        throw new Error("refresh-failed");
+      },
+    });
     store["access_token"] = "old-at";
 
     await expect(

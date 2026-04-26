@@ -143,6 +143,10 @@ docs/BACKLOG_FUTUR.md
 # ===========================
 backups/*.sql
 backups/*.gz
+backups-prod/
+*.sql.gz
+*.tar
+*.tar.gz
 
 # ===========================
 # TEST DATA FILES

@@ -3,12 +3,31 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { Prisma } from 'database';
+import {
+  AccessScopeService,
+  AccessUser,
+} from '../common/services/access-scope.service';
 
 @Injectable()
 export class DocumentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accessScope: AccessScopeService,
+  ) {}
 
-  async create(userId: string, createDocumentDto: CreateDocumentDto) {
+  async create(
+    userId: string,
+    createDocumentDto: CreateDocumentDto,
+    currentUser?: AccessUser,
+  ) {
+    if (currentUser) {
+      await this.accessScope.assertCanAccessProject(
+        createDocumentDto.projectId,
+        currentUser,
+        ['documents:manage_any', 'projects:manage_any'],
+      );
+    }
+
     return this.prisma.document.create({
       data: {
         ...createDocumentDto,
@@ -20,11 +39,19 @@ export class DocumentsService {
     });
   }
 
-  async findAll(page = 1, limit = 1000, projectId?: string) {
+  async findAll(
+    page = 1,
+    limit = 1000,
+    projectId?: string,
+    currentUser?: AccessUser,
+  ) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
     const where: Prisma.DocumentWhereInput = {};
     if (projectId) where.projectId = projectId;
+    if (currentUser) {
+      where.AND = [await this.accessScope.documentReadWhere(currentUser)];
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.document.findMany({
@@ -50,7 +77,11 @@ export class DocumentsService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, currentUser?: AccessUser) {
+    if (currentUser) {
+      await this.accessScope.assertCanReadDocument(id, currentUser);
+    }
+
     const document = await this.prisma.document.findUnique({
       where: { id },
       include: {

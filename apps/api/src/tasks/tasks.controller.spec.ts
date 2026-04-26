@@ -11,6 +11,8 @@ import { TaskStatus, Role } from 'database';
 
 describe('TasksController', () => {
   let controller: TasksController;
+  const mockCurrentUser = { id: 'user-id-1', role: { code: Role.ADMIN } };
+  const normalizedCurrentUser = { id: 'user-id-1', role: Role.ADMIN };
 
   const mockTask = {
     id: 'task-id-1',
@@ -270,10 +272,13 @@ describe('TasksController', () => {
     it('should return a task by id', async () => {
       mockTasksService.findOne.mockResolvedValue(mockTask);
 
-      const result = await controller.findOne('task-id-1');
+      const result = await controller.findOne('task-id-1', mockCurrentUser);
 
       expect(result).toEqual(mockTask);
-      expect(mockTasksService.findOne).toHaveBeenCalledWith('task-id-1');
+      expect(mockTasksService.findOne).toHaveBeenCalledWith(
+        'task-id-1',
+        normalizedCurrentUser,
+      );
     });
 
     it('should throw NotFoundException when task not found', async () => {
@@ -281,9 +286,9 @@ describe('TasksController', () => {
         new NotFoundException('Tâche introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.findOne('nonexistent', mockCurrentUser),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -336,11 +341,15 @@ describe('TasksController', () => {
       const projectTasks = [mockTask];
       mockTasksService.getTasksByProject.mockResolvedValue(projectTasks);
 
-      const result = await controller.getTasksByProject('project-id-1');
+      const result = await controller.getTasksByProject(
+        'project-id-1',
+        mockCurrentUser,
+      );
 
       expect(result).toEqual(projectTasks);
       expect(mockTasksService.getTasksByProject).toHaveBeenCalledWith(
         'project-id-1',
+        normalizedCurrentUser,
       );
     });
 
@@ -349,9 +358,9 @@ describe('TasksController', () => {
         new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.getTasksByProject('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.getTasksByProject('nonexistent', mockCurrentUser),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AuditService } from '../audit/audit.service';
 import { RefreshTokenService } from './refresh-token.service';
@@ -388,6 +389,10 @@ describe('AuthService', () => {
     };
 
     it('should update password and mark token as used for a valid token', async () => {
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update('valid-token-uuid')
+        .digest('hex');
       mockPrismaService.passwordResetToken.findUnique.mockResolvedValue(
         validToken,
       );
@@ -408,7 +413,7 @@ describe('AuthService', () => {
       );
       expect(mockPrismaService.passwordResetToken.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { token: 'valid-token-uuid' },
+          where: { token: tokenHash },
           data: expect.objectContaining({ usedAt: expect.any(Date) }),
         }),
       );

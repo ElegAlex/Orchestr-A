@@ -20,6 +20,10 @@ import {
 import { TaskStatus, Priority, RACIRole } from 'database';
 import { Prisma } from 'database';
 import { PermissionsService } from '../rbac/permissions.service';
+import {
+  AccessScopeService,
+  AccessUser,
+} from '../common/services/access-scope.service';
 import { getTaskProgress } from './task-progress.helper';
 import { CreateSubtaskDto } from './dto/create-subtask.dto';
 import { UpdateSubtaskDto } from './dto/update-subtask.dto';
@@ -29,6 +33,7 @@ export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissionsService: PermissionsService,
+    private readonly accessScope: AccessScopeService,
   ) {}
 
   /**
@@ -296,17 +301,11 @@ export class TasksService {
     if (projectId) where.projectId = projectId;
     if (assigneeId) where.assigneeId = assigneeId;
 
+    const andFilters: Prisma.TaskWhereInput[] = [];
+
     // RBAC: filtrer par utilisateur si pas la permission tasks:readAll
     if (currentUser) {
-      const permissions = await this.permissionsService.getPermissionsForRole(
-        currentUser.role,
-      );
-      if (!permissions.includes('tasks:readAll')) {
-        where.OR = [
-          { assigneeId: currentUser.id },
-          { assignees: { some: { userId: currentUser.id } } },
-        ];
-      }
+      andFilters.push(await this.accessScope.taskReadWhere(currentUser));
     }
 
     if (overdue) {
@@ -319,7 +318,7 @@ export class TasksService {
     const hasDateFilter = startDate || endDate;
     if (startDate && endDate) {
       // Tâches dont la plage [startDate, endDate] chevauche [startDate, endDate] du filtre
-      where.AND = [
+      andFilters.push(
         {
           endDate: { gte: new Date(startDate) }, // La tâche finit après le début de la plage
         },
@@ -329,13 +328,20 @@ export class TasksService {
             { startDate: null }, // Ou pas de startDate (on utilise endDate comme seul jour)
           ],
         },
-      ];
+      );
     } else if (startDate) {
       where.endDate = { gte: new Date(startDate) };
     } else if (endDate) {
       where.OR = [
         { startDate: { lte: new Date(endDate) } },
         { startDate: null, endDate: { lte: new Date(endDate) } },
+      ];
+    }
+
+    if (andFilters.length > 0) {
+      where.AND = [
+        ...((where.AND as Prisma.TaskWhereInput[]) ?? []),
+        ...andFilters,
       ];
     }
 
@@ -403,7 +409,11 @@ export class TasksService {
   /**
    * Récupérer une tâche par ID avec tous les détails
    */
-  async findOne(id: string) {
+  async findOne(id: string, currentUser?: AccessUser) {
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(id, currentUser);
+    }
+
     const task = await this.prisma.task.findUnique({
       where: { id },
       include: {
@@ -1103,13 +1113,18 @@ export class TasksService {
   /**
    * Récupérer les tâches d'un projet
    */
-  async getTasksByProject(projectId: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-    });
-
-    if (!project) {
-      throw new NotFoundException('Projet introuvable');
+  async getTasksByProject(projectId: string, currentUser?: AccessUser) {
+    if (currentUser) {
+      await this.accessScope.assertCanAccessProject(projectId, currentUser, [
+        'projects:manage_any',
+        'tasks:readAll',
+        'tasks:manage_any',
+      ]);
+    } else {
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+      });
+      if (!project) throw new NotFoundException('Projet introuvable');
     }
 
     return this.prisma.task.findMany({
@@ -1677,7 +1692,16 @@ export class TasksService {
    */
   async exportProjectTasksCsv(
     projectId: string,
+    currentUser?: AccessUser,
   ): Promise<{ csv: string; filename: string }> {
+    if (currentUser) {
+      await this.accessScope.assertCanAccessProject(projectId, currentUser, [
+        'projects:manage_any',
+        'tasks:readAll',
+        'tasks:manage_any',
+      ]);
+    }
+
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
     });

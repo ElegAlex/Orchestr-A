@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { BalancedPlanningModal } from "../BalancedPlanningModal";
 import toast from "react-hot-toast";
 
@@ -8,8 +14,8 @@ import toast from "react-hot-toast";
 jest.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const map: Record<string, string> = {
-      "title": "Planning équilibré automatique",
-      "description": "Répartit les occurrences de tâches récurrentes.",
+      title: "Planning équilibré automatique",
+      description: "Répartit les occurrences de tâches récurrentes.",
       "config.range": "Plage",
       "config.startDate": "Date de début",
       "config.endDate": "Date de fin",
@@ -18,10 +24,12 @@ jest.mock("next-intl", () => ({
       "config.tasks": "Tâches à équilibrer",
       "config.preview": "Prévisualiser",
       "config.apply": "Appliquer",
-      "config.validation.noAgent": "Sélectionnez au moins un agent ou un service",
+      "config.validation.noAgent":
+        "Sélectionnez au moins un agent ou un service",
       "config.validation.noTask": "Sélectionnez au moins une tâche",
       "config.validation.datesInvalid": "Plage de dates invalide",
-      "preview.empty": "Cliquez sur Prévisualiser pour voir la proposition d'équilibrage",
+      "preview.empty":
+        "Cliquez sur Prévisualiser pour voir la proposition d'équilibrage",
       "preview.loading": "Calcul en cours...",
       "preview.equityRatio": "Ratio d'équité",
       "preview.workloadByAgent": "Charge par agent",
@@ -30,7 +38,8 @@ jest.mock("next-intl", () => ({
       "preview.count": "Nombre d'occurrences",
       "preview.proposedAssignments": "Assignations proposées",
       "preview.unassignedOccurrences": "Occurrences non assignées",
-      "preview.warningLowEquity": "Équilibre faible — envisagez d'ajuster la configuration",
+      "preview.warningLowEquity":
+        "Équilibre faible — envisagez d'ajuster la configuration",
       "preview.reasons.NO_ELIGIBLE_AGENT": "Aucun agent éligible",
       "toast.applied": "{count} assignation(s) créée(s)",
       "toast.forbidden": "Permission refusée",
@@ -91,9 +100,11 @@ jest.mock("@/services/predefined-tasks.service", () => ({
 
 jest.mock("@/services/services.service", () => ({
   servicesService: {
-    getAll: jest.fn().mockResolvedValue([
-      { id: "svc-1", name: "Contrôle de Gestion", departmentId: "dept-1" },
-    ]),
+    getAll: jest
+      .fn()
+      .mockResolvedValue([
+        { id: "svc-1", name: "Contrôle de Gestion", departmentId: "dept-1" },
+      ]),
   },
 }));
 
@@ -124,22 +135,19 @@ jest.mock("react-hot-toast", () => ({
 
 // Mock Radix Dialog to render children directly (no portal issues in jsdom)
 jest.mock("@radix-ui/react-dialog", () => ({
-  Root: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open: boolean;
-  }) => (open ? <div data-testid="dialog-root">{children}</div> : null),
+  Root: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
+    open ? <div data-testid="dialog-root">{children}</div> : null,
   Portal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   Overlay: ({ className }: { className?: string }) => (
     <div data-testid="dialog-overlay" className={className} />
   ),
   Content: ({
     children,
+    onEscapeKeyDown: _onEscapeKeyDown,
     ...rest
   }: {
     children: React.ReactNode;
+    onEscapeKeyDown?: () => void;
     [key: string]: unknown;
   }) => (
     <div data-testid="dialog-content" {...rest}>
@@ -290,7 +298,9 @@ describe("BalancedPlanningModal", () => {
       expect(screen.getByTestId("equity-badge")).toBeInTheDocument();
     });
     // "Charge par agent" appears twice (section heading + table header) — verify presence
-    expect(screen.getAllByText("Charge par agent").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText("Charge par agent").length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("5. Appliquer after preview → hook.apply called, modal closes", async () => {
@@ -318,7 +328,9 @@ describe("BalancedPlanningModal", () => {
 
     // Wait for Apply to become enabled
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Appliquer" })).not.toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Appliquer" }),
+      ).not.toBeDisabled();
     });
 
     // Apply

@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsService } from './comments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
+import { AccessScopeService } from '../common/services/access-scope.service';
 
 describe('CommentsService', () => {
   let service: CommentsService;
@@ -37,7 +38,14 @@ describe('CommentsService', () => {
           useValue: {
             getPermissionsForRole: vi
               .fn()
-              .mockResolvedValue(['comments:delete_any']),
+              .mockResolvedValue(['comments:delete']),
+          },
+        },
+        {
+          provide: AccessScopeService,
+          useValue: {
+            taskReadWhere: vi.fn().mockResolvedValue({}),
+            assertCanReadTask: vi.fn().mockResolvedValue(undefined),
           },
         },
       ],

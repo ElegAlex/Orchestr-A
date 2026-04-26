@@ -353,10 +353,12 @@ export class AuthService {
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // +24h
 
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
     await this.prisma.passwordResetToken.create({
       data: {
         userId,
-        token,
+        token: tokenHash,
         expiresAt,
         createdById,
       },
@@ -376,8 +378,9 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const resetToken = await this.prisma.passwordResetToken.findUnique({
-      where: { token },
+      where: { token: tokenHash },
     });
 
     if (!resetToken) {
@@ -402,7 +405,7 @@ export class AuthService {
     });
 
     await this.prisma.passwordResetToken.update({
-      where: { token },
+      where: { token: tokenHash },
       data: { usedAt: new Date() },
     });
 

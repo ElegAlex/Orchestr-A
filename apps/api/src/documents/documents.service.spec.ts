@@ -3,6 +3,7 @@ import { DocumentsService } from './documents.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotFoundException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { AccessScopeService } from '../common/services/access-scope.service';
 
 describe('DocumentsService', () => {
   let service: DocumentsService;
@@ -40,6 +41,14 @@ describe('DocumentsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: AccessScopeService,
+          useValue: {
+            documentReadWhere: vi.fn().mockResolvedValue({}),
+            assertCanReadDocument: vi.fn().mockResolvedValue(undefined),
+            assertCanAccessProject: vi.fn().mockResolvedValue(undefined),
+          },
         },
       ],
     }).compile();

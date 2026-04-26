@@ -1,9 +1,6 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
-import {
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // -------------------------------------------------------------------
 // ResizeObserver polyfill (jsdom lacks it, recharts needs it)
@@ -23,11 +20,9 @@ jest.mock("recharts", () => {
   const actual = jest.requireActual<typeof import("recharts")>("recharts");
   return {
     ...actual,
-    ResponsiveContainer: ({
-      children,
-    }: {
-      children: React.ReactNode;
-    }) => <div data-testid="responsive-container">{children}</div>,
+    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="responsive-container">{children}</div>
+    ),
   };
 });
 
@@ -125,8 +120,8 @@ describe("WorkloadChart", () => {
       expect(screen.getByText("Alice Martin")).toBeInTheDocument();
     });
 
-    // SVG chart must be in the document
-    expect(document.querySelector("svg")).toBeInTheDocument();
+    expect(screen.getAllByText("6")).toHaveLength(2);
+    expect(screen.getAllByText("3").length).toBeGreaterThan(0);
   });
 
   it("shows error message when the API rejects", async () => {
@@ -137,9 +132,7 @@ describe("WorkloadChart", () => {
     renderWithClient(<WorkloadChart />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Erreur lors du chargement"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Erreur lors du chargement")).toBeInTheDocument();
     });
   });
 

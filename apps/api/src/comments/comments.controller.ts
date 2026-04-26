@@ -27,6 +27,7 @@ import {
   CurrentUser,
   CurrentUserRoleCode,
 } from '../auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('comments')
 @Controller('comments')
@@ -39,10 +40,13 @@ export class CommentsController {
   @ApiOperation({ summary: 'Créer un commentaire' })
   @ApiResponse({ status: 201, description: 'Commentaire créé' })
   create(
-    @CurrentUser('id') userId: string,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createCommentDto: CreateCommentDto,
   ) {
-    return this.commentsService.create(userId, createCommentDto);
+    return this.commentsService.create(user.id, createCommentDto, {
+      id: user.id,
+      role: user.role?.code ?? null,
+    });
   }
 
   @Get()
@@ -55,15 +59,27 @@ export class CommentsController {
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('taskId') taskId?: string,
+    @CurrentUser() user?: AuthenticatedUser,
   ) {
-    return this.commentsService.findAll(page, limit, taskId);
+    return this.commentsService.findAll(
+      page,
+      limit,
+      taskId,
+      user ? { id: user.id, role: user.role?.code ?? null } : undefined,
+    );
   }
 
   @Get(':id')
   @RequirePermissions('comments:read')
   @ApiOperation({ summary: "Détails d'un commentaire" })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.commentsService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.commentsService.findOne(id, {
+      id: user.id,
+      role: user.role?.code ?? null,
+    });
   }
 
   @Patch(':id')

@@ -10,6 +10,7 @@ import {
 import { TaskStatus, RACIRole, Role, Priority } from 'database';
 import { getTaskProgress } from './task-progress.helper';
 import { PermissionsService } from '../rbac/permissions.service';
+import { AccessScopeService } from '../common/services/access-scope.service';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -96,6 +97,14 @@ describe('TasksService', () => {
                 'tasks:assign_any_user',
                 'projects:manage_any',
               ]),
+          },
+        },
+        {
+          provide: AccessScopeService,
+          useValue: {
+            taskReadWhere: vi.fn().mockResolvedValue({}),
+            assertCanReadTask: vi.fn().mockResolvedValue(undefined),
+            assertCanAccessProject: vi.fn().mockResolvedValue(undefined),
           },
         },
       ],
