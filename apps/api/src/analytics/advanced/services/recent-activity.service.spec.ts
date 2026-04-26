@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RecentActivityService } from './recent-activity.service';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { AccessScopeService } from '../../../common/services/access-scope.service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -47,6 +48,12 @@ describe('RecentActivityService', () => {
       providers: [
         RecentActivityService,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: AccessScopeService,
+          useValue: {
+            projectScopeWhere: vi.fn().mockResolvedValue({}),
+          },
+        },
       ],
     }).compile();
 

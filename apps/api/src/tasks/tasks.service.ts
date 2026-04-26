@@ -808,8 +808,16 @@ export class TasksService {
   /**
    * Ajouter une dépendance à une tâche
    */
-  async addDependency(taskId: string, addDependencyDto: AddDependencyDto) {
+  async addDependency(
+    taskId: string,
+    addDependencyDto: AddDependencyDto,
+    currentUser?: AccessUser,
+  ) {
     const { dependsOnId: dependsOnTaskId } = addDependencyDto;
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(taskId, currentUser);
+      await this.accessScope.assertCanReadTask(dependsOnTaskId, currentUser);
+    }
 
     // Vérifier que les deux tâches existent
     const [task, dependsOnTask] = await Promise.all([
@@ -881,7 +889,16 @@ export class TasksService {
   /**
    * Retirer une dépendance
    */
-  async removeDependency(taskId: string, dependsOnTaskId: string) {
+  async removeDependency(
+    taskId: string,
+    dependsOnTaskId: string,
+    currentUser?: AccessUser,
+  ) {
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(taskId, currentUser);
+      await this.accessScope.assertCanReadTask(dependsOnTaskId, currentUser);
+    }
+
     const dependency = await this.prisma.taskDependency.findUnique({
       where: {
         taskId_dependsOnTaskId: {
@@ -910,8 +927,15 @@ export class TasksService {
   /**
    * Assigner un rôle RACI à un utilisateur pour une tâche
    */
-  async assignRACI(taskId: string, assignRACIDto: AssignRACIDto) {
+  async assignRACI(
+    taskId: string,
+    assignRACIDto: AssignRACIDto,
+    currentUser?: AccessUser,
+  ) {
     const { userId, role } = assignRACIDto;
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(taskId, currentUser);
+    }
 
     // Vérifier que la tâche existe
     const task = await this.prisma.task.findUnique({
@@ -970,7 +994,16 @@ export class TasksService {
   /**
    * Retirer une assignation RACI
    */
-  async removeRACI(taskId: string, userId: string, role: RACIRole) {
+  async removeRACI(
+    taskId: string,
+    userId: string,
+    role: RACIRole,
+    currentUser?: AccessUser,
+  ) {
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(taskId, currentUser);
+    }
+
     const assignment = await this.prisma.taskRACI.findUnique({
       where: {
         taskId_userId_role: {
@@ -1228,7 +1261,16 @@ export class TasksService {
   async importTasks(
     projectId: string,
     tasks: ImportTaskDto[],
+    currentUser?: AccessUser,
   ): Promise<ImportTasksResultDto> {
+    if (currentUser) {
+      await this.accessScope.assertCanAccessProject(projectId, currentUser, [
+        'projects:manage_any',
+        'tasks:manage_any',
+        'tasks:assign_any_user',
+      ]);
+    }
+
     // Vérifier que le projet existe
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
@@ -1380,7 +1422,16 @@ export class TasksService {
   async validateImport(
     projectId: string,
     tasks: ImportTaskDto[],
+    currentUser?: AccessUser,
   ): Promise<TasksValidationPreviewDto> {
+    if (currentUser) {
+      await this.accessScope.assertCanAccessProject(projectId, currentUser, [
+        'projects:manage_any',
+        'tasks:manage_any',
+        'tasks:assign_any_user',
+      ]);
+    }
+
     // Vérifier que le projet existe
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
@@ -1647,7 +1698,20 @@ export class TasksService {
   /**
    * Rattache une tâche orpheline à un projet
    */
-  async attachToProject(taskId: string, projectId: string) {
+  async attachToProject(
+    taskId: string,
+    projectId: string,
+    currentUser?: AccessUser,
+  ) {
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(taskId, currentUser);
+      await this.accessScope.assertCanAccessProject(projectId, currentUser, [
+        'projects:manage_any',
+        'tasks:manage_any',
+        'tasks:assign_any_user',
+      ]);
+    }
+
     const task = await this.prisma.task.findUnique({
       where: { id: taskId },
     });
@@ -1763,7 +1827,11 @@ export class TasksService {
   /**
    * Détache une tâche de son projet (la rend orpheline)
    */
-  async detachFromProject(taskId: string) {
+  async detachFromProject(taskId: string, currentUser?: AccessUser) {
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(taskId, currentUser);
+    }
+
     const task = await this.prisma.task.findUnique({
       where: { id: taskId },
     });
@@ -1796,7 +1864,15 @@ export class TasksService {
 
   // ========== SUBTASKS ==========
 
-  async createSubtask(taskId: string, dto: CreateSubtaskDto) {
+  async createSubtask(
+    taskId: string,
+    dto: CreateSubtaskDto,
+    currentUser?: AccessUser,
+  ) {
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(taskId, currentUser);
+    }
+
     const task = await this.prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new NotFoundException('Tâche introuvable');
 
@@ -1813,7 +1889,11 @@ export class TasksService {
     return subtask;
   }
 
-  async getSubtasks(taskId: string) {
+  async getSubtasks(taskId: string, currentUser?: AccessUser) {
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(taskId, currentUser);
+    }
+
     return this.prisma.subtask.findMany({
       where: { taskId },
       orderBy: { position: 'asc' },
@@ -1824,7 +1904,12 @@ export class TasksService {
     taskId: string,
     subtaskId: string,
     dto: UpdateSubtaskDto,
+    currentUser?: AccessUser,
   ) {
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(taskId, currentUser);
+    }
+
     const subtask = await this.prisma.subtask.findFirst({
       where: { id: subtaskId, taskId },
     });
@@ -1839,7 +1924,15 @@ export class TasksService {
     return updated;
   }
 
-  async deleteSubtask(taskId: string, subtaskId: string) {
+  async deleteSubtask(
+    taskId: string,
+    subtaskId: string,
+    currentUser?: AccessUser,
+  ) {
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(taskId, currentUser);
+    }
+
     const subtask = await this.prisma.subtask.findFirst({
       where: { id: subtaskId, taskId },
     });
@@ -1850,7 +1943,15 @@ export class TasksService {
     return { message: 'Sous-tâche supprimée' };
   }
 
-  async reorderSubtasks(taskId: string, subtaskIds: string[]) {
+  async reorderSubtasks(
+    taskId: string,
+    subtaskIds: string[],
+    currentUser?: AccessUser,
+  ) {
+    if (currentUser) {
+      await this.accessScope.assertCanReadTask(taskId, currentUser);
+    }
+
     const task = await this.prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new NotFoundException('Tâche introuvable');
 

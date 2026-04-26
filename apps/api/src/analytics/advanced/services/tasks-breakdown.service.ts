@@ -2,17 +2,26 @@ import { Injectable } from '@nestjs/common';
 import { Priority, TaskStatus } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
+  AccessScopeService,
+  AccessUser,
+} from '../../../common/services/access-scope.service';
+import {
   TasksBreakdownQueryDto,
   TasksBreakdownResponseDto,
 } from '../dto/tasks-breakdown.dto';
 
 @Injectable()
 export class TasksBreakdownService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accessScope: AccessScopeService,
+  ) {}
 
   async getTasksBreakdown(
     query: TasksBreakdownQueryDto,
+    currentUser?: AccessUser,
   ): Promise<TasksBreakdownResponseDto> {
+    const projectScope = await this.accessScope.projectScopeWhere(currentUser);
     const projectIds =
       query.projectIds && query.projectIds.length > 0
         ? query.projectIds
@@ -23,6 +32,7 @@ export class TasksBreakdownService {
       where: {
         project: {
           status: 'ACTIVE',
+          AND: [projectScope],
           ...(projectIds ? { id: { in: projectIds } } : {}),
         },
       },

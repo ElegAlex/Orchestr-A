@@ -323,8 +323,12 @@ export class TasksController {
   addDependency(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() addDependencyDto: AddDependencyDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.addDependency(id, addDependencyDto);
+    return this.tasksService.addDependency(id, addDependencyDto, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Delete(':taskId/dependencies/:dependsOnId')
@@ -342,8 +346,12 @@ export class TasksController {
   removeDependency(
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Param('dependsOnId', ParseUUIDPipe) dependsOnId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.removeDependency(taskId, dependsOnId);
+    return this.tasksService.removeDependency(taskId, dependsOnId, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Post(':id/raci')
@@ -366,8 +374,12 @@ export class TasksController {
   assignRACI(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() assignRACIDto: AssignRACIDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.assignRACI(id, assignRACIDto);
+    return this.tasksService.assignRACI(id, assignRACIDto, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Delete(':taskId/raci/:userId/:role')
@@ -386,8 +398,12 @@ export class TasksController {
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Param('userId', ParseUUIDPipe) userId: string,
     @Param('role') role: RACIRole,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.removeRACI(taskId, userId, role);
+    return this.tasksService.removeRACI(taskId, userId, role, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Post('project/:projectId/import/validate')
@@ -405,8 +421,12 @@ export class TasksController {
   validateImport(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Body() importTasksDto: ImportTasksDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.validateImport(projectId, importTasksDto.tasks);
+    return this.tasksService.validateImport(projectId, importTasksDto.tasks, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Post('project/:projectId/import')
@@ -424,8 +444,12 @@ export class TasksController {
   importTasks(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Body() importTasksDto: ImportTasksDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.importTasks(projectId, importTasksDto.tasks);
+    return this.tasksService.importTasks(projectId, importTasksDto.tasks, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get('project/:projectId/import-template')
@@ -455,8 +479,12 @@ export class TasksController {
   attachToProject(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('projectId', ParseUUIDPipe) projectId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.attachToProject(id, projectId);
+    return this.tasksService.attachToProject(id, projectId, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Post(':id/detach-project')
@@ -472,8 +500,14 @@ export class TasksController {
     status: 404,
     description: 'Tâche introuvable',
   })
-  detachFromProject(@Param('id', ParseUUIDPipe) id: string) {
-    return this.tasksService.detachFromProject(id);
+  detachFromProject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    return this.tasksService.detachFromProject(id, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   // ========== SUBTASKS ==========
@@ -485,15 +519,25 @@ export class TasksController {
   createSubtask(
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Body() dto: CreateSubtaskDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.createSubtask(taskId, dto);
+    return this.tasksService.createSubtask(taskId, dto, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get(':taskId/subtasks')
   @RequirePermissions('tasks:read')
   @ApiOperation({ summary: 'Lister les sous-tâches' })
-  getSubtasks(@Param('taskId', ParseUUIDPipe) taskId: string) {
-    return this.tasksService.getSubtasks(taskId);
+  getSubtasks(
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    return this.tasksService.getSubtasks(taskId, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Patch(':taskId/subtasks/:subtaskId')
@@ -505,8 +549,12 @@ export class TasksController {
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Param('subtaskId', ParseUUIDPipe) subtaskId: string,
     @Body() dto: UpdateSubtaskDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.updateSubtask(taskId, subtaskId, dto);
+    return this.tasksService.updateSubtask(taskId, subtaskId, dto, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Delete(':taskId/subtasks/:subtaskId')
@@ -515,8 +563,12 @@ export class TasksController {
   deleteSubtask(
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Param('subtaskId', ParseUUIDPipe) subtaskId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.deleteSubtask(taskId, subtaskId);
+    return this.tasksService.deleteSubtask(taskId, subtaskId, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Post(':taskId/subtasks/reorder')
@@ -525,7 +577,11 @@ export class TasksController {
   reorderSubtasks(
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Body() dto: ReorderSubtasksDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    return this.tasksService.reorderSubtasks(taskId, dto.subtaskIds);
+    return this.tasksService.reorderSubtasks(taskId, dto.subtaskIds, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 }

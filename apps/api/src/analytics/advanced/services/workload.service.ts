@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { TaskStatus } from '@prisma/client';
+import { Prisma, TaskStatus } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { WorkloadQueryDto, WorkloadUserDto } from '../dto/workload.dto';
+import {
+  AccessScopeService,
+  AccessUser,
+} from '../../../common/services/access-scope.service';
 
 const ACTIVE_STATUSES = [
   TaskStatus.TODO,
@@ -12,25 +16,42 @@ const ACTIVE_STATUSES = [
 
 @Injectable()
 export class WorkloadService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accessScope: AccessScopeService,
+  ) {}
 
-  async getWorkload(query: WorkloadQueryDto): Promise<WorkloadUserDto[]> {
+  async getWorkload(
+    query: WorkloadQueryDto,
+    currentUser?: AccessUser,
+  ): Promise<WorkloadUserDto[]> {
     const limit = query.limit ?? 15;
+    const projectScope = await this.accessScope.projectScopeWhere(currentUser);
+    const activeTaskWhere: Prisma.TaskWhereInput = {
+      status: { in: [...ACTIVE_STATUSES] },
+      project: projectScope,
+    };
 
     // Single query: fetch all active users with their tasks via both relations.
     // Filter active statuses at DB level to avoid pulling DONE tasks into memory.
     const users = await this.prisma.user.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        OR: [
+          { tasks: { some: activeTaskWhere } },
+          { taskAssignments: { some: { task: activeTaskWhere } } },
+        ],
+      },
       select: {
         id: true,
         firstName: true,
         lastName: true,
         tasks: {
-          where: { status: { in: [...ACTIVE_STATUSES] } },
+          where: activeTaskWhere,
           select: { id: true, status: true },
         },
         taskAssignments: {
-          where: { task: { status: { in: [...ACTIVE_STATUSES] } } },
+          where: { task: activeTaskWhere },
           select: { task: { select: { id: true, status: true } } },
         },
       },

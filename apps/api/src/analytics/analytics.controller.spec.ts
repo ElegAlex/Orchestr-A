@@ -7,6 +7,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('AnalyticsController', () => {
   let controller: AnalyticsController;
+  const mockCurrentUser = { id: 'user-1', role: { code: 'ADMIN' } };
+  const normalizedCurrentUser = { id: 'user-1', role: 'ADMIN' };
 
   const mockAnalyticsService = {
     getAnalytics: vi.fn(),
@@ -44,9 +46,12 @@ describe('AnalyticsController', () => {
 
       mockAnalyticsService.getAnalytics.mockResolvedValue(mockResult);
 
-      const result = await controller.getAnalytics(query);
+      const result = await controller.getAnalytics(query, mockCurrentUser as any);
 
-      expect(mockAnalyticsService.getAnalytics).toHaveBeenCalledWith(query);
+      expect(mockAnalyticsService.getAnalytics).toHaveBeenCalledWith(
+        query,
+        normalizedCurrentUser,
+      );
       expect(result).toEqual(mockResult);
     });
   });
@@ -65,9 +70,15 @@ describe('AnalyticsController', () => {
 
       mockAnalyticsService.exportAnalytics.mockResolvedValue(mockExport);
 
-      const result = await controller.exportAnalytics(query);
+      const result = await controller.exportAnalytics(
+        query,
+        mockCurrentUser as any,
+      );
 
-      expect(mockAnalyticsService.exportAnalytics).toHaveBeenCalledWith(query);
+      expect(mockAnalyticsService.exportAnalytics).toHaveBeenCalledWith(
+        query,
+        normalizedCurrentUser,
+      );
       expect(result).toEqual(mockExport);
     });
   });

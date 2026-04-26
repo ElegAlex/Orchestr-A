@@ -125,8 +125,13 @@ export class CommentsService {
     return comment;
   }
 
-  async update(id: string, userId: string, updateCommentDto: UpdateCommentDto) {
-    const comment = await this.findOne(id);
+  async update(
+    id: string,
+    userId: string,
+    updateCommentDto: UpdateCommentDto,
+    currentUser?: AccessUser,
+  ) {
+    const comment = await this.findOne(id, currentUser);
 
     // Seul l'auteur peut modifier son commentaire
     if (comment.authorId !== userId) {
@@ -152,15 +157,22 @@ export class CommentsService {
     });
   }
 
-  async remove(id: string, userId: string, userRole: string | null) {
-    const comment = await this.findOne(id);
+  async remove(id: string, userId: string, currentUser?: AccessUser) {
+    const comment = await this.findOne(id, currentUser);
 
-    // Seul l'auteur ou un utilisateur avec la permission comments:delete_any peut supprimer
+    // Seul l'auteur ou un rôle de gestion globale peut supprimer le commentaire d'autrui.
     if (comment.authorId !== userId) {
       const permissions = (await this.permissionsService.getPermissionsForRole(
-        userRole,
+        currentUser?.role
+          ? typeof currentUser.role === 'string'
+            ? currentUser.role
+            : currentUser.role.code
+          : null,
       )) as readonly string[];
-      const canDeleteAny = permissions.includes('comments:delete');
+      const canDeleteAny =
+        permissions.includes('comments:delete_any') ||
+        permissions.includes('projects:manage_any') ||
+        permissions.includes('tasks:manage_any');
       if (!canDeleteAny) {
         throw new ForbiddenException(
           'Vous ne pouvez supprimer que vos propres commentaires',

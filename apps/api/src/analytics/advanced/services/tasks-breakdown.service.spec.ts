@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksBreakdownService } from './tasks-breakdown.service';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { AccessScopeService } from '../../../common/services/access-scope.service';
 
 describe('TasksBreakdownService', () => {
   let service: TasksBreakdownService;
@@ -18,6 +19,12 @@ describe('TasksBreakdownService', () => {
       providers: [
         TasksBreakdownService,
         { provide: PrismaService, useValue: mockPrismaService },
+        {
+          provide: AccessScopeService,
+          useValue: {
+            projectScopeWhere: vi.fn().mockResolvedValue({}),
+          },
+        },
       ],
     }).compile();
 

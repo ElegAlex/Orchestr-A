@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { MilestoneStatus } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
+  AccessScopeService,
+  AccessUser,
+} from '../../../common/services/access-scope.service';
+import {
   MilestonesCompletionResponseDto,
   MilestoneByProjectDto,
   MilestoneDetailDto,
@@ -12,12 +16,19 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 @Injectable()
 export class MilestonesCompletionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accessScope: AccessScopeService,
+  ) {}
 
-  async getMilestonesCompletion(): Promise<MilestonesCompletionResponseDto> {
+  async getMilestonesCompletion(
+    currentUser?: AccessUser,
+  ): Promise<MilestonesCompletionResponseDto> {
     const now = new Date();
+    const projectScope = await this.accessScope.projectScopeWhere(currentUser);
 
     const milestones = await this.prisma.milestone.findMany({
+      where: { project: projectScope },
       include: {
         project: { select: { id: true, name: true } },
       },

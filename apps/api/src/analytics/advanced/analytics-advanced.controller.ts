@@ -22,6 +22,10 @@ import { ProjectHealthService } from './services/project-health.service';
 import { MilestonesCompletionService } from './services/milestones-completion.service';
 import { TasksBreakdownService } from './services/tasks-breakdown.service';
 import { RecentActivityService } from './services/recent-activity.service';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('analytics-advanced')
 @Controller('analytics/advanced')
@@ -44,8 +48,12 @@ export class AnalyticsAdvancedController {
   })
   async getSnapshots(
     @Query() query: SnapshotsQueryDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<SnapshotsResponseDto> {
-    return this.snapshotsQuery.getSnapshots(query);
+    return this.snapshotsQuery.getSnapshots(query, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get('workload')
@@ -55,8 +63,12 @@ export class AnalyticsAdvancedController {
   })
   async getWorkload(
     @Query() query: WorkloadQueryDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<WorkloadUserDto[]> {
-    return this.workload.getWorkload(query);
+    return this.workload.getWorkload(query, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get('project-health')
@@ -64,8 +76,13 @@ export class AnalyticsAdvancedController {
   @ApiOperation({
     summary: 'Per-project health table with overdueMilestones-based status (bloc 4)',
   })
-  async getProjectHealth(): Promise<ProjectHealthRowDto[]> {
-    return this.projectHealth.getProjectHealth();
+  async getProjectHealth(
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<ProjectHealthRowDto[]> {
+    return this.projectHealth.getProjectHealth({
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get('milestones-completion')
@@ -73,8 +90,13 @@ export class AnalyticsAdvancedController {
   @ApiOperation({
     summary: 'Milestones reached on time over due, with per-project breakdown (bloc 5)',
   })
-  async getMilestonesCompletion(): Promise<MilestonesCompletionResponseDto> {
-    return this.milestonesCompletion.getMilestonesCompletion();
+  async getMilestonesCompletion(
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<MilestonesCompletionResponseDto> {
+    return this.milestonesCompletion.getMilestonesCompletion({
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get('tasks-breakdown')
@@ -84,8 +106,12 @@ export class AnalyticsAdvancedController {
   })
   async getTasksBreakdown(
     @Query() query: TasksBreakdownQueryDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<TasksBreakdownResponseDto> {
-    return this.tasksBreakdown.getTasksBreakdown(query);
+    return this.tasksBreakdown.getTasksBreakdown(query, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 
   @Get('recent-activity')
@@ -95,7 +121,11 @@ export class AnalyticsAdvancedController {
   })
   async getRecentActivity(
     @Query() query: RecentActivityQueryDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<RecentActivityResponseDto> {
-    return this.recentActivity.getRecentActivity(query);
+    return this.recentActivity.getRecentActivity(query, {
+      id: currentUser.id,
+      role: currentUser.role?.code ?? null,
+    });
   }
 }

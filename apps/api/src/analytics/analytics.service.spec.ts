@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AnalyticsService } from './analytics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DateRangeEnum } from './dto/analytics-query.dto';
+import { AccessScopeService } from '../common/services/access-scope.service';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
@@ -65,6 +66,12 @@ describe('AnalyticsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: AccessScopeService,
+          useValue: {
+            projectScopeWhere: vi.fn().mockResolvedValue({}),
+          },
         },
       ],
     }).compile();

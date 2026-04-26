@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MilestoneStatus } from '@prisma/client';
 import { MilestonesCompletionService } from './milestones-completion.service';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { AccessScopeService } from '../../../common/services/access-scope.service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -63,6 +64,12 @@ describe('MilestonesCompletionService', () => {
       providers: [
         MilestonesCompletionService,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: AccessScopeService,
+          useValue: {
+            projectScopeWhere: vi.fn().mockResolvedValue({}),
+          },
+        },
       ],
     }).compile();
 

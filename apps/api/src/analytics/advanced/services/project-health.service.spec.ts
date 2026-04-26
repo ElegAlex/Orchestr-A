@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectHealthService } from './project-health.service';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { AccessScopeService } from '../../../common/services/access-scope.service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,6 +54,12 @@ describe('ProjectHealthService', () => {
             project: {
               findMany: prismaFindMany,
             },
+          },
+        },
+        {
+          provide: AccessScopeService,
+          useValue: {
+            projectScopeWhere: vi.fn().mockResolvedValue({}),
           },
         },
       ],
@@ -227,7 +234,9 @@ describe('ProjectHealthService', () => {
     prismaFindMany.mockResolvedValue([]);
     await service.getProjectHealth();
     expect(prismaFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { status: 'ACTIVE' } }),
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'ACTIVE' }),
+      }),
     );
   });
 });

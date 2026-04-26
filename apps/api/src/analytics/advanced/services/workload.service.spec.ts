@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkloadService } from './workload.service';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { AccessScopeService } from '../../../common/services/access-scope.service';
 
 // ---------------------------------------------------------------------------
 // Helpers — mirror the exact Prisma select shape used in WorkloadService
@@ -45,6 +46,12 @@ describe('WorkloadService', () => {
       providers: [
         WorkloadService,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: AccessScopeService,
+          useValue: {
+            projectScopeWhere: vi.fn().mockResolvedValue({}),
+          },
+        },
       ],
     }).compile();
 
@@ -327,7 +334,7 @@ describe('WorkloadService', () => {
 
     expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { isActive: true },
+        where: expect.objectContaining({ isActive: true }),
       }),
     );
   });

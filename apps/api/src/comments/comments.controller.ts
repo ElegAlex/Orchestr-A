@@ -23,10 +23,7 @@ import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
-import {
-  CurrentUser,
-  CurrentUserRoleCode,
-} from '../auth/decorators/current-user.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('comments')
@@ -87,10 +84,13 @@ export class CommentsController {
   @ApiOperation({ summary: 'Modifier son commentaire' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('id') userId: string,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() updateCommentDto: UpdateCommentDto,
   ) {
-    return this.commentsService.update(id, userId, updateCommentDto);
+    return this.commentsService.update(id, user.id, updateCommentDto, {
+      id: user.id,
+      role: user.role?.code ?? null,
+    });
   }
 
   @Delete(':id')
@@ -99,9 +99,11 @@ export class CommentsController {
   @ApiOperation({ summary: 'Supprimer un commentaire (auteur ou admin)' })
   remove(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('id') userId: string,
-    @CurrentUserRoleCode() userRole: string | null,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.commentsService.remove(id, userId, userRole);
+    return this.commentsService.remove(id, user.id, {
+      id: user.id,
+      role: user.role?.code ?? null,
+    });
   }
 }

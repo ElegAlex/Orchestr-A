@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { TaskStatus } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
+  AccessScopeService,
+  AccessUser,
+} from '../../../common/services/access-scope.service';
+import {
   RecentActivityQueryDto,
   RecentActivityResponseDto,
   ActivityPointDto,
@@ -9,19 +13,24 @@ import {
 
 @Injectable()
 export class RecentActivityService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accessScope: AccessScopeService,
+  ) {}
 
   async getRecentActivity(
     query: RecentActivityQueryDto,
+    currentUser?: AccessUser,
   ): Promise<RecentActivityResponseDto> {
     const days = query.days ?? 30;
     const now = new Date();
+    const projectScope = await this.accessScope.projectScopeWhere(currentUser);
 
     // Single query — orphan tasks (null projectId) are implicitly excluded
     // because project: { status: 'ACTIVE' } only matches tasks with a project.
     const tasks = await this.prisma.task.findMany({
       where: {
-        project: { status: 'ACTIVE' },
+        project: { status: 'ACTIVE', AND: [projectScope] },
       },
       select: {
         status: true,

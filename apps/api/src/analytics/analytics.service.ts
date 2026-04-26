@@ -10,6 +10,10 @@ import {
 } from './dto/analytics-response.dto';
 import { subDays, startOfWeek } from 'date-fns';
 import { Prisma, Task, User, ProjectStatus } from '@prisma/client';
+import {
+  AccessScopeService,
+  AccessUser,
+} from '../common/services/access-scope.service';
 
 // Types for analytics data
 interface ProjectMember {
@@ -47,17 +51,24 @@ interface ProjectWithDetails {
 
 @Injectable()
 export class AnalyticsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly accessScope: AccessScopeService,
+  ) {}
 
-  async getAnalytics(query: AnalyticsQueryDto): Promise<AnalyticsResponseDto> {
+  async getAnalytics(
+    query: AnalyticsQueryDto,
+    currentUser?: AccessUser,
+  ): Promise<AnalyticsResponseDto> {
     const { dateRange = DateRangeEnum.MONTH, projectId } = query;
     const startDate = this.getStartDate(dateRange);
+    const projectScope = await this.accessScope.projectScopeWhere(currentUser);
 
     // Fetch data
     const [projects, tasks, users] = await Promise.all([
-      this.getProjects(startDate, projectId),
-      this.getTasks(startDate, projectId),
-      this.getActiveUsers(),
+      this.getProjects(startDate, projectId, projectScope),
+      this.getTasks(startDate, projectId, projectScope),
+      this.getActiveUsers(projectScope),
     ]);
 
     // Calculate metrics
@@ -90,9 +101,14 @@ export class AnalyticsService {
     }
   }
 
-  private async getProjects(startDate: Date, projectId?: string) {
+  private async getProjects(
+    startDate: Date,
+    projectId: string | undefined,
+    projectScope: Prisma.ProjectWhereInput,
+  ) {
     const where: Prisma.ProjectWhereInput = {
       createdAt: { gte: startDate },
+      AND: [projectScope],
     };
 
     if (projectId) {
@@ -159,9 +175,14 @@ export class AnalyticsService {
     return Math.round((doneCount / tasks.length) * 100);
   }
 
-  private async getTasks(startDate: Date, projectId?: string): Promise<Task[]> {
+  private async getTasks(
+    startDate: Date,
+    projectId: string | undefined,
+    projectScope: Prisma.ProjectWhereInput,
+  ): Promise<Task[]> {
     const where: Prisma.TaskWhereInput = {
       createdAt: { gte: startDate },
+      project: projectScope,
     };
 
     if (projectId) {
@@ -171,9 +192,24 @@ export class AnalyticsService {
     return this.prisma.task.findMany({ where });
   }
 
-  private async getActiveUsers(): Promise<Pick<User, 'id' | 'isActive'>[]> {
+  private async getActiveUsers(
+    projectScope: Prisma.ProjectWhereInput,
+  ): Promise<Pick<User, 'id' | 'isActive'>[]> {
+    const hasProjectScope = Object.keys(projectScope).length > 0;
     return this.prisma.user.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(hasProjectScope
+          ? {
+              OR: [
+                { projectMembers: { some: { project: projectScope } } },
+                { managedProjects: { some: projectScope } },
+                { sponsoredProjects: { some: projectScope } },
+                { createdProjects: { some: projectScope } },
+              ],
+            }
+          : {}),
+      },
       select: { id: true, isActive: true },
     });
   }
@@ -370,8 +406,8 @@ export class AnalyticsService {
     });
   }
 
-  async exportAnalytics(query: AnalyticsQueryDto) {
-    const analytics = await this.getAnalytics(query);
+  async exportAnalytics(query: AnalyticsQueryDto, currentUser?: AccessUser) {
+    const analytics = await this.getAnalytics(query, currentUser);
     return {
       ...analytics,
       generatedAt: new Date().toISOString(),

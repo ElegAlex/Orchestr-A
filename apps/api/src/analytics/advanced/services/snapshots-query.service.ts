@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
+import {
+  AccessScopeService,
+  AccessUser,
+} from '../../../common/services/access-scope.service';
 import {
   SnapshotsQueryDto,
   SnapshotsResponseDto,
@@ -26,17 +31,25 @@ import {
  */
 @Injectable()
 export class SnapshotsQueryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accessScope: AccessScopeService,
+  ) {}
 
-  async getSnapshots(query: SnapshotsQueryDto): Promise<SnapshotsResponseDto> {
+  async getSnapshots(
+    query: SnapshotsQueryDto,
+    currentUser?: AccessUser,
+  ): Promise<SnapshotsResponseDto> {
+    const projectScope = await this.accessScope.projectScopeWhere(currentUser);
     // ── 1. Resolve active projects ─────────────────────────────────────────
+    const where: Prisma.ProjectWhereInput = {
+      status: 'ACTIVE',
+      AND: [projectScope],
+      ...(query.projectIds?.length ? { id: { in: query.projectIds } } : {}),
+    };
+
     const projects = await this.prisma.project.findMany({
-      where: {
-        status: 'ACTIVE',
-        ...(query.projectIds?.length
-          ? { id: { in: query.projectIds } }
-          : {}),
-      },
+      where,
       select: { id: true, name: true },
     });
 

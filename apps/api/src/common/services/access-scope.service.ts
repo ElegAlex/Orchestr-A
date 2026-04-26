@@ -51,6 +51,15 @@ export class AccessScopeService {
     };
   }
 
+  async projectScopeWhere(
+    user: AccessUser | undefined,
+    bypassPermissions: readonly string[] = ['projects:manage_any'],
+  ): Promise<Prisma.ProjectWhereInput> {
+    if (!user?.id) return { id: '__no_access__' };
+    if (await this.hasAny(user, bypassPermissions)) return {};
+    return this.projectAccessWhere(user);
+  }
+
   async canAccessProject(
     projectId: string,
     user: AccessUser | undefined,

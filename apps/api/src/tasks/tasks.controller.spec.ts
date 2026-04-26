@@ -479,12 +479,14 @@ describe('TasksController', () => {
       const result = await controller.addDependency(
         'task-id-1',
         addDependencyDto,
+        mockCurrentUser,
       );
 
       expect(result).toEqual(dependency);
       expect(mockTasksService.addDependency).toHaveBeenCalledWith(
         'task-id-1',
         addDependencyDto,
+        normalizedCurrentUser,
       );
     });
 
@@ -494,7 +496,7 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.addDependency('nonexistent', addDependencyDto),
+        controller.addDependency('nonexistent', addDependencyDto, mockCurrentUser),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -504,7 +506,7 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.addDependency('task-id-1', addDependencyDto),
+        controller.addDependency('task-id-1', addDependencyDto, mockCurrentUser),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -514,7 +516,7 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.addDependency('task-id-1', addDependencyDto),
+        controller.addDependency('task-id-1', addDependencyDto, mockCurrentUser),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -524,7 +526,7 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.addDependency('task-id-1', addDependencyDto),
+        controller.addDependency('task-id-1', addDependencyDto, mockCurrentUser),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -538,12 +540,14 @@ describe('TasksController', () => {
       const result = await controller.removeDependency(
         'task-id-1',
         'task-id-2',
+        mockCurrentUser,
       );
 
       expect(result.message).toBe('Dépendance supprimée');
       expect(mockTasksService.removeDependency).toHaveBeenCalledWith(
         'task-id-1',
         'task-id-2',
+        normalizedCurrentUser,
       );
     });
 
@@ -553,7 +557,7 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.removeDependency('task-id-1', 'nonexistent'),
+        controller.removeDependency('task-id-1', 'nonexistent', mockCurrentUser),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -574,12 +578,17 @@ describe('TasksController', () => {
 
       mockTasksService.assignRACI.mockResolvedValue(raciAssignment);
 
-      const result = await controller.assignRACI('task-id-1', assignRACIDto);
+      const result = await controller.assignRACI(
+        'task-id-1',
+        assignRACIDto,
+        mockCurrentUser,
+      );
 
       expect(result).toEqual(raciAssignment);
       expect(mockTasksService.assignRACI).toHaveBeenCalledWith(
         'task-id-1',
         assignRACIDto,
+        normalizedCurrentUser,
       );
     });
 
@@ -589,7 +598,7 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.assignRACI('nonexistent', assignRACIDto),
+        controller.assignRACI('nonexistent', assignRACIDto, mockCurrentUser),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -599,7 +608,7 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.assignRACI('task-id-1', assignRACIDto),
+        controller.assignRACI('task-id-1', assignRACIDto, mockCurrentUser),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -609,7 +618,7 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.assignRACI('task-id-1', assignRACIDto),
+        controller.assignRACI('task-id-1', assignRACIDto, mockCurrentUser),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -624,6 +633,7 @@ describe('TasksController', () => {
         'task-id-1',
         'user-id-1',
         'RESPONSIBLE',
+        mockCurrentUser,
       );
 
       expect(result.message).toBe('Assignation RACI supprimée');
@@ -631,6 +641,7 @@ describe('TasksController', () => {
         'task-id-1',
         'user-id-1',
         'RESPONSIBLE',
+        normalizedCurrentUser,
       );
     });
 
@@ -640,7 +651,12 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.removeRACI('task-id-1', 'user-id-1', 'RESPONSIBLE'),
+        controller.removeRACI(
+          'task-id-1',
+          'user-id-1',
+          'RESPONSIBLE',
+          mockCurrentUser,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });

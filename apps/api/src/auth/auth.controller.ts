@@ -99,7 +99,6 @@ export class AuthController {
     schema: {
       example: {
         access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        refresh_token: 'opaque-48-byte-base64url-token',
         user: {
           id: 'uuid',
           email: 'admin@orchestr-a.internal',
@@ -123,7 +122,7 @@ export class AuthController {
       result.refresh_token,
       this.refreshTokenService.getCookieMaxAgeSeconds(),
     );
-    return result;
+    return { access_token: result.access_token, user: result.user };
   }
 
   @Public()
@@ -136,7 +135,7 @@ export class AuthController {
   @ApiOperation({ summary: "Rafraîchir le token d'accès" })
   @ApiResponse({
     status: 200,
-    description: 'Nouveau access_token + refresh_token',
+    description: 'Nouveau access_token; refresh token renouvelé en cookie HttpOnly',
   })
   @ApiResponse({ status: 401, description: 'Refresh token invalide ou expiré' })
   async refresh(
@@ -156,7 +155,7 @@ export class AuthController {
       newRefreshToken,
       this.refreshTokenService.getCookieMaxAgeSeconds(),
     );
-    return { access_token, refresh_token: newRefreshToken };
+    return { access_token };
   }
 
   @Post('logout')

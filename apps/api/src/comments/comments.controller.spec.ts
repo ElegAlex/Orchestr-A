@@ -178,7 +178,7 @@ describe('CommentsController', () => {
 
       const result = await controller.update(
         'comment-id-1',
-        'user-id-1',
+        mockCurrentUser as any,
         updateCommentDto,
       );
 
@@ -187,6 +187,7 @@ describe('CommentsController', () => {
         'comment-id-1',
         'user-id-1',
         updateCommentDto,
+        normalizedCurrentUser,
       );
     });
 
@@ -198,7 +199,7 @@ describe('CommentsController', () => {
       );
 
       await expect(
-        controller.update('comment-id-1', 'other-user-id', updateCommentDto),
+        controller.update('comment-id-1', mockCurrentUser as any, updateCommentDto),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -208,7 +209,7 @@ describe('CommentsController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', 'user-id-1', updateCommentDto),
+        controller.update('nonexistent', mockCurrentUser as any, updateCommentDto),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -221,15 +222,14 @@ describe('CommentsController', () => {
 
       const result = await controller.remove(
         'comment-id-1',
-        'user-id-1',
-        'CONTRIBUTEUR',
+        mockCurrentUser as any,
       );
 
       expect(result.message).toBe('Commentaire supprimé');
       expect(mockCommentsService.remove).toHaveBeenCalledWith(
         'comment-id-1',
         'user-id-1',
-        'CONTRIBUTEUR',
+        normalizedCurrentUser,
       );
     });
 
@@ -240,15 +240,14 @@ describe('CommentsController', () => {
 
       const result = await controller.remove(
         'comment-id-1',
-        'admin-id',
-        'ADMIN',
+        { id: 'admin-id', role: { code: 'ADMIN' } } as any,
       );
 
       expect(result.message).toBe('Commentaire supprimé');
       expect(mockCommentsService.remove).toHaveBeenCalledWith(
         'comment-id-1',
         'admin-id',
-        'ADMIN',
+        { id: 'admin-id', role: 'ADMIN' },
       );
     });
 
@@ -260,7 +259,10 @@ describe('CommentsController', () => {
       );
 
       await expect(
-        controller.remove('comment-id-1', 'other-user-id', 'CONTRIBUTEUR'),
+        controller.remove(
+          'comment-id-1',
+          { id: 'other-user-id', role: { code: 'CONTRIBUTEUR' } } as any,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -270,7 +272,7 @@ describe('CommentsController', () => {
       );
 
       await expect(
-        controller.remove('nonexistent', 'user-id-1', 'CONTRIBUTEUR'),
+        controller.remove('nonexistent', mockCurrentUser as any),
       ).rejects.toThrow(NotFoundException);
     });
   });

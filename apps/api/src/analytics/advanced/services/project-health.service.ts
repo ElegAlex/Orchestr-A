@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
+import {
+  AccessScopeService,
+  AccessUser,
+} from '../../../common/services/access-scope.service';
 import {
   HealthStatus,
   ProjectHealthRowDto,
@@ -25,13 +30,21 @@ function computeHealth(
 
 @Injectable()
 export class ProjectHealthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accessScope: AccessScopeService,
+  ) {}
 
-  async getProjectHealth(): Promise<ProjectHealthRowDto[]> {
+  async getProjectHealth(currentUser?: AccessUser): Promise<ProjectHealthRowDto[]> {
     const now = new Date();
+    const projectScope = await this.accessScope.projectScopeWhere(currentUser);
+    const where: Prisma.ProjectWhereInput = {
+      status: 'ACTIVE',
+      AND: [projectScope],
+    };
 
     const projects = await this.prisma.project.findMany({
-      where: { status: 'ACTIVE' },
+      where,
       include: {
         milestones: {
           select: { status: true, dueDate: true },
