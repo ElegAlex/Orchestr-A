@@ -803,7 +803,9 @@ export function TaskForm({
               label={t("modal.create.assigneesLabel")}
               users={availableAssignees}
               selectedIds={values.assigneeIds}
-              onChange={(ids) => setValues({ ...values, assigneeIds: ids })}
+              onChange={(ids) =>
+                setValues((current) => ({ ...current, assigneeIds: ids }))
+              }
               placeholder={t("modal.create.assigneesPlaceholder")}
             />
           )}

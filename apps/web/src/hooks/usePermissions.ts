@@ -15,22 +15,32 @@
  */
 
 import type { PermissionCode } from "rbac";
+import { useCallback } from "react";
 import { useAuthStore } from "@/stores/auth.store";
 
 export function usePermissions() {
   const { permissions, permissionsLoaded, user } = useAuthStore();
 
-  const hasPermission = (code: PermissionCode): boolean => {
-    return permissions.includes(code);
-  };
+  const hasPermission = useCallback(
+    (code: PermissionCode): boolean => {
+      return permissions.includes(code);
+    },
+    [permissions],
+  );
 
-  const hasAnyPermission = (codes: readonly PermissionCode[]): boolean => {
-    return codes.some((code) => permissions.includes(code));
-  };
+  const hasAnyPermission = useCallback(
+    (codes: readonly PermissionCode[]): boolean => {
+      return codes.some((code) => permissions.includes(code));
+    },
+    [permissions],
+  );
 
-  const hasAllPermissions = (codes: readonly PermissionCode[]): boolean => {
-    return codes.every((code) => permissions.includes(code));
-  };
+  const hasAllPermissions = useCallback(
+    (codes: readonly PermissionCode[]): boolean => {
+      return codes.every((code) => permissions.includes(code));
+    },
+    [permissions],
+  );
 
   return {
     permissions,

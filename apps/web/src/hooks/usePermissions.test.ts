@@ -1,5 +1,6 @@
 import { usePermissions } from "./usePermissions";
 import { useAuthStore } from "@/stores/auth.store";
+import { renderHook } from "@testing-library/react";
 
 jest.mock("@/stores/auth.store");
 
@@ -17,7 +18,8 @@ describe("usePermissions", () => {
       user: { role: "CONTRIBUTEUR" },
     });
 
-    const { hasPermission } = usePermissions();
+    const { result } = renderHook(() => usePermissions());
+    const { hasPermission } = result.current;
 
     expect(hasPermission("projects:create")).toBe(true);
     expect(hasPermission("users:delete")).toBe(false);
@@ -32,7 +34,8 @@ describe("usePermissions", () => {
       user: { role: "ADMIN" },
     });
 
-    const { hasPermission } = usePermissions();
+    const { result } = renderHook(() => usePermissions());
+    const { hasPermission } = result.current;
 
     expect(hasPermission("projects:create")).toBe(false);
     expect(hasPermission("users:delete")).toBe(false);
@@ -45,7 +48,8 @@ describe("usePermissions", () => {
       user: { role: "ADMIN" },
     });
 
-    const { hasPermission } = usePermissions();
+    const { result } = renderHook(() => usePermissions());
+    const { hasPermission } = result.current;
 
     expect(hasPermission("projects:create")).toBe(true);
     expect(hasPermission("users:delete")).toBe(true);
@@ -58,7 +62,8 @@ describe("usePermissions", () => {
       user: { role: "CONTRIBUTEUR" },
     });
 
-    const { hasAnyPermission } = usePermissions();
+    const { result } = renderHook(() => usePermissions());
+    const { hasAnyPermission } = result.current;
 
     expect(hasAnyPermission(["tasks:read", "tasks:create"])).toBe(true);
     expect(hasAnyPermission(["users:delete", "users:create"])).toBe(false);
@@ -71,7 +76,8 @@ describe("usePermissions", () => {
       user: { role: "CONTRIBUTEUR" },
     });
 
-    const { hasAllPermissions } = usePermissions();
+    const { result } = renderHook(() => usePermissions());
+    const { hasAllPermissions } = result.current;
 
     expect(hasAllPermissions(["tasks:read", "tasks:create"])).toBe(true);
     expect(hasAllPermissions(["tasks:read", "users:delete"])).toBe(false);
@@ -84,7 +90,8 @@ describe("usePermissions", () => {
       user: { role: "CONTRIBUTEUR" },
     });
 
-    const { permissionsLoaded } = usePermissions();
+    const { result } = renderHook(() => usePermissions());
+    const { permissionsLoaded } = result.current;
 
     expect(permissionsLoaded).toBe(false);
   });
@@ -96,9 +103,30 @@ describe("usePermissions", () => {
       user: null,
     });
 
-    const { hasPermission } = usePermissions();
+    const { result } = renderHook(() => usePermissions());
+    const { hasPermission } = result.current;
 
     expect(hasPermission("tasks:read")).toBe(true);
     expect(hasPermission("users:delete")).toBe(false);
+  });
+
+  it("keeps permission helper identities stable while permissions do not change", () => {
+    const storeState = {
+      permissions: ["tasks:read"],
+      permissionsLoaded: true,
+      user: { role: "CONTRIBUTEUR" },
+    };
+    mockUseAuthStore.mockReturnValue(storeState);
+
+    const { result, rerender } = renderHook(() => usePermissions());
+    const firstHasPermission = result.current.hasPermission;
+    const firstHasAnyPermission = result.current.hasAnyPermission;
+    const firstHasAllPermissions = result.current.hasAllPermissions;
+
+    rerender();
+
+    expect(result.current.hasPermission).toBe(firstHasPermission);
+    expect(result.current.hasAnyPermission).toBe(firstHasAnyPermission);
+    expect(result.current.hasAllPermissions).toBe(firstHasAllPermissions);
   });
 });
