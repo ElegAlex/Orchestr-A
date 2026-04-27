@@ -66,6 +66,7 @@ export interface ServiceGroup {
 interface UsePlanningDataOptions {
   currentDate: Date;
   viewMode: "week" | "month";
+  weekCount?: number; // Nombre de semaines consécutives en vue week
   filterUserId?: string; // Filtrer pour un seul utilisateur
   filterServiceIds?: string[]; // Filtrer pour un ou plusieurs services
   viewFilter?: ViewFilter; // Filtre d'affichage (default: 'all')
@@ -97,6 +98,7 @@ interface UsePlanningDataReturn {
 export const usePlanningData = ({
   currentDate,
   viewMode,
+  weekCount = 1,
   filterUserId,
   filterServiceIds,
   viewFilter = "all",
@@ -136,10 +138,13 @@ export const usePlanningData = ({
   const { displayDays, queryStartDate, queryEndDate } = useMemo(() => {
     // Convertir ISO (1=Lun..7=Dim) en JS getDay() (0=Dim..6=Sam)
     const jsVisibleDays = visibleDays.map((d) => (d === 7 ? 0 : d));
+    const safeWeekCount = Math.max(1, Math.floor(weekCount));
 
     if (viewMode === "week") {
       const start = startOfWeek(currentDate, { locale: fr, weekStartsOn: 1 });
-      const allDays = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+      const allDays = Array.from({ length: 7 * safeWeekCount }, (_, i) =>
+        addDays(start, i),
+      );
       const filtered = allDays.filter((d) =>
         jsVisibleDays.includes(d.getDay()),
       );
@@ -175,7 +180,7 @@ export const usePlanningData = ({
         queryEndDate: endOfDay(allGridDays[allGridDays.length - 1]),
       };
     }
-  }, [currentDate, viewMode, visibleDays]);
+  }, [currentDate, viewMode, visibleDays, weekCount]);
 
   // Fetch data
   const fetchData = useCallback(

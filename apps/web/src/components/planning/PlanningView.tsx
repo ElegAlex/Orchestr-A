@@ -29,6 +29,7 @@ const DEFAULT_DISPLAY_FILTERS: DisplayFilters = {
   orphanTasks: true,
   events: true,
 };
+const ACTIVITY_WEEK_COUNT = 4;
 
 interface PlanningViewProps {
   filterUserId?: string; // Filtrer pour un utilisateur spécifique (pour dashboard)
@@ -95,10 +96,12 @@ export const PlanningView = ({
   const effectiveFilterServiceIds =
     selectedServices.length > 0 ? selectedServices : undefined;
 
-  // ActivityGrid consomme les mêmes données que le mode semaine (plage hebdo courante).
+  // ActivityGrid consomme les mêmes données que le mode semaine sur 4 semaines.
   // Le pivot jours × tâches est réalisé côté composant, pas côté hook.
   const dataViewMode: "week" | "month" =
     viewMode === "activity" ? "week" : viewMode;
+  const dataWeekCount =
+    viewMode === "activity" ? ACTIVITY_WEEK_COUNT : undefined;
   const {
     displayDays,
     users,
@@ -112,6 +115,7 @@ export const PlanningView = ({
   } = usePlanningData({
     currentDate,
     viewMode: dataViewMode,
+    weekCount: dataWeekCount,
     filterUserId: effectiveFilterUserId,
     filterServiceIds: effectiveFilterServiceIds,
     viewFilter,
@@ -297,7 +301,7 @@ export const PlanningView = ({
             {title || t("title")}
           </h1>
           <p className="text-gray-600 mt-1">
-            {viewMode === "week"
+            {viewMode === "week" || viewMode === "activity"
               ? t("weekOf", {
                   start: format(displayDays[0] || new Date(), "dd MMM", {
                     locale: dateLocale,
@@ -423,7 +427,7 @@ export const PlanningView = ({
             </div>
             <button
               onClick={() =>
-                viewMode === "week"
+                viewMode === "week" || viewMode === "activity"
                   ? setCurrentDate(subWeeks(currentDate, 1))
                   : setCurrentDate(
                       new Date(
@@ -445,7 +449,7 @@ export const PlanningView = ({
             </button>
             <button
               onClick={() =>
-                viewMode === "week"
+                viewMode === "week" || viewMode === "activity"
                   ? setCurrentDate(addWeeks(currentDate, 1))
                   : setCurrentDate(
                       new Date(

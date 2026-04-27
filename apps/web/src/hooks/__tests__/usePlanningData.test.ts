@@ -290,6 +290,24 @@ describe("usePlanningData", () => {
     expect(result.current.displayDays).toHaveLength(5); // Mon-Fri
   });
 
+  it("should generate visible days across multiple weeks when weekCount is set", async () => {
+    const { result } = renderHook(() =>
+      usePlanningData({
+        currentDate: new Date(2025, 5, 16), // Monday June 16, 2025
+        viewMode: "week",
+        weekCount: 4,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.displayDays).toHaveLength(20); // 4 Mon-Fri weeks
+    expect(result.current.displayDays[0].getDay()).toBe(1);
+    expect(result.current.displayDays.at(-1)?.getDay()).toBe(5);
+  });
+
   it("should group users by service", async () => {
     const { result } = renderHook(() =>
       usePlanningData({
