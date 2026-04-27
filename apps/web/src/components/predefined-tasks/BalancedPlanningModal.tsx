@@ -571,9 +571,7 @@ export function BalancedPlanningModal({
                                 {uo.date} — {uo.period}
                               </span>
                               <span className="text-red-500">
-                                {uo.reason === "NO_ELIGIBLE_AGENT"
-                                  ? t("preview.reasons.NO_ELIGIBLE_AGENT")
-                                  : uo.reason}
+                                {t(`preview.reasons.${uo.reason}`)}
                               </span>
                             </div>
                           ))}

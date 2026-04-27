@@ -114,10 +114,17 @@ export class TeleworkService {
 
     const where: Prisma.TeleworkScheduleWhereInput = {};
 
-    // Lecture globale : vérifier la permission dynamique telework:readAll
+    // Lecture globale : vérifier les permissions dynamiques.
+    // `predefined_tasks:assign` a besoin des télétravails de l'équipe dans
+    // planning/overview pour afficher les agents non éligibles dans la modale
+    // d'assignation Vue activité.
     const permissions =
       await this.permissionsService.getPermissionsForRole(currentUserRole);
-    if (!permissions.includes('telework:readAll')) {
+    const canReadTeamTelework =
+      permissions.includes('telework:readAll') ||
+      permissions.includes('telework:read_team') ||
+      permissions.includes('predefined_tasks:assign');
+    if (!canReadTeamTelework) {
       where.userId = currentUserId;
     } else if (userId) {
       where.userId = userId;

@@ -204,6 +204,9 @@ describe('TeleworkService', () => {
 
   describe('findAll', () => {
     it('should return paginated telework requests', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:readAll',
+      ]);
       const mockTeleworks = [mockTelework];
       mockPrismaService.teleworkSchedule.findMany.mockResolvedValue(
         mockTeleworks,
@@ -217,6 +220,9 @@ describe('TeleworkService', () => {
     });
 
     it('should filter telework by user', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:readAll',
+      ]);
       mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
         mockTelework,
       ]);
@@ -233,6 +239,9 @@ describe('TeleworkService', () => {
     });
 
     it('should filter by date range', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:readAll',
+      ]);
       mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
       mockPrismaService.teleworkSchedule.count.mockResolvedValue(0);
       mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([]);
@@ -260,6 +269,9 @@ describe('TeleworkService', () => {
     });
 
     it('should filter by startDate only', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:readAll',
+      ]);
       mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
       mockPrismaService.teleworkSchedule.count.mockResolvedValue(0);
 
@@ -277,6 +289,9 @@ describe('TeleworkService', () => {
     });
 
     it('should filter by endDate only', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:readAll',
+      ]);
       mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
       mockPrismaService.teleworkSchedule.count.mockResolvedValue(0);
 
@@ -297,6 +312,25 @@ describe('TeleworkService', () => {
               lte: expect.any(Date) as Date,
             }) as object,
           }) as object,
+        }),
+      );
+    });
+
+    it('should not scope to current user when user can assign predefined tasks', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:read',
+        'predefined_tasks:assign',
+      ]);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
+        mockTelework,
+      ]);
+      mockPrismaService.teleworkSchedule.count.mockResolvedValue(1);
+
+      await service.findAll('user-1', 'RESPONSABLE', 1, 10);
+
+      expect(mockPrismaService.teleworkSchedule.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({ userId: 'user-1' }) as object,
         }),
       );
     });

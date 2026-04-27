@@ -41,7 +41,10 @@
       "proposedAssignments": "Proposed assignments",
       "unassignedOccurrences": "Unassigned occurrences",
       "reasons": {
-        "NO_ELIGIBLE_AGENT": "No eligible agent (absences or missing skills)"
+        "NO_ELIGIBLE_AGENT": "No eligible agent",
+        "ABSENCE_CONFLICT": "No eligible agent: leave or absence",
+        "TELEWORK_CONFLICT": "No eligible agent: telework incompatible with an on-site task",
+        "SKILL_CONFLICT": "No eligible agent: missing skills"
       },
       "warningLowEquity": "Low balance — consider adjusting the configuration"
     },

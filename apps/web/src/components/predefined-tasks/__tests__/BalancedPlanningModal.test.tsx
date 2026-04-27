@@ -41,6 +41,9 @@ jest.mock("next-intl", () => ({
       "preview.warningLowEquity":
         "Équilibre faible — envisagez d'ajuster la configuration",
       "preview.reasons.NO_ELIGIBLE_AGENT": "Aucun agent éligible",
+      "preview.reasons.ABSENCE_CONFLICT": "Congé ou absence",
+      "preview.reasons.TELEWORK_CONFLICT": "Télétravail incompatible",
+      "preview.reasons.SKILL_CONFLICT": "Compétence manquante",
       "toast.applied": "{count} assignation(s) créée(s)",
       "toast.forbidden": "Permission refusée",
       "toast.error": "Erreur lors de la génération",
@@ -301,6 +304,37 @@ describe("BalancedPlanningModal", () => {
     expect(
       screen.getAllByText("Charge par agent").length,
     ).toBeGreaterThanOrEqual(1);
+  });
+
+  it("4b. affiche explicitement les exclusions télétravail du balancer", async () => {
+    mockPreview.mockResolvedValueOnce({
+      ...MOCK_RESULT,
+      proposedAssignments: [],
+      workloadByAgent: [{ userId: "user-1", weightedLoad: 0 }],
+      unassignedOccurrences: [
+        {
+          taskId: "task-1",
+          date: "2026-05-05",
+          period: "FULL_DAY",
+          reason: "TELEWORK_CONFLICT",
+        },
+      ],
+    });
+    renderModal();
+
+    await waitFor(() => {
+      expect(screen.getByText("Permanence")).toBeInTheDocument();
+    });
+
+    await fillValidForm();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Prévisualiser" }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Télétravail incompatible")).toBeInTheDocument();
+    });
   });
 
   it("5. Appliquer after preview → hook.apply called, modal closes", async () => {

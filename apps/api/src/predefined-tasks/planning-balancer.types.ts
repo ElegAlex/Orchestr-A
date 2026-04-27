@@ -49,7 +49,11 @@ export interface BalancerProposedAssignment {
   weight: number;
 }
 
-export type BalancerUnassignedReason = 'NO_ELIGIBLE_AGENT';
+export type BalancerUnassignedReason =
+  | 'NO_ELIGIBLE_AGENT'
+  | 'ABSENCE_CONFLICT'
+  | 'TELEWORK_CONFLICT'
+  | 'SKILL_CONFLICT';
 
 export interface BalancerUnassigned {
   taskId: string;

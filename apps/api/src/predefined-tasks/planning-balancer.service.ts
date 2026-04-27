@@ -7,6 +7,7 @@ import {
   BalancerAgent,
   BalancerProposedAssignment,
   BalancerUnassigned,
+  BalancerUnassignedReason,
 } from './planning-balancer.types';
 
 /**
@@ -48,18 +49,19 @@ export class PlanningBalancerService {
         input.taskTeleworkAllowed?.get(occ.taskId) ?? true;
 
       const eligibles = input.agents.filter((agent) => {
-        if (this.isAbsentOn(absencesByUser.get(agent.userId) ?? [], occ.date)) {
-          return false;
-        }
         if (
-          !isTeleworkAllowed &&
-          this.isTeleworkOn(teleworkByUser?.get(agent.userId) ?? [], occ.date)
+          this.getIneligibilityReason(
+            agent,
+            occ,
+            absencesByUser,
+            teleworkByUser,
+            isTeleworkAllowed,
+            requiredSkills,
+          )
         ) {
           return false;
         }
-        if (requiredSkills.length === 0) return true;
-        const skills = agent.skills ?? [];
-        return requiredSkills.every((s) => skills.includes(s));
+        return true;
       });
 
       if (eligibles.length === 0) {
@@ -67,7 +69,14 @@ export class PlanningBalancerService {
           taskId: occ.taskId,
           date: occ.date,
           period: occ.period,
-          reason: 'NO_ELIGIBLE_AGENT',
+          reason: this.resolveUnassignedReason(
+            input.agents,
+            occ,
+            absencesByUser,
+            teleworkByUser,
+            isTeleworkAllowed,
+            requiredSkills,
+          ),
         });
         continue;
       }
@@ -128,5 +137,59 @@ export class PlanningBalancerService {
   private isTeleworkOn(schedules: BalancerTelework[], date: Date): boolean {
     const dateKey = date.toISOString().slice(0, 10);
     return schedules.some((s) => s.date.toISOString().slice(0, 10) === dateKey);
+  }
+
+  private getIneligibilityReason(
+    agent: BalancerAgent,
+    occ: { taskId: string; date: Date },
+    absencesByUser: Map<string, BalancerAbsence[]>,
+    teleworkByUser: Map<string, BalancerTelework[]> | undefined,
+    isTeleworkAllowed: boolean,
+    requiredSkills: string[],
+  ): BalancerUnassignedReason | null {
+    if (this.isAbsentOn(absencesByUser.get(agent.userId) ?? [], occ.date)) {
+      return 'ABSENCE_CONFLICT';
+    }
+    if (
+      !isTeleworkAllowed &&
+      this.isTeleworkOn(teleworkByUser?.get(agent.userId) ?? [], occ.date)
+    ) {
+      return 'TELEWORK_CONFLICT';
+    }
+    const skills = agent.skills ?? [];
+    if (
+      requiredSkills.length > 0 &&
+      !requiredSkills.every((s) => skills.includes(s))
+    ) {
+      return 'SKILL_CONFLICT';
+    }
+    return null;
+  }
+
+  private resolveUnassignedReason(
+    agents: BalancerAgent[],
+    occ: { taskId: string; date: Date },
+    absencesByUser: Map<string, BalancerAbsence[]>,
+    teleworkByUser: Map<string, BalancerTelework[]> | undefined,
+    isTeleworkAllowed: boolean,
+    requiredSkills: string[],
+  ): BalancerUnassignedReason {
+    const reasons = agents
+      .map((agent) =>
+        this.getIneligibilityReason(
+          agent,
+          occ,
+          absencesByUser,
+          teleworkByUser,
+          isTeleworkAllowed,
+          requiredSkills,
+        ),
+      )
+      .filter((reason): reason is BalancerUnassignedReason => reason !== null);
+
+    if (reasons.includes('TELEWORK_CONFLICT')) return 'TELEWORK_CONFLICT';
+    if (reasons.includes('ABSENCE_CONFLICT')) return 'ABSENCE_CONFLICT';
+    if (reasons.includes('SKILL_CONFLICT')) return 'SKILL_CONFLICT';
+    return 'NO_ELIGIBLE_AGENT';
   }
 }

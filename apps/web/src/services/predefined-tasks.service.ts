@@ -187,7 +187,11 @@ export interface BalancerResult {
     taskId: string;
     date: string;
     period: AssignmentPeriod;
-    reason: string;
+    reason:
+      | "NO_ELIGIBLE_AGENT"
+      | "ABSENCE_CONFLICT"
+      | "TELEWORK_CONFLICT"
+      | "SKILL_CONFLICT";
   }>;
   assignmentsCreated: number;
 }

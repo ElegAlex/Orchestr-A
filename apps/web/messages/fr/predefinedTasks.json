@@ -41,7 +41,10 @@
       "proposedAssignments": "Assignations proposées",
       "unassignedOccurrences": "Occurrences non assignées",
       "reasons": {
-        "NO_ELIGIBLE_AGENT": "Aucun agent éligible (absences ou compétences manquantes)"
+        "NO_ELIGIBLE_AGENT": "Aucun agent éligible",
+        "ABSENCE_CONFLICT": "Aucun agent éligible : congés ou absences",
+        "TELEWORK_CONFLICT": "Aucun agent éligible : télétravail incompatible avec une tâche présentielle",
+        "SKILL_CONFLICT": "Aucun agent éligible : compétences manquantes"
       },
       "warningLowEquity": "Équilibre faible — envisagez d'ajuster la configuration"
     },

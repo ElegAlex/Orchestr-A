@@ -142,7 +142,7 @@ describe('PlanningBalancerService', () => {
     expect(out.proposedAssignments[0].userId).toBe('b');
   });
 
-  it('cas 6 — aucun éligible : tous les agents absents → unassigned NO_ELIGIBLE_AGENT', () => {
+  it('cas 6 — aucun éligible : tous les agents absents → unassigned ABSENCE_CONFLICT', () => {
     const out = service.balance(
       buildInput({
         agents: [{ userId: 'u1' }],
@@ -169,7 +169,7 @@ describe('PlanningBalancerService', () => {
     );
     expect(out.proposedAssignments).toHaveLength(0);
     expect(out.unassignedOccurrences).toHaveLength(1);
-    expect(out.unassignedOccurrences[0].reason).toBe('NO_ELIGIBLE_AGENT');
+    expect(out.unassignedOccurrences[0].reason).toBe('ABSENCE_CONFLICT');
   });
 
   it('cas 6b — télétravail bloquant : tâche présentielle → agent en télétravail non éligible', () => {
@@ -193,6 +193,30 @@ describe('PlanningBalancerService', () => {
 
     expect(out.proposedAssignments).toHaveLength(1);
     expect(out.proposedAssignments[0].userId).toBe('u2');
+  });
+
+  it('cas 6d — télétravail bloquant : tous les agents en télétravail → unassigned TELEWORK_CONFLICT', () => {
+    const out = service.balance(
+      buildInput({
+        agents: [{ userId: 'u1' }],
+        occurrences: [
+          {
+            taskId: 't-presentiel',
+            weight: 1,
+            date: new Date('2026-05-01T00:00:00Z'),
+            period: 'MORNING',
+          },
+        ],
+        telework: new Map([
+          ['u1', [{ date: new Date('2026-05-01T00:00:00Z') }]],
+        ]),
+        taskTeleworkAllowed: new Map([['t-presentiel', false]]),
+      }),
+    );
+
+    expect(out.proposedAssignments).toHaveLength(0);
+    expect(out.unassignedOccurrences).toHaveLength(1);
+    expect(out.unassignedOccurrences[0].reason).toBe('TELEWORK_CONFLICT');
   });
 
   it('cas 6c — télétravail autorisé : agent en télétravail reste éligible', () => {
