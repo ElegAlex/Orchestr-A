@@ -112,6 +112,7 @@ export const PlanningView = ({
     predefinedAssignments,
     getHolidayForDate,
     leaves,
+    teleworkSchedules,
   } = usePlanningData({
     currentDate,
     viewMode: dataViewMode,
@@ -812,6 +813,7 @@ export const PlanningView = ({
                 format(addUsersTarget.date, "yyyy-MM-dd"),
           )}
           leaves={leaves}
+          teleworkSchedules={teleworkSchedules}
           onClose={() => setAddUsersTarget(null)}
           onSuccess={() => {
             refetch();

@@ -16,10 +16,7 @@ import {
   GenerateFromRulesDto,
 } from './dto/create-recurring-rule.dto';
 import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
-import {
-  generateOccurrences,
-  RuleLike,
-} from './occurrence-generator';
+import { generateOccurrences, RuleLike } from './occurrence-generator';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
@@ -27,7 +24,10 @@ import type { PredefinedTaskAssignment } from 'database';
 import { PlanningBalancerService } from './planning-balancer.service';
 import type { BalancerOccurrence } from './planning-balancer.types';
 import { LeavesService } from '../leaves/leaves.service';
-import { GenerateBalancedDto, GenerateBalancedResult } from './dto/generate-balanced.dto';
+import {
+  GenerateBalancedDto,
+  GenerateBalancedResult,
+} from './dto/generate-balanced.dto';
 
 @Injectable()
 export class PredefinedTasksService {
@@ -46,9 +46,7 @@ export class PredefinedTasksService {
    * NOTE: logique dupliquée de LeavesService.getManagedUserIds (privé, non partagé).
    * TODO: extraire dans un helper RBAC partagé (packages/rbac ou apps/api/src/rbac/helpers/).
    */
-  private async getManagedUserIds(
-    currentUserId: string,
-  ): Promise<Set<string>> {
+  private async getManagedUserIds(currentUserId: string): Promise<Set<string>> {
     const managedServices = await this.prisma.service.findMany({
       where: { managerId: currentUserId },
       select: { id: true },
@@ -73,6 +71,36 @@ export class PredefinedTasksService {
       distinct: ['userId'],
     });
     return new Set(usersInServices.map((us) => us.userId));
+  }
+
+  private async assertTeleworkCompatibility(
+    task: { isTeleworkAllowed: boolean; name: string },
+    userIds: string[],
+    dates: string[],
+  ): Promise<void> {
+    if (task.isTeleworkAllowed) return;
+    if (userIds.length === 0 || dates.length === 0) return;
+
+    const teleworkSchedules = await this.prisma.teleworkSchedule.findMany({
+      where: {
+        userId: { in: userIds },
+        date: { in: dates.map((date) => new Date(date)) },
+        isTelework: true,
+      },
+      select: { userId: true, date: true },
+    });
+
+    if (teleworkSchedules.length > 0) {
+      const details = teleworkSchedules
+        .map(
+          (schedule) =>
+            `${schedule.userId}:${schedule.date.toISOString().slice(0, 10)}`,
+        )
+        .join(', ');
+      throw new BadRequestException(
+        `La tâche "${task.name}" n'est pas réalisable en télétravail. Agents incompatibles : ${details}`,
+      );
+    }
   }
 
   // ===========================
@@ -117,6 +145,7 @@ export class PredefinedTasksService {
         startTime,
         endTime,
         isExternalIntervention: dto.isExternalIntervention ?? false,
+        isTeleworkAllowed: dto.isTeleworkAllowed ?? true,
         weight: dto.weight ?? 1,
         createdById,
       },
@@ -173,6 +202,9 @@ export class PredefinedTasksService {
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
         ...(dto.isExternalIntervention !== undefined && {
           isExternalIntervention: dto.isExternalIntervention,
+        }),
+        ...(dto.isTeleworkAllowed !== undefined && {
+          isTeleworkAllowed: dto.isTeleworkAllowed,
         }),
         ...(dto.weight !== undefined && { weight: dto.weight }),
         ...timeSlotData,
@@ -235,6 +267,7 @@ export class PredefinedTasksService {
             startTime: true,
             endTime: true,
             isExternalIntervention: true,
+            isTeleworkAllowed: true,
             weight: true,
           },
         },
@@ -259,6 +292,7 @@ export class PredefinedTasksService {
         `Tâche prédéfinie ${dto.predefinedTaskId} introuvable ou inactive`,
       );
     }
+    await this.assertTeleworkCompatibility(task, [dto.userId], [dto.date]);
 
     try {
       return await this.prisma.predefinedTaskAssignment.create({
@@ -272,7 +306,13 @@ export class PredefinedTasksService {
         },
         include: {
           predefinedTask: {
-            select: { id: true, name: true, color: true, icon: true },
+            select: {
+              id: true,
+              name: true,
+              color: true,
+              icon: true,
+              isTeleworkAllowed: true,
+            },
           },
           user: {
             select: { id: true, firstName: true, lastName: true },
@@ -307,6 +347,7 @@ export class PredefinedTasksService {
         `Tâche prédéfinie ${dto.predefinedTaskId} introuvable ou inactive`,
       );
     }
+    await this.assertTeleworkCompatibility(task, dto.userIds, dto.dates);
 
     const results = { created: 0, skipped: 0, errors: [] as string[] };
 
@@ -383,6 +424,7 @@ export class PredefinedTasksService {
             startTime: true,
             endTime: true,
             isExternalIntervention: true,
+            isTeleworkAllowed: true,
           },
         },
         user: {
@@ -423,7 +465,13 @@ export class PredefinedTasksService {
       },
       include: {
         predefinedTask: {
-          select: { id: true, name: true, color: true, icon: true },
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            icon: true,
+            isTeleworkAllowed: true,
+          },
         },
         user: {
           select: { id: true, firstName: true, lastName: true },
@@ -467,7 +515,13 @@ export class PredefinedTasksService {
             },
             include: {
               predefinedTask: {
-                select: { id: true, name: true, color: true, icon: true },
+                select: {
+                  id: true,
+                  name: true,
+                  color: true,
+                  icon: true,
+                  isTeleworkAllowed: true,
+                },
               },
               user: {
                 select: { id: true, firstName: true, lastName: true },
@@ -519,7 +573,13 @@ export class PredefinedTasksService {
       },
       include: {
         predefinedTask: {
-          select: { id: true, name: true, color: true, icon: true },
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            icon: true,
+            isTeleworkAllowed: true,
+          },
         },
         user: {
           select: { id: true, firstName: true, lastName: true },
@@ -736,10 +796,13 @@ export class PredefinedTasksService {
     // findAll retourne un tableau brut quand startDate/endDate est fourni
     const rawLeaves: any[] = Array.isArray(rawLeavesResult)
       ? rawLeavesResult
-      : (rawLeavesResult as any).data ?? [];
+      : ((rawLeavesResult as any).data ?? []);
 
     const userIdSet = new Set(userIds);
-    const absencesMap = new Map<string, Array<{ startDate: Date; endDate: Date }>>();
+    const absencesMap = new Map<
+      string,
+      Array<{ startDate: Date; endDate: Date }>
+    >();
     for (const userId of userIds) {
       absencesMap.set(userId, []);
     }
@@ -752,19 +815,41 @@ export class PredefinedTasksService {
       }
     }
 
-    // ── 6. Skills — V1 non câblé ────────────────────────────────────────────
+    // ── 6. Charger les jours télétravaillés ─────────────────────────────────
+    const teleworkRows = await this.prisma.teleworkSchedule.findMany({
+      where: {
+        userId: { in: userIds },
+        date: { gte: startDate, lte: endDate },
+        isTelework: true,
+      },
+      select: { userId: true, date: true },
+    });
+    const teleworkMap = new Map<string, Array<{ date: Date }>>();
+    for (const userId of userIds) {
+      teleworkMap.set(userId, []);
+    }
+    for (const row of teleworkRows) {
+      teleworkMap.get(row.userId)!.push({ date: row.date });
+    }
+    const taskTeleworkAllowed = new Map(
+      tasks.map((task) => [task.id, task.isTeleworkAllowed]),
+    );
+
+    // ── 7. Skills — V1 non câblé ────────────────────────────────────────────
     // V2: intégrer PredefinedTask.requiredSkills
 
-    // ── 7. Appel du balancer ─────────────────────────────────────────────────
+    // ── 8. Appel du balancer ─────────────────────────────────────────────────
     const agents = userIds.map((userId) => ({ userId }));
     const output = this.planningBalancer.balance({
       occurrences,
       agents,
       absences: absencesMap,
+      telework: teleworkMap,
+      taskTeleworkAllowed,
       taskRequiredSkills: undefined,
     });
 
-    // ── 8. Mode preview ──────────────────────────────────────────────────────
+    // ── 9. Mode preview ──────────────────────────────────────────────────────
     if (dto.mode === 'preview') {
       return {
         mode: 'preview',
@@ -773,7 +858,7 @@ export class PredefinedTasksService {
       };
     }
 
-    // ── 9. Mode apply ────────────────────────────────────────────────────────
+    // ── 10. Mode apply ───────────────────────────────────────────────────────
     const count = await this.prisma.$transaction(async (tx) => {
       const result = await (tx as any).predefinedTaskAssignment.createMany({
         data: output.proposedAssignments.map((a) => ({
@@ -811,5 +896,4 @@ export class PredefinedTasksService {
       assignmentsCreated: count,
     };
   }
-
 }

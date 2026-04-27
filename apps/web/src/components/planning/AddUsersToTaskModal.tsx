@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { format, isWithinInterval, parseISO } from "date-fns";
+import { format, isSameDay, isWithinInterval, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
@@ -12,7 +12,7 @@ import {
   type PredefinedTaskAssignment,
   type TaskDuration,
 } from "@/services/predefined-tasks.service";
-import type { UserSummary, Leave } from "@/types";
+import type { UserSummary, Leave, TeleworkSchedule } from "@/types";
 
 export interface AddUsersToTaskModalProps {
   task: PredefinedTask;
@@ -20,11 +20,16 @@ export interface AddUsersToTaskModalProps {
   allUsers: UserSummary[];
   existingAssignments: PredefinedTaskAssignment[];
   leaves: Leave[];
+  teleworkSchedules?: TeleworkSchedule[];
   onClose: () => void;
   onSuccess: () => void;
 }
 
-type EligibilityStatus = "eligible" | "already_assigned" | "on_leave";
+type EligibilityStatus =
+  | "eligible"
+  | "already_assigned"
+  | "on_leave"
+  | "on_telework";
 
 interface EligibilityInfo {
   status: EligibilityStatus;
@@ -35,6 +40,8 @@ function computeEligibility(
   user: UserSummary,
   existingAssignments: PredefinedTaskAssignment[],
   leaves: Leave[],
+  teleworkSchedules: TeleworkSchedule[],
+  task: PredefinedTask,
   date: Date,
 ): EligibilityInfo {
   if (existingAssignments.some((a) => a.userId === user.id)) {
@@ -57,6 +64,18 @@ function computeEligibility(
       userLeave.leaveType?.code ?? userLeave.type ?? "OTHER";
     return { status: "on_leave", leaveType: leaveTypeCode };
   }
+  if (!task.isTeleworkAllowed) {
+    const userTelework = teleworkSchedules.find((schedule) => {
+      if (schedule.userId !== user.id) return false;
+      if (!schedule.isTelework) return false;
+      try {
+        return isSameDay(parseISO(schedule.date), date);
+      } catch {
+        return false;
+      }
+    });
+    if (userTelework) return { status: "on_telework" };
+  }
   return { status: "eligible" };
 }
 
@@ -73,6 +92,7 @@ export function AddUsersToTaskModal({
   allUsers,
   existingAssignments,
   leaves,
+  teleworkSchedules = [],
   onClose,
   onSuccess,
 }: AddUsersToTaskModalProps) {
@@ -93,16 +113,25 @@ export function AddUsersToTaskModal({
   const eligibility = useMemo(() => {
     const map = new Map<string, EligibilityInfo>();
     for (const u of sortedUsers) {
-      map.set(u.id, computeEligibility(u, existingAssignments, leaves, date));
+      map.set(
+        u.id,
+        computeEligibility(
+          u,
+          existingAssignments,
+          leaves,
+          teleworkSchedules,
+          task,
+          date,
+        ),
+      );
     }
     return map;
-  }, [sortedUsers, existingAssignments, leaves, date]);
+  }, [sortedUsers, existingAssignments, leaves, teleworkSchedules, task, date]);
 
   const eligibleCount = useMemo(
     () =>
-      sortedUsers.filter(
-        (u) => eligibility.get(u.id)?.status === "eligible",
-      ).length,
+      sortedUsers.filter((u) => eligibility.get(u.id)?.status === "eligible")
+        .length,
     [sortedUsers, eligibility],
   );
 
@@ -185,15 +214,13 @@ export function AddUsersToTaskModal({
           </p>
         )}
         {sortedUsers.length > 0 && (
-          <ul
-            className="space-y-1 max-h-80 overflow-y-auto"
-            role="list"
-          >
+          <ul className="space-y-1 max-h-80 overflow-y-auto" role="list">
             {sortedUsers.map((user) => {
               const info = eligibility.get(user.id)!;
               const isAlreadyAssigned = info.status === "already_assigned";
               const isOnLeave = info.status === "on_leave";
-              const disabled = isAlreadyAssigned || isOnLeave;
+              const isOnTelework = info.status === "on_telework";
+              const disabled = isAlreadyAssigned || isOnLeave || isOnTelework;
               const checked = isAlreadyAssigned || selectedUserIds.has(user.id);
               const firstName = user.firstName ?? "";
               const lastName = (user.lastName ?? "").toUpperCase();
@@ -231,6 +258,11 @@ export function AddUsersToTaskModal({
                       {t("activityGrid.addUsersModal.onLeave", {
                         type: info.leaveType ?? "",
                       })}
+                    </span>
+                  )}
+                  {isOnTelework && (
+                    <span className="text-xs italic text-gray-400">
+                      {t("activityGrid.addUsersModal.onTelework")}
                     </span>
                   )}
                 </li>

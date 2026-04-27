@@ -3,6 +3,7 @@ import {
   BalancerInput,
   BalancerOutput,
   BalancerAbsence,
+  BalancerTelework,
   BalancerAgent,
   BalancerProposedAssignment,
   BalancerUnassigned,
@@ -42,9 +43,18 @@ export class PlanningBalancerService {
     for (const occ of occurrences) {
       const requiredSkills = input.taskRequiredSkills?.get(occ.taskId) ?? [];
       const absencesByUser = input.absences;
+      const teleworkByUser = input.telework;
+      const isTeleworkAllowed =
+        input.taskTeleworkAllowed?.get(occ.taskId) ?? true;
 
       const eligibles = input.agents.filter((agent) => {
         if (this.isAbsentOn(absencesByUser.get(agent.userId) ?? [], occ.date)) {
+          return false;
+        }
+        if (
+          !isTeleworkAllowed &&
+          this.isTeleworkOn(teleworkByUser?.get(agent.userId) ?? [], occ.date)
+        ) {
           return false;
         }
         if (requiredSkills.length === 0) return true;
@@ -113,5 +123,10 @@ export class PlanningBalancerService {
     return absences.some(
       (a) => a.startDate.getTime() <= t && t <= a.endDate.getTime(),
     );
+  }
+
+  private isTeleworkOn(schedules: BalancerTelework[], date: Date): boolean {
+    const dateKey = date.toISOString().slice(0, 10);
+    return schedules.some((s) => s.date.toISOString().slice(0, 10) === dateKey);
   }
 }

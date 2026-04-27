@@ -947,6 +947,7 @@ model PredefinedTask {
   startTime              String? // Format "HH:mm", utilisé quand defaultDuration = "TIME_SLOT"
   endTime                String? // Format "HH:mm", utilisé quand defaultDuration = "TIME_SLOT"
   isExternalIntervention Boolean  @default(false)
+  isTeleworkAllowed      Boolean  @default(true)
   isActive               Boolean  @default(true)
   weight                 Int      @default(1) // 1..5, pondération pour équilibrage
   createdById            String

@@ -5,7 +5,7 @@
  * Pure, aucune dépendance Prisma ou NestJS.
  */
 
-export type BalancerPeriod = "MORNING" | "AFTERNOON" | "FULL_DAY";
+export type BalancerPeriod = 'MORNING' | 'AFTERNOON' | 'FULL_DAY';
 
 export interface BalancerOccurrence {
   taskId: string;
@@ -24,11 +24,19 @@ export interface BalancerAbsence {
   endDate: Date;
 }
 
+export interface BalancerTelework {
+  date: Date;
+}
+
 export interface BalancerInput {
   occurrences: BalancerOccurrence[];
   agents: BalancerAgent[];
   /** Indexé par userId */
   absences: Map<string, BalancerAbsence[]>;
+  /** Indexé par userId */
+  telework?: Map<string, BalancerTelework[]>;
+  /** Indexé par taskId, true par défaut */
+  taskTeleworkAllowed?: Map<string, boolean>;
   /** Indexé par taskId, optionnel */
   taskRequiredSkills?: Map<string, string[]>;
 }
@@ -41,7 +49,7 @@ export interface BalancerProposedAssignment {
   weight: number;
 }
 
-export type BalancerUnassignedReason = "NO_ELIGIBLE_AGENT";
+export type BalancerUnassignedReason = 'NO_ELIGIBLE_AGENT';
 
 export interface BalancerUnassigned {
   taskId: string;

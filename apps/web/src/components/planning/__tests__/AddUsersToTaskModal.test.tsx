@@ -4,41 +4,50 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AddUsersToTaskModal } from "../AddUsersToTaskModal";
 import { predefinedTasksService } from "@/services/predefined-tasks.service";
-import type { PredefinedTask, PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
-import type { UserSummary, Leave } from "@/types";
+import type {
+  PredefinedTask,
+  PredefinedTaskAssignment,
+} from "@/services/predefined-tasks.service";
+import type { UserSummary, Leave, TeleworkSchedule } from "@/types";
 
 jest.mock("next-intl", () => ({
-  useTranslations: () => (key: string, params?: Record<string, string | number>) => {
-    const dict: Record<string, string> = {
-      "activityGrid.addUsersModal.title": "Ajouter des agents",
-      "activityGrid.addUsersModal.alreadyAssigned": "déjà assigné",
-      "activityGrid.addUsersModal.noEligibleUsers": "Tous les agents sont déjà assignés ou en congé ce jour.",
-      "activityGrid.addUsersModal.cancel": "Annuler",
-      "activityGrid.addUsersModal.submitting": "Ajout en cours…",
-      "activityGrid.addUsersModal.errorToast": "Erreur lors de l'ajout",
-    };
-    if (key === "activityGrid.addUsersModal.subtitle" && params) {
-      return `${params.taskName} · ${params.date}`;
-    }
-    if (key === "activityGrid.addUsersModal.onLeave" && params) {
-      return `en congé · ${params.type}`;
-    }
-    if (key === "activityGrid.addUsersModal.selectedCount" && params) {
-      return `${params.count} agent(s) sélectionné(s)`;
-    }
-    if (key === "activityGrid.addUsersModal.submit" && params) {
-      return `Ajouter (${params.count})`;
-    }
-    if (key === "activityGrid.addUsersModal.successToast" && params) {
-      return `${params.count} assignation(s) créée(s)`;
-    }
-    return dict[key] ?? key;
-  },
+  useTranslations:
+    () => (key: string, params?: Record<string, string | number>) => {
+      const dict: Record<string, string> = {
+        "activityGrid.addUsersModal.title": "Ajouter des agents",
+        "activityGrid.addUsersModal.alreadyAssigned": "déjà assigné",
+        "activityGrid.addUsersModal.onTelework": "en télétravail",
+        "activityGrid.addUsersModal.noEligibleUsers":
+          "Tous les agents sont déjà assignés, en congé ou en télétravail ce jour.",
+        "activityGrid.addUsersModal.cancel": "Annuler",
+        "activityGrid.addUsersModal.submitting": "Ajout en cours…",
+        "activityGrid.addUsersModal.errorToast": "Erreur lors de l'ajout",
+      };
+      if (key === "activityGrid.addUsersModal.subtitle" && params) {
+        return `${params.taskName} · ${params.date}`;
+      }
+      if (key === "activityGrid.addUsersModal.onLeave" && params) {
+        return `en congé · ${params.type}`;
+      }
+      if (key === "activityGrid.addUsersModal.selectedCount" && params) {
+        return `${params.count} agent(s) sélectionné(s)`;
+      }
+      if (key === "activityGrid.addUsersModal.submit" && params) {
+        return `Ajouter (${params.count})`;
+      }
+      if (key === "activityGrid.addUsersModal.successToast" && params) {
+        return `${params.count} assignation(s) créée(s)`;
+      }
+      return dict[key] ?? key;
+    },
 }));
 
 jest.mock("@/components/UserAvatar", () => ({
   UserAvatar: ({ user }: { user: UserSummary }) => (
-    <span data-testid="avatar">{user.firstName?.[0]}{user.lastName?.[0]}</span>
+    <span data-testid="avatar">
+      {user.firstName?.[0]}
+      {user.lastName?.[0]}
+    </span>
   ),
 }));
 
@@ -53,8 +62,11 @@ jest.mock("@/services/predefined-tasks.service", () => ({
   },
 }));
 
-const buildUser = (id: string, firstName: string, lastName: string): UserSummary =>
-  ({ id, firstName, lastName, isActive: true }) as UserSummary;
+const buildUser = (
+  id: string,
+  firstName: string,
+  lastName: string,
+): UserSummary => ({ id, firstName, lastName, isActive: true }) as UserSummary;
 
 const buildTask = (overrides: Partial<PredefinedTask> = {}): PredefinedTask =>
   ({
@@ -65,6 +77,7 @@ const buildTask = (overrides: Partial<PredefinedTask> = {}): PredefinedTask =>
     icon: "📋",
     defaultDuration: "FULL_DAY",
     isExternalIntervention: false,
+    isTeleworkAllowed: true,
     isActive: true,
     weight: 2,
     createdAt: "2026-01-01",
@@ -72,7 +85,10 @@ const buildTask = (overrides: Partial<PredefinedTask> = {}): PredefinedTask =>
     ...overrides,
   }) as PredefinedTask;
 
-const buildAssignment = (id: string, userId: string): PredefinedTaskAssignment =>
+const buildAssignment = (
+  id: string,
+  userId: string,
+): PredefinedTaskAssignment =>
   ({
     id,
     predefinedTaskId: "t1",
@@ -100,6 +116,16 @@ const buildLeave = (
     type: typeCode,
     leaveType: { code: typeCode, name: typeCode } as Leave["leaveType"],
   }) as Leave;
+
+const buildTelework = (userId: string, date: string): TeleworkSchedule =>
+  ({
+    id: `telework-${userId}`,
+    userId,
+    date,
+    isTelework: true,
+    isException: false,
+    createdAt: "2026-01-01",
+  }) as TeleworkSchedule;
 
 describe("AddUsersToTaskModal", () => {
   beforeEach(() => {
@@ -177,6 +203,44 @@ describe("AddUsersToTaskModal", () => {
         allUsers={users}
         existingAssignments={[]}
         leaves={[buildLeave("u1", "2026-05-10", "2026-05-15", "PENDING")]}
+        onClose={jest.fn()}
+        onSuccess={jest.fn()}
+      />,
+    );
+    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+    expect(checkbox.disabled).toBe(false);
+  });
+
+  it("désactive les agents en télétravail pour une tâche présentielle", () => {
+    const users = [buildUser("u1", "Marie", "Dupont")];
+    render(
+      <AddUsersToTaskModal
+        task={buildTask({ isTeleworkAllowed: false })}
+        date={new Date("2026-05-12")}
+        allUsers={users}
+        existingAssignments={[]}
+        leaves={[]}
+        teleworkSchedules={[buildTelework("u1", "2026-05-12")]}
+        onClose={jest.fn()}
+        onSuccess={jest.fn()}
+      />,
+    );
+    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+    expect(checkbox.disabled).toBe(true);
+    expect(screen.getByText("en télétravail")).toBeInTheDocument();
+  });
+
+  it("garde les agents en télétravail éligibles pour une tâche compatible", () => {
+    const users = [buildUser("u1", "Marie", "Dupont")];
+    render(
+      <AddUsersToTaskModal
+        task={buildTask({ isTeleworkAllowed: true })}
+        date={new Date("2026-05-12")}
+        allUsers={users}
+        existingAssignments={[]}
+        leaves={[]}
+        teleworkSchedules={[buildTelework("u1", "2026-05-12")]}
         onClose={jest.fn()}
         onSuccess={jest.fn()}
       />,
@@ -280,7 +344,7 @@ describe("AddUsersToTaskModal", () => {
     );
     expect(
       screen.getByText(
-        "Tous les agents sont déjà assignés ou en congé ce jour.",
+        "Tous les agents sont déjà assignés, en congé ou en télétravail ce jour.",
       ),
     ).toBeInTheDocument();
   });

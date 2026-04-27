@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PlanningBalancerService } from './planning-balancer.service';
-import {
-  BalancerInput,
-  BalancerOccurrence,
-} from './planning-balancer.types';
+import { BalancerInput, BalancerOccurrence } from './planning-balancer.types';
 
 describe('PlanningBalancerService', () => {
   let service: PlanningBalancerService;
@@ -24,7 +21,12 @@ describe('PlanningBalancerService', () => {
       buildInput({
         agents: [{ userId: 'u1' }],
         occurrences: [
-          { taskId: 't1', weight: 1, date: new Date('2026-05-01'), period: 'MORNING' },
+          {
+            taskId: 't1',
+            weight: 1,
+            date: new Date('2026-05-01'),
+            period: 'MORNING',
+          },
         ],
       }),
     );
@@ -168,6 +170,52 @@ describe('PlanningBalancerService', () => {
     expect(out.proposedAssignments).toHaveLength(0);
     expect(out.unassignedOccurrences).toHaveLength(1);
     expect(out.unassignedOccurrences[0].reason).toBe('NO_ELIGIBLE_AGENT');
+  });
+
+  it('cas 6b — télétravail bloquant : tâche présentielle → agent en télétravail non éligible', () => {
+    const out = service.balance(
+      buildInput({
+        agents: [{ userId: 'u1' }, { userId: 'u2' }],
+        occurrences: [
+          {
+            taskId: 't-presentiel',
+            weight: 1,
+            date: new Date('2026-05-01T00:00:00Z'),
+            period: 'MORNING',
+          },
+        ],
+        telework: new Map([
+          ['u1', [{ date: new Date('2026-05-01T00:00:00Z') }]],
+        ]),
+        taskTeleworkAllowed: new Map([['t-presentiel', false]]),
+      }),
+    );
+
+    expect(out.proposedAssignments).toHaveLength(1);
+    expect(out.proposedAssignments[0].userId).toBe('u2');
+  });
+
+  it('cas 6c — télétravail autorisé : agent en télétravail reste éligible', () => {
+    const out = service.balance(
+      buildInput({
+        agents: [{ userId: 'u1' }, { userId: 'u2' }],
+        occurrences: [
+          {
+            taskId: 't-compatible',
+            weight: 1,
+            date: new Date('2026-05-01T00:00:00Z'),
+            period: 'MORNING',
+          },
+        ],
+        telework: new Map([
+          ['u1', [{ date: new Date('2026-05-01T00:00:00Z') }]],
+        ]),
+        taskTeleworkAllowed: new Map([['t-compatible', true]]),
+      }),
+    );
+
+    expect(out.proposedAssignments).toHaveLength(1);
+    expect(out.proposedAssignments[0].userId).toBe('u1');
   });
 
   it('cas 7 — départage stable par userId lexicographique : user-a gagne sur user-b à charge égale', () => {

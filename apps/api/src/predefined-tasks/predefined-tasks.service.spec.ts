@@ -49,6 +49,9 @@ describe('PredefinedTasksService', () => {
     userService: {
       findMany: vi.fn(),
     },
+    teleworkSchedule: {
+      findMany: vi.fn(),
+    },
     $transaction: vi.fn(),
   };
 
@@ -82,6 +85,7 @@ describe('PredefinedTasksService', () => {
     icon: '🏢',
     defaultDuration: 'FULL_DAY',
     isActive: true,
+    isTeleworkAllowed: true,
     weight: 1,
     createdById: 'user-1',
     createdAt: new Date('2026-01-01'),
@@ -198,6 +202,7 @@ describe('PredefinedTasksService', () => {
           startTime: null,
           endTime: null,
           isExternalIntervention: false,
+          isTeleworkAllowed: true,
           weight: 1,
           createdById: 'user-1',
         },
@@ -267,7 +272,9 @@ describe('PredefinedTasksService', () => {
   describe('weight — service.create()', () => {
     it('a. devrait passer weight:3 à Prisma et retourner une tâche avec weight=3', async () => {
       const taskWithWeight3 = { ...mockTask, weight: 3 };
-      mockPrismaService.predefinedTask.create.mockResolvedValue(taskWithWeight3);
+      mockPrismaService.predefinedTask.create.mockResolvedValue(
+        taskWithWeight3,
+      );
 
       const dto = {
         name: 'Permanence accueil',
@@ -290,7 +297,9 @@ describe('PredefinedTasksService', () => {
 
     it('b. devrait utiliser weight=1 par défaut si absent du DTO', async () => {
       const taskWithWeight1 = { ...mockTask, weight: 1 };
-      mockPrismaService.predefinedTask.create.mockResolvedValue(taskWithWeight1);
+      mockPrismaService.predefinedTask.create.mockResolvedValue(
+        taskWithWeight1,
+      );
 
       const dto = {
         name: 'Permanence accueil',
@@ -517,6 +526,33 @@ describe('PredefinedTasksService', () => {
         ConflictException,
       );
     });
+
+    it('devrait refuser un agent en télétravail sur une tâche présentielle', async () => {
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue({
+        ...mockTask,
+        isTeleworkAllowed: false,
+      });
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
+        {
+          userId: 'user-1',
+          date: new Date('2026-03-25T00:00:00Z'),
+        },
+      ]);
+
+      const dto = {
+        predefinedTaskId: 'task-1',
+        userId: 'user-1',
+        date: '2026-03-25T00:00:00Z',
+        period: 'FULL_DAY',
+      };
+
+      await expect(service.createAssignment('admin-1', dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(
+        mockPrismaService.predefinedTaskAssignment.create,
+      ).not.toHaveBeenCalled();
+    });
   });
 
   describe('removeAssignment', () => {
@@ -590,6 +626,33 @@ describe('PredefinedTasksService', () => {
 
       expect(result.created).toBe(1);
       expect(result.skipped).toBe(1);
+    });
+
+    it('devrait refuser le bulk si un agent est en télétravail sur une tâche présentielle', async () => {
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue({
+        ...mockTask,
+        isTeleworkAllowed: false,
+      });
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
+        {
+          userId: 'user-2',
+          date: new Date('2026-03-26T00:00:00Z'),
+        },
+      ]);
+
+      const dto = {
+        predefinedTaskId: 'task-1',
+        userIds: ['user-1', 'user-2'],
+        dates: ['2026-03-25T00:00:00Z', '2026-03-26T00:00:00Z'],
+        period: 'FULL_DAY',
+      };
+
+      await expect(
+        service.createBulkAssignment('admin-1', dto),
+      ).rejects.toThrow(BadRequestException);
+      expect(
+        mockPrismaService.predefinedTaskAssignment.create,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -1156,6 +1219,7 @@ describe('PredefinedTasksService', () => {
       id: taskId1,
       name: 'Tâche test',
       isActive: true,
+      isTeleworkAllowed: true,
       weight: 2,
     };
 
@@ -1191,20 +1255,37 @@ describe('PredefinedTasksService', () => {
 
     const adminUser = {
       id: 'admin-uuid',
-      role: { code: 'ADMIN', templateKey: 'ADMIN', id: 'r-admin', label: 'Admin', isSystem: true },
+      role: {
+        code: 'ADMIN',
+        templateKey: 'ADMIN',
+        id: 'r-admin',
+        label: 'Admin',
+        isSystem: true,
+      },
       permissions: ['projects:manage_any', 'predefined_tasks:balance'],
     };
 
     const responsableUser = {
       id: 'resp-uuid',
-      role: { code: 'RESPONSABLE', templateKey: 'RESPONSABLE', id: 'r-resp', label: 'Responsable', isSystem: true },
+      role: {
+        code: 'RESPONSABLE',
+        templateKey: 'RESPONSABLE',
+        id: 'r-resp',
+        label: 'Responsable',
+        isSystem: true,
+      },
       permissions: ['predefined_tasks:balance'],
     };
 
     beforeEach(() => {
       // Par défaut : tâches actives, règles, pas d'absences, balancer output
-      mockPrismaService.predefinedTask.findMany.mockResolvedValue([mockActiveTask]);
-      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([mockRule]);
+      mockPrismaService.predefinedTask.findMany.mockResolvedValue([
+        mockActiveTask,
+      ]);
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
+        mockRule,
+      ]);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
       mockLeavesService.findAll.mockResolvedValue([]);
       mockPlanningBalancerService.balance.mockReturnValue(mockBalancerOutput);
       // Pour RBAC scope : service.findMany et userService.findMany
@@ -1231,8 +1312,38 @@ describe('PredefinedTasksService', () => {
       expect(result.mode).toBe('preview');
       expect(result.assignmentsCreated).toBe(0);
       expect(result.proposedAssignments).toHaveLength(1);
-      expect(mockPrismaService.predefinedTaskAssignment.createMany).not.toHaveBeenCalled();
+      expect(
+        mockPrismaService.predefinedTaskAssignment.createMany,
+      ).not.toHaveBeenCalled();
       expect(mockAuditPersistenceService.log).not.toHaveBeenCalled();
+    });
+
+    it('GB-1b: transmet le télétravail et la compatibilité des tâches au balancer', async () => {
+      const dto = {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        userIds: [userId1],
+        taskIds: [taskId1],
+        mode: 'preview' as const,
+      };
+
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+      ]);
+      mockPrismaService.predefinedTask.findMany.mockResolvedValue([
+        { ...mockActiveTask, isTeleworkAllowed: false },
+      ]);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
+        { userId: userId1, date: new Date('2026-04-06') },
+      ]);
+
+      await service.generateBalanced(dto, adminUser as any);
+
+      const balanceCall = mockPlanningBalancerService.balance.mock.calls[0][0];
+      expect(balanceCall.taskTeleworkAllowed.get(taskId1)).toBe(false);
+      expect(balanceCall.telework.get(userId1)).toEqual([
+        { date: new Date('2026-04-06') },
+      ]);
     });
 
     it('GB-2: mode apply — createMany appelé avec skipDuplicates, audit log BALANCER_APPLIED inséré', async () => {
@@ -1324,7 +1435,7 @@ describe('PredefinedTasksService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('GB-5: ADMIN global (projects:manage_any) peut balancer n\'importe quel user', async () => {
+    it("GB-5: ADMIN global (projects:manage_any) peut balancer n'importe quel user", async () => {
       const dto = {
         startDate: '2026-04-01',
         endDate: '2026-04-30',
@@ -1338,7 +1449,9 @@ describe('PredefinedTasksService', () => {
         'projects:manage_any',
         'predefined_tasks:balance',
       ]);
-      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([]);
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue(
+        [],
+      );
       mockPlanningBalancerService.balance.mockReturnValue({
         ...mockBalancerOutput,
         proposedAssignments: [],
@@ -1415,7 +1528,9 @@ describe('PredefinedTasksService', () => {
         return Promise.resolve([]);
       });
       mockPrismaService.service.findMany.mockResolvedValue([]);
-      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([]);
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue(
+        [],
+      );
       mockPlanningBalancerService.balance.mockReturnValue({
         ...mockBalancerOutput,
         proposedAssignments: [],

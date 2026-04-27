@@ -26,6 +26,7 @@ export interface PredefinedTask {
   startTime?: string | null; // Format "HH:mm"
   endTime?: string | null; // Format "HH:mm"
   isExternalIntervention: boolean;
+  isTeleworkAllowed: boolean;
   isActive: boolean;
   weight: number; // 1..5, pondération pour équilibrage
   createdAt: string;
@@ -89,6 +90,7 @@ export interface CreatePredefinedTaskDto {
   startTime?: string;
   endTime?: string;
   isExternalIntervention?: boolean;
+  isTeleworkAllowed?: boolean;
   weight?: number; // 1..5, défaut 1 côté API
 }
 
@@ -101,6 +103,7 @@ export interface UpdatePredefinedTaskDto {
   startTime?: string;
   endTime?: string;
   isExternalIntervention?: boolean;
+  isTeleworkAllowed?: boolean;
   isActive?: boolean;
   weight?: number; // 1..5
 }

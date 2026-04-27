@@ -86,6 +86,14 @@ export class CreatePredefinedTaskDto {
   isExternalIntervention?: boolean;
 
   @ApiPropertyOptional({
+    description: 'Tâche réalisable en télétravail',
+    example: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  isTeleworkAllowed?: boolean;
+
+  @ApiPropertyOptional({
     description: 'Pondération de la tâche (1 = légère, 5 = très lourde)',
     example: 1,
     minimum: 1,

@@ -66,6 +66,7 @@ interface TaskFormData {
   startTime: string;
   endTime: string;
   isExternalIntervention: boolean;
+  isTeleworkAllowed: boolean;
   weight: number;
 }
 
@@ -78,6 +79,7 @@ const EMPTY_FORM: TaskFormData = {
   startTime: "09:00",
   endTime: "12:00",
   isExternalIntervention: false,
+  isTeleworkAllowed: true,
   weight: 1,
 };
 
@@ -141,6 +143,7 @@ export default function PredefinedTasksAdminPage() {
       startTime: task.startTime ?? "09:00",
       endTime: task.endTime ?? "12:00",
       isExternalIntervention: task.isExternalIntervention ?? false,
+      isTeleworkAllowed: task.isTeleworkAllowed ?? true,
       weight: task.weight ?? 1,
     });
     setShowEditModal(true);
@@ -157,6 +160,7 @@ export default function PredefinedTasksAdminPage() {
         icon: formData.icon,
         defaultDuration: formData.defaultDuration,
         isExternalIntervention: formData.isExternalIntervention,
+        isTeleworkAllowed: formData.isTeleworkAllowed,
         weight: formData.weight,
         ...(formData.defaultDuration === "TIME_SLOT" && {
           startTime: formData.startTime,
@@ -189,6 +193,7 @@ export default function PredefinedTasksAdminPage() {
         icon: formData.icon,
         defaultDuration: formData.defaultDuration,
         isExternalIntervention: formData.isExternalIntervention,
+        isTeleworkAllowed: formData.isTeleworkAllowed,
         weight: formData.weight,
         ...(formData.defaultDuration === "TIME_SLOT" && {
           startTime: formData.startTime,
@@ -364,6 +369,11 @@ export default function PredefinedTasksAdminPage() {
                     {task.isExternalIntervention && (
                       <span className="text-xs text-red-600 bg-red-100 px-2 py-0.5 rounded-full font-medium">
                         🔴 Ext.
+                      </span>
+                    )}
+                    {task.isTeleworkAllowed === false && (
+                      <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-medium">
+                        Présentiel requis
                       </span>
                     )}
                     {!task.isActive && (
@@ -615,6 +625,27 @@ function TaskFormModal({
               className="ml-2 block text-sm font-medium text-gray-700"
             >
               🔴 Intervention extérieure
+            </label>
+          </div>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="isTeleworkAllowed"
+              checked={formData.isTeleworkAllowed}
+              onChange={(e) =>
+                onChange({
+                  ...formData,
+                  isTeleworkAllowed: e.target.checked,
+                })
+              }
+              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            />
+            <label
+              htmlFor="isTeleworkAllowed"
+              className="ml-2 block text-sm font-medium text-gray-700"
+            >
+              Réalisable en télétravail
             </label>
           </div>
 
