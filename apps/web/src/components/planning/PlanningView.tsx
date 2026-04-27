@@ -103,6 +103,7 @@ export const PlanningView = ({
     displayDays,
     users,
     groupedUsers,
+    filteredGroups,
     refetch,
     silentRefetch,
     predefinedAssignments,
@@ -118,6 +119,38 @@ export const PlanningView = ({
   });
 
   const canAssignPredefinedTask = hasPermission("predefined_tasks:assign");
+
+  const activityUsers = useMemo(() => {
+    const visibleUsers = filteredGroups.flatMap((group) => group.users);
+    const seen = new Set<string>();
+    return visibleUsers.filter((user) => {
+      if (seen.has(user.id)) return false;
+      seen.add(user.id);
+      return true;
+    });
+  }, [filteredGroups]);
+
+  const activityUserIds = useMemo(
+    () => new Set(activityUsers.map((user) => user.id)),
+    [activityUsers],
+  );
+
+  const activityAssignments = useMemo(
+    () =>
+      predefinedAssignments.filter((assignment) =>
+        activityUserIds.has(assignment.userId),
+      ),
+    [predefinedAssignments, activityUserIds],
+  );
+
+  const activityTasks = useMemo(() => {
+    if (!filterUserId) return predefinedTasks;
+
+    const assignedTaskIds = new Set(
+      activityAssignments.map((assignment) => assignment.predefinedTaskId),
+    );
+    return predefinedTasks.filter((task) => assignedTaskIds.has(task.id));
+  }, [predefinedTasks, activityAssignments, filterUserId]);
 
   // Charger les tâches prédéfinies actives uniquement en Vue Activité (W4.3).
   // Guard: on ne charge qu'au premier basculement sur "activity" (lazy, pas au mount).
@@ -721,13 +754,13 @@ export const PlanningView = ({
       ) : (
         <ActivityGrid
           days={displayDays}
-          tasks={predefinedTasks}
-          assignments={predefinedAssignments}
-          users={users}
+          tasks={activityTasks}
+          assignments={activityAssignments}
+          users={activityUsers}
           leaves={leaves}
           canAssign={canAssignPredefinedTask}
           onAddUsers={(taskId, dateIso) => {
-            const task = predefinedTasks.find((t) => t.id === taskId);
+            const task = activityTasks.find((t) => t.id === taskId);
             if (!task) return;
             setAddUsersTarget({ task, date: new Date(dateIso) });
           }}
@@ -765,8 +798,8 @@ export const PlanningView = ({
         <AddUsersToTaskModal
           task={addUsersTarget.task}
           date={addUsersTarget.date}
-          allUsers={users}
-          existingAssignments={predefinedAssignments.filter(
+          allUsers={activityUsers}
+          existingAssignments={activityAssignments.filter(
             (a) =>
               a.predefinedTaskId === addUsersTarget.task.id &&
               (typeof a.date === "string"
