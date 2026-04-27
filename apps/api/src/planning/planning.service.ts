@@ -63,17 +63,7 @@ export class PlanningService {
     const dateOnlyStart = startDate.slice(0, 10);
     const dateOnlyEnd = endDate.slice(0, 10);
 
-    const [
-      usersResult,
-      servicesResult,
-      tasksResult,
-      leavesResult,
-      events,
-      teleworkResult,
-      holidays,
-      schoolVacations,
-      predefinedAssignments,
-    ] = await Promise.all([
+    const [usersResult, servicesResult, tasksResult] = await Promise.all([
       this.usersService.findAll(1, 1000),
       this.servicesService.findAll(1, 1000),
       this.tasksService.findAll(
@@ -87,6 +77,26 @@ export class PlanningService {
         undefined,
         currentUser,
       ),
+    ]);
+
+    const visibleUserIds = usersResult.data
+      .filter(
+        (user: any) =>
+          user?.isActive !== false &&
+          Array.isArray(user?.userServices) &&
+          user.userServices.length > 0,
+      )
+      .map((user: any) => user.id)
+      .filter((id: unknown): id is string => typeof id === 'string');
+
+    const [
+      leavesResult,
+      events,
+      telework,
+      holidays,
+      schoolVacations,
+      predefinedAssignments,
+    ] = await Promise.all([
       this.leavesService.findAll(
         1,
         1000,
@@ -104,12 +114,8 @@ export class PlanningService {
         dateOnlyStart,
         dateOnlyEnd,
       ),
-      this.teleworkService.findAll(
-        currentUser.id,
-        currentUser.role,
-        1,
-        1000,
-        undefined,
+      this.teleworkService.findForPlanningOverview(
+        visibleUserIds,
         dateOnlyStart,
         dateOnlyEnd,
       ),
@@ -135,7 +141,7 @@ export class PlanningService {
       tasks: tasksResult.data,
       leaves,
       events,
-      telework: teleworkResult.data,
+      telework,
       holidays,
       schoolVacations,
       predefinedAssignments,

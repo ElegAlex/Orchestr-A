@@ -114,17 +114,10 @@ export class TeleworkService {
 
     const where: Prisma.TeleworkScheduleWhereInput = {};
 
-    // Lecture globale : vérifier les permissions dynamiques.
-    // `predefined_tasks:assign` a besoin des télétravails de l'équipe dans
-    // planning/overview pour afficher les agents non éligibles dans la modale
-    // d'assignation Vue activité.
+    // Lecture globale : vérifier la permission dynamique telework:readAll
     const permissions =
       await this.permissionsService.getPermissionsForRole(currentUserRole);
-    const canReadTeamTelework =
-      permissions.includes('telework:readAll') ||
-      permissions.includes('telework:read_team') ||
-      permissions.includes('predefined_tasks:assign');
-    if (!canReadTeamTelework) {
+    if (!permissions.includes('telework:readAll')) {
       where.userId = currentUserId;
     } else if (userId) {
       where.userId = userId;
@@ -187,6 +180,61 @@ export class TeleworkService {
         totalPages: Math.ceil(total / safeLimit),
       },
     };
+  }
+
+  /**
+   * Récupère les télétravails strictement pour les agents déjà visibles dans
+   * planning/overview. Utilisé pour l'éligibilité des predefined tasks sans
+   * élargir les droits du endpoint public GET /telework.
+   */
+  async findForPlanningOverview(
+    userIds: string[],
+    startDate: string,
+    endDate: string,
+  ) {
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    await this.expandRecurringRulesForRange(startDate, endDate);
+
+    return this.prisma.teleworkSchedule.findMany({
+      where: {
+        userId: { in: [...new Set(userIds)] },
+        date: {
+          gte: new Date(startDate),
+          lte: new Date(endDate),
+        },
+      },
+      orderBy: { date: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            department: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            userServices: {
+              select: {
+                service: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
   }
 
   /**

@@ -316,7 +316,7 @@ describe('TeleworkService', () => {
       );
     });
 
-    it('should not scope to current user when user can assign predefined tasks', async () => {
+    it('should still scope to current user when user can assign predefined tasks without telework:readAll', async () => {
       mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:read',
         'predefined_tasks:assign',
@@ -330,9 +330,46 @@ describe('TeleworkService', () => {
 
       expect(mockPrismaService.teleworkSchedule.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.not.objectContaining({ userId: 'user-1' }) as object,
+          where: expect.objectContaining({ userId: 'user-1' }) as object,
         }),
       );
+    });
+  });
+
+  describe('findForPlanningOverview', () => {
+    it('should fetch telework only for provided visible user ids', async () => {
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([]);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
+        mockTelework,
+      ]);
+
+      const result = await service.findForPlanningOverview(
+        ['user-1', 'user-1', 'user-2'],
+        '2025-01-01',
+        '2025-01-31',
+      );
+
+      expect(result).toEqual([mockTelework]);
+      expect(mockPrismaService.teleworkSchedule.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: { in: ['user-1', 'user-2'] },
+          }) as object,
+        }),
+      );
+    });
+
+    it('should return empty array without querying schedules when no user ids are visible', async () => {
+      const result = await service.findForPlanningOverview(
+        [],
+        '2025-01-01',
+        '2025-01-31',
+      );
+
+      expect(result).toEqual([]);
+      expect(
+        mockPrismaService.teleworkSchedule.findMany,
+      ).not.toHaveBeenCalled();
     });
   });
 

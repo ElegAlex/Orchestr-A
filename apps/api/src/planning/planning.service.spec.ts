@@ -25,7 +25,10 @@ describe('PlanningService', () => {
   const mockTasksService = { findAll: vi.fn() };
   const mockLeavesService = { findAll: vi.fn() };
   const mockEventsService = { findAll: vi.fn() };
-  const mockTeleworkService = { findAll: vi.fn() };
+  const mockTeleworkService = {
+    findAll: vi.fn(),
+    findForPlanningOverview: vi.fn(),
+  };
   const mockHolidaysService = { findByRange: vi.fn() };
   const mockSchoolVacationsService = { findByRange: vi.fn() };
   const mockPredefinedTasksService = { findAssignments: vi.fn() };
@@ -34,12 +37,16 @@ describe('PlanningService', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    mockUsersService.findAll.mockResolvedValue(paginated([{ id: 'u1' }]));
+    mockUsersService.findAll.mockResolvedValue(
+      paginated([{ id: 'u1', isActive: true, userServices: [{ id: 'us1' }] }]),
+    );
     mockServicesService.findAll.mockResolvedValue(paginated([{ id: 's1' }]));
     mockTasksService.findAll.mockResolvedValue(paginated([{ id: 't1' }]));
     mockLeavesService.findAll.mockResolvedValue(paginated([{ id: 'l1' }]));
     mockEventsService.findAll.mockResolvedValue([{ id: 'e1' }]);
-    mockTeleworkService.findAll.mockResolvedValue(paginated([{ id: 'tw1' }]));
+    mockTeleworkService.findForPlanningOverview.mockResolvedValue([
+      { id: 'tw1' },
+    ]);
     mockHolidaysService.findByRange.mockResolvedValue([{ id: 'h1' }]);
     mockSchoolVacationsService.findByRange.mockResolvedValue([{ id: 'sv1' }]);
     mockPredefinedTasksService.findAssignments.mockResolvedValue([
@@ -84,7 +91,7 @@ describe('PlanningService', () => {
     const result = await service.getOverview(START, END, USER);
 
     expect(result).toEqual({
-      users: [{ id: 'u1' }],
+      users: [{ id: 'u1', isActive: true, userServices: [{ id: 'us1' }] }],
       services: [{ id: 's1' }],
       tasks: [{ id: 't1' }],
       leaves: [{ id: 'l1' }],
@@ -140,12 +147,8 @@ describe('PlanningService', () => {
       '2026-04-13',
       '2026-04-19',
     );
-    expect(mockTeleworkService.findAll).toHaveBeenCalledWith(
-      USER.id,
-      USER.role,
-      1,
-      1000,
-      undefined,
+    expect(mockTeleworkService.findForPlanningOverview).toHaveBeenCalledWith(
+      ['u1'],
       '2026-04-13',
       '2026-04-19',
     );
@@ -170,5 +173,24 @@ describe('PlanningService', () => {
       startDate: '2026-04-13',
       endDate: '2026-04-19',
     });
+  });
+
+  it('limite les télétravails overview aux agents actifs visibles', async () => {
+    mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+    mockUsersService.findAll.mockResolvedValue(
+      paginated([
+        { id: 'u1', isActive: true, userServices: [{ id: 'us1' }] },
+        { id: 'u2', isActive: false, userServices: [{ id: 'us2' }] },
+        { id: 'u3', isActive: true, userServices: [] },
+      ]),
+    );
+
+    await service.getOverview(START, END, USER);
+
+    expect(mockTeleworkService.findForPlanningOverview).toHaveBeenCalledWith(
+      ['u1'],
+      '2026-04-13',
+      '2026-04-19',
+    );
   });
 });
