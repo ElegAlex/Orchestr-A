@@ -120,9 +120,17 @@ export class AccessScopeService {
   async assertCanReadTask(
     taskId: string,
     user: AccessUser | undefined,
+    bypassPermissions: readonly string[] = [],
   ): Promise<void> {
     const taskExists = await this.prisma.task.count({ where: { id: taskId } });
     if (taskExists === 0) throw new NotFoundException('Tâche introuvable');
+
+    if (
+      bypassPermissions.length > 0 &&
+      (await this.hasAny(user, bypassPermissions))
+    ) {
+      return;
+    }
 
     const count = await this.prisma.task.count({
       where: {

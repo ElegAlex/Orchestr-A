@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { ThirdPartiesService } from '../third-parties/third-parties.service';
 import { OwnershipService } from '../common/services/ownership.service';
+import { AccessScopeService } from '../common/services/access-scope.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
 
@@ -28,6 +29,7 @@ export class TimeTrackingService {
     private readonly thirdPartiesService: ThirdPartiesService,
     private readonly permissionsService: PermissionsService,
     private readonly ownershipService: OwnershipService,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
   /**
@@ -91,10 +93,16 @@ export class TimeTrackingService {
       if (!createTimeEntryDto.taskId) {
         throw new BadRequestException('taskId requis pour un dismissal');
       }
-      return this.upsertDismissal(currentUser.id, createTimeEntryDto.taskId);
+      return this.upsertDismissal(currentUser, createTimeEntryDto.taskId);
     }
 
     if (taskId) {
+      // Scope gate (Issue #3): caller must be able to read the task or hold
+      // time_tracking:manage_any. Throws 404 if task missing, 403 if out-of-scope.
+      await this.accessScopeService.assertCanReadTask(taskId, currentUser, [
+        MANAGE_ANY_PERMISSION,
+      ]);
+
       const task = await this.prisma.task.findUnique({
         where: { id: taskId },
       });
@@ -109,12 +117,14 @@ export class TimeTrackingService {
     const effectiveProjectId = createTimeEntryDto.projectId || projectId;
 
     if (effectiveProjectId) {
-      const project = await this.prisma.project.findUnique({
-        where: { id: effectiveProjectId },
-      });
-      if (!project) {
-        throw new NotFoundException('Projet introuvable');
-      }
+      // Scope gate (Issue #3): caller must be able to access the project or
+      // hold time_tracking:manage_any. assertCanAccessProject distinguishes
+      // 404 (missing project) from 403 (out-of-scope).
+      await this.accessScopeService.assertCanAccessProject(
+        effectiveProjectId,
+        currentUser,
+        [MANAGE_ANY_PERMISSION],
+      );
     }
 
     if (!taskId && !effectiveProjectId) {
@@ -205,7 +215,17 @@ export class TimeTrackingService {
    * clé composite non-unique : on passe par findFirst + update/create dans
    * une transaction courte (D9).
    */
-  private async upsertDismissal(userId: string, taskId: string) {
+  private async upsertDismissal(
+    currentUser: { id: string; role: string | null },
+    taskId: string,
+  ) {
+    // Scope gate (Issue #3): the caller must be able to read the task before
+    // writing a dismissal against it. assertCanReadTask handles 404 vs 403.
+    await this.accessScopeService.assertCanReadTask(taskId, currentUser, [
+      MANAGE_ANY_PERMISSION,
+    ]);
+
+    const userId = currentUser.id;
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.timeEntry.findFirst({
         where: { userId, taskId, isDismissal: true },

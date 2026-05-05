@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { ThirdPartiesService } from '../third-parties/third-parties.service';
 import { OwnershipService } from '../common/services/ownership.service';
+import { AccessScopeService } from '../common/services/access-scope.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { TimeTrackingService } from './time-tracking.service';
 
@@ -46,6 +47,11 @@ describe('TimeTrackingService', () => {
     isOwner: vi.fn(),
   };
 
+  const mockAccessScopeService = {
+    assertCanReadTask: vi.fn(),
+    assertCanAccessProject: vi.fn(),
+  };
+
   const currentUser: { id: string; role: string | null } = {
     id: 'user-1',
     role: 'MANAGER',
@@ -62,6 +68,7 @@ describe('TimeTrackingService', () => {
           useValue: mockPermissionsService,
         },
         { provide: OwnershipService, useValue: mockOwnershipService },
+        { provide: AccessScopeService, useValue: mockAccessScopeService },
       ],
     }).compile();
     service = module.get<TimeTrackingService>(TimeTrackingService);
@@ -69,6 +76,10 @@ describe('TimeTrackingService', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    // Reset access-scope mock implementations so rejection/resolution set by
+    // one test cannot leak into later describe blocks (Issue #3).
+    mockAccessScopeService.assertCanReadTask.mockReset();
+    mockAccessScopeService.assertCanAccessProject.mockReset();
   });
 
   describe('create (user mode)', () => {
@@ -118,7 +129,10 @@ describe('TimeTrackingService', () => {
 
     it('throws NotFoundException when task is missing', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.task.findUnique.mockResolvedValue(null);
+      // Issue #3: existence is enforced via AccessScopeService (404 vs 403).
+      mockAccessScopeService.assertCanReadTask.mockRejectedValue(
+        new NotFoundException('Tâche introuvable'),
+      );
       await expect(service.create(currentUser, dto)).rejects.toThrow(
         NotFoundException,
       );
@@ -127,7 +141,9 @@ describe('TimeTrackingService', () => {
     it('throws NotFoundException when project is missing', async () => {
       const projectOnly = { ...dto, taskId: undefined };
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.project.findUnique.mockResolvedValue(null);
+      mockAccessScopeService.assertCanAccessProject.mockRejectedValue(
+        new NotFoundException('Projet introuvable'),
+      );
       await expect(service.create(currentUser, projectOnly)).rejects.toThrow(
         NotFoundException,
       );
@@ -290,6 +306,107 @@ describe('TimeTrackingService', () => {
         taskId: 'task-1',
         projectId: undefined,
       });
+    });
+  });
+
+  describe('create — access scope (Issue #3)', () => {
+    const baseDto = {
+      date: '2025-01-01',
+      hours: 4,
+      activityType: 'DEVELOPMENT' as const,
+      taskId: 'task-1',
+      projectId: 'project-1',
+      description: 'scope test',
+    };
+
+    beforeEach(() => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: 'project-1',
+      });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+    });
+
+    it('throws ForbiddenException when caller cannot access the task', async () => {
+      mockAccessScopeService.assertCanReadTask.mockRejectedValue(
+        new ForbiddenException('Accès tâche non autorisé'),
+      );
+      await expect(service.create(currentUser, baseDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockPrismaService.timeEntry.create).not.toHaveBeenCalled();
+    });
+
+    it('throws ForbiddenException when caller cannot access the project (project-only entry)', async () => {
+      const projectOnly = { ...baseDto, taskId: undefined };
+      mockAccessScopeService.assertCanAccessProject.mockRejectedValue(
+        new ForbiddenException('Accès projet non autorisé'),
+      );
+      await expect(service.create(currentUser, projectOnly)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockPrismaService.timeEntry.create).not.toHaveBeenCalled();
+    });
+
+    it('persists entry when caller is in scope (asserts resolve)', async () => {
+      mockAccessScopeService.assertCanReadTask.mockResolvedValue(undefined);
+      mockAccessScopeService.assertCanAccessProject.mockResolvedValue(
+        undefined,
+      );
+      mockPrismaService.timeEntry.create.mockResolvedValue({ id: 'ok' });
+
+      await service.create(currentUser, baseDto);
+
+      expect(mockAccessScopeService.assertCanReadTask).toHaveBeenCalledWith(
+        'task-1',
+        currentUser,
+        ['time_tracking:manage_any'],
+      );
+      expect(
+        mockAccessScopeService.assertCanAccessProject,
+      ).toHaveBeenCalledWith('project-1', currentUser, [
+        'time_tracking:manage_any',
+      ]);
+      expect(mockPrismaService.timeEntry.create).toHaveBeenCalled();
+    });
+
+    it('honours time_tracking:manage_any bypass via access-scope (asserts resolve, entry persisted)', async () => {
+      // Bypass is applied inside AccessScopeService when the manage_any
+      // permission is in the bypass list — here we just confirm the service
+      // does not throw when both asserts resolve.
+      mockAccessScopeService.assertCanReadTask.mockResolvedValue(undefined);
+      mockAccessScopeService.assertCanAccessProject.mockResolvedValue(
+        undefined,
+      );
+      mockPrismaService.timeEntry.create.mockResolvedValue({ id: 'ok' });
+
+      await expect(service.create(currentUser, baseDto)).resolves.toBeDefined();
+    });
+
+    it('dismissal: throws ForbiddenException when caller cannot access the task', async () => {
+      const dismissalDto = {
+        date: '2025-01-01',
+        hours: 0,
+        activityType: 'OTHER' as const,
+        taskId: 'task-1',
+        isDismissal: true,
+      };
+      mockPrismaService.$transaction.mockImplementation(
+        async (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          cb(mockPrismaService),
+      );
+      mockAccessScopeService.assertCanReadTask.mockRejectedValue(
+        new ForbiddenException('Accès tâche non autorisé'),
+      );
+
+      await expect(service.create(currentUser, dismissalDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockPrismaService.timeEntry.findFirst).not.toHaveBeenCalled();
+      expect(mockPrismaService.timeEntry.create).not.toHaveBeenCalled();
     });
   });
 
