@@ -10,7 +10,7 @@
 
 | # | Title | Severity | Status | Branch / commit |
 |---|-------|----------|--------|-----------------|
-| 1 | Privilege escalation via user create / import (`roleCode` not gated by hierarchy) | **High** | ✅ Done — 7fa33c4 | 7fa33c4 |
+| 1 | Privilege escalation via user create / import (`roleCode` not gated by hierarchy) | **High** | ✅ Done — ef6b4e7 | ef6b4e7 |
 | 2 | Cross-tier password reset token issuance | **High** | ☐ Pending | — |
 | 3 | Time-tracking entries created on out-of-scope task / project | **High** | ☐ Pending | — |
 | 4 | E2E IDOR test contradicts service behavior (silent coercion vs 403) | **Medium** | ☐ Pending | — |
