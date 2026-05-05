@@ -13,7 +13,7 @@
 | 1 | Privilege escalation via user create / import (`roleCode` not gated by hierarchy) | **High** | ✅ Done — ef6b4e7 | ef6b4e7 |
 | 2 | Cross-tier password reset token issuance | **High** | ✅ Done — 24423e5 | 24423e5 |
 | 3 | Time-tracking entries created on out-of-scope task / project | **High** | ✅ Done — a05fb60 | a05fb60 |
-| 4 | E2E IDOR test contradicts service behavior (silent coercion vs 403) | **Medium** | ☐ Pending | — |
+| 4 | E2E IDOR test contradicts service behavior (silent coercion vs 403) | **Medium** | ✅ Done — f46e432 | f46e432 |
 
 Update this table at the **start** and **end** of every session. Set status to `🟡 In progress` when you begin and `✅ Done — <commit sha>` when merged.
 
