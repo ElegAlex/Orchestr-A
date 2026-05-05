@@ -60,8 +60,11 @@ export class UsersController {
     status: 403,
     description: 'Accès interdit',
   })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  create(
+    @Body() createUserDto: CreateUserDto,
+    @CurrentUser() caller: { role?: { code: string } | null },
+  ) {
+    return this.usersService.create(createUserDto, caller?.role?.code);
   }
 
   @Post('import/validate')
@@ -82,8 +85,14 @@ export class UsersController {
     status: 403,
     description: 'Accès interdit',
   })
-  validateImport(@Body() importUsersDto: ImportUsersDto) {
-    return this.usersService.validateImport(importUsersDto.users);
+  validateImport(
+    @Body() importUsersDto: ImportUsersDto,
+    @CurrentUser() caller: { role?: { code: string } | null },
+  ) {
+    return this.usersService.validateImport(
+      importUsersDto.users,
+      caller?.role?.code,
+    );
   }
 
   @Post('import')
@@ -103,8 +112,14 @@ export class UsersController {
     status: 403,
     description: 'Accès interdit',
   })
-  importUsers(@Body() importUsersDto: ImportUsersDto) {
-    return this.usersService.importUsers(importUsersDto.users);
+  importUsers(
+    @Body() importUsersDto: ImportUsersDto,
+    @CurrentUser() caller: { role?: { code: string } | null },
+  ) {
+    return this.usersService.importUsers(
+      importUsersDto.users,
+      caller?.role?.code,
+    );
   }
 
   @Get()

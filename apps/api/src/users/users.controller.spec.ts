@@ -94,10 +94,13 @@ describe('UsersController', () => {
       const expectedUser = { ...mockUser, ...createUserDto, id: 'new-user-id' };
       mockUsersService.create.mockResolvedValue(expectedUser);
 
-      const result = await controller.create(createUserDto);
+      const result = await controller.create(createUserDto, ADMIN_CALLER);
 
       expect(result).toEqual(expectedUser);
-      expect(mockUsersService.create).toHaveBeenCalledWith(createUserDto);
+      expect(mockUsersService.create).toHaveBeenCalledWith(
+        createUserDto,
+        'ADMIN',
+      );
       expect(mockUsersService.create).toHaveBeenCalledTimes(1);
     });
 
@@ -106,9 +109,9 @@ describe('UsersController', () => {
         new ConflictException('Cet email est déjà utilisé'),
       );
 
-      await expect(controller.create(createUserDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        controller.create(createUserDto, ADMIN_CALLER),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw ConflictException when login already exists', async () => {
@@ -116,9 +119,9 @@ describe('UsersController', () => {
         new ConflictException('Ce login est déjà utilisé'),
       );
 
-      await expect(controller.create(createUserDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        controller.create(createUserDto, ADMIN_CALLER),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw NotFoundException when department does not exist', async () => {
@@ -126,9 +129,9 @@ describe('UsersController', () => {
         new NotFoundException('Département introuvable'),
       );
 
-      await expect(controller.create(createUserDto)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.create(createUserDto, ADMIN_CALLER),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -517,9 +520,12 @@ describe('UsersController', () => {
       const preview = { valid: 2, invalid: 0, users: [] };
       mockUsersService.validateImport.mockResolvedValue(preview);
 
-      const result = await controller.validateImport({ users: [] } as any);
+      const result = await controller.validateImport(
+        { users: [] } as any,
+        ADMIN_CALLER,
+      );
 
-      expect(mockUsersService.validateImport).toHaveBeenCalledWith([]);
+      expect(mockUsersService.validateImport).toHaveBeenCalledWith([], 'ADMIN');
       expect(result).toEqual(preview);
     });
   });
@@ -529,9 +535,12 @@ describe('UsersController', () => {
       const importResult = { created: 2, failed: 0, errors: [] };
       mockUsersService.importUsers.mockResolvedValue(importResult);
 
-      const result = await controller.importUsers({ users: [] } as any);
+      const result = await controller.importUsers(
+        { users: [] } as any,
+        ADMIN_CALLER,
+      );
 
-      expect(mockUsersService.importUsers).toHaveBeenCalledWith([]);
+      expect(mockUsersService.importUsers).toHaveBeenCalledWith([], 'ADMIN');
       expect(result).toEqual(importResult);
     });
   });

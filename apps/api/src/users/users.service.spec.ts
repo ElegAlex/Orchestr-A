@@ -217,6 +217,164 @@ describe('UsersService', () => {
         'Un ou plusieurs services introuvables',
       );
     });
+
+    describe('hierarchy gate', () => {
+      const adminTargetDto = {
+        ...createUserDto,
+        email: 'newadmin@example.com',
+        login: 'newadmin',
+        roleCode: 'INSTITUTIONAL_ADMIN',
+      };
+
+      function mockRoleLookups(
+        roleByCode: Record<
+          string,
+          { id?: string; templateKey: string; isSystem?: boolean } | null
+        >,
+      ) {
+        mockPrismaService.role.findUnique.mockImplementation((args: any) => {
+          const code = args?.where?.code;
+          const role = roleByCode[code] ?? null;
+          return Promise.resolve(role);
+        });
+      }
+
+      it('throws ForbiddenException when ADMIN_DELEGATED tries to assign ADMIN-template role', async () => {
+        mockPrismaService.user.findFirst.mockResolvedValue(null);
+        mockPrismaService.department.findUnique.mockResolvedValue({
+          id: 'dept-1',
+          name: 'IT',
+        });
+        mockPrismaService.service.findMany.mockResolvedValue([
+          { id: 'service-1', name: 'Dev' },
+        ]);
+        mockRoleLookups({
+          INSTITUTIONAL_ADMIN: {
+            id: 'role-inst-admin',
+            templateKey: 'ADMIN',
+            isSystem: false,
+          },
+          RESPONSABLE: { templateKey: 'ADMIN_DELEGATED' },
+        });
+
+        await expect(service.create(adminTargetDto, 'RESPONSABLE')).rejects.toThrow(
+          'administrateur',
+        );
+        expect(mockPrismaService.user.create).not.toHaveBeenCalled();
+      });
+
+      it('throws ForbiddenException when caller rank is not strictly higher than target', async () => {
+        mockPrismaService.user.findFirst.mockResolvedValue(null);
+        mockPrismaService.department.findUnique.mockResolvedValue({
+          id: 'dept-1',
+          name: 'IT',
+        });
+        mockPrismaService.service.findMany.mockResolvedValue([
+          { id: 'service-1', name: 'Dev' },
+        ]);
+        mockRoleLookups({
+          PEER_MANAGER: {
+            id: 'role-peer',
+            templateKey: 'MANAGER',
+            isSystem: false,
+          },
+          MANAGER_CALLER: { templateKey: 'MANAGER' },
+        });
+
+        await expect(
+          service.create(
+            { ...createUserDto, roleCode: 'PEER_MANAGER' },
+            'MANAGER_CALLER',
+          ),
+        ).rejects.toThrow('rôles inférieurs');
+        expect(mockPrismaService.user.create).not.toHaveBeenCalled();
+      });
+
+      it('allows ADMIN to assign an institutional role bound to ADMIN template', async () => {
+        const mockDepartment = { id: 'dept-1', name: 'IT' };
+        const mockServices = [{ id: 'service-1', name: 'Dev' }];
+        mockPrismaService.user.findFirst.mockResolvedValue(null);
+        mockPrismaService.department.findUnique.mockResolvedValue(mockDepartment);
+        mockPrismaService.service.findMany.mockResolvedValue(mockServices);
+        mockRoleLookups({
+          INSTITUTIONAL_ADMIN: {
+            id: 'role-inst-admin',
+            templateKey: 'ADMIN',
+            isSystem: false,
+          },
+          ADMIN: { templateKey: 'ADMIN' },
+        });
+        mockPrismaService.user.create.mockResolvedValue({
+          id: 'new-admin',
+          email: adminTargetDto.email,
+          login: adminTargetDto.login,
+          firstName: 'New',
+          lastName: 'Admin',
+          roleId: 'role-inst-admin',
+          role: {
+            id: 'role-inst-admin',
+            code: 'INSTITUTIONAL_ADMIN',
+            label: 'Admin institutionnel',
+            templateKey: 'ADMIN',
+            isSystem: false,
+          },
+          departmentId: 'dept-1',
+          avatarUrl: null,
+          isActive: true,
+          createdAt: new Date(),
+          department: mockDepartment,
+          userServices: [],
+        });
+        mockPrismaService.userService.createMany.mockResolvedValue({ count: 1 });
+
+        const result = await service.create(adminTargetDto, 'ADMIN');
+
+        expect(result.email).toBe(adminTargetDto.email);
+        expect(mockPrismaService.user.create).toHaveBeenCalled();
+      });
+
+      it('allows ADMIN_DELEGATED to assign a strictly lower rank role', async () => {
+        const mockDepartment = { id: 'dept-1', name: 'IT' };
+        const mockServices = [{ id: 'service-1', name: 'Dev' }];
+        mockPrismaService.user.findFirst.mockResolvedValue(null);
+        mockPrismaService.department.findUnique.mockResolvedValue(mockDepartment);
+        mockPrismaService.service.findMany.mockResolvedValue(mockServices);
+        mockRoleLookups({
+          CONTRIBUTEUR: {
+            id: 'role-contrib',
+            templateKey: 'PROJECT_CONTRIBUTOR',
+            isSystem: false,
+          },
+          RESPONSABLE: { templateKey: 'ADMIN_DELEGATED' },
+        });
+        mockPrismaService.user.create.mockResolvedValue({
+          id: 'new-1',
+          email: createUserDto.email,
+          login: createUserDto.login,
+          firstName: 'New',
+          lastName: 'User',
+          roleId: 'role-contrib',
+          role: {
+            id: 'role-contrib',
+            code: 'CONTRIBUTEUR',
+            label: 'Contributeur',
+            templateKey: 'PROJECT_CONTRIBUTOR',
+            isSystem: false,
+          },
+          departmentId: 'dept-1',
+          avatarUrl: null,
+          isActive: true,
+          createdAt: new Date(),
+          department: mockDepartment,
+          userServices: [],
+        });
+        mockPrismaService.userService.createMany.mockResolvedValue({ count: 1 });
+
+        const result = await service.create(createUserDto, 'RESPONSABLE');
+
+        expect(result.email).toBe(createUserDto.email);
+      });
+    });
   });
 
   describe('findAll', () => {
@@ -864,6 +1022,155 @@ describe('UsersService', () => {
       expect(result.created).toBe(0);
       expect(result.errors).toBe(1);
       expect(result.errorDetails[0]).toContain('introuvable');
+    });
+
+    describe('hierarchy gate', () => {
+      const importedRoles = [
+        {
+          id: 'role-inst-admin',
+          code: 'INSTITUTIONAL_ADMIN',
+          templateKey: 'ADMIN',
+        },
+        {
+          id: 'role-contrib',
+          code: 'CONTRIBUTEUR',
+          templateKey: 'PROJECT_CONTRIBUTOR',
+        },
+      ];
+
+      function mockCallerRoleLookups(
+        roleByCode: Record<string, { templateKey: string } | null>,
+      ) {
+        mockPrismaService.role.findUnique.mockImplementation((args: any) => {
+          const code = args?.where?.code;
+          return Promise.resolve(roleByCode[code] ?? null);
+        });
+      }
+
+      it('skips ADMIN-template rows with error in result.errors when caller is ADMIN_DELEGATED', async () => {
+        const importData = [
+          {
+            email: 'attacker@example.com',
+            login: 'attacker',
+            password: 'Password1!',
+            firstName: 'A',
+            lastName: 'B',
+            roleCode: 'INSTITUTIONAL_ADMIN',
+          },
+          {
+            email: 'normal@example.com',
+            login: 'normal',
+            password: 'Password1!',
+            firstName: 'N',
+            lastName: 'O',
+            roleCode: 'CONTRIBUTEUR',
+          },
+        ];
+
+        mockPrismaService.department.findMany.mockResolvedValue([]);
+        mockPrismaService.service.findMany.mockResolvedValue([]);
+        mockPrismaService.role.findMany.mockResolvedValue(importedRoles);
+        mockPrismaService.user.findFirst.mockResolvedValue(null);
+        mockCallerRoleLookups({
+          INSTITUTIONAL_ADMIN: { templateKey: 'ADMIN' },
+          CONTRIBUTEUR: { templateKey: 'PROJECT_CONTRIBUTOR' },
+          RESPONSABLE: { templateKey: 'ADMIN_DELEGATED' },
+        });
+        mockPrismaService.user.create.mockResolvedValue({
+          id: 'new-normal',
+          email: 'normal@example.com',
+          login: 'normal',
+          firstName: 'N',
+          lastName: 'O',
+          roleId: 'role-contrib',
+          role: { id: 'role-contrib', code: 'CONTRIBUTEUR' },
+          departmentId: null,
+        });
+
+        const result = await service.importUsers(importData, 'RESPONSABLE');
+
+        expect(result.created).toBe(1);
+        expect(result.errors).toBeGreaterThanOrEqual(1);
+        const joined = result.errorDetails.join('\n');
+        expect(joined.toLowerCase()).toContain('admin');
+        expect(
+          result.createdUsers.some((u: any) => u.email === 'attacker@example.com'),
+        ).toBe(false);
+      });
+
+      it('allows ADMIN to import a row with ADMIN-template role', async () => {
+        const importData = [
+          {
+            email: 'newadmin@example.com',
+            login: 'newadmin',
+            password: 'Password1!',
+            firstName: 'A',
+            lastName: 'B',
+            roleCode: 'INSTITUTIONAL_ADMIN',
+          },
+        ];
+
+        mockPrismaService.department.findMany.mockResolvedValue([]);
+        mockPrismaService.service.findMany.mockResolvedValue([]);
+        mockPrismaService.role.findMany.mockResolvedValue(importedRoles);
+        mockPrismaService.user.findFirst.mockResolvedValue(null);
+        mockCallerRoleLookups({
+          INSTITUTIONAL_ADMIN: { templateKey: 'ADMIN' },
+          ADMIN: { templateKey: 'ADMIN' },
+        });
+        mockPrismaService.user.create.mockResolvedValue({
+          id: 'new-admin',
+          email: 'newadmin@example.com',
+          login: 'newadmin',
+          firstName: 'A',
+          lastName: 'B',
+          roleId: 'role-inst-admin',
+          role: { id: 'role-inst-admin', code: 'INSTITUTIONAL_ADMIN' },
+          departmentId: null,
+        });
+
+        const result = await service.importUsers(importData, 'ADMIN');
+
+        expect(result.created).toBe(1);
+        expect(result.createdUsers[0].email).toBe('newadmin@example.com');
+      });
+    });
+  });
+
+  describe('validateImport', () => {
+    it('flags ADMIN-template rows as errors when caller is ADMIN_DELEGATED', async () => {
+      const importData = [
+        {
+          email: 'attacker@example.com',
+          login: 'attacker',
+          password: 'Password1!',
+          firstName: 'A',
+          lastName: 'B',
+          roleCode: 'INSTITUTIONAL_ADMIN',
+        },
+      ];
+
+      mockPrismaService.department.findMany.mockResolvedValue([]);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.role.findMany.mockResolvedValue([
+        { code: 'INSTITUTIONAL_ADMIN' },
+      ]);
+      mockPrismaService.role.findUnique.mockImplementation((args: any) => {
+        const code = args?.where?.code;
+        if (code === 'INSTITUTIONAL_ADMIN')
+          return Promise.resolve({ templateKey: 'ADMIN' });
+        if (code === 'RESPONSABLE')
+          return Promise.resolve({ templateKey: 'ADMIN_DELEGATED' });
+        return Promise.resolve(null);
+      });
+
+      const result = await service.validateImport(importData, 'RESPONSABLE');
+
+      expect(result.summary.errors).toBeGreaterThanOrEqual(1);
+      expect(result.errors.length).toBeGreaterThanOrEqual(1);
+      const messages = result.errors.flatMap((e: any) => e.messages).join('\n');
+      expect(messages.toLowerCase()).toContain('admin');
     });
   });
 

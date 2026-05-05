@@ -110,6 +110,36 @@ export class UsersService {
     return callerRank > targetRank;
   }
 
+  /**
+   * Hiérarchie : refuse l'assignation d'un rôle bound au template ADMIN par
+   * un appelant non-ADMIN, ou d'un rôle de rang ≥ celui de l'appelant.
+   * Sans-op si `callerRoleCode` est absent (caller resolved upstream).
+   */
+  private async assertCanAssignRole(
+    callerRoleCode: string | null | undefined,
+    targetRoleCode: string | null | undefined,
+  ): Promise<void> {
+    if (!callerRoleCode || !targetRoleCode) return;
+    const [targetTemplateKey, callerTemplateKey] = await Promise.all([
+      this.resolveTemplateKey(targetRoleCode),
+      this.resolveTemplateKey(callerRoleCode),
+    ]);
+    if (targetTemplateKey === 'ADMIN' && callerTemplateKey !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Seul un administrateur peut attribuer un rôle rattaché au template ADMIN',
+      );
+    }
+    // ADMIN siège au sommet : peut attribuer n'importe quel rôle (y compris
+    // un autre rôle template ADMIN). Le rang-strict ne s'applique qu'aux
+    // niveaux inférieurs.
+    if (callerTemplateKey === 'ADMIN') return;
+    if (!(await this.canAssignRole(callerRoleCode, targetRoleCode))) {
+      throw new ForbiddenException(
+        'Vous ne pouvez attribuer que des rôles inférieurs au vôtre',
+      );
+    }
+  }
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly refreshTokenService: RefreshTokenService,
@@ -138,7 +168,9 @@ export class UsersService {
     return role.id;
   }
 
-  async create(createUserDto: CreateUserDto) {
+  async create(createUserDto: CreateUserDto, callerRoleCode?: string) {
+    await this.assertCanAssignRole(callerRoleCode, createUserDto.roleCode);
+
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [{ email: createUserDto.email }, { login: createUserDto.login }],
@@ -422,21 +454,8 @@ export class UsersService {
     // Hiérarchie : l'appelant ne peut attribuer qu'un rôle dont le template
     // est strictement inférieur au sien. Les templates ADMIN et ADMIN_DELEGATED
     // ne sont assignables que par un ADMIN (pas par un ADMIN_DELEGATED).
-    if (updateUserDto.roleCode && callerRoleCode) {
-      const targetTemplateKey = await this.resolveTemplateKey(
-        updateUserDto.roleCode,
-      );
-      const callerTemplateKey = await this.resolveTemplateKey(callerRoleCode);
-      if (targetTemplateKey === 'ADMIN' && callerTemplateKey !== 'ADMIN') {
-        throw new ForbiddenException(
-          'Seul un administrateur peut attribuer un rôle rattaché au template ADMIN',
-        );
-      }
-      if (!(await this.canAssignRole(callerRoleCode, updateUserDto.roleCode))) {
-        throw new ForbiddenException(
-          'Vous ne pouvez attribuer que des rôles inférieurs au vôtre',
-        );
-      }
+    if (updateUserDto.roleCode) {
+      await this.assertCanAssignRole(callerRoleCode, updateUserDto.roleCode);
     }
 
     if (updateUserDto.email || updateUserDto.login) {
@@ -881,7 +900,10 @@ export class UsersService {
     });
   }
 
-  async importUsers(users: ImportUserDto[]): Promise<ImportUsersResultDto> {
+  async importUsers(
+    users: ImportUserDto[],
+    callerRoleCode?: string,
+  ): Promise<ImportUsersResultDto> {
     const result: ImportUsersResultDto = {
       created: 0,
       skipped: 0,
@@ -982,6 +1004,16 @@ export class UsersService {
           continue;
         }
 
+        try {
+          await this.assertCanAssignRole(callerRoleCode, userData.roleCode);
+        } catch (err) {
+          result.errors++;
+          const message =
+            err instanceof Error ? err.message : 'Rôle non assignable';
+          result.errorDetails.push(`Ligne ${rowNum}: ${message}`);
+          continue;
+        }
+
         const passwordHash = await bcrypt.hash(userData.password, 12);
 
         const user = await this.prisma.user.create({
@@ -1040,6 +1072,7 @@ export class UsersService {
    */
   async validateImport(
     users: ImportUserDto[],
+    callerRoleCode?: string,
   ): Promise<UsersValidationPreviewDto> {
     const result: UsersValidationPreviewDto = {
       valid: [],
@@ -1169,6 +1202,20 @@ export class UsersService {
         result.errors.push(previewItem);
         result.summary.errors++;
         continue;
+      }
+
+      if (userData.roleCode) {
+        try {
+          await this.assertCanAssignRole(callerRoleCode, userData.roleCode);
+        } catch (err) {
+          previewItem.status = 'error';
+          previewItem.messages.push(
+            err instanceof Error ? err.message : 'Rôle non assignable',
+          );
+          result.errors.push(previewItem);
+          result.summary.errors++;
+          continue;
+        }
       }
 
       if (userData.departmentName) {
