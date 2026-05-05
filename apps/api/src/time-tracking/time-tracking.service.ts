@@ -265,10 +265,10 @@ export class TimeTrackingService {
   /**
    * Récupérer toutes les entrées avec pagination et filtres.
    *
-   * Contrôle d'accès (D8 PO 2026-04-19) : coercion silencieuse — un appelant
-   * sans `time_tracking:view_any` qui filtre par `userId` autre que le sien
-   * voit son filtre **coercé** vers son propre userId. Aucun 403 surprise.
-   * Aligné sur le pattern coercion des modules tasks/leaves/telework/events.
+   * Contrôle d'accès (Security Issue #4, 2026-05-05) : strict 403. Un appelant
+   * qui filtre par `userId` tiers sans `time_tracking:view_any` reçoit une
+   * `ForbiddenException`. Pas de coercion silencieuse — le client doit voir
+   * un refus explicite plutôt qu'un dataset substitué.
    */
   async findAll(
     currentUser: { id: string; role: string | null },
@@ -287,11 +287,10 @@ export class TimeTrackingService {
     );
     const hasViewAny = permissions.includes(VIEW_ANY_PERMISSION);
 
-    // D8 : coercion silencieuse au lieu de 403. Si l'appelant veut filtrer un
-    // userId tiers sans la perm view_any, on le redirige vers ses propres
-    // entries (cohérent avec readAll pattern des autres modules).
     if (userId && userId !== currentUser.id && !hasViewAny) {
-      userId = currentUser.id;
+      throw new ForbiddenException(
+        'time_tracking:view_any requise pour filtrer par utilisateur tiers',
+      );
     }
 
     const safeLimit = Math.min(limit || 1000, 1000);

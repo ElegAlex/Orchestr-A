@@ -443,21 +443,14 @@ describe('TimeTrackingService', () => {
       );
     });
 
-    it('coerces userId to currentUser.id when filtering by another user without time_tracking:view_any (D8 PO 2026-04-19)', async () => {
-      // D8 PO : remplacement du 403 historique par coercion silencieuse —
-      // alignement avec tasks/leaves/telework/events qui coercent eux aussi.
+    it('throws ForbiddenException when filtering by another user without time_tracking:view_any (Security Issue #4)', async () => {
       mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'time_tracking:read',
       ]);
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
-      mockPrismaService.timeEntry.count.mockResolvedValue(0);
-      await service.findAll(currentUser, 1, 10, 'user-2');
-      // Le filtre cross-user a été coercé : where.userId === currentUser.id.
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ userId: currentUser.id }),
-        }),
-      );
+      await expect(
+        service.findAll(currentUser, 1, 10, 'user-2'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockPrismaService.timeEntry.findMany).not.toHaveBeenCalled();
     });
 
     it('allows filtering by another user when time_tracking:view_any is granted', async () => {
