@@ -14,6 +14,15 @@ import { RegisterDto } from './dto/register.dto';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AuditService, AuditAction } from '../audit/audit.service';
 import { RefreshTokenService, RefreshTokenMeta } from './refresh-token.service';
+import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
+
+export interface ResetTokenResponse {
+  ok: true;
+  /** Présent uniquement si AUTH_EXPOSE_RESET_TOKEN=true (dev/E2E). */
+  token?: string;
+  /** Présent uniquement si AUTH_EXPOSE_RESET_TOKEN=true (dev/E2E). */
+  resetUrl?: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -24,6 +33,7 @@ export class AuthService {
     private readonly permissionsService: PermissionsService,
     private readonly auditService: AuditService,
     private readonly refreshTokenService: RefreshTokenService,
+    private readonly roleHierarchy: RoleHierarchyService,
   ) {}
 
   private getAccessTtl(): string {
@@ -331,28 +341,50 @@ export class AuthService {
     return [...perms];
   }
 
+  /**
+   * Génère un token de reset password. Deux gardes critiques :
+   *
+   * 1. Hiérarchie : un appelant ne peut viser que des comptes dont le template
+   *    est strictement inférieur au sien (mêmes règles que `users.update`).
+   *    Sans cette garde, n'importe quel détenteur de `users:reset_password`
+   *    (ex. ADMIN_DELEGATED) pouvait s'auto-promouvoir en réinitialisant le
+   *    mot de passe d'un ADMIN. Self-reset (caller==target) → 403 par
+   *    construction ; le bon chemin self-service est `/auth/change-password`.
+   *
+   * 2. Disclosure : le token brut n'est exposé dans la réponse HTTP que si
+   *    `AUTH_EXPOSE_RESET_TOKEN=true` (dev / E2E). En prod, l'admin reçoit
+   *    `{ ok: true }` ; le canal de transport (mail / SMS) reste à câbler.
+   *    On évite délibérément de logger l'URL en clair dans l'audit (qui est
+   *    persistée et indexée), seul l'événement est tracé.
+   */
   async generateResetToken(
     userId: string,
     createdById: string,
-  ): Promise<{ token: string; resetUrl: string }> {
-    // Vérifier que l'utilisateur cible existe
+  ): Promise<ResetTokenResponse> {
     const targetUser = await this.prisma.user.findUnique({
       where: { id: userId },
+      select: { id: true, login: true, role: { select: { code: true } } },
     });
     if (!targetUser) {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    // Invalider les tokens précédents pour ce user
+    const caller = await this.prisma.user.findUnique({
+      where: { id: createdById },
+      select: { role: { select: { code: true } } },
+    });
+    await this.roleHierarchy.assertCanAssignRole(
+      caller?.role?.code,
+      targetUser.role?.code,
+    );
+
     await this.prisma.passwordResetToken.updateMany({
       where: { userId, usedAt: null },
       data: { usedAt: new Date() },
     });
 
-    // Générer un nouveau token
     const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // +24h
-
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     await this.prisma.passwordResetToken.create({
@@ -364,9 +396,6 @@ export class AuthService {
       },
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4001';
-    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
-
     this.auditService.log({
       action: AuditAction.PASSWORD_CHANGED,
       userId: createdById,
@@ -374,7 +403,15 @@ export class AuthService {
       success: true,
     });
 
-    return { token, resetUrl };
+    const exposeToken =
+      this.configService.get<string>('AUTH_EXPOSE_RESET_TOKEN') === 'true';
+    if (!exposeToken) {
+      return { ok: true };
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4001';
+    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+    return { ok: true, token, resetUrl };
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {

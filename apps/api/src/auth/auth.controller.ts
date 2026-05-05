@@ -264,16 +264,22 @@ export class AuthController {
   })
   @ApiResponse({
     status: 201,
-    description: 'Token généré',
+    description:
+      'Token généré. `token` et `resetUrl` ne sont retournés que si AUTH_EXPOSE_RESET_TOKEN=true (dev/E2E) ; sinon la réponse est { ok: true } et le canal de délivrance (mail/SMS) prend le relais.',
     schema: {
       example: {
+        ok: true,
         token: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
         resetUrl: 'http://localhost:4001/reset-password?token=...',
       },
     },
   })
   @ApiResponse({ status: 401, description: 'Non autorisé' })
-  @ApiResponse({ status: 403, description: 'Permission insuffisante' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Permission insuffisante OU appelant sans rang strictement supérieur à la cible (incl. self-reset)',
+  })
   @ApiResponse({ status: 404, description: 'Utilisateur introuvable' })
   async generateResetToken(
     @Body() dto: ResetPasswordTokenDto,

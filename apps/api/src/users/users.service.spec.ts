@@ -26,6 +26,7 @@ vi.mock('../common/upload/magic-bytes.validator', () => ({
   assertMagicBytes: vi.fn().mockResolvedValue(undefined),
 }));
 import { RefreshTokenService } from '../auth/refresh-token.service';
+import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -108,6 +109,11 @@ describe('UsersService', () => {
           provide: RefreshTokenService,
           useValue: { revokeAllForUser: vi.fn().mockResolvedValue(undefined) },
         },
+        // Use the REAL RoleHierarchyService against the mock prisma. The
+        // Issue 1 "hierarchy gate" tests stub `prisma.role.findUnique` and
+        // rely on the assertion calling through; mocking the service flat
+        // would silently make those tests pass when they shouldn't.
+        RoleHierarchyService,
       ],
     }).compile();
 

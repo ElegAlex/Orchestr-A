@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { OwnershipService } from './services/ownership.service';
 import { AccessScopeService } from './services/access-scope.service';
+import { RoleHierarchyService } from './services/role-hierarchy.service';
 import { OwnershipGuard } from './guards/ownership.guard';
 import { RbacModule } from '../rbac/rbac.module';
 
@@ -12,12 +13,19 @@ import { RbacModule } from '../rbac/rbac.module';
   providers: [
     OwnershipService,
     AccessScopeService,
+    RoleHierarchyService,
     OwnershipGuard,
     {
       provide: APP_GUARD,
       useClass: OwnershipGuard,
     },
   ],
-  exports: [OwnershipService, AccessScopeService, OwnershipGuard, RbacModule],
+  exports: [
+    OwnershipService,
+    AccessScopeService,
+    RoleHierarchyService,
+    OwnershipGuard,
+    RbacModule,
+  ],
 })
 export class CommonModule {}

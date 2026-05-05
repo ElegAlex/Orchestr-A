@@ -396,12 +396,22 @@ export default function UsersPage() {
     setShowResetModal(true);
     try {
       const response = await import("@/lib/api").then(({ api }) =>
-        api.post<{ token: string; resetUrl: string }>(
+        api.post<{ ok: true; token?: string; resetUrl?: string }>(
           "/auth/reset-password-token",
           { userId },
         ),
       );
-      setResetLink(response.data.resetUrl);
+      // En production AUTH_EXPOSE_RESET_TOKEN=false → pas de resetUrl ;
+      // l'admin reçoit une confirmation, le lien sera transmis par mail/SMS.
+      if (response.data.resetUrl) {
+        setResetLink(response.data.resetUrl);
+      } else {
+        setResetLink(null);
+        toast.success(
+          "Token de réinitialisation généré. Le lien sera transmis à l'utilisateur par mail.",
+        );
+        setShowResetModal(false);
+      }
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(

@@ -325,6 +325,7 @@ describe('AuthController', () => {
   describe('generateResetToken', () => {
     it('should return token and resetUrl for valid userId', async () => {
       const expected = {
+        ok: true as const,
         token: 'uuid-token',
         resetUrl: 'http://localhost:4001/reset-password?token=uuid-token',
       };

@@ -3,9 +3,9 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -40,109 +40,10 @@ export interface UserDependenciesResponse {
 
 @Injectable()
 export class UsersService {
-  /**
-   * Hiérarchie par templateKey — utilisée pour restreindre l'assignation
-   * (un appelant ne peut attribuer qu'un rôle dont le template est
-   * strictement inférieur au sien). Les templates hors hiérarchie (observers,
-   * external, etc.) reçoivent le rang 0 par défaut.
-   *
-   * Post-V4 : les codes de rôles (institutionnels) varient d'une collectivité
-   * à l'autre (ex. ADMIN_DSI, MANAGER_CFA_FLUX), seule la templateKey est
-   * stable. La hiérarchie se raisonne donc sur le templateKey.
-   */
-  private readonly TEMPLATE_HIERARCHY: Record<string, number> = {
-    BASIC_USER: 1,
-    STAGIAIRE_ALTERNANT: 1,
-    EXTERNAL_PRESTATAIRE: 1,
-    PROJECT_CONTRIBUTOR_LIGHT: 2,
-    PROJECT_CONTRIBUTOR: 2,
-    IT_SUPPORT: 2,
-    FUNCTIONAL_REFERENT: 2,
-    DATA_ANALYST: 2,
-    HR_OFFICER_LIGHT: 2,
-    PROJECT_LEAD_JUNIOR: 3,
-    PROJECT_LEAD: 3,
-    TECHNICAL_LEAD: 3,
-    IT_INFRASTRUCTURE: 3,
-    HR_OFFICER: 3,
-    CONTROLLER: 3,
-    BUDGET_ANALYST: 3,
-    THIRD_PARTY_MANAGER: 3,
-    OBSERVER_FULL: 3,
-    OBSERVER_HR_ONLY: 3,
-    OBSERVER_PROJECTS_ONLY: 3,
-    MANAGER_PROJECT_FOCUS: 4,
-    MANAGER_HR_FOCUS: 4,
-    MANAGER: 4,
-    PORTFOLIO_MANAGER: 5,
-    ADMIN_DELEGATED: 5,
-    ADMIN: 6,
-  };
-
-  /**
-   * Résout le templateKey d'un rôle par son code. Null si rôle introuvable.
-   */
-  private async resolveTemplateKey(
-    code: string | null | undefined,
-  ): Promise<string | null> {
-    if (!code) return null;
-    const role = await this.prisma.role.findUnique({
-      where: { code },
-      select: { templateKey: true },
-    });
-    return role?.templateKey ?? null;
-  }
-
-  private async canAssignRole(
-    callerRoleCode: string | null | undefined,
-    targetRoleCode: string | null | undefined,
-  ): Promise<boolean> {
-    const [callerTpl, targetTpl] = await Promise.all([
-      this.resolveTemplateKey(callerRoleCode),
-      this.resolveTemplateKey(targetRoleCode),
-    ]);
-    const callerRank = callerTpl
-      ? (this.TEMPLATE_HIERARCHY[callerTpl] ?? 0)
-      : 0;
-    const targetRank = targetTpl
-      ? (this.TEMPLATE_HIERARCHY[targetTpl] ?? 0)
-      : 0;
-    return callerRank > targetRank;
-  }
-
-  /**
-   * Hiérarchie : refuse l'assignation d'un rôle bound au template ADMIN par
-   * un appelant non-ADMIN, ou d'un rôle de rang ≥ celui de l'appelant.
-   * Sans-op si `callerRoleCode` est absent (caller resolved upstream).
-   */
-  private async assertCanAssignRole(
-    callerRoleCode: string | null | undefined,
-    targetRoleCode: string | null | undefined,
-  ): Promise<void> {
-    if (!callerRoleCode || !targetRoleCode) return;
-    const [targetTemplateKey, callerTemplateKey] = await Promise.all([
-      this.resolveTemplateKey(targetRoleCode),
-      this.resolveTemplateKey(callerRoleCode),
-    ]);
-    if (targetTemplateKey === 'ADMIN' && callerTemplateKey !== 'ADMIN') {
-      throw new ForbiddenException(
-        'Seul un administrateur peut attribuer un rôle rattaché au template ADMIN',
-      );
-    }
-    // ADMIN siège au sommet : peut attribuer n'importe quel rôle (y compris
-    // un autre rôle template ADMIN). Le rang-strict ne s'applique qu'aux
-    // niveaux inférieurs.
-    if (callerTemplateKey === 'ADMIN') return;
-    if (!(await this.canAssignRole(callerRoleCode, targetRoleCode))) {
-      throw new ForbiddenException(
-        'Vous ne pouvez attribuer que des rôles inférieurs au vôtre',
-      );
-    }
-  }
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly refreshTokenService: RefreshTokenService,
+    private readonly roleHierarchy: RoleHierarchyService,
   ) {}
 
   /**
@@ -169,7 +70,7 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto, callerRoleCode?: string) {
-    await this.assertCanAssignRole(callerRoleCode, createUserDto.roleCode);
+    await this.roleHierarchy.assertCanAssignRole(callerRoleCode, createUserDto.roleCode);
 
     const existingUser = await this.prisma.user.findFirst({
       where: {
@@ -455,7 +356,7 @@ export class UsersService {
     // est strictement inférieur au sien. Les templates ADMIN et ADMIN_DELEGATED
     // ne sont assignables que par un ADMIN (pas par un ADMIN_DELEGATED).
     if (updateUserDto.roleCode) {
-      await this.assertCanAssignRole(callerRoleCode, updateUserDto.roleCode);
+      await this.roleHierarchy.assertCanAssignRole(callerRoleCode, updateUserDto.roleCode);
     }
 
     if (updateUserDto.email || updateUserDto.login) {
@@ -1005,7 +906,7 @@ export class UsersService {
         }
 
         try {
-          await this.assertCanAssignRole(callerRoleCode, userData.roleCode);
+          await this.roleHierarchy.assertCanAssignRole(callerRoleCode, userData.roleCode);
         } catch (err) {
           result.errors++;
           const message =
@@ -1206,7 +1107,7 @@ export class UsersService {
 
       if (userData.roleCode) {
         try {
-          await this.assertCanAssignRole(callerRoleCode, userData.roleCode);
+          await this.roleHierarchy.assertCanAssignRole(callerRoleCode, userData.roleCode);
         } catch (err) {
           previewItem.status = 'error';
           previewItem.messages.push(

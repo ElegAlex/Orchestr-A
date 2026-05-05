@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  UnauthorizedException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -10,6 +14,7 @@ import { PermissionsService } from '../rbac/permissions.service';
 import { AuditService } from '../audit/audit.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { ConfigService } from '@nestjs/config';
+import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
 
 vi.mock('bcrypt');
 
@@ -82,8 +87,13 @@ describe('AuthService', () => {
     get: vi.fn().mockImplementation((key: string) => {
       if (key === 'JWT_ACCESS_TTL') return '15m';
       if (key === 'JWT_EXPIRES_IN') return undefined;
+      if (key === 'AUTH_EXPOSE_RESET_TOKEN') return 'true';
       return undefined;
     }),
+  };
+
+  const mockRoleHierarchy = {
+    assertCanAssignRole: vi.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -113,6 +123,10 @@ describe('AuthService', () => {
         {
           provide: RefreshTokenService,
           useValue: mockRefreshTokenService,
+        },
+        {
+          provide: RoleHierarchyService,
+          useValue: mockRoleHierarchy,
         },
       ],
     }).compile();
@@ -335,8 +349,42 @@ describe('AuthService', () => {
   });
 
   describe('generateResetToken', () => {
-    it('should generate a reset token and invalidate previous ones', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+    /**
+     * Le service fait deux lookups successifs : target user (avec role.code),
+     * puis caller (avec role.code). On programme `findUnique` pour répondre à
+     * la requête courante en inspectant `where.id`.
+     */
+    function arrangeUsers(opts: {
+      target?: { id: string; login: string; roleCode: string | null } | null;
+      caller?: { roleCode: string | null } | null;
+    }) {
+      const { target, caller } = opts;
+      mockPrismaService.user.findUnique.mockImplementation(
+        ({ where }: { where: { id: string } }) => {
+          if (target && where.id === target.id) {
+            return Promise.resolve({
+              id: target.id,
+              login: target.login,
+              role: target.roleCode ? { code: target.roleCode } : null,
+            });
+          }
+          if (caller !== undefined) {
+            return Promise.resolve(
+              caller
+                ? { role: caller.roleCode ? { code: caller.roleCode } : null }
+                : null,
+            );
+          }
+          return Promise.resolve(null);
+        },
+      );
+    }
+
+    it('should generate a reset token and invalidate previous ones (caller above target)', async () => {
+      arrangeUsers({
+        target: { id: 'user-id-1', login: 'jdoe', roleCode: 'CONTRIBUTEUR' },
+        caller: { roleCode: 'ADMIN' },
+      });
       mockPrismaService.passwordResetToken.updateMany.mockResolvedValue({
         count: 1,
       });
@@ -347,9 +395,14 @@ describe('AuthService', () => {
 
       const result = await service.generateResetToken('user-id-1', 'admin-id');
 
-      expect(result).toHaveProperty('token');
-      expect(result).toHaveProperty('resetUrl');
-      expect(result.resetUrl).toContain(result.token);
+      expect(mockRoleHierarchy.assertCanAssignRole).toHaveBeenCalledWith(
+        'ADMIN',
+        'CONTRIBUTEUR',
+      );
+      expect(result.ok).toBe(true);
+      // AUTH_EXPOSE_RESET_TOKEN=true in mockConfigService → fields present
+      expect(result.token).toBeDefined();
+      expect(result.resetUrl).toContain(result.token!);
       expect(
         mockPrismaService.passwordResetToken.updateMany,
       ).toHaveBeenCalledWith(
@@ -374,6 +427,53 @@ describe('AuthService', () => {
       await expect(
         service.generateResetToken('nonexistent-id', 'admin-id'),
       ).rejects.toThrow('Utilisateur introuvable');
+    });
+
+    it('should throw ForbiddenException when caller is not above target (Issue 2: cross-tier reset)', async () => {
+      arrangeUsers({
+        target: { id: 'admin-id', login: 'admin', roleCode: 'ADMIN' },
+        caller: { roleCode: 'ADMIN_DELEGATED' },
+      });
+      mockRoleHierarchy.assertCanAssignRole.mockRejectedValueOnce(
+        new ForbiddenException('cross-tier'),
+      );
+
+      await expect(
+        service.generateResetToken('admin-id', 'delegated-id'),
+      ).rejects.toThrow(ForbiddenException);
+
+      // Aucun token ne doit être créé si la garde refuse
+      expect(
+        mockPrismaService.passwordResetToken.create,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should NOT expose token/resetUrl when AUTH_EXPOSE_RESET_TOKEN is false (Issue 2: disclosure)', async () => {
+      mockConfigService.get.mockImplementationOnce((key: string) => {
+        if (key === 'AUTH_EXPOSE_RESET_TOKEN') return 'false';
+        return undefined;
+      });
+      // Une seule occurrence de override → on remet en place pour les autres
+      // appels (mockImplementationOnce ne couvre qu'un appel) ; le service
+      // n'invoque get('AUTH_EXPOSE_RESET_TOKEN') qu'une fois par requête, OK.
+      arrangeUsers({
+        target: { id: 'user-id-1', login: 'jdoe', roleCode: 'CONTRIBUTEUR' },
+        caller: { roleCode: 'ADMIN' },
+      });
+      mockPrismaService.passwordResetToken.updateMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.passwordResetToken.create.mockResolvedValue({
+        id: 'token-id',
+      });
+
+      const result = await service.generateResetToken('user-id-1', 'admin-id');
+
+      expect(result).toEqual({ ok: true });
+      expect(result).not.toHaveProperty('token');
+      expect(result).not.toHaveProperty('resetUrl');
+      // Le token doit quand même être persisté en DB pour usage ultérieur
+      expect(mockPrismaService.passwordResetToken.create).toHaveBeenCalled();
     });
   });
 
