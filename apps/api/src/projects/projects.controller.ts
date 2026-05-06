@@ -32,6 +32,7 @@ import {
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
 import { ProjectStatus } from 'database';
+import { ArchivedFilter } from './dto/archived-filter.dto';
 
 @ApiTags('projects')
 @Controller('projects')
@@ -80,6 +81,7 @@ export class ProjectsController {
     type: String,
     description: "CSV d'UUIDs de clients (filtre OR)",
   })
+  @ApiQuery({ name: 'archived', required: false, enum: ArchivedFilter })
   @ApiResponse({
     status: 200,
     description: 'Liste des projets',
@@ -91,6 +93,7 @@ export class ProjectsController {
     @CurrentUser('id') userId?: string,
     @CurrentUserRoleCode() userRole?: string | null,
     @Query('clients') clients?: string,
+    @Query('archived') archived?: ArchivedFilter,
   ) {
     return this.projectsService.findAll(
       page,
@@ -99,6 +102,7 @@ export class ProjectsController {
       userId,
       userRole ?? undefined,
       clients,
+      archived,
     );
   }
 

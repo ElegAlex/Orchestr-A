@@ -17,6 +17,7 @@ import {
 } from '../common/services/access-scope.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { ProjectStatus, TaskStatus } from 'database';
+import { ArchivedFilter, archivedWhere } from './dto/archived-filter.dto';
 
 /**
  * Caller shape accepted by mutation methods for ownership enforcement.
@@ -229,6 +230,7 @@ export class ProjectsService {
     userId?: string,
     userRole?: string,
     clients?: string,
+    archived: ArchivedFilter = ArchivedFilter.ACTIVE,
   ) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
@@ -268,7 +270,12 @@ export class ProjectsService {
       }
     }
 
-    const where = { ...baseFilter, ...membershipFilter, ...clientsFilter };
+    const where = {
+      ...baseFilter,
+      ...membershipFilter,
+      ...clientsFilter,
+      ...archivedWhere(archived),
+    };
 
     const [projects, total] = await Promise.all([
       this.prisma.project.findMany({

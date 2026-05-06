@@ -16,6 +16,7 @@ import {
   TaskStatus,
   MilestoneStatus,
 } from '../__mocks__/database';
+import { ArchivedFilter } from './dto/archived-filter.dto';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -243,7 +244,7 @@ describe('ProjectsService', () => {
 
       expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { status: ProjectStatus.ACTIVE },
+          where: { status: ProjectStatus.ACTIVE, archivedAt: null },
         }),
       );
     });
@@ -256,7 +257,7 @@ describe('ProjectsService', () => {
 
       expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: {},
+          where: { archivedAt: null },
         }),
       );
     });
@@ -315,11 +316,11 @@ describe('ProjectsService', () => {
         // Aucun filtre de membership appliqué — where ne doit pas contenir members
         expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: {},
+            where: { archivedAt: null },
           }),
         );
         expect(mockPrismaService.project.count).toHaveBeenCalledWith({
-          where: {},
+          where: { archivedAt: null },
         });
       });
 
@@ -335,7 +336,7 @@ describe('ProjectsService', () => {
 
         expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: {},
+            where: { archivedAt: null },
           }),
         );
       });
@@ -352,7 +353,7 @@ describe('ProjectsService', () => {
 
         expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: {},
+            where: { archivedAt: null },
           }),
         );
       });
@@ -368,6 +369,7 @@ describe('ProjectsService', () => {
           expect.objectContaining({
             where: {
               members: { some: { userId: 'contrib-id' } },
+              archivedAt: null,
             },
           }),
         );
@@ -384,6 +386,7 @@ describe('ProjectsService', () => {
           expect.objectContaining({
             where: {
               members: { some: { userId: 'obs-id' } },
+              archivedAt: null,
             },
           }),
         );
@@ -400,6 +403,7 @@ describe('ProjectsService', () => {
           expect.objectContaining({
             where: {
               members: { some: { userId: 'ref-id' } },
+              archivedAt: null,
             },
           }),
         );
@@ -414,7 +418,7 @@ describe('ProjectsService', () => {
 
         expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: { status: ProjectStatus.ACTIVE },
+            where: { status: ProjectStatus.ACTIVE, archivedAt: null },
           }),
         );
       });
@@ -437,6 +441,7 @@ describe('ProjectsService', () => {
             where: {
               status: ProjectStatus.ACTIVE,
               members: { some: { userId: 'contrib-id' } },
+              archivedAt: null,
             },
           }),
         );
@@ -454,7 +459,7 @@ describe('ProjectsService', () => {
 
         expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: {},
+            where: { archivedAt: null },
           }),
         );
       });
@@ -484,6 +489,7 @@ describe('ProjectsService', () => {
           expect.objectContaining({
             where: {
               clients: { some: { clientId: { in: [clientId1, clientId2] } } },
+              archivedAt: null,
             },
           }),
         );
@@ -535,6 +541,44 @@ describe('ProjectsService', () => {
           { id: clientId1, name: 'ACME Corp' },
           { id: clientId2, name: 'Beta SA' },
         ]);
+      });
+    });
+
+    // ------------------------------------------
+    // Filtre archived
+    // ------------------------------------------
+    describe('archived filter', () => {
+      it('default findAll excludes archived projects (archivedAt: null)', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([]);
+        mockPrismaService.project.count.mockResolvedValue(0);
+
+        await service.findAll(1, 10);
+        const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+          where: Record<string, unknown>;
+        };
+        expect(JSON.stringify(callArgs.where)).toContain('"archivedAt":null');
+      });
+
+      it('archived=archived returns only archived projects', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([]);
+        mockPrismaService.project.count.mockResolvedValue(0);
+
+        await service.findAll(1, 10, undefined, undefined, undefined, undefined, ArchivedFilter.ARCHIVED);
+        const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+          where: Record<string, unknown>;
+        };
+        expect(JSON.stringify(callArgs.where)).toContain('"archivedAt":{"not":null}');
+      });
+
+      it('archived=all does not filter on archivedAt', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([]);
+        mockPrismaService.project.count.mockResolvedValue(0);
+
+        await service.findAll(1, 10, undefined, undefined, undefined, undefined, ArchivedFilter.ALL);
+        const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+          where: Record<string, unknown>;
+        };
+        expect(JSON.stringify(callArgs.where)).not.toContain('archivedAt');
       });
     });
   });
