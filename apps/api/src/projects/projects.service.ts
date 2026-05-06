@@ -424,6 +424,15 @@ export class ProjectsService {
             avatarPreset: true,
           },
         },
+        archivedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
+        },
         members: {
           include: {
             user: {
