@@ -95,91 +95,92 @@ test.describe("Project archive", () => {
         `POST /api/projects/${projectId}/archive should return 200`,
       ).toBe(200);
 
-      // ── afterEach cleanup: always unarchive, even if assertions below fail ─
-      // We register it before the assertions so it fires on failure too.
-      test.afterEach(async () => {
+      // ── Cleanup guard via try/finally — always unarchive even on failure ──
+      // (test.afterEach cannot be called from inside a test body in Playwright)
+      try {
+        // ── 4. /fr/projects — default view (toggle OFF): project not visible ──
+        await page.goto("/fr/projects");
+        await page.waitForLoadState("networkidle");
+
+        // Give the page a moment for hydration / query fetch
+        await page.waitForTimeout(800);
+
+        // Project name must NOT appear in the default list
+        await expect(
+          page.getByText(projectName, { exact: true }).first(),
+        ).not.toBeVisible({ timeout: 5000 });
+
+        // ── 5. Toggle "Afficher les projets archivés" ON ────────────────────
+        const toggle = page.getByLabel(/projets archivés/i);
+        await expect(toggle).toBeVisible({ timeout: 10000 });
+        await toggle.check();
+
+        // Wait for the list to reload
+        await page.waitForTimeout(800);
+
+        // Project name must now appear
+        await expect(
+          page.getByText(projectName, { exact: true }).first(),
+        ).toBeVisible({ timeout: 10000 });
+
+        // "Archivée" badge must appear on the row that carries the project name.
+        // We locate the h3 that contains the name (see projects/page.tsx: the name
+        // is in <h3> and the badge <span> is a sibling inside the same <h3>).
+        const projectNameHeading = page
+          .getByRole("heading", { name: projectName })
+          .first();
+        await expect(projectNameHeading).toBeVisible({ timeout: 5000 });
+        await expect(
+          projectNameHeading.locator("span", { hasText: "Archivée" }),
+        ).toBeVisible({ timeout: 5000 });
+
+        // ── 6. Navigate directly to /fr/projects/:id — banner visible ───────
+        await page.goto(`/fr/projects/${projectId}`);
+        await page.waitForLoadState("networkidle");
+        await expect(
+          page.getByRole("heading", { name: /Projet archivé/i }),
+        ).toBeVisible({ timeout: 15000 });
+
+        // ── 7. /api/analytics — project id NOT in projectDetails ─────────────
+        const analyticsRes = await request.get(`${baseURL}/api/analytics`, {
+          headers: authHeaders,
+        });
+        expect(analyticsRes.status(), "GET /api/analytics should succeed").toBe(200);
+
+        const analyticsBody = await analyticsRes.json();
+        // Response: { metrics, projectProgressData, taskStatusData, projectDetails: [{ id, ... }] }
+        const detailIds: string[] = (analyticsBody.projectDetails ?? []).map(
+          (p: { id: string }) => p.id,
+        );
+        expect(
+          detailIds,
+          `Archived project ${projectId} (${projectName}) must be excluded from /api/analytics projectDetails`,
+        ).not.toContain(projectId);
+
+        // ── 8. Unarchive via API — project reappears in default view ─────────
+        const unarchiveRes = await request.post(
+          `${baseURL}/api/projects/${projectId}/unarchive`,
+          { headers: authHeaders },
+        );
+        expect(
+          unarchiveRes.status(),
+          `POST /api/projects/${projectId}/unarchive should return 200`,
+        ).toBe(200);
+
+        // Navigate back to /fr/projects with toggle OFF (default) — project visible
+        await page.goto("/fr/projects");
+        await page.waitForLoadState("networkidle");
+        await page.waitForTimeout(800);
+
+        await expect(
+          page.getByText(projectName, { exact: true }).first(),
+        ).toBeVisible({ timeout: 15000 });
+      } finally {
+        // Best-effort cleanup: silently swallow 409 if already unarchived above
         await request.post(`${baseURL}/api/projects/${projectId}/unarchive`, {
           headers: authHeaders,
         });
-      });
-
-      // ── 4. /fr/projects — default view (toggle OFF): project not visible ──
-      await page.goto("/fr/projects");
-      await page.waitForLoadState("networkidle");
-
-      // Give the page a moment for hydration / query fetch
-      await page.waitForTimeout(800);
-
-      // Project name must NOT appear in the default list
-      await expect(
-        page.getByText(projectName, { exact: true }).first(),
-      ).not.toBeVisible({ timeout: 5000 });
-
-      // ── 5. Toggle "Afficher les projets archivés" ON ──────────────────────
-      const toggle = page.getByLabel(/projets archivés/i);
-      await expect(toggle).toBeVisible({ timeout: 10000 });
-      await toggle.check();
-
-      // Wait for the list to reload
-      await page.waitForTimeout(800);
-
-      // Project name must now appear
-      await expect(
-        page.getByText(projectName, { exact: true }).first(),
-      ).toBeVisible({ timeout: 10000 });
-
-      // "Archivée" badge must appear alongside the project name.
-      // Scope: any element on the page that has both the project name and the badge.
-      // We locate the project row by text then check for the sibling badge.
-      const projectRow = page
-        .locator(`text="${projectName}"`)
-        .locator("..")         // parent element
-        .first();
-      await expect(projectRow).toBeVisible({ timeout: 5000 });
-      // The badge is a <span> containing "Archivée" near the project name
-      await expect(page.getByText("Archivée").first()).toBeVisible({ timeout: 5000 });
-
-      // ── 6. Navigate directly to /fr/projects/:id — banner visible ─────────
-      await page.goto(`/fr/projects/${projectId}`);
-      await page.waitForLoadState("networkidle");
-      await expect(
-        page.getByRole("heading", { name: /Projet archivé/i }),
-      ).toBeVisible({ timeout: 15000 });
-
-      // ── 7. /api/analytics — project id NOT in projectDetails ─────────────
-      const analyticsRes = await request.get(`${baseURL}/api/analytics`, {
-        headers: authHeaders,
-      });
-      expect(analyticsRes.status(), "GET /api/analytics should succeed").toBe(200);
-
-      const analyticsBody = await analyticsRes.json();
-      // Response: { metrics, projectProgressData, taskStatusData, projectDetails: [{ id, name, ... }] }
-      const detailIds: string[] = (analyticsBody.projectDetails ?? []).map(
-        (p: { id: string }) => p.id,
-      );
-      expect(
-        detailIds,
-        `Archived project ${projectId} (${projectName}) must be excluded from /api/analytics projectDetails`,
-      ).not.toContain(projectId);
-
-      // ── 8. Unarchive via API — project reappears in default view ──────────
-      const unarchiveRes = await request.post(
-        `${baseURL}/api/projects/${projectId}/unarchive`,
-        { headers: authHeaders },
-      );
-      expect(
-        unarchiveRes.status(),
-        `POST /api/projects/${projectId}/unarchive should return 200`,
-      ).toBe(200);
-
-      // Navigate back to /fr/projects with toggle OFF (default) — project visible
-      await page.goto("/fr/projects");
-      await page.waitForLoadState("networkidle");
-      await page.waitForTimeout(800);
-
-      await expect(
-        page.getByText(projectName, { exact: true }).first(),
-      ).toBeVisible({ timeout: 15000 });
+      }
     },
   );
 
