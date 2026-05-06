@@ -250,6 +250,11 @@ export interface Project {
   tasks?: Task[];
   documents?: Document[];
   clients?: Array<{ id: string; name: string }>;
+  archivedAt?: string | null;
+  archivedById?: string | null;
+  archivedBy?: UserSummary | null;
+  canArchive?: boolean;
+  canUnarchive?: boolean;
 }
 
 export interface ProjectMember {

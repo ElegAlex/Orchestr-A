@@ -9,16 +9,20 @@ import {
   ProjectStats,
 } from "@/types";
 
+export type ArchivedFilter = "active" | "archived" | "all";
+
 export const projectsService = {
   async getAll(
     page?: number,
     limit?: number,
     status?: ProjectStatus,
+    archived?: ArchivedFilter,
   ): Promise<PaginatedResponse<Project>> {
     const params = new URLSearchParams();
     params.append("limit", (limit ?? 1000).toString());
     if (page !== undefined) params.append("page", page.toString());
     if (status) params.append("status", status);
+    if (archived) params.append("archived", archived);
 
     const response = await api.get<PaginatedResponse<Project>>(
       `/projects?${params.toString()}`,
@@ -88,5 +92,15 @@ export const projectsService = {
 
   async removeMember(projectId: string, userId: string): Promise<void> {
     await api.delete(`/projects/${projectId}/members/${userId}`);
+  },
+
+  async archive(id: string): Promise<Project> {
+    const response = await api.post<Project>(`/projects/${id}/archive`);
+    return response.data;
+  },
+
+  async unarchive(id: string): Promise<Project> {
+    const response = await api.post<Project>(`/projects/${id}/unarchive`);
+    return response.data;
   },
 };
