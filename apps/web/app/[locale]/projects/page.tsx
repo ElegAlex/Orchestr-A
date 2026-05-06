@@ -44,6 +44,7 @@ export default function ProjectsPage() {
   );
   const [priorityFilter, setPriorityFilter] = useState<Priority | "ALL">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
   const [managers, setManagers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const initialClientsParam = searchParams.get("clients");
@@ -98,7 +99,12 @@ export default function ProjectsPage() {
         }
       } else if (hasPermission("projects:read")) {
         // Users with project read access see all projects (ADMIN, RESPONSABLE, MANAGER, etc.)
-        const response = await projectsService.getAll();
+        const response = await projectsService.getAll(
+          undefined,
+          undefined,
+          undefined,
+          showArchived ? "all" : "active",
+        );
         projectsData = response.data;
       } else if (user?.id) {
         // Autres rôles voient uniquement leurs projets
@@ -122,7 +128,7 @@ export default function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, memberMeFilter]);
+  }, [user, memberMeFilter, showArchived]);
 
   useEffect(() => {
     fetchProjects();
@@ -312,6 +318,22 @@ export default function ProjectsPage() {
     return t(`priority.${priority}`, { defaultValue: priority });
   };
 
+  const onArchive = async (id: string) => {
+    if (
+      !confirm(
+        "Archiver ce projet ? Il n'apparaîtra plus dans le suivi général mais restera accessible.",
+      )
+    )
+      return;
+    await projectsService.archive(id);
+    await fetchProjects();
+  };
+
+  const onUnarchive = async (id: string) => {
+    await projectsService.unarchive(id);
+    await fetchProjects();
+  };
+
   const canCreateProject = () => {
     return hasPermission("projects:create");
   };
@@ -461,6 +483,17 @@ export default function ProjectsPage() {
               )}
             </div>
           </div>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer w-fit">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              Afficher les projets archivés
+            </label>
+          </div>
         </div>
 
         {/* Projects List */}
@@ -475,7 +508,7 @@ export default function ProjectsPage() {
               <div
                 key={project.id}
                 onClick={() => router.push(`/${locale}/projects/${project.id}`)}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 px-5 py-3 hover:shadow-md hover:border-blue-500 transition cursor-pointer"
+                className={`bg-white rounded-lg shadow-sm border border-gray-200 px-5 py-3 hover:shadow-md hover:border-blue-500 transition cursor-pointer${project.archivedAt ? " opacity-60" : ""}`}
               >
                 <div className="flex items-center gap-3">
                   <span
@@ -486,6 +519,11 @@ export default function ProjectsPage() {
                   <ProjectIcon icon={project.icon} size={20} />
                   <h3 className="text-base font-semibold text-gray-900 truncate min-w-0 flex-1">
                     {project.name}
+                    {project.archivedAt && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-200 text-gray-700">
+                        Archivée
+                      </span>
+                    )}
                   </h3>
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${getStatusBadgeColor(project.status)}`}
@@ -538,6 +576,30 @@ export default function ProjectsPage() {
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
                           +{(project.clients ?? []).length - 2}
                         </span>
+                      )}
+                    </div>
+                  )}
+                  {/* Archive / Unarchive actions */}
+                  {(project.canArchive || project.canUnarchive) && (
+                    <div
+                      className="flex items-center gap-1 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {project.canArchive && (
+                        <button
+                          onClick={() => onArchive(project.id)}
+                          className="px-2 py-0.5 rounded text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-100 transition"
+                        >
+                          Archiver
+                        </button>
+                      )}
+                      {project.canUnarchive && (
+                        <button
+                          onClick={() => onUnarchive(project.id)}
+                          className="px-2 py-0.5 rounded text-xs font-medium text-blue-600 border border-blue-300 hover:bg-blue-50 transition"
+                        >
+                          Désarchiver
+                        </button>
                       )}
                     </div>
                   )}
