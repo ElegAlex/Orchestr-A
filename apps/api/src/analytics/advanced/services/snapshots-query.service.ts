@@ -6,6 +6,10 @@ import {
   AccessUser,
 } from '../../../common/services/access-scope.service';
 import {
+  ArchivedFilter,
+  archivedWhere,
+} from '../../../projects/dto/archived-filter.dto';
+import {
   SnapshotsQueryDto,
   SnapshotsResponseDto,
   ProjectSeriesDto,
@@ -41,10 +45,11 @@ export class SnapshotsQueryService {
     currentUser?: AccessUser,
   ): Promise<SnapshotsResponseDto> {
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
+    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
     // ── 1. Resolve active projects ─────────────────────────────────────────
     const where: Prisma.ProjectWhereInput = {
       status: 'ACTIVE',
-      AND: [projectScope],
+      AND: [projectScope, archivedClause],
       ...(query.projectIds?.length ? { id: { in: query.projectIds } } : {}),
     };
 

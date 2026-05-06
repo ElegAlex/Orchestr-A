@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsOptional, IsUUID } from 'class-validator';
+import { IsArray, IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { ArchivedFilter } from '../../../projects/dto/archived-filter.dto';
 
 export class TasksBreakdownQueryDto {
   @ApiProperty({
@@ -13,6 +14,11 @@ export class TasksBreakdownQueryDto {
   @IsUUID('all', { each: true })
   @Type(() => String)
   projectIds?: string[];
+
+  @ApiProperty({ required: false, enum: ArchivedFilter, default: ArchivedFilter.ACTIVE })
+  @IsOptional()
+  @IsEnum(ArchivedFilter)
+  archived?: ArchivedFilter;
 }
 
 export interface PriorityBreakdownDto {

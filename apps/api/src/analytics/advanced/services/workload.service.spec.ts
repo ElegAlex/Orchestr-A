@@ -338,4 +338,14 @@ describe('WorkloadService', () => {
       }),
     );
   });
+
+  // 12. archived filter: default excludes archived projects
+  it('default excludes archived projects (archivedAt: null in activeTaskWhere.project)', async () => {
+    mockPrisma.user.findMany.mockResolvedValue([]);
+
+    await service.getWorkload({});
+
+    const callArgs = mockPrisma.user.findMany.mock.calls[0][0] as unknown;
+    expect(JSON.stringify(callArgs)).toContain('"archivedAt":null');
+  });
 });

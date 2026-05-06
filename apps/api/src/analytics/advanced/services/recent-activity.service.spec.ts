@@ -349,4 +349,17 @@ describe('RecentActivityService', () => {
       }),
     );
   });
+
+  // -------------------------------------------------------------------------
+  // archived filter: default excludes archived projects
+  // -------------------------------------------------------------------------
+
+  it('default excludes archived projects (archivedAt: null in task.project where)', async () => {
+    mockPrisma.task.findMany.mockResolvedValue([]);
+
+    await service.getRecentActivity({ days: 30 });
+
+    const callArgs = mockPrisma.task.findMany.mock.calls[0][0] as { where: { project: unknown } };
+    expect(JSON.stringify(callArgs.where.project)).toContain('"archivedAt":null');
+  });
 });

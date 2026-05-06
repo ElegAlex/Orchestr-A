@@ -6,6 +6,10 @@ import {
   AccessScopeService,
   AccessUser,
 } from '../../../common/services/access-scope.service';
+import {
+  ArchivedFilter,
+  archivedWhere,
+} from '../../../projects/dto/archived-filter.dto';
 
 const ACTIVE_STATUSES = [
   TaskStatus.TODO,
@@ -27,9 +31,10 @@ export class WorkloadService {
   ): Promise<WorkloadUserDto[]> {
     const limit = query.limit ?? 15;
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
+    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
     const activeTaskWhere: Prisma.TaskWhereInput = {
       status: { in: [...ACTIVE_STATUSES] },
-      project: projectScope,
+      project: { AND: [projectScope, archivedClause] },
     };
 
     // Single query: fetch all active users with their tasks via both relations.

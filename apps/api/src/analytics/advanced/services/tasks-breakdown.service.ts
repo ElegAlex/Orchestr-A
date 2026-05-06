@@ -6,6 +6,10 @@ import {
   AccessUser,
 } from '../../../common/services/access-scope.service';
 import {
+  ArchivedFilter,
+  archivedWhere,
+} from '../../../projects/dto/archived-filter.dto';
+import {
   TasksBreakdownQueryDto,
   TasksBreakdownResponseDto,
 } from '../dto/tasks-breakdown.dto';
@@ -22,6 +26,7 @@ export class TasksBreakdownService {
     currentUser?: AccessUser,
   ): Promise<TasksBreakdownResponseDto> {
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
+    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
     const projectIds =
       query.projectIds && query.projectIds.length > 0
         ? query.projectIds
@@ -32,7 +37,7 @@ export class TasksBreakdownService {
       where: {
         project: {
           status: 'ACTIVE',
-          AND: [projectScope],
+          AND: [projectScope, archivedClause],
           ...(projectIds ? { id: { in: projectIds } } : {}),
         },
       },

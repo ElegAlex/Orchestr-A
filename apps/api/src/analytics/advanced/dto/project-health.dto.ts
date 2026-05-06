@@ -1,3 +1,14 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsOptional } from 'class-validator';
+import { ArchivedFilter } from '../../../projects/dto/archived-filter.dto';
+
+export class ProjectHealthQueryDto {
+  @ApiProperty({ required: false, enum: ArchivedFilter, default: ArchivedFilter.ACTIVE })
+  @IsOptional()
+  @IsEnum(ArchivedFilter)
+  archived?: ArchivedFilter;
+}
+
 export type HealthStatus = 'green' | 'orange' | 'red';
 
 export interface ProjectMilestonesSummaryDto {

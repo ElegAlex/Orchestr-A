@@ -6,6 +6,10 @@ import {
   AccessUser,
 } from '../../../common/services/access-scope.service';
 import {
+  ArchivedFilter,
+  archivedWhere,
+} from '../../../projects/dto/archived-filter.dto';
+import {
   RecentActivityQueryDto,
   RecentActivityResponseDto,
   ActivityPointDto,
@@ -25,12 +29,13 @@ export class RecentActivityService {
     const days = query.days ?? 30;
     const now = new Date();
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
+    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
 
     // Single query — orphan tasks (null projectId) are implicitly excluded
     // because project: { status: 'ACTIVE' } only matches tasks with a project.
     const tasks = await this.prisma.task.findMany({
       where: {
-        project: { status: 'ACTIVE', AND: [projectScope] },
+        project: { status: 'ACTIVE', AND: [projectScope, archivedClause] },
       },
       select: {
         status: true,

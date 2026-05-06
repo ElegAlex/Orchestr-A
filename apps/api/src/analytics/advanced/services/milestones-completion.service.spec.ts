@@ -334,6 +334,16 @@ describe('MilestonesCompletionService', () => {
   });
 
   // -------------------------------------------------------------------------
+  // archived filter: default excludes archived projects
+  // -------------------------------------------------------------------------
+  it('default excludes archived projects (archivedAt: null in milestone project where)', async () => {
+    mockPrisma.milestone.findMany.mockResolvedValue([]);
+    await service.getMilestonesCompletion();
+    const callArgs = mockPrisma.milestone.findMany.mock.calls[0][0] as { where: unknown };
+    expect(JSON.stringify(callArgs.where)).toContain('"archivedAt":null');
+  });
+
+  // -------------------------------------------------------------------------
   // 8. Projects with 0 milestones are excluded from byProject
   // -------------------------------------------------------------------------
   it('excludes projects with no milestones from byProject', async () => {

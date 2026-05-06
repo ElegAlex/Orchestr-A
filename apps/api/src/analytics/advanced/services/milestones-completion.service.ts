@@ -6,6 +6,11 @@ import {
   AccessUser,
 } from '../../../common/services/access-scope.service';
 import {
+  ArchivedFilter,
+  archivedWhere,
+} from '../../../projects/dto/archived-filter.dto';
+import {
+  MilestonesCompletionQueryDto,
   MilestonesCompletionResponseDto,
   MilestoneByProjectDto,
   MilestoneDetailDto,
@@ -22,13 +27,15 @@ export class MilestonesCompletionService {
   ) {}
 
   async getMilestonesCompletion(
+    query: MilestonesCompletionQueryDto = {},
     currentUser?: AccessUser,
   ): Promise<MilestonesCompletionResponseDto> {
     const now = new Date();
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
+    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
 
     const milestones = await this.prisma.milestone.findMany({
-      where: { project: projectScope },
+      where: { project: { AND: [projectScope, archivedClause] } },
       include: {
         project: { select: { id: true, name: true } },
       },

@@ -6,7 +6,12 @@ import {
   AccessUser,
 } from '../../../common/services/access-scope.service';
 import {
+  ArchivedFilter,
+  archivedWhere,
+} from '../../../projects/dto/archived-filter.dto';
+import {
   HealthStatus,
+  ProjectHealthQueryDto,
   ProjectHealthRowDto,
 } from '../dto/project-health.dto';
 
@@ -35,12 +40,16 @@ export class ProjectHealthService {
     private readonly accessScope: AccessScopeService,
   ) {}
 
-  async getProjectHealth(currentUser?: AccessUser): Promise<ProjectHealthRowDto[]> {
+  async getProjectHealth(
+    query: ProjectHealthQueryDto = {},
+    currentUser?: AccessUser,
+  ): Promise<ProjectHealthRowDto[]> {
     const now = new Date();
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
+    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
     const where: Prisma.ProjectWhereInput = {
       status: 'ACTIVE',
-      AND: [projectScope],
+      AND: [projectScope, archivedClause],
     };
 
     const projects = await this.prisma.project.findMany({

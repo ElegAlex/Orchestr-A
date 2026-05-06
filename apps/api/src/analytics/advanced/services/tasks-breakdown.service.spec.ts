@@ -179,6 +179,17 @@ describe('TasksBreakdownService', () => {
     expect(result.byStatus.BLOCKED).toBe(0);
   });
 
+  // ─── Archived filter ─────────────────────────────────────────────────────────
+
+  it('default excludes archived projects (archivedAt: null in task.project where)', async () => {
+    mockPrismaService.task.findMany.mockResolvedValue([]);
+
+    await service.getTasksBreakdown({});
+
+    const callArgs = mockPrismaService.task.findMany.mock.calls[0][0] as { where: { project: unknown } };
+    expect(JSON.stringify(callArgs.where.project)).toContain('"archivedAt":null');
+  });
+
   // ─── Select projection ────────────────────────────────────────────────────────
 
   it('selects only priority and status fields (no over-fetching)', async () => {

@@ -259,4 +259,15 @@ describe('SnapshotsQueryService', () => {
     expect(snapWhere.date).toEqual({ lte: new Date('2025-12-31') });
     expect(snapWhere.date.gte).toBeUndefined();
   });
+
+  // ── Archived filter: default excludes archived projects ─────────────────
+  it('default excludes archived projects (archivedAt: null in project where)', async () => {
+    mockPrisma.project.findMany.mockResolvedValue([]);
+    mockPrisma.projectSnapshot.findMany.mockResolvedValue([]);
+
+    await service.getSnapshots({});
+
+    const where = mockPrisma.project.findMany.mock.calls[0][0].where;
+    expect(JSON.stringify(where)).toContain('"archivedAt":null');
+  });
 });

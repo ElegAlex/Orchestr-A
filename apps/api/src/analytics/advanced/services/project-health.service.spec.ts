@@ -239,4 +239,12 @@ describe('ProjectHealthService', () => {
       }),
     );
   });
+
+  // — archived filter: default excludes archived projects
+  it('default excludes archived projects (archivedAt: null in project where)', async () => {
+    prismaFindMany.mockResolvedValue([]);
+    await service.getProjectHealth();
+    const callArgs = prismaFindMany.mock.calls[0][0] as { where: unknown };
+    expect(JSON.stringify(callArgs.where)).toContain('"archivedAt":null');
+  });
 });

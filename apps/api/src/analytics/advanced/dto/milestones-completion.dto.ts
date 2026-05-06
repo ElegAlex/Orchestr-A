@@ -1,3 +1,14 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsOptional } from 'class-validator';
+import { ArchivedFilter } from '../../../projects/dto/archived-filter.dto';
+
+export class MilestonesCompletionQueryDto {
+  @ApiProperty({ required: false, enum: ArchivedFilter, default: ArchivedFilter.ACTIVE })
+  @IsOptional()
+  @IsEnum(ArchivedFilter)
+  archived?: ArchivedFilter;
+}
+
 export interface MilestoneByProjectDto {
   projectId: string;
   name: string;

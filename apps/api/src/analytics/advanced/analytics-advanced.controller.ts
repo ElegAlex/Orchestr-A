@@ -6,8 +6,14 @@ import {
   SnapshotsResponseDto,
 } from './dto/snapshots-query.dto';
 import { WorkloadQueryDto, WorkloadUserDto } from './dto/workload.dto';
-import { ProjectHealthRowDto } from './dto/project-health.dto';
-import { MilestonesCompletionResponseDto } from './dto/milestones-completion.dto';
+import {
+  ProjectHealthQueryDto,
+  ProjectHealthRowDto,
+} from './dto/project-health.dto';
+import {
+  MilestonesCompletionQueryDto,
+  MilestonesCompletionResponseDto,
+} from './dto/milestones-completion.dto';
 import {
   TasksBreakdownQueryDto,
   TasksBreakdownResponseDto,
@@ -77,9 +83,10 @@ export class AnalyticsAdvancedController {
     summary: 'Per-project health table with overdueMilestones-based status (bloc 4)',
   })
   async getProjectHealth(
+    @Query() query: ProjectHealthQueryDto,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<ProjectHealthRowDto[]> {
-    return this.projectHealth.getProjectHealth({
+    return this.projectHealth.getProjectHealth(query, {
       id: currentUser.id,
       role: currentUser.role?.code ?? null,
     });
@@ -91,9 +98,10 @@ export class AnalyticsAdvancedController {
     summary: 'Milestones reached on time over due, with per-project breakdown (bloc 5)',
   })
   async getMilestonesCompletion(
+    @Query() query: MilestonesCompletionQueryDto,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<MilestonesCompletionResponseDto> {
-    return this.milestonesCompletion.getMilestonesCompletion({
+    return this.milestonesCompletion.getMilestonesCompletion(query, {
       id: currentUser.id,
       role: currentUser.role?.code ?? null,
     });
