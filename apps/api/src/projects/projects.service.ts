@@ -247,6 +247,7 @@ export class ProjectsService {
       ? await this.permissionsService.getPermissionsForRole(userRole)
       : [];
     const hasFullVisibility = permissions.includes('projects:manage_any');
+    const hasArchivePerm = permissions.includes('projects:archive');
 
     const membershipFilter =
       !hasFullVisibility && userId ? { members: { some: { userId } } } : {};
@@ -368,6 +369,8 @@ export class ProjectsService {
                   100,
               )
             : 0,
+        canArchive: hasArchivePerm && project.archivedAt == null,
+        canUnarchive: hasArchivePerm && project.archivedAt != null,
       }),
     );
 
@@ -484,10 +487,27 @@ export class ProjectsService {
       throw new NotFoundException('Projet introuvable');
     }
 
+    // Compute canArchive / canUnarchive: skip lookup when no user to avoid
+    // unnecessary DB queries (and keep existing no-user tests passing).
+    let canArchive = false;
+    let canUnarchive = false;
+    if (currentUser) {
+      const roleCode =
+        typeof currentUser.role === 'string'
+          ? currentUser.role
+          : currentUser.role?.code ?? null;
+      const perms = await this.permissionsService.getPermissionsForRole(roleCode);
+      const hasArchivePerm = perms.includes('projects:archive');
+      canArchive = hasArchivePerm && project.archivedAt == null;
+      canUnarchive = hasArchivePerm && project.archivedAt != null;
+    }
+
     const { clients: projectClients, ...rest } = project;
     return {
       ...rest,
       clients: projectClients.map((pc) => pc.client),
+      canArchive,
+      canUnarchive,
     };
   }
 

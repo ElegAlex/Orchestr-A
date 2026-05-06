@@ -1296,6 +1296,64 @@ describe('ProjectsService', () => {
   });
 
   // ============================================
+  // COMPUTED FLAGS: canArchive / canUnarchive
+  // ============================================
+  describe('computed canArchive / canUnarchive', () => {
+    beforeEach(() => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:archive',
+        'projects:read',
+        'projects:update',
+      ]);
+    });
+
+    it('returns canArchive=true and canUnarchive=false on an active project for a user with the permission', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        archivedAt: null,
+      });
+      const result = await service.findOne('project-1', { id: 'user-1', role: 'MANAGER' });
+      expect(result.canArchive).toBe(true);
+      expect(result.canUnarchive).toBe(false);
+    });
+
+    it('returns canArchive=false and canUnarchive=true on an archived project', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        archivedAt: new Date(),
+      });
+      const result = await service.findOne('project-1', { id: 'user-1', role: 'MANAGER' });
+      expect(result.canArchive).toBe(false);
+      expect(result.canUnarchive).toBe(true);
+    });
+
+    it('returns both flags false when user lacks projects:archive', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:read',
+      ]);
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        archivedAt: null,
+      });
+      const result = await service.findOne('project-1', { id: 'user-1', role: 'OBSERVATEUR' });
+      expect(result.canArchive).toBe(false);
+      expect(result.canUnarchive).toBe(false);
+    });
+
+    it('returns both flags false when no currentUser is provided', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        archivedAt: null,
+      });
+      const result = await service.findOne('project-1');
+      expect(result.canArchive).toBe(false);
+      expect(result.canUnarchive).toBe(false);
+      // No permissions lookup when no user
+      expect(mockPermissionsService.getPermissionsForRole).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================
   // ARCHIVE / UNARCHIVE
   // ============================================
   describe('archive / unarchive', () => {
