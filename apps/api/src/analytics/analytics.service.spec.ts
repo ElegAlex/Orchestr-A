@@ -117,6 +117,43 @@ describe('AnalyticsService', () => {
       expect(callArgs.where.id).toBe('project-1');
     });
 
+    // Regression guard: dateRange must NOT narrow the project or task set —
+    // the Reports view must always reflect the user's full project scope.
+    // See incident: 36 projects in scope, only 7 displayed because of
+    // `createdAt: { gte: startDate }` on getProjects/getTasks.
+    it('should NOT filter projects or tasks by createdAt for any dateRange', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+
+      for (const dateRange of [
+        DateRangeEnum.WEEK,
+        DateRangeEnum.MONTH,
+        DateRangeEnum.QUARTER,
+        DateRangeEnum.YEAR,
+      ]) {
+        mockPrismaService.project.findMany.mockClear();
+        mockPrismaService.task.findMany.mockClear();
+
+        await service.getAnalytics({ dateRange });
+
+        const projectWhere = (
+          mockPrismaService.project.findMany.mock.calls[0][0] as {
+            where: Record<string, unknown>;
+          }
+        ).where;
+        const taskWhere = (
+          mockPrismaService.task.findMany.mock.calls[0][0] as {
+            where: Record<string, unknown>;
+          }
+        ).where;
+
+        expect(projectWhere).not.toHaveProperty('createdAt');
+        expect(taskWhere).not.toHaveProperty('createdAt');
+      }
+    });
+
     it('should handle WEEK date range', async () => {
       mockPrismaService.project.findMany.mockResolvedValue([]);
       mockPrismaService.task.findMany.mockResolvedValue([]);

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AnalyticsQueryDto, DateRangeEnum } from './dto/analytics-query.dto';
+import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import {
   AnalyticsResponseDto,
   MetricDto,
@@ -8,7 +8,6 @@ import {
   TaskStatusDataDto,
   ProjectDetailDto,
 } from './dto/analytics-response.dto';
-import { subDays, startOfWeek } from 'date-fns';
 import { Prisma, Task, User, ProjectStatus } from '@prisma/client';
 import {
   AccessScopeService,
@@ -60,14 +59,16 @@ export class AnalyticsService {
     query: AnalyticsQueryDto,
     currentUser?: AccessUser,
   ): Promise<AnalyticsResponseDto> {
-    const { dateRange = DateRangeEnum.MONTH, projectId } = query;
-    const startDate = this.getStartDate(dateRange);
+    const { projectId } = query;
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
 
-    // Fetch data
+    // Reports surface the user's full project scope. dateRange is reserved
+    // for future period-bound queries (e.g. time entries) — it must not
+    // narrow project or task visibility, otherwise users miss projects they
+    // own (see incident: 36 projects in scope, only 7 displayed).
     const [projects, tasks, users] = await Promise.all([
-      this.getProjects(startDate, projectId, projectScope),
-      this.getTasks(startDate, projectId, projectScope),
+      this.getProjects(projectId, projectScope),
+      this.getTasks(projectId, projectScope),
       this.getActiveUsers(projectScope),
     ]);
 
@@ -85,29 +86,11 @@ export class AnalyticsService {
     };
   }
 
-  private getStartDate(dateRange: DateRangeEnum): Date {
-    const now = new Date();
-    switch (dateRange) {
-      case DateRangeEnum.WEEK:
-        return startOfWeek(now);
-      case DateRangeEnum.MONTH:
-        return subDays(now, 30);
-      case DateRangeEnum.QUARTER:
-        return subDays(now, 90);
-      case DateRangeEnum.YEAR:
-        return subDays(now, 365);
-      default:
-        return subDays(now, 30);
-    }
-  }
-
   private async getProjects(
-    startDate: Date,
     projectId: string | undefined,
     projectScope: Prisma.ProjectWhereInput,
   ) {
     const where: Prisma.ProjectWhereInput = {
-      createdAt: { gte: startDate },
       AND: [projectScope],
     };
 
@@ -176,12 +159,10 @@ export class AnalyticsService {
   }
 
   private async getTasks(
-    startDate: Date,
     projectId: string | undefined,
     projectScope: Prisma.ProjectWhereInput,
   ): Promise<Task[]> {
     const where: Prisma.TaskWhereInput = {
-      createdAt: { gte: startDate },
       project: projectScope,
     };
 
