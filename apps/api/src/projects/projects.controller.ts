@@ -278,6 +278,42 @@ export class ProjectsController {
     return this.projectsService.hardDelete(id);
   }
 
+  @Post(':id/archive')
+  @RequirePermissions('projects:archive')
+  @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Archiver un projet (le retire du suivi général, reste accessible)' })
+  @ApiResponse({ status: 200, description: 'Projet archivé' })
+  @ApiResponse({ status: 404, description: 'Projet introuvable' })
+  @ApiResponse({ status: 409, description: 'Projet déjà archivé' })
+  archive(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.projectsService.archive(id, {
+      id: user.id,
+      role: user.role?.code ?? undefined,
+    });
+  }
+
+  @Post(':id/unarchive')
+  @RequirePermissions('projects:archive')
+  @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Désarchiver un projet' })
+  @ApiResponse({ status: 200, description: 'Projet désarchivé' })
+  @ApiResponse({ status: 404, description: 'Projet introuvable' })
+  @ApiResponse({ status: 409, description: "Projet n'est pas archivé" })
+  unarchive(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.projectsService.unarchive(id, {
+      id: user.id,
+      role: user.role?.code ?? undefined,
+    });
+  }
+
   @Post(':id/members')
   @RequirePermissions('projects:manage_members')
   @OwnershipCheck({

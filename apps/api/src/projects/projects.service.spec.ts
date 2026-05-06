@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { OwnershipService } from '../common/services/ownership.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AccessScopeService } from '../common/services/access-scope.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import {
   NotFoundException,
   BadRequestException,
@@ -86,6 +87,10 @@ describe('ProjectsService', () => {
     getPermissionsForRole: vi.fn(),
   };
 
+  const mockAuditPersistenceService = {
+    log: vi.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -109,6 +114,10 @@ describe('ProjectsService', () => {
             assertCanAccessProject: vi.fn().mockResolvedValue(undefined),
             hasAny: vi.fn().mockResolvedValue(true),
           },
+        },
+        {
+          provide: AuditPersistenceService,
+          useValue: mockAuditPersistenceService,
         },
       ],
     }).compile();
@@ -1283,6 +1292,77 @@ describe('ProjectsService', () => {
           }),
         );
       }
+    });
+  });
+
+  // ============================================
+  // ARCHIVE / UNARCHIVE
+  // ============================================
+  describe('archive / unarchive', () => {
+    const userCtx = { id: 'user-1', role: 'ADMIN' };
+
+    beforeEach(() => {
+      mockAuditPersistenceService.log.mockResolvedValue(undefined);
+      mockOwnershipService.isOwner.mockResolvedValue(false);
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+      ]);
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        archivedAt: null,
+      });
+      mockPrismaService.project.update.mockImplementation(async ({ data }) => ({
+        ...mockProject,
+        ...data,
+      }));
+    });
+
+    it('archives a project: sets archivedAt + archivedById and writes audit log', async () => {
+      const result = await service.archive('project-1', userCtx);
+      expect(mockPrismaService.project.update).toHaveBeenCalledWith({
+        where: { id: 'project-1' },
+        data: expect.objectContaining({
+          archivedAt: expect.any(Date),
+          archivedById: 'user-1',
+        }),
+      });
+      expect(result.archivedAt).toBeDefined();
+    });
+
+    it('refuses to archive an already-archived project (409)', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        archivedAt: new Date(),
+      });
+      await expect(service.archive('project-1', userCtx)).rejects.toThrow(
+        /déjà archivé|already archived/i,
+      );
+    });
+
+    it('unarchives a project: clears both fields', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        archivedAt: new Date(),
+        archivedById: 'user-1',
+      });
+      await service.unarchive('project-1', userCtx);
+      expect(mockPrismaService.project.update).toHaveBeenCalledWith({
+        where: { id: 'project-1' },
+        data: { archivedAt: null, archivedById: null },
+      });
+    });
+
+    it('refuses to unarchive a non-archived project (409)', async () => {
+      await expect(service.unarchive('project-1', userCtx)).rejects.toThrow(
+        /n'est pas archivé|not archived/i,
+      );
+    });
+
+    it('refuses archive when project not found (404)', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+      await expect(service.archive('missing', userCtx)).rejects.toThrow(
+        /introuvable|not found/i,
+      );
     });
   });
 

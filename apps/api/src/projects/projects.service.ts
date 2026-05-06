@@ -16,6 +16,7 @@ import {
   AccessUser,
 } from '../common/services/access-scope.service';
 import { PermissionsService } from '../rbac/permissions.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { ProjectStatus, TaskStatus } from 'database';
 import { ArchivedFilter, archivedWhere } from './dto/archived-filter.dto';
 
@@ -40,6 +41,7 @@ export class ProjectsService {
     private readonly ownershipService: OwnershipService,
     private readonly permissionsService: PermissionsService,
     private readonly accessScope: AccessScopeService,
+    private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
   /**
@@ -605,6 +607,66 @@ export class ProjectsService {
     });
 
     return { message: 'Projet annulé avec succès' };
+  }
+
+  /**
+   * Archiver un projet (orthogonal au statut — ne modifie pas ProjectStatus).
+   */
+  async archive(id: string, user: ProjectMutationUser) {
+    await this.assertProjectOwnershipOrBypass(id, user);
+
+    const project = await this.prisma.project.findUnique({ where: { id } });
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+    if (project.archivedAt) {
+      throw new ConflictException('Projet déjà archivé');
+    }
+
+    const updated = await this.prisma.project.update({
+      where: { id },
+      data: { archivedAt: new Date(), archivedById: user.id },
+    });
+
+    await this.auditPersistence.log({
+      action: 'PROJECT_ARCHIVED',
+      entityType: 'Project',
+      entityId: id,
+      actorId: user.id,
+      payload: { archivedAt: updated.archivedAt },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Désarchiver un projet.
+   */
+  async unarchive(id: string, user: ProjectMutationUser) {
+    await this.assertProjectOwnershipOrBypass(id, user);
+
+    const project = await this.prisma.project.findUnique({ where: { id } });
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+    if (!project.archivedAt) {
+      throw new ConflictException("Projet n'est pas archivé");
+    }
+
+    const updated = await this.prisma.project.update({
+      where: { id },
+      data: { archivedAt: null, archivedById: null },
+    });
+
+    await this.auditPersistence.log({
+      action: 'PROJECT_UNARCHIVED',
+      entityType: 'Project',
+      entityId: id,
+      actorId: user.id,
+      payload: { previousArchivedAt: project.archivedAt },
+    });
+
+    return updated;
   }
 
   /**
