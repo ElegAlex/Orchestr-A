@@ -101,7 +101,8 @@ export type PermissionCode =
   | "predefined_tasks:update-any-status"
   | "predefined_tasks:update-own-status"
   | "predefined_tasks:view"
-  // projects (6 — :edit et :view supprimés D4 A)
+  // projects (7 — :edit et :view supprimés D4 A ; :archive ajouté W1.x)
+  | "projects:archive"
   | "projects:create"
   | "projects:delete"
   | "projects:manage_any"
@@ -334,6 +335,7 @@ export const TASKS_PROJECT_CRUD = [
 export const PROJECTS_CRUD = [
   "projects:create",
   "projects:update",
+  "projects:archive",
   "projects:delete",
   "projects:manage_members",
 ] as const satisfies readonly PermissionCode[];
@@ -691,6 +693,7 @@ export const CATALOG_PERMISSIONS = [
   "predefined_tasks:update-own-status",
   "predefined_tasks:view",
   // projects
+  "projects:archive",
   "projects:create",
   "projects:delete",
   "projects:manage_any",

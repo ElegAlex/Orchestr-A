@@ -554,6 +554,7 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
     description: "Contributeur au scope réduit. Équipes juniors encadrées.",
     permissions: without(DRAFT_PROJECT_CONTRIB(), [
       "projects:update", // =ex projects:edit D4 A
+      "projects:archive",
       "projects:delete",
       "epics:create",
       "epics:delete",
@@ -577,6 +578,7 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       "projects:create",
       "projects:delete",
       "projects:update",
+      "projects:archive",
       "epics:create",
       "epics:update",
       "epics:delete",
@@ -981,6 +983,7 @@ function DRAFT_PROJECT_CONTRIB(): readonly PermissionCode[] {
 function DRAFT_PROJECT_CONTRIB_LIGHT(): readonly PermissionCode[] {
   return without(DRAFT_PROJECT_CONTRIB(), [
     "projects:update",
+    "projects:archive",
     "projects:delete",
     "epics:create",
     "epics:delete",
