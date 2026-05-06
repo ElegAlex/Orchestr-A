@@ -4,6 +4,7 @@ import { AnalyticsService } from './analytics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DateRangeEnum } from './dto/analytics-query.dto';
 import { AccessScopeService } from '../common/services/access-scope.service';
+import { ArchivedFilter } from '../projects/dto/archived-filter.dto';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
@@ -569,6 +570,34 @@ describe('AnalyticsService', () => {
       const result = await service.getAnalytics({});
 
       expect(result.projectDetails[0].loggedHours).toBe(0);
+    });
+
+    it('default analytics excludes archived projects (archivedAt: null on project where)', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+
+      await service.getAnalytics({});
+
+      const projectWhere = (mockPrismaService.project.findMany.mock.calls[0][0] as {
+        where: Record<string, unknown>;
+      }).where;
+      expect(JSON.stringify(projectWhere)).toContain('"archivedAt":null');
+    });
+
+    it('archived=all does NOT filter on archivedAt', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+
+      await service.getAnalytics({ archived: ArchivedFilter.ALL });
+
+      const projectWhere = (mockPrismaService.project.findMany.mock.calls[0][0] as {
+        where: Record<string, unknown>;
+      }).where;
+      expect(JSON.stringify(projectWhere)).not.toContain('archivedAt');
     });
 
     it('should filter dismissed time entries from both user and third-party groupBy (D3)', async () => {

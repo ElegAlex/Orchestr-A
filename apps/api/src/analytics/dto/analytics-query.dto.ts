@@ -1,5 +1,6 @@
 import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { ArchivedFilter } from '../../projects/dto/archived-filter.dto';
 
 export enum DateRangeEnum {
   WEEK = 'week',
@@ -25,4 +26,14 @@ export class AnalyticsQueryDto {
   @IsUUID()
   @IsOptional()
   projectId?: string;
+
+  @ApiProperty({
+    enum: ArchivedFilter,
+    default: ArchivedFilter.ACTIVE,
+    description: 'Include archived projects in analytics (default: active only)',
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(ArchivedFilter)
+  archived?: ArchivedFilter;
 }

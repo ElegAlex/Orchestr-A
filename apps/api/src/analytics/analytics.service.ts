@@ -13,6 +13,10 @@ import {
   AccessScopeService,
   AccessUser,
 } from '../common/services/access-scope.service';
+import {
+  ArchivedFilter,
+  archivedWhere,
+} from '../projects/dto/archived-filter.dto';
 
 // Types for analytics data
 interface ProjectMember {
@@ -66,10 +70,16 @@ export class AnalyticsService {
     // for future period-bound queries (e.g. time entries) — it must not
     // narrow project or task visibility, otherwise users miss projects they
     // own (see incident: 36 projects in scope, only 7 displayed).
+    // Archived projects are excluded by default; pass archived=all to include them.
+    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
+    const projectWhere: Prisma.ProjectWhereInput = {
+      AND: [projectScope, archivedClause],
+    };
+
     const [projects, tasks, users] = await Promise.all([
-      this.getProjects(projectId, projectScope),
-      this.getTasks(projectId, projectScope),
-      this.getActiveUsers(projectScope),
+      this.getProjects(projectId, projectWhere),
+      this.getTasks(projectId, projectWhere),
+      this.getActiveUsers(projectWhere),
     ]);
 
     // Calculate metrics
@@ -88,10 +98,10 @@ export class AnalyticsService {
 
   private async getProjects(
     projectId: string | undefined,
-    projectScope: Prisma.ProjectWhereInput,
+    projectWhere: Prisma.ProjectWhereInput,
   ) {
     const where: Prisma.ProjectWhereInput = {
-      AND: [projectScope],
+      AND: [projectWhere],
     };
 
     if (projectId) {
@@ -160,10 +170,10 @@ export class AnalyticsService {
 
   private async getTasks(
     projectId: string | undefined,
-    projectScope: Prisma.ProjectWhereInput,
+    projectWhere: Prisma.ProjectWhereInput,
   ): Promise<Task[]> {
     const where: Prisma.TaskWhereInput = {
-      project: projectScope,
+      project: projectWhere,
     };
 
     if (projectId) {
@@ -174,19 +184,19 @@ export class AnalyticsService {
   }
 
   private async getActiveUsers(
-    projectScope: Prisma.ProjectWhereInput,
+    projectWhere: Prisma.ProjectWhereInput,
   ): Promise<Pick<User, 'id' | 'isActive'>[]> {
-    const hasProjectScope = Object.keys(projectScope).length > 0;
+    const hasProjectScope = Object.keys(projectWhere).length > 0;
     return this.prisma.user.findMany({
       where: {
         isActive: true,
         ...(hasProjectScope
           ? {
               OR: [
-                { projectMembers: { some: { project: projectScope } } },
-                { managedProjects: { some: projectScope } },
-                { sponsoredProjects: { some: projectScope } },
-                { createdProjects: { some: projectScope } },
+                { projectMembers: { some: { project: projectWhere } } },
+                { managedProjects: { some: projectWhere } },
+                { sponsoredProjects: { some: projectWhere } },
+                { createdProjects: { some: projectWhere } },
               ],
             }
           : {}),
