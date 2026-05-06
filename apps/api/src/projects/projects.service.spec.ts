@@ -1327,6 +1327,15 @@ describe('ProjectsService', () => {
         }),
       });
       expect(result.archivedAt).toBeDefined();
+      expect(mockAuditPersistenceService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'PROJECT_ARCHIVED',
+          entityType: 'Project',
+          entityId: 'project-1',
+          actorId: 'user-1',
+          payload: expect.objectContaining({ archivedAt: expect.any(Date) }),
+        }),
+      );
     });
 
     it('refuses to archive an already-archived project (409)', async () => {
@@ -1350,6 +1359,15 @@ describe('ProjectsService', () => {
         where: { id: 'project-1' },
         data: { archivedAt: null, archivedById: null },
       });
+      expect(mockAuditPersistenceService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'PROJECT_UNARCHIVED',
+          entityType: 'Project',
+          entityId: 'project-1',
+          actorId: 'user-1',
+          payload: expect.objectContaining({ previousArchivedAt: expect.any(Date) }),
+        }),
+      );
     });
 
     it('refuses to unarchive a non-archived project (409)', async () => {
@@ -1361,6 +1379,13 @@ describe('ProjectsService', () => {
     it('refuses archive when project not found (404)', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
       await expect(service.archive('missing', userCtx)).rejects.toThrow(
+        /introuvable|not found/i,
+      );
+    });
+
+    it('refuses unarchive when project not found (404)', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+      await expect(service.unarchive('missing', userCtx)).rejects.toThrow(
         /introuvable|not found/i,
       );
     });
