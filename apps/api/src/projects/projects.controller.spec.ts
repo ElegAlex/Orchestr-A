@@ -6,8 +6,10 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ParseEnumPipe,
 } from '@nestjs/common';
 import { ProjectStatus } from 'database';
+import { ArchivedFilter } from './dto/archived-filter.dto';
 
 describe('ProjectsController', () => {
   let controller: ProjectsController;
@@ -149,6 +151,7 @@ describe('ProjectsController', () => {
         undefined,
         undefined,
         undefined,
+        undefined,
       );
     });
 
@@ -171,6 +174,42 @@ describe('ProjectsController', () => {
         undefined,
         undefined,
         undefined,
+        undefined,
+      );
+    });
+
+    it('should filter projects by archived state', async () => {
+      const paginatedResult = {
+        data: [],
+        meta: { page: 1, limit: 10, total: 0, totalPages: 0 },
+      };
+      mockProjectsService.findAll.mockResolvedValue(paginatedResult);
+
+      await controller.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        ArchivedFilter.ARCHIVED,
+      );
+
+      expect(mockProjectsService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        ArchivedFilter.ARCHIVED,
+      );
+    });
+
+    it('ParseEnumPipe rejects invalid archived value with BadRequestException', async () => {
+      const pipe = new ParseEnumPipe(ArchivedFilter, { optional: true });
+      await expect(pipe.transform('foo', { type: 'query' })).rejects.toThrow(
+        BadRequestException,
       );
     });
 

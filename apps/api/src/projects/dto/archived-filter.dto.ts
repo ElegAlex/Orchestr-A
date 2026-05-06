@@ -1,16 +1,9 @@
 import { Prisma } from 'database';
-import { IsEnum, IsOptional } from 'class-validator';
 
 export enum ArchivedFilter {
   ACTIVE = 'active',
   ARCHIVED = 'archived',
   ALL = 'all',
-}
-
-export class ArchivedFilterDto {
-  @IsOptional()
-  @IsEnum(ArchivedFilter)
-  archived?: ArchivedFilter;
 }
 
 export function archivedWhere(

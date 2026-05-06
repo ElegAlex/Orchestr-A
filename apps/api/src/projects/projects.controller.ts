@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   ParseUUIDPipe,
+  ParseEnumPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -93,7 +94,8 @@ export class ProjectsController {
     @CurrentUser('id') userId?: string,
     @CurrentUserRoleCode() userRole?: string | null,
     @Query('clients') clients?: string,
-    @Query('archived') archived?: ArchivedFilter,
+    @Query('archived', new ParseEnumPipe(ArchivedFilter, { optional: true }))
+    archived?: ArchivedFilter,
   ) {
     return this.projectsService.findAll(
       page,
