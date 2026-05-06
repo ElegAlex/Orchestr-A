@@ -73,6 +73,7 @@ model User {
   refreshTokens                    RefreshToken[]
   managedProjects                  Project[]                     @relation("ProjectManager")
   sponsoredProjects                Project[]                     @relation("ProjectSponsor")
+  archivedProjects                 Project[]                     @relation("ProjectArchiver")
   auditLogs                        AuditLog[]                    @relation("AuditActor")
   completedAssignments             PredefinedTaskAssignment[]    @relation("AssignmentCompletedBy")
 
@@ -152,11 +153,14 @@ model Project {
   sponsorId       String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  archivedAt      DateTime?
+  archivedById    String?
 
   // Relations
   createdBy         User?                     @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: SetNull)
   manager           User?                     @relation("ProjectManager", fields: [managerId], references: [id], onDelete: SetNull)
   sponsor           User?                     @relation("ProjectSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
+  archivedBy        User?                     @relation("ProjectArchiver", fields: [archivedById], references: [id], onDelete: SetNull)
   members           ProjectMember[]
   thirdPartyMembers ProjectThirdPartyMember[]
   clients           ProjectClient[]
@@ -168,6 +172,7 @@ model Project {
   events            Event[]
   snapshots         ProjectSnapshot[]
 
+  @@index([archivedAt])
   @@map("projects")
 }
 
