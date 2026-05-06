@@ -36,6 +36,7 @@ import { clientsService } from "@/services/clients.service";
 import { ClientSelector } from "@/components/clients/ClientSelector";
 import { ProjectClient } from "@/types";
 import { usePermissions } from "@/hooks/usePermissions";
+import { format } from "date-fns";
 import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
 import { parseCSV } from "@/lib/csv-parser";
@@ -980,6 +981,20 @@ export default function ProjectDetailPage() {
     }
   };
 
+  // Unarchive handler — re-fetches the project so the banner disappears
+  const onUnarchive = async () => {
+    if (!project) return;
+    try {
+      await projectsService.unarchive(project.id);
+      const projectData = await projectsService.getById(projectId);
+      setProject(projectData);
+      toast.success("Projet désarchivé");
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || "Erreur lors du désarchivage");
+    }
+  };
+
   if (loading || !project) {
     return (
       <MainLayout>
@@ -1071,6 +1086,29 @@ export default function ProjectDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Archived banner */}
+        {project?.archivedAt && (
+          <div className="border-l-4 border-amber-500 bg-amber-50 p-4 mb-6 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-amber-800">Projet archivé</h3>
+              <p className="text-sm text-amber-700">
+                Archivé le {format(new Date(project.archivedAt), "dd/MM/yyyy")}
+                {project.archivedBy
+                  ? ` par ${project.archivedBy.firstName} ${project.archivedBy.lastName}`
+                  : ""}.
+              </p>
+            </div>
+            {project.canUnarchive && (
+              <button
+                onClick={onUnarchive}
+                className="px-3 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700"
+              >
+                Désarchiver
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="border-b border-gray-200">
