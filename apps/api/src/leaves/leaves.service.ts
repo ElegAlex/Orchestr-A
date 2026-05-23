@@ -393,8 +393,11 @@ export class LeavesService {
         bucket.year,
       );
       if (available < bucket.workDays) {
+        const shortfall = bucket.workDays - available;
         throw new BadRequestException(
-          `Solde insuffisant pour ${leaveTypeConfig.name} en ${bucket.year}. Disponible : ${available} jours, demandé : ${bucket.workDays} jours.`,
+          `Solde insuffisant pour ${leaveTypeConfig.name} en ${bucket.year} : ` +
+            `${bucket.workDays} jours demandés, ${available} jours disponibles, ` +
+            `il manque ${shortfall} jours.`,
         );
       }
     }
@@ -1128,8 +1131,11 @@ export class LeavesService {
       );
       if (available < bucket.workDays) {
         const typeName = await loadLeaveTypeName();
+        const shortfall = bucket.workDays - available;
         throw new BadRequestException(
-          `Solde insuffisant pour ${typeName} en ${bucket.year}. Disponible : ${available} jours, demandé : ${bucket.workDays} jours.`,
+          `Solde insuffisant pour ${typeName} en ${bucket.year} : ` +
+            `${bucket.workDays} jours demandés, ${available} jours disponibles, ` +
+            `il manque ${shortfall} jours.`,
         );
       }
     }

@@ -623,10 +623,12 @@ describe('LeavesService', () => {
       queueYearAllocation(25); // 2026 ok (4 ≤ 25)
       queueYearAllocation(0); // 2027 exhausted
 
-      // The rejection must name 2027 (not 2026), proving the gate iterates
-      // every bucket and reports the failing year — finding #1.
+      // The rejection must name 2027 AND state the exact shortfall — the
+      // user's Wave 2 acceptance is "rejection message must name the
+      // failing year and the exact shortfall in days". 2027 bucket is
+      // 6 work days, allocation 0, so shortfall = 6.
       await expect(service.create('user-1', crossYearDto)).rejects.toThrow(
-        /en 2027/,
+        /en 2027.*6 jours demandés.*0 jours disponibles.*il manque 6 jours/,
       );
       expect(mockPrismaService.leave.create).not.toHaveBeenCalled();
     });
@@ -640,9 +642,10 @@ describe('LeavesService', () => {
       queueYearAllocation(2); // 2026: only 2 days, leave needs 4
 
       // Gate fails on the first failing year and short-circuits before
-      // checking 2027 — that's expected. Just assert 2026 is named.
+      // checking 2027 — that's expected. 2026 bucket is 4 work days,
+      // allocation 2, shortfall = 2.
       await expect(service.create('user-1', crossYearDto)).rejects.toThrow(
-        /en 2026/,
+        /en 2026.*4 jours demandés.*2 jours disponibles.*il manque 2 jours/,
       );
       expect(mockPrismaService.leave.create).not.toHaveBeenCalled();
     });
