@@ -79,6 +79,76 @@ validator identity for those rows is out of scope (the data is not
 recoverable from the table itself and the audit-log history for April
 predates the Wave 3 audit-log emission).
 
+## Post-deploy manual fix — stuck PENDING leave (1 row)
+
+Shortly after the deploy a single pre-existing row surfaced as broken:
+`leaves.id = ebe3522c-b788-41b9-9346-8d49546fc81c`, created 2026-04-27,
+status `PENDING`, with `validator_id = userId` (the leave's owner was
+also its assigned validator). The `/approve` endpoint's anti-self-approval
+guard (`leaves.service.ts:1437`) rejects this state with 403, leaving the
+row permanently stuck.
+
+**Fixed via direct UPDATE + audit_logs INSERT** in a single transaction,
+with WHERE guards forcing a no-op if the row had moved between
+pre-flight read and write. The audit_logs row is self-documenting:
+
+> `audit_logs.id = f2450641-855f-436d-8fe7-43d251308121`
+> action `LEAVE_RETROACTIVE_APPROVAL`, `actorId = 843555cf…`,
+> `payload.operatorIdentity = alexandre.berge@cpam92.fr`,
+> `payload.previousState / newState / rootCauseRef` set.
+
+A reader of this closeout who needs the full reasoning can query that
+audit_logs row directly without replaying the operator session.
+
+## Known latent defect — `findValidatorForUser` self-assignment
+
+The root cause of the stuck row above is **a real bug** in
+`leaves.service.ts:findValidatorForUser` (lines 598–600):
+
+```ts
+if (user.department?.managerId) {
+  return user.department.managerId;
+}
+```
+
+For a user `U` who manages their own department (i.e.,
+`U.department.managerId === U.id`), this returns `U` as `U`'s own
+validator. The leave then lands `PENDING` with `validator_id = userId`,
+and the anti-self-approval guard in `/approve` permanently blocks it.
+
+The triple recording this defect honestly:
+
+1. **The bug is real.** `findValidatorForUser` does not exclude the
+   user themselves when resolving the department manager. Any
+   top-of-hierarchy user whose role lacks `leaves:self_approve` will
+   land their leaves in the stuck state on every submission.
+2. **The bug is dormant in the current prod population.** The
+   2026-05-23 diagnostic query returned exactly one row: the user
+   above (`ADMIN_DSI` role → `ADMIN` template → carries
+   `leaves:self_approve`). For this single affected user, every new
+   submission hits the Wave 3 self-approve path and lands APPROVED
+   at creation time; the `findValidatorForUser` branch is never
+   exercised. No other user manages their own department on prod
+   today.
+3. **The reactivation condition is precise.** The bug becomes live
+   the moment ANY user whose role does NOT carry
+   `leaves:self_approve` is promoted to be the manager of their own
+   department — typically a `MANAGER`, `PORTFOLIO_MANAGER`,
+   `MANAGER_PROJECT_FOCUS`, `REFERENT_TECHNIQUE`, or any non-admin
+   role from `packages/rbac/templates.ts`. The org-admin who makes
+   that promotion will not be warned by the system; the first leave
+   that user submits will silently land stuck. Operationally cheap
+   detection: re-run the diagnostic query (block 3 above) whenever
+   department-manager assignments change.
+
+Fix is straightforward (`return user.department.managerId === userId ?
+null : user.department.managerId` plus the existing fallback chain),
+but not in scope for this remediation. It is recorded here as a
+**known dormant defect** rather than fixed silently — the future
+maintainer who promotes a non-admin to top-of-hierarchy needs to be
+able to find this entry by grepping the codebase for
+`findValidatorForUser`.
+
 ## Constraints honored
 
 - No `git push` was performed during the work — per the user's global brief.
