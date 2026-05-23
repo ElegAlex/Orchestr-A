@@ -1098,11 +1098,11 @@ model Role {
 }
 
 /// Journal d'audit persistant pour traçabilité RGPD des actions métier.
-/// Scope V1 strict : ASSIGNMENT_STATUS_CHANGED et BALANCER_APPLIED (cf. ADR-02).
+/// Scope V1 strict : ASSIGNMENT_STATUS_CHANGED (cf. ADR-02).
 /// Table append-only par convention applicative (aucun update, aucun delete via service).
 model AuditLog {
   id         String   @id @default(uuid())
-  /// Code de l'action (ex. ASSIGNMENT_STATUS_CHANGED, BALANCER_APPLIED).
+  /// Code de l'action (ex. ASSIGNMENT_STATUS_CHANGED).
   action     String
   /// Type de la ressource concernée (ex. PredefinedTaskAssignment, PredefinedTaskRange).
   entityType String

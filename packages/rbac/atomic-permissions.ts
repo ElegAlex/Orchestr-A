@@ -612,7 +612,7 @@ export const SETTINGS_READ = [
 // ============================================================================
 
 /**
- * Liste exhaustive des 117 permissions canoniques, triée alphabétiquement par
+ * Liste exhaustive des 116 permissions canoniques, triée alphabétiquement par
  * `module:action`. Sert de source unique pour :
  *   - le seed DB (Spec 2 Vague 0) ;
  *   - la génération de migrations (drop permissions mortes, rename
