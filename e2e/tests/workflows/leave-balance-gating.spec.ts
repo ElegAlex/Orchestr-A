@@ -342,15 +342,24 @@ test.describe("Wave 5 — uniform leave balance gating (cross-year + audit)", ()
   );
 
   test(
-    "D. Concurrent global-balance upsert produces a single row (partial unique index + P2002 retry)",
+    "D. Concurrent global-balance upsert converges on a single row (partial unique index)",
     async ({ asRole }) => {
-      // Wave 3 / finding #11. Two ADMINs hit POST /api/leaves/balances
-      // for the same (leaveTypeId, year, userId=null) at once. The
-      // partial unique index `leave_balances_global_unique` guarantees
-      // at most one row; the in-service retry catches P2002 and converts
-      // the loser to a clean update. Both calls must succeed; exactly
-      // one row must exist with the LATER `totalDays` value (or one of
-      // the two, deterministically — the test only asserts the count).
+      // Wave 3 / finding #11. Two ADMIN calls hit
+      // POST /api/leaves/balances for the same
+      // (leaveTypeId, year, userId=null). Under Fastify's single-process
+      // dispatcher the two requests may serialize at the application
+      // layer (request 1 commits before request 2 reads), in which case
+      // the P2002 retry branch in upsertBalance never fires. This test
+      // therefore proves:
+      //   - the partial unique index allows convergent upserts (both
+      //     respond ok, both point to the SAME row id);
+      //   - the response shape stays stable under concurrency.
+      // It does NOT prove that the catch (P2002) → retry branch
+      // executes — that requires a deterministic Postgres-level race
+      // (Testcontainers + pg_advisory_lock or an in-tx barrier). The
+      // retry branch is verified by code review against the advisor's
+      // tx-abort analysis; an integration test for it is tracked in
+      // the closeout's "Outstanding follow-ups" list.
       const adminPage = await asRole("admin");
       const typesRes = await adminPage.request.get("/api/leave-types");
       const types = await typesRes.json();

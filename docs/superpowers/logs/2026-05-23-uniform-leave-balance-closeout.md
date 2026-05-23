@@ -36,7 +36,7 @@
 | 4 | Hygiene (#7, #8, #9, #12) | `0480bcb`, `766fcd4` | (existing tests tightened) | 1518 |
 | 5 | Verification + closeout | this commit | +4 E2E scenarios (A/B/C/D), +1 `test:tz-utc` script | 1518 unit + 4 E2E |
 
-All 1518 API unit tests + 110 RBAC tests green. Build clean. Helper suite green under both `TZ=Europe/Paris` (default) and `TZ=UTC` (`pnpm --filter api test:tz-utc`).
+All 1518 API unit tests + 110 RBAC tests green. Build clean. The full `src/leaves/` suite (203 tests: helper + service + controller) passes under both `TZ=Europe/Paris` (default) and `TZ=UTC` — the latter exercised via `pnpm --filter api test:tz-utc`, which sets `LEAVE_TZ_OVERRIDE_OFF=1` so `vitest.setup.ts` respects the shell-level `TZ=UTC` instead of forcing Paris. This is the architectural proof that the helper and the gates that consume it are host-TZ-independent by construction, not just because we forced Paris everywhere.
 
 ## E2E scenarios delivered
 
@@ -45,7 +45,7 @@ Per Wave 5 brief — `e2e/tests/workflows/leave-balance-gating.spec.ts`:
 1. **A.** ADMIN self-approves a leave spanning Dec 30 → Jan 8 with both years funded at 25 days each. Asserts status APPROVED, `selfApproved = true`, `validatorId = actor`.
 2. **B.** ADMIN edits a CANCELLED leave (gate must accept; CANCELLED rows are filtered structurally per #5).
 3. **C.** CONTRIBUTEUR with mixed allocations (year N = 25 days, year N+1 = 0) tries to span. Rejection names year N+1 and the shortfall in days per Wave 2.
-4. **D.** Concurrent `POST /api/leaves/balances` with `userId=null` for the same `(leaveTypeId, year)` — partial unique index + P2002 retry produce exactly one row.
+4. **D.** Concurrent `POST /api/leaves/balances` with `userId=null` for the same `(leaveTypeId, year)` — partial unique index ensures the two responses converge on a single row. **Caveat:** under Fastify's single-process dispatcher the two requests can serialize, so this scenario does not deterministically exercise the in-service `catch (P2002) → retry` branch. The retry path is verified by code review (cf. advisor's tx-abort analysis); a deterministic integration test is queued in "Outstanding follow-ups" below.
 
 The previously-codified-bug assertion `expect(body.validatorId).toBeNull()` in the existing smoke test is replaced with the Wave 3 contract (`validatorId = userId, selfApproved = true`).
 
@@ -85,3 +85,5 @@ If counts are zero, no action. If non-zero, decide between backfill (UPDATE matc
 2. Force `TZ=Europe/Paris` in `apps/api/Dockerfile` and `docker-compose.prod.yml` — the helper is robust, but other Date operations may drift. Cheap fix.
 3. Remove the deprecated `type` field from `CreateLeaveDto` / `UpdateLeaveDto` at the next major release. The service already ignores it.
 4. The audit-log entry for self-approval fires AFTER the `$transaction` commits. Process crash in the microsecond gap leaves the row's `selfApproved=true` without a security-log entry. AuditService is sync-to-`Logger` (no IO), but if this gap ever needs to be closed, move the log emission inside the tx via Prisma middleware bound to the leaves insert.
+5. **Deterministic integration test for the `upsertBalance` P2002 retry branch** (finding #11). E2E scenario D converges on a single row but does not reliably trigger the catch branch because Fastify can serialize the two POSTs. Future: stand up a Testcontainers Postgres + use `pg_advisory_lock` or a barrier to force two `findFirst` calls to return "no row" before either commit. Until then, the retry branch is covered by code review only.
+6. **E2E scenarios A–D were parsed by Playwright (`--list` clean) but not executed in this session** (no dev API + DB running in the sandbox). Operator must run `pnpm test:e2e` against a healthy environment before deploying; CI already wires this up.
