@@ -31,9 +31,13 @@ import {
 // Distribuée à tous les templates ayant projects:update (même bundle PROJECTS_CRUD).
 // Mise à jour 2026-05-23 : suppression de predefined_tasks:balance (catalogue 117 → 116).
 // Retirée de PREDEFINED_TASKS_ADMIN (-1 sur tous les templates utilisant ce bundle).
+// Mise à jour 2026-05-23 : ajout de leaves:self_approve (catalogue 116 → 117).
+// Distribué via CATALOG_PERMISSIONS à ADMIN (catalogue complet) et ADMIN_DELEGATED
+// (catalogue moins exclusions). La permission n'est pas dans la liste d'exclusions
+// d'ADMIN_DELEGATED, donc les deux templates gagnent +1.
 const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
-  ADMIN: 116,
-  ADMIN_DELEGATED: 113,
+  ADMIN: 117,
+  ADMIN_DELEGATED: 114,
   PORTFOLIO_MANAGER: 82,
   MANAGER: 85,
   MANAGER_PROJECT_FOCUS: 78,
@@ -61,8 +65,8 @@ const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
 };
 
 describe("rbac — conformité contrats Phase 1", () => {
-  it("CATALOG_PERMISSIONS contient exactement 116 permissions", () => {
-    expect(CATALOG_PERMISSIONS.length).toBe(116);
+  it("CATALOG_PERMISSIONS contient exactement 117 permissions", () => {
+    expect(CATALOG_PERMISSIONS.length).toBe(117);
   });
 
   it("CATALOG_PERMISSIONS sans doublon", () => {

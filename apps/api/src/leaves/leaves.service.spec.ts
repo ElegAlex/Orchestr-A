@@ -561,6 +561,192 @@ describe('LeavesService', () => {
   });
 
   // ============================================
+  // SELF-APPROVAL (leaves:self_approve)
+  // ============================================
+  describe('self-approval (leaves:self_approve)', () => {
+    const createLeaveDto = {
+      leaveTypeId: 'leave-type-1',
+      startDate: '2025-06-02',
+      endDate: '2025-06-06',
+      reason: 'Self-approve test',
+    };
+
+    it('grants APPROVED status when requesting user has leaves:self_approve and creates for self', async () => {
+      // Mock ADMIN having leaves:self_approve
+      mockGetPermissionsForRole.mockImplementation((role: string) => {
+        if (role === 'ADMIN') {
+          return Promise.resolve([
+            'leaves:read',
+            'leaves:readAll',
+            'leaves:self_approve',
+            'leaves:delete',
+            'leaves:approve',
+            'leaves:manage_any',
+          ]);
+        }
+        return Promise.resolve(['leaves:read', 'leaves:readAll']);
+      });
+
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue({
+        ...mockLeaveTypeConfig,
+        requiresApproval: true,
+      });
+
+      // hasConfiguredBalance: no balance (unlimited)
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce(null);
+
+      // overlap check
+      mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
+
+      const autoApprovedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        validatorId: null,
+      };
+      mockPrismaService.leave.create.mockResolvedValue(autoApprovedLeave);
+
+      const result = await service.create('user-1', createLeaveDto, 'ADMIN');
+
+      expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: LeaveStatus.APPROVED,
+            validatorId: null,
+          }),
+        }),
+      );
+      expect(result.status).toBe(LeaveStatus.APPROVED);
+    });
+
+    it('keeps PENDING status when user does not have leaves:self_approve', async () => {
+      // CONTRIBUTEUR role has no leaves:self_approve
+      mockGetPermissionsForRole.mockImplementation((role: string) => {
+        return Promise.resolve(['leaves:read', 'leaves:readAll']);
+      });
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(mockUser) // user check
+        .mockResolvedValueOnce({ ...mockUser }); // findValidatorForUser
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue({
+        ...mockLeaveTypeConfig,
+        requiresApproval: true,
+      });
+
+      // hasConfiguredBalance: no balance (unlimited)
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce(null);
+
+      // overlap check
+      mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
+
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+
+      const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING };
+      mockPrismaService.leave.create.mockResolvedValue(pendingLeave);
+
+      await service.create('user-1', createLeaveDto, 'CONTRIBUTEUR');
+
+      expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: LeaveStatus.PENDING,
+          }),
+        }),
+      );
+    });
+
+    it('does not self-approve when leave is for another user (targetUserId)', async () => {
+      // ADMIN has leaves:self_approve AND leaves:declare_for_others
+      mockGetPermissionsForRole.mockImplementation((role: string) => {
+        if (role === 'ADMIN') {
+          return Promise.resolve([
+            'leaves:read',
+            'leaves:readAll',
+            'leaves:self_approve',
+            'leaves:delete',
+            'leaves:approve',
+            'leaves:manage_any',
+            'leaves:declare_for_others',
+          ]);
+        }
+        return Promise.resolve(['leaves:read', 'leaves:readAll']);
+      });
+
+      const targetUser = { ...mockUser, id: 'user-2' };
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(mockUser) // requesting user check
+        .mockResolvedValueOnce(targetUser) // target user check
+        .mockResolvedValueOnce(targetUser); // findValidatorForUser
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue({
+        ...mockLeaveTypeConfig,
+        requiresApproval: true,
+      });
+
+      // hasConfiguredBalance for target user: unlimited
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce(null);
+
+      // overlap check
+      mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
+
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+
+      // declaredByManager path → APPROVED (existing manager-for-other logic)
+      const approvedLeave = { ...mockLeave, userId: 'user-2', status: LeaveStatus.APPROVED };
+      mockPrismaService.leave.create.mockResolvedValue(approvedLeave);
+
+      const dtoForOther = { ...createLeaveDto, targetUserId: 'user-2' };
+      const result = await service.create('user-1', dtoForOther, 'ADMIN');
+
+      // The existing manager-for-other path produces APPROVED
+      // (not via self_approve but via declaredByManager=true)
+      expect(result.status).toBe(LeaveStatus.APPROVED);
+      // Verify leave is created for the target user, not the requesting user
+      expect(result.userId).toBe('user-2');
+    });
+
+    it('still respects balance check before self-approving (insufficient balance → BadRequestException)', async () => {
+      // ADMIN has leaves:self_approve
+      mockGetPermissionsForRole.mockImplementation((role: string) => {
+        if (role === 'ADMIN') {
+          return Promise.resolve([
+            'leaves:read',
+            'leaves:readAll',
+            'leaves:self_approve',
+            'leaves:manage_any',
+          ]);
+        }
+        return Promise.resolve(['leaves:read', 'leaves:readAll']);
+      });
+
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue({
+        ...mockLeaveTypeConfig,
+        requiresApproval: true,
+      });
+
+      // Balance configured globally with only 1 day
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ id: 'g1' });
+      // resolveAllocatedDays: global = 1 day
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ totalDays: 1 });
+
+      mockPrismaService.leave.findMany
+        .mockResolvedValueOnce([]) // overlap
+        .mockResolvedValueOnce([]) // approved
+        .mockResolvedValueOnce([]); // pending
+
+      // 5 days requested, 1 day available → BadRequestException even with self_approve
+      await expect(
+        service.create('user-1', createLeaveDto, 'ADMIN'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ============================================
   // FIND ALL
   // ============================================
   describe('findAll', () => {

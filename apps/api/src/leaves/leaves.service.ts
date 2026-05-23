@@ -384,15 +384,25 @@ export class LeavesService {
       }
     }
 
-    // Trouver le validateur approprié (manager du département ou délégué actif)
-    const validatorId = leaveTypeConfig.requiresApproval
+    // Auto-validation : un utilisateur ayant `leaves:self_approve` qui crée
+    // un congé pour lui-même obtient directement APPROVED. La voie
+    // "déclaration pour autrui" (declaredByManager) garde sa logique propre.
+    const isForSelf = !declaredByManager;
+    const canSelfApprove =
+      isForSelf &&
+      (await this.roleHasPermission(requestingUserRole, 'leaves:self_approve'));
+
+    // Trouver le validateur approprié (sauf cas d'auto-approbation)
+    const requiresValidator =
+      leaveTypeConfig.requiresApproval && !declaredByManager && !canSelfApprove;
+    const validatorId = requiresValidator
       ? await this.findValidatorForUser(userId)
       : null;
 
-    // Statut initial selon si validation requise
-    // Un congé déclaré par un manager/responsable pour un collaborateur → APPROVED directement
+    // Statut initial : APPROVED si déclaré pour autrui par manager, si type
+    // sans approbation requise, ou si auto-validation autorisée.
     const initialStatus =
-      declaredByManager || !leaveTypeConfig.requiresApproval
+      declaredByManager || !leaveTypeConfig.requiresApproval || canSelfApprove
         ? LeaveStatus.APPROVED
         : LeaveStatus.PENDING;
 

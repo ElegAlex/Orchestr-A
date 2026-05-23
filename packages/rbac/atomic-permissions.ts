@@ -74,7 +74,7 @@ export type PermissionCode =
   | "holidays:delete"
   | "holidays:read"
   | "holidays:update"
-  // leaves (10 — :view supprimé D4 A)
+  // leaves (11 — :view supprimé D4 A ; :self_approve ajouté 2026-05-23)
   | "leaves:approve"
   | "leaves:create"
   | "leaves:declare_for_others"
@@ -84,6 +84,7 @@ export type PermissionCode =
   | "leaves:manage_delegations"
   | "leaves:read"
   | "leaves:readAll"
+  | "leaves:self_approve"
   | "leaves:update"
   // milestones (4)
   | "milestones:create"
@@ -444,6 +445,16 @@ export const LEAVES_GLOBAL = [
 ] as const satisfies readonly PermissionCode[];
 
 /**
+ * Permet d'auto-valider ses propres demandes de congés (statut APPROVED
+ * direct, sans entrée dans la liste des PENDING). Attribué aux rôles
+ * d'encadrement de haut niveau (ADMIN, RESPONSABLE/ADMIN_DELEGATED).
+ * Ces templates héritent la permission automatiquement via CATALOG_PERMISSIONS.
+ */
+export const LEAVES_SELF_APPROVE = [
+  "leaves:self_approve",
+] as const satisfies readonly PermissionCode[];
+
+/**
  * Assignation cross-user sans restriction (tasks).
  */
 export const TASKS_CROSS_ASSIGN = [
@@ -612,7 +623,7 @@ export const SETTINGS_READ = [
 // ============================================================================
 
 /**
- * Liste exhaustive des 116 permissions canoniques, triée alphabétiquement par
+ * Liste exhaustive des 117 permissions canoniques, triée alphabétiquement par
  * `module:action`. Sert de source unique pour :
  *   - le seed DB (Spec 2 Vague 0) ;
  *   - la génération de migrations (drop permissions mortes, rename
@@ -672,6 +683,7 @@ export const CATALOG_PERMISSIONS = [
   "leaves:manage_delegations",
   "leaves:read",
   "leaves:readAll",
+  "leaves:self_approve",
   "leaves:update",
   // milestones
   "milestones:create",
