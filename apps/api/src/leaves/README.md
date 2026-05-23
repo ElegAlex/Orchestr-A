@@ -55,6 +55,22 @@ The DTO field is marked `@deprecated` and will be removed in the next
 major release. Until then, the service silently drops it — no 400 — to
 avoid breaking existing API consumers.
 
+**Historical drift is not eliminated retroactively.** Wave 4 closes the
+write path: no row created or updated after `0480bcb` can carry a
+divergent `type` / `leaveTypeId`. Rows persisted before that commit may
+still have the disagreement and `GET /leaves?type=X` will return them.
+The Wave 5 closeout reports the historical count via:
+
+```sql
+SELECT COUNT(*)
+FROM   leaves l
+JOIN   leave_type_configs c ON c.id = l.leave_type_id
+WHERE  l."type"::text != c.code
+  AND  l."type" IS NOT NULL;
+```
+
+Backfilling those rows is a follow-up decision, not part of Wave 4.
+
 If a future change introduces an editable `leaveTypeId` on update, both
 columns must move together inside a single Prisma write. Adding a
 "change leave type" endpoint without enforcing this invariant re-opens

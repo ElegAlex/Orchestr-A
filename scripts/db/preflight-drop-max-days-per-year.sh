@@ -54,6 +54,20 @@ echo "    Container: ${CONTAINER_NAME}"
 echo "    Database:  ${DATABASE_NAME}"
 echo
 
+# Smoke check: under `set -e`, a failure inside $(run_sql ...) only aborts
+# the script if the statement is the entire command — assigning the output
+# to a variable masks the exit code. We surface a connection failure now,
+# before the diagnostic queries silently return empty strings.
+echo "--- 0. Connectivity smoke check -------------------------------------"
+if ! run_sql -c 'SELECT 1;' >/dev/null 2>&1; then
+  echo "!! psql connection failed inside container ${CONTAINER_NAME}."
+  echo "!! Check the container is running and DATABASE_USER/DATABASE_NAME"
+  echo "!! match what is deployed. ABORTING."
+  exit 1
+fi
+echo "    psql reachable."
+echo
+
 echo "--- 1. Affected leave_type_configs rows -----------------------------"
 AFFECTED_COUNT=$(run_sql -c 'SELECT COUNT(*) FROM "leave_type_configs" WHERE "maxDaysPerYear" IS NOT NULL;')
 echo "    rows with non-null maxDaysPerYear: ${AFFECTED_COUNT}"
