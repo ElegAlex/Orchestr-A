@@ -350,6 +350,31 @@ describe('LeavesService', () => {
       expect(mockPrismaService.leave.create).toHaveBeenCalled();
     });
 
+    it('should reject leave when allocated balance is zero', async () => {
+      const typeWithZeroBalance = { ...mockLeaveTypeConfig, code: 'RTT' };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        typeWithZeroBalance,
+      );
+
+      // hasConfiguredBalance: no individual, global row exists (totalDays will be 0)
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ id: 'g1' });
+
+      // resolveAllocatedDays inside getAvailableDays: individual null, global totalDays=0
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ totalDays: 0 });
+
+      mockPrismaService.leave.findMany
+        .mockResolvedValueOnce([]) // overlap
+        .mockResolvedValueOnce([]) // approved
+        .mockResolvedValueOnce([]); // pending
+
+      await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
     it('should use individual override when individual balance is more restrictive', async () => {
       const typeRtt = { ...mockLeaveTypeConfig, code: 'RTT' };
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);

@@ -448,29 +448,6 @@ export class LeavesService {
   }
 
   /**
-   * Récupérer le nombre de jours utilisés pour un type de congé cette année
-   */
-  private async getUsedDaysForType(
-    userId: string,
-    leaveTypeId: string,
-  ): Promise<number> {
-    const currentYear = new Date().getFullYear();
-    const yearStart = new Date(currentYear, 0, 1);
-    const yearEnd = new Date(currentYear, 11, 31);
-
-    const leaves = await this.prisma.leave.findMany({
-      where: {
-        userId,
-        leaveTypeId,
-        status: { in: [LeaveStatus.APPROVED, LeaveStatus.PENDING] },
-        startDate: { gte: yearStart, lte: yearEnd },
-      },
-    });
-
-    return leaves.reduce((sum, l) => sum + l.days, 0);
-  }
-
-  /**
    * Trouver le validateur approprié pour un utilisateur
    */
   private async findValidatorForUser(userId: string): Promise<string | null> {
@@ -1095,17 +1072,33 @@ export class LeavesService {
       }
     }
 
-    // Vérifier le solde si c'est un congé payé
-    const leaveType = type ?? existingLeave.type;
-    if (leaveType === LeaveType.CP) {
-      const balance = await this.getLeaveBalance(existingLeave.userId);
-      const currentDays = existingLeave.days;
-      const newDays = days;
-      const additionalDays = newDays - currentDays;
-
-      if (balance.available < additionalDays) {
+    // Vérifier le solde si la typologie en a un de configuré (sinon : illimité).
+    // Important : on calcule la disponibilité APRÈS exclusion de la demande
+    // en cours d'édition, pour éviter qu'elle ne soit comptée deux fois
+    // (getAvailableDays soustrait déjà ses jours actuels).
+    const requestYear = start.getFullYear();
+    const hasBalance = await this.hasConfiguredBalance(
+      existingLeave.userId,
+      existingLeave.leaveTypeId,
+      requestYear,
+    );
+    if (hasBalance) {
+      const available = await this.getAvailableDays(
+        existingLeave.userId,
+        existingLeave.leaveTypeId,
+        requestYear,
+      );
+      // Réintégrer les jours du congé en cours de modification pour éviter
+      // le double-décompte (il est déjà inclus dans approved/pending).
+      const adjustedAvailable = available + existingLeave.days;
+      if (adjustedAvailable < days) {
+        const leaveTypeConfig = await this.prisma.leaveTypeConfig.findUnique({
+          where: { id: existingLeave.leaveTypeId },
+          select: { name: true },
+        });
+        const typeName = leaveTypeConfig?.name ?? 'ce type de congé';
         throw new BadRequestException(
-          `Solde de congés insuffisant. Disponible: ${balance.available} jours, Demandé en plus: ${additionalDays} jours`,
+          `Solde insuffisant pour ${typeName}. Disponible: ${adjustedAvailable} jours, Demandé: ${days} jours`,
         );
       }
     }
