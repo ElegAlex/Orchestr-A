@@ -1,6 +1,13 @@
 import 'reflect-metadata';
 import { vi } from 'vitest';
 
+// Force Europe/Paris timezone for every test run.
+// Year-window math (cf. uniform leave balance) is anchored on Paris time;
+// CI runners default to UTC, which would silently flip edge-day leaves
+// across calendar years. Setting this here before any Date instantiation
+// in test modules keeps results deterministic locally and in GitHub Actions.
+process.env.TZ = 'Europe/Paris';
+
 // Mock Prisma enums for tests
 // These enums are exported from @prisma/client and need to be available in tests
 
