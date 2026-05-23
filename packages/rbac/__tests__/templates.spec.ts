@@ -29,20 +29,22 @@ import {
 // → STANDARD_SELF_SERVICE (+1 tous templates self-service composite).
 // Mise à jour W1.x : +1 permission projects:archive (catalogue 116 → 117).
 // Distribuée à tous les templates ayant projects:update (même bundle PROJECTS_CRUD).
+// Mise à jour 2026-05-23 : suppression de predefined_tasks:balance (catalogue 117 → 116).
+// Retirée de PREDEFINED_TASKS_ADMIN (-1 sur tous les templates utilisant ce bundle).
 const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
-  ADMIN: 117,
-  ADMIN_DELEGATED: 114,
-  PORTFOLIO_MANAGER: 83,
-  MANAGER: 86,
-  MANAGER_PROJECT_FOCUS: 79,
-  MANAGER_HR_FOCUS: 49,
+  ADMIN: 116,
+  ADMIN_DELEGATED: 113,
+  PORTFOLIO_MANAGER: 82,
+  MANAGER: 85,
+  MANAGER_PROJECT_FOCUS: 78,
+  MANAGER_HR_FOCUS: 48,
   PROJECT_LEAD: 67,
   PROJECT_LEAD_JUNIOR: 64,
   TECHNICAL_LEAD: 48,
   PROJECT_CONTRIBUTOR: 58,
   PROJECT_CONTRIBUTOR_LIGHT: 49,
   FUNCTIONAL_REFERENT: 44,
-  HR_OFFICER: 41,
+  HR_OFFICER: 40,
   HR_OFFICER_LIGHT: 21,
   THIRD_PARTY_MANAGER: 55,
   CONTROLLER: 29,
@@ -59,8 +61,8 @@ const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
 };
 
 describe("rbac — conformité contrats Phase 1", () => {
-  it("CATALOG_PERMISSIONS contient exactement 117 permissions", () => {
-    expect(CATALOG_PERMISSIONS.length).toBe(117);
+  it("CATALOG_PERMISSIONS contient exactement 116 permissions", () => {
+    expect(CATALOG_PERMISSIONS.length).toBe(116);
   });
 
   it("CATALOG_PERMISSIONS sans doublon", () => {

@@ -92,9 +92,8 @@ export type PermissionCode =
   | "milestones:update"
   // planning (1)
   | "planning:activity-view"
-  // predefined_tasks (8)
+  // predefined_tasks (7)
   | "predefined_tasks:assign"
-  | "predefined_tasks:balance"
   | "predefined_tasks:create"
   | "predefined_tasks:delete"
   | "predefined_tasks:edit"
@@ -472,16 +471,14 @@ export const PREDEFINED_TASKS_VIEW = [
 ] as const satisfies readonly PermissionCode[];
 
 /**
- * Administration des tâches prédéfinies + assignment aux agents + génération
- * équilibrée + mise à jour du statut de toute assignation (scope service via
- * @OwnershipCheck côté code).
+ * Administration des tâches prédéfinies + assignment aux agents + mise à jour
+ * du statut de toute assignation (scope service via @OwnershipCheck côté code).
  */
 export const PREDEFINED_TASKS_ADMIN = [
   "predefined_tasks:create",
   "predefined_tasks:edit",
   "predefined_tasks:delete",
   "predefined_tasks:assign",
-  "predefined_tasks:balance",
   "predefined_tasks:update-any-status",
 ] as const satisfies readonly PermissionCode[];
 
@@ -685,7 +682,6 @@ export const CATALOG_PERMISSIONS = [
   "planning:activity-view",
   // predefined_tasks
   "predefined_tasks:assign",
-  "predefined_tasks:balance",
   "predefined_tasks:create",
   "predefined_tasks:delete",
   "predefined_tasks:edit",
