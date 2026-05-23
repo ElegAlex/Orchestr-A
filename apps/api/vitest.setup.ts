@@ -6,7 +6,14 @@ import { vi } from 'vitest';
 // CI runners default to UTC, which would silently flip edge-day leaves
 // across calendar years. Setting this here before any Date instantiation
 // in test modules keeps results deterministic locally and in GitHub Actions.
-process.env.TZ = 'Europe/Paris';
+//
+// Opt-out: set `LEAVE_TZ_OVERRIDE_OFF=1` in the shell. Used by the
+// `test:tz-utc` script to prove the leave-year-window helper is
+// host-TZ-independent by construction (date-fns-tz with explicit zone),
+// not just because we forced Paris everywhere.
+if (process.env.LEAVE_TZ_OVERRIDE_OFF !== '1') {
+  process.env.TZ = 'Europe/Paris';
+}
 
 // Mock Prisma enums for tests
 // These enums are exported from @prisma/client and need to be available in tests
