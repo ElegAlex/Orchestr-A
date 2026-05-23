@@ -123,6 +123,19 @@ export function splitLeaveByYear(
   if (endHalfDay) {
     buckets.set(endYear, Math.max(0, (buckets.get(endYear) ?? 0) - 0.5));
   }
+
+  // Reconcile with calculateLeaveDays. The legacy day count floors at 0.5,
+  // so a leave that lands entirely on weekends still records 0.5 in the
+  // database `days` column. If we returned an empty bucket array, the gate
+  // would skip the check while storage records non-zero consumption — the
+  // exact "balance gate bypass" regression Wave 1 must not introduce. We
+  // credit the shortfall to start.year so the gate sees what storage sees.
+  const expected = calculateLeaveDays(start, end, startHalfDay, endHalfDay);
+  const sum = Array.from(buckets.values()).reduce((a, b) => a + b, 0);
+  if (expected > sum) {
+    buckets.set(startYear, (buckets.get(startYear) ?? 0) + (expected - sum));
+  }
+
   return Array.from(buckets.entries())
     .filter(([, d]) => d > 0)
     .sort(([a], [b]) => a - b)

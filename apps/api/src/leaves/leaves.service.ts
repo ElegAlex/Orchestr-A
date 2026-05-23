@@ -1074,12 +1074,12 @@ export class LeavesService {
       );
     }
 
-    const days = calculateLeaveDays(
-      start,
-      end,
-      effectiveHalfDay ?? existingLeave.halfDay,
-      undefined,
-    );
+    // `gateHalfDay` est la valeur effective consommée par le moteur de
+    // décompte ET par la gate de solde : il faut que les deux voient la
+    // même demi-journée, sinon `days` (stockage) et `workDays` (gate)
+    // peuvent diverger d'une demi-journée et bloquer un édit légitime.
+    const gateHalfDay = effectiveHalfDay ?? existingLeave.halfDay;
+    const days = calculateLeaveDays(start, end, gateHalfDay, undefined);
 
     // Vérifier les chevauchements (exclure la demande actuelle)
     if (startDate || endDate) {
@@ -1102,12 +1102,7 @@ export class LeavesService {
     // `available + existingLeave.days` qui sur-créditait quand un congé
     // était déplacé d'une année à l'autre (existingLeave.days est compté
     // en totalité, indépendamment de l'année où il tombait).
-    const yearBuckets = splitLeaveByYear(
-      start,
-      end,
-      effectiveHalfDay,
-      undefined,
-    );
+    const yearBuckets = splitLeaveByYear(start, end, gateHalfDay, undefined);
     let leaveTypeConfigCache: { name: string } | null = null;
     const loadLeaveTypeName = async (): Promise<string> => {
       if (!leaveTypeConfigCache) {

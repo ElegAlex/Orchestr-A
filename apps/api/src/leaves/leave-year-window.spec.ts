@@ -98,18 +98,17 @@ describe('leave-year-window', () => {
       ]);
     });
 
-    it('drops weekend-only year buckets', () => {
-      // Sat 2026-01-03 (no, 2026-01-03 is Sat? Actually 2026-01-03 is Saturday)
-      // Use Fri 2026-01-02 → Sat 2027-01-02 to keep things readable:
-      // Fri 2026-01-02 = weekday; entire 2026 has 1 weekday recorded
-      // 2027 stretches from Jan 1 (Fri) — Sat Jan 2 ends the range
-      // 2026: Fri Jan 2 + remaining 2026 weekdays through Dec 31 = many days.
-      // Too noisy — replace with a controlled cross-year case:
-      // Sat 2026-12-26 → Sun 2026-12-27 → only 2026 buckets, weekend only
-      const start = new Date('2026-12-26T00:00:00Z');
-      const end = new Date('2026-12-27T00:00:00Z');
-      const buckets = splitLeaveByYear(start, end);
-      expect(buckets).toEqual([]); // all weekend, no bucket emitted
+    it('charges the legacy floor (0.5) to start.year when all days are weekend', () => {
+      // calculateLeaveDays floors at 0.5 for any multi-day leave; storage
+      // records `days = 0.5` in this case. The split must report the same
+      // figure or the gate would skip the check while storage consumes the
+      // half-day off-the-books.
+      const start = new Date('2026-12-26T00:00:00Z'); // Sat
+      const end = new Date('2026-12-27T00:00:00Z'); // Sun
+      expect(calculateLeaveDays(start, end)).toBe(0.5);
+      expect(splitLeaveByYear(start, end)).toEqual([
+        { year: 2026, workDays: 0.5 },
+      ]);
     });
 
     it('charges startHalfDay to start.year, endHalfDay to end.year on cross-year leave', () => {
@@ -125,6 +124,31 @@ describe('leave-year-window', () => {
         { year: 2026, workDays: 0.5 },
         { year: 2027, workDays: 0.5 },
       ]);
+    });
+
+    it('matches calculateLeaveDays exactly for any (start, end, halfDay) combination', () => {
+      // Architectural invariant: storage.days === sum(bucket.workDays).
+      // If this ever fails, the gate and storage disagree and the system
+      // is back in the regime that produced findings #1–#3.
+      const cases: Array<[string, string, string | null, string | null]> = [
+        ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', null, null], // Mon-Fri
+        ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', 'MORNING', null],
+        ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', 'MORNING', 'AFTERNOON'],
+        ['2026-12-28T00:00:00Z', '2027-01-08T00:00:00Z', null, null], // cross-year
+        ['2026-12-28T00:00:00Z', '2027-01-08T00:00:00Z', 'MORNING', 'AFTERNOON'],
+        ['2026-01-17T00:00:00Z', '2026-01-18T00:00:00Z', null, null], // weekend-only
+        ['2026-01-17T00:00:00Z', '2026-01-18T00:00:00Z', 'MORNING', null], // weekend + half
+      ];
+      for (const [s, e, sh, eh] of cases) {
+        const start = new Date(s);
+        const end = new Date(e);
+        const calc = calculateLeaveDays(start, end, sh, eh);
+        const sum = splitLeaveByYear(start, end, sh, eh).reduce(
+          (acc, b) => acc + b.workDays,
+          0,
+        );
+        expect(sum).toBe(calc);
+      }
     });
 
     it('single-instant leave returns one bucket in its Paris year', () => {
