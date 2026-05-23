@@ -663,7 +663,6 @@ export interface LeaveTypeConfig {
   icon: string;
   isPaid: boolean;
   requiresApproval: boolean;
-  maxDaysPerYear?: number | null;
   isActive: boolean;
   isSystem: boolean;
   sortOrder: number;

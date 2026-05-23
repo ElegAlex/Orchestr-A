@@ -9,7 +9,6 @@ export interface LeaveTypeConfig {
   icon: string;
   isPaid: boolean;
   requiresApproval: boolean;
-  maxDaysPerYear?: number;
   isActive: boolean;
   isSystem: boolean;
   sortOrder: number;
@@ -28,7 +27,6 @@ export interface CreateLeaveTypeDto {
   icon?: string;
   isPaid?: boolean;
   requiresApproval?: boolean;
-  maxDaysPerYear?: number;
   sortOrder?: number;
 }
 
@@ -39,7 +37,6 @@ export interface UpdateLeaveTypeDto {
   icon?: string;
   isPaid?: boolean;
   requiresApproval?: boolean;
-  maxDaysPerYear?: number;
   isActive?: boolean;
   sortOrder?: number;
 }

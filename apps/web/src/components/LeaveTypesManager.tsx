@@ -32,7 +32,6 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
     icon: "🌴",
     isPaid: true,
     requiresApproval: true,
-    maxDaysPerYear: undefined,
     sortOrder: 0,
   });
 
@@ -62,7 +61,6 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
       icon: "🌴",
       isPaid: true,
       requiresApproval: true,
-      maxDaysPerYear: undefined,
       sortOrder: leaveTypes.length,
     });
   };
@@ -100,7 +98,6 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
     if (!editingType.isSystem) {
       updateData.isPaid = formData.isPaid;
       updateData.requiresApproval = formData.requiresApproval;
-      updateData.maxDaysPerYear = formData.maxDaysPerYear;
     }
 
     try {
@@ -168,7 +165,6 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
       icon: type.icon,
       isPaid: type.isPaid,
       requiresApproval: type.requiresApproval,
-      maxDaysPerYear: type.maxDaysPerYear || undefined,
       sortOrder: type.sortOrder,
     });
     setShowEditModal(true);
@@ -253,9 +249,6 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                 Options
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Limite/an
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Utilisations
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -318,11 +311,6 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                       </span>
                     )}
                   </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {type.maxDaysPerYear
-                    ? `${type.maxDaysPerYear} jours`
-                    : t("unlimited")}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
                   {type._count?.leaves || 0} congé(s)
@@ -546,27 +534,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Limite annuelle
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.maxDaysPerYear || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        maxDaysPerYear: e.target.value
-                          ? parseInt(e.target.value)
-                          : undefined,
-                      })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder={t("unlimited")}
-                    min={0}
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center pt-6">
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input
@@ -723,27 +691,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
               </div>
 
               {!editingType.isSystem && (
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Limite annuelle
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.maxDaysPerYear || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          maxDaysPerYear: e.target.value
-                            ? parseInt(e.target.value)
-                            : undefined,
-                        })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder={t("unlimited")}
-                      min={0}
-                    />
-                  </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center pt-6">
                     <label className="flex items-center space-x-2 cursor-pointer">
                       <input

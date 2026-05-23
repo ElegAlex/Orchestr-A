@@ -20,7 +20,6 @@ describe("leaveTypesService", () => {
     icon: "vacation",
     isPaid: true,
     requiresApproval: true,
-    maxDaysPerYear: 25,
     isActive: true,
     isSystem: true,
     sortOrder: 1,
@@ -90,7 +89,6 @@ describe("leaveTypesService", () => {
         color: "#4CAF50",
         isPaid: true,
         requiresApproval: true,
-        maxDaysPerYear: 25,
       };
 
       const result = await leaveTypesService.create(createData);

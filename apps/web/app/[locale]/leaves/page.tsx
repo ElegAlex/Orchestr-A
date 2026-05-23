@@ -1296,7 +1296,6 @@ export default function LeavesPage() {
                   {leaveTypes.map((type) => (
                     <option key={type.id} value={type.id}>
                       {type.icon} {type.name}
-                      {type.maxDaysPerYear && ` (${type.maxDaysPerYear}j/an)`}
                       {!type.isPaid && " - Non rémunéré"}
                     </option>
                   ))}
@@ -1441,7 +1440,6 @@ export default function LeavesPage() {
                   {leaveTypes.map((type) => (
                     <option key={type.id} value={type.id}>
                       {type.icon} {type.name}
-                      {type.maxDaysPerYear && ` (${type.maxDaysPerYear}j/an)`}
                       {!type.isPaid && " - Non rémunéré"}
                     </option>
                   ))}
