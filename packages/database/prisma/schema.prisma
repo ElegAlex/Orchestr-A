@@ -583,6 +583,7 @@ model Leave {
   validatedById     String?   @map("validated_by_id") // Qui a effectivement validé/rejeté
   validatedAt       DateTime? @map("validated_at") // Date de validation/rejet
   validationComment String?   @map("validation_comment") // Commentaire du validateur (motif de refus, etc.)
+  selfApproved      Boolean   @default(false) // True si le validateur est le demandeur (leaves:self_approve), permet à l'audit de distinguer auto-validation et validation hiérarchique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -636,7 +637,12 @@ enum HalfDay {
 }
 
 // Soldes de congés par utilisateur, type et année
-// Si userId est null → valeur globale par défaut pour ce type et cette année
+// Si userId est null → valeur globale par défaut pour ce type et cette année.
+// Note : un index unique partiel `leave_balances_global_unique` (défini en
+// SQL brut dans la migration 20260523171000) empêche les doublons sur la
+// tranche userId IS NULL — Prisma ne sait pas exprimer un UNIQUE WHERE
+// dans @@unique, donc cet index n'apparaît pas dans ce schema mais sa
+// présence est garantie au niveau base par la migration.
 model LeaveBalance {
   id          String   @id @default(uuid())
   userId      String? // null = solde global par défaut

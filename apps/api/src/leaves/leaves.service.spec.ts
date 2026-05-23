@@ -78,6 +78,13 @@ describe('LeavesService', () => {
     role: {
       findMany: vi.fn().mockResolvedValue([]),
     },
+    // Wave 3 / finding #4: create() and update() wrap the gate + write in
+    // $transaction. The mock forwards the same client to the callback so
+    // every queued mock (leaveBalance.findUnique etc.) continues to be
+    // consumed transparently — no test rewrite needed.
+    $transaction: vi.fn(<T>(cb: (tx: typeof mockPrismaService) => T): T =>
+      cb(mockPrismaService),
+    ),
   };
 
   const mockUser = {
@@ -578,10 +585,15 @@ describe('LeavesService', () => {
       reason: 'Year-spanning leave',
     };
 
-    // Helper: queue one (year, allocatedDays) configuration as the gate
-    // expects — `hasConfiguredBalance` (individual=null, global={id}) then
-    // `getAvailableDays` → `resolveAllocatedDays` (individual=null,
-    // global={totalDays}) → leave.findMany (no other intersecting leaves).
+    // Helper: queue one year's worth of gate-phase mocks. The bucket-loop
+    // consumes, IN ORDER, for each year that has configured balance:
+    //   - hasConfiguredBalance: findUnique(null) + findFirst({id})
+    //   - snapshot resolveAllocatedDays: findUnique(null) + findFirst({totalDays})
+    //   - inner getAvailableDays → resolveAllocatedDays: another pair
+    //   - intersecting leaves: leave.findMany([])
+    // Wave 3 (#4) added a re-read phase that runs AFTER the loop, once per
+    // year that produced a snapshot. Use `queueRereadPair` separately so
+    // the queue order matches execution order (loop, then re-read).
     const queueYearAllocation = (totalDays: number) => {
       mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
       mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
@@ -591,7 +603,18 @@ describe('LeavesService', () => {
       mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
         totalDays,
       });
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays,
+      });
       mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
+    };
+
+    const queueRereadPair = (totalDays: number) => {
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays,
+      });
     };
 
     it('accepts a Dec 28 → Jan 8 leave when both years are funded', async () => {
@@ -602,8 +625,11 @@ describe('LeavesService', () => {
         mockLeaveTypeConfig,
       );
       mockPrismaService.leave.findMany.mockResolvedValueOnce([]); // overlap
-      queueYearAllocation(25); // 2026 allocation
-      queueYearAllocation(25); // 2027 allocation
+      queueYearAllocation(25); // 2026 loop iteration
+      queueYearAllocation(25); // 2027 loop iteration
+      // After the loop, re-read fires for each gated year (queue order matters).
+      queueRereadPair(25); // 2026 re-read
+      queueRereadPair(25); // 2027 re-read
       mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
         null,
       );
@@ -620,8 +646,8 @@ describe('LeavesService', () => {
         mockLeaveTypeConfig,
       );
       mockPrismaService.leave.findMany.mockResolvedValueOnce([]); // overlap
-      queueYearAllocation(25); // 2026 ok (4 ≤ 25)
-      queueYearAllocation(0); // 2027 exhausted
+      queueYearAllocation(25); // 2026 passes loop iter, no re-read fires because 2027 throws
+      queueYearAllocation(0); // 2027 exhausted, throws inside the loop
 
       // The rejection must name 2027 AND state the exact shortfall — the
       // user's Wave 2 acceptance is "rejection message must name the
@@ -639,7 +665,7 @@ describe('LeavesService', () => {
         mockLeaveTypeConfig,
       );
       mockPrismaService.leave.findMany.mockResolvedValueOnce([]); // overlap
-      queueYearAllocation(2); // 2026: only 2 days, leave needs 4
+      queueYearAllocation(2); // 2026: only 2 days, leave needs 4 — throws in-loop
 
       // Gate fails on the first failing year and short-circuits before
       // checking 2027 — that's expected. 2026 bucket is 4 work days,
@@ -710,18 +736,9 @@ describe('LeavesService', () => {
       // checkOverlap (excludeId) — return empty
       mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
 
-      // hasConfiguredBalance(2026): individual=null, global={id}
-      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
-      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
-        id: 'g2026',
-      });
-      // resolveAllocatedDays(2026): individual=null, global={totalDays: 25}
-      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
-      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
-        totalDays: 25,
-      });
-      // intersecting query EXCLUDES the edited leave; return empty
-      mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
+      // Single year 2026, gated and passing → re-read fires.
+      queueYearAllocation(25);
+      queueRereadPair(25);
 
       mockPrismaService.leave.update.mockResolvedValue({
         ...existingPending2025,
@@ -751,6 +768,90 @@ describe('LeavesService', () => {
         ([arg]) => arg?.where?.id?.not === 'edit-target',
       );
       expect(intersectingCall).toBeDefined();
+    });
+  });
+
+  // ============================================
+  // WAVE 3 — TRANSACTIONAL SAFETY & STATUS-AWARE EXCLUSION (#4, #5)
+  // ============================================
+  describe('Wave 3 — transactional safety and status-aware exclusion', () => {
+    it('rejects with ConflictException when the snapshotted allocation changes mid-transaction (#4)', async () => {
+      // Inside $transaction: snapshot reads 25 days allocated; immediately
+      // before write, re-read returns 20 (admin shrank the allocation
+      // between the two reads). Gate must abort with ConflictException.
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
+      mockPrismaService.leave.findMany.mockResolvedValueOnce([]); // overlap
+
+      // hasConfiguredBalance
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        id: 'g',
+      });
+      // snapshot resolveAllocatedDays → 25
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 25,
+      });
+      // inner resolveAllocatedDays (getAvailableDays) → 25 too; gate passes
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany.mockResolvedValueOnce([]); // intersecting
+
+      // RE-READ returns a DIFFERENT value — concurrent admin modification.
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 20,
+      });
+
+      await expect(
+        service.create('user-1', {
+          leaveTypeId: 'leave-type-1',
+          startDate: '2026-03-02',
+          endDate: '2026-03-06',
+          reason: 'snapshot race',
+        }),
+      ).rejects.toThrow(/modifié pendant le traitement/);
+
+      // The leave must NOT have been persisted.
+      expect(mockPrismaService.leave.create).not.toHaveBeenCalled();
+    });
+
+    it('CANCELLED leaves never inflate getAvailableDays even without excludeLeaveId (#5)', async () => {
+      // Wave 1 made #5's regression structurally impossible: getAvailableDays
+      // filters by status ∈ {APPROVED, CANCELLATION_REQUESTED, PENDING}, so
+      // CANCELLED/REJECTED rows are never in the subtraction set. excludeLeaveId
+      // therefore cannot "re-credit" days that were never in the count. This
+      // test pins the contract by mocking a CANCELLED row and asserting the
+      // intersecting query filters it out at the SQL level.
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany.mockImplementation(({ where }) => {
+        // Assert the where clause restricts statuses correctly.
+        expect(where.status).toEqual({
+          in: [
+            LeaveStatus.APPROVED,
+            LeaveStatus.CANCELLATION_REQUESTED,
+            LeaveStatus.PENDING,
+          ],
+        });
+        // The DB filter would exclude any CANCELLED/REJECTED row before it
+        // reached the application; here we mimic that by returning [].
+        return Promise.resolve([]);
+      });
+
+      const available = await service.getAvailableDays(
+        'user-1',
+        'leave-type-1',
+        2026,
+      );
+      expect(available).toBe(25);
     });
   });
 
@@ -797,21 +898,75 @@ describe('LeavesService', () => {
       const autoApprovedLeave = {
         ...mockLeave,
         status: LeaveStatus.APPROVED,
-        validatorId: null,
+        validatorId: 'user-1',
+        validatedById: 'user-1',
+        selfApproved: true,
       };
       mockPrismaService.leave.create.mockResolvedValue(autoApprovedLeave);
 
       const result = await service.create('user-1', createLeaveDto, 'ADMIN');
 
+      // Wave 3 / finding #6: self-approval must leave an explicit audit
+      // trail. The leaves table now reflects who validated (validatorId =
+      // validatedById = actorId) and that the validation was a
+      // self-approval (selfApproved = true). validatedAt is set to the
+      // moment the leave was persisted — asserted via expect.any(Date).
       expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             status: LeaveStatus.APPROVED,
-            validatorId: null,
+            validatorId: 'user-1',
+            validatedById: 'user-1',
+            validatedAt: expect.any(Date),
+            selfApproved: true,
           }),
         }),
       );
       expect(result.status).toBe(LeaveStatus.APPROVED);
+    });
+
+    it('emits an audit log entry naming the actor and the selfApproved flag', async () => {
+      // Companion test to the previous one: finding #6 mandates that the
+      // audit log (not just the leaves row) records both pieces of info.
+      mockGetPermissionsForRole.mockImplementation((role: string) => {
+        if (role === 'ADMIN') {
+          return Promise.resolve([
+            'leaves:read',
+            'leaves:self_approve',
+            'leaves:manage_any',
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue({
+        ...mockLeaveTypeConfig,
+        requiresApproval: true,
+      });
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce(null);
+      mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
+      mockPrismaService.leave.create.mockResolvedValue({
+        ...mockLeave,
+        id: 'leave-self-1',
+        status: LeaveStatus.APPROVED,
+        selfApproved: true,
+      });
+
+      const auditLog = vi.spyOn(service['auditService'], 'log');
+
+      await service.create('user-1', createLeaveDto, 'ADMIN');
+
+      expect(auditLog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'LEAVE_APPROVED',
+          userId: 'user-1',
+          targetId: 'leave-self-1',
+          details: expect.stringMatching(/selfApproved=true/),
+          success: true,
+        }),
+      );
     });
 
     it('keeps PENDING status when user does not have leaves:self_approve', async () => {

@@ -369,39 +369,6 @@ export class LeavesService {
       );
     }
 
-    // Vérifier le solde par année calendaire Paris : un congé qui chevauche
-    // 2026 et 2027 doit être validé contre chaque allocation séparément. Si
-    // une année donnée n'a pas d'allocation configurée, elle est traitée
-    // comme illimitée pour cette année (gate ignorée). Si toutes les années
-    // sont sans allocation, aucune borne n'est appliquée.
-    const yearBuckets = splitLeaveByYear(
-      start,
-      end,
-      effectiveHalfDay,
-      endHalfDay,
-    );
-    for (const bucket of yearBuckets) {
-      const hasBalance = await this.hasConfiguredBalance(
-        userId,
-        leaveTypeId,
-        bucket.year,
-      );
-      if (!hasBalance) continue;
-      const available = await this.getAvailableDays(
-        userId,
-        leaveTypeId,
-        bucket.year,
-      );
-      if (available < bucket.workDays) {
-        const shortfall = bucket.workDays - available;
-        throw new BadRequestException(
-          `Solde insuffisant pour ${leaveTypeConfig.name} en ${bucket.year} : ` +
-            `${bucket.workDays} jours demandés, ${available} jours disponibles, ` +
-            `il manque ${shortfall} jours.`,
-        );
-      }
-    }
-
     // Auto-validation : un utilisateur ayant `leaves:self_approve` qui crée
     // un congé pour lui-même obtient directement APPROVED. La voie
     // "déclaration pour autrui" (declaredByManager) garde sa logique propre.
@@ -410,12 +377,18 @@ export class LeavesService {
       isForSelf &&
       (await this.roleHasPermission(requestingUserRole, 'leaves:self_approve'));
 
-    // Trouver le validateur approprié (sauf cas d'auto-approbation)
+    // Trouver le validateur approprié (sauf cas d'auto-approbation).
+    // Pour les auto-validations, l'utilisateur EST son propre validateur :
+    // validatorId = requestingUserId (et validatedById/At/selfApproved
+    // sont positionnés à la création, plus bas dans la transaction).
     const requiresValidator =
       leaveTypeConfig.requiresApproval && !declaredByManager && !canSelfApprove;
-    const validatorId = requiresValidator
-      ? await this.findValidatorForUser(userId)
-      : null;
+    let validatorId: string | null = null;
+    if (requiresValidator) {
+      validatorId = await this.findValidatorForUser(userId);
+    } else if (canSelfApprove) {
+      validatorId = requestingUserId;
+    }
 
     // Statut initial : APPROVED si déclaré pour autrui par manager, si type
     // sans approbation requise, ou si auto-validation autorisée.
@@ -433,44 +406,133 @@ export class LeavesService {
         ? (leaveTypeConfig.code as LeaveType)
         : LeaveType.OTHER);
 
-    // Créer la demande de congé
-    const leave = await this.prisma.leave.create({
-      data: {
-        userId,
-        leaveTypeId,
-        type: enumType,
-        startDate: start,
-        endDate: end,
-        halfDay: effectiveHalfDay || undefined,
-        days,
-        comment: reason,
-        status: initialStatus,
-        validatorId,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            email: true,
+    // Vérifier le solde par année calendaire Paris : un congé qui chevauche
+    // 2026 et 2027 doit être validé contre chaque allocation séparément. Si
+    // une année donnée n'a pas d'allocation configurée, elle est traitée
+    // comme illimitée pour cette année (gate ignorée). Si toutes les années
+    // sont sans allocation, aucune borne n'est appliquée.
+    const yearBuckets = splitLeaveByYear(
+      start,
+      end,
+      effectiveHalfDay,
+      endHalfDay,
+    );
+
+    // Finding #4 — la gate (hasConfiguredBalance + getAvailableDays) et la
+    // création doivent partager une même connexion : sinon un admin qui
+    // supprime/modifie une LeaveBalance entre les deux lectures renvoie un
+    // "Solde insuffisant" trompeur, et la création prend effet contre un
+    // état différent de celui validé. Isolation par défaut (ReadCommitted)
+    // suffit ici uniquement parce qu'on RE-LIT chaque allocation juste
+    // avant l'insert et qu'on abort en ConflictException si elle a bougé.
+    // Une isolation Serializable serait plus stricte mais introduit des
+    // retries non maîtrisés sur un endpoint très sollicité.
+    const leave = await this.prisma.$transaction(async (tx) => {
+      const allocationSnapshots = new Map<number, number>();
+      for (const bucket of yearBuckets) {
+        const hasBalance = await this.hasConfiguredBalance(
+          userId,
+          leaveTypeId,
+          bucket.year,
+          tx,
+        );
+        if (!hasBalance) continue;
+        const allocated = await this.resolveAllocatedDays(
+          userId,
+          leaveTypeId,
+          bucket.year,
+          tx,
+        );
+        allocationSnapshots.set(bucket.year, allocated);
+        const available = await this.getAvailableDays(
+          userId,
+          leaveTypeId,
+          bucket.year,
+          {},
+          tx,
+        );
+        if (available < bucket.workDays) {
+          const shortfall = bucket.workDays - available;
+          throw new BadRequestException(
+            `Solde insuffisant pour ${leaveTypeConfig.name} en ${bucket.year} : ` +
+              `${bucket.workDays} jours demandés, ${available} jours disponibles, ` +
+              `il manque ${shortfall} jours.`,
+          );
+        }
+      }
+
+      // Re-lecture : si une allocation captée pendant la gate a bougé
+      // (delete, update concurrent), on refuse la demande au lieu de
+      // l'écrire contre une réalité différente.
+      for (const [year, snapshot] of allocationSnapshots) {
+        const current = await this.resolveAllocatedDays(
+          userId,
+          leaveTypeId,
+          year,
+          tx,
+        );
+        if (current !== snapshot) {
+          throw new ConflictException(
+            `Le solde de ${leaveTypeConfig.name} pour ${year} a été modifié ` +
+              `pendant le traitement. Veuillez réessayer.`,
+          );
+        }
+      }
+
+      return tx.leave.create({
+        data: {
+          userId,
+          leaveTypeId,
+          type: enumType,
+          startDate: start,
+          endDate: end,
+          halfDay: effectiveHalfDay || undefined,
+          days,
+          comment: reason,
+          status: initialStatus,
+          validatorId,
+          validatedById: canSelfApprove ? requestingUserId : null,
+          validatedAt: canSelfApprove ? new Date() : null,
+          selfApproved: canSelfApprove,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              email: true,
+            },
+          },
+          leaveType: true,
+          validator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              email: true,
+            },
           },
         },
-        leaveType: true,
-        validator: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            email: true,
-          },
-        },
-      },
+      });
     });
+
+    // Trace d'audit séparée pour les auto-validations (finding #6). La
+    // colonne `selfApproved` rend la distinction lisible dans la table,
+    // l'entrée d'audit la rend visible dans le flux de logs sécurité.
+    if (canSelfApprove) {
+      this.auditService.log({
+        action: AuditAction.LEAVE_APPROVED,
+        userId: requestingUserId,
+        targetId: leave.id,
+        details: `Auto-validation par ${requestingUserId} (selfApproved=true)`,
+        success: true,
+      });
+    }
 
     return leave;
   }
@@ -1107,71 +1169,106 @@ export class LeavesService {
     // en totalité, indépendamment de l'année où il tombait).
     const yearBuckets = splitLeaveByYear(start, end, gateHalfDay, undefined);
     let leaveTypeConfigCache: { name: string } | null = null;
-    const loadLeaveTypeName = async (): Promise<string> => {
+    const loadLeaveTypeName = async (
+      db: Prisma.TransactionClient | PrismaService,
+    ): Promise<string> => {
       if (!leaveTypeConfigCache) {
-        leaveTypeConfigCache = await this.prisma.leaveTypeConfig.findUnique({
+        leaveTypeConfigCache = await db.leaveTypeConfig.findUnique({
           where: { id: existingLeave.leaveTypeId },
           select: { name: true },
         });
       }
       return leaveTypeConfigCache?.name ?? 'ce type de congé';
     };
-    for (const bucket of yearBuckets) {
-      const hasBalance = await this.hasConfiguredBalance(
-        existingLeave.userId,
-        existingLeave.leaveTypeId,
-        bucket.year,
-      );
-      if (!hasBalance) continue;
-      const available = await this.getAvailableDays(
-        existingLeave.userId,
-        existingLeave.leaveTypeId,
-        bucket.year,
-        { excludeLeaveId: id },
-      );
-      if (available < bucket.workDays) {
-        const typeName = await loadLeaveTypeName();
-        const shortfall = bucket.workDays - available;
-        throw new BadRequestException(
-          `Solde insuffisant pour ${typeName} en ${bucket.year} : ` +
-            `${bucket.workDays} jours demandés, ${available} jours disponibles, ` +
-            `il manque ${shortfall} jours.`,
-        );
-      }
-    }
 
-    const leave = await this.prisma.leave.update({
-      where: { id },
-      data: {
-        ...(type && { type }),
-        ...(startDate && { startDate: start }),
-        ...(endDate && { endDate: end }),
-        ...(effectiveHalfDay && { halfDay: effectiveHalfDay }),
-        ...(reason !== undefined && { comment: reason }),
-        days,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            email: true,
+    // Finding #4 (cf. create) : gate + write doivent partager une tx pour
+    // qu'une suppression concurrente de LeaveBalance ne fasse pas diverger
+    // l'état validé de l'état écrit. ReadCommitted + re-lecture explicite
+    // avant l'update.
+    const leave = await this.prisma.$transaction(async (tx) => {
+      const allocationSnapshots = new Map<number, number>();
+      for (const bucket of yearBuckets) {
+        const hasBalance = await this.hasConfiguredBalance(
+          existingLeave.userId,
+          existingLeave.leaveTypeId,
+          bucket.year,
+          tx,
+        );
+        if (!hasBalance) continue;
+        const allocated = await this.resolveAllocatedDays(
+          existingLeave.userId,
+          existingLeave.leaveTypeId,
+          bucket.year,
+          tx,
+        );
+        allocationSnapshots.set(bucket.year, allocated);
+        const available = await this.getAvailableDays(
+          existingLeave.userId,
+          existingLeave.leaveTypeId,
+          bucket.year,
+          { excludeLeaveId: id },
+          tx,
+        );
+        if (available < bucket.workDays) {
+          const typeName = await loadLeaveTypeName(tx);
+          const shortfall = bucket.workDays - available;
+          throw new BadRequestException(
+            `Solde insuffisant pour ${typeName} en ${bucket.year} : ` +
+              `${bucket.workDays} jours demandés, ${available} jours disponibles, ` +
+              `il manque ${shortfall} jours.`,
+          );
+        }
+      }
+
+      for (const [year, snapshot] of allocationSnapshots) {
+        const current = await this.resolveAllocatedDays(
+          existingLeave.userId,
+          existingLeave.leaveTypeId,
+          year,
+          tx,
+        );
+        if (current !== snapshot) {
+          const typeName = await loadLeaveTypeName(tx);
+          throw new ConflictException(
+            `Le solde de ${typeName} pour ${year} a été modifié pendant ` +
+              `le traitement. Veuillez réessayer.`,
+          );
+        }
+      }
+
+      return tx.leave.update({
+        where: { id },
+        data: {
+          ...(type && { type }),
+          ...(startDate && { startDate: start }),
+          ...(endDate && { endDate: end }),
+          ...(effectiveHalfDay && { halfDay: effectiveHalfDay }),
+          ...(reason !== undefined && { comment: reason }),
+          days,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              email: true,
+            },
+          },
+          leaveType: true,
+          validator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
         },
-        leaveType: true,
-        validator: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-          },
-        },
-      },
+      });
     });
 
     return leave;
@@ -1773,16 +1870,20 @@ export class LeavesService {
   }
 
   /**
-   * Résoudre le solde total alloué pour un user + leaveType + year
-   * Cherche d'abord l'override individuel, puis le solde global (userId=null)
+   * Résoudre le solde total alloué pour un user + leaveType + year.
+   * Cherche d'abord l'override individuel, puis le solde global (userId=null).
+   *
+   * `db` permet à un appelant transactionnel de partager sa connexion ; sans
+   * argument, on retombe sur `this.prisma` (client racine).
    */
   async resolveAllocatedDays(
     userId: string,
     leaveTypeId: string,
     year: number,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
   ): Promise<number> {
     // 1. Override individuel
-    const individualBalance = await this.prisma.leaveBalance.findUnique({
+    const individualBalance = await db.leaveBalance.findUnique({
       where: {
         userId_leaveTypeId_year: { userId, leaveTypeId, year },
       },
@@ -1792,7 +1893,7 @@ export class LeavesService {
     }
 
     // 2. Solde global (userId = null)
-    const globalBalance = await this.prisma.leaveBalance.findFirst({
+    const globalBalance = await db.leaveBalance.findFirst({
       where: {
         userId: null,
         leaveTypeId,
@@ -1816,8 +1917,9 @@ export class LeavesService {
     userId: string,
     leaveTypeId: string,
     year: number,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
   ): Promise<boolean> {
-    const individual = await this.prisma.leaveBalance.findUnique({
+    const individual = await db.leaveBalance.findUnique({
       where: {
         userId_leaveTypeId_year: { userId, leaveTypeId, year },
       },
@@ -1825,7 +1927,7 @@ export class LeavesService {
     });
     if (individual) return true;
 
-    const global = await this.prisma.leaveBalance.findFirst({
+    const global = await db.leaveBalance.findFirst({
       where: { userId: null, leaveTypeId, year },
       select: { id: true },
     });
@@ -1851,11 +1953,17 @@ export class LeavesService {
     leaveTypeId: string,
     year: number,
     options: { excludeLeaveId?: string } = {},
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
   ): Promise<number> {
-    const totalDays = await this.resolveAllocatedDays(userId, leaveTypeId, year);
+    const totalDays = await this.resolveAllocatedDays(
+      userId,
+      leaveTypeId,
+      year,
+      db,
+    );
     const { start: yearStart, endExclusive: yearEnd } = parisYearWindow(year);
 
-    const intersecting = await this.prisma.leave.findMany({
+    const intersecting = await db.leave.findMany({
       where: {
         userId,
         leaveTypeId,
@@ -2096,23 +2204,52 @@ export class LeavesService {
       });
     }
 
-    // userId = null (global default): Prisma upsert doesn't handle null well in compound keys
-    const existing = await this.prisma.leaveBalance.findFirst({
-      where: { userId: null, leaveTypeId, year },
-    });
-
-    if (existing) {
-      return this.prisma.leaveBalance.update({
-        where: { id: existing.id },
-        data: { totalDays },
-        include: includeOpts,
+    // userId = null (global default) — Prisma upsert ne gère pas correctement
+    // les compound keys avec NULL. Wave 3 / finding #11 : la séquence
+    // findFirst → create | update n'est pas atomique, et l'unique constraint
+    // par défaut (`(userId, leaveTypeId, year)`) traite NULL comme distinct
+    // donc deux globaux pouvaient cohabiter. L'index unique partiel
+    // `leave_balances_global_unique` (migration 20260523171000) interdit ce
+    // doublon au niveau base : le doublon est désormais IMPOSSIBLE.
+    //
+    // Retry simple à un coup, HORS transaction. Une P2002 dans un
+    // $transaction Postgres abort la tx entière (état ERROR), tout
+    // statement suivant échoue avec "current transaction is aborted" — le
+    // try/catch en tx était cosmétique et masquait une 500 réelle. Hors
+    // tx, on peut rejouer la séquence find → update pour gérer la course
+    // proprement.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const existing = await this.prisma.leaveBalance.findFirst({
+        where: { userId: null, leaveTypeId, year },
       });
+      if (existing) {
+        return this.prisma.leaveBalance.update({
+          where: { id: existing.id },
+          data: { totalDays },
+          include: includeOpts,
+        });
+      }
+      try {
+        return await this.prisma.leaveBalance.create({
+          data: { userId: null, leaveTypeId, year, totalDays },
+          include: includeOpts,
+        });
+      } catch (err) {
+        if (
+          attempt === 0 &&
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === 'P2002'
+        ) {
+          // Race perdue : une autre transaction vient de créer le global.
+          // On rejoue la boucle ; au second tour, le findFirst le verra.
+          continue;
+        }
+        throw err;
+      }
     }
-
-    return this.prisma.leaveBalance.create({
-      data: { userId: null, leaveTypeId, year, totalDays },
-      include: includeOpts,
-    });
+    // Inatteignable : la boucle retourne toujours dans son premier tour
+    // OU throw dans le second. Garde-fou typé.
+    throw new Error('upsertBalance global: unreachable');
   }
 
   /**
