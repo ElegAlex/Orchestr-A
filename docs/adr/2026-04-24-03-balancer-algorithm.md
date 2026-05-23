@@ -1,7 +1,7 @@
 # ADR-03 — Algorithme d'équilibrage glouton V1 (PlanningBalancerService)
 
 **Date :** 2026-04-24
-**Statut :** Accepté
+**Statut :** Superseded — feature removed 2026-05-23 (no real-world usage value, complexity removed from the activity view)
 **Décideurs :** A. Berge (DSI), L. Preschez (CDG, PO)
 **Lot :** Planning d'activités récurrentes (besoin IA nº01 CDG) — épopée E4
 
