@@ -444,15 +444,12 @@ export const LEAVES_GLOBAL = [
   "leaves:manage_any",
 ] as const satisfies readonly PermissionCode[];
 
-/**
- * Permet d'auto-valider ses propres demandes de congés (statut APPROVED
- * direct, sans entrée dans la liste des PENDING). Attribué aux rôles
- * d'encadrement de haut niveau (ADMIN, RESPONSABLE/ADMIN_DELEGATED).
- * Ces templates héritent la permission automatiquement via CATALOG_PERMISSIONS.
- */
-export const LEAVES_SELF_APPROVE = [
-  "leaves:self_approve",
-] as const satisfies readonly PermissionCode[];
+// `leaves:self_approve` n'a pas de bundle dédié : la permission est
+// distribuée exclusivement via l'inclusion dans CATALOG_PERMISSIONS, qui
+// alimente ADMIN (catalogue intégral) et ADMIN_DELEGATED (catalogue moins
+// exclusions explicites). Un bundle séparé n'est introduit que lorsque la
+// permission doit être greffée à un template hors catalogue ; ce n'est pas
+// le cas ici. Voir packages/rbac/README.md pour le détail.
 
 /**
  * Assignation cross-user sans restriction (tasks).

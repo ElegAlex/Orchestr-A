@@ -377,16 +377,19 @@ export class LeavesService {
       isForSelf &&
       (await this.roleHasPermission(requestingUserRole, 'leaves:self_approve'));
 
-    // Trouver le validateur approprié (sauf cas d'auto-approbation).
-    // Pour les auto-validations, l'utilisateur EST son propre validateur :
-    // validatorId = requestingUserId (et validatedById/At/selfApproved
-    // sont positionnés à la création, plus bas dans la transaction).
+    // Trouver le validateur approprié.
+    //   - Auto-validation : l'utilisateur EST son propre validateur.
+    //   - Déclaration par un manager (finding #12) : le manager EST le
+    //     validateur de fait — la requête `SELECT "validatorId" FROM leaves`
+    //     répond "qui a approuvé ?" dans tous les cas.
+    //   - Sinon, lookup du validateur habituel (manager du département ou
+    //     délégué actif).
     const requiresValidator =
       leaveTypeConfig.requiresApproval && !declaredByManager && !canSelfApprove;
     let validatorId: string | null = null;
     if (requiresValidator) {
       validatorId = await this.findValidatorForUser(userId);
-    } else if (canSelfApprove) {
+    } else if (canSelfApprove || declaredByManager) {
       validatorId = requestingUserId;
     }
 
@@ -397,14 +400,19 @@ export class LeavesService {
         ? LeaveStatus.APPROVED
         : LeaveStatus.PENDING;
 
-    // Déterminer le type enum à utiliser (pour rétrocompatibilité)
-    // Si le code correspond à un type enum existant, l'utiliser, sinon utiliser OTHER
+    // Finding #8 — `type` (enum) est dérivé exclusivement de
+    // `leaveTypeConfig.code` côté serveur. Le champ DTO `type` est
+    // marqué déprécié et délibérément IGNORÉ ici : sans ça, un appelant
+    // pouvait poster `leaveTypeId='cp-uuid'` ET `type='RTT'`, le serveur
+    // écrivait les deux tels quels, et la table contenait un row
+    // `{ leaveTypeId → CP config, type: 'RTT' }`. Les dashboards qui
+    // pivotent sur l'un voyaient CP, ceux qui pivotaient sur l'autre
+    // voyaient RTT. La dérivation côté serveur ferme cette porte.
+    // (DTO.type sera retiré à la prochaine release majeure.)
     const validEnumTypes = Object.values(LeaveType);
-    const enumType =
-      type ||
-      (validEnumTypes.includes(leaveTypeConfig.code as LeaveType)
-        ? (leaveTypeConfig.code as LeaveType)
-        : LeaveType.OTHER);
+    const enumType = validEnumTypes.includes(leaveTypeConfig.code as LeaveType)
+      ? (leaveTypeConfig.code as LeaveType)
+      : LeaveType.OTHER;
 
     // Vérifier le solde par année calendaire Paris : un congé qui chevauche
     // 2026 et 2027 doit être validé contre chaque allocation séparément. Si
@@ -479,6 +487,16 @@ export class LeavesService {
         }
       }
 
+      // Finding #12 — pour qu'un auditeur lisant la table puisse répondre à
+      // "qui a transformé ce PENDING en APPROVED ?", on remplit aussi les
+      // colonnes validatedById/validatedAt quand un manager déclare un
+      // congé pour autrui (`declaredByManager`). Sans ça, ces rows étaient
+      // APPROVED avec validatorId/validatedById/At tous null — exactement
+      // le même angle mort que celui de finding #6, juste sur un autre
+      // chemin de code. `selfApproved` reste false (ce n'est pas
+      // l'utilisateur qui s'auto-valide).
+      const validatedByActor = canSelfApprove || declaredByManager;
+
       return tx.leave.create({
         data: {
           userId,
@@ -491,8 +509,8 @@ export class LeavesService {
           comment: reason,
           status: initialStatus,
           validatorId,
-          validatedById: canSelfApprove ? requestingUserId : null,
-          validatedAt: canSelfApprove ? new Date() : null,
+          validatedById: validatedByActor ? requestingUserId : null,
+          validatedAt: validatedByActor ? new Date() : null,
           selfApproved: canSelfApprove,
         },
         include: {
@@ -1239,7 +1257,13 @@ export class LeavesService {
       return tx.leave.update({
         where: { id },
         data: {
-          ...(type && { type }),
+          // Finding #8 — `type` (enum) n'est plus modifiable via update :
+          // c'est `leaveTypeId` (FK) qui porte la vérité et `type` est
+          // dérivé côté create depuis la config. Permettre l'update de
+          // `type` autorisait `{type:'RTT', leaveTypeId:cp-uuid}` à
+          // persister, créant un désaccord enum/FK. Le DTO accepte
+          // encore le champ (rétrocompatibilité de surface) mais le
+          // serveur l'ignore silencieusement.
           ...(startDate && { startDate: start }),
           ...(endDate && { endDate: end }),
           ...(effectiveHalfDay && { halfDay: effectiveHalfDay }),

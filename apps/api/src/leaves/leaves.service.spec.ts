@@ -545,25 +545,39 @@ describe('LeavesService', () => {
       expect(result).toBeDefined();
     });
 
-    it('should use provided type when specified', async () => {
-      const dtoWithType = { ...createLeaveDto, type: LeaveType.RTT };
+    it('ignores DTO `type` and derives enum from leaveTypeConfig.code (#8)', async () => {
+      // Wave 4 / finding #8 — the DTO still exposes `type` for surface
+      // compatibility but the service must IGNORE it: enumType is derived
+      // exclusively from `leaveTypeConfig.code`. Otherwise an API caller
+      // could persist a row whose `type` (enum) disagreed with the
+      // `leaveTypeId` (FK), and dashboards pivoting on either would
+      // report inconsistent figures.
+      const dtoWithMismatchedType = {
+        ...createLeaveDto,
+        type: LeaveType.RTT,
+      };
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue({
-        ...mockLeaveTypeConfig,
-        code: 'OTHER',
-      });
+      // leaveTypeConfig.code is 'CP' (from mockLeaveTypeConfig). The DTO
+      // tries to override to 'RTT'. The server must persist 'CP'.
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
       mockPrismaService.leave.findMany.mockResolvedValue([]);
       mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
         null,
       );
-      mockPrismaService.leave.create.mockResolvedValue({
-        ...mockLeave,
-        type: LeaveType.RTT,
-      });
+      mockPrismaService.leave.create.mockResolvedValue(mockLeave);
 
-      const result = await service.create('user-1', dtoWithType);
+      await service.create('user-1', dtoWithMismatchedType);
 
-      expect(result).toBeDefined();
+      expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            leaveTypeId: 'leave-type-1',
+            type: LeaveType.CP, // derived from config, not RTT from DTO
+          }),
+        }),
+      );
     });
   });
 
@@ -1043,17 +1057,41 @@ describe('LeavesService', () => {
       mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
 
       // declaredByManager path → APPROVED (existing manager-for-other logic)
-      const approvedLeave = { ...mockLeave, userId: 'user-2', status: LeaveStatus.APPROVED };
+      const approvedLeave = {
+        ...mockLeave,
+        userId: 'user-2',
+        status: LeaveStatus.APPROVED,
+        validatorId: 'user-1',
+        validatedById: 'user-1',
+        selfApproved: false,
+      };
       mockPrismaService.leave.create.mockResolvedValue(approvedLeave);
 
       const dtoForOther = { ...createLeaveDto, targetUserId: 'user-2' };
       const result = await service.create('user-1', dtoForOther, 'ADMIN');
 
       // The existing manager-for-other path produces APPROVED
-      // (not via self_approve but via declaredByManager=true)
+      // (not via self_approve but via declaredByManager=true).
       expect(result.status).toBe(LeaveStatus.APPROVED);
       // Verify leave is created for the target user, not the requesting user
       expect(result.userId).toBe('user-2');
+
+      // Finding #12 — the manager is the validator of record. Auditor
+      // reading `leaves` directly can answer "who approved this?" without
+      // joining the audit log. `selfApproved` stays false (the actor isn't
+      // the leave's beneficiary).
+      expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'user-2',
+            status: LeaveStatus.APPROVED,
+            validatorId: 'user-1',
+            validatedById: 'user-1',
+            validatedAt: expect.any(Date),
+            selfApproved: false,
+          }),
+        }),
+      );
     });
 
     it('still respects balance check before self-approving (insufficient balance → BadRequestException)', async () => {
