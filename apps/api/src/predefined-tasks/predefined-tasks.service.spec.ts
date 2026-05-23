@@ -7,14 +7,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   NotFoundException,
   ConflictException,
-  ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
 import { CreatePredefinedTaskDto } from './dto/create-predefined-task.dto';
 import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
-import { AuditPersistenceService } from '../audit/audit-persistence.service';
-import { PermissionsService } from '../rbac/permissions.service';
-import { LeavesService } from '../leaves/leaves.service';
 
 describe('PredefinedTasksService', () => {
   let service: PredefinedTasksService;
@@ -42,29 +38,10 @@ describe('PredefinedTasksService', () => {
       update: vi.fn(),
       delete: vi.fn(),
     },
-    service: {
-      findMany: vi.fn(),
-    },
-    userService: {
-      findMany: vi.fn(),
-    },
     teleworkSchedule: {
       findMany: vi.fn(),
     },
     $transaction: vi.fn(),
-  };
-
-
-  const mockLeavesService = {
-    findAll: vi.fn(),
-  };
-
-  const mockAuditPersistenceService = {
-    log: vi.fn(),
-  };
-
-  const mockPermissionsService = {
-    getPermissionsForRole: vi.fn(),
   };
 
   const mockUser = {
@@ -143,18 +120,6 @@ describe('PredefinedTasksService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
-        },
-        {
-          provide: AuditPersistenceService,
-          useValue: mockAuditPersistenceService,
-        },
-        {
-          provide: PermissionsService,
-          useValue: mockPermissionsService,
-        },
-        {
-          provide: LeavesService,
-          useValue: mockLeavesService,
         },
       ],
     }).compile();

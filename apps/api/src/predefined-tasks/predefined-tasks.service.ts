@@ -3,7 +3,6 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePredefinedTaskDto } from './dto/create-predefined-task.dto';
@@ -17,54 +16,12 @@ import {
 } from './dto/create-recurring-rule.dto';
 import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
 import { generateOccurrences, RuleLike } from './occurrence-generator';
-import { AuditPersistenceService } from '../audit/audit-persistence.service';
-import { PermissionsService } from '../rbac/permissions.service';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import type { PredefinedTaskAssignment } from 'database';
-import { LeavesService } from '../leaves/leaves.service';
 
 @Injectable()
 export class PredefinedTasksService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly auditPersistence: AuditPersistenceService,
-    private readonly permissionsService: PermissionsService,
-    private readonly leavesService: LeavesService,
-  ) {}
-
-  /**
-   * Résout le périmètre de gestion d'un utilisateur :
-   * services managés (managerId) + services membres (user_services) → Set<userId>.
-   *
-   * NOTE: logique dupliquée de LeavesService.getManagedUserIds (privé, non partagé).
-   * TODO: extraire dans un helper RBAC partagé (packages/rbac ou apps/api/src/rbac/helpers/).
-   */
-  private async getManagedUserIds(currentUserId: string): Promise<Set<string>> {
-    const managedServices = await this.prisma.service.findMany({
-      where: { managerId: currentUserId },
-      select: { id: true },
-    });
-    const userServices = await this.prisma.userService.findMany({
-      where: { userId: currentUserId },
-      select: { serviceId: true },
-    });
-
-    const serviceIds = [
-      ...new Set([
-        ...managedServices.map((s) => s.id),
-        ...userServices.map((us) => us.serviceId),
-      ]),
-    ];
-
-    if (serviceIds.length === 0) return new Set<string>();
-
-    const usersInServices = await this.prisma.userService.findMany({
-      where: { serviceId: { in: serviceIds } },
-      select: { userId: true },
-      distinct: ['userId'],
-    });
-    return new Set(usersInServices.map((us) => us.userId));
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   private async assertTeleworkCompatibility(
     task: { isTeleworkAllowed: boolean; name: string },
