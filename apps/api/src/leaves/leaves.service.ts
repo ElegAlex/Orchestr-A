@@ -17,6 +17,11 @@ import {
   type RoleTemplateKey,
 } from 'rbac';
 import { AuditService, AuditAction } from '../audit/audit.service';
+import {
+  calculateLeaveDays,
+  parisYearWindow,
+  splitLeaveByYear,
+} from './leave-year-window';
 
 /**
  * Permission bypass donnant un accès complet aux congés sans restriction
@@ -348,7 +353,7 @@ export class LeavesService {
     }
 
     // Calculer le nombre de jours
-    const days = this.calculateLeaveDays(
+    const days = calculateLeaveDays(
       start,
       end,
       effectiveHalfDay,
@@ -364,22 +369,32 @@ export class LeavesService {
       );
     }
 
-    // Vérifier le solde si la typologie en a un de configuré (sinon : illimité).
-    const requestYear = start.getFullYear();
-    const hasBalance = await this.hasConfiguredBalance(
-      userId,
-      leaveTypeId,
-      requestYear,
+    // Vérifier le solde par année calendaire Paris : un congé qui chevauche
+    // 2026 et 2027 doit être validé contre chaque allocation séparément. Si
+    // une année donnée n'a pas d'allocation configurée, elle est traitée
+    // comme illimitée pour cette année (gate ignorée). Si toutes les années
+    // sont sans allocation, aucune borne n'est appliquée.
+    const yearBuckets = splitLeaveByYear(
+      start,
+      end,
+      effectiveHalfDay,
+      endHalfDay,
     );
-    if (hasBalance) {
+    for (const bucket of yearBuckets) {
+      const hasBalance = await this.hasConfiguredBalance(
+        userId,
+        leaveTypeId,
+        bucket.year,
+      );
+      if (!hasBalance) continue;
       const available = await this.getAvailableDays(
         userId,
         leaveTypeId,
-        requestYear,
+        bucket.year,
       );
-      if (available < days) {
+      if (available < bucket.workDays) {
         throw new BadRequestException(
-          `Solde insuffisant pour ${leaveTypeConfig.name}. Disponible: ${available} jours, Demandé: ${days} jours`,
+          `Solde insuffisant pour ${leaveTypeConfig.name} en ${bucket.year}. Disponible : ${available} jours, demandé : ${bucket.workDays} jours.`,
         );
       }
     }
@@ -1059,7 +1074,7 @@ export class LeavesService {
       );
     }
 
-    const days = this.calculateLeaveDays(
+    const days = calculateLeaveDays(
       start,
       end,
       effectiveHalfDay ?? existingLeave.halfDay,
@@ -1082,33 +1097,44 @@ export class LeavesService {
       }
     }
 
-    // Vérifier le solde si la typologie en a un de configuré (sinon : illimité).
-    // Important : on calcule la disponibilité APRÈS exclusion de la demande
-    // en cours d'édition, pour éviter qu'elle ne soit comptée deux fois
-    // (getAvailableDays soustrait déjà ses jours actuels).
-    const requestYear = start.getFullYear();
-    const hasBalance = await this.hasConfiguredBalance(
-      existingLeave.userId,
-      existingLeave.leaveTypeId,
-      requestYear,
+    // Vérifier le solde par année calendaire Paris, en excluant la demande
+    // elle-même via `excludeLeaveId` — cela remplace l'ancien correctif
+    // `available + existingLeave.days` qui sur-créditait quand un congé
+    // était déplacé d'une année à l'autre (existingLeave.days est compté
+    // en totalité, indépendamment de l'année où il tombait).
+    const yearBuckets = splitLeaveByYear(
+      start,
+      end,
+      effectiveHalfDay,
+      undefined,
     );
-    if (hasBalance) {
-      const available = await this.getAvailableDays(
-        existingLeave.userId,
-        existingLeave.leaveTypeId,
-        requestYear,
-      );
-      // Réintégrer les jours du congé en cours de modification pour éviter
-      // le double-décompte (il est déjà inclus dans approved/pending).
-      const adjustedAvailable = available + existingLeave.days;
-      if (adjustedAvailable < days) {
-        const leaveTypeConfig = await this.prisma.leaveTypeConfig.findUnique({
+    let leaveTypeConfigCache: { name: string } | null = null;
+    const loadLeaveTypeName = async (): Promise<string> => {
+      if (!leaveTypeConfigCache) {
+        leaveTypeConfigCache = await this.prisma.leaveTypeConfig.findUnique({
           where: { id: existingLeave.leaveTypeId },
           select: { name: true },
         });
-        const typeName = leaveTypeConfig?.name ?? 'ce type de congé';
+      }
+      return leaveTypeConfigCache?.name ?? 'ce type de congé';
+    };
+    for (const bucket of yearBuckets) {
+      const hasBalance = await this.hasConfiguredBalance(
+        existingLeave.userId,
+        existingLeave.leaveTypeId,
+        bucket.year,
+      );
+      if (!hasBalance) continue;
+      const available = await this.getAvailableDays(
+        existingLeave.userId,
+        existingLeave.leaveTypeId,
+        bucket.year,
+        { excludeLeaveId: id },
+      );
+      if (available < bucket.workDays) {
+        const typeName = await loadLeaveTypeName();
         throw new BadRequestException(
-          `Solde insuffisant pour ${typeName}. Disponible: ${adjustedAvailable} jours, Demandé: ${days} jours`,
+          `Solde insuffisant pour ${typeName} en ${bucket.year}. Disponible : ${available} jours, demandé : ${bucket.workDays} jours.`,
         );
       }
     }
@@ -1806,47 +1832,60 @@ export class LeavesService {
   }
 
   /**
-   * Jours encore disponibles pour ce user/type/year :
+   * Jours encore disponibles pour ce user/type/year (calendrier Paris) :
    *   total alloué (override individuel sinon global)
-   *   − jours APPROVED ou CANCELLATION_REQUESTED sur l'année
-   *   − jours PENDING sur l'année
-   * Suppose qu'une allocation est configurée (à vérifier avec hasConfiguredBalance).
+   *   − jours APPROVED, CANCELLATION_REQUESTED ou PENDING dont l'intervalle
+   *     [startDate, endDate] intersecte l'année cible, pondérés au prorata
+   *     des jours qui tombent effectivement dans cette année.
+   *
+   * `excludeLeaveId` permet à update() d'exclure la demande en cours
+   * d'édition pour qu'elle ne se compte pas elle-même — c'est ce qui
+   * remplace le hack historique `available + existingLeave.days`.
+   *
+   * Suppose qu'une allocation est configurée (à vérifier au préalable avec
+   * hasConfiguredBalance).
    */
   async getAvailableDays(
     userId: string,
     leaveTypeId: string,
     year: number,
+    options: { excludeLeaveId?: string } = {},
   ): Promise<number> {
     const totalDays = await this.resolveAllocatedDays(userId, leaveTypeId, year);
+    const { start: yearStart, endExclusive: yearEnd } = parisYearWindow(year);
 
-    const yearStart = new Date(year, 0, 1);
-    const yearEnd = new Date(year, 11, 31);
-
-    const approvedLeaves = await this.prisma.leave.findMany({
+    const intersecting = await this.prisma.leave.findMany({
       where: {
         userId,
         leaveTypeId,
         status: {
-          in: [LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED],
+          in: [
+            LeaveStatus.APPROVED,
+            LeaveStatus.CANCELLATION_REQUESTED,
+            LeaveStatus.PENDING,
+          ],
         },
-        startDate: { gte: yearStart, lte: yearEnd },
+        startDate: { lt: yearEnd },
+        endDate: { gte: yearStart },
+        ...(options.excludeLeaveId
+          ? { id: { not: options.excludeLeaveId } }
+          : {}),
       },
-      select: { days: true },
+      select: { startDate: true, endDate: true, halfDay: true },
     });
-    const usedDays = approvedLeaves.reduce((sum, l) => sum + l.days, 0);
 
-    const pendingLeaves = await this.prisma.leave.findMany({
-      where: {
-        userId,
-        leaveTypeId,
-        status: LeaveStatus.PENDING,
-        startDate: { gte: yearStart, lte: yearEnd },
-      },
-      select: { days: true },
-    });
-    const pendingDays = pendingLeaves.reduce((sum, l) => sum + l.days, 0);
+    const usedThisYear = intersecting.reduce((sum, l) => {
+      const buckets = splitLeaveByYear(
+        l.startDate,
+        l.endDate,
+        l.halfDay ?? null,
+        null,
+      );
+      const bucket = buckets.find((b) => b.year === year);
+      return sum + (bucket?.workDays ?? 0);
+    }, 0);
 
-    return Math.max(0, totalDays - usedDays - pendingDays);
+    return Math.max(0, totalDays - usedThisYear);
   }
 
   /**
@@ -2089,56 +2128,6 @@ export class LeavesService {
 
     await this.prisma.leaveBalance.delete({ where: { id } });
     return { message: 'Solde supprimé avec succès' };
-  }
-
-  /**
-   * Calculer le nombre de jours de congé
-   */
-  private calculateLeaveDays(
-    startDate: Date,
-    endDate: Date,
-    startHalfDay?: string | null,
-    endHalfDay?: string | null,
-  ): number {
-    // Calculer le nombre de jours calendaires
-    // Note: diffTime is used for potential debugging, but we count work days below
-    void Math.abs(endDate.getTime() - startDate.getTime());
-
-    // Comptabiliser uniquement les jours ouvrés (lundi à vendredi)
-    let workDays = 0;
-    const current = new Date(startDate);
-
-    while (current <= endDate) {
-      const dayOfWeek = current.getDay();
-      // 0 = Dimanche, 6 = Samedi
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        workDays++;
-      }
-      current.setDate(current.getDate() + 1);
-    }
-
-    // Ajuster pour les demi-journées
-    let adjustment = 0;
-
-    // Si c'est une seule journée
-    if (startDate.getTime() === endDate.getTime()) {
-      if (startHalfDay || endHalfDay) {
-        return 0.5;
-      }
-      return 1;
-    }
-
-    // Ajustement pour le début
-    if (startHalfDay) {
-      adjustment -= 0.5;
-    }
-
-    // Ajustement pour la fin
-    if (endHalfDay) {
-      adjustment -= 0.5;
-    }
-
-    return Math.max(0.5, workDays + adjustment);
   }
 
   /**
@@ -2607,7 +2596,7 @@ export class LeavesService {
             ? leaveData.halfDay
             : null;
 
-        const days = this.calculateLeaveDays(
+        const days = calculateLeaveDays(
           startDate,
           endDate,
           halfDay,
