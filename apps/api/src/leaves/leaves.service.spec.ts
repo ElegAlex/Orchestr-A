@@ -105,7 +105,6 @@ describe('LeavesService', () => {
     isPaid: true,
     isActive: true,
     requiresApproval: true,
-    maxDaysPerYear: null,
   };
 
   const mockLeave = {
@@ -305,45 +304,69 @@ describe('LeavesService', () => {
       );
     });
 
-    it('should throw BadRequestException when CP balance is insufficient', async () => {
-      const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
+    it('should throw BadRequestException when configured balance is exceeded', async () => {
+      const typeWithBalance = { ...mockLeaveTypeConfig, code: 'RTT' };
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
-        cpLeaveType,
+        typeWithBalance,
       );
-      // getLeaveBalance: returns CP type; balance = 1 day total, 0 used, 1 available → insufficient for 5 days
-      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
-        cpLeaveType,
-      ]);
-      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
-        totalDays: 1,
-      });
+      // hasConfiguredBalance: no individual balance, global exists
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null); // individual (hasConfiguredBalance)
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ id: 'g1' }); // global (hasConfiguredBalance) → true
+
+      // getAvailableDays → resolveAllocatedDays: no individual, global = 1 day
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null); // individual (resolveAllocatedDays)
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ totalDays: 1 }); // global (resolveAllocatedDays)
+
       mockPrismaService.leave.findMany
         .mockResolvedValueOnce([]) // No overlap
         .mockResolvedValueOnce([]) // Approved leaves (0 used)
         .mockResolvedValueOnce([]); // Pending leaves
 
+      // 1 day available, 5 days requested → rejet
       await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(
         BadRequestException,
       );
     });
 
-    it('should throw BadRequestException when annual limit is exceeded', async () => {
-      const limitedLeaveType = {
-        ...mockLeaveTypeConfig,
-        code: 'RTT',
-        maxDaysPerYear: 10,
-      };
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+    it('should allow leave when type has no configured balance (unlimited)', async () => {
+      const typeWithoutBalance = { ...mockLeaveTypeConfig, code: 'OTHER' };
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(mockUser) // user check
+        .mockResolvedValueOnce({ ...mockUser }); // findValidatorForUser
       mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
-        limitedLeaveType,
+        typeWithoutBalance,
       );
-      // Reset any leftover queue from previous tests, then set up fresh mocks
-      mockPrismaService.leave.findMany.mockReset();
-      mockPrismaService.leave.findMany
-        .mockResolvedValueOnce([]) // No overlap
-        .mockResolvedValueOnce([{ days: 8 }]); // 8 days already used, requesting 5, limit is 10
+      // hasConfiguredBalance: no individual, no global → unlimited
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce(null);
 
+      mockPrismaService.leave.findMany.mockResolvedValueOnce([]); // overlap check only
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.leave.create.mockResolvedValue(mockLeave);
+
+      const result = await service.create('user-1', createLeaveDto);
+      expect(result).toBeDefined();
+      expect(mockPrismaService.leave.create).toHaveBeenCalled();
+    });
+
+    it('should use individual override when individual balance is more restrictive', async () => {
+      const typeRtt = { ...mockLeaveTypeConfig, code: 'RTT' };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(typeRtt);
+
+      // hasConfiguredBalance: individual exists → returns true immediately
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce({ id: 'i1' });
+
+      // getAvailableDays → resolveAllocatedDays: individual gives totalDays=3
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce({ totalDays: 3 });
+
+      mockPrismaService.leave.findMany
+        .mockResolvedValueOnce([]) // overlap
+        .mockResolvedValueOnce([]) // approved
+        .mockResolvedValueOnce([]); // pending
+
+      // 3 days available, 5 days requested → rejet
       await expect(service.create('user-1', createLeaveDto)).rejects.toThrow(
         BadRequestException,
       );

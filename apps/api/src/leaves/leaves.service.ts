@@ -364,23 +364,22 @@ export class LeavesService {
       );
     }
 
-    // Vérifier le solde pour les congés payés (code CP)
-    if (leaveTypeConfig.code === 'CP') {
-      const balance = await this.getLeaveBalance(userId);
-
-      if (balance.available < days) {
+    // Vérifier le solde si la typologie en a un de configuré (sinon : illimité).
+    const requestYear = start.getFullYear();
+    const hasBalance = await this.hasConfiguredBalance(
+      userId,
+      leaveTypeId,
+      requestYear,
+    );
+    if (hasBalance) {
+      const available = await this.getAvailableDays(
+        userId,
+        leaveTypeId,
+        requestYear,
+      );
+      if (available < days) {
         throw new BadRequestException(
-          `Solde de congés insuffisant. Disponible: ${balance.available} jours, Demandé: ${days} jours`,
-        );
-      }
-    }
-
-    // Vérifier la limite annuelle si définie
-    if (leaveTypeConfig.maxDaysPerYear) {
-      const usedDays = await this.getUsedDaysForType(userId, leaveTypeId);
-      if (usedDays + days > leaveTypeConfig.maxDaysPerYear) {
-        throw new BadRequestException(
-          `Limite annuelle dépassée pour ${leaveTypeConfig.name}. Disponible: ${leaveTypeConfig.maxDaysPerYear - usedDays} jours, Demandé: ${days} jours`,
+          `Solde insuffisant pour ${leaveTypeConfig.name}. Disponible: ${available} jours, Demandé: ${days} jours`,
         );
       }
     }
@@ -1776,6 +1775,75 @@ export class LeavesService {
 
     // 3. Aucun solde configuré → 0
     return 0;
+  }
+
+  /**
+   * Indique si une allocation de congés est configurée pour ce user/type/year.
+   * Retourne true s'il existe une ligne LeaveBalance individuelle OU globale.
+   * Absence de ligne ⇒ type illimité pour ce user/year.
+   */
+  async hasConfiguredBalance(
+    userId: string,
+    leaveTypeId: string,
+    year: number,
+  ): Promise<boolean> {
+    const individual = await this.prisma.leaveBalance.findUnique({
+      where: {
+        userId_leaveTypeId_year: { userId, leaveTypeId, year },
+      },
+      select: { id: true },
+    });
+    if (individual) return true;
+
+    const global = await this.prisma.leaveBalance.findFirst({
+      where: { userId: null, leaveTypeId, year },
+      select: { id: true },
+    });
+    return global !== null;
+  }
+
+  /**
+   * Jours encore disponibles pour ce user/type/year :
+   *   total alloué (override individuel sinon global)
+   *   − jours APPROVED ou CANCELLATION_REQUESTED sur l'année
+   *   − jours PENDING sur l'année
+   * Suppose qu'une allocation est configurée (à vérifier avec hasConfiguredBalance).
+   */
+  async getAvailableDays(
+    userId: string,
+    leaveTypeId: string,
+    year: number,
+  ): Promise<number> {
+    const totalDays = await this.resolveAllocatedDays(userId, leaveTypeId, year);
+
+    const yearStart = new Date(year, 0, 1);
+    const yearEnd = new Date(year, 11, 31);
+
+    const approvedLeaves = await this.prisma.leave.findMany({
+      where: {
+        userId,
+        leaveTypeId,
+        status: {
+          in: [LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED],
+        },
+        startDate: { gte: yearStart, lte: yearEnd },
+      },
+      select: { days: true },
+    });
+    const usedDays = approvedLeaves.reduce((sum, l) => sum + l.days, 0);
+
+    const pendingLeaves = await this.prisma.leave.findMany({
+      where: {
+        userId,
+        leaveTypeId,
+        status: LeaveStatus.PENDING,
+        startDate: { gte: yearStart, lte: yearEnd },
+      },
+      select: { days: true },
+    });
+    const pendingDays = pendingLeaves.reduce((sum, l) => sum + l.days, 0);
+
+    return Math.max(0, totalDays - usedDays - pendingDays);
   }
 
   /**

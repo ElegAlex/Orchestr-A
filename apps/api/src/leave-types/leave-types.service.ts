@@ -36,7 +36,6 @@ export class LeaveTypesService {
         icon: createLeaveTypeDto.icon || '🌴',
         isPaid: createLeaveTypeDto.isPaid ?? true,
         requiresApproval: createLeaveTypeDto.requiresApproval ?? true,
-        maxDaysPerYear: createLeaveTypeDto.maxDaysPerYear,
         sortOrder: createLeaveTypeDto.sortOrder || 0,
         isSystem: false, // Les types créés manuellement ne sont jamais système
         isActive: true,

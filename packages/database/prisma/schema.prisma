@@ -553,7 +553,6 @@ model LeaveTypeConfig {
   icon             String   @default("🌴") // Emoji/icône
   isPaid           Boolean  @default(true) // Congé rémunéré ou non
   requiresApproval Boolean  @default(true) // Nécessite validation
-  maxDaysPerYear   Int? // Limite annuelle (null = illimité)
   isActive         Boolean  @default(true) // Type actif ou archivé
   isSystem         Boolean  @default(false) // Type système (non supprimable)
   sortOrder        Int      @default(0) // Ordre d'affichage

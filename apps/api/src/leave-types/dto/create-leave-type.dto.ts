@@ -75,12 +75,6 @@ export class CreateLeaveTypeDto {
   @IsBoolean()
   requiresApproval?: boolean;
 
-  @ApiPropertyOptional({ description: 'Limite annuelle (jours)', example: 10 })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  maxDaysPerYear?: number;
-
   @ApiPropertyOptional({
     description: "Ordre d'affichage",
     example: 6,
