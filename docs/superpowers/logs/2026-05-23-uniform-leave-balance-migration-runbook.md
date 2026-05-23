@@ -172,10 +172,16 @@ SELECT COUNT(*) FROM leaves
     AND "validatorId" IS NULL
     AND "createdAt" >= '2026-05-23';
 
--- 5.2 Historical type/leaveTypeId drift
+-- 5.2 Historical type/leaveTypeId drift.
+-- IMPORTANT: filter on `c.code IN (enum members)` — otherwise the query
+-- flags rows where the config code is a custom value (ALTERNANCE,
+-- FORMATION, etc.) and the service correctly persists `type=OTHER` as
+-- the fall-through. Those are NOT drift.
 SELECT COUNT(*) FROM leaves l
   JOIN leave_type_configs c ON c.id = l.leave_type_id
-  WHERE l."type"::text != c.code AND l."type" IS NOT NULL;
+  WHERE l."type"::text != c.code
+    AND l."type" IS NOT NULL
+    AND c.code IN ('CP', 'RTT', 'SICK_LEAVE', 'UNPAID', 'OTHER');
 
 -- 5.3 Affected maxDaysPerYear rows (already captured in step 2 §1)
 SELECT COUNT(*) FROM leave_type_configs_max_days_backup_20260523

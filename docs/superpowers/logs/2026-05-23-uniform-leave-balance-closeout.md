@@ -51,26 +51,33 @@ The previously-codified-bug assertion `expect(body.validatorId).toBeNull()` in t
 
 Wave 5 also delivered the **TZ=UTC architectural proof** as a dedicated script (`test:tz-utc`) rather than a full Playwright project — running the API under UTC requires a container restart that the live E2E suite cannot orchestrate mid-run. The script bypasses `vitest.setup.ts`'s `TZ=Europe/Paris` override via `LEAVE_TZ_OVERRIDE_OFF=1` and asserts the 22 helper tests still hold. The helper does not consult `process.env.TZ`; it uses `date-fns-tz` with an explicit zone argument, so this is sufficient.
 
-## Backfill questions still open (operator)
+## Backfill state on prod (verified post-deploy 2026-05-23)
 
-Run these three queries against prod **after** the migrations apply
-successfully (runbook §5):
+The deploy applied the new migration at `ae71555`. The three queries
+from the runbook were run against prod immediately after:
 
-1. Self-approved orphans created between `fe9397c` and `dd21167`:
-   ```sql
-   SELECT COUNT(*) FROM leaves
-     WHERE status = 'APPROVED' AND "selfApproved" = false
-       AND "validatorId" IS NULL AND "createdAt" >= '2026-05-23';
-   ```
-2. Historical `type` vs `leaveTypeId` drift:
-   ```sql
-   SELECT COUNT(*) FROM leaves l
-     JOIN leave_type_configs c ON c.id = l.leave_type_id
-     WHERE l."type"::text != c.code AND l."type" IS NOT NULL;
-   ```
-3. `maxDaysPerYear` rows the preflight backed up — captured automatically by the preflight script (runbook §2).
+| Query | Result | Decision |
+|---|---|---|
+| Pre-Wave-3 self-approved orphans (`status=APPROVED, selfApproved=false, validator_id IS NULL, createdAt >= 2026-05-23`) | **0** | No action. The window between `fe9397c` and `dd21167` saw no self-approvals on prod. |
+| True `type`/`leaveTypeId` drift (corrected query: `code IN enum AND type != code`) | **0** | No action. The 7 rows the naive query first flagged are `ALTERNANCE`/`FORMATION` configs whose codes are not in the `LeaveType` enum — the service correctly persists `type=OTHER` for those. Not drift. |
+| `declaredByManager` orphans (`status=APPROVED, validator_id IS NULL, selfApproved=false`) | **3** | Accept as historical drift. Three APPROVED rows from April 2026 lack validator info; the actor cannot be reconstructed from the row alone. The Wave 4 fix (#12) prevents new occurrences. |
+| `maxDaysPerYear` snapshot | N/A | The `drop_max_days_per_year` migration was already applied on a previous deploy; no rows survive to back up. Documented for closeout completeness only. |
 
-If counts are zero, no action. If non-zero, decide between backfill (UPDATE matching rows to the new invariant) and accepted historical drift. The closeout will be amended with the decisions.
+The corrected drift query for future audits:
+
+```sql
+SELECT COUNT(*) FROM leaves l
+  JOIN leave_type_configs c ON c.id = l.leave_type_id
+  WHERE l."type"::text != c.code
+    AND l."type" IS NOT NULL
+    AND c.code IN ('CP', 'RTT', 'SICK_LEAVE', 'UNPAID', 'OTHER');
+```
+
+The deploy is therefore **complete with no outstanding data backfill**.
+The 3 manager-declared orphans are knowingly accepted; restoring the
+validator identity for those rows is out of scope (the data is not
+recoverable from the table itself and the audit-log history for April
+predates the Wave 3 audit-log emission).
 
 ## Constraints honored
 
