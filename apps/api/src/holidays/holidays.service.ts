@@ -187,7 +187,11 @@ export class HolidaysService {
     const month = Math.floor((h + l - 7 * m + 114) / 31) - 1; // 0-indexed month
     const day = ((h + l - 7 * m + 114) % 31) + 1;
 
-    return new Date(year, month, day);
+    // UTC midnight: the `date` column is `@db.Date`, which Prisma persists from
+    // the UTC date components. Building with the local-time `new Date(y, m, d)`
+    // constructor shifts every holiday back one day when the host runs ahead of
+    // UTC (e.g. Europe/Paris = +01/+02), so a May 1 holiday lands on April 30.
+    return new Date(Date.UTC(year, month, day));
   }
 
   /**
@@ -195,7 +199,7 @@ export class HolidaysService {
    */
   private addDays(date: Date, days: number): Date {
     const result = new Date(date);
-    result.setDate(result.getDate() + days);
+    result.setUTCDate(result.getUTCDate() + days);
     return result;
   }
 
@@ -213,45 +217,47 @@ export class HolidaysService {
       date: Date;
       type: HolidayType;
     }> = [
-      // Jours fériés à date fixe
+      // Jours fériés à date fixe (UTC midnight — see calculateEaster note: the
+      // `@db.Date` column persists UTC date components, so local-time Date
+      // construction would shift each holiday back a day under +UTC hosts).
       {
         name: "Jour de l'An",
-        date: new Date(year, 0, 1),
+        date: new Date(Date.UTC(year, 0, 1)),
         type: HolidayType.LEGAL,
       },
       {
         name: 'Fête du Travail',
-        date: new Date(year, 4, 1),
+        date: new Date(Date.UTC(year, 4, 1)),
         type: HolidayType.LEGAL,
       },
       {
         name: 'Victoire 1945',
-        date: new Date(year, 4, 8),
+        date: new Date(Date.UTC(year, 4, 8)),
         type: HolidayType.LEGAL,
       },
       {
         name: 'Fête Nationale',
-        date: new Date(year, 6, 14),
+        date: new Date(Date.UTC(year, 6, 14)),
         type: HolidayType.LEGAL,
       },
       {
         name: 'Assomption',
-        date: new Date(year, 7, 15),
+        date: new Date(Date.UTC(year, 7, 15)),
         type: HolidayType.LEGAL,
       },
       {
         name: 'Toussaint',
-        date: new Date(year, 10, 1),
+        date: new Date(Date.UTC(year, 10, 1)),
         type: HolidayType.LEGAL,
       },
       {
         name: 'Armistice 1918',
-        date: new Date(year, 10, 11),
+        date: new Date(Date.UTC(year, 10, 11)),
         type: HolidayType.LEGAL,
       },
       {
         name: 'Noël',
-        date: new Date(year, 11, 25),
+        date: new Date(Date.UTC(year, 11, 25)),
         type: HolidayType.LEGAL,
       },
       // Jours fériés mobiles basés sur Pâques

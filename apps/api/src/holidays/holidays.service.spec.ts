@@ -389,6 +389,40 @@ describe('HolidaysService', () => {
       expect(names).toContain('Ascension');
       expect(names).toContain('Lundi de Pentecôte');
     });
+
+    it('should store each holiday on its exact calendar date (UTC, no off-by-one)', async () => {
+      // Regression: the `date` column is `@db.Date`, persisted from UTC date
+      // components. Building dates with the local-time `new Date(y, m, d)`
+      // constructor on a +UTC host (e.g. Europe/Paris) shifted every holiday
+      // back one day (May 1 -> April 30, Jan 1 -> Dec 31 prev year). The
+      // import must construct dates in UTC so the stored day matches the
+      // intended French public holiday. This test FAILS pre-fix, PASSES post-fix.
+      mockPrismaService.holiday.create.mockResolvedValue(mockHoliday);
+
+      await service.importFrenchHolidays(2026, 'user-1');
+
+      const calls = mockPrismaService.holiday.create.mock.calls;
+      const dateByName = new Map<string, Date>(
+        calls.map((c) => [c[0].data.name as string, c[0].data.date as Date]),
+      );
+
+      const isoDay = (name: string) =>
+        dateByName.get(name)!.toISOString().slice(0, 10);
+
+      // Fixed-date holidays
+      expect(isoDay("Jour de l'An")).toBe('2026-01-01');
+      expect(isoDay('Fête du Travail')).toBe('2026-05-01');
+      expect(isoDay('Victoire 1945')).toBe('2026-05-08');
+      expect(isoDay('Fête Nationale')).toBe('2026-07-14');
+      expect(isoDay('Assomption')).toBe('2026-08-15');
+      expect(isoDay('Toussaint')).toBe('2026-11-01');
+      expect(isoDay('Armistice 1918')).toBe('2026-11-11');
+      expect(isoDay('Noël')).toBe('2026-12-25');
+      // Easter-based holidays (Easter 2026 = April 5)
+      expect(isoDay('Lundi de Pâques')).toBe('2026-04-06');
+      expect(isoDay('Ascension')).toBe('2026-05-14');
+      expect(isoDay('Lundi de Pentecôte')).toBe('2026-05-25');
+    });
   });
 
   describe('isNonWorkingHoliday', () => {
