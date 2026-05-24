@@ -376,7 +376,7 @@ pnpm test apps/api/src/users/users.controller.spec.ts  # may need creation if mi
 ---
 ### CLAUDE-CFG-001 — Smoke hook misses untracked changes
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 1
 - **Cluster:** —
 - **Confidence:** codex-only
