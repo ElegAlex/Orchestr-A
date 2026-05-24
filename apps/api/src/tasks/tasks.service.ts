@@ -1107,7 +1107,7 @@ export class TasksService {
         })
       : [];
     const sumByTaskId = new Map<string, number>(
-      sums.map((s) => [s.taskId!, s._sum.hours ?? 0]),
+      sums.map((s) => [s.taskId!, Number(s._sum.hours ?? 0)]),
     );
     return tasks.map((t) => ({
       ...t,

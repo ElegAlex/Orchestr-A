@@ -75,7 +75,9 @@ export class ProjectHealthService {
 
     return projects.map((project) => {
       const progressPct =
-        project.snapshots.length > 0 ? project.snapshots[0].progress : 0;
+        project.snapshots.length > 0
+          ? Number(project.snapshots[0].progress)
+          : 0;
 
       const reached = project.milestones.filter(
         (m) => m.status === 'COMPLETED',

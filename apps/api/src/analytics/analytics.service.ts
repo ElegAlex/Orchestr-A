@@ -339,7 +339,7 @@ export class AnalyticsService {
     const userHoursMap = userTimeEntries.reduce(
       (acc, entry) => {
         if (entry.projectId) {
-          acc[entry.projectId] = entry._sum.hours || 0;
+          acc[entry.projectId] = Number(entry._sum.hours ?? 0);
         }
         return acc;
       },
@@ -349,7 +349,7 @@ export class AnalyticsService {
     const thirdPartyHoursMap = thirdPartyTimeEntries.reduce(
       (acc, entry) => {
         if (entry.projectId) {
-          acc[entry.projectId] = entry._sum.hours || 0;
+          acc[entry.projectId] = Number(entry._sum.hours ?? 0);
         }
         return acc;
       },

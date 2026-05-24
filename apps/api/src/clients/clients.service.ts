@@ -155,7 +155,7 @@ export class ClientsService {
     const hoursByProjectId = new Map<string, number>();
     for (const row of hoursGroupBy) {
       if (row.projectId) {
-        hoursByProjectId.set(row.projectId, row._sum.hours ?? 0);
+        hoursByProjectId.set(row.projectId, Number(row._sum.hours ?? 0));
       }
     }
 

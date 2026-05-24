@@ -2037,7 +2037,7 @@ export class LeavesService {
       },
     });
     if (individualBalance) {
-      return individualBalance.totalDays;
+      return Number(individualBalance.totalDays);
     }
 
     // 2. Solde global (userId = null)
@@ -2049,7 +2049,7 @@ export class LeavesService {
       },
     });
     if (globalBalance) {
-      return globalBalance.totalDays;
+      return Number(globalBalance.totalDays);
     }
 
     // 3. Aucun solde configuré → 0
@@ -2188,7 +2188,10 @@ export class LeavesService {
             startDate: { gte: yearStart, lte: yearEnd },
           },
         });
-        const usedDays = approvedLeaves.reduce((sum, l) => sum + l.days, 0);
+        const usedDays = approvedLeaves.reduce(
+          (sum, l) => sum + Number(l.days),
+          0,
+        );
 
         const pendingLeaves = await this.prisma.leave.findMany({
           where: {
@@ -2198,7 +2201,10 @@ export class LeavesService {
             startDate: { gte: yearStart, lte: yearEnd },
           },
         });
-        const pendingDays = pendingLeaves.reduce((sum, l) => sum + l.days, 0);
+        const pendingDays = pendingLeaves.reduce(
+          (sum, l) => sum + Number(l.days),
+          0,
+        );
 
         return {
           leaveTypeId: lt.id,
@@ -2243,7 +2249,7 @@ export class LeavesService {
       },
     });
 
-    return pendingLeaves.reduce((sum, leave) => sum + leave.days, 0);
+    return pendingLeaves.reduce((sum, leave) => sum + Number(leave.days), 0);
   }
 
   // ===========================

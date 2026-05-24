@@ -95,7 +95,7 @@ export class SnapshotsQueryService {
 
     for (const snap of snapshots) {
       snapshotsByProject.get(snap.projectId)?.push({
-        progress: snap.progress,
+        progress: Number(snap.progress),
         date: snap.date,
       });
     }
@@ -131,7 +131,7 @@ export class SnapshotsQueryService {
     for (const snap of snapshots) {
       const dayKey = snap.date.toISOString().slice(0, 10);
       const bucket = dayBuckets.get(dayKey) ?? { sum: 0, count: 0 };
-      bucket.sum += snap.progress;
+      bucket.sum += Number(snap.progress);
       bucket.count += 1;
       dayBuckets.set(dayKey, bucket);
     }

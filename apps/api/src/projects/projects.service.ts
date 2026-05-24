@@ -1113,7 +1113,7 @@ export class ProjectsService {
     ).length;
 
     const totalEstimatedHours = project.tasks.reduce(
-      (sum, t) => sum + (t.estimatedHours || 0),
+      (sum, t) => sum + Number(t.estimatedHours ?? 0),
       0,
     );
 
@@ -1141,11 +1141,11 @@ export class ProjectsService {
       }),
     ]);
     const totalActualHours = userTimeEntries.reduce(
-      (sum, entry) => sum + entry.hours,
+      (sum, entry) => sum + Number(entry.hours),
       0,
     );
     const totalThirdPartyHours = thirdPartyTimeEntries.reduce(
-      (sum, entry) => sum + entry.hours,
+      (sum, entry) => sum + Number(entry.hours),
       0,
     );
 

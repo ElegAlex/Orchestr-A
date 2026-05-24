@@ -632,11 +632,15 @@ export class TimeTrackingService {
       orderBy: { date: 'asc' },
     });
 
-    const totalHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
+    const totalHours = entries.reduce(
+      (sum, entry) => sum + Number(entry.hours),
+      0,
+    );
 
     const byType = entries.reduce(
       (acc, entry) => {
-        acc[entry.activityType] = (acc[entry.activityType] || 0) + entry.hours;
+        acc[entry.activityType] =
+          (acc[entry.activityType] || 0) + Number(entry.hours);
         return acc;
       },
       {} as Record<string, number>,
@@ -653,7 +657,7 @@ export class TimeTrackingService {
               hours: 0,
             };
           }
-          acc[key].hours += entry.hours;
+          acc[key].hours += Number(entry.hours);
         }
         return acc;
       },
@@ -666,7 +670,7 @@ export class TimeTrackingService {
     const byDate = entries.reduce(
       (acc, entry) => {
         const dateKey = entry.date.toISOString().split('T')[0];
-        acc[dateKey] = (acc[dateKey] || 0) + entry.hours;
+        acc[dateKey] = (acc[dateKey] || 0) + Number(entry.hours);
         return acc;
       },
       {} as Record<string, number>,
@@ -778,9 +782,12 @@ export class TimeTrackingService {
       }),
     ]);
 
-    const userHours = userEntries.reduce((sum, e) => sum + e.hours, 0);
+    const userHours = userEntries.reduce(
+      (sum, e) => sum + Number(e.hours),
+      0,
+    );
     const thirdPartyHours = thirdPartyEntries.reduce(
-      (sum, e) => sum + e.hours,
+      (sum, e) => sum + Number(e.hours),
       0,
     );
 
@@ -795,7 +802,7 @@ export class TimeTrackingService {
             hours: 0,
           };
         }
-        acc[key].hours += entry.hours;
+        acc[key].hours += Number(entry.hours);
         return acc;
       },
       {} as Record<string, { userId: string; userName: string; hours: number }>,
@@ -813,7 +820,7 @@ export class TimeTrackingService {
             hours: 0,
           };
         }
-        acc[key].hours += entry.hours;
+        acc[key].hours += Number(entry.hours);
         return acc;
       },
       {} as Record<
@@ -830,7 +837,8 @@ export class TimeTrackingService {
     const allEntries = [...userEntries, ...thirdPartyEntries];
     const byType = allEntries.reduce(
       (acc, entry) => {
-        acc[entry.activityType] = (acc[entry.activityType] || 0) + entry.hours;
+        acc[entry.activityType] =
+          (acc[entry.activityType] || 0) + Number(entry.hours);
         return acc;
       },
       {} as Record<string, number>,
