@@ -287,7 +287,7 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ---
 ### SEC-003 — POST /users/:id/reset-password bypasses role-hierarchy guard
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 1
 - **Cluster:** B
 - **Confidence:** claude-only
