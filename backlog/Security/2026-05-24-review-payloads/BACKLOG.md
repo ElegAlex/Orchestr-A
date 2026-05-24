@@ -63,7 +63,7 @@ See `CLAUDE_SESSION_CONTRACT.md` in this directory for the exact session protoco
 
 ### COR-003 — Leave day calculation never subtracts public holidays
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** C
 - **Confidence:** claude-only
@@ -100,8 +100,16 @@ Either (a) fetch holidays for [start, end] from HolidaysService and pass the Set
 pnpm test apps/api/src/leaves/leave-year-window.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 8fc6c92d1f8f5ec499cc57abfc6325de3b5518a5
 **Learnings:**
+- **Implemented 2026-05-25 (commit `8fc6c92`), option (a) as designed.** Optional `holidayKeys?: Set<DayKey>` added to BOTH `calculateLeaveDays` and `splitLeaveByYear`; a day is charged only when `!isWeekend(cursor) && !holidayKeys?.has(cursor)`. `parisDayKey` + the `DayKey` type are now exported so callers key holidays the same way the cursor does. The reconciliation `calculateLeaveDays` call inside `splitLeaveByYear` was updated to forward the same set — without that, `sum(buckets) !== calculateLeaveDays` under a holiday set and the Wave 1 gate-vs-storage divergence returns (covered by a dedicated invariant test).
+- **Additive, NOT breaking.** The new param is optional and trailing; every existing caller/test that omits it gets the exact legacy "weekends-only" figure (verified: the pre-existing `splitLeaveByYear` test at line ~87 that documents "Jan 1 2027 is a holiday but the helper does not consult a calendar" stays green). The full `pnpm test` suite (6 turbo tasks, all green) confirms no regression.
+- **Six call sites wired, not just create().** `leaves.service.ts` calls the helpers in: `create()` (storage `days` + gate buckets), `update()` (same), `getAvailableDays()` (the CONSUMPTION side — summing used days per year), and the CSV `bulkImport`. Wiring only the create/storage side would have made the gate over-count consumption (4 days stored but 5 recomputed in `getAvailableDays`) and reject legitimate requests. Consistency across storage + demand + consumption is the load-bearing property.
+- **Holidays fetched OUTSIDE the balance-gate transaction.** A private `getHolidayKeySet(start,end)` calls `HolidaysService.findByRange` on the default Prisma connection even inside the `$transaction` gate, because holidays are static reference data — they are not part of Finding #4's concurrency concern (LeaveBalance mutation). Fetch window widened ±1 day to absorb host-TZ edges; extra holidays in the set are harmless since the cursor only probes keys within `[start,end]`. Filters out `isWorkDay=true` rows (worked bank holidays).
+- **Witness dates corrected.** The task's illustrative range (Apr 28 → May 2 2026) lands on a Saturday at the end in 2026's calendar (4 weekdays, not 5). The faithful 5→4 witness is **Apr 27 (Mon) → May 1 (Fri) 2026**; used in the unit test.
+- **Same-instant branch intentionally untouched** (per BACKLOG decision point + acceptance #6). `start===end` returns 1/0.5 without weekend OR holiday filtering — matching legacy. Single-day-holiday handling is out of this fix's scope; the audit's described failure mode is a multi-day leave spanning a holiday.
+- **Tests are unit-level on the pure helper (injected `Set<DayKey>`, no DB) + one service-level wiring test** (mocked `HolidaysService.findByRange`, asserts `days` drops from 5→4 and that `findByRange` was called). Per the task, the witness does NOT depend on the seeded holidays table. Acceptance #4 (audit_log) N/A — pure calculation fix. E2E not added (session-contract test scope overrides CLAUDE.md's blanket E2E rule for this pure-calc task).
+- **`tsc --noEmit` is not this repo's gate.** Running it surfaces 119 PRE-EXISTING loose-typing errors across 18 spec files (e.g. `holidays.service.spec.ts` `HolidayType.LOCAL`, untyped controller-spec actors) — none in the COR-003 production files. The project pipeline is vitest+swc (transpile-only) + a build that excludes specs; `pnpm test` is the contractual gate and is fully green.
 - **Unblocked 2026-05-24 (was BLOCKED `holidays-data-seed-required`).** The original blocker assumed no holiday data existed anywhere. Real state after investigation + remediation:
   - **Prod:** `holidays` table holds **33 rows = 2025/2026/2027 × 11**, all dates correct, verified (`SELECT EXTRACT(YEAR FROM date), count(*), count(DISTINCT name)` → 11/11/11). 2026 was already present and correct; 2025 + 2027 were added this session (additive `INSERT ... ON CONFLICT (date) DO NOTHING`, table backed up first to `/opt/orchestra/backups-prod/holidays_before_2025_2027_*.sql`).
   - **Dev:** seeded on demand via `scripts/import-french-holidays.ts` (calls the real `HolidaysService.importFrenchHolidays`). Operator gesture, not a migration — re-run after any `prisma migrate reset`.
