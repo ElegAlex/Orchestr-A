@@ -192,7 +192,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### SEC-001 — RBAC guard defaults to permissive mode — uncovered routes silently allow access
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** B
 - **Confidence:** cross-validated
@@ -229,8 +229,12 @@ Default to 'enforce' (this.mode = envMode === 'permissive' ? 'permissive' : 'enf
 pnpm test apps/api/src/rbac/permissions.guard.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 507d755
+**Learnings:**
+- Suggested fix offered two alternatives joined by OR; implemented BOTH (default flip + boot-assert + env docs) for defense-in-depth, matching the example commit message shape in `CLAUDE_SESSION_CONTRACT.md`.
+- Pre-existing test file `permissions.guard.spec.ts` already had `mode enforce: refuse` coverage but used `makeGuard('enforce')` which sets the env explicitly — it did not cover the "env unset" path that was the actual regression vector. Added two tests: env-unset → enforce, env-unknown-value → enforce (fail-closed). The first one is the FAIL-pre-fix / PASS-post-fix witness required by acceptance criterion #2.
+- `docker-compose.prod.yml` already pins `RBAC_GUARD_MODE: enforce`, so the production deployment was already safe in practice; the bug was the development/staging default and any prod deployment NOT going through that compose file. The boot-assert closes the loop.
+- Scope: change touched 6 files. Only `permissions.guard.ts:69` was strictly in the audit's File scope; the other 5 (main.ts, rbac.module.ts, env examples, spec) are direct consequences of the Suggested fix and are documented in the commit body.
 
 ---
 ### SEC-002 — PATCH /users/:id has no horizontal scope check — any user with users:update can modify any user
