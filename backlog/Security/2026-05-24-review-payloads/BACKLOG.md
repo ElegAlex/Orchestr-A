@@ -63,7 +63,7 @@ See `CLAUDE_SESSION_CONTRACT.md` in this directory for the exact session protoco
 
 ### COR-003 — Leave day calculation never subtracts public holidays
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 1
 - **Cluster:** C
 - **Confidence:** claude-only
