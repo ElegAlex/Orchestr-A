@@ -9,12 +9,17 @@ import { PermissionsService } from '../../rbac/permissions.service';
 
 export interface AccessUser {
   id: string;
-  role?: string | { code: string } | null;
+  role?: string | { code: string; templateKey?: string | null } | null;
 }
 
 function roleCode(user?: AccessUser): string | null {
   if (!user?.role) return null;
   return typeof user.role === 'string' ? user.role : user.role.code;
+}
+
+function roleTemplateKey(user?: AccessUser): string | null {
+  if (!user?.role || typeof user.role === 'string') return null;
+  return user.role.templateKey ?? null;
 }
 
 @Injectable()
@@ -185,5 +190,64 @@ export class AccessScopeService {
     });
     if (count === 0)
       throw new ForbiddenException('Accès document non autorisé');
+  }
+
+  /**
+   * Horizontal scope check for admin operations targeting a user (update,
+   * deactivate). ADMIN template bypasses; any other caller must be either the
+   * manager of the target's department, OR share at least one service with
+   * the target. The vertical check (caller cannot affect a role above their
+   * own template rank) lives in RoleHierarchyService.assertCanAssignRole and
+   * is intentionally separate.
+   */
+  async canManageUser(
+    targetUserId: string,
+    caller: AccessUser | undefined,
+  ): Promise<boolean> {
+    if (!caller?.id) return false;
+    if (roleTemplateKey(caller) === 'ADMIN') return true;
+
+    const target = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: {
+        departmentId: true,
+        userServices: { select: { serviceId: true } },
+      },
+    });
+    if (!target) return false;
+
+    if (target.departmentId) {
+      const isDeptManager = await this.prisma.department.count({
+        where: { id: target.departmentId, managerId: caller.id },
+      });
+      if (isDeptManager > 0) return true;
+    }
+
+    const targetServiceIds = target.userServices.map((us) => us.serviceId);
+    if (targetServiceIds.length > 0) {
+      const shared = await this.prisma.userService.count({
+        where: {
+          userId: caller.id,
+          serviceId: { in: targetServiceIds },
+        },
+      });
+      if (shared > 0) return true;
+    }
+
+    return false;
+  }
+
+  async assertCanManageUser(
+    targetUserId: string,
+    caller: AccessUser | undefined,
+  ): Promise<void> {
+    const exists = await this.prisma.user.count({
+      where: { id: targetUserId },
+    });
+    if (exists === 0) throw new NotFoundException('Utilisateur introuvable');
+
+    if (!(await this.canManageUser(targetUserId, caller))) {
+      throw new ForbiddenException('Utilisateur hors de votre périmètre');
+    }
   }
 }

@@ -10,7 +10,11 @@ import {
 } from '@nestjs/common';
 
 // Caller passé au controller.update() — forme RBAC V4 (objet role avec code).
-const ADMIN_CALLER = { role: { code: 'ADMIN' } };
+// SEC-002 : le scope horizontal exige aussi `id` (passé à AccessScopeService).
+const ADMIN_CALLER = {
+  id: 'caller-admin-id',
+  role: { code: 'ADMIN', templateKey: 'ADMIN' },
+};
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -293,6 +297,7 @@ describe('UsersController', () => {
         'user-id-1',
         updateUserDto,
         'ADMIN',
+        ADMIN_CALLER,
       );
     });
 
@@ -327,12 +332,15 @@ describe('UsersController', () => {
         message: 'Utilisateur désactivé avec succès',
       });
 
-      const result = await controller.remove('user-id-1');
+      const result = await controller.remove('user-id-1', ADMIN_CALLER);
 
       expect(result).toEqual({
         message: 'Utilisateur désactivé avec succès',
       });
-      expect(mockUsersService.remove).toHaveBeenCalledWith('user-id-1');
+      expect(mockUsersService.remove).toHaveBeenCalledWith(
+        'user-id-1',
+        ADMIN_CALLER,
+      );
     });
 
     it('should throw NotFoundException when user not found', async () => {
@@ -340,9 +348,9 @@ describe('UsersController', () => {
         new NotFoundException('Utilisateur introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.remove('nonexistent', ADMIN_CALLER),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -618,7 +626,7 @@ describe('UsersController', () => {
       const updatedUser = { ...mockUser, firstName: 'Updated' };
       mockUsersService.update.mockResolvedValue(updatedUser);
 
-      const callerWithNoRole = { role: null };
+      const callerWithNoRole = { id: 'caller-x', role: null };
       const result = await controller.update(
         'user-id-1',
         { firstName: 'Updated' },
@@ -629,6 +637,7 @@ describe('UsersController', () => {
         'user-id-1',
         { firstName: 'Updated' },
         undefined,
+        callerWithNoRole,
       );
       expect(result.firstName).toBe('Updated');
     });
@@ -637,12 +646,18 @@ describe('UsersController', () => {
       const updatedUser = { ...mockUser, firstName: 'Updated' };
       mockUsersService.update.mockResolvedValue(updatedUser);
 
-      await controller.update('user-id-1', { firstName: 'Updated' }, {} as any);
+      const callerEmpty = {} as any;
+      await controller.update(
+        'user-id-1',
+        { firstName: 'Updated' },
+        callerEmpty,
+      );
 
       expect(mockUsersService.update).toHaveBeenCalledWith(
         'user-id-1',
         { firstName: 'Updated' },
         undefined,
+        callerEmpty,
       );
     });
   });

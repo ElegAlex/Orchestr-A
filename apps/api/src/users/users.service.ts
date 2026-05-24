@@ -6,6 +6,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
+import {
+  AccessScopeService,
+  AccessUser,
+} from '../common/services/access-scope.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -44,6 +48,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly refreshTokenService: RefreshTokenService,
     private readonly roleHierarchy: RoleHierarchyService,
+    private readonly accessScope: AccessScopeService,
   ) {}
 
   /**
@@ -343,7 +348,16 @@ export class UsersService {
     id: string,
     updateUserDto: UpdateUserDto,
     callerRoleCode?: string,
+    caller?: AccessUser,
   ) {
+    // SEC-002 — horizontal scope: non-ADMIN callers (incl. ADMIN_DELEGATED or
+    // any institutional role granted USERS_CRUD) must be inside the target's
+    // perimeter (dept manager or shared service). NotFound is raised here as
+    // well, so the explicit guard below is redundant when caller is provided.
+    if (caller) {
+      await this.accessScope.assertCanManageUser(id, caller);
+    }
+
     const existingUser = await this.prisma.user.findUnique({
       where: { id },
     });
@@ -475,7 +489,13 @@ export class UsersService {
     return user;
   }
 
-  async remove(id: string) {
+  async remove(id: string, caller?: AccessUser) {
+    // SEC-002 — same horizontal scope guard as update(): non-ADMIN callers
+    // can only deactivate users inside their perimeter.
+    if (caller) {
+      await this.accessScope.assertCanManageUser(id, caller);
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id },
     });

@@ -309,9 +309,18 @@ export class UsersController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
-    @CurrentUser() caller: { role?: { code: string } | null },
+    @CurrentUser()
+    caller: {
+      id: string;
+      role?: { code: string; templateKey?: string | null } | null;
+    },
   ) {
-    return this.usersService.update(id, updateUserDto, caller?.role?.code);
+    return this.usersService.update(
+      id,
+      updateUserDto,
+      caller?.role?.code,
+      caller,
+    );
   }
 
   @Delete(':id')
@@ -328,8 +337,15 @@ export class UsersController {
     status: 404,
     description: 'Utilisateur introuvable',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser()
+    caller: {
+      id: string;
+      role?: { code: string; templateKey?: string | null } | null;
+    },
+  ) {
+    return this.usersService.remove(id, caller);
   }
 
   @Get(':id/dependencies')

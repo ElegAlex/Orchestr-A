@@ -27,6 +27,7 @@ vi.mock('../common/upload/magic-bytes.validator', () => ({
 }));
 import { RefreshTokenService } from '../auth/refresh-token.service';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
+import { AccessScopeService } from '../common/services/access-scope.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -57,6 +58,7 @@ describe('UsersService', () => {
     userService: {
       createMany: vi.fn(),
       deleteMany: vi.fn(),
+      count: vi.fn(),
     },
     projectMember: {
       count: vi.fn(),
@@ -114,6 +116,17 @@ describe('UsersService', () => {
         // rely on the assertion calling through; mocking the service flat
         // would silently make those tests pass when they shouldn't.
         RoleHierarchyService,
+        // Same rationale for AccessScopeService: SEC-002 horizontal-scope
+        // tests stub prisma to drive its real branches; a flat mock would
+        // silently pass.
+        {
+          provide: AccessScopeService,
+          useFactory: (prisma: PrismaService) =>
+            new AccessScopeService(prisma, {
+              getPermissionsForRole: vi.fn().mockResolvedValue([]),
+            } as never),
+          inject: [PrismaService],
+        },
       ],
     }).compile();
 
@@ -526,6 +539,119 @@ describe('UsersService', () => {
       await expect(
         service.update('nonexistent', updateUserDto, 'ADMIN'),
       ).rejects.toThrow('Utilisateur introuvable');
+    });
+
+    // SEC-002 — horizontal scope: ADMIN_DELEGATED (or any non-ADMIN holder of
+    // users:update) must not be able to edit a target outside their dept /
+    // shared-service perimeter.
+    describe('horizontal scope (SEC-002)', () => {
+      const callerOutOfScope = {
+        id: 'caller-delegated-1',
+        role: { code: 'INSTITUTIONAL_DELEGATED', templateKey: 'ADMIN_DELEGATED' },
+      };
+      const callerAdmin = {
+        id: 'caller-admin-1',
+        role: { code: 'ADMIN', templateKey: 'ADMIN' },
+      };
+      const targetId = 'target-user-1';
+
+      it('forbids non-ADMIN caller when target is outside dept and shares no service', async () => {
+        // user.count(target) > 0 (target exists), then canManageUser checks:
+        //   - department.count(caller manages target dept) → 0
+        //   - userService.count(caller shares a service)   → 0
+        mockPrismaService.user.count.mockResolvedValueOnce(1);
+        mockPrismaService.user.findUnique.mockResolvedValueOnce({
+          departmentId: 'dept-foreign',
+          userServices: [{ serviceId: 'svc-foreign' }],
+        });
+        mockPrismaService.department.count.mockResolvedValueOnce(0);
+        mockPrismaService.userService.count.mockResolvedValueOnce(0);
+
+        await expect(
+          service.update(targetId, updateUserDto, 'INSTITUTIONAL_DELEGATED', callerOutOfScope),
+        ).rejects.toThrow('périmètre');
+        expect(mockPrismaService.user.update).not.toHaveBeenCalled();
+      });
+
+      it('allows non-ADMIN caller when caller manages the target department', async () => {
+        const updated = { id: targetId, firstName: 'Updated' };
+        mockPrismaService.user.count.mockResolvedValueOnce(1);
+        mockPrismaService.user.findUnique.mockResolvedValueOnce({
+          departmentId: 'dept-managed',
+          userServices: [],
+        });
+        mockPrismaService.department.count.mockResolvedValueOnce(1);
+        mockPrismaService.user.findUnique.mockResolvedValueOnce({
+          id: targetId,
+        });
+        mockPrismaService.user.update.mockResolvedValueOnce(updated);
+
+        const result = await service.update(
+          targetId,
+          updateUserDto,
+          'INSTITUTIONAL_DELEGATED',
+          callerOutOfScope,
+        );
+        expect(result).toEqual(updated);
+      });
+
+      it('allows non-ADMIN caller when caller shares a service with the target', async () => {
+        const updated = { id: targetId, firstName: 'Updated' };
+        mockPrismaService.user.count.mockResolvedValueOnce(1);
+        mockPrismaService.user.findUnique.mockResolvedValueOnce({
+          departmentId: 'dept-foreign',
+          userServices: [{ serviceId: 'svc-shared' }],
+        });
+        mockPrismaService.department.count.mockResolvedValueOnce(0);
+        mockPrismaService.userService.count.mockResolvedValueOnce(1);
+        mockPrismaService.user.findUnique.mockResolvedValueOnce({
+          id: targetId,
+        });
+        mockPrismaService.user.update.mockResolvedValueOnce(updated);
+
+        const result = await service.update(
+          targetId,
+          updateUserDto,
+          'INSTITUTIONAL_DELEGATED',
+          callerOutOfScope,
+        );
+        expect(result).toEqual(updated);
+      });
+
+      it('allows ADMIN caller globally without scope lookups', async () => {
+        const updated = { id: targetId, firstName: 'Updated' };
+        mockPrismaService.user.count.mockResolvedValueOnce(1);
+        mockPrismaService.user.findUnique.mockResolvedValueOnce({
+          id: targetId,
+        });
+        mockPrismaService.user.update.mockResolvedValueOnce(updated);
+
+        const result = await service.update(
+          targetId,
+          updateUserDto,
+          'ADMIN',
+          callerAdmin,
+        );
+        expect(result).toEqual(updated);
+        // ADMIN bypass: no dept / userService lookups consumed.
+        expect(mockPrismaService.department.count).not.toHaveBeenCalled();
+        expect(mockPrismaService.userService.count).not.toHaveBeenCalled();
+      });
+
+      it('forbids remove() for non-ADMIN caller outside the target perimeter', async () => {
+        mockPrismaService.user.count.mockResolvedValueOnce(1);
+        mockPrismaService.user.findUnique.mockResolvedValueOnce({
+          departmentId: 'dept-foreign',
+          userServices: [{ serviceId: 'svc-foreign' }],
+        });
+        mockPrismaService.department.count.mockResolvedValueOnce(0);
+        mockPrismaService.userService.count.mockResolvedValueOnce(0);
+
+        await expect(
+          service.remove(targetId, callerOutOfScope),
+        ).rejects.toThrow('périmètre');
+        expect(mockPrismaService.user.update).not.toHaveBeenCalled();
+      });
     });
   });
 
