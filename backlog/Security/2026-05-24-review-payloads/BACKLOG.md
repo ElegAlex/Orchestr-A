@@ -158,7 +158,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ---
 ### DAT-005 — Money/hours precision uses Float (double-precision) instead of Decimal
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -195,8 +195,17 @@ Migrate to Decimal @db.Decimal(6,2). One-shot migration: ALTER TABLE ... TYPE nu
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** bcb7ec3
+**Learnings:**
+- **Enumerated Float columns.** Five: `TimeEntry.hours`, `Leave.days`, `LeaveBalance.totalDays`, `Task.estimatedHours`, `ProjectSnapshot.progress`. All five converted; precision/scale per-column rationale committed in the conversion migration's SQL comment header.
+- **No monetary columns exist.** The audit's "money" hint was checked — schema has no price/amount/cost/budget Float column (Project.budgetHours is Int). Documented in migration comment.
+- **ProjectSnapshot.progress was kept in scope** despite being computed today as `Math.round(...)` (integer 0–100) because the aggregation path in `snapshots-query.service.ts:143` does `sum / count` for portfolio average — that's business arithmetic the user's exclusion clause asked us NOT to ignore. Converted to Decimal(5,2) for consistency with the audit's explicit listing.
+- **Two migrations, not one.** Prisma applies each migration atomically. If we backed up Float values and then ALTERed in the same migration, a failure in the ALTER would roll back the backup too. The pre-conversion snapshot lives in an earlier-timestamped migration (20260524100000) so the safety net survives any failure of the conversion (20260524100100).
+- **JSON serialization footgun discovered & fixed.** `Prisma.Decimal.toJSON()` returns a string ("1.50"), not a number. Every API response that ships these fields would silently switch from `"days": 1.5` to `"days": "1.5"`, breaking `Number(x) + ...` math in the frontend. Fix: override `Decimal.prototype.toJSON` at module load in `prisma.service.ts` to return `.toNumber()`. Imported from `@prisma/client/runtime/library` directly because the `Prisma` namespace tree-shakes under vitest+swc and `Prisma.Decimal` resolves to undefined.
+- **`number + Decimal` is silent string concat in TS.** TypeScript does NOT flag `sum + entry.hours` after the type change because `Decimal` has `.toString()` and `+` falls back to concatenation. Caught only because `tsc --noEmit` does flag the resulting `number | Decimal` assignability mismatch on the consumer side. Fix everywhere: `Number(entry.hours)` at the read boundary, `Number(x._sum.y ?? 0)` for Prisma aggregates. 42 contamination sites enumerated and fixed in: analytics.service, project-health.service, snapshots-query.service, clients.service, leaves.service (3 reduce sites + 2 balance returns), projects.service (3 sums), tasks.service (groupBy sum), time-tracking.service (8 reduce/+= sites).
+- **`Prisma.dmmf` is unavailable under vitest+swc** in this repo. First-pass schema test used `Prisma.dmmf.datamodel.models` → undefined at runtime. Rewrote the schema assertion to parse `schema.prisma` text directly with regex. Source of truth either way; sidesteps bundler edge cases.
+- **Verification command divergence.** The BACKLOG-prescribed verification is `pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy`. Per explicit user instruction, did NOT run migrations against the local dev DB — operator will inspect the SQL first. Substitute verification: `pnpm test` green (1545/1545), including 12 new tests in `apps/api/src/prisma/dat005-decimal-precision.spec.ts`. Operational verification path is `scripts/db/preflight-decimal-conversion.sh` against a staging dump.
+- **Acceptance criterion #4 (audit_logs entry) skipped intentionally.** This is a schema migration; no user-initiated business mutation occurs at runtime. Documented per session contract.
 
 ---
 ### SEC-001 — RBAC guard defaults to permissive mode — uncovered routes silently allow access
