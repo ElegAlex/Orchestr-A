@@ -17,6 +17,7 @@ import {
   type RoleTemplateKey,
 } from 'rbac';
 import { AuditService, AuditAction } from '../audit/audit.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import {
   calculateLeaveDays,
   parisYearWindow,
@@ -218,6 +219,7 @@ export class LeavesService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly permissionsService: PermissionsService,
+    private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
   /**
@@ -1451,44 +1453,87 @@ export class LeavesService {
       );
     }
 
-    const updatedLeave = await this.prisma.leave.update({
-      where: { id },
-      data: {
-        status: LeaveStatus.APPROVED,
-        validatedById: validatorId,
-        validatedAt: new Date(),
-        validationComment: comment,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            email: true,
-          },
-        },
-        leaveType: true,
-        validatedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-          },
-        },
-      },
-    });
+    // DAT-001 — état + écriture d'audit doivent partager une seule
+    // transaction. Pré-fix : leave.update puis auditService.log (logger-only)
+    // hors $transaction ; un crash entre les deux laissait un congé APPROVED
+    // sans aucune trace persistée. Pattern aligné sur create()/update()
+    // (Wave 3) : ReadCommitted + re-lecture explicite avant l'écriture pour
+    // se protéger d'une transition concurrente PENDING → APPROVED/REJECTED.
+    const updatedLeave = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.leave.findUnique({ where: { id } });
+      if (!current) {
+        throw new NotFoundException('Demande de congé introuvable');
+      }
+      if (current.status !== LeaveStatus.PENDING) {
+        throw new ConflictException(
+          'La demande de congé a été modifiée pendant le traitement. Veuillez réessayer.',
+        );
+      }
 
-    this.auditService.log({
-      action: AuditAction.LEAVE_APPROVED,
-      userId: validatorId,
-      targetId: id,
-      details: `Leave ${id} approved for user ${leave.userId}`,
-      success: true,
+      const beforeSnapshot = {
+        status: current.status,
+        validatedById: current.validatedById,
+        validatedAt: current.validatedAt?.toISOString() ?? null,
+        validationComment: current.validationComment,
+      };
+
+      const updated = await tx.leave.update({
+        where: { id },
+        data: {
+          status: LeaveStatus.APPROVED,
+          validatedById: validatorId,
+          validatedAt: new Date(),
+          validationComment: comment,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              email: true,
+            },
+          },
+          leaveType: true,
+          validatedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
+          },
+        },
+      });
+
+      await this.auditPersistence.log({
+        action: AuditAction.LEAVE_APPROVED,
+        entityType: 'Leave',
+        entityId: id,
+        actorId: validatorId,
+        payload: {
+          targetUserId: current.userId,
+          validatorAssigned: current.validatorId,
+          // Wave 3 : `selfApproved` est figé à la création (true seulement si
+          // `leaves:self_approve` a écrit directement APPROVED). Sur la voie
+          // approve() le gate PENDING garantit qu'il vaut false ici, mais on
+          // remonte la valeur lue pour que l'audit reste honnête à 100% si
+          // un import/seed inattendu changeait l'invariant.
+          selfApproved: current.selfApproved,
+          before: beforeSnapshot,
+          after: {
+            status: updated.status,
+            validatedById: updated.validatedById,
+            validatedAt: updated.validatedAt?.toISOString() ?? null,
+            validationComment: updated.validationComment,
+          },
+        },
+      });
+
+      return updated;
     });
 
     return updatedLeave;
@@ -1524,44 +1569,78 @@ export class LeavesService {
       );
     }
 
-    const updatedLeave = await this.prisma.leave.update({
-      where: { id },
-      data: {
-        status: LeaveStatus.REJECTED,
-        validatedById: validatorId,
-        validatedAt: new Date(),
-        validationComment: reason,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            email: true,
-          },
-        },
-        leaveType: true,
-        validatedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-          },
-        },
-      },
-    });
+    // DAT-001 — mêmes garanties que approve() : status + audit durables
+    // doivent partager une transaction unique avec re-lecture du statut.
+    const updatedLeave = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.leave.findUnique({ where: { id } });
+      if (!current) {
+        throw new NotFoundException('Demande de congé introuvable');
+      }
+      if (current.status !== LeaveStatus.PENDING) {
+        throw new ConflictException(
+          'La demande de congé a été modifiée pendant le traitement. Veuillez réessayer.',
+        );
+      }
 
-    this.auditService.log({
-      action: AuditAction.LEAVE_REJECTED,
-      userId: validatorId,
-      targetId: id,
-      details: `Leave ${id} rejected for user ${leave.userId}`,
-      success: true,
+      const beforeSnapshot = {
+        status: current.status,
+        validatedById: current.validatedById,
+        validatedAt: current.validatedAt?.toISOString() ?? null,
+        validationComment: current.validationComment,
+      };
+
+      const updated = await tx.leave.update({
+        where: { id },
+        data: {
+          status: LeaveStatus.REJECTED,
+          validatedById: validatorId,
+          validatedAt: new Date(),
+          validationComment: reason,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              email: true,
+            },
+          },
+          leaveType: true,
+          validatedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
+          },
+        },
+      });
+
+      await this.auditPersistence.log({
+        action: AuditAction.LEAVE_REJECTED,
+        entityType: 'Leave',
+        entityId: id,
+        actorId: validatorId,
+        payload: {
+          targetUserId: current.userId,
+          validatorAssigned: current.validatorId,
+          selfApproved: current.selfApproved,
+          before: beforeSnapshot,
+          after: {
+            status: updated.status,
+            validatedById: updated.validatedById,
+            validatedAt: updated.validatedAt?.toISOString() ?? null,
+            validationComment: updated.validationComment,
+          },
+        },
+      });
+
+      return updated;
     });
 
     return updatedLeave;
@@ -1605,22 +1684,67 @@ export class LeavesService {
       );
     }
 
-    const updatedLeave = await this.prisma.leave.update({
-      where: { id },
-      data: { status: LeaveStatus.REJECTED },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            email: true,
+    // DAT-001 — annulation = transition d'état audit-sensible. Même pattern
+    // qu'approve()/reject() : re-lecture sous tx puis update + audit durable
+    // dans la même transaction.
+    const updatedLeave = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.leave.findUnique({ where: { id } });
+      if (!current) {
+        throw new NotFoundException('Demande de congé introuvable');
+      }
+      if (
+        current.status !== LeaveStatus.APPROVED &&
+        current.status !== LeaveStatus.CANCELLATION_REQUESTED
+      ) {
+        throw new ConflictException(
+          'La demande de congé a été modifiée pendant le traitement. Veuillez réessayer.',
+        );
+      }
+
+      const beforeSnapshot = {
+        status: current.status,
+        validatedById: current.validatedById,
+        validatedAt: current.validatedAt?.toISOString() ?? null,
+      };
+
+      const updated = await tx.leave.update({
+        where: { id },
+        data: { status: LeaveStatus.REJECTED },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              email: true,
+            },
+          },
+          leaveType: true,
+        },
+      });
+
+      await this.auditPersistence.log({
+        action: 'LEAVE_CANCELLED',
+        entityType: 'Leave',
+        entityId: id,
+        actorId: currentUserId ?? null,
+        payload: {
+          targetUserId: current.userId,
+          validatorAssigned: current.validatorId,
+          selfApproved: current.selfApproved,
+          cancelledByOwner: currentUserId
+            ? current.userId === currentUserId
+            : null,
+          before: beforeSnapshot,
+          after: {
+            status: updated.status,
           },
         },
-        leaveType: true,
-      },
+      });
+
+      return updated;
     });
 
     return updatedLeave;

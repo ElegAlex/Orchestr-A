@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { LeaveStatus, LeaveType, Role } from '../__mocks__/database';
 import { AuditService } from '../audit/audit.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { PermissionsService } from '../rbac/permissions.service';
 
 const mockGetPermissionsForRole = vi.fn().mockImplementation((role: string) => {
@@ -28,6 +29,10 @@ const mockGetPermissionsForRole = vi.fn().mockImplementation((role: string) => {
 
 describe('LeavesService', () => {
   let service: LeavesService;
+
+  // DAT-001 — partagé entre la fixture beforeEach et les tests de régression
+  // pour pouvoir asserter les appels durables au-delà du describe parent.
+  const mockAuditPersistence = { log: vi.fn().mockResolvedValue(undefined) };
 
   const mockPrismaService = {
     leave: {
@@ -146,6 +151,10 @@ describe('LeavesService', () => {
           useValue: { log: vi.fn() },
         },
         {
+          provide: AuditPersistenceService,
+          useValue: mockAuditPersistence,
+        },
+        {
           provide: PermissionsService,
           useValue: {
             getPermissionsForRole: mockGetPermissionsForRole,
@@ -161,6 +170,9 @@ describe('LeavesService', () => {
     // resetAllMocks vs clearAllMocks: reset supprime aussi les queues
     // mockResolvedValueOnce résiduelles, évitant la pollution inter-tests.
     vi.resetAllMocks();
+    // DAT-001 — restaurer l'implémentation default (resolved void) sinon les
+    // tests d'autres flows qui n'attendent rien d'auditPersistence cassent.
+    mockAuditPersistence.log.mockResolvedValue(undefined);
     // Restore default mock implementations
     mockPrismaService.userService.findMany.mockResolvedValue([]);
     mockPrismaService.userService.findFirst.mockResolvedValue(null);
@@ -2054,6 +2066,92 @@ describe('LeavesService', () => {
         ForbiddenException,
       );
     });
+
+    // DAT-001 — status mutation + durable audit must share a $transaction,
+    // and the audit MUST go through AuditPersistenceService, not the legacy
+    // logger-only AuditService. Pre-fix the test fails because approve()
+    // called leave.update outside any tx and emitted to auditService.log
+    // (logger-only — never reaches audit_logs).
+    it('wraps the status mutation and a durable audit log in a single $transaction (DAT-001)', async () => {
+      const pendingLeave = {
+        ...mockLeave,
+        status: LeaveStatus.PENDING,
+        validatedById: null,
+        validatedAt: null,
+        validationComment: null,
+        validatorId: 'manager-1',
+        selfApproved: false,
+      };
+      const approvedLeave = {
+        ...pendingLeave,
+        status: LeaveStatus.APPROVED,
+        validatedById: 'admin-1',
+        validatedAt: new Date('2026-05-24T10:00:00Z'),
+        validationComment: 'OK',
+      };
+
+      mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
+      mockPrismaService.leave.update.mockResolvedValue(approvedLeave);
+
+      await service.approve('leave-1', 'admin-1', 'OK');
+
+      // (a) $transaction must wrap the mutation+audit pair
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+
+      // (b) durable audit emitted with required snapshot fields
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'LEAVE_APPROVED',
+          entityType: 'Leave',
+          entityId: 'leave-1',
+          actorId: 'admin-1',
+          payload: expect.objectContaining({
+            targetUserId: 'user-1',
+            validatorAssigned: 'manager-1',
+            selfApproved: false,
+            before: expect.objectContaining({ status: LeaveStatus.PENDING }),
+            after: expect.objectContaining({ status: LeaveStatus.APPROVED }),
+          }),
+        }),
+      );
+    });
+
+    // DAT-001 — re-read sous tx : si une mutation concurrente a déjà fait
+    // sortir le congé de PENDING (race avec un autre validateur), on doit
+    // refuser au lieu d'écraser silencieusement.
+    it('rejects with ConflictException when the leave is no longer PENDING inside the transaction (DAT-001)', async () => {
+      const pendingOutside = { ...mockLeave, status: LeaveStatus.PENDING };
+      const approvedInsideTx = { ...mockLeave, status: LeaveStatus.APPROVED };
+
+      // Three leave.findUnique calls happen on this path:
+      //  1) pre-tx gate in approve()
+      //  2) inside canValidate() (re-looks the leave up by id)
+      //  3) inside the tx callback (re-read after gates passed)
+      // Only the third returns APPROVED — simulating a concurrent validator
+      // that flipped the row between gate and tx.
+      mockPrismaService.leave.findUnique
+        .mockResolvedValueOnce(pendingOutside)
+        .mockResolvedValueOnce(pendingOutside)
+        .mockResolvedValueOnce(approvedInsideTx);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
+
+      await expect(service.approve('leave-1', 'admin-1')).rejects.toThrow(
+        ConflictException,
+      );
+
+      // No audit write must happen on the conflict path.
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+      // No status write either — the tx callback aborts before update.
+      expect(mockPrismaService.leave.update).not.toHaveBeenCalled();
+    });
   });
 
   // ============================================
@@ -2110,6 +2208,53 @@ describe('LeavesService', () => {
 
       await expect(service.reject('leave-1', 'random-user')).rejects.toThrow(
         ForbiddenException,
+      );
+    });
+
+    // DAT-001 — même garantie que approve() : tx + audit durable.
+    it('wraps the status mutation and a durable audit log in a single $transaction (DAT-001)', async () => {
+      const pendingLeave = {
+        ...mockLeave,
+        status: LeaveStatus.PENDING,
+        validatedById: null,
+        validatedAt: null,
+        validationComment: null,
+        validatorId: 'manager-1',
+        selfApproved: false,
+      };
+      const rejectedLeave = {
+        ...pendingLeave,
+        status: LeaveStatus.REJECTED,
+        validatedById: 'admin-1',
+        validatedAt: new Date('2026-05-24T10:00:00Z'),
+        validationComment: 'Not enough staff',
+      };
+
+      mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
+      mockPrismaService.leave.update.mockResolvedValue(rejectedLeave);
+
+      await service.reject('leave-1', 'admin-1', 'Not enough staff');
+
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'LEAVE_REJECTED',
+          entityType: 'Leave',
+          entityId: 'leave-1',
+          actorId: 'admin-1',
+          payload: expect.objectContaining({
+            targetUserId: 'user-1',
+            validatorAssigned: 'manager-1',
+            selfApproved: false,
+            before: expect.objectContaining({ status: LeaveStatus.PENDING }),
+            after: expect.objectContaining({ status: LeaveStatus.REJECTED }),
+          }),
+        }),
       );
     });
   });
@@ -2173,6 +2318,47 @@ describe('LeavesService', () => {
 
       const result = await service.cancel('leave-1', 'admin-1', 'ADMIN');
       expect(result.status).toBe(LeaveStatus.REJECTED);
+    });
+
+    // DAT-001 — cancel est une transition audit-sensible (APPROVED →
+    // REJECTED). Avant ce ticket, aucune entrée audit_logs n'était écrite
+    // et la mutation ne partageait pas une tx avec l'audit.
+    it('wraps the status mutation and a durable audit log in a single $transaction (DAT-001)', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        validatorId: 'manager-1',
+        validatedById: 'manager-1',
+        validatedAt: new Date('2026-05-20T10:00:00Z'),
+        selfApproved: false,
+      };
+      const cancelledLeave = {
+        ...approvedLeave,
+        status: LeaveStatus.REJECTED,
+      };
+
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.leave.update.mockResolvedValue(cancelledLeave);
+
+      await service.cancel('leave-1', 'admin-1', 'ADMIN');
+
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'LEAVE_CANCELLED',
+          entityType: 'Leave',
+          entityId: 'leave-1',
+          actorId: 'admin-1',
+          payload: expect.objectContaining({
+            targetUserId: 'user-1',
+            validatorAssigned: 'manager-1',
+            selfApproved: false,
+            before: expect.objectContaining({ status: LeaveStatus.APPROVED }),
+            after: expect.objectContaining({ status: LeaveStatus.REJECTED }),
+          }),
+        }),
+      );
     });
   });
 
