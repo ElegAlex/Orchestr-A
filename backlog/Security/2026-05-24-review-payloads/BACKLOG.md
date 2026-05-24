@@ -106,7 +106,7 @@ pnpm test apps/api/src/leaves/leave-year-window.spec.ts  # may need creation if 
 ---
 ### DAT-001 — Leave.approve() updates status outside transaction and audit is logger-only
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 1
 - **Cluster:** D
 - **Confidence:** cross-validated
