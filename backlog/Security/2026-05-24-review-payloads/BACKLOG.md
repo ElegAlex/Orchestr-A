@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 174 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review
+> **Total tasks:** 175 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175")
 
 ## Schema legend
 
@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 116 important · 21 nit · 5 suggestion
-- **By category:** 33 correctness · 30 data_integrity · 25 observability · 30 performance · 30 security · 25 tests · 1 tooling
+- **By severity:** 32 blocking · 117 important · 21 nit · 5 suggestion
+- **By category:** 33 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 25 tests · 1 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -63,11 +63,11 @@ See `CLAUDE_SESSION_CONTRACT.md` in this directory for the exact session protoco
 
 ### COR-003 — Leave day calculation never subtracts public holidays
 
-- **Status:** BLOCKED
+- **Status:** TODO
 - **Phase:** 1
 - **Cluster:** C
 - **Confidence:** claude-only
-- **Blocked_by:** holidays-data-seed-required
+- **Blocked_by:** (none)
 - **Severity:** blocking
 - **Category:** correctness · calendar
 - **File:** `apps/api/src/leaves/leave-year-window.ts:71`
@@ -100,12 +100,16 @@ Either (a) fetch holidays for [start, end] from HolidaysService and pass the Set
 pnpm test apps/api/src/leaves/leave-year-window.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — not closed; BLOCKED)
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
 **Learnings:**
-- **BLOCKED at orientation, before any code was written.** The `holidays` table is empty on the dev DB (`orchestr-a-db`, host port 5433): `SELECT count(*) FROM holidays` → `0`, no rows for any year. `packages/database/prisma/seed.ts` contains zero holiday references, so seeding never populates it. `HolidaysService.importFrenchHolidays(year, userId)` exists (`apps/api/src/holidays/holidays.service.ts:205`) but has no scheduled/seed/bootstrap caller — it is only reachable via the admin controller endpoint on demand. Per the task's explicit override ("If the holidays table is not populated → BLOCKED with Blocked_by = holidays-data-seed-required"), the calculation fix is meaningless without holiday data to consume, so the fix was NOT implemented.
-- **Required unblocking work (new backlog item, not COR-003 scope):** a durable holiday-seeding mechanism. Options: (1) call `importFrenchHolidays` for the relevant year range inside `seed.ts`; (2) a year-boundary cron that imports the upcoming year; (3) a one-shot bootstrap script run at deploy. Until at least one exists and is run against dev/staging/prod, COR-003 cannot be demonstrated end-to-end.
-- **Design already decided for the future executor (so it need not re-derive):** use **option (a)** from the Suggested fix — add an optional `holidayKeys?: Set<DayKey>` parameter to BOTH `calculateLeaveDays` and `splitLeaveByYear` in `leave-year-window.ts`, and skip a day when `isWeekend(cursor) || holidayKeys.has(cursor)`. The leaves service pre-fetches holidays for `[start, end]` (via `HolidaysService.findByRange` / a new helper) and converts each non-working holiday `date` to a Paris `DayKey` (same `parisDayKey` keying the cursor uses) before passing the Set in. Rationale for (a) over (b): the pure functions stay synchronous and unit-testable; half-day semantics and the same-instant special case are preserved untouched; and crucially `splitLeaveByYear` needs **per-year buckets**, which `HolidaysService.countWorkingDays` (a single async total, with a timezone-inconsistent local `getDay()` + UTC date-key mix) cannot provide. `splitLeaveByYear`'s reconciliation step calls `calculateLeaveDays`, so both MUST receive the same holiday Set to stay consistent. The same-instant (`start===end`) branch currently does not even filter weekends (legacy); whether to subtract holidays there is a deliberate decision the executor should document, not assume.
-- **No downstream cascade:** `grep "Blocked_by:.*COR-003"` returns nothing — no other task waits on COR-003, so BLOCKING it does not stall Phase 1.
+- **Unblocked 2026-05-24 (was BLOCKED `holidays-data-seed-required`).** The original blocker assumed no holiday data existed anywhere. Real state after investigation + remediation:
+  - **Prod:** `holidays` table holds **33 rows = 2025/2026/2027 × 11**, all dates correct, verified (`SELECT EXTRACT(YEAR FROM date), count(*), count(DISTINCT name)` → 11/11/11). 2026 was already present and correct; 2025 + 2027 were added this session (additive `INSERT ... ON CONFLICT (date) DO NOTHING`, table backed up first to `/opt/orchestra/backups-prod/holidays_before_2025_2027_*.sql`).
+  - **Dev:** seeded on demand via `scripts/import-french-holidays.ts` (calls the real `HolidaysService.importFrenchHolidays`). Operator gesture, not a migration — re-run after any `prisma migrate reset`.
+  - So the remaining gap is only a *durable/automated* seeding mechanism, tracked as **DAT-031** (Phase 13, important; the "#175" follow-up). With prod covered through 2027-12-31 (~24-month runway), that is NOT a Phase-1 prerequisite, hence COR-003 returns to TODO.
+- **TZ off-by-one bug found & fixed during de-risk → commit `0dc640e`.** `importFrenchHolidays` built dates with local-time `new Date(y,m,d)`; `Holiday.date` is `@db.Date` (persisted from UTC components), so on a +UTC host every holiday stored one day early (May 1→Apr 30). Prod (UTC host) masked it; dev (CEST) exposed it. Fixed via `Date.UTC`/`setUTCDate` + a regression test asserting stored dates. **Implication for this task:** holidays are now stored at UTC midnight of the correct day, so `parisDayKey(holiday.date)` yields the right `DayKey`.
+- **Design for the implementer (unchanged):** use **option (a)** — add an optional `holidayKeys?: Set<DayKey>` to BOTH `calculateLeaveDays` and `splitLeaveByYear` in `leave-year-window.ts`; skip a day when `isWeekend(cursor) || holidayKeys.has(cursor)`. The leaves service pre-fetches `[start,end]` holidays (`HolidaysService.findByRange`, filter `isWorkDay=false`) and converts each `date` to a Paris `DayKey` via the same `parisDayKey` the cursor uses. Rationale for (a) over (b): pure functions stay sync/unit-testable; half-day + same-instant semantics untouched; and `splitLeaveByYear` needs **per-year buckets** that `HolidaysService.countWorkingDays` (single async total, TZ-inconsistent local `getDay()`+UTC keys) cannot give. `splitLeaveByYear`'s reconciliation calls `calculateLeaveDays`, so both MUST receive the same Set. The same-instant (`start===end`) branch does not filter weekends (legacy) — decide and document whether to subtract holidays there.
+- **Related:** **COR-013** (Phase 8) covers the consumer-side TZ mismatch in `findByYear`/`isNonWorkingHoliday`/`countWorkingDays` (local-vs-UTC key matching). The COR-003 implementation should key holidays via `parisDayKey` to stay consistent with the leave cursor regardless of COR-013's status.
+- **No downstream cascade:** nothing has `Blocked_by: COR-003`.
 
 ---
 ### DAT-001 — Leave.approve() updates status outside transaction and audit is logger-only
@@ -5101,7 +5105,7 @@ pnpm --filter web test  # no targeted spec inferred from apps/web/app/[locale]/p
 ---
 
 ## Phase 13 — Findings hors cluster — à traiter en parallèle des autres phases
-*59 tasks in this phase.*
+*60 tasks in this phase.*
 
 ### COR-005 — findValidatorForUser ignores the link between the leave's user and the active delegation
 
@@ -7638,5 +7642,54 @@ pnpm test apps/api/src/analytics/advanced/snapshot-scheduler.service.spec.ts  # 
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
 **Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### DAT-031 — Add durable holidays seeding mechanism
+
+- **Status:** TODO
+- **Phase:** 13
+- **Cluster:** C
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** data_integrity · seeding
+- **File:** `packages/database/prisma/seed.ts` · `apps/api/src/holidays/holidays.service.ts`
+- **Source:** operational follow-up from the COR-003 remediation session (2026-05-24) — not an audit-agent finding. Referred to as "#175" (the 175th backlog task).
+
+**Description:**
+Holiday reference data must exist wherever leave days are calculated (COR-003 subtracts public holidays from charged days), but nothing populates the `holidays` table automatically. `HolidaysService.importFrenchHolidays(year)` exists but is only reachable via the on-demand admin endpoint (`POST /holidays/import-french`). As of 2026-05-24 prod was manually seeded for 2025–2027 and dev is seeded on demand via `scripts/import-french-holidays.ts`; both lapse once 2027 ends. There is no recurring/bootstrap path, so the data will silently run out (~24-month runway from 2026-05) and every future-year leave will over-charge holidays again — the exact COR-003 failure mode, deferred not closed.
+
+**Root cause:**
+The holiday calendar was never integrated into the seed/bootstrap lifecycle; it relies on a human remembering to call the admin import each year.
+
+**Code evidence:**
+```
+grep -n holiday packages/database/prisma/seed.ts   # → no matches (seed never imports holidays)
+# importFrenchHolidays has no scheduled/cron/bootstrap caller — admin endpoint only.
+```
+
+**Suggested fix:**
+Pick ONE durable mechanism and wire it: (1) call `importFrenchHolidays` for a rolling window (`currentYear .. currentYear+2`) inside `seed.ts` so every reset/bootstrap is covered; (2) a `@nestjs/schedule` cron at the year boundary that imports the upcoming year; (3) a deploy-time bootstrap step. All are idempotent via the `@@unique([date])` constraint. Reuse `scripts/import-french-holidays.ts` as the manual fallback. Coordinate with **COR-013** (consumer-side TZ key matching) so import and lookup agree on date keys.
+
+**Acceptance criteria:**
+1. A durable, idempotent mechanism guarantees holidays exist for at least `currentYear .. currentYear+1` after a fresh `prisma migrate reset && db:seed` (or equivalent bootstrap).
+2. A test/check proves re-running the mechanism does not duplicate rows (relies on `@@unique([date])`).
+3. No regression in existing test suite (`pnpm test` green).
+4. Dates are stored at the correct calendar day on any host TZ (regression guard already added in `0dc640e`).
+5. Commit message includes `[closes DAT-031]`.
+6. Document the chosen mechanism (1/2/3) and why in `Learnings`.
+
+**Verification command:**
+```
+# After implementing, on a clean DB:
+pnpm --filter database db:seed && \
+  psql "$DATABASE_URL" -c "SELECT EXTRACT(YEAR FROM date) yr, count(*) FROM holidays GROUP BY 1 ORDER BY 1;"
+# Expect >= 11 rows for the current and next year.
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:**
+- Not blocking Phase 1: prod holidays cover through **2027-12-31** (~24-month runway from 2026-05), so COR-003 was returned to TODO without this. This task closes the structural gap before the runway expires.
+- The TZ off-by-one in `importFrenchHolidays` was fixed in `0dc640e` (UTC date construction + regression test); the durable mechanism must keep using that fixed path.
 
 ---
