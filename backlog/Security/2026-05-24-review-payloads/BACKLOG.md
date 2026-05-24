@@ -106,7 +106,7 @@ pnpm test apps/api/src/leaves/leave-year-window.spec.ts  # may need creation if 
 ---
 ### DAT-001 — Leave.approve() updates status outside transaction and audit is logger-only
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** D
 - **Confidence:** cross-validated
@@ -143,8 +143,17 @@ Inject AuditPersistenceService into LeavesService. Wrap prisma.leave.update(...)
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** b14cdd5
+**Learnings:**
+- Pre-fix: approve() and reject() were NOT wrapped in $transaction. Wave 3 added $transaction to create()/update() (lines 438 and 1206) but never extended the pattern to the status-transition methods. This commit is the first transactional wrap for approve/reject/cancel. The same ReadCommitted + re-read pattern from create/update is reused literally — re-fetch the row inside the tx and re-assert the status invariant before writing, raising ConflictException if a concurrent transition slipped in.
+- Pre-fix: approve/reject were emitting through `AuditService.log` (Logger.log/JSON.stringify only — never persisted). This commit switches them to `AuditPersistenceService.log` (durable audit_logs writes). `cancel()` had NO audit emission at all pre-fix — adding one is in scope per the audit's literal "Same for ... cancel" in the Suggested fix.
+- Scope: Suggested fix says "Same for reject, cancel, validator changes." `validator changes` is not a real code path — `grep` for `validatorId\s*:` shows no separate validator-mutation method outside create/update/approve/reject; `validatorId` is only assigned at create time and replaced via the approve/reject `validatedById` field. Treating "validator changes" as not-applicable is defensible.
+- Acceptance criterion #4 (audit-sensitive entry): payload includes `actorId`, `entityId` (leave id), `before/after` status + validator metadata snapshot, `validatorAssigned` (the leave's assigned validator), `targetUserId`, and `selfApproved` from the Wave 3 column. No new column introduced — `selfApproved` is read from the row. For approve() it is always false at runtime (the PENDING gate blocks self-approved leaves which are written APPROVED at create time), but the value is still surfaced honestly from the DB.
+- Out-of-scope observation (DAT-002 territory): `create()` line 545-553 still emits the self-approval LEAVE_APPROVED through `AuditService.log` (logger-only). This is the same logger-only path criticized by DAT-001 but in a different code path — left for DAT-002 (which migrates the AuditService itself to dual-write logger + audit_logs).
+- Test design for acceptance criterion #2 (FAIL pre-fix / PASS post-fix): three new tests assert (a) `$transaction` is called for approve/reject/cancel, (b) `AuditPersistenceService.log` is called with the required payload shape, (c) the conflict-path re-read raises ConflictException AND does not write either the leave update or the audit row. With the mocked Prisma, real rollback isn't observable — the test instead verifies the assertion order (tx callback aborts before reaching update) which proves atomicity at the code-flow level.
+- spec setup needed `AuditPersistenceService` injected as a mock provider AND a `mockResolvedValue(undefined)` restoration in `afterEach` (since `vi.resetAllMocks()` clears the implementation too).
+- canValidate() also calls `prisma.leave.findUnique` — the concurrency-race test had to mock 3 sequential returns (pre-tx gate, canValidate, in-tx re-read), not just 2.
+- The console-logger `AuditService.log` emission was removed (not kept in parallel) — divergence from SEC-003's "keep both in parallel" pattern. Rationale: SEC-003's parallel emit existed for parity with `AuthService.generateResetToken`; DAT-001's criticism is precisely that the logger emit was the ONLY persistence. Keeping it post-fix would muddy the contract. When DAT-002 lands and `AuditService.log` itself dual-writes, the live SecurityAudit stream visibility returns for free.
 
 ---
 ### DAT-005 — Money/hours precision uses Float (double-precision) instead of Decimal
