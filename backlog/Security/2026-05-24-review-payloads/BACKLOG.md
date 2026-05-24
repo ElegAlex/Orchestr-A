@@ -239,7 +239,7 @@ pnpm test apps/api/src/rbac/permissions.guard.spec.ts  # may need creation if mi
 ---
 ### SEC-002 — PATCH /users/:id has no horizontal scope check — any user with users:update can modify any user
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 1
 - **Cluster:** B
 - **Confidence:** claude-only
