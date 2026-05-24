@@ -28,13 +28,12 @@
     "deny": ["Bash(rm -rf /)", "Bash(rm -rf /*)"]
   },
   "hooks": {
-    "PostToolUse": [
+    "Stop": [
       {
-        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "npx playwright test --reporter=line --grep @smoke 2>&1 | tail -20"
+            "command": "! git status --porcelain -- apps packages e2e 2>/dev/null | grep -q . || npx playwright test --reporter=line --grep @smoke 2>&1 | tail -20"
           }
         ]
       }
