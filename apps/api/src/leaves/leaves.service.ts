@@ -18,10 +18,13 @@ import {
 } from 'rbac';
 import { AuditService, AuditAction } from '../audit/audit.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { HolidaysService } from '../holidays/holidays.service';
 import {
   calculateLeaveDays,
+  parisDayKey,
   parisYearWindow,
   splitLeaveByYear,
+  type DayKey,
 } from './leave-year-window';
 
 /**
@@ -220,7 +223,37 @@ export class LeavesService {
     private readonly auditService: AuditService,
     private readonly permissionsService: PermissionsService,
     private readonly auditPersistence: AuditPersistenceService,
+    private readonly holidaysService: HolidaysService,
   ) {}
+
+  /**
+   * COR-003 — Build the set of non-working public-holiday Paris day keys that
+   * intersect `[start, end]`, so the day-counting helpers can exclude them
+   * from charged leave days. Holidays are reference data (not transactional),
+   * so this read deliberately uses the default Prisma connection even when the
+   * balance gate runs inside a transaction. The fetch window is widened by one
+   * day on each side to absorb host-TZ edge cases; extra holidays in the set
+   * are harmless because the cursor only probes keys within `[start, end]`.
+   * Holidays flagged `isWorkDay` (e.g. a worked bank holiday) are excluded.
+   */
+  private async getHolidayKeySet(
+    start: Date,
+    end: Date,
+  ): Promise<Set<DayKey>> {
+    const from = new Date(start);
+    from.setUTCDate(from.getUTCDate() - 1);
+    const to = new Date(end);
+    to.setUTCDate(to.getUTCDate() + 1);
+    const holidays = await this.holidaysService.findByRange(
+      from.toISOString(),
+      to.toISOString(),
+    );
+    return new Set(
+      holidays
+        .filter((h) => !h.isWorkDay)
+        .map((h) => parisDayKey(h.date)),
+    );
+  }
 
   /**
    * Créer une nouvelle demande de congé
@@ -354,12 +387,17 @@ export class LeavesService {
       );
     }
 
+    // COR-003 — jours fériés non travaillés à soustraire du décompte (et de
+    // la gate de solde plus bas). Référentiel statique, lu hors transaction.
+    const holidayKeys = await this.getHolidayKeySet(start, end);
+
     // Calculer le nombre de jours
     const days = calculateLeaveDays(
       start,
       end,
       effectiveHalfDay,
       endHalfDay,
+      holidayKeys,
     );
 
     // Vérifier les chevauchements
@@ -426,6 +464,7 @@ export class LeavesService {
       end,
       effectiveHalfDay,
       endHalfDay,
+      holidayKeys,
     );
 
     // Finding #4 — la gate (hasConfiguredBalance + getAvailableDays) et la
@@ -1164,7 +1203,15 @@ export class LeavesService {
     // même demi-journée, sinon `days` (stockage) et `workDays` (gate)
     // peuvent diverger d'une demi-journée et bloquer un édit légitime.
     const gateHalfDay = effectiveHalfDay ?? existingLeave.halfDay;
-    const days = calculateLeaveDays(start, end, gateHalfDay, undefined);
+    // COR-003 — même set de jours fériés pour le stockage et la gate.
+    const holidayKeys = await this.getHolidayKeySet(start, end);
+    const days = calculateLeaveDays(
+      start,
+      end,
+      gateHalfDay,
+      undefined,
+      holidayKeys,
+    );
 
     // Vérifier les chevauchements (exclure la demande actuelle)
     if (startDate || endDate) {
@@ -1187,7 +1234,13 @@ export class LeavesService {
     // `available + existingLeave.days` qui sur-créditait quand un congé
     // était déplacé d'une année à l'autre (existingLeave.days est compté
     // en totalité, indépendamment de l'année où il tombait).
-    const yearBuckets = splitLeaveByYear(start, end, gateHalfDay, undefined);
+    const yearBuckets = splitLeaveByYear(
+      start,
+      end,
+      gateHalfDay,
+      undefined,
+      holidayKeys,
+    );
     let leaveTypeConfigCache: { name: string } | null = null;
     const loadLeaveTypeName = async (
       db: Prisma.TransactionClient | PrismaService,
@@ -2111,6 +2164,12 @@ export class LeavesService {
     );
     const { start: yearStart, endExclusive: yearEnd } = parisYearWindow(year);
 
+    // COR-003 — soustraire les jours fériés non travaillés du décompte
+    // consommé, exactement comme la création/édition les soustrait du
+    // stockage. Sans ça la gate sur-compterait la consommation (4 jours
+    // stockés mais 5 recomptés ici) et bloquerait des demandes légitimes.
+    const holidayKeys = await this.getHolidayKeySet(yearStart, yearEnd);
+
     const intersecting = await db.leave.findMany({
       where: {
         userId,
@@ -2137,6 +2196,7 @@ export class LeavesService {
         l.endDate,
         l.halfDay ?? null,
         null,
+        holidayKeys,
       );
       const bucket = buckets.find((b) => b.year === year);
       return sum + (bucket?.workDays ?? 0);
@@ -2888,11 +2948,18 @@ export class LeavesService {
             ? leaveData.halfDay
             : null;
 
+        // COR-003 — soustraire les jours fériés non travaillés, comme la
+        // création standard. Lecture par ligne (volume d'import modéré).
+        const importHolidayKeys = await this.getHolidayKeySet(
+          startDate,
+          endDate,
+        );
         const days = calculateLeaveDays(
           startDate,
           endDate,
           halfDay,
           undefined,
+          importHolidayKeys,
         );
 
         // Trouver le validateur approprié

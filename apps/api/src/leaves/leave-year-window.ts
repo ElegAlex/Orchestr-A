@@ -8,13 +8,18 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
  */
 export const LEAVE_TIMEZONE = 'Europe/Paris';
 
-type DayKey = string;
+export type DayKey = string;
 
 function pad2(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
 }
 
-function parisDayKey(d: Date): DayKey {
+/**
+ * Paris calendar day of an instant, as `yyyy-MM-dd`. Callers that pre-fetch
+ * the holiday calendar (COR-003) MUST key each holiday with THIS function so
+ * the resulting `Set<DayKey>` lines up with the day-counting cursor below.
+ */
+export function parisDayKey(d: Date): DayKey {
   return formatInTimeZone(d, LEAVE_TIMEZONE, 'yyyy-MM-dd');
 }
 
@@ -58,12 +63,21 @@ export function parisYearWindow(year: number): {
  *     implementation);
  *   - multi-day leave: weekday count − 0.5 per active half-day flag, floored
  *     at 0.5 globally.
+ *
+ * COR-003 — `holidayKeys` is an optional set of non-working public-holiday
+ * Paris day keys (see `parisDayKey`). A day inside the range is counted only
+ * when it is neither a weekend NOR a known holiday. The parameter is optional
+ * and additive: omitting it (or passing `undefined`) reproduces the prior
+ * "weekends only" behavior exactly, so existing callers are unaffected. The
+ * same-instant branch is intentionally left untouched (it never filtered
+ * weekends either); single-day holiday handling is out of this fix's scope.
  */
 export function calculateLeaveDays(
   start: Date,
   end: Date,
   startHalfDay?: string | null,
   endHalfDay?: string | null,
+  holidayKeys?: Set<DayKey>,
 ): number {
   if (start.getTime() === end.getTime()) {
     return startHalfDay || endHalfDay ? 0.5 : 1;
@@ -72,7 +86,7 @@ export function calculateLeaveDays(
   let cursor = parisDayKey(start);
   const endKey = parisDayKey(end);
   while (cursor <= endKey) {
-    if (!isWeekend(cursor)) workDays++;
+    if (!isWeekend(cursor) && !holidayKeys?.has(cursor)) workDays++;
     cursor = nextDayKey(cursor);
   }
   let adjustment = 0;
@@ -98,6 +112,7 @@ export function splitLeaveByYear(
   end: Date,
   startHalfDay?: string | null,
   endHalfDay?: string | null,
+  holidayKeys?: Set<DayKey>,
 ): Array<{ year: number; workDays: number }> {
   const startYear = dayKeyToYear(parisDayKey(start));
   const endYear = dayKeyToYear(parisDayKey(end));
@@ -111,7 +126,9 @@ export function splitLeaveByYear(
   let cursor = parisDayKey(start);
   const endKey = parisDayKey(end);
   while (cursor <= endKey) {
-    if (!isWeekend(cursor)) {
+    // COR-003 — exclude both weekends and known non-working holidays, per
+    // year bucket. The set must be keyed by `parisDayKey` (same as `cursor`).
+    if (!isWeekend(cursor) && !holidayKeys?.has(cursor)) {
       const y = dayKeyToYear(cursor);
       buckets.set(y, (buckets.get(y) ?? 0) + 1);
     }
@@ -130,7 +147,13 @@ export function splitLeaveByYear(
   // would skip the check while storage records non-zero consumption — the
   // exact "balance gate bypass" regression Wave 1 must not introduce. We
   // credit the shortfall to start.year so the gate sees what storage sees.
-  const expected = calculateLeaveDays(start, end, startHalfDay, endHalfDay);
+  const expected = calculateLeaveDays(
+    start,
+    end,
+    startHalfDay,
+    endHalfDay,
+    holidayKeys,
+  );
   const sum = Array.from(buckets.values()).reduce((a, b) => a + b, 0);
   if (expected > sum) {
     buckets.set(startYear, (buckets.get(startYear) ?? 0) + (expected - sum));

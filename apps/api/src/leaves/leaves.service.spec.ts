@@ -12,6 +12,7 @@ import { LeaveStatus, LeaveType, Role } from '../__mocks__/database';
 import { AuditService } from '../audit/audit.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { PermissionsService } from '../rbac/permissions.service';
+import { HolidaysService } from '../holidays/holidays.service';
 
 const mockGetPermissionsForRole = vi.fn().mockImplementation((role: string) => {
   const base = [
@@ -33,6 +34,13 @@ describe('LeavesService', () => {
   // DAT-001 — partagé entre la fixture beforeEach et les tests de régression
   // pour pouvoir asserter les appels durables au-delà du describe parent.
   const mockAuditPersistence = { log: vi.fn().mockResolvedValue(undefined) };
+
+  // COR-003 — la table des jours fériés est un référentiel ; par défaut vide
+  // (aucun férié connu = comportement legacy "que les week-ends"). Les tests
+  // de câblage surchargent findByRange pour injecter un férié dans la fenêtre.
+  const mockHolidaysService = {
+    findByRange: vi.fn().mockResolvedValue([]),
+  };
 
   const mockPrismaService = {
     leave: {
@@ -160,6 +168,10 @@ describe('LeavesService', () => {
             getPermissionsForRole: mockGetPermissionsForRole,
           },
         },
+        {
+          provide: HolidaysService,
+          useValue: mockHolidaysService,
+        },
       ],
     }).compile();
 
@@ -184,6 +196,8 @@ describe('LeavesService', () => {
     mockPrismaService.roleConfig.findMany.mockResolvedValue([]);
     mockPrismaService.roleConfig.findFirst.mockResolvedValue(null);
     mockPrismaService.role.findMany.mockResolvedValue([]);
+    // COR-003 — référentiel jours fériés vide par défaut après chaque reset.
+    mockHolidaysService.findByRange.mockResolvedValue([]);
     // Default user.findUnique to mockUser : évite les NotFoundException
     // quand update()/remove()/cancel() déclenchent getLeaveBalance pour un
     // congé CP mais que le test ne mocke pas explicitement user.findUnique.
@@ -263,6 +277,45 @@ describe('LeavesService', () => {
       expect(result).toBeDefined();
       expect(result.userId).toBe('user-1');
       expect(mockPrismaService.leave.create).toHaveBeenCalled();
+    });
+
+    it('COR-003 — fetches holidays and subtracts a non-working holiday from charged days', async () => {
+      // Wiring witness: Mon 2025-06-02 → Fri 2025-06-06 = 5 weekdays. The
+      // service must fetch the holiday calendar and exclude Wed 2025-06-04,
+      // charging 4 days instead of 5. Proves the HolidaysService → helper
+      // path end-to-end without depending on the seeded DB.
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(mockUser)
+        .mockResolvedValueOnce({
+          ...mockUser,
+          department: { ...mockUser.department, manager: { id: 'manager-1' } },
+        });
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        mockLeaveTypeConfig,
+      ]);
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      mockPrismaService.leave.create.mockResolvedValue(mockLeave);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
+      mockHolidaysService.findByRange.mockResolvedValue([
+        { date: new Date('2025-06-04T00:00:00Z'), isWorkDay: false },
+      ]);
+
+      await service.create('user-1', createLeaveDto);
+
+      expect(mockHolidaysService.findByRange).toHaveBeenCalled();
+      expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ days: 4 }),
+        }),
+      );
     });
 
     it('should throw NotFoundException when user not found', async () => {

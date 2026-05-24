@@ -238,4 +238,114 @@ describe('leave-year-window', () => {
       expect(years).toContain(2027);
     });
   });
+
+  describe('COR-003 — public-holiday exclusion', () => {
+    // Witness: Apr 27 (Mon) → May 1 (Fri) 2026 — five consecutive weekdays,
+    // May 1 (Fête du Travail) is a non-working public holiday. The user's
+    // illustrative range (Apr 28 → May 2) lands on a Sat at the end in 2026's
+    // calendar (4 weekdays); Apr 27 → May 1 is the faithful 5→4 witness.
+    const witnessStart = new Date('2026-04-27T00:00:00Z'); // Mon
+    const witnessEnd = new Date('2026-05-01T00:00:00Z'); // Fri (holiday)
+    const mayDay = new Set<string>(['2026-05-01']);
+
+    it('calculateLeaveDays charges 5 without the holiday set (legacy/no-fix)', () => {
+      // FAIL-pre / PASS-post anchor: this is the buggy figure the fix removes.
+      expect(calculateLeaveDays(witnessStart, witnessEnd)).toBe(5);
+    });
+
+    it('calculateLeaveDays charges 4 when May 1 is a known holiday', () => {
+      // The witness assertion: passes only when the helper consults the set.
+      expect(
+        calculateLeaveDays(witnessStart, witnessEnd, null, null, mayDay),
+      ).toBe(4);
+    });
+
+    it('splitLeaveByYear drops the holiday from its year bucket', () => {
+      expect(splitLeaveByYear(witnessStart, witnessEnd)).toEqual([
+        { year: 2026, workDays: 5 },
+      ]);
+      expect(
+        splitLeaveByYear(witnessStart, witnessEnd, null, null, mayDay),
+      ).toEqual([{ year: 2026, workDays: 4 }]);
+    });
+
+    it('does not double-count a holiday that falls on a weekend', () => {
+      // May 2 2026 is a Saturday: already excluded as a weekend. Including it
+      // in the holiday set must not subtract a second time.
+      const start = new Date('2026-04-27T00:00:00Z'); // Mon
+      const end = new Date('2026-05-02T00:00:00Z'); // Sat
+      const weekendHoliday = new Set<string>(['2026-05-02']);
+      // Mon–Fri = 5 weekdays (Sat excluded), regardless of the set.
+      expect(calculateLeaveDays(start, end)).toBe(5);
+      expect(
+        calculateLeaveDays(start, end, null, null, weekendHoliday),
+      ).toBe(5);
+    });
+
+    it('subtracts a holiday independently in each year of a cross-year leave', () => {
+      // Dec 28 2026 (Mon) → Jan 8 2027 (Fri). Inject one synthetic holiday in
+      // each Paris year: Dec 30 2026 (Wed) and Jan 1 2027 (Fri).
+      const start = new Date('2026-12-28T00:00:00Z');
+      const end = new Date('2027-01-08T00:00:00Z');
+      const set = new Set<string>(['2026-12-30', '2027-01-01']);
+      // Without set: 2026 = Mon28,Tue29,Wed30,Thu31 = 4 ; 2027 = 6.
+      expect(splitLeaveByYear(start, end)).toEqual([
+        { year: 2026, workDays: 4 },
+        { year: 2027, workDays: 6 },
+      ]);
+      // With set: each year loses exactly its own holiday.
+      expect(splitLeaveByYear(start, end, null, null, set)).toEqual([
+        { year: 2026, workDays: 3 },
+        { year: 2027, workDays: 5 },
+      ]);
+    });
+
+    it('floors at 0.5 and credits start.year when every day is a holiday', () => {
+      // Mirror of the all-weekend floor case (line ~101) but driven by
+      // holidays: Mon 2026-01-12 + Tue 2026-01-13, both in the holiday set.
+      const start = new Date('2026-01-12T00:00:00Z'); // Mon
+      const end = new Date('2026-01-13T00:00:00Z'); // Tue
+      const set = new Set<string>(['2026-01-12', '2026-01-13']);
+      expect(calculateLeaveDays(start, end, null, null, set)).toBe(0.5);
+      expect(splitLeaveByYear(start, end, null, null, set)).toEqual([
+        { year: 2026, workDays: 0.5 },
+      ]);
+    });
+
+    it('keeps sum(buckets) === calculateLeaveDays when holidays are subtracted', () => {
+      // Same architectural invariant as the weekend-only parameterized test,
+      // now exercised WITH a holiday set: if these ever drift, the balance
+      // gate and storage diverge again (the Wave 1 regression vector).
+      const set = new Set<string>(['2026-01-14', '2027-01-01']);
+      const cases: Array<[string, string, string | null, string | null]> = [
+        ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', null, null],
+        ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', 'MORNING', null],
+        ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', 'MORNING', 'AFTERNOON'],
+        ['2026-12-28T00:00:00Z', '2027-01-08T00:00:00Z', null, null],
+        ['2026-12-28T00:00:00Z', '2027-01-08T00:00:00Z', 'MORNING', 'AFTERNOON'],
+      ];
+      for (const [s, e, sh, eh] of cases) {
+        const start = new Date(s);
+        const end = new Date(e);
+        const calc = calculateLeaveDays(start, end, sh, eh, set);
+        const sum = splitLeaveByYear(start, end, sh, eh, set).reduce(
+          (acc, b) => acc + b.workDays,
+          0,
+        );
+        expect(sum).toBe(calc);
+      }
+    });
+
+    it('reproduces legacy behavior when holidayKeys is omitted (additive)', () => {
+      // Existing callers that pass no set must see the exact prior figures.
+      const start = new Date('2026-04-27T00:00:00Z');
+      const end = new Date('2026-05-01T00:00:00Z');
+      expect(calculateLeaveDays(start, end, null, null, undefined)).toBe(
+        calculateLeaveDays(start, end),
+      );
+      expect(
+        splitLeaveByYear(start, end, null, null, undefined),
+      ).toEqual(splitLeaveByYear(start, end));
+    });
+  });
 });
