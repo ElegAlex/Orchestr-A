@@ -287,7 +287,7 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ---
 ### SEC-003 — POST /users/:id/reset-password bypasses role-hierarchy guard
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** B
 - **Confidence:** claude-only
@@ -324,8 +324,14 @@ Call this.roleHierarchy.assertCanAssignRole(callerRoleCode, target.role?.code) i
 pnpm test apps/api/src/users/users.controller.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 27635523cfc2c0dad7e4745ed84c1ad9400b3bd6
+**Learnings:**
+- The audit's suggested fix "Forbid self-reset" is explicitly implemented as a `callerId === userId` check that throws ForbiddenException. RoleHierarchyService.assertCanAssignRole alone would NOT have caught it — for an ADMIN caller (line 97 in role-hierarchy.service.ts), the function returns early without comparing ranks, so an ADMIN could otherwise reset their own (ADMIN) password through this endpoint. The two gates are complementary, not redundant.
+- The peer ADMIN→ADMIN case from the audit Description ("ADMIN A can reset ADMIN B's password") is NOT fully closed by SEC-003 as scoped: `assertCanAssignRole` blocks ADMIN_DELEGATED→ADMIN (target template === 'ADMIN' && caller !== 'ADMIN' → 403) but ADMIN→ADMIN returns OK at line 97. This matches the SEC-002 peer-edit follow-up note; the suggested fix only mandated the hierarchy + self-reset checks, and staying literal per the session contract. If the threat model justifies peer-ADMIN protection, that's a separate finding.
+- For audit_log payload (acceptance criterion #4): used `updatedAt` (already on User model, auto-touched by Prisma) as before/after marker. Did NOT add a `passwordChangedAt` schema field — that would be schema migration out of scope. Test asserts the payload never contains the raw password or a bcrypt hash prefix `$2[aby]$`.
+- AuditService (console-only, OBS-001 territory) is still emitted in parallel to mirror AuthService.generateResetToken's pattern, but durability of the audit trail relies on AuditPersistenceService writing to the `audit_logs` table. OBS-001 will unify both sinks; SEC-003 is durable today because AuditPersistenceService persists directly.
+- Service signature kept the callerId parameter OPTIONAL to preserve the existing test `should reset password successfully (legacy: no caller)` and keep call sites that don't have caller context working. The controller path (the production attack surface) always passes the caller via @CurrentUser('id'); the gates only run when caller is known.
+- Adjacent files touched (justified by Suggested fix scope): users.controller.ts (thread @CurrentUser('id') through), users.service.spec.ts and users.controller.spec.ts (test wiring + new SEC-003 coverage). No unrelated paths modified.
 
 ---
 ### CLAUDE-CFG-001 — Smoke hook misses untracked changes
