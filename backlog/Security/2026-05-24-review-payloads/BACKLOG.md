@@ -63,11 +63,11 @@ See `CLAUDE_SESSION_CONTRACT.md` in this directory for the exact session protoco
 
 ### COR-003 — Leave day calculation never subtracts public holidays
 
-- **Status:** TODO
+- **Status:** BLOCKED
 - **Phase:** 1
 - **Cluster:** C
 - **Confidence:** claude-only
-- **Blocked_by:** (none)
+- **Blocked_by:** holidays-data-seed-required
 - **Severity:** blocking
 - **Category:** correctness · calendar
 - **File:** `apps/api/src/leaves/leave-year-window.ts:71`
@@ -100,8 +100,12 @@ Either (a) fetch holidays for [start, end] from HolidaysService and pass the Set
 pnpm test apps/api/src/leaves/leave-year-window.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** (empty — not closed; BLOCKED)
+**Learnings:**
+- **BLOCKED at orientation, before any code was written.** The `holidays` table is empty on the dev DB (`orchestr-a-db`, host port 5433): `SELECT count(*) FROM holidays` → `0`, no rows for any year. `packages/database/prisma/seed.ts` contains zero holiday references, so seeding never populates it. `HolidaysService.importFrenchHolidays(year, userId)` exists (`apps/api/src/holidays/holidays.service.ts:205`) but has no scheduled/seed/bootstrap caller — it is only reachable via the admin controller endpoint on demand. Per the task's explicit override ("If the holidays table is not populated → BLOCKED with Blocked_by = holidays-data-seed-required"), the calculation fix is meaningless without holiday data to consume, so the fix was NOT implemented.
+- **Required unblocking work (new backlog item, not COR-003 scope):** a durable holiday-seeding mechanism. Options: (1) call `importFrenchHolidays` for the relevant year range inside `seed.ts`; (2) a year-boundary cron that imports the upcoming year; (3) a one-shot bootstrap script run at deploy. Until at least one exists and is run against dev/staging/prod, COR-003 cannot be demonstrated end-to-end.
+- **Design already decided for the future executor (so it need not re-derive):** use **option (a)** from the Suggested fix — add an optional `holidayKeys?: Set<DayKey>` parameter to BOTH `calculateLeaveDays` and `splitLeaveByYear` in `leave-year-window.ts`, and skip a day when `isWeekend(cursor) || holidayKeys.has(cursor)`. The leaves service pre-fetches holidays for `[start, end]` (via `HolidaysService.findByRange` / a new helper) and converts each non-working holiday `date` to a Paris `DayKey` (same `parisDayKey` keying the cursor uses) before passing the Set in. Rationale for (a) over (b): the pure functions stay synchronous and unit-testable; half-day semantics and the same-instant special case are preserved untouched; and crucially `splitLeaveByYear` needs **per-year buckets**, which `HolidaysService.countWorkingDays` (a single async total, with a timezone-inconsistent local `getDay()` + UTC date-key mix) cannot provide. `splitLeaveByYear`'s reconciliation step calls `calculateLeaveDays`, so both MUST receive the same holiday Set to stay consistent. The same-instant (`start===end`) branch currently does not even filter weekends (legacy); whether to subtract holidays there is a deliberate decision the executor should document, not assume.
+- **No downstream cascade:** `grep "Blocked_by:.*COR-003"` returns nothing — no other task waits on COR-003, so BLOCKING it does not stall Phase 1.
 
 ---
 ### DAT-001 — Leave.approve() updates status outside transaction and audit is logger-only
