@@ -376,7 +376,7 @@ pnpm test apps/api/src/users/users.controller.spec.ts  # may need creation if mi
 ---
 ### CLAUDE-CFG-001 — Smoke hook misses untracked changes
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** —
 - **Confidence:** codex-only
@@ -419,8 +419,13 @@ Replace `git diff --quiet HEAD -- apps packages e2e` with `git status --porcelai
 TBD — manual verification (config change, no automated test)
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** a4c3ec2834a1ead45ad1dcdd727f85511b4244b2
+**Learnings:**
+- **The audit's "Code evidence" was truncated and the real hook has a `||` tail.** The live command (`.claude/settings.json:36`) is `git diff --quiet HEAD -- apps packages e2e 2>/dev/null || npx playwright test --grep @smoke`. The `||` is load-bearing: the gate runs the @smoke suite **when changes exist**. The audit only quoted the `git diff --quiet` half, so a literal drop-in of the Suggested-fix `git status --porcelain ... | grep -q .` would have **inverted** the gate (grep exits 0 when changes exist; `||` would then fire smoke only when the tree is clean). The fix had to be the *negated* form to preserve the contract.
+- **Exit-code contract decision (the crux).** The command-before-`||` must keep: exit 0 = no changes (skip smoke), exit non-zero = changes (run smoke) — exactly what `git diff --quiet` provides (0=no-diff, 1=diff). Implemented as `! git status --porcelain -- apps packages e2e 2>/dev/null | grep -q .`. Bash parses `! a | b || c | d` as `(! (a|b)) || (c|d)`; `!` negates the pipeline's final exit (`grep -q .`). Result: changes→grep 0→`!`→non-zero→`||` fires (smoke runs); clean→grep 1→`!`→0→`||` skips. Rejected the simpler `... | grep -q . && npx playwright ...` (`&&`) form because on a clean tree it would leave the overall hook exit at grep's non-zero (1), changing the Stop hook's overall success contract; the `!`+`||` form keeps overall exit 0 in both branches, identical to the original.
+- **Manual verification (no automated test — config change).** `touch apps/__cfg001_test` then ran the gate alone (not the full line, to avoid firing playwright): NEW form `! git status --porcelain ... | grep -q .` → exit 1 (changes detected ✓) while OLD `git diff --quiet HEAD ...` → exit 0 (untracked file MISSED — the exact bug). On a clean pathspec (`apps/api/tsconfig.json`) NEW form → exit 0 (smoke skipped ✓). Removed the temp file.
+- **Acceptance criterion #2 trade-off:** "a test that FAILS before / PASSES after" cannot be a `*.spec.ts` artifact for a hook-config change; the Verification field is explicitly `TBD — manual`. The FAIL-before/PASS-after property is demonstrated by the exit-code comparison above, not by a committed test. Flagged so the CI coherence gate isn't expected to find a test file.
+- `pnpm test`: 6/6 turbo tasks green (API + web, 579 passed / 14 skipped). Config-only change, no code paths touched — no regression. `pnpm test:e2e` not run (no app/server changes; the hook itself is the smoke trigger).
 
 ---
 

@@ -153,3 +153,19 @@ Append a new entry at the bottom after each Claude Code session that touched the
   - **Witness date correction:** task's Apr 28→May 2 2026 = 4 weekdays (May 2 is a Sat) — the true 5→4 witness is Apr 27 (Mon) → May 1 (Fri) 2026. Tests are unit-level on the pure helper with an injected Set (no DB) + one mocked service-level wiring test asserting `days` 5→4. Acceptance #4 (audit_log) N/A (pure calc). E2E not added (session-contract scope overrides CLAUDE.md's blanket E2E rule here).
   - **`tsc --noEmit` is not the repo gate.** It flags 119 pre-existing loose-typing errors across 18 spec files (none in COR-003 production files). The pipeline is vitest+swc + spec-excluding build; `pnpm test` (6 turbo tasks, all green) is the contractual gate and passed.
 - **Open questions for next session:** none for COR-003. **DAT-031** (durable holidays seeding) still open and should land before 2027 (prod runway ends 2027-12-31). **COR-013** (Phase 8) shares the date-key concern — verify it keys via `parisDayKey` for consistency with this fix when picked up.
+
+
+## 2026-05-25 — CLAUDE-CFG-001 closed (smoke Stop hook now catches untracked files)
+
+- **Session ID:** 2026-05-25-claude-cfg-001
+- **Tasks closed:** CLAUDE-CFG-001
+- **Tasks moved to BLOCKED:** none
+- **Commits:** a5bda6f (in_progress anchor), a4c3ec2 (fix — `.claude/settings.json`), <pending> (closeout)
+- **Duration:** ~25 minutes
+- **Learnings (non-trivial):**
+  - **Audit "Code evidence" was truncated.** The real Stop hook is `git diff --quiet HEAD -- apps packages e2e 2>/dev/null || npx playwright test --grep @smoke ...` — the `||` tail (run @smoke when changes exist) was not in the audit snippet. Reading the live `.claude/settings.json:36` before editing (per the user's explicit "read the surrounding hook config to confirm semantics" instruction) was what surfaced this and prevented a contract-inverting drop-in.
+  - **Exit-code crux.** A literal `git status --porcelain ... | grep -q .` inverts the gate (grep exits 0 on changes; with `||` smoke would fire only on a clean tree). Fixed with the negated form `! git status --porcelain -- apps packages e2e 2>/dev/null | grep -q .`, which preserves the original `git diff --quiet` contract (exit 0 = no changes → skip smoke; non-zero = changes → run smoke) AND keeps the overall hook exit at 0 in both branches. Rejected the `&&`-with-playwright alternative because it leaves overall exit non-zero on a clean tree, changing the Stop hook's success signal.
+  - **Empirical FAIL-before/PASS-after.** `touch apps/__cfg001_test`: OLD `git diff --quiet` → exit 0 (untracked file MISSED = the bug); NEW form → exit 1 (detected). Clean pathspec → NEW form exit 0 (smoke skipped). Verified the gate alone, not the full line, to avoid firing the (slow, irrelevant) @smoke suite during verification.
+  - **No automated test artifact** for a hook-config change (Verification field is `TBD — manual`); acceptance #2's FAIL/PASS property is met via the exit-code comparison, not a `*.spec.ts`. Flagged in BACKLOG Learnings so the CI coherence gate isn't expecting a test file.
+  - `pnpm test` 6/6 green (config-only, no code paths). `pnpm test:e2e` not run — no app/server change; the hook is itself the smoke trigger.
+- **Open questions for next session:** none for CLAUDE-CFG-001. Phase 1 remaining: re-scan BACKLOG for other TODO Phase-1 tasks before advancing phases.
