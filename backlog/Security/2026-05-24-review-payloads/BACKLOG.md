@@ -192,7 +192,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### SEC-001 — RBAC guard defaults to permissive mode — uncovered routes silently allow access
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 1
 - **Cluster:** B
 - **Confidence:** cross-validated
