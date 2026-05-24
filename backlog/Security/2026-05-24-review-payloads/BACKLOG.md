@@ -239,7 +239,7 @@ pnpm test apps/api/src/rbac/permissions.guard.spec.ts  # may need creation if mi
 ---
 ### SEC-002 — PATCH /users/:id has no horizontal scope check — any user with users:update can modify any user
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** B
 - **Confidence:** claude-only
@@ -276,8 +276,13 @@ Inject AccessScopeService.assertCanManageUser(targetUserId, callerUser) into upd
 pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 24bbfe7
+**Learnings:**
+- Audit's "Suggested fix" named `AccessScopeService.assertCanManageUser` but only the service existed — the method did not. Treated adding the named method as in-scope (matches advisor reading of the contract; not a BLOCKED-prerequisite case since the host module was already provided & @Global).
+- Vertical hierarchy (RoleHierarchyService.assertCanAssignRole) and horizontal scope (new method) are deliberately kept separate: the former only fires when `roleCode` is in the payload; the latter fires unconditionally. Both must hold.
+- Acceptance criterion 4 lists "user delete, password reset" for audit_logs; user *update* is not listed. No audit_logs change made in this commit — left for a dedicated audit-trail task if needed.
+- Scope check does not prevent two peer ADMIN_DELEGATEDs sharing a service from touching each other (that's a hierarchy concern, not scope; audit did not request hierarchy on update). Surfaced as a peer-edit follow-up if the threat model justifies it.
+- Adjacent files touched (justified by Suggested fix scope): `common/services/access-scope.service.ts` (new method), `users/users.controller.ts` (thread full caller through to service). No unrelated paths modified.
 
 ---
 ### SEC-003 — POST /users/:id/reset-password bypasses role-hierarchy guard
