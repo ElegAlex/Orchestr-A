@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
@@ -10,6 +11,8 @@ import {
   AccessScopeService,
   AccessUser,
 } from '../common/services/access-scope.service';
+import { AuditService, AuditAction } from '../audit/audit.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -49,6 +52,8 @@ export class UsersService {
     private readonly refreshTokenService: RefreshTokenService,
     private readonly roleHierarchy: RoleHierarchyService,
     private readonly accessScope: AccessScopeService,
+    private readonly auditService: AuditService,
+    private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
   /**
@@ -728,23 +733,94 @@ export class UsersService {
     return { message: 'Mot de passe modifié avec succès' };
   }
 
-  async resetPassword(userId: string, newPassword: string) {
+  /**
+   * Réinitialisation administrative du mot de passe (endpoint
+   * `POST /users/:id/reset-password`).
+   *
+   * Deux gardes critiques, mêmes invariants que `AuthService.generateResetToken` :
+   *
+   * 1. Hiérarchie : l'appelant ne peut viser qu'une cible dont le template
+   *    est strictement inférieur au sien (`roleHierarchy.assertCanAssignRole`).
+   *    Sans cette garde, un détenteur de `users:manage_roles` (ex. un futur
+   *    rôle institutionnel bound à ADMIN_DELEGATED) pourrait s'auto-promouvoir
+   *    en réinitialisant le mot de passe d'un ADMIN.
+   * 2. Self-reset interdit : le bon chemin self-service est
+   *    `/auth/change-password`. Cet endpoint admin n'est pas un raccourci pour
+   *    le caller (qui pourrait par ce biais contourner la vérification du
+   *    mot de passe actuel).
+   *
+   * Émet une entrée `audit_logs` durable (actor, target, before/after sans
+   * le mot de passe). Émet aussi un événement console via AuditService pour
+   * parité avec le path AuthService — OBS-001 unifiera ces deux sinks.
+   */
+  async resetPassword(
+    userId: string,
+    newPassword: string,
+    callerId?: string,
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      select: {
+        id: true,
+        login: true,
+        updatedAt: true,
+        role: { select: { code: true } },
+      },
     });
 
     if (!user) {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
+    if (callerId && callerId === userId) {
+      throw new ForbiddenException(
+        "Self-reset interdit via cet endpoint admin — utilisez /auth/change-password",
+      );
+    }
+
+    if (callerId) {
+      const caller = await this.prisma.user.findUnique({
+        where: { id: callerId },
+        select: { role: { select: { code: true } } },
+      });
+      await this.roleHierarchy.assertCanAssignRole(
+        caller?.role?.code,
+        user.role?.code,
+      );
+    }
+
     const passwordHash = await bcrypt.hash(newPassword, 12);
 
-    await this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { passwordHash },
+      select: { id: true, updatedAt: true },
     });
 
     await this.refreshTokenService.revokeAllForUser(userId);
+
+    await this.auditPersistence.log({
+      action: 'PASSWORD_RESET_ADMIN',
+      entityType: 'User',
+      entityId: userId,
+      actorId: callerId ?? null,
+      payload: {
+        targetLogin: user.login,
+        // Password value is deliberately NOT included. `updatedAt` acts as a
+        // before/after marker: Prisma touches it on every write, so its
+        // transition proves the reset landed without leaking the secret.
+        before: { updatedAt: user.updatedAt.toISOString() },
+        after: { updatedAt: updated.updatedAt.toISOString() },
+      },
+    });
+
+    this.auditService.log({
+      action: AuditAction.PASSWORD_CHANGED,
+      userId: callerId,
+      targetId: userId,
+      details: `Admin password reset for user ${user.login}`,
+      success: true,
+    });
 
     return { message: 'Mot de passe réinitialisé avec succès' };
   }

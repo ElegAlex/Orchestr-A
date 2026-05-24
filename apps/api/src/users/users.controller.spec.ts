@@ -420,14 +420,17 @@ describe('UsersController', () => {
         message: 'Mot de passe réinitialisé',
       });
 
-      const result = await controller.resetPassword('user-id-1', {
-        newPassword: 'newpassword123',
-      } as any);
+      const result = await controller.resetPassword(
+        'user-id-1',
+        { newPassword: 'newpassword123' } as any,
+        'caller-admin',
+      );
 
       expect(result.message).toBe('Mot de passe réinitialisé');
       expect(mockUsersService.resetPassword).toHaveBeenCalledWith(
         'user-id-1',
         'newpassword123',
+        'caller-admin',
       );
     });
 
@@ -437,9 +440,11 @@ describe('UsersController', () => {
       );
 
       await expect(
-        controller.resetPassword('nonexistent', {
-          newPassword: 'newpassword123',
-        } as any),
+        controller.resetPassword(
+          'nonexistent',
+          { newPassword: 'newpassword123' } as any,
+          'caller-admin',
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });

@@ -28,9 +28,14 @@ vi.mock('../common/upload/magic-bytes.validator', () => ({
 import { RefreshTokenService } from '../auth/refresh-token.service';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
 import { AccessScopeService } from '../common/services/access-scope.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { ForbiddenException } from '@nestjs/common';
 
 describe('UsersService', () => {
   let service: UsersService;
+  const mockAuditPersistence = { log: vi.fn().mockResolvedValue(undefined) };
+  const mockAuditService = { log: vi.fn() };
 
   const mockPrismaService = {
     user: {
@@ -127,6 +132,8 @@ describe('UsersService', () => {
             } as never),
           inject: [PrismaService],
         },
+        { provide: AuditService, useValue: mockAuditService },
+        { provide: AuditPersistenceService, useValue: mockAuditPersistence },
       ],
     }).compile();
 
@@ -918,13 +925,18 @@ describe('UsersService', () => {
   });
 
   describe('resetPassword', () => {
-    it('should reset password successfully', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({
-        id: 'user-1',
-        email: 'user@example.com',
-      });
+    const targetUser = {
+      id: 'user-1',
+      login: 'jdupont',
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      role: { code: 'CONTRIBUTEUR' },
+    };
+
+    it('should reset password successfully (legacy: no caller)', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(targetUser);
       mockPrismaService.user.update.mockResolvedValue({
         id: 'user-1',
+        updatedAt: new Date('2026-05-24T12:00:00.000Z'),
       });
 
       const result = await service.resetPassword('user-1', 'newpassword123');
@@ -950,6 +962,109 @@ describe('UsersService', () => {
       await expect(
         service.resetPassword('nonexistent', 'newpassword123'),
       ).rejects.toThrow('Utilisateur introuvable');
+    });
+
+    describe('hierarchy + self-reset gates (SEC-003)', () => {
+      const adminTarget = {
+        id: 'admin-target',
+        login: 'admin-target',
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        role: { code: 'ADMIN' },
+      };
+
+      it('rejects self-reset via admin endpoint', async () => {
+        mockPrismaService.user.findUnique.mockResolvedValueOnce({
+          ...targetUser,
+          id: 'caller-self',
+        });
+
+        await expect(
+          service.resetPassword('caller-self', 'newpassword123', 'caller-self'),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(mockPrismaService.user.update).not.toHaveBeenCalled();
+        expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+      });
+
+      it('rejects ADMIN_DELEGATED resetting an ADMIN target (escalation vector)', async () => {
+        // First findUnique = target (ADMIN), second = caller (ADMIN_DELEGATED)
+        mockPrismaService.user.findUnique
+          .mockResolvedValueOnce(adminTarget)
+          .mockResolvedValueOnce({ role: { code: 'ADMIN_DELEGATED' } });
+        // RoleHierarchyService resolves templateKey via prisma.role.findUnique
+        mockPrismaService.role.findUnique
+          .mockResolvedValueOnce({ templateKey: 'ADMIN' }) // target
+          .mockResolvedValueOnce({ templateKey: 'ADMIN_DELEGATED' }); // caller
+
+        await expect(
+          service.resetPassword('admin-target', 'newpassword123', 'caller-delegated'),
+        ).rejects.toThrow(
+          'Seul un administrateur peut cibler un rôle rattaché au template ADMIN',
+        );
+
+        expect(mockPrismaService.user.update).not.toHaveBeenCalled();
+        expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+      });
+
+      it('rejects peer-rank caller (MANAGER → MANAGER)', async () => {
+        const managerTarget = { ...targetUser, role: { code: 'MANAGER' } };
+        mockPrismaService.user.findUnique
+          .mockResolvedValueOnce(managerTarget)
+          .mockResolvedValueOnce({ role: { code: 'MANAGER' } });
+        mockPrismaService.role.findUnique
+          .mockResolvedValueOnce({ templateKey: 'MANAGER' }) // first call: target template
+          .mockResolvedValueOnce({ templateKey: 'MANAGER' }) // first call: caller template
+          .mockResolvedValueOnce({ templateKey: 'MANAGER' }) // canAssignRole: caller
+          .mockResolvedValueOnce({ templateKey: 'MANAGER' }); // canAssignRole: target
+
+        await expect(
+          service.resetPassword('user-1', 'newpassword123', 'caller-manager'),
+        ).rejects.toThrow(
+          'Vous ne pouvez cibler que des rôles inférieurs au vôtre',
+        );
+
+        expect(mockPrismaService.user.update).not.toHaveBeenCalled();
+      });
+
+      it('allows ADMIN caller targeting non-ADMIN, writes audit_log entry', async () => {
+        mockPrismaService.user.findUnique
+          .mockResolvedValueOnce(targetUser) // target lookup
+          .mockResolvedValueOnce({ role: { code: 'ADMIN' } }); // caller lookup
+        mockPrismaService.role.findUnique
+          .mockResolvedValueOnce({ templateKey: 'CONTRIBUTOR' }) // target tpl
+          .mockResolvedValueOnce({ templateKey: 'ADMIN' }); // caller tpl
+        mockPrismaService.user.update.mockResolvedValue({
+          id: 'user-1',
+          updatedAt: new Date('2026-05-24T12:00:00.000Z'),
+        });
+
+        const result = await service.resetPassword(
+          'user-1',
+          'newpassword123',
+          'caller-admin',
+        );
+
+        expect(result).toEqual({
+          message: 'Mot de passe réinitialisé avec succès',
+        });
+        expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+          expect.objectContaining({
+            action: 'PASSWORD_RESET_ADMIN',
+            entityType: 'User',
+            entityId: 'user-1',
+            actorId: 'caller-admin',
+            payload: expect.objectContaining({
+              targetLogin: 'jdupont',
+              before: { updatedAt: '2026-01-01T00:00:00.000Z' },
+              after: { updatedAt: '2026-05-24T12:00:00.000Z' },
+            }),
+          }),
+        );
+        // Critical: the raw password and hash must NOT leak into the audit payload.
+        const auditPayload = mockAuditPersistence.log.mock.calls[0][0].payload;
+        expect(JSON.stringify(auditPayload)).not.toContain('newpassword123');
+        expect(JSON.stringify(auditPayload)).not.toMatch(/\$2[aby]\$/); // bcrypt prefix
+      });
     });
   });
 

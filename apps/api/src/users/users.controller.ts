@@ -409,7 +409,8 @@ export class UsersController {
   resetPassword(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AdminResetPasswordDto,
+    @CurrentUser('id') callerId: string,
   ) {
-    return this.usersService.resetPassword(id, dto.newPassword);
+    return this.usersService.resetPassword(id, dto.newPassword, callerId);
   }
 }
