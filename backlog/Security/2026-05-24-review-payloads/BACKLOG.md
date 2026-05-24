@@ -158,7 +158,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ---
 ### DAT-005 — Money/hours precision uses Float (double-precision) instead of Decimal
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 1
 - **Cluster:** F
 - **Confidence:** claude-only
