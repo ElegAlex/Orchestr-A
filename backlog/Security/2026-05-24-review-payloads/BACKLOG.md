@@ -206,6 +206,12 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 - **`Prisma.dmmf` is unavailable under vitest+swc** in this repo. First-pass schema test used `Prisma.dmmf.datamodel.models` → undefined at runtime. Rewrote the schema assertion to parse `schema.prisma` text directly with regex. Source of truth either way; sidesteps bundler edge cases.
 - **Verification command divergence.** The BACKLOG-prescribed verification is `pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy`. Per explicit user instruction, did NOT run migrations against the local dev DB — operator will inspect the SQL first. Substitute verification: `pnpm test` green (1545/1545), including 12 new tests in `apps/api/src/prisma/dat005-decimal-precision.spec.ts`. Operational verification path is `scripts/db/preflight-decimal-conversion.sh` against a staging dump.
 - **Acceptance criterion #4 (audit_logs entry) skipped intentionally.** This is a schema migration; no user-initiated business mutation occurs at runtime. Documented per session contract.
+- **CONSCIOUS DEBT — precision is preserved at storage, NOT in JS-side aggregation.** The `Decimal.prototype.toJSON → toNumber()` override plus the 42 `Number(...)` read-boundary coercions mean Decimal precision lives only at the Postgres storage layer, not in JS arithmetic. Concretely:
+  - Postgres storage (Decimal columns): exact ✓
+  - SQL aggregation via `prisma.groupBy({ _sum })` / `aggregate`: exact (Postgres sums in Decimal) ✓
+  - JS-side aggregation via `array.reduce((sum, e) => sum + Number(e.hours), 0)`: re-exposed to IEEE-754 drift ⚠️
+  Why this is acceptable for the Cour des Comptes audit posture: what an auditor can recompute is the SQL-side ledger, and that is exact. JS-side drifts are display-layer artefacts that do not falsify the grand livre. The compromise holds for now.
+  - **DAT-005-followup (not yet ticketed):** for audit-grade end-to-end precision, eliminate the `Number()` coercions in the JS-side aggregation paths in favour of `Prisma.Decimal` arithmetic (`Decimal.add`/`.mul`/etc.), converting to `number` only at the final presentation boundary. Touch points are the same files listed in the `number + Decimal` Learning above; the highest-value targets are the HR balance paths in `leaves.service.ts` (`getLeaveBalance`, `getAvailableDays`, `getPendingDays`) since those are the legally observable totals.
 
 ---
 ### SEC-001 — RBAC guard defaults to permissive mode — uncovered routes silently allow access
