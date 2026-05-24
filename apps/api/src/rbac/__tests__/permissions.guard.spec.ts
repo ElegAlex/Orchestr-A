@@ -104,6 +104,34 @@ describe('PermissionsGuardV2 — V3 F', () => {
         guard.canActivate(buildCtx({ id: 'u-1', role: 'CONTRIBUTEUR' })),
       ).resolves.toBe(false);
     });
+
+    // SEC-001 — guard MUST default to 'enforce' when RBAC_GUARD_MODE is unset.
+    // Pre-fix: default was 'permissive' → uncovered route silently allowed
+    // (canActivate returns true). Post-fix: default is 'enforce' → returns
+    // false. This test FAILS pre-fix and PASSES post-fix (acceptance crit. #2).
+    it('SEC-001: default (env unset) = enforce → refuse les routes non décorées', async () => {
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+      delete process.env.RBAC_GUARD_MODE;
+      const guard = new PermissionsGuardV2(
+        reflector,
+        permissions as unknown as PermissionsService,
+      );
+      await expect(
+        guard.canActivate(buildCtx({ id: 'u-1', role: 'CONTRIBUTEUR' })),
+      ).resolves.toBe(false);
+    });
+
+    it('SEC-001: valeur env inconnue → fallback enforce (fail-closed)', async () => {
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+      process.env.RBAC_GUARD_MODE = 'garbage';
+      const guard = new PermissionsGuardV2(
+        reflector,
+        permissions as unknown as PermissionsService,
+      );
+      await expect(
+        guard.canActivate(buildCtx({ id: 'u-1', role: 'CONTRIBUTEUR' })),
+      ).resolves.toBe(false);
+    });
   });
 
   describe('@RequirePermissions (AND)', () => {

@@ -21,6 +21,24 @@ function safeEqual(a: string, b: string): boolean {
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+
+  // SEC-001: refuse to start in production if the RBAC guard is in
+  // permissive mode. Permissive allows any authenticated user to hit
+  // controller methods that lack an RBAC decorator (only a warning is
+  // logged). The guard now defaults to 'enforce'; an explicit
+  // RBAC_GUARD_MODE=permissive must be opted-in for staging/migration only.
+  if (
+    process.env.NODE_ENV === 'production' &&
+    process.env.RBAC_GUARD_MODE === 'permissive'
+  ) {
+    throw new Error(
+      "RBAC_GUARD_MODE='permissive' is forbidden in production " +
+        '(routes without @RequirePermissions/@AllowSelfService/@Public ' +
+        'would be silently allowed). Unset the variable or set it to ' +
+        "'enforce'.",
+    );
+  }
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ logger: fastifyLoggerOptions }),

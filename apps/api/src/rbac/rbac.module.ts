@@ -33,11 +33,11 @@ import { RolesService } from './roles.service';
     PermissionsService,
     PermissionsGuardV2,
     RolesService,
-    // V2 E (a) : activation globale du guard zero-trust en mode `permissive`
-    // par défaut (env RBAC_GUARD_MODE=permissive). Le guard logue les routes
-    // qui SERAIENT refusées sans bloquer. La bascule en `enforce` se fait
-    // via env RBAC_GUARD_MODE=enforce après validation de l'absence de
-    // route oubliée (logs propres en V3).
+    // V2 E : activation globale du guard zero-trust. Default `enforce`
+    // (SEC-001 fail-closed) — les routes sans @Public/@AllowSelfService/
+    // @RequirePermissions/@RequireAnyPermission sont refusées.
+    // RBAC_GUARD_MODE=permissive autorise les routes non décorées (migration
+    // uniquement, refusé au boot si NODE_ENV=production).
     {
       provide: APP_GUARD,
       useClass: PermissionsGuardV2,

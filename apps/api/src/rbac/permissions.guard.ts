@@ -19,13 +19,14 @@ import { PermissionsService } from './permissions.service';
  *
  *  - 'permissive' : ne refuse rien — log les routes qui DEVRAIENT être
  *    refusées (utilisé pendant la phase de migration V2 (a) avant le
- *    hard-fail).
+ *    hard-fail). DOIT être désactivé en production (boot-assert dans main.ts).
  *  - 'enforce' : refuse les routes non couvertes par `@Public()`,
  *    `@RequirePermissions(...)`, `@RequireAnyPermission(...)` ou
- *    `@AllowSelfService()`. Mode cible post-V2.
+ *    `@AllowSelfService()`. Mode cible post-V2 — fail-closed par défaut.
  *
- * Configuration via env `RBAC_GUARD_MODE` (default: 'permissive' tant que
- * V2 n'est pas finalisé).
+ * Configuration via env `RBAC_GUARD_MODE` (default: 'enforce'). Pour rester
+ * en mode permissive transitoire, set RBAC_GUARD_MODE=permissive
+ * explicitement (interdit en production, vérifié au boot).
  */
 export type RbacGuardMode = 'permissive' | 'enforce';
 
@@ -66,7 +67,7 @@ export class PermissionsGuardV2 implements CanActivate {
     private readonly permissionsService: PermissionsService,
   ) {
     const envMode = process.env.RBAC_GUARD_MODE;
-    this.mode = envMode === 'enforce' ? 'enforce' : 'permissive';
+    this.mode = envMode === 'permissive' ? 'permissive' : 'enforce';
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
