@@ -1,0 +1,13 @@
+{
+  "id": "CLAUDE-CFG-001",
+  "severity": "important",
+  "category": "tooling",
+  "subcategory": "audit_workflow",
+  "title": "Smoke hook misses untracked changes",
+  "file": ".claude/settings.json",
+  "line": "31-36",
+  "description": "The Stop hook uses `git diff --quiet HEAD -- apps packages e2e` which only sees tracked file changes. Untracked files (newly created tests, configs, documentation) bypass the smoke gate entirely. This makes the audit workflow unreliable: any future review that produces new audit artifacts or test files will not trigger the smoke validation.",
+  "root_cause": "The diff-based check is too narrow. `git diff` ignores untracked files by design; this hook needs to also inspect the working tree.",
+  "suggested_fix": "Replace `git diff --quiet HEAD -- apps packages e2e` with `git status --porcelain -- apps packages e2e | grep -q .` (inverted condition to mean 'changes exist'). This includes untracked files in the trigger logic. Alternatively, add a separate post-write targeted check that fires on every relevant file write rather than only at Stop.",
+  "evidence": "\"matcher\": \"Edit|Write|MultiEdit\",\n\"hooks\": [\n  {\n    \"type\": \"command\",\n    \"command\": \"git diff --quiet HEAD -- apps packages e2e\"\n  }\n]"
+}

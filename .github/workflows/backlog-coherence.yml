@@ -1,0 +1,41 @@
+name: Backlog Coherence
+
+on:
+  pull_request:
+    paths:
+      - 'backlog/Security/**/BACKLOG.md'
+      - 'backlog/Security/**/scripts/check-backlog-coherence.sh'
+
+jobs:
+  check-coherence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Find all BACKLOG.md files under backlog/Security/
+        id: list
+        run: |
+          mapfile -t BACKLOGS < <(find backlog/Security -name BACKLOG.md)
+          echo "Found ${#BACKLOGS[@]} backlog file(s)"
+          for b in "${BACKLOGS[@]}"; do echo "  $b"; done
+          echo "backlogs<<EOF" >> $GITHUB_OUTPUT
+          printf '%s\n' "${BACKLOGS[@]}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Run coherence check on each BACKLOG.md
+        run: |
+          SCRIPT=$(find backlog/Security -name check-backlog-coherence.sh | head -1)
+          chmod +x "$SCRIPT"
+          while IFS= read -r backlog; do
+            [ -z "$backlog" ] && continue
+            echo "::group::Checking $backlog"
+            "$SCRIPT" "$backlog"
+            echo "::endgroup::"
+          done <<< "${{ steps.list.outputs.backlogs }}"
