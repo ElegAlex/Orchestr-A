@@ -604,7 +604,7 @@ pnpm test apps/api/src/audit/audit-persistence.service.spec.ts  # may need creat
 ---
 ### AUD-EMIT-001 — ROLE_CHANGE and USER_DEACTIVATED have no live emitters in UsersService
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** cross-validated
