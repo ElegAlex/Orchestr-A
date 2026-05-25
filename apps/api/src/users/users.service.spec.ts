@@ -824,10 +824,14 @@ describe('UsersService', () => {
 
     it('does not emit when neither roleId nor isActive changes', async () => {
       mockPrismaService.user.count.mockResolvedValueOnce(1);
+      // OBS-004 — departmentId is now an audited field, so the no-op fixture
+      // must set the existing departmentId to the SAME value the DTO carries
+      // (genuine no-op), otherwise DEPARTMENT_CHANGED would legitimately fire.
       mockPrismaService.user.findUnique.mockResolvedValueOnce({
         id: 'target-1',
         roleId: 'role-x',
         isActive: true,
+        departmentId: 'dept-x',
         role: { code: 'CONTRIBUTEUR' },
       });
       mockPrismaService.department.findUnique.mockResolvedValueOnce({
@@ -837,6 +841,7 @@ describe('UsersService', () => {
       mockPrismaService.user.update.mockResolvedValueOnce({
         id: 'target-1',
         isActive: true,
+        departmentId: 'dept-x',
         role: { code: 'CONTRIBUTEUR' },
       });
 
@@ -848,6 +853,259 @@ describe('UsersService', () => {
       );
 
       expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+  });
+
+  // OBS-004 — extends AUD-EMIT-001's emitter coverage to the remaining
+  // role/admin user mutations. USER_REACTIVATED / DEPARTMENT_CHANGED /
+  // SERVICE_MEMBERSHIP_CHANGED land in update(); PASSWORD_RESET_BY_ADMIN is
+  // the SEC-003 admin-reset durable emit, renamed from the free-string
+  // 'PASSWORD_RESET_ADMIN' to the AuditAction enum. Same spy-on-
+  // AuditPersistenceService pattern, same caller-as-actor + no-op invariants.
+  describe('audit emission (OBS-004)', () => {
+    const callerAdmin = {
+      id: 'caller-admin-1',
+      role: { code: 'ADMIN', templateKey: 'ADMIN' },
+    };
+
+    it('emits USER_REACTIVATED when isActive transitions false→true via update()', async () => {
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-1',
+        roleId: 'role-x',
+        isActive: false,
+        departmentId: 'dept-x',
+        role: { code: 'CONTRIBUTEUR' },
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: true,
+        role: { code: 'CONTRIBUTEUR' },
+      });
+
+      await service.update('target-1', { isActive: true }, 'ADMIN', callerAdmin);
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'USER_REACTIVATED',
+          entityType: 'User',
+          entityId: 'target-1',
+          actorId: 'caller-admin-1',
+          payload: expect.objectContaining({
+            before: { isActive: false },
+            after: { isActive: true },
+          }),
+        }),
+      );
+    });
+
+    it('does not emit USER_REACTIVATED when the user was already active', async () => {
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-1',
+        roleId: 'role-x',
+        isActive: true,
+        departmentId: 'dept-x',
+        role: { code: 'CONTRIBUTEUR' },
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: true,
+        role: { code: 'CONTRIBUTEUR' },
+      });
+
+      await service.update('target-1', { isActive: true }, 'ADMIN', callerAdmin);
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+
+    it('emits DEPARTMENT_CHANGED when departmentId transitions via update()', async () => {
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-1',
+        roleId: 'role-x',
+        isActive: true,
+        departmentId: 'dept-old',
+        role: { code: 'CONTRIBUTEUR' },
+      });
+      mockPrismaService.department.findUnique.mockResolvedValueOnce({
+        id: 'dept-new',
+        name: 'Finance',
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: true,
+        departmentId: 'dept-new',
+        role: { code: 'CONTRIBUTEUR' },
+      });
+
+      await service.update(
+        'target-1',
+        { departmentId: 'dept-new' },
+        'ADMIN',
+        callerAdmin,
+      );
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'DEPARTMENT_CHANGED',
+          entityType: 'User',
+          entityId: 'target-1',
+          actorId: 'caller-admin-1',
+          payload: expect.objectContaining({
+            before: { departmentId: 'dept-old' },
+            after: { departmentId: 'dept-new' },
+          }),
+        }),
+      );
+    });
+
+    it('does not emit DEPARTMENT_CHANGED when departmentId is unchanged', async () => {
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-1',
+        roleId: 'role-x',
+        isActive: true,
+        departmentId: 'dept-x',
+        role: { code: 'CONTRIBUTEUR' },
+      });
+      mockPrismaService.department.findUnique.mockResolvedValueOnce({
+        id: 'dept-x',
+        name: 'IT',
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: true,
+        departmentId: 'dept-x',
+        role: { code: 'CONTRIBUTEUR' },
+      });
+
+      await service.update(
+        'target-1',
+        { departmentId: 'dept-x' },
+        'ADMIN',
+        callerAdmin,
+      );
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+
+    it('emits SERVICE_MEMBERSHIP_CHANGED with added/removed diff when serviceIds differ', async () => {
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-1',
+        roleId: 'role-x',
+        isActive: true,
+        departmentId: 'dept-x',
+        role: { code: 'CONTRIBUTEUR' },
+        userServices: [{ serviceId: 's1' }],
+      });
+      mockPrismaService.service.findMany.mockResolvedValueOnce([
+        { id: 's1' },
+        { id: 's2' },
+      ]);
+      mockPrismaService.userService.deleteMany.mockResolvedValueOnce({
+        count: 1,
+      });
+      mockPrismaService.userService.createMany.mockResolvedValueOnce({
+        count: 2,
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: true,
+        role: { code: 'CONTRIBUTEUR' },
+      });
+
+      await service.update(
+        'target-1',
+        { serviceIds: ['s1', 's2'] },
+        'ADMIN',
+        callerAdmin,
+      );
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'SERVICE_MEMBERSHIP_CHANGED',
+          entityType: 'User',
+          entityId: 'target-1',
+          actorId: 'caller-admin-1',
+          payload: expect.objectContaining({
+            before: { serviceIds: ['s1'] },
+            after: { serviceIds: ['s1', 's2'] },
+            added: ['s2'],
+            removed: [],
+          }),
+        }),
+      );
+    });
+
+    it('does not emit SERVICE_MEMBERSHIP_CHANGED when the set is identical (order-insensitive)', async () => {
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-1',
+        roleId: 'role-x',
+        isActive: true,
+        departmentId: 'dept-x',
+        role: { code: 'CONTRIBUTEUR' },
+        userServices: [{ serviceId: 's1' }, { serviceId: 's2' }],
+      });
+      mockPrismaService.service.findMany.mockResolvedValueOnce([
+        { id: 's1' },
+        { id: 's2' },
+      ]);
+      mockPrismaService.userService.deleteMany.mockResolvedValueOnce({
+        count: 2,
+      });
+      mockPrismaService.userService.createMany.mockResolvedValueOnce({
+        count: 2,
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: true,
+        role: { code: 'CONTRIBUTEUR' },
+      });
+
+      await service.update(
+        'target-1',
+        { serviceIds: ['s2', 's1'] },
+        'ADMIN',
+        callerAdmin,
+      );
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+
+    it('emits PASSWORD_RESET_BY_ADMIN (renamed from PASSWORD_RESET_ADMIN) without leaking the password', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce({
+          id: 'user-1',
+          login: 'jdupont',
+          updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+          role: { code: 'CONTRIBUTEUR' },
+        })
+        .mockResolvedValueOnce({ role: { code: 'ADMIN' } });
+      mockPrismaService.role.findUnique
+        .mockResolvedValueOnce({ templateKey: 'CONTRIBUTOR' })
+        .mockResolvedValueOnce({ templateKey: 'ADMIN' });
+      mockPrismaService.user.update.mockResolvedValue({
+        id: 'user-1',
+        updatedAt: new Date('2026-05-25T12:00:00.000Z'),
+      });
+
+      await service.resetPassword('user-1', 'NewSecret1!', 'caller-admin');
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'PASSWORD_RESET_BY_ADMIN',
+          entityType: 'User',
+          entityId: 'user-1',
+          actorId: 'caller-admin',
+        }),
+      );
+      // OBS-001 no-PII regression invariant, extended to the renamed action.
+      const auditPayload = mockAuditPersistence.log.mock.calls[0][0].payload;
+      expect(JSON.stringify(auditPayload)).not.toContain('NewSecret1!');
+      expect(JSON.stringify(auditPayload)).not.toMatch(/\$2[aby]\$/);
     });
   });
 
@@ -1200,7 +1458,10 @@ describe('UsersService', () => {
         });
         expect(mockAuditPersistence.log).toHaveBeenCalledWith(
           expect.objectContaining({
-            action: 'PASSWORD_RESET_ADMIN',
+            // OBS-004 — renamed from free-string 'PASSWORD_RESET_ADMIN' to the
+            // AuditAction enum. SEC-003's gates (hierarchy, self-reset, no-PII)
+            // are unaffected; only the durable action code is canonicalized.
+            action: 'PASSWORD_RESET_BY_ADMIN',
             entityType: 'User',
             entityId: 'user-1',
             actorId: 'caller-admin',

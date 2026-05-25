@@ -217,7 +217,11 @@ describe('AuditService', () => {
       const expectations: Array<[AuditAction, string]> = [
         [AuditAction.ROLE_CHANGE, 'User'],
         [AuditAction.USER_DEACTIVATED, 'User'],
+        [AuditAction.USER_REACTIVATED, 'User'],
         [AuditAction.PASSWORD_CHANGED, 'User'],
+        [AuditAction.PASSWORD_RESET_BY_ADMIN, 'User'],
+        [AuditAction.SERVICE_MEMBERSHIP_CHANGED, 'User'],
+        [AuditAction.DEPARTMENT_CHANGED, 'User'],
         [AuditAction.REGISTER, 'User'],
         [AuditAction.LOGIN_SUCCESS, 'Auth'],
         [AuditAction.LOGIN_FAILURE, 'Auth'],

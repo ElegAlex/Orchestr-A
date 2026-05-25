@@ -366,9 +366,15 @@ export class UsersService {
     // AUD-EMIT-001 — role.code is loaded here (enriching the existing lookup,
     // not an extra query) so the ROLE_CHANGE audit payload can carry the
     // before-snapshot roleCode without a second round-trip.
+    // OBS-004 — same lookup enriched with userServices.serviceId for the
+    // SERVICE_MEMBERSHIP_CHANGED before-snapshot (still one round-trip).
+    // departmentId / isActive are scalars returned by `include` already.
     const existingUser = await this.prisma.user.findUnique({
       where: { id },
-      include: { role: { select: { code: true } } },
+      include: {
+        role: { select: { code: true } },
+        userServices: { select: { serviceId: true } },
+      },
     });
 
     if (!existingUser) {
@@ -523,6 +529,72 @@ export class UsersService {
             after: { isActive: false },
           },
         });
+      }
+
+      // OBS-004 — USER_REACTIVATED on the inactive→active transition (the
+      // mirror of USER_DEACTIVATED; only update() can reactivate, remove()
+      // only ever deactivates).
+      if (existingUser.isActive === false && updateUserDto.isActive === true) {
+        await this.auditPersistence.log({
+          action: AuditAction.USER_REACTIVATED,
+          entityType: 'User',
+          entityId: id,
+          actorId: caller.id ?? null,
+          payload: {
+            before: { isActive: false },
+            after: { isActive: true },
+          },
+        });
+      }
+
+      // OBS-004 — DEPARTMENT_CHANGED when the DTO carries a departmentId that
+      // differs from the loaded value. departmentId stored in before/after
+      // (name snapshot deferred — departments are not hard-deleted like the
+      // actor case that motivated DAT-009's label snapshot).
+      if (
+        updateUserDto.departmentId !== undefined &&
+        updateUserDto.departmentId !== existingUser.departmentId
+      ) {
+        await this.auditPersistence.log({
+          action: AuditAction.DEPARTMENT_CHANGED,
+          entityType: 'User',
+          entityId: id,
+          actorId: caller.id ?? null,
+          payload: {
+            before: { departmentId: existingUser.departmentId ?? null },
+            after: { departmentId: updateUserDto.departmentId },
+          },
+        });
+      }
+
+      // OBS-004 — SERVICE_MEMBERSHIP_CHANGED when the DTO carries serviceIds
+      // whose set differs from the current memberships (order-insensitive).
+      // Payload keeps the full before/after arrays AND the computed diff so an
+      // auditor can query "who gained/lost service S" without re-deriving it.
+      if (updateUserDto.serviceIds !== undefined) {
+        const beforeServiceIds = (existingUser.userServices ?? []).map(
+          (us) => us.serviceId,
+        );
+        const afterServiceIds = updateUserDto.serviceIds;
+        const beforeSet = new Set(beforeServiceIds);
+        const afterSet = new Set(afterServiceIds);
+        const added = afterServiceIds.filter((sid) => !beforeSet.has(sid));
+        const removed = beforeServiceIds.filter((sid) => !afterSet.has(sid));
+
+        if (added.length > 0 || removed.length > 0) {
+          await this.auditPersistence.log({
+            action: AuditAction.SERVICE_MEMBERSHIP_CHANGED,
+            entityType: 'User',
+            entityId: id,
+            actorId: caller.id ?? null,
+            payload: {
+              before: { serviceIds: beforeServiceIds },
+              after: { serviceIds: afterServiceIds },
+              added,
+              removed,
+            },
+          });
+        }
       }
     }
 
@@ -849,8 +921,12 @@ export class UsersService {
 
     await this.refreshTokenService.revokeAllForUser(userId);
 
+    // OBS-004 — durable admin-reset event. Renamed from the SEC-003 free-string
+    // 'PASSWORD_RESET_ADMIN' to the AuditAction enum value (advances OBS-024's
+    // enum-vs-free-string unification). The console-parity auditService.log
+    // below still emits PASSWORD_CHANGED — that dual sink is OBS-024 territory.
     await this.auditPersistence.log({
-      action: 'PASSWORD_RESET_ADMIN',
+      action: AuditAction.PASSWORD_RESET_BY_ADMIN,
       entityType: 'User',
       entityId: userId,
       actorId: callerId ?? null,
