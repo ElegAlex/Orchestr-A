@@ -434,7 +434,7 @@ TBD — manual verification (config change, no automated test)
 
 ### DAT-002 — AuditService is logger-only — security events not persisted
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** cross-validated
