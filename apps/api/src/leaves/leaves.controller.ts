@@ -139,8 +139,17 @@ export class LeavesController {
     status: 404,
     description: 'Type de congé ou utilisateur introuvable',
   })
-  upsertBalance(@Body() dto: UpsertLeaveBalanceDto) {
-    return this.leavesService.upsertBalance(dto);
+  upsertBalance(
+    @Body() dto: UpsertLeaveBalanceDto,
+    @CurrentUser('id') actorId: string,
+    @CurrentUser('role') role: { code: string; templateKey: string } | null,
+    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+  ) {
+    return this.leavesService.upsertBalance(dto, actorId, {
+      roleCode: role?.code ?? null,
+      templateKey: role?.templateKey ?? null,
+      ...extractMeta(req),
+    });
   }
 
   @Delete('balances/:id')
@@ -149,8 +158,17 @@ export class LeavesController {
   @ApiOperation({ summary: 'Supprimer un override de solde individuel' })
   @ApiResponse({ status: 200, description: 'Solde supprimé' })
   @ApiResponse({ status: 404, description: 'Solde introuvable' })
-  deleteBalance(@Param('id', ParseUUIDPipe) id: string) {
-    return this.leavesService.deleteBalance(id);
+  deleteBalance(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') actorId: string,
+    @CurrentUser('role') role: { code: string; templateKey: string } | null,
+    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+  ) {
+    return this.leavesService.deleteBalance(id, actorId, {
+      roleCode: role?.code ?? null,
+      templateKey: role?.templateKey ?? null,
+      ...extractMeta(req),
+    });
   }
 
   @Get()
@@ -392,12 +410,15 @@ export class LeavesController {
     @Body() updateLeaveDto: UpdateLeaveDto,
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
+    @CurrentUser('role') role: { code: string; templateKey: string } | null,
+    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
   ) {
     return this.leavesService.update(
       id,
       updateLeaveDto,
       currentUserId,
       currentUserRole ?? undefined,
+      { templateKey: role?.templateKey ?? null, ...extractMeta(req) },
     );
   }
 
@@ -424,11 +445,14 @@ export class LeavesController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
+    @CurrentUser('role') role: { code: string; templateKey: string } | null,
+    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
   ) {
     return this.leavesService.remove(
       id,
       currentUserId,
       currentUserRole ?? undefined,
+      { templateKey: role?.templateKey ?? null, ...extractMeta(req) },
     );
   }
 
@@ -549,8 +573,14 @@ export class LeavesController {
   requestCancel(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('role') role: { code: string; templateKey: string } | null,
+    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
   ) {
-    return this.leavesService.requestCancel(id, userId);
+    return this.leavesService.requestCancel(id, userId, {
+      roleCode: role?.code ?? null,
+      templateKey: role?.templateKey ?? null,
+      ...extractMeta(req),
+    });
   }
 
   @Post(':id/cancel')

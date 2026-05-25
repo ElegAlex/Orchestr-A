@@ -1585,12 +1585,51 @@ describe('LeavesService', () => {
       expect(result.comment).toBe('Updated reason');
     });
 
+    // OBS-021 — every update must leave a LEAVE_UPDATED trail with before/after
+    // of the mutable fields. Pre-fix update() emitted nothing.
+    it('emits LEAVE_UPDATED with before/after snapshot (OBS-021)', async () => {
+      const pendingLeave = {
+        ...mockLeave,
+        status: LeaveStatus.PENDING,
+        comment: 'Old comment',
+      };
+      const updatedLeave = { ...pendingLeave, comment: 'Updated reason' };
+
+      mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
+
+      await service.update('leave-1', updateDto, 'admin-user-id', 'ADMIN', {
+        templateKey: 'ADMIN',
+        ip: '10.0.0.9',
+        ua: 'vitest',
+      });
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      const call = mockAuditPersistence.log.mock.calls[0][0];
+      expect(call.action).toBe('LEAVE_UPDATED');
+      expect(call.entityType).toBe('Leave');
+      expect(call.entityId).toBe('leave-1');
+      expect(call.actorId).toBe('admin-user-id');
+      expect(call.payload.actor.roleCode).toBe('ADMIN');
+      expect(call.payload.before).toEqual(
+        expect.objectContaining({ comment: 'Old comment' }),
+      );
+      expect(call.payload.after).toEqual(
+        expect.objectContaining({ comment: 'Updated reason' }),
+      );
+      expect(call.payload.ip).toBe('10.0.0.9');
+    });
+
     it('should throw NotFoundException when leave not found', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(null);
 
       await expect(
         service.update('nonexistent', updateDto, 'admin-user-id', 'ADMIN'),
       ).rejects.toThrow(NotFoundException);
+
+      // OBS-021 — no audit row on the not-found gate (negative invariant).
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when non-management role updates a non-pending leave', async () => {
@@ -1827,6 +1866,58 @@ describe('LeavesService', () => {
       const result = await service.remove('leave-1', 'admin-user-id', 'ADMIN');
 
       expect(result.message).toBe('Demande de congé supprimée avec succès');
+    });
+
+    // OBS-021 — leaves are HARD-deleted, so the audit row's `before` snapshot
+    // is the only surviving trace of the deleted leave. Pre-fix remove()
+    // emitted nothing.
+    it('emits LEAVE_DELETED with a full before-snapshot of the deleted leave (OBS-021)', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        comment: 'Vanishing leave',
+        validatedById: 'manager-1',
+      };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.leave.delete.mockResolvedValue(approvedLeave);
+
+      await service.remove('leave-1', 'admin-user-id', 'ADMIN', {
+        templateKey: 'ADMIN',
+        ip: '10.0.0.10',
+        ua: 'vitest',
+      });
+
+      expect(mockPrismaService.leave.delete).toHaveBeenCalledWith({
+        where: { id: 'leave-1' },
+      });
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      const call = mockAuditPersistence.log.mock.calls[0][0];
+      expect(call.action).toBe('LEAVE_DELETED');
+      expect(call.entityType).toBe('Leave');
+      expect(call.actorId).toBe('admin-user-id');
+      expect(call.payload.before).toEqual(
+        expect.objectContaining({
+          userId: 'user-1',
+          status: LeaveStatus.APPROVED,
+          comment: 'Vanishing leave',
+          validatedById: 'manager-1',
+        }),
+      );
+      expect(call.payload.subject).toEqual({
+        leaveId: 'leave-1',
+        userId: 'user-1',
+      });
+    });
+
+    it('does not emit LEAVE_DELETED when the leave is not found (OBS-021)', async () => {
+      mockPrismaService.leave.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.remove('nonexistent', 'admin-user-id', 'ADMIN'),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+      expect(mockPrismaService.leave.delete).not.toHaveBeenCalled();
     });
 
     it('should delete a rejected leave request', async () => {
@@ -2528,6 +2619,59 @@ describe('LeavesService', () => {
   // ============================================
   // REJECT CANCELLATION (SEC-06 perimeter check)
   // ============================================
+  // ============================================
+  // REQUEST CANCEL (OBS-021)
+  // ============================================
+  describe('requestCancel', () => {
+    it('emits LEAVE_CANCELLATION_REQUESTED with before/after status (OBS-021)', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        userId: 'user-1',
+      };
+      const requested = {
+        ...approvedLeave,
+        status: LeaveStatus.CANCELLATION_REQUESTED,
+      };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.leave.update.mockResolvedValue(requested);
+
+      const result = await service.requestCancel('leave-1', 'user-1', {
+        roleCode: 'CONTRIBUTEUR',
+        ip: '10.0.0.11',
+        ua: 'vitest',
+      });
+
+      expect(result.status).toBe(LeaveStatus.CANCELLATION_REQUESTED);
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      const call = mockAuditPersistence.log.mock.calls[0][0];
+      expect(call.action).toBe('LEAVE_CANCELLATION_REQUESTED');
+      expect(call.entityType).toBe('Leave');
+      expect(call.actorId).toBe('user-1');
+      expect(call.payload.before).toEqual({ status: LeaveStatus.APPROVED });
+      expect(call.payload.after).toEqual({
+        status: LeaveStatus.CANCELLATION_REQUESTED,
+      });
+      expect(call.payload.ip).toBe('10.0.0.11');
+    });
+
+    it('does not emit when requesting cancellation of someone else’s leave (OBS-021)', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        userId: 'someone-else',
+      };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+
+      await expect(
+        service.requestCancel('leave-1', 'user-1'),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+      expect(mockPrismaService.leave.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('rejectCancellation', () => {
     it('should throw ForbiddenException when MANAGER rejects a cancellation outside their perimeter', async () => {
       const leave = {
@@ -3100,6 +3244,46 @@ describe('LeavesService', () => {
         }),
       );
     });
+
+    // OBS-021 — admin balance adjustments are personal-data writes that must be
+    // audited with before/after. Pre-fix upsertBalance emitted nothing.
+    it('emits LEAVE_BALANCE_ADJUSTED with before/after on the user-upsert path (OBS-021)', async () => {
+      const existing = { totalDays: 10 };
+      const upsertedBalance = { id: 'bal-1', userId: 'user-1', totalDays: 25 };
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue(existing);
+      mockPrismaService.leaveBalance.upsert.mockResolvedValue(upsertedBalance);
+
+      await service.upsertBalance({ ...baseDto, userId: 'user-1' }, 'admin-1', {
+        roleCode: 'ADMIN',
+        templateKey: 'ADMIN',
+      });
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      const call = mockAuditPersistence.log.mock.calls[0][0];
+      expect(call.action).toBe('LEAVE_BALANCE_ADJUSTED');
+      expect(call.entityType).toBe('Leave');
+      expect(call.actorId).toBe('admin-1');
+      expect(call.payload.operation).toBe('UPDATE');
+      expect(call.payload.before.totalDays).toBe('10');
+      expect(call.payload.after.totalDays).toBe('25');
+      expect(call.payload.subject).toEqual(
+        expect.objectContaining({ userId: 'user-1', year: 2025 }),
+      );
+    });
+
+    it('does not emit LEAVE_BALANCE_ADJUSTED when the leaveType is unknown (OBS-021)', async () => {
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.upsertBalance({ ...baseDto, userId: 'user-1' }, 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
   });
 
   // ============================================
@@ -3119,12 +3303,39 @@ describe('LeavesService', () => {
       });
     });
 
+    // OBS-021 — removing a balance override is a balance adjustment; emit with
+    // operation DELETE and the prior totalDays as before (after = null).
+    it('emits LEAVE_BALANCE_ADJUSTED operation=DELETE with before totalDays (OBS-021)', async () => {
+      const balance = {
+        id: 'bal-1',
+        userId: 'user-1',
+        leaveTypeId: 'leave-type-1',
+        year: 2025,
+        totalDays: 18,
+      };
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue(balance);
+      mockPrismaService.leaveBalance.delete.mockResolvedValue(balance);
+
+      await service.deleteBalance('bal-1', 'admin-1', { roleCode: 'ADMIN' });
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      const call = mockAuditPersistence.log.mock.calls[0][0];
+      expect(call.action).toBe('LEAVE_BALANCE_ADJUSTED');
+      expect(call.actorId).toBe('admin-1');
+      expect(call.payload.operation).toBe('DELETE');
+      expect(call.payload.before.totalDays).toBe('18');
+      expect(call.payload.after.totalDays).toBeNull();
+    });
+
     it('should throw NotFoundException when balance not found', async () => {
       mockPrismaService.leaveBalance.findUnique.mockResolvedValue(null);
 
       await expect(service.deleteBalance('nonexistent')).rejects.toThrow(
         NotFoundException,
       );
+
+      // OBS-021 — no audit row when the balance does not exist.
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
     });
   });
 

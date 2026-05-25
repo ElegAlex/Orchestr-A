@@ -1171,6 +1171,7 @@ export class LeavesService {
     updateLeaveDto: UpdateLeaveDto,
     currentUserId?: string,
     currentUserRole?: string,
+    actor?: LeaveActorMeta,
   ) {
     const existingLeave = await this.prisma.leave.findUnique({
       where: { id },
@@ -1283,6 +1284,12 @@ export class LeavesService {
       return leaveTypeConfigCache?.name ?? 'ce type de congé';
     };
 
+    // OBS-021 — actor snapshot resolved before the tx (see approve()).
+    const actorSnapshot = await this.buildActorSnapshot(currentUserId ?? '', {
+      roleCode: actor?.roleCode ?? currentUserRole ?? null,
+      templateKey: actor?.templateKey ?? null,
+    });
+
     // Finding #4 (cf. create) : gate + write doivent partager une tx pour
     // qu'une suppression concurrente de LeaveBalance ne fasse pas diverger
     // l'état validé de l'état écrit. ReadCommitted + re-lecture explicite
@@ -1338,7 +1345,7 @@ export class LeavesService {
         }
       }
 
-      return tx.leave.update({
+      const updated = await tx.leave.update({
         where: { id },
         data: {
           // Finding #8 — `type` (enum) n'est plus modifiable via update :
@@ -1377,6 +1384,38 @@ export class LeavesService {
           },
         },
       });
+
+      // OBS-021 — LEAVE_UPDATED durable trail. before/after captures the
+      // mutable leave fields (dates + duration + half-day + comment). `type`
+      // is server-immutable here (Finding #8), so it is not part of the diff.
+      await this.auditPersistence.log({
+        action: AuditAction.LEAVE_UPDATED,
+        entityType: 'Leave',
+        entityId: id,
+        actorId: currentUserId ?? null,
+        payload: {
+          actor: actorSnapshot,
+          subject: { leaveId: id, userId: existingLeave.userId },
+          ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
+          ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
+          before: {
+            startDate: existingLeave.startDate?.toISOString() ?? null,
+            endDate: existingLeave.endDate?.toISOString() ?? null,
+            halfDay: existingLeave.halfDay,
+            days: existingLeave.days,
+            comment: existingLeave.comment,
+          },
+          after: {
+            startDate: updated.startDate?.toISOString() ?? null,
+            endDate: updated.endDate?.toISOString() ?? null,
+            halfDay: updated.halfDay,
+            days: updated.days,
+            comment: updated.comment,
+          },
+        },
+      });
+
+      return updated;
     });
 
     return leave;
@@ -1385,7 +1424,12 @@ export class LeavesService {
   /**
    * Supprimer une demande de congé
    */
-  async remove(id: string, currentUserId?: string, currentUserRole?: string) {
+  async remove(
+    id: string,
+    currentUserId?: string,
+    currentUserRole?: string,
+    actor?: LeaveActorMeta,
+  ) {
     const leave = await this.prisma.leave.findUnique({
       where: { id },
     });
@@ -1424,8 +1468,48 @@ export class LeavesService {
       }
     }
 
-    await this.prisma.leave.delete({
-      where: { id },
+    // OBS-021 — leaves are HARD-deleted (no soft-delete column), so the row
+    // vanishes; the audit_logs entry is the only surviving trace. Snapshot the
+    // full record into the payload (DAT-007 PROJECT_DELETED precedent) before
+    // the delete. `audit_logs.entityId` is a plain string column, not a FK to
+    // `leave`, so the delete is not blocked by the audit row.
+    const actorSnapshot = await this.buildActorSnapshot(currentUserId ?? '', {
+      roleCode: actor?.roleCode ?? currentUserRole ?? null,
+      templateKey: actor?.templateKey ?? null,
+    });
+    const deletedSnapshot = {
+      userId: leave.userId,
+      leaveTypeId: leave.leaveTypeId,
+      type: leave.type,
+      status: leave.status,
+      startDate: leave.startDate?.toISOString() ?? null,
+      endDate: leave.endDate?.toISOString() ?? null,
+      halfDay: leave.halfDay,
+      days: leave.days,
+      comment: leave.comment,
+      validatedById: leave.validatedById,
+    };
+
+    // NB: the audit write goes through AuditPersistenceService's own prisma
+    // client, not `tx` — so this $transaction gates the delete commit on the
+    // audit promise resolving, but the two are not a single atomic unit (a
+    // committed audit row can outlive a rolled-back delete). DAT-001 accepted
+    // this trade-off for the status transitions; mirrored here.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.leave.delete({ where: { id } });
+      await this.auditPersistence.log({
+        action: AuditAction.LEAVE_DELETED,
+        entityType: 'Leave',
+        entityId: id,
+        actorId: currentUserId ?? null,
+        payload: {
+          actor: actorSnapshot,
+          subject: { leaveId: id, userId: leave.userId },
+          ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
+          ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
+          before: deletedSnapshot,
+        },
+      });
     });
 
     return { message: 'Demande de congé supprimée avec succès' };
@@ -1862,7 +1946,13 @@ export class LeavesService {
       });
 
       await this.auditPersistence.log({
-        action: 'LEAVE_CANCELLED',
+        // OBS-021 — promoted from the DAT-001 free-string to the enum member
+        // (identical value 'LEAVE_CANCELLED'). cancel() handles both the
+        // APPROVED→cancel and the CANCELLATION_REQUESTED→cancel (approve-
+        // cancellation) transitions; before.status disambiguates the two, so
+        // APPROVE_CANCELLATION is merged here rather than shipped as a separate
+        // event.
+        action: AuditAction.LEAVE_CANCELLED,
         entityType: 'Leave',
         entityId: id,
         actorId: currentUserId ?? null,
@@ -1890,7 +1980,11 @@ export class LeavesService {
    * Demander l'annulation d'un congé approuvé (par le demandeur lui-même)
    * Le congé passe en CANCELLATION_REQUESTED et attend validation du manager/admin
    */
-  async requestCancel(id: string, requestingUserId: string) {
+  async requestCancel(
+    id: string,
+    requestingUserId: string,
+    actor?: LeaveActorMeta,
+  ) {
     const leave = await this.prisma.leave.findUnique({
       where: { id },
     });
@@ -1911,22 +2005,49 @@ export class LeavesService {
       );
     }
 
-    const updatedLeave = await this.prisma.leave.update({
-      where: { id },
-      data: { status: LeaveStatus.CANCELLATION_REQUESTED },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            email: true,
+    // OBS-021 — self-service path: the requester is always the leave owner, so
+    // the role context is light (often null), but the snapshot records it
+    // honestly. Audit write uses its own prisma client (see remove() note).
+    const actorSnapshot = await this.buildActorSnapshot(requestingUserId, {
+      roleCode: actor?.roleCode ?? null,
+      templateKey: actor?.templateKey ?? null,
+    });
+
+    const updatedLeave = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.leave.update({
+        where: { id },
+        data: { status: LeaveStatus.CANCELLATION_REQUESTED },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              email: true,
+            },
           },
+          leaveType: true,
         },
-        leaveType: true,
-      },
+      });
+
+      await this.auditPersistence.log({
+        action: AuditAction.LEAVE_CANCELLATION_REQUESTED,
+        entityType: 'Leave',
+        entityId: id,
+        actorId: requestingUserId,
+        payload: {
+          actor: actorSnapshot,
+          subject: { leaveId: id, userId: leave.userId },
+          ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
+          ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
+          before: { status: leave.status },
+          after: { status: updated.status },
+        },
+      });
+
+      return updated;
     });
 
     return updatedLeave;
@@ -2452,7 +2573,11 @@ export class LeavesService {
   /**
    * Créer ou mettre à jour un solde (upsert)
    */
-  async upsertBalance(dto: UpsertLeaveBalanceDto) {
+  async upsertBalance(
+    dto: UpsertLeaveBalanceDto,
+    actorId?: string,
+    actor?: LeaveActorMeta,
+  ) {
     const { userId, leaveTypeId, year, totalDays } = dto;
 
     // Vérifier que le type de congé existe
@@ -2489,9 +2614,48 @@ export class LeavesService {
       },
     };
 
+    // OBS-021 — single hoisted emit point so LEAVE_BALANCE_ADJUSTED fires
+    // exactly once, on a successful write, awaited — never on the global-branch
+    // create-with-retry's failed attempt (the create throws before this runs).
+    // `before` = the admin's perspective at decision time (pre-read), not the
+    // last observed state if a race re-runs the retry loop.
+    const actorSnapshot = await this.buildActorSnapshot(actorId ?? '', {
+      roleCode: actor?.roleCode ?? null,
+      templateKey: actor?.templateKey ?? null,
+    });
+    const emitAdjustment = async <T extends { id: string }>(
+      r: T,
+      before: string | null,
+      after: string | null,
+      operation: 'CREATE' | 'UPDATE' | 'DELETE',
+    ): Promise<T> => {
+      await this.auditPersistence.log({
+        action: AuditAction.LEAVE_BALANCE_ADJUSTED,
+        entityType: 'Leave',
+        entityId: r.id,
+        actorId: actorId ?? null,
+        payload: {
+          actor: actorSnapshot,
+          subject: { balanceId: r.id, userId: userId ?? null, leaveTypeId, year },
+          operation,
+          ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
+          ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
+          before: { totalDays: before },
+          after: { totalDays: after },
+        },
+      });
+      return r;
+    };
+
     if (userId) {
+      // OBS-021 — pre-read the prior balance for the audit before-snapshot.
+      // Extra roundtrip; the upsert below remains the atomic write.
+      const existing = await this.prisma.leaveBalance.findUnique({
+        where: { userId_leaveTypeId_year: { userId, leaveTypeId, year } },
+        select: { totalDays: true },
+      });
       // With a non-null userId, use Prisma upsert with compound key
-      return this.prisma.leaveBalance.upsert({
+      const result = await this.prisma.leaveBalance.upsert({
         where: {
           userId_leaveTypeId_year: { userId, leaveTypeId, year },
         },
@@ -2499,6 +2663,12 @@ export class LeavesService {
         update: { totalDays },
         include: includeOpts,
       });
+      return emitAdjustment(
+        result,
+        existing ? existing.totalDays.toString() : null,
+        result.totalDays.toString(),
+        existing ? 'UPDATE' : 'CREATE',
+      );
     }
 
     // userId = null (global default) — Prisma upsert ne gère pas correctement
@@ -2520,17 +2690,29 @@ export class LeavesService {
         where: { userId: null, leaveTypeId, year },
       });
       if (existing) {
-        return this.prisma.leaveBalance.update({
+        const updated = await this.prisma.leaveBalance.update({
           where: { id: existing.id },
           data: { totalDays },
           include: includeOpts,
         });
+        return emitAdjustment(
+          updated,
+          existing.totalDays.toString(),
+          updated.totalDays.toString(),
+          'UPDATE',
+        );
       }
       try {
-        return await this.prisma.leaveBalance.create({
+        const created = await this.prisma.leaveBalance.create({
           data: { userId: null, leaveTypeId, year, totalDays },
           include: includeOpts,
         });
+        return await emitAdjustment(
+          created,
+          null,
+          created.totalDays.toString(),
+          'CREATE',
+        );
       } catch (err) {
         if (
           attempt === 0 &&
@@ -2552,7 +2734,7 @@ export class LeavesService {
   /**
    * Supprimer un solde individuel
    */
-  async deleteBalance(id: string) {
+  async deleteBalance(id: string, actorId?: string, actor?: LeaveActorMeta) {
     const balance = await this.prisma.leaveBalance.findUnique({
       where: { id },
     });
@@ -2561,7 +2743,36 @@ export class LeavesService {
       throw new NotFoundException('Solde introuvable');
     }
 
+    // OBS-021 — removing a balance override is a balance adjustment too; emit
+    // with operation 'DELETE' and the prior totalDays as before (after = null).
+    const actorSnapshot = await this.buildActorSnapshot(actorId ?? '', {
+      roleCode: actor?.roleCode ?? null,
+      templateKey: actor?.templateKey ?? null,
+    });
+
     await this.prisma.leaveBalance.delete({ where: { id } });
+
+    await this.auditPersistence.log({
+      action: AuditAction.LEAVE_BALANCE_ADJUSTED,
+      entityType: 'Leave',
+      entityId: id,
+      actorId: actorId ?? null,
+      payload: {
+        actor: actorSnapshot,
+        subject: {
+          balanceId: id,
+          userId: balance.userId,
+          leaveTypeId: balance.leaveTypeId,
+          year: balance.year,
+        },
+        operation: 'DELETE',
+        ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
+        ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
+        before: { totalDays: balance.totalDays.toString() },
+        after: { totalDays: null },
+      },
+    });
+
     return { message: 'Solde supprimé avec succès' };
   }
 

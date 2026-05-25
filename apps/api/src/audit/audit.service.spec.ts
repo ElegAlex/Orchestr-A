@@ -238,6 +238,12 @@ describe('AuditService', () => {
         [AuditAction.ACCESS_DENIED, 'Auth'],
         [AuditAction.LEAVE_APPROVED, 'Leave'],
         [AuditAction.LEAVE_REJECTED, 'Leave'],
+        // OBS-021 — full leave lifecycle subjects.
+        [AuditAction.LEAVE_CANCELLED, 'Leave'],
+        [AuditAction.LEAVE_CANCELLATION_REQUESTED, 'Leave'],
+        [AuditAction.LEAVE_UPDATED, 'Leave'],
+        [AuditAction.LEAVE_DELETED, 'Leave'],
+        [AuditAction.LEAVE_BALANCE_ADJUSTED, 'Leave'],
       ];
 
       for (const [action, expectedEntityType] of expectations) {

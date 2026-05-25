@@ -27,6 +27,18 @@ export enum AuditAction {
   DOCUMENT_DOWNLOADED = 'DOCUMENT_DOWNLOADED',
   LEAVE_APPROVED = 'LEAVE_APPROVED',
   LEAVE_REJECTED = 'LEAVE_REJECTED',
+  // OBS-021 — full leave lifecycle beyond approve/reject. LEAVE_CANCELLED was
+  // already emitted by DAT-001's cancel() path as a free-string; promoted to an
+  // enum member here (identical value → zero prod-data impact, advances the
+  // OBS-024 enum-vs-free-string unification). The other four are net-new
+  // emitters on the update / hard-delete / cancellation-request / balance-
+  // adjustment paths so an auditor can reconstruct "leave approved on T1 then
+  // its dates were silently changed on T2".
+  LEAVE_CANCELLED = 'LEAVE_CANCELLED',
+  LEAVE_CANCELLATION_REQUESTED = 'LEAVE_CANCELLATION_REQUESTED',
+  LEAVE_UPDATED = 'LEAVE_UPDATED',
+  LEAVE_DELETED = 'LEAVE_DELETED',
+  LEAVE_BALANCE_ADJUSTED = 'LEAVE_BALANCE_ADJUSTED',
   // OBS-012 — a release booted. Written on every container boot in a deploy
   // context (DeploymentsService). The durable source of truth is the
   // `deployments` table; this audit row is the Cour-des-Comptes narrative
@@ -78,6 +90,11 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.DOCUMENT_DOWNLOADED]: 'Document',
   [AuditAction.LEAVE_APPROVED]: 'Leave',
   [AuditAction.LEAVE_REJECTED]: 'Leave',
+  [AuditAction.LEAVE_CANCELLED]: 'Leave',
+  [AuditAction.LEAVE_CANCELLATION_REQUESTED]: 'Leave',
+  [AuditAction.LEAVE_UPDATED]: 'Leave',
+  [AuditAction.LEAVE_DELETED]: 'Leave',
+  [AuditAction.LEAVE_BALANCE_ADJUSTED]: 'Leave',
   [AuditAction.RELEASE_DEPLOYED]: 'Deployment',
 };
 

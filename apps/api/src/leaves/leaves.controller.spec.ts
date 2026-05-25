@@ -366,14 +366,23 @@ describe('LeavesController', () => {
         updateLeaveDto,
         'admin-user-id',
         'ADMIN',
+        { code: 'ADMIN', templateKey: 'ADMIN' },
+        { headers: { 'user-agent': 'jest' }, ip: '127.0.0.1' },
       );
 
       expect(result.comment).toBe('Updated comment');
+      // OBS-021 — controller threads the actor templateKey + ip/ua for the
+      // LEAVE_UPDATED audit trail (roleCode flows via currentUserRole).
       expect(mockLeavesService.update).toHaveBeenCalledWith(
         'leave-id-1',
         updateLeaveDto,
         'admin-user-id',
         'ADMIN',
+        expect.objectContaining({
+          templateKey: 'ADMIN',
+          ip: '127.0.0.1',
+          ua: 'jest',
+        }),
       );
     });
 
@@ -420,6 +429,8 @@ describe('LeavesController', () => {
         'leave-id-1',
         'admin-user-id',
         'ADMIN',
+        { code: 'ADMIN', templateKey: 'ADMIN' },
+        { headers: { 'user-agent': 'jest' }, ip: '127.0.0.1' },
       );
 
       expect(result.message).toBe('Demande supprimée');
@@ -427,6 +438,11 @@ describe('LeavesController', () => {
         'leave-id-1',
         'admin-user-id',
         'ADMIN',
+        expect.objectContaining({
+          templateKey: 'ADMIN',
+          ip: '127.0.0.1',
+          ua: 'jest',
+        }),
       );
     });
 
