@@ -1,18 +1,100 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { createHash } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuditPersistenceService } from './audit-persistence.service';
 import { PrismaService } from '../prisma/prisma.service';
 
+// ---------------------------------------------------------------------------
+// Independent re-implementation of the documented hash-chain formula
+// (decision #2 of the OBS-002 + DAT-009 contract). Kept deliberately separate
+// from the service code: the witness must recompute from stored fields and
+// catch any disconnect (tamper signal). If this helper and the service drift,
+// the round-trip assertions fail — which is the point.
+// ---------------------------------------------------------------------------
+function stableStringify(value: unknown): string {
+  if (value === null || value === undefined) return 'null';
+  if (typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return '[' + value.map((v) => stableStringify(v)).join(',') + ']';
+  }
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort();
+  return (
+    '{' +
+    keys
+      .map((k) => JSON.stringify(k) + ':' + stableStringify(obj[k]))
+      .join(',') +
+    '}'
+  );
+}
+
+function recomputeRowHash(row: {
+  action: string;
+  entityType: string;
+  entityId: string;
+  actorId: string | null | undefined;
+  createdAt: Date;
+  payload: Record<string, unknown> | null | undefined;
+  prevHash: string | null | undefined;
+}): string {
+  const canonical = [
+    row.action,
+    row.entityType,
+    row.entityId,
+    row.actorId ?? '',
+    row.createdAt.toISOString(),
+    stableStringify(row.payload ?? null),
+    row.prevHash ?? '',
+  ].join('|');
+  return createHash('sha256').update(canonical, 'utf8').digest('hex');
+}
+
 describe('AuditPersistenceService', () => {
   let service: AuditPersistenceService;
 
-  const mockPrismaService = {
+  // Mutable chain state: simulates the audit_logs table for the prior-row read.
+  let chainTip: { rowHash: string } | null;
+  // Records every create() data arg, in insertion order.
+  let created: Array<Record<string, unknown>>;
+  // Stubbed users table for actor-snapshot lookups.
+  let users: Record<
+    string,
+    { email: string | null; firstName: string | null; lastName: string | null }
+  >;
+
+  const txMock = {
+    $executeRaw: vi.fn().mockResolvedValue(1),
+    $queryRaw: vi.fn(async () => (chainTip ? [chainTip] : [])),
+    user: {
+      findUnique: vi.fn(
+        async ({ where }: { where: { id: string } }) =>
+          users[where.id] ?? null,
+      ),
+    },
     auditLog: {
-      create: vi.fn(),
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
+        created.push(data);
+        // advance the simulated chain tip so the next log() reads this rowHash
+        if (typeof data.rowHash === 'string') {
+          chainTip = { rowHash: data.rowHash };
+        }
+        return { id: `log-${created.length}`, ...data };
+      }),
     },
   };
 
+  const mockPrismaService = {
+    // Interactive transaction: run the callback against the tx mock.
+    $transaction: vi.fn(
+      async (cb: (tx: typeof txMock) => Promise<unknown>) => cb(txMock),
+    ),
+  };
+
   beforeEach(async () => {
+    chainTip = null;
+    created = [];
+    users = {};
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuditPersistenceService,
@@ -30,10 +112,8 @@ describe('AuditPersistenceService', () => {
     vi.clearAllMocks();
   });
 
-  describe('log', () => {
-    it('1. devrait appeler prisma.auditLog.create avec les bons args (événement complet)', async () => {
-      mockPrismaService.auditLog.create.mockResolvedValue({ id: 'log-1' });
-
+  describe('log — basic persistence (existing contract)', () => {
+    it('1. persiste action/entityType/entityId/actorId/payload', async () => {
       await service.log({
         action: 'ASSIGNMENT_STATUS_CHANGED',
         entityType: 'PredefinedTaskAssignment',
@@ -42,40 +122,27 @@ describe('AuditPersistenceService', () => {
         payload: { before: 'NOT_DONE', after: 'DONE', reason: null },
       });
 
-      expect(mockPrismaService.auditLog.create).toHaveBeenCalledWith({
-        data: {
-          action: 'ASSIGNMENT_STATUS_CHANGED',
-          entityType: 'PredefinedTaskAssignment',
-          entityId: 'assignment-1',
-          actorId: 'user-1',
-          payload: { before: 'NOT_DONE', after: 'DONE', reason: null },
-        },
-      });
-    });
-
-    it('2. devrait persister actorId: null quand actorId est absent', async () => {
-      mockPrismaService.auditLog.create.mockResolvedValue({ id: 'log-2' });
-
-      await service.log({
+      expect(created).toHaveLength(1);
+      expect(created[0]).toMatchObject({
         action: 'ASSIGNMENT_STATUS_CHANGED',
         entityType: 'PredefinedTaskAssignment',
-        entityId: 'assignment-2',
-      });
-
-      expect(mockPrismaService.auditLog.create).toHaveBeenCalledWith({
-        data: {
-          action: 'ASSIGNMENT_STATUS_CHANGED',
-          entityType: 'PredefinedTaskAssignment',
-          entityId: 'assignment-2',
-          actorId: null,
-          payload: undefined,
-        },
+        entityId: 'assignment-1',
+        actorId: 'user-1',
+        payload: { before: 'NOT_DONE', after: 'DONE', reason: null },
       });
     });
 
-    it('3. devrait persister payload: undefined quand payload est absent (pas de crash)', async () => {
-      mockPrismaService.auditLog.create.mockResolvedValue({ id: 'log-3' });
+    it('2. persiste actorId: null quand actorId est absent (événement système)', async () => {
+      await service.log({
+        action: 'SYSTEM_BACKFILL',
+        entityType: 'SystemMaintenance',
+        entityId: 'backfill-1',
+      });
 
+      expect(created[0].actorId).toBeNull();
+    });
+
+    it('3. ne crashe pas quand payload est absent', async () => {
       await expect(
         service.log({
           action: 'ASSIGNMENT_STATUS_CHANGED',
@@ -84,9 +151,151 @@ describe('AuditPersistenceService', () => {
           actorId: 'user-1',
         }),
       ).resolves.not.toThrow();
+      expect(created[0].payload).toBeUndefined();
+    });
+  });
 
-      const callArg = mockPrismaService.auditLog.create.mock.calls[0][0];
-      expect(callArg.data.payload).toBeUndefined();
+  // ===========================================================================
+  // WITNESS W-c — hash chain (OBS-002 + DAT-009)
+  // FAILS on master (log() persists no rowHash/prevHash), PASSES after the fix.
+  // ===========================================================================
+  describe('WITNESS W-c — hash chain', () => {
+    it('persiste un rowHash sha256 hex (64 chars) sur chaque ligne', async () => {
+      await service.log({
+        action: 'LOGIN_SUCCESS',
+        entityType: 'Auth',
+        entityId: 'user-1',
+        actorId: 'user-1',
+        payload: { ip: '10.0.0.1' },
+      });
+
+      expect(created[0].rowHash).toBeDefined();
+      expect(created[0].rowHash).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it('chaîne 3 lignes: prevHash[n] === rowHash[n-1], première ligne prevHash null', async () => {
+      const events = [
+        { action: 'A', entityType: 'Auth', entityId: 'e1', payload: { k: 1 } },
+        {
+          action: 'B',
+          entityType: 'User',
+          entityId: 'e2',
+          payload: { z: 2, a: 1 },
+        },
+        { action: 'C', entityType: 'Leave', entityId: 'e3', payload: null },
+      ];
+      for (const ev of events) {
+        await service.log(ev);
+      }
+
+      expect(created).toHaveLength(3);
+      expect(created[0].prevHash).toBeNull();
+      expect(created[1].prevHash).toBe(created[0].rowHash);
+      expect(created[2].prevHash).toBe(created[1].rowHash);
+    });
+
+    it('rowHash stocké === recomputation indépendante depuis les champs (intégrité)', async () => {
+      await service.log({
+        action: 'LEAVE_APPROVED',
+        entityType: 'Leave',
+        entityId: 'leave-9',
+        actorId: 'validator-1',
+        payload: {
+          after: { status: 'APPROVED' },
+          before: { status: 'PENDING' },
+        },
+      });
+
+      const row = created[0];
+      const recomputed = recomputeRowHash({
+        action: row.action as string,
+        entityType: row.entityType as string,
+        entityId: row.entityId as string,
+        actorId: row.actorId as string | null,
+        createdAt: row.createdAt as Date,
+        payload: row.payload as Record<string, unknown> | null,
+        prevHash: row.prevHash as string | null,
+      });
+      expect(row.rowHash).toBe(recomputed);
+    });
+
+    it('toute mutation du payload casse le rowHash recalculé (tamper signal)', async () => {
+      await service.log({
+        action: 'LEAVE_APPROVED',
+        entityType: 'Leave',
+        entityId: 'leave-9',
+        actorId: 'validator-1',
+        payload: { status: 'APPROVED' },
+      });
+      const row = created[0];
+      const tampered = recomputeRowHash({
+        action: row.action as string,
+        entityType: row.entityType as string,
+        entityId: row.entityId as string,
+        actorId: row.actorId as string | null,
+        createdAt: row.createdAt as Date,
+        payload: { status: 'REJECTED' }, // mutated
+        prevHash: row.prevHash as string | null,
+      });
+      expect(tampered).not.toBe(row.rowHash);
+    });
+
+    it('persiste createdAt explicitement (la valeur hachée doit égaler la valeur stockée)', async () => {
+      await service.log({
+        action: 'LOGIN_SUCCESS',
+        entityType: 'Auth',
+        entityId: 'user-1',
+        actorId: 'user-1',
+      });
+      expect(created[0].createdAt).toBeInstanceOf(Date);
+    });
+  });
+
+  // ===========================================================================
+  // WITNESS W-d — actor snapshot (DAT-009)
+  // FAILS on master (no actorEmail/actorLabel columns populated).
+  // ===========================================================================
+  describe('WITNESS W-d — actor snapshot', () => {
+    it('capture actorEmail + actorLabel depuis User au moment du log()', async () => {
+      users['validator-1'] = {
+        email: 'validator@cpam92.fr',
+        firstName: 'Marie',
+        lastName: 'Dupont',
+      };
+
+      await service.log({
+        action: 'LEAVE_APPROVED',
+        entityType: 'Leave',
+        entityId: 'leave-1',
+        actorId: 'validator-1',
+        payload: { status: 'APPROVED' },
+      });
+
+      expect(created[0].actorEmail).toBe('validator@cpam92.fr');
+      expect(created[0].actorLabel).toBe('Marie Dupont');
+    });
+
+    it('actorEmail/actorLabel null pour un événement système (actorId absent)', async () => {
+      await service.log({
+        action: 'SYSTEM_BACKFILL',
+        entityType: 'SystemMaintenance',
+        entityId: 'backfill-1',
+      });
+
+      expect(created[0].actorEmail).toBeNull();
+      expect(created[0].actorLabel).toBeNull();
+    });
+
+    it('actorEmail/actorLabel null si actorId ne résout aucun User (suppression antérieure)', async () => {
+      await service.log({
+        action: 'LOGIN_SUCCESS',
+        entityType: 'Auth',
+        entityId: 'ghost',
+        actorId: 'deleted-user',
+      });
+
+      expect(created[0].actorEmail).toBeNull();
+      expect(created[0].actorLabel).toBeNull();
     });
   });
 });

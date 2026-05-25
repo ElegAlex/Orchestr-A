@@ -1103,8 +1103,13 @@ model Role {
 }
 
 /// Journal d'audit persistant pour traçabilité RGPD des actions métier.
-/// Scope V1 strict : ASSIGNMENT_STATUS_CHANGED (cf. ADR-02).
-/// Table append-only par convention applicative (aucun update, aucun delete via service).
+/// Append-only ENFORCÉ au niveau DB (OBS-002 / DAT-009) :
+///  - trigger BEFORE UPDATE/DELETE -> RAISE EXCEPTION (audit_logs_no_update_delete) ;
+///  - chaîne d'intégrité prevHash/rowHash (sha256) calculée à l'INSERT ;
+///  - snapshot actorEmail/actorLabel figé à l'INSERT (survit à la suppression de l'acteur).
+/// La FK actorId est passée onDelete: NoAction (au lieu de SetNull) : un SET NULL
+/// déclencherait un UPDATE bloqué par le trigger d'immutabilité — le snapshot
+/// actorEmail/actorLabel préserve l'identité de l'acteur sans muter le journal.
 model AuditLog {
   id         String   @id @default(uuid())
   /// Code de l'action (ex. ASSIGNMENT_STATUS_CHANGED).
@@ -1115,9 +1120,17 @@ model AuditLog {
   entityId   String
   /// Utilisateur à l'origine de l'action, nullable pour actions système (cron, job).
   actorId    String?
-  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: NoAction)
+  /// Email de l'acteur figé au moment du log (RGPD : snapshot, pas de JOIN). NULL si action système.
+  actorEmail String?
+  /// Libellé lisible de l'acteur (prénom + nom) figé au moment du log. NULL si action système.
+  actorLabel String?
   /// Payload contextuel (before/after, raison, plage...). JSONB côté Postgres.
   payload    Json?
+  /// Hash sha256 (hex) de la ligne précédente — NULL pour la première ligne (genèse).
+  prevHash   String?
+  /// Hash sha256 (hex) de cette ligne (chaîne d'intégrité, calculé à l'INSERT).
+  rowHash    String
   createdAt  DateTime @default(now())
 
   @@index([entityType, entityId])
