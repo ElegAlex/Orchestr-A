@@ -372,6 +372,7 @@ pnpm test apps/api/src/users/users.controller.spec.ts  # may need creation if mi
 - AuditService (console-only, OBS-001 territory) is still emitted in parallel to mirror AuthService.generateResetToken's pattern, but durability of the audit trail relies on AuditPersistenceService writing to the `audit_logs` table. OBS-001 will unify both sinks; SEC-003 is durable today because AuditPersistenceService persists directly.
 - Service signature kept the callerId parameter OPTIONAL to preserve the existing test `should reset password successfully (legacy: no caller)` and keep call sites that don't have caller context working. The controller path (the production attack surface) always passes the caller via @CurrentUser('id'); the gates only run when caller is known.
 - Adjacent files touched (justified by Suggested fix scope): users.controller.ts (thread @CurrentUser('id') through), users.service.spec.ts and users.controller.spec.ts (test wiring + new SEC-003 coverage). No unrelated paths modified.
+- **Superseded action code (OBS-004, 330a8eb):** the durable emit's free-string `'PASSWORD_RESET_ADMIN'` was renamed to the enum `AuditAction.PASSWORD_RESET_BY_ADMIN`. SEC-003's gates/no-PII ACs are unchanged; only the action code was canonicalized. Legacy prod rows under the old code can't be backfilled (OBS-002 immutability) — see OBS-004 Learnings for the OBS-024 query-time alias carry-over.
 
 ---
 ### CLAUDE-CFG-001 — Smoke hook misses untracked changes
@@ -892,7 +893,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ---
 ### OBS-004 — Role changes on users are NOT audited
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -929,8 +930,17 @@ Inject AuditService into UsersService; emit ROLE_CHANGE, USER_DEACTIVATED, USER_
 pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** Partial closure: AUD-EMIT-001 (ffc4cf4, 2026-05-25) shipped live emitters for ROLE_CHANGE + USER_DEACTIVATED (both via UsersService.update() and remove() soft-delete branch). Remaining scope for OBS-004: USER_REACTIVATED, PASSWORD_RESET_BY_ADMIN (overlap with SEC-003 [2763552] — verify before re-emitting), SERVICE_MEMBERSHIP_CHANGED, DEPARTMENT_CHANGED.
+**Closed_by:** 330a8eb
+**Learnings:** Partial closure completed. AUD-EMIT-001 (ffc4cf4) shipped ROLE_CHANGE + USER_DEACTIVATED; this session (330a8eb) lands the remaining four.
+- **Enum for all four** (USER_REACTIVATED, PASSWORD_RESET_BY_ADMIN, SERVICE_MEMBERSHIP_CHANGED, DEPARTMENT_CHANGED) added to AuditAction + ENTITY_TYPE_BY_ACTION='User'. Kept UsersService self-consistent and **advances the enum side of [[OBS-024]]** (enum-vs-free-string unification): the only free-string this module emitted ('PASSWORD_RESET_ADMIN') is now an enum value.
+- **PASSWORD_RESET_BY_ADMIN = case (b)-rename, NOT net-new.** SEC-003 (2763552) already durably emitted the admin-reset row at `users.service.ts:852`, but as the free-string `'PASSWORD_RESET_ADMIN'`. Renamed in-place to `AuditAction.PASSWORD_RESET_BY_ADMIN`. SEC-003's gates (hierarchy / self-reset / no-PII) are untouched — only the action code is canonicalized; the SEC-003 spec assertion (`users.service.spec.ts:1461`) was updated and its ACs still pass. The console-parity `auditService.log(PASSWORD_CHANGED)` at `:867` is intentionally left in place (its DAT-002 dual-write to a `PASSWORD_CHANGED` row is OBS-024 territory; OBS-004 does not collapse the dual emit).
+- **PROD NAMESPACE CARRY-OVER for OBS-024:** SEC-003 is an ancestor of prod HEAD 8e4b593, so prod `audit_logs` may already hold `'PASSWORD_RESET_ADMIN'` rows. OBS-002's immutability trigger blocks UPDATE, so those legacy rows **cannot be backfilled** — OBS-024's unification must alias `PASSWORD_RESET_ADMIN` ↔ `PASSWORD_RESET_BY_ADMIN` at query time.
+- **SERVICE_MEMBERSHIP_CHANGED** payload = full before/after arrays + computed `{added, removed}` diff (more queryable). Order-insensitive Set comparison → no emit when the membership set is unchanged regardless of array order.
+- **DEPARTMENT_CHANGED** payload = `departmentId` before/after; department-name snapshot **deferred** (departments aren't hard-deleted like the actor case that motivated DAT-009's label snapshot).
+- **One extra include, no new round-trip:** update()'s `findUnique` gained `userServices.serviceId` for the membership before-snapshot. `departmentId`/`isActive` are scalars already returned by `include`.
+- **No-op invariants preserved** (AUD-EMIT-001 witness (c)): no emit when the field is unchanged; caller-undefined skips emit. The AUD-EMIT-001 no-op fixture was adjusted (existing departmentId set equal to the DTO value) — a fixture update forced by the emission-set expanding to departmentId, not a behavior change.
+- **[[TST-011]] incidental coverage:** +7 audit-emission assertions in `users.service.spec.ts` (4 positive across the 4 events, 3 no-op negatives) + 4 new pairs in the `audit.service.spec.ts` entityType table. Materially advances TST-011's "audit emission almost never asserted" pressure for the user-mutation surface.
+- **AC evaluation:** AC#1 (fix per Suggested fix — emit the named events with before/after) ✓; AC#2 (FAIL-pre/PASS-post witness) ✓ 5 FAIL-pre → all PASS-post; AC#3 (`pnpm test` 1586 + `pnpm test:e2e` 2/2 green) ✓; AC#4 (audit-sensitive path → audit_logs before/after) ✓; AC#5 ([closes OBS-004]) ✓; AC#6 (diff confined to File scope = users/ + audit/ + the SEC-003 sibling spec) ✓.
 
 ---
 ### OBS-005 — Role template / institutional role mutations are NOT audited

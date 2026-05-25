@@ -328,3 +328,26 @@ Append a new entry at the bottom after each Claude Code session that touched the
   - **USR-DEL-001 symmetry resisted/deferred:** `checkProjectDependencies()` mirrors `UsersService.checkDependencies()`; USR-DEL-001 inherits the pre-check shape, ConflictException convention, actor-threading, and the answered "yes, hardDelete emits `<ENTITY>_DELETED` with a snapshot" policy. Not implemented (stayed in scope).
 - **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1579** (68 files, +4 net witnesses over d6299cc's 1575), web 579 passed / 14 skipped. `pnpm run test:e2e` 4/4 turbo green (apps/api app e2e, mocked DB, invariant — no Playwright spec touches `/projects/:id/hard`). Unit witnesses FAIL-pre 4/4 → PASS-post; real-DB W-2 pass.
 - **Open questions for next session:** USR-DEL-001 + DAT-007 share the `check<Entity>Dependencies` + `<ENTITY>_DELETED` pattern — candidate paired session. DAT-008 (Leave.user Cascade — same Phase 10 Cluster G cascade theme, retention obligation). Frontend `projects/[id]/page.tsx` hardDelete now can receive a 409 ConflictException (was a 500 on FK violation) — UX copy could surface the dependency list, but that's web scope, out of this task.
+
+
+## 2026-05-25 — OBS-004 closed (4 remaining user-mutation audit emitters: USER_REACTIVATED + DEPARTMENT_CHANGED + SERVICE_MEMBERSHIP_CHANGED + PASSWORD_RESET_BY_ADMIN rename)
+
+- **Session ID:** 2026-05-25-obs-004
+- **Tasks closed:** OBS-004 (Phase 2, Cluster A — claude-only). Completes the partial closure left by AUD-EMIT-001 (ffc4cf4).
+- **Tasks moved to BLOCKED:** none.
+- **Commits:** `42e1a40` (IN_PROGRESS anchor), `330a8eb` (fix — `[closes OBS-004]`), `<pending>` (closeout).
+- **Counter:** no count change — OBS-004 was already in the finding totals; only its Status flipped (coherence checked-set 13→14 DONE/VERIFIED).
+- **Duration:** ~50 minutes
+- **Design choices (4):**
+  - **Enum for all four.** Extended AuditAction + ENTITY_TYPE_BY_ACTION='User'. Advances [[OBS-024]]'s enum side — the only free-string this module emitted ('PASSWORD_RESET_ADMIN') is now enum.
+  - **PASSWORD_RESET_BY_ADMIN = case (b)-rename, NOT net-new.** SEC-003 (2763552) already emitted the durable admin-reset row at `users.service.ts:852` as the free-string 'PASSWORD_RESET_ADMIN'; renamed in-place to the enum. SEC-003 gates/no-PII ACs untouched; SEC-003 spec assertion + BACKLOG Learnings updated. Console-parity auditService.log(PASSWORD_CHANGED) at :867 left as-is (OBS-024 dual-sink territory).
+  - **SERVICE_MEMBERSHIP_CHANGED** = full before/after arrays + computed {added, removed}; order-insensitive Set compare (no emit on reorder-only).
+  - **DEPARTMENT_CHANGED** = departmentId before/after; name snapshot deferred (departments aren't hard-deleted like DAT-009's actor case).
+- **Learnings (non-trivial):**
+  - **PROD NAMESPACE CARRY-OVER:** SEC-003 is in prod (ancestor of HEAD 8e4b593) → prod audit_logs may hold legacy `PASSWORD_RESET_ADMIN` rows. OBS-002 immutability blocks backfill, so OBS-024 must alias the two codes at QUERY TIME. Documented in OBS-004 + SEC-003 Learnings.
+  - **One extra include, no new round-trip:** update()'s findUnique gained `userServices.serviceId` for the membership before-snapshot. departmentId/isActive are scalars `include` already returns — no further query change.
+  - **AUD-EMIT-001 no-op fixture adjusted (non-additive edit):** its `does not emit when neither roleId nor isActive changes` test updated departmentId='dept-x' on a user with no departmentId — now a real DEPARTMENT_CHANGED transition. Set existing departmentId='dept-x' to keep it a genuine no-op. Behavior unchanged; fixture follows the emission-set expansion.
+  - **[[TST-011]] incidental:** +7 audit-emission assertions (4 positive / 3 negative across the 4 events) + 4 entityType pairs in audit.service.spec. Advances TST-011's user-mutation surface.
+- **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1586** (68 files, +7 net witnesses over DAT-007's 1579), web 579 passed / 14 skipped. `pnpm run test:e2e` 2/2 (api app e2e, mocked DB, invariant — no Playwright spec touches the users-update / audit_logs surface; AUD-EMIT-001/DAT-007 precedent). Witness FAIL-pre 5/5 (4 OBS-004 positives + renamed SEC-003 assertion) → PASS-post; negatives vacuous pre+post. TST-DB-001 still applies (vitest mocks 'database'; no real audit_logs row asserted).
+- **Invariant priority call:** none forced — the only collision (existing AUD-EMIT-001 no-op fixture vs the new DEPARTMENT_CHANGED emit) was resolved by tightening the fixture, not weakening an invariant.
+- **Open questions for next session:** OBS-003 (leave-approval before/after + role snapshot) remains the last Phase 2 Cluster A audit-emitter TODO. OBS-005 (RBAC role/template mutations unaudited) is the natural follow-on. OBS-024 now carries the explicit PASSWORD_RESET_ADMIN↔PASSWORD_RESET_BY_ADMIN query-time-alias requirement.
