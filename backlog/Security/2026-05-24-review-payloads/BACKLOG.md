@@ -1333,7 +1333,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### OBS-021 — Self-approval audited; cancellation / cancellation-request / update / delete are not
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -1370,8 +1370,17 @@ Emit LEAVE_CANCELLATION_REQUESTED, LEAVE_CANCELLED, LEAVE_UPDATED (with before/a
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** Partial closure: DAT-001 (b14cdd5, 2026-05-24) wired AuditPersistenceService.log for approve/reject/cancel transactional paths — LEAVE_CANCELLED is emitted. Remaining scope for OBS-021: LEAVE_CANCELLATION_REQUESTED, LEAVE_UPDATED (date range change), LEAVE_DELETED, LEAVE_BALANCE_ADJUSTED. The self-approval LEAVE_APPROVED via create() still routes through AuditService logger-only (noted in DAT-001 Learnings as out-of-scope).
+**Closed_by:** c45f209
+**Learnings:** Partial closure: DAT-001 (b14cdd5, 2026-05-24) wired AuditPersistenceService.log for approve/reject/cancel transactional paths — LEAVE_CANCELLED was emitted (as a free-string). Remaining scope now shipped in c45f209.
+- **5 new enum members** (LEAVE_CANCELLED promoted from free-string + 4 net-new: LEAVE_CANCELLATION_REQUESTED, LEAVE_UPDATED, LEAVE_DELETED, LEAVE_BALANCE_ADJUSTED), all ENTITY_TYPE_BY_ACTION='Leave'. **LEAVE_CANCELLED promotion = zero prod-data impact** (identical value 'LEAVE_CANCELLED'; unlike OBS-004's PASSWORD_RESET rename, no carry-over alias needed) and **advances [[OBS-024]]** — the only LEAVE_* free-string in-module is now an enum.
+- **Existence check passed:** all four target workflows exist (`update()`, `remove()`, `requestCancel()`, `upsertBalance()`/`deleteBalance()`) — none invented.
+- **LEAVE_DELETED: leaves are HARD-deleted** (`prisma.leave.delete`, no soft-delete column). Full before-snapshot in payload (DAT-007 PROJECT_DELETED precedent). **No FK interaction surprise:** `audit_logs.entityId` is a plain string column, not a FK to `leave`, so the pending d6299cc audit_logs FK NoAction does NOT block leave deletion — the audit row simply outlives the deleted leave (the intended behavior).
+- **upsertBalance single-hoisted emit:** 3 return points (user-upsert / global-update / global-create-with-retry) route through one `emitAdjustment()` closure so the event fires exactly once on success, never on the failed-create-before-retry. **before = admin's decision-time perspective** (pre-read), not last-observed-state if the retry races — documented, intentional. User-branch pre-read = 1 extra roundtrip (flagged).
+- **Cross-connection audit caveat:** remove()/requestCancel() wrap mutation+audit in `$transaction`, but AuditPersistenceService uses its own prisma client (not `tx`) — commit is gated on the audit promise but they are NOT a single atomic unit. DAT-001 accepted this; mirrored, not claimed-fixed.
+- **rejectCancellation deliberately NOT audited** — not in the Suggested-fix list (which names exactly 5 events). It IS a state transition (CANCELLATION_REQUESTED→APPROVED) and is a candidate follow-up, but shipping it would be inventing scope. **APPROVE_CANCELLATION merged into LEAVE_CANCELLED** via `before.status` (the cancel() path handles both APPROVED→cancel and CANCELLATION_REQUESTED→cancel).
+- **totalDays is Decimal(6,2)** — before/after stored as `.toString()` (DAT-005 float-drift lesson).
+- **[[TST-011]] delta:** +8 leaves.service witnesses (5 positive emit + 3 negative no-emit invariants) + 5 entityType pairs in audit.service.spec.
+- **AC evaluation:** AC#1 ✓ (all 5 named events emitted with before/after); AC#2 ✓ (5 FAIL-pre positives + audit-table → PASS-post; negatives are invariant guards vacuous pre-fix); AC#3 ✓ (`pnpm test` api 1618 / web 579, `test:e2e` 2/2); AC#4 ✓ (leave mutations → audit_logs before/after); AC#5 ✓; AC#6 ✓ (diff = leaves/ + audit/ + controller wiring, 6 files).
 
 ---
 ### OBS-024 — Two divergent audit codebases (enum vs free-string) — no schema for action codes

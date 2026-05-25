@@ -455,3 +455,27 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **[[TST-011]] delta:** +2 leaves.service witnesses (approve/reject enriched payload).
 - **Cour-des-Comptes question:** "who approved leave X, with which role at the time?" → **YES**, answerable. `SELECT payload->'actor' FROM audit_logs WHERE action='LEAVE_APPROVED' AND "entityId"='X'` returns `{id, roleCode, templateKey, permissions[]}` snapshotted at decision time.
 - **Open questions for next session:** OBS-021 (LEAVE_* lifecycle: UPDATE/DELETE/CANCELLATION_REQUESTED/BALANCE_ADJUSTED) is task 2/4 — will reuse `buildActorSnapshot` and promote the DAT-001 `LEAVE_CANCELLED` free-string to an enum member (same value = zero prod-data impact; advisor point #4).
+
+## 2026-05-25 — OBS-021 closed (LEAVE_* lifecycle audit: UPDATED + DELETED + CANCELLATION_REQUESTED + BALANCE_ADJUSTED + LEAVE_CANCELLED enum promotion)
+
+- **Session ID:** 2026-05-25-obs-chain (task 2/4)
+- **Tasks closed:** OBS-021 (Phase 2, Cluster A — claude-only, severity important). Second task of the autonomous chain; reuses the OBS-003 buildActorSnapshot helper.
+- **Tasks moved to BLOCKED:** none.
+- **Commits:** `0156434` (IN_PROGRESS anchor), `c45f209` (fix — `[closes OBS-021]`), `<pending>` (closeout).
+- **Counter:** no count change — OBS-021 already in finding totals; Status flipped (coherence checked-set 18→19 DONE/VERIFIED).
+- **Duration:** ~70 minutes
+- **Enum members added (5):** LEAVE_CANCELLED (promoted from DAT-001 free-string, identical value), LEAVE_CANCELLATION_REQUESTED, LEAVE_UPDATED, LEAVE_DELETED, LEAVE_BALANCE_ADJUSTED — all ENTITY_TYPE_BY_ACTION='Leave'.
+- **Design choices:**
+  - **Existence check first** (grep): all four target workflows exist — none invented. `update()`, `remove()` (hard delete), `requestCancel()`, `upsertBalance()`/`deleteBalance()`.
+  - **upsertBalance single hoisted emit:** 3 return points → one `emitAdjustment()` closure called on each successful return; fires exactly once, never on the global-branch failed-create-before-retry. before = admin decision-time perspective (pre-read, 1 extra roundtrip flagged), not last-observed-state on a race.
+  - **rejectCancellation deliberately omitted** (not in the 5-event Suggested-fix list; candidate follow-up, not invented scope). APPROVE_CANCELLATION merged into LEAVE_CANCELLED via before.status.
+  - **LEAVE_CANCELLED promotion = zero prod-data impact** (value unchanged) — cleaner than OBS-004's PASSWORD_RESET rename which needed a query-time alias. Advances [[OBS-024]].
+- **Learnings (non-trivial):**
+  - **No FK surprise on LEAVE_DELETED:** `audit_logs.entityId` is a plain TEXT column, not a FK to `leave` — the pending d6299cc audit_logs FK NoAction does NOT block leave hard-delete; the audit row outlives the deleted leave (intended). The cross-task interaction the chain contract flagged turned out to be a non-issue.
+  - **Cross-connection audit caveat (carried from DAT-001):** remove()/requestCancel() wrap mutation+audit in `$transaction`, but AuditPersistenceService uses its own prisma client — commit gated on the audit promise but NOT a single atomic unit. Mirrored DAT-001, did NOT claim to fix.
+  - **cancel() enum promotion validated against its DAT-001 test** — the test asserts `action: 'LEAVE_CANCELLED'` as a string literal; `AuditAction.LEAVE_CANCELLED === 'LEAVE_CANCELLED'` so it still passes (ran it, didn't assume).
+  - **Controller signatures are positional:** threading `@CurrentUser('role')` + `@Req()` into update/remove shifted args, breaking 2 controller-spec `toHaveBeenCalledWith` assertions — fixed there (caught by the spec going red).
+- **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1618** (69 files, +8 over OBS-003's 1610), web 579 passed / 14 skipped. `pnpm run test:e2e` api app e2e 2/2 (mocked DB — no Playwright spec touches the leaves/audit surface; OBS-003/OBS-006 precedent). Witnesses FAIL-pre 5 positive + audit-table → PASS-post; 3 negatives vacuous pre-fix (invariant guards).
+- **[[TST-011]] delta:** +8 leaves.service witnesses + 5 entityType pairs (audit.service.spec).
+- **Cour-des-Comptes question:** "when was leave Y modified, by whom, what changed?" → **YES.** `SELECT action, "actorId", payload->'before', payload->'after' FROM audit_logs WHERE "entityId"='Y' ORDER BY "createdAt"` now returns LEAVE_UPDATED/CANCELLATION_REQUESTED/CANCELLED/DELETED rows with before/after. Balance changes via LEAVE_BALANCE_ADJUSTED. (rejectCancellation is the one un-audited transition — noted for follow-up.)
+- **Open questions for next session:** OBS-007 (data exports → DATA_EXPORTED) is task 3/4 — different module shape (format/scope/dateRange/recordCount). Pre-flight grep export endpoints BEFORE anchoring; if >4 export controllers, partial-close to planning-export only to respect the 8-file cap (advisor point #5).
