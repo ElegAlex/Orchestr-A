@@ -479,3 +479,27 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **[[TST-011]] delta:** +8 leaves.service witnesses + 5 entityType pairs (audit.service.spec).
 - **Cour-des-Comptes question:** "when was leave Y modified, by whom, what changed?" → **YES.** `SELECT action, "actorId", payload->'before', payload->'after' FROM audit_logs WHERE "entityId"='Y' ORDER BY "createdAt"` now returns LEAVE_UPDATED/CANCELLATION_REQUESTED/CANCELLED/DELETED rows with before/after. Balance changes via LEAVE_BALANCE_ADJUSTED. (rejectCancellation is the one un-audited transition — noted for follow-up.)
 - **Open questions for next session:** OBS-007 (data exports → DATA_EXPORTED) is task 3/4 — different module shape (format/scope/dateRange/recordCount). Pre-flight grep export endpoints BEFORE anchoring; if >4 export controllers, partial-close to planning-export only to respect the 8-file cap (advisor point #5).
+
+## 2026-05-25 — OBS-007 closed (DATA_EXPORTED on planning ICS export; partial-close, CSV exports → OBS-026 follow-up)
+
+- **Session ID:** 2026-05-25-obs-chain (task 3/4)
+- **Tasks closed:** OBS-007 (Phase 2, Cluster A — claude-only, severity important). **PARTIAL CLOSE** scoped to the planning-export module (finding's named File + most RGPD-relevant).
+- **Tasks filed:** OBS-026 (project CSV exports tasks/milestones — deferred for the 8-file cap, severity suggestion).
+- **Tasks moved to BLOCKED:** none.
+- **Commits:** `ad876e9` (IN_PROGRESS anchor), `4711097` (fix — `[closes OBS-007]`), `<pending>` (closeout + OBS-026 filing).
+- **Counter:** OBS-007 Status flipped (coherence checked-set 19→20 DONE/VERIFIED). OBS-026 filed as TODO (not in checked-set; +1 to total findings).
+- **Duration:** ~45 minutes
+- **Enum members added (1):** DATA_EXPORTED; ENTITY_TYPE_BY_ACTION union widened `+'Export'` (exhaustive-Record compile-forced).
+- **Design choices:**
+  - **Partial-close decision (file cap):** enumerated 3 file-format egress endpoints across 3 modules (planning ICS, tasks CSV, milestones CSV). All three = ~11 files > 8-file cap. Shipped planning-export only (named File + personal-data egress); filed OBS-026 for the CSV pair. Per advisor point #5 + chain contract.
+  - **Single DATA_EXPORTED with `scope` in payload** (Suggested-fix default), not per-domain enums.
+  - **recordCount exact** (events+leaves+telework lengths), materialized not estimated.
+  - **Fire-and-forget** (read-path nuance, OBS-006): export is a GET; audit hiccup must not 500 it.
+- **Learnings (non-trivial):**
+  - **The `@Req()` insertion is positional:** added at param 2 (required) before the optional `@Query`/`@Res` params — valid (required-before-optional). exportIcs is NOT directly tested in planning-export.controller.spec (only previewImport/importIcs are), so no controller-spec churn.
+  - **AuditModule is @Global** → AuditPersistenceService injectable into PlanningExportService with no module edit (OBS-012 precedent).
+  - **No new free-string** — DATA_EXPORTED enum-from-creation, no [[OBS-024]] carry-over.
+- **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1620** (+2 over OBS-021's 1618), web 579 passed / 14 skipped. `pnpm run test:e2e` 2/2 (mocked DB; no Playwright spec touches the export/audit surface). Witnesses FAIL-pre 1 positive + audit-table → PASS-post; fire-and-forget resilience test vacuous pre-fix.
+- **[[TST-011]] delta:** +2 planning-export.service witnesses + 1 entityType pair (audit.service.spec).
+- **Cour-des-Comptes question:** "who exported planning data on date Z?" → **YES** for the planning ICS export. `SELECT "actorId", payload->>'scope', payload->>'recordCount', payload->'dateRange', "createdAt" FROM audit_logs WHERE action='DATA_EXPORTED'`. **NOT yet** for tasks/milestones CSV (→ [[OBS-026]]).
+- **Open questions for next session:** OBS-018 (backfill/seed scripts → SYSTEM_BACKFILL) is task 4/4 (final). Scripts don't run under vitest → extract a testable emission helper (AUD-EMIT-001 / OBS-002+DAT-009 precedent for the manual-verification divergence).

@@ -1204,7 +1204,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### OBS-007 — Data exports (ICS/CSV/XLSX) are NOT audited
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -1241,8 +1241,52 @@ Emit DATA_EXPORTED { actorId, format, scope, dateRange, recordCount, ip } at eac
 pnpm test apps/api/src/planning-export/planning-export.service.spec.ts  # may need creation if missing
 ```
 
+**Closed_by:** 4711097
+**Learnings:** **PARTIAL CLOSE — planning-export only.** Enumerated 3 file-format egress endpoints across 3 modules: (1) `planning-export.controller GET ics` → exportIcs (events+leaves+telework, **personal data**); (2) `tasks.controller GET project/:id/export` → exportProjectTasksCsv; (3) `milestones.controller GET project/:id/export` → exportProjectMilestonesCsv. Instrumenting all three would touch ~11 files (3 services + 3 controllers + specs + audit) — exceeds the chain's **8-file-per-task cap**. Shipped the planning ICS export (the finding's named File `planning-export.service.ts` AND the most RGPD-relevant: who's on leave/telework when). The two project-data CSV exports are filed as **[[OBS-026]]** follow-up.
+- **One AuditAction.DATA_EXPORTED** (entityType 'Export', new exhaustive-Record subject type) with `scope` in the payload (Suggested-fix default — single enum, not per-domain). Payload = `{ format:'ics', scope:'planning', dateRange:{start,end}, recordCount, ip, ua }` + actorId.
+- **recordCount is exact** (`events.length + leaves.length + teleworkDays.length`), computed at egress time from the materialized rows — not estimated from the query (the ICS isn't streamed, it's built in memory then returned).
+- **Fire-and-forget** (read-path nuance, OBS-006): an export is a GET; a transient audit hiccup must not 500 a successful export. void + `.catch(logger.error)`. Witness locks resilience (export resolves when log() rejects).
+- **[[OBS-024]] enum side advanced:** DATA_EXPORTED is enum-from-creation (no free-string), no prod-namespace carry-over.
+- **[[TST-011]] delta:** +2 planning-export.service witnesses (1 positive payload, 1 fire-and-forget resilience) + 1 entityType pair (audit.service.spec).
+- **AC evaluation:** AC#1 ✓ (DATA_EXPORTED per Suggested fix, planning scope); AC#2 ✓ (FAIL-pre → PASS-post); AC#3 ✓ (`pnpm test` api 1620 / web 579, `test:e2e` 2/2); AC#4 n/a (export is a read, not an audit-sensitive *mutation* — but a DATA_EXPORTED audit_logs row is written anyway for RGPD); AC#5 ✓; AC#6 ✓ (5 files, planning-export + audit). **Partial-close cross-link → [[OBS-026]]** for tasks/milestones CSV.
+
+---
+### OBS-026 — Project CSV exports (tasks / milestones) are NOT audited
+
+- **Status:** TODO
+- **Phase:** 2
+- **Cluster:** A
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** suggestion
+- **Category:** observability · traceability_audit
+- **File:** `apps/api/src/tasks/tasks.service.ts` + `apps/api/src/milestones/milestones.service.ts`
+- **Source:** OBS-007 partial-close (chain session 2026-05-25)
+
+**Description:**
+OBS-007 instrumented the planning ICS export (DATA_EXPORTED) but, to respect the 8-file-per-task cap, deferred the two project-data CSV egress endpoints: `tasks.controller GET project/:projectId/export` → `tasksService.exportProjectTasksCsv` and `milestones.controller GET project/:projectId/export` → `milestonesService.exportProjectMilestonesCsv`. These egress task/milestone rows (including assignee names = personal data) with no audit trace.
+
+**Root cause:**
+Export endpoints in the tasks/milestones modules not yet wired to AuditPersistenceService.
+
+**Suggested fix:**
+Reuse the OBS-007 DATA_EXPORTED enum + 'Export' entityType. Emit at each export path with payload `{ format:'csv', scope:'tasks'|'milestones', subject:{projectId}, recordCount, ip }`. recordCount = CSV row count minus the header line (services already build the full CSV string). Fire-and-forget (read path, OBS-006/OBS-007 precedent). Thread ip/ua from the controllers via extractMeta.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code, a corresponding entry is created in `audit_logs`.
+5. Commit message includes `[closes OBS-026]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm test apps/api/src/tasks/tasks.service.spec.ts apps/api/src/milestones/milestones.service.spec.ts
+```
+
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:** Filed by OBS-007's partial-close. Cross-link: [[OBS-007]]. The DATA_EXPORTED enum + 'Export' entityType already exist (shipped in 4711097) — this is purely additional emit sites, no new enum.
 
 ---
 ### OBS-018 — Backfill / seed scripts have no persisted audit trail
