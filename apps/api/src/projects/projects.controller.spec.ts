@@ -421,16 +421,22 @@ describe('ProjectsController', () => {
   });
 
   describe('hardDelete', () => {
-    it('should permanently delete a project', async () => {
+    const caller = {
+      id: 'admin-1',
+      role: { id: 'role-1', code: 'ADMIN', templateKey: 'ADMIN' },
+    } as any;
+
+    it('should permanently delete a project and thread the actor', async () => {
       mockProjectsService.hardDelete.mockResolvedValue({
         message: 'Projet supprimé définitivement',
       });
 
-      const result = await controller.hardDelete('project-id-1');
+      const result = await controller.hardDelete('project-id-1', caller);
 
       expect(result.message).toBe('Projet supprimé définitivement');
       expect(mockProjectsService.hardDelete).toHaveBeenCalledWith(
         'project-id-1',
+        { id: 'admin-1', role: 'ADMIN' },
       );
     });
 
@@ -439,9 +445,9 @@ describe('ProjectsController', () => {
         new NotFoundException('Projet introuvable'),
       );
 
-      await expect(controller.hardDelete('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.hardDelete('nonexistent', caller),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

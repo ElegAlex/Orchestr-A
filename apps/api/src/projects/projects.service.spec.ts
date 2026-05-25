@@ -39,13 +39,21 @@ describe('ProjectsService', () => {
     user: {
       findUnique: vi.fn(),
     },
+    task: {
+      count: vi.fn(),
+    },
+    document: {
+      count: vi.fn(),
+    },
     timeEntry: {
       findMany: vi.fn(),
+      count: vi.fn(),
     },
     projectSnapshot: {
       create: vi.fn(),
       findFirst: vi.fn(),
       findMany: vi.fn(),
+      count: vi.fn(),
     },
     $transaction: vi.fn(),
   };
@@ -897,11 +905,19 @@ describe('ProjectsService', () => {
   // HARD DELETE
   // ============================================
   describe('hardDelete', () => {
-    it('should permanently delete a project', async () => {
+    const noDependents = () => {
+      mockPrismaService.task.count.mockResolvedValue(0);
+      mockPrismaService.projectSnapshot.count.mockResolvedValue(0);
+      mockPrismaService.document.count.mockResolvedValue(0);
+      mockPrismaService.timeEntry.count.mockResolvedValue(0);
+    };
+
+    it('should permanently delete a project with no blocking dependents', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      noDependents();
       mockPrismaService.project.delete.mockResolvedValue(mockProject);
 
-      const result = await service.hardDelete('project-1');
+      const result = await service.hardDelete('project-1', { id: 'user-1' });
 
       expect(result.message).toBe('Projet supprimé définitivement');
       expect(mockPrismaService.project.delete).toHaveBeenCalledWith({
@@ -912,9 +928,97 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.hardDelete('nonexistent')).rejects.toThrow(
-        NotFoundException,
+      await expect(
+        service.hardDelete('nonexistent', { id: 'user-1' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    // ── DAT-007 witnesses ───────────────────────────────────────────────
+    // W-1: hard-delete on a Project with blocking dependents (Task /
+    // ProjectSnapshot / Document / TimeEntry) must surface a typed
+    // ConflictException — NOT a raw P2003 FK violation — and must NOT mutate
+    // the Project. FAILS on master (no pre-check; delete proceeds & cascades).
+    it('W-1: throws ConflictException and does not delete when tasks exist', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      noDependents();
+      mockPrismaService.task.count.mockResolvedValue(3);
+
+      await expect(
+        service.hardDelete('project-1', { id: 'user-1' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(mockPrismaService.project.delete).not.toHaveBeenCalled();
+    });
+
+    it('W-1: ConflictException enumerates every blocking dependency type with counts', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.task.count.mockResolvedValue(2);
+      mockPrismaService.projectSnapshot.count.mockResolvedValue(5);
+      mockPrismaService.document.count.mockResolvedValue(1);
+      mockPrismaService.timeEntry.count.mockResolvedValue(7);
+
+      let caught: ConflictException | undefined;
+      try {
+        await service.hardDelete('project-1', { id: 'user-1' });
+      } catch (e) {
+        caught = e as ConflictException;
+      }
+      expect(caught).toBeInstanceOf(ConflictException);
+      const body = caught!.getResponse() as {
+        dependencies: { type: string; count: number }[];
+      };
+      const byType = Object.fromEntries(
+        body.dependencies.map((d) => [d.type, d.count]),
       );
+      expect(byType).toMatchObject({
+        TASKS: 2,
+        SNAPSHOTS: 5,
+        DOCUMENTS: 1,
+        TIME_ENTRIES: 7,
+      });
+      expect(mockPrismaService.project.delete).not.toHaveBeenCalled();
+    });
+
+    it('W-1: does NOT delete when only snapshots/documents/timeEntries exist (no tasks)', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.task.count.mockResolvedValue(0);
+      mockPrismaService.projectSnapshot.count.mockResolvedValue(4);
+      mockPrismaService.document.count.mockResolvedValue(0);
+      mockPrismaService.timeEntry.count.mockResolvedValue(0);
+
+      await expect(
+        service.hardDelete('project-1', { id: 'user-1' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(mockPrismaService.project.delete).not.toHaveBeenCalled();
+    });
+
+    // W-3: a permitted hard-delete must persist a final PROJECT_DELETED audit
+    // row carrying a column snapshot of the project before the row is erased,
+    // so the lifecycle event survives in the immutable audit trail.
+    // FAILS on master (hardDelete emits nothing to AuditPersistenceService).
+    it('W-3: emits PROJECT_DELETED with a column snapshot before deleting', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      noDependents();
+      mockPrismaService.project.delete.mockResolvedValue(mockProject);
+
+      await service.hardDelete('project-1', { id: 'actor-9' });
+
+      expect(mockAuditPersistenceService.log).toHaveBeenCalledTimes(1);
+      const call = mockAuditPersistenceService.log.mock.calls[0][0];
+      expect(call.action).toBe('PROJECT_DELETED');
+      expect(call.entityType).toBe('Project');
+      expect(call.entityId).toBe('project-1');
+      expect(call.actorId).toBe('actor-9');
+      expect(call.payload.snapshot).toMatchObject({
+        id: 'project-1',
+        name: 'Test Project',
+        status: ProjectStatus.ACTIVE,
+      });
+      // snapshot is captured before the row is destroyed
+      const logOrder =
+        mockAuditPersistenceService.log.mock.invocationCallOrder[0];
+      const deleteOrder =
+        mockPrismaService.project.delete.mock.invocationCallOrder[0];
+      expect(logOrder).toBeLessThan(deleteOrder);
     });
   });
 

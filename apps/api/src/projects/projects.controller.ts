@@ -274,8 +274,14 @@ export class ProjectsController {
     status: 404,
     description: 'Projet introuvable',
   })
-  hardDelete(@Param('id', ParseUUIDPipe) id: string) {
-    return this.projectsService.hardDelete(id);
+  hardDelete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.projectsService.hardDelete(id, {
+      id: user.id,
+      role: user.role?.code ?? undefined,
+    });
   }
 
   @Post(':id/archive')

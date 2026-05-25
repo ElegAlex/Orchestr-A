@@ -699,9 +699,71 @@ export class ProjectsService {
   }
 
   /**
-   * Supprimer définitivement un projet
+   * Vérifie les dépendances qui bloquent une suppression définitive (DAT-007).
+   *
+   * Single source of truth for the hard-delete dependency list. Mirrors
+   * `UsersService.checkDependencies`. The four counted relations are exactly the
+   * FK edges promoted to ON DELETE RESTRICT in migration
+   * 20260525200000_dat007_project_fk_restrict_preserve_history — so this
+   * pre-check and the DB constraints block on the same set, and a blocking
+   * Project surfaces as a typed ConflictException instead of a raw P2003.
    */
-  async hardDelete(id: string) {
+  async checkProjectDependencies(id: string): Promise<{
+    projectId: string;
+    canDelete: boolean;
+    dependencies: { type: string; count: number; description: string }[];
+  }> {
+    const [tasks, snapshots, documents, timeEntries] = await Promise.all([
+      this.prisma.task.count({ where: { projectId: id } }),
+      this.prisma.projectSnapshot.count({ where: { projectId: id } }),
+      this.prisma.document.count({ where: { projectId: id } }),
+      this.prisma.timeEntry.count({ where: { projectId: id } }),
+    ]);
+
+    const dependencies: { type: string; count: number; description: string }[] =
+      [];
+    if (tasks > 0) {
+      dependencies.push({
+        type: 'TASKS',
+        count: tasks,
+        description: `${tasks} tâche(s) rattachée(s)`,
+      });
+    }
+    if (snapshots > 0) {
+      dependencies.push({
+        type: 'SNAPSHOTS',
+        count: snapshots,
+        description: `${snapshots} instantané(s) de progression`,
+      });
+    }
+    if (documents > 0) {
+      dependencies.push({
+        type: 'DOCUMENTS',
+        count: documents,
+        description: `${documents} document(s)`,
+      });
+    }
+    if (timeEntries > 0) {
+      dependencies.push({
+        type: 'TIME_ENTRIES',
+        count: timeEntries,
+        description: `${timeEntries} saisie(s) de temps`,
+      });
+    }
+
+    return { projectId: id, canDelete: dependencies.length === 0, dependencies };
+  }
+
+  /**
+   * Supprimer définitivement un projet (DAT-007).
+   *
+   * Refuse the delete if any history-bearing dependent exists (the RESTRICT FKs
+   * would raise P2003 anyway — checkProjectDependencies turns that into a clean
+   * ConflictException recommending archive). Before erasing the row, persist a
+   * PROJECT_DELETED audit entry with a column snapshot of the project, so the
+   * lifecycle event survives in the immutable audit trail (d6299cc chain).
+   */
+  async hardDelete(id: string, user: ProjectMutationUser) {
     const project = await this.prisma.project.findUnique({
       where: { id },
     });
@@ -709,6 +771,46 @@ export class ProjectsService {
     if (!project) {
       throw new NotFoundException('Projet introuvable');
     }
+
+    const { canDelete, dependencies } =
+      await this.checkProjectDependencies(id);
+    if (!canDelete) {
+      throw new ConflictException({
+        message:
+          'Impossible de supprimer définitivement ce projet : des données historiques y sont rattachées. Archivez-le plutôt.',
+        dependencies,
+      });
+    }
+
+    // Final snapshot to the audit trail BEFORE the row is erased (audit
+    // suggested-fix b). Plain await — not transactional with the delete — to
+    // match the existing archive()/unarchive() emission pattern; the audit
+    // pipeline (AuditPersistenceService) is out of DAT-007 scope.
+    await this.auditPersistence.log({
+      action: 'PROJECT_DELETED',
+      entityType: 'Project',
+      entityId: id,
+      actorId: user.id,
+      payload: {
+        snapshot: {
+          id: project.id,
+          name: project.name,
+          description: project.description,
+          status: project.status,
+          priority: project.priority,
+          startDate: project.startDate,
+          endDate: project.endDate,
+          budgetHours: project.budgetHours,
+          createdById: project.createdById,
+          managerId: project.managerId,
+          sponsorId: project.sponsorId,
+          archivedAt: project.archivedAt,
+          archivedById: project.archivedById,
+          createdAt: project.createdAt,
+          updatedAt: project.updatedAt,
+        },
+      },
+    });
 
     await this.prisma.project.delete({
       where: { id },

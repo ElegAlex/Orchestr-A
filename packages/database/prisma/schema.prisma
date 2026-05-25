@@ -190,7 +190,7 @@ model ProjectSnapshot {
   date               DateTime @default(now())
   createdAt          DateTime @default(now())
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Restrict) // DAT-007: Restrict (was Cascade) — progress history must not be erased by a Project hard-delete
 
   @@index([projectId, date])
   @@index([date])
@@ -294,7 +294,7 @@ model Task {
   updatedAt              DateTime   @updatedAt
 
   // Relations
-  project             Project?                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project             Project?                 @relation(fields: [projectId], references: [id], onDelete: Restrict) // DAT-007: Restrict (was Cascade) — a Project with tasks cannot be hard-deleted; archive it instead
   epic                Epic?                    @relation(fields: [epicId], references: [id], onDelete: SetNull)
   milestone           Milestone?               @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   assignee            User?                    @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
@@ -419,7 +419,7 @@ model TimeEntry {
   user       User?       @relation("TimeEntryUser", fields: [userId], references: [id], onDelete: Cascade)
   thirdParty ThirdParty? @relation(fields: [thirdPartyId], references: [id], onDelete: Cascade)
   declaredBy User        @relation("TimeEntryDeclaredBy", fields: [declaredById], references: [id], onDelete: Restrict)
-  project    Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  project    Project?    @relation(fields: [projectId], references: [id], onDelete: Restrict) // DAT-007: Restrict (was SetNull) — logged time must not silently lose its Project link on hard-delete
   task       Task?       @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   @@index([userId, date])
@@ -746,7 +746,7 @@ model Document {
   createdAt   DateTime @default(now())
 
   // Relations
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Restrict) // DAT-007: Restrict (was Cascade) — project documents must not be erased by a Project hard-delete
 
   @@map("documents")
 }
