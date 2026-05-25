@@ -149,7 +149,7 @@ describe('AuditService', () => {
       expect(persistence.log).toHaveBeenCalledWith(
         expect.objectContaining({
           action: AuditAction.LOGIN_SUCCESS,
-          entityType: 'SecurityEvent',
+          entityType: 'Auth', // OBS-001 refined DAT-002's flat 'SecurityEvent'
           entityId: 'user-1',
           actorId: 'user-1',
           payload: expect.objectContaining({
@@ -177,7 +177,7 @@ describe('AuditService', () => {
       expect(persistence.log).toHaveBeenCalledWith(
         expect.objectContaining({
           action: AuditAction.ROLE_CHANGE,
-          entityType: 'SecurityEvent',
+          entityType: 'User', // OBS-001 refined DAT-002's flat 'SecurityEvent'
           entityId: 'user-2',
           actorId: 'admin-1',
         }),
@@ -198,12 +198,132 @@ describe('AuditService', () => {
       expect(persistence.log).toHaveBeenCalledWith(
         expect.objectContaining({
           action: AuditAction.LOGIN_FAILURE,
-          entityType: 'SecurityEvent',
+          entityType: 'Auth', // OBS-001 refined DAT-002's flat 'SecurityEvent'
           entityId: 'unknown',
           actorId: null,
           payload: expect.objectContaining({ success: false }),
         }),
       );
+    });
+
+    // OBS-001 (a) — per-action entityType. The single 'SecurityEvent' constant
+    // from DAT-002 is refined to subject types so an auditor can filter by what
+    // the event is about: User for account mutations, Auth for login/access,
+    // Leave for leave decisions.
+    it('should stamp entityType per action (User / Auth / Leave)', () => {
+      vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+
+      const expectations: Array<[AuditAction, string]> = [
+        [AuditAction.ROLE_CHANGE, 'User'],
+        [AuditAction.USER_DEACTIVATED, 'User'],
+        [AuditAction.PASSWORD_CHANGED, 'User'],
+        [AuditAction.REGISTER, 'User'],
+        [AuditAction.LOGIN_SUCCESS, 'Auth'],
+        [AuditAction.LOGIN_FAILURE, 'Auth'],
+        [AuditAction.ACCESS_DENIED, 'Auth'],
+        [AuditAction.LEAVE_APPROVED, 'Leave'],
+        [AuditAction.LEAVE_REJECTED, 'Leave'],
+      ];
+
+      for (const [action, expectedEntityType] of expectations) {
+        persistence.log.mockClear();
+        service.log({ action, userId: 'u1', success: true });
+        expect(persistence.log).toHaveBeenCalledWith(
+          expect.objectContaining({ action, entityType: expectedEntityType }),
+        );
+      }
+    });
+
+    // OBS-001 (b) — LOGIN_FAILURE subject capture. DAT-002 landed entityId
+    // 'unknown' for anonymous failures; OBS-001 captures the attempted
+    // identifier so an auditor can answer "who was targeted", lowercased and
+    // length-capped.
+    it('should capture LOGIN_FAILURE attemptedEmail as entityId (lowercased, capped)', () => {
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+
+      service.log({
+        action: AuditAction.LOGIN_FAILURE,
+        attemptedEmail: 'Ghost.User@Example.COM',
+        details: 'Failed login attempt',
+        success: false,
+      });
+
+      expect(persistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.LOGIN_FAILURE,
+          entityType: 'Auth',
+          entityId: 'ghost.user@example.com',
+          actorId: null,
+        }),
+      );
+    });
+
+    // OBS-001 (c) — ua + reason enrichment round-trip into the JSONB payload.
+    it('should round-trip ua and reason into the persisted payload', () => {
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+
+      service.log({
+        action: AuditAction.LOGIN_FAILURE,
+        attemptedEmail: 'ghost',
+        ua: 'Mozilla/5.0 (sentinel-UA)',
+        reason: 'invalid_credentials',
+        success: false,
+      });
+
+      expect(persistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            ua: 'Mozilla/5.0 (sentinel-UA)',
+            reason: 'invalid_credentials',
+          }),
+        }),
+      );
+    });
+
+    // OBS-001 (d) — structured before/after for role mutations.
+    it('should carry before.roleCode + after.roleCode in ROLE_CHANGE payload', () => {
+      vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+
+      service.log({
+        action: AuditAction.ROLE_CHANGE,
+        userId: 'admin-1',
+        targetId: 'user-2',
+        before: { roleCode: 'CONTRIBUTEUR' },
+        after: { roleCode: 'MANAGER' },
+        success: true,
+      });
+
+      expect(persistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            before: { roleCode: 'CONTRIBUTEUR' },
+            after: { roleCode: 'MANAGER' },
+          }),
+        }),
+      );
+    });
+
+    // OBS-001 design decision #2 — the mapping MUST never write a bcrypt-shaped
+    // string (the password) into entityId or payload. Even if a caller mistakes
+    // the password for the login identifier, the mapping redacts it.
+    it('should never persist a bcrypt-shaped string for LOGIN_FAILURE', () => {
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+
+      // Simulate a client that fat-fingered the password into the login field:
+      // the new attemptedEmail→entityId path must NOT turn into a hash-leak.
+      const bcryptHash =
+        '$2b$12$abcdefghijklmnopqrstuv.wxyz0123456789ABCDEFGHIJKLMNO';
+      service.log({
+        action: AuditAction.LOGIN_FAILURE,
+        attemptedEmail: bcryptHash,
+        success: false,
+      });
+
+      const persistedArg = persistence.log.mock.calls[0][0];
+      const serialized = JSON.stringify(persistedArg);
+      expect(serialized).not.toMatch(/\$2[aby]\$/);
+      expect(persistedArg.entityId).not.toMatch(/\$2[aby]\$/);
     });
   });
 });

@@ -96,6 +96,12 @@ export class AuthService {
     if (!user) {
       this.auditService.log({
         action: AuditAction.LOGIN_FAILURE,
+        // OBS-001 — the attempted identifier becomes the event subject so an
+        // auditor can answer "who was targeted" on a failed login.
+        attemptedEmail: loginDto.login,
+        ip: meta?.ip,
+        ua: meta?.userAgent,
+        reason: 'invalid_credentials',
         details: `Failed login attempt for login: ${loginDto.login}`,
         success: false,
       });
@@ -161,6 +167,8 @@ export class AuthService {
     this.auditService.log({
       action: AuditAction.LOGIN_SUCCESS,
       userId: user.id,
+      ip: meta?.ip,
+      ua: meta?.userAgent,
       details: `User ${user.login} logged in successfully`,
       success: true,
     });
