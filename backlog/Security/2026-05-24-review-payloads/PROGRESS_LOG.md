@@ -231,3 +231,23 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Commits:** <pending> (filing)
 - **Duration:** ~10 minutes
 - **Learnings:** Filing-only session. AUD-EMIT-001 is the explicit close to the deferred questions from SEC-002 (2026-05-24) and OBS-001 (2026-05-25); both PROGRESS_LOG entries had flagged a missing audit-emitter wiring on user mutations.
+
+
+## 2026-05-25 — AUD-EMIT-001 closed (live ROLE_CHANGE / USER_DEACTIVATED emitters in UsersService)
+
+- **Session ID:** 2026-05-25-aud-emit-001-impl
+- **Tasks closed:** AUD-EMIT-001 (Phase 2, Cluster A)
+- **Tasks moved to BLOCKED:** none
+- **Commits:** 1d5db0a (in_progress anchor), ffc4cf4 (fix + 4 witness tests), <pending> (closeout)
+- **Duration:** ~40 minutes
+- **Learnings (non-trivial):**
+  - **Closes the deferred questions from SEC-002 + OBS-001.** Both had flagged that `users.service.update()/remove()` mutate roleId/isActive with zero audit emission despite ROLE_CHANGE/USER_DEACTIVATED being live-capable since DAT-002 (durable) + OBS-001 (before/after payload schema). This is the emitter-coverage closeout.
+  - **remove() is soft-delete** (`update({ data: { isActive: false } })`) → decision #6 soft path: USER_DEACTIVATED emitted on the active→false flip in both update() and remove(). Hard delete is the separate `hardDelete()` method (out of scope, would need a net-new USER_DELETED enum value).
+  - **before.roleCode enriched the existing query, no extra round-trip.** `update()`'s `findUnique` previously selected nothing (null-check only); added `include: { role: { select: { code: true } } }`. after.roleCode from the post-update read. Gate = `updateData.roleId !== existingUser.roleId` (DTO is roleCode-based; roleId resolved via `resolveAssignableRoleIdByCode`).
+  - **AccessUser carries no `email`** (only id + role) → actor is `caller.id` → `actorId`; decision #5's actorEmail is moot. No DTO/controller signature change to add one (out of scope).
+  - **Emission gated on a defined caller** (SEC-003 callerId-optional precedent). SEC-002 backward-compat tests (caller=undefined, and caller-present cases whose DTOs touch neither field) needed **zero** changes — all 63 users.service tests green.
+  - **Contract decision #4 "catch-degraded pattern" does not match the codebase.** All 6 `auditPersistence.log` sites use plain `await`, no try/catch. Followed the empirical in-file precedent (`resetPassword`).
+  - **No $transaction introduced** — neither update() nor remove() wrap in $tx today; per decision #4 the emission is a plain post-update `await` (DAT-001 $tx territory not entered).
+- **Gates:** `pnpm run build` 3/3 turbo green (tsc). `pnpm run test` 6/6 turbo — **api 1567** tests green (68 files), web 579 passed / 14 skipped. Witness FAIL-pre on (a ROLE_CHANGE / b1 USER_DEACTIVATED-update / b2 USER_DEACTIVATED-remove) with "Number of calls: 0" (assertion, not crash), (c no-op) passed pre+post; PASS-post 4/4.
+- **E2E not run (documented divergence, DAT-005 precedent):** diff confined to an internal service method's audit emission — no controller/route/DTO/UI/permission-matrix surface, no E2E spec asserts `audit_logs`, and the local API/web dev servers were down (ports 3001/4001). Suite is invariant to this change; the 4-case unit witness is the substitute verification.
+- **Open questions for next session:** OBS-003 (leave-approval before/after + role snapshot) remains TODO in Phase 2 Cluster A. The peer-ADMIN mutation guard (SEC-002 / SEC-003 open question) and self-deactivation prevention are still unaddressed (SEC concerns, deliberately out of AUD-EMIT-001 scope).

@@ -604,7 +604,7 @@ pnpm test apps/api/src/audit/audit-persistence.service.spec.ts  # may need creat
 ---
 ### AUD-EMIT-001 — ROLE_CHANGE and USER_DEACTIVATED have no live emitters in UsersService
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** cross-validated
@@ -642,8 +642,14 @@ In UsersService.update(): when roleId in the DTO differs from the loaded user's 
 pnpm test apps/api/src/users/users.service.spec.ts
 ```
 
-**Closed_by:** (empty)
-**Learnings:** (empty)
+**Closed_by:** ffc4cf4
+**Learnings:**
+- **remove() is soft-delete** (`prisma.user.update({ data: { isActive: false } })`), so decision #6's soft path applied: USER_DEACTIVATED is emitted on the active→false flip in both `update()` and `remove()`. No hard-delete branch in remove() (hard delete lives in the separate `hardDelete()`, out of scope).
+- **before.roleCode required enriching the existing `findUnique`**, not an extra query. The `update()` lookup previously selected nothing (used only for the null check); added `include: { role: { select: { code: true } } }`. `after.roleCode` comes from the post-update read (select already carries `role.code`). Gate is `updateData.roleId !== existingUser.roleId` (the DTO is roleCode-based; roleId is resolved via `resolveAssignableRoleIdByCode`).
+- **AccessUser has no `email` field** (only `id` + `role`), so actorEmail cannot be threaded — actor is `caller.id` → `actorId` only. Decision #5's "caller.email if present" is moot.
+- **SEC-002 backward-compat (caller=undefined) needed zero changes.** Emission is gated on a defined `caller` (SEC-003 callerId-optional precedent); the existing update()/remove() tests pass `caller` only in SEC-002 scope cases whose DTOs touch neither roleId nor isActive, so no emission fires for them either way. All 63 users.service tests green.
+- **Contract decision #4 "catch-degraded pattern" does not match the codebase** — all 6 `auditPersistence.log` call sites (leaves×3, projects×2, users.resetPassword×1) use plain `await`, no try/catch. Followed the empirical in-file precedent (resetPassword) rather than chase a non-existent convention.
+- **E2E not run.** Diff is confined to an internal service method's audit emission — no controller/route/DTO/UI/permission-matrix surface, and no E2E spec asserts `audit_logs`. Local API/web dev servers were down (ports 3001/4001), so the suite is invariant to this change. Substitute verification = the 4-case unit witness (FAIL-pre on a/b1/b2, PASS-post) + full `pnpm test` green (API 1567, web 579). Documented divergence per DAT-005 precedent.
 
 ---
 ### OBS-003 — Leave approval audit lacks before/after state and role snapshot
