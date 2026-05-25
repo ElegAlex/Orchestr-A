@@ -1999,7 +1999,7 @@ pnpm test apps/api/src/auth/auth.service.spec.ts  # may need creation if missing
 ---
 ### OBS-008 — Auth audit events do not carry IP/User-Agent despite controller extracting them
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** claude-only
@@ -2036,8 +2036,8 @@ Add ip and userAgent to the AuditService event signature; emit them from all aut
 pnpm test apps/api/src/auth/auth.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 1ff6c9a
+**Learnings:** Fully covered by OBS-001 (1ff6c9a, 2026-05-25). AuthService.login() wires ip/ua/attemptedEmail/reason for LOGIN_FAILURE and ip/ua for LOGIN_SUCCESS via controller's extractMeta(req). Witness tests in OBS-001 spec cover both branches. No additional implementation required; this closure documents the coverage retroactively.
 
 ---
 ### OBS-013 — Failed login details log raw user-supplied 'login' value to stdout
