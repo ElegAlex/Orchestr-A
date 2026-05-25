@@ -169,3 +169,19 @@ Append a new entry at the bottom after each Claude Code session that touched the
   - **No automated test artifact** for a hook-config change (Verification field is `TBD — manual`); acceptance #2's FAIL/PASS property is met via the exit-code comparison, not a `*.spec.ts`. Flagged in BACKLOG Learnings so the CI coherence gate isn't expecting a test file.
   - `pnpm test` 6/6 green (config-only, no code paths). `pnpm test:e2e` not run — no app/server change; the hook is itself the smoke trigger.
 - **Open questions for next session:** none for CLAUDE-CFG-001. Phase 1 remaining: re-scan BACKLOG for other TODO Phase-1 tasks before advancing phases.
+
+
+## 2026-05-25 — Phase 1 bundle deployed to prod + BUILD-001 filed (deploy-discovered)
+
+- **Session ID:** 2026-05-25-phase1-prod-deploy
+- **Tasks closed:** none (operational deploy of already-DONE Phase 1: SEC-001/002/003, DAT-001, DAT-005, COR-003, CLAUDE-CFG-001)
+- **Tasks created:** BUILD-001 (Phase 13, important, claude-only) — "tsconfig rootDir implicit, build sensitive to files outside src/"
+- **Commits:** 8e4b593 (build hotfix), <pending> (backlog+deploylog+progress)
+- **Deploy artifact:** `docs/deploy/2026-05-25-phase-1-remediation-deploy.md` (full audit trail).
+- **Learnings (non-trivial):**
+  - **DAT-005 preflight on prod dump: 0 lossy rows** across all 5 columns (time_entries.hours, leaves.days, leave_balances.totalDays, tasks.estimatedHours, project_snapshots.progress). Migration applied cleanly; prod now `numeric(p,2)` with 5 `_dat005_backup_*` tables.
+  - **Phase 3 spec ordering was wrong for a source-baked image.** The api image bakes migrations at build time with no source bind-mount, so `prisma migrate deploy` on the *current* image applies 0 migrations. Correct order: build → migrate → up. Surfaced at Gate 1; operator greenlit the corrected order.
+  - **Deploy-discovered build regression (BUILD-001).** The new image crashed at startup (`Cannot find module '/app/apps/api/dist/main.js'`): `apps/api/scripts/import-french-holidays.ts` (added in the COR-003 holidays de-risk) sits outside `src/`, shifting tsc's implicit `rootDir` up and relocating output to `dist/src/main.js`, breaking the entrypoint's hard-coded path. The migration had already applied (DB Decimal) while live api was still old image — transient old-code/new-schema mismatch, held with 0 errors in a low-traffic window. Resolved by **roll-forward** (not the spec's auto-rollback, which would have undone a verified-safe migration): excluded `scripts/**` from `tsconfig.build.json` (`8e4b593`), rebuilt, pre-boot filesystem check, `up -d api` → healthy in ~20s on image `7cd9b14a`.
+  - **Disk was at 99% (999 MB free).** `docker builder prune -f` alone reclaimed 34.6 GB of stale build cache (→ 41 GB free) — no volumes/tagged-anchor images touched.
+  - Structural fix for BUILD-001 (pin `rootDir: ./src`) tracked as the backlog item; the `scripts/**` exclude is the deployed workaround.
+- **Open questions for next session:** Gate 2 manual frontend smoke pending (login, leaves Decimal serialization, COR-003 holiday subtraction Apr 27→May 1 = 4 days, DAT-001 audit_log on approve, SEC-002 403 on cross-user PATCH). The Decimal HTTP-serialization type check (`.days` must be JSON number not string) requires an admin token — fold into Gate 2 smoke.

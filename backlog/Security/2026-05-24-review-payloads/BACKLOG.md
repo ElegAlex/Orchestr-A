@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 175 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175")
+> **Total tasks:** 176 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25)
 
 ## Schema legend
 
@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 117 important · 21 nit · 5 suggestion
-- **By category:** 33 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 25 tests · 1 tooling
+- **By severity:** 32 blocking · 118 important · 21 nit · 5 suggestion
+- **By category:** 33 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 25 tests · 2 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -5118,8 +5118,54 @@ pnpm --filter web test  # no targeted spec inferred from apps/web/app/[locale]/p
 ---
 
 ## Phase 13 — Findings hors cluster — à traiter en parallèle des autres phases
-*60 tasks in this phase.*
+*61 tasks in this phase.*
 
+### BUILD-001 — tsconfig rootDir implicit, build sensitive to files outside src/
+
+- **Status:** TODO
+- **Phase:** 13
+- **Cluster:** —
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** tooling · build
+- **File:** `apps/api/tsconfig.json` (+ `apps/api/docker-entrypoint.sh:111`)
+- **Source:** deploy-discovered (2026-05-25 Phase 1 remediation prod deploy) — not in source audit
+
+**Description:**
+API build output structure depends on tsc's auto-detected `rootDir`, which is the common ancestor of all input files. Adding files outside `src/` (e.g., `scripts/`) silently shifts the output from `dist/<file>` to `dist/src/<file>`, breaking the Dockerfile entrypoint that hard-codes `dist/main.js`. Discovered during the Phase 1 deploy on 2026-05-25 when `apps/api/scripts/import-french-holidays.ts` (added in the COR-003 holidays de-risk work) moved the inferred `rootDir` up to `apps/api/`, relocating `main.js` to `dist/src/main.js` and causing the new image to crash at startup (`Cannot find module '/app/apps/api/dist/main.js'`). Fixed for the deploy by excluding `scripts/**` from `tsconfig.build.json` (workaround, commit `8e4b593`).
+
+**Root cause:**
+`apps/api/tsconfig.json` sets `outDir` but no explicit `rootDir`/`include`, so the output layout is a function of which files happen to exist in the workspace rather than a fixed contract. The entrypoint's hard-coded path makes the coupling brittle.
+
+**Code evidence:**
+```
+// apps/api/docker-entrypoint.sh:111
+exec node apps/api/dist/main.js
+// apps/api/tsconfig.json — outDir: ./dist, no rootDir, no include
+```
+
+**Suggested fix:**
+Pin `"rootDir": "./src"` in `apps/api/tsconfig.json` (or `tsconfig.build.json`) so the output structure is independent of which files exist in the workspace. tsc then hard-errors if a file outside `src/` is ever pulled into the compile, instead of silently relocating output. (The `scripts/**` exclude from `8e4b593` remains as belt-and-braces.)
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot.
+5. Commit message includes `[closes BUILD-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+# Build the api, confirm dist/main.js exists at the flat root regardless of files added under apps/api/ outside src/
+pnpm --filter api run build && ls apps/api/dist/main.js
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** Deploy workaround `8e4b593` (exclude `scripts/**`) is live on prod; the structural `rootDir` pin remains the durable fix tracked here. Verification #2 (FAIL-before/PASS-after) for a build-layout invariant is best expressed as a build-output assertion, not a unit test.
+
+---
 ### COR-005 — findValidatorForUser ignores the link between the leave's user and the active delegation
 
 - **Status:** TODO
