@@ -514,7 +514,7 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Duration:** ~40 minutes
 - **Enum members added (1):** SYSTEM_BACKFILL; ENTITY_TYPE_BY_ACTION union widened `+'SystemMaintenance'` (exhaustive-Record compile-forced).
 - **Design choices:**
-  - **Testable-helper pattern:** scripts don't run under vitest → emission extracted to `src/scripts/system-backfill-audit.ts` (`emitSystemBackfill` + `resolveBackfillActor`), tested at the `.log` boundary. Script-level verification = real dry run on dev DB (AUD-EMIT-001 / OBS-002+DAT-009 manual-verification divergence).
+  - **Testable-helper pattern:** scripts don't run under vitest → emission extracted to `src/scripts/system-backfill-audit.ts` (`emitSystemBackfill` + `resolveBackfillActor`), tested at the `.log` boundary. Script-level verification (a real dry run on a dev DB) is **DEFERRED — not performed this session** (no Orchestra dev DB up; TST-DB-001 gap, AUD-EMIT-001 / OBS-002+DAT-009 manual-verification divergence). Automated coverage shipped = the helper witnesses + `nest build` compiling backfill-snapshots.ts.
   - **Single SYSTEM_BACKFILL** with `phase` in payload (OBS-012 RELEASE_DEPLOYED precedent). affectedCount omitted at STARTED.
   - **actorId = resolveBackfillActor** prefers DEPLOYED_BY (OBS-012 deploy identity) over the finding-suggested DEPLOY_USER; honest null otherwise.
   - **Scope = backfill-snapshots only.** seed.ts + import-french-holidays.ts construct their own PrismaClient (no Nest context) → deferred (chain contract's skip-and-document clause); the helper is reusable for them later.
