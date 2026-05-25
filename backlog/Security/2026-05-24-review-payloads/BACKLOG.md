@@ -945,7 +945,7 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ---
 ### OBS-005 — Role template / institutional role mutations are NOT audited
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
