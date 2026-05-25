@@ -1053,7 +1053,7 @@ pnpm test apps/api/src/documents/documents.controller.spec.ts  # may need creati
 ---
 ### OBS-012 — Deploy workflow is theatrical — no real deploy and no deploy audit trail
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -1090,8 +1090,17 @@ Either wire real SSH deploy (appleboy/ssh-action) writing a release row in DB on
 TBD — manual verification (config change, no automated test)
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 189344f
+**Learnings:**
+- **Remove-the-theater chosen over wiring real SSH.** Evidence was decisive: HANDOVER.md ("Deploy workflow est 'fake' → manual ssh + docker compose sur VPS"), the `DEPLOY_HOST/USER/KEY` secrets were never configured (commented-out in deploy.yml), and `docker-publish.yml` already builds+pushes real images on tags. Wiring `appleboy/ssh-action` would have faked an automation nobody uses against secrets that don't exist. `deploy.yml` deleted; `scripts/deploy-prod.sh` is its honest operator-run replacement (pull → pin RELEASE_SHA into .env.production → build/migrate/up with `--env-file`).
+- **Durability = `deployments` table (source of truth) + dual-write to `audit_logs`.** Columns: `id, releaseSha, deployedAt, deployedBy, environment, nodeVersion, dbMigrationsApplied (JSONB)`. **No FK to users** — `deployedBy` is a frozen string (operator email / 'ci'), surviving user deletion, mirroring `audit_logs.actorEmail` RGPD snapshot. It is an infra event, so deliberately NOT under the `audit_logs` immutability trigger (d6299cc). Migration `20260525210000_obs012_deployments_table`, virgin table = **0 rows** at ship time.
+- **Version pinning = env-injected SHA + boot hook.** `DeploymentsService` (`OnApplicationBootstrap`) records one row per boot in a deploy context (`NODE_ENV=production` OR `RELEASE_SHA` set). `dbMigrationsApplied` read from `_prisma_migrations` (`migration_name WHERE finished_at IS NOT NULL`), best-effort → `[]` so a future **TOOL-DEPLOY-001** restricted DB role can't crash boot. Production-without-RELEASE_SHA records `releaseSha='unknown'` + warns (not a hard fail). Boot hook is fire-and-forget (caught into logger) — a ledger hiccup never blocks API startup, so the OBS-006-style resilience is built into the first commit (no 4th commit).
+- **Cross-emission YES.** `AuditAction.RELEASE_DEPLOYED` (entityType `'Deployment'`, exhaustive `Record` widened) emits one informational `audit_logs` row per boot so deploys sit inline with user actions for the Cour-des-Comptes narrative. AC#4 satisfied via dual-write.
+- **[[TOOL-DEPLOY-001]] surface untouched** — no `directUrl`/role split added; only the migration-probe was made degradation-tolerant of it.
+- **[[TST-011]] incidental:** +6 DeploymentsService witnesses + 1 `RELEASE_DEPLOYED→'Deployment'` entityType pair in audit.service.spec.
+- **[[TST-DB-001]] still applies** — vitest mocks `database`; the deployments row-write + migration introspection are asserted at the mocked `prisma` boundary, not against a real `deployments` table. Migration itself hand-written to mirror the `audit_logs` DDL conventions (TEXT/JSONB/TIMESTAMP(3)/pkey/idx) — no Orchestra dev DB was up to `migrate dev` against (only an unrelated `opstracker` postgres on :5432); `prisma validate` + `prisma generate` confirm schema/client coherence.
+- **Dangling doc refs (out of confined scope, NOT edited):** `KNOWLEDGE-BASE.md:824` and `docs/AUDIT-DOCKER-DEPLOY.md` reference the now-removed `deploy.yml` (the latter already calls it "un stub"). Left for a docs-hygiene pass — editing `docs/`/KB was outside AC#6 scope.
+- **Cour-des-Comptes answerable now:** `SELECT "releaseSha","deployedAt","deployedBy" FROM deployments WHERE "deployedAt" <= '<leave-approval-ts>' ORDER BY "deployedAt" DESC LIMIT 1;` returns the live release at any timestamp — once the first real deploy via `deploy-prod.sh` writes a row.
 
 ---
 ### DAT-009 — AuditLog has no append-only enforcement and no integrity hash chain
