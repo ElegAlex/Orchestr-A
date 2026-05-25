@@ -1291,7 +1291,7 @@ pnpm test apps/api/src/tasks/tasks.service.spec.ts apps/api/src/milestones/miles
 ---
 ### OBS-018 — Backfill / seed scripts have no persisted audit trail
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
