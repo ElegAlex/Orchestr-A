@@ -384,3 +384,102 @@ additive; `rootDir` untouched (structural fix tracked as **BUILD-001**, Phase 13
 Server listening at http://127.0.0.1:4000
 ```
 No error-level logs. **Phase 3 complete.** Old-code/new-schema mismatch resolved.
+
+---
+
+## Phase 4 — Post-deploy verification
+
+**Captured:** 2026-05-25T09:03Z (prod UTC). All checks green.
+
+| Check | Result |
+|-------|--------|
+| 4.1 All services healthy | ✅ api/web/nginx/postgres/redis `Up (healthy)`; api `Up 2 min` on new image |
+| 4.2 Both DAT-005 migrations applied | ✅ `…backup_float_columns` + `…convert_float_to_decimal`, each `applied_steps_count=1`, `finished_at` 2026-05-25 08:49:22+00 (no mixed state) |
+| 4.3 5 columns now `numeric(p,s)` | ✅ leaves.days `(6,2)`, leave_balances.totalDays `(6,2)`, time_entries.hours `(5,2)`, tasks.estimatedHours `(5,2)`, project_snapshots.progress `(5,2)` |
+| 4.4 `_dat005_backup_*` tables | ✅ 5 present (leaves_days, leave_balances_total_days, time_entries_hours, tasks_estimated_hours, project_snapshots_progress) |
+| 4.5 Row counts vs baseline | ✅ leaves=132, time_entries=15, tasks=321 (unchanged — no data loss) |
+| 4.6 Running api image | ✅ `sha256:7cd9b14a…` (hotfixed image), not anchor `5a9f56cc` |
+
+### COR-003 smoke witness — date correction (important for Gate 2)
+Day-of-week (2026): Apr 27=Mon, Apr 28=Tue, Apr 29=Wed, Apr 30=Thu, **May 1=Fri (Fête du Travail,
+holiday on prod, isWorkDay=false)**, May 2=Sat.
+- The spec's **Apr 28 → May 2** = weekdays Tue–Fri (4) − May 1 holiday = **3** charged days (not 4;
+  "expect 4" there would be a false-fail).
+- **Clean witness matching "expect 4": Apr 27 → May 1** = weekdays Mon–Fri (5) − May 1 holiday =
+  **4** (was 5 pre-COR-003). Recommended for Gate 2.
+
+---
+
+## GATE 2 — post-deploy verification reported; awaiting operator manual frontend smoke
+
+Phases 1–4 complete; Phase 1 remediation bundle live on prod (image `7cd9b14a`, Decimal schema).
+Awaiting operator smoke (see checklist) → then final log commit + push. Rollback anchors ready:
+api image `orchestra-api:pre-phase1-remediation` (`5a9f56cc`); DB backups in `backups-prod/`;
+`_dat005_backup_*` tables + `scripts/db/rollback-dat005-decimal-conversion.sql` for schema revert.
+
+---
+
+## Phase 4.5 — Smoke verification (JWT-assisted API automation)
+
+**Captured:** 2026-05-25T~10:00Z (prod UTC). All credentials handled as ephemeral shell vars —
+**no token, cookie, or password value is recorded here or in any commit.**
+
+### Auth contract discovered
+- Session model = **opaque refresh cookie + short-lived access token**. The refresh cookie alone
+  does NOT authenticate `/api/*` (`/api/auth/me` → 401). `POST /api/auth/login` returns an
+  **`access_token`** in the body → used as `Authorization: Bearer` for all `/api/*` calls; the
+  `orchestr_a_refresh_token` cookie is for `/api/auth/refresh` only.
+- The operator-supplied refresh token was rejected (`401 "Refresh token inconnu"`) — rotated/
+  single-use; superseded by a newer token in `refresh_tokens`. Re-established auth via
+  credential `POST /api/auth/login` instead (login field accepts email when it contains `@`).
+- **RBAC assignment:** system roles (`isSystem=true`, e.g. `BASIC_USER`) are **not assignable**
+  ("Rôle système non assignable"); a non-admin **institutional** role (`CONTRIB_DEV`, template
+  `PROJECT_CONTRIBUTOR`) was used for the temp user.
+- Admin role `ADMIN_DSI` (template `ADMIN`) has `leaves:self_approve` → an admin's own leave is
+  created `APPROVED`/`selfApproved=true`. So the DAT-001 approve path was exercised with a leave
+  created by the **non-self-approving temp user** (lands `PENDING`), then approved by admin.
+
+### Results
+| # | Check | Method | Result |
+|---|-------|--------|--------|
+| 1 | COR-003 holiday subtraction + DAT-005 Decimal serialization | temp user `POST /api/leaves` 2026-04-27→2026-05-01 (CP) | HTTP 201; **`days = 4`** (5 weekdays Mon–Fri − May 1 «Fête du Travail») ; **`days` is JSON number (`int`), not string** ; `status=PENDING` → ✅ PASS |
+| 2 | DAT-001 transactional approve + durable audit | admin `POST /api/leaves/<id>/approve` | HTTP 200, `status=APPROVED`, `selfApproved=false`; `audit_logs` row `LEAVE_APPROVED` with **actorId = admin**, payload `before.status=PENDING → after.status=APPROVED`, **`selfApproved=false`**, `validatedById=admin` → ✅ PASS |
+| 3 | SEC-002 horizontal user-scope | non-admin temp user `PATCH /api/users/<admin-id>` | HTTP **403** "Forbidden resource" → ✅ PASS |
+| 4 | leave delete | admin `DELETE /api/leaves/<id>` | HTTP 200 → ✅ PASS |
+
+### Temp user lifecycle & cleanup
+- Temp non-admin user created (`CONTRIB_DEV`) for checks 1–3 — id recorded operationally, **no
+  credentials logged**. Hard-deleted at end (HTTP 200).
+- A probe leave (admin self-approved during auth-contract discovery) was deleted (HTTP 200).
+- **No test residue** on prod: both temp leaves deleted, temp user hard-deleted.
+
+**All 4 backend smoke checks PASS.** Awaiting operator UI sanity ("smoke OK") → final log commit + push.
+
+---
+
+## GATE 2 — PASSED. Deploy complete.
+
+**Operator UI sanity (login + leaves list render): OK.** Combined with the 4 green backend smoke
+checks (Phase 4.5), the Phase 1 remediation bundle is **verified live on production**.
+
+### Final state
+- **Code:** prod `git HEAD = 8e4b593` (master + build hotfix). API image `sha256:7cd9b14a…`, healthy.
+- **Schema:** DAT-005 applied — 5 columns `numeric(p,2)`; 5 `_dat005_backup_*` tables retained.
+- **Verified behaviors:** SEC-001 (`RBAC_GUARD_MODE=enforce`), SEC-002 (403 on cross-user PATCH),
+  DAT-001 (transactional approve + durable `audit_logs`), DAT-005 (Decimal columns + JSON-number
+  serialization), COR-003 (public-holiday subtraction, May 1 → `days=4`). SEC-003 & CLAUDE-CFG-001
+  shipped in the same bundle (code-level; not separately smoke-exercised).
+- **No rollback required.** Anchors retained for the standard window: api image
+  `orchestra-api:pre-phase1-remediation` (`5a9f56cc`), DB dumps in `backups-prod/`,
+  `_dat005_backup_*` tables + `scripts/db/rollback-dat005-decimal-conversion.sql`.
+
+### Deviations from the original plan (for audit)
+1. Prod was **26** commits behind master, not 19 (benign — only the 2 DAT-005 migrations were
+   schema-relevant).
+2. Phase 3 step order corrected to **build → migrate → up** (source-baked image; Gate 1 greenlit).
+3. **Disk remediation** (Category A): 999 MB → 41 GB free before the build.
+4. **Build hotfix `8e4b593`** (entrypoint path) required mid-Phase-3; **roll-forward** chosen over
+   the spec's auto-rollback (migration was verified-safe). New finding **BUILD-001** filed.
+5. Smoke witness corrected to **Apr 27→May 1** (the spec's Apr 28→May 2 would yield 3, not 4).
+
+**Deploy log complete — committed to the repo as the Cour des Comptes audit trail.**
