@@ -850,7 +850,7 @@ pnpm test apps/api/src/users/users.service.spec.ts
 ---
 ### OBS-003 — Leave approval audit lacks before/after state and role snapshot
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -887,8 +887,15 @@ Extend audit payload with { actor: { id, roleCode, templateKey, permissions[] },
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** Capability partially shipped by OBS-001 (1ff6c9a, 2026-05-25): payload now supports before/after, ua, reason, requestId-shaped fields via AuditEvent extension; ENTITY_TYPE_BY_ACTION maps LEAVE_* to entityType 'Leave'. Remaining scope: enrich LEAVE_APPROVED/REJECTED emitters in leaves.service.ts with actor.roleCode + actor.templateKey + actor.permissions[] snapshot, subject.{leaveId,userId}, before.status, after.{status,validatorId,validatedAt,validationComment}. ip/ua already reachable via @Req in the controller.
+**Closed_by:** 1aa24b5
+**Learnings:** Capability partially shipped by OBS-001 (1ff6c9a, 2026-05-25): payload now supports before/after, ua, reason, requestId-shaped fields via AuditEvent extension; ENTITY_TYPE_BY_ACTION maps LEAVE_* to entityType 'Leave'. Remaining scope (now shipped in 1aa24b5): enriched LEAVE_APPROVED/REJECTED emitters with `actor.{id,roleCode,templateKey,permissions[]}`, `subject.{leaveId,userId}`, conditional `ip`/`ua`. before/after were already DAT-001-durable; the OBS-003 delta is the actor/subject snapshot.
+- **actor.permissions source = `PermissionsService.getPermissionsForRole(roleCode)`** — the same RBAC compile-time resolver the `RequirePermissions` guard consumes (no `RbacService.resolvePermissions` callable exists; this is the guard-equivalent). Resolved BEFORE the `$transaction` (Redis/Prisma read must not sit inside the Postgres tx holding the row lock). Captured at emit time because `templateKey → permissions` is compile-time and leaves no DB trace between deploys.
+- **roleCode + templateKey from JWT `req.user.role`** (carries both per current-user.decorator AuthenticatedUser) — zero extra DB roundtrip, zero extra include on the leave query.
+- **requestId OMITTED** — no request-id propagation infra exists ([[OBS-009]] still open). Not implemented inline per chain contract.
+- **Reusable `buildActorSnapshot(actorId, actor?)` private helper** introduced now and reused forward by the [[OBS-021]] lifecycle emitters (and a candidate upgrade for the DAT-001 `cancel()` emitter).
+- **AC#6 controller touch:** `leaves.controller.ts` gained `@Req()` + `@CurrentUser('role')` + an `extractMeta` helper (OBS-006 documents.controller mirror) — wiring required to deliver the snapshot, justified in the fix-commit body.
+- **[[TST-011]] delta:** +2 service witnesses (approve/reject enriched-payload, FAIL-pre verified by stashing the service edit → `payload.actor` undefined); controller spec updated for the new threading signature (no new controller assertions beyond the actor-object call shape).
+- **AC evaluation:** AC#1 ✓ (actor/subject/ip/ua per Suggested fix); AC#2 ✓ (2 FAIL-pre → PASS-post); AC#3 ✓ (`pnpm test` api 1610 / web 579, `test:e2e` 2/2); AC#4 ✓ (leaves approve/reject audit_logs row carries before/after + actor snapshot); AC#5 ✓; AC#6 ✓ (diff confined to leaves/ + the controller wiring).
 
 ---
 ### OBS-004 — Role changes on users are NOT audited

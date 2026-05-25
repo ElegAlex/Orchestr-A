@@ -431,3 +431,27 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Invariant priority call:** none forced — no collision with existing tests; the boot-hook guard keeps the e2e app-boot a no-op.
 - **[[TST-011]] delta:** +6 DeploymentsService witnesses + 1 entityType pair (audit.service.spec). +1 audit subject type ('Deployment').
 - **Open questions for next session:** OBS-018 (backfill/seed scripts → SYSTEM_BACKFILL audit row — adjacent observability, the deploy-time-event sibling now that the boot-time event ships) and OBS-020 (audit retention/archival — `@@index([createdAt])` + partitioning) remain the Phase-2 Cluster-A observability TODOs. OBS-003 (leave-approval before/after) if still open. The `deployments` table is a candidate for the same retention discussion as OBS-020 but currently unbounded-growth-tolerant (one row per boot, low volume).
+
+## 2026-05-25 — OBS-003 closed (LEAVE_APPROVED/REJECTED audit payload enriched with actor role/permissions snapshot + subject + ip/ua)
+
+- **Session ID:** 2026-05-25-obs-chain (task 1/4)
+- **Tasks closed:** OBS-003 (Phase 2, Cluster A — claude-only, severity blocking). First task of the autonomous OBS-003 → OBS-021 → OBS-007 → OBS-018 chain.
+- **Tasks moved to BLOCKED:** none.
+- **Commits:** `c8fbe97` (IN_PROGRESS anchor), `1aa24b5` (fix — `[closes OBS-003]`), `<pending>` (closeout).
+- **Counter:** no count change — OBS-003 already in finding totals; Status flipped (coherence checked-set 17→18 DONE/VERIFIED).
+- **Duration:** ~40 minutes
+- **Enum members added:** none (LEAVE_APPROVED/LEAVE_REJECTED already enum; this task is pure payload enrichment of existing DAT-001 emitters).
+- **Design choices:**
+  - **actor.permissions source = `PermissionsService.getPermissionsForRole(roleCode)`** — the same RBAC compile-time resolver the `RequirePermissions` guard consumes (no `RbacService.resolvePermissions` callable). Captured at emit time (templateKey→permissions is compile-time, no DB trace between deploys). Resolved BEFORE the `$transaction` — the Redis/Prisma read must not sit inside the Postgres tx holding the leave row lock.
+  - **roleCode + templateKey from JWT `req.user.role`** (AuthenticatedUser carries both) — zero extra DB roundtrip, no extra include on the leave query.
+  - **actor.id duplicated inside payload** in addition to the top-level AuditPersistence actorId column, so `payload->'actor'->>'id'` resolves without a join (advisor point #2).
+  - **requestId omitted** — no request-id infra ([[OBS-009]] open); not implemented inline.
+  - **Reusable `buildActorSnapshot()` private helper** introduced now, reused forward by the OBS-021 lifecycle emitters (advisor point #1 — avoids a 4× copy-paste / mid-chain refactor).
+- **Learnings (non-trivial):**
+  - **FAIL-pre demonstrated by stashing only `leaves.service.ts`** (keeping the spec + the new 4-arg controller call): vitest/esbuild strips types without type-checking, so the spec's `service.approve(id, validator, comment, {actor})` 4th arg is silently ignored against the pre-fix 3-arg signature → `payload.actor` is `undefined` → both witnesses red. Restored via `git stash pop`.
+  - **Controller signature is positional:** inserting `@CurrentUser('role')` + `@Req()` before the optional `@Body` shifted the arg order, so the controller spec's `controller.approve(id, validator, 'comment')` calls had to be rewritten (comment moved to position 5). Caught by `leaves.controller.spec` going red, fixed there — not a service regression.
+  - **Conflict-path invariant preserved:** the existing DAT-001 "no audit on ConflictException" assertion is untouched; `buildActorSnapshot` runs before the tx (so `getPermissionsForRole` is now called once on the conflict path) but the emission still never fires on conflict (advisor blocking-concern confirmed).
+- **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1610** (69 files, +2 over OBS-012's 1608), web 579 passed / 14 skipped. `pnpm run test:e2e` api app e2e 2/2 (mocked DB — no Playwright spec touches the leaves/audit surface; OBS-006/OBS-012 precedent). Witnesses FAIL-pre 2/2 → PASS-post.
+- **[[TST-011]] delta:** +2 leaves.service witnesses (approve/reject enriched payload).
+- **Cour-des-Comptes question:** "who approved leave X, with which role at the time?" → **YES**, answerable. `SELECT payload->'actor' FROM audit_logs WHERE action='LEAVE_APPROVED' AND "entityId"='X'` returns `{id, roleCode, templateKey, permissions[]}` snapshotted at decision time.
+- **Open questions for next session:** OBS-021 (LEAVE_* lifecycle: UPDATE/DELETE/CANCELLATION_REQUESTED/BALANCE_ADJUSTED) is task 2/4 — will reuse `buildActorSnapshot` and promote the DAT-001 `LEAVE_CANCELLED` free-string to an enum member (same value = zero prod-data impact; advisor point #4).
