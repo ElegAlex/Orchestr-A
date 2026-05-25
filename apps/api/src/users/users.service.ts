@@ -363,8 +363,12 @@ export class UsersService {
       await this.accessScope.assertCanManageUser(id, caller);
     }
 
+    // AUD-EMIT-001 — role.code is loaded here (enriching the existing lookup,
+    // not an extra query) so the ROLE_CHANGE audit payload can carry the
+    // before-snapshot roleCode without a second round-trip.
     const existingUser = await this.prisma.user.findUnique({
       where: { id },
+      include: { role: { select: { code: true } } },
     });
 
     if (!existingUser) {
@@ -491,6 +495,37 @@ export class UsersService {
       },
     });
 
+    // AUD-EMIT-001 — durable audit trail for role / deactivation mutations.
+    // Actor is the caller; when caller is undefined (internal/test paths) no
+    // event is emitted, matching the SEC-003 callerId-optional precedent.
+    if (caller) {
+      if (updateData.roleId && updateData.roleId !== existingUser.roleId) {
+        await this.auditPersistence.log({
+          action: AuditAction.ROLE_CHANGE,
+          entityType: 'User',
+          entityId: id,
+          actorId: caller.id ?? null,
+          payload: {
+            before: { roleCode: existingUser.role?.code ?? null },
+            after: { roleCode: user.role?.code ?? null },
+          },
+        });
+      }
+
+      if (existingUser.isActive === true && updateUserDto.isActive === false) {
+        await this.auditPersistence.log({
+          action: AuditAction.USER_DEACTIVATED,
+          entityType: 'User',
+          entityId: id,
+          actorId: caller.id ?? null,
+          payload: {
+            before: { isActive: true },
+            after: { isActive: false },
+          },
+        });
+      }
+    }
+
     return user;
   }
 
@@ -513,6 +548,21 @@ export class UsersService {
       where: { id },
       data: { isActive: false },
     });
+
+    // AUD-EMIT-001 — remove() is a soft-delete (isActive flip), so it emits
+    // USER_DEACTIVATED on the true→false transition, same shape as update().
+    if (caller && user.isActive === true) {
+      await this.auditPersistence.log({
+        action: AuditAction.USER_DEACTIVATED,
+        entityType: 'User',
+        entityId: id,
+        actorId: caller.id ?? null,
+        payload: {
+          before: { isActive: true },
+          after: { isActive: false },
+        },
+      });
+    }
 
     return { message: 'Utilisateur désactivé avec succès' };
   }

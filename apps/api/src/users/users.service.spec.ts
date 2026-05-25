@@ -700,6 +700,157 @@ describe('UsersService', () => {
     });
   });
 
+  // AUD-EMIT-001 — live ROLE_CHANGE / USER_DEACTIVATED emitters on user
+  // mutations. Witness spies AuditPersistenceService.log and asserts the
+  // emission shape. Actor is the caller (caller.id → actorId); emission is
+  // skipped entirely when caller is undefined (SEC-003 callerId-optional
+  // precedent), so all witnesses pass a real ADMIN caller.
+  describe('audit emission (AUD-EMIT-001)', () => {
+    const callerAdmin = {
+      id: 'caller-admin-1',
+      role: { code: 'ADMIN', templateKey: 'ADMIN' },
+    };
+
+    it('emits ROLE_CHANGE with before/after roleCode when roleId changes', async () => {
+      // assertCanManageUser: exists check (ADMIN template bypasses scope).
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      // update() loads the target enriched with role.code (before snapshot).
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-1',
+        roleId: 'role-old',
+        isActive: true,
+        role: { code: 'CONTRIBUTEUR' },
+      });
+      // RoleHierarchyService.assertCanAssignRole + resolveAssignableRoleIdByCode.
+      mockPrismaService.role.findUnique.mockImplementation((args: any) => {
+        const code = args?.where?.code;
+        if (code === 'MANAGER')
+          return Promise.resolve({
+            id: 'role-manager',
+            templateKey: 'MANAGER',
+            isSystem: false,
+          });
+        if (code === 'ADMIN') return Promise.resolve({ templateKey: 'ADMIN' });
+        return Promise.resolve(null);
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: true,
+        role: { code: 'MANAGER' },
+      });
+
+      await service.update(
+        'target-1',
+        { roleCode: 'MANAGER' },
+        'ADMIN',
+        callerAdmin,
+      );
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'ROLE_CHANGE',
+          entityType: 'User',
+          entityId: 'target-1',
+          actorId: 'caller-admin-1',
+          payload: expect.objectContaining({
+            before: { roleCode: 'CONTRIBUTEUR' },
+            after: { roleCode: 'MANAGER' },
+          }),
+        }),
+      );
+    });
+
+    it('emits USER_DEACTIVATED when isActive transitions true→false via update()', async () => {
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-1',
+        roleId: 'role-x',
+        isActive: true,
+        role: { code: 'CONTRIBUTEUR' },
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: false,
+        role: { code: 'CONTRIBUTEUR' },
+      });
+
+      await service.update(
+        'target-1',
+        { isActive: false },
+        'ADMIN',
+        callerAdmin,
+      );
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'USER_DEACTIVATED',
+          entityType: 'User',
+          entityId: 'target-1',
+          actorId: 'caller-admin-1',
+          payload: expect.objectContaining({
+            before: { isActive: true },
+            after: { isActive: false },
+          }),
+        }),
+      );
+    });
+
+    it('emits USER_DEACTIVATED when remove() soft-deletes an active user', async () => {
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: true,
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: false,
+      });
+
+      await service.remove('target-1', callerAdmin);
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'USER_DEACTIVATED',
+          entityType: 'User',
+          entityId: 'target-1',
+          actorId: 'caller-admin-1',
+          payload: expect.objectContaining({
+            before: { isActive: true },
+            after: { isActive: false },
+          }),
+        }),
+      );
+    });
+
+    it('does not emit when neither roleId nor isActive changes', async () => {
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-1',
+        roleId: 'role-x',
+        isActive: true,
+        role: { code: 'CONTRIBUTEUR' },
+      });
+      mockPrismaService.department.findUnique.mockResolvedValueOnce({
+        id: 'dept-x',
+        name: 'IT',
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: true,
+        role: { code: 'CONTRIBUTEUR' },
+      });
+
+      await service.update(
+        'target-1',
+        { departmentId: 'dept-x' },
+        'ADMIN',
+        callerAdmin,
+      );
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+  });
+
   describe('changePassword', () => {
     it('should change user password successfully', async () => {
       const mockUser = {
