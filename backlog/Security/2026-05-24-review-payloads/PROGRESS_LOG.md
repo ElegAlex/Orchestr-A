@@ -308,3 +308,23 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Duration:** <approx>
 - **Learnings:** Filing follow-ups within one session of the remediation that surfaced them. Pattern correction vs the earlier SEC-002 / OBS-001 "deferred Q in Learnings" approach which led to AUD-EMIT-001 having to retroactively close threads — explicit filings as standalone entries are more durable than Learnings notes.
 - **Open questions for next session:** DAT-007 (Task.projectId Cascade — next cross-validated Cluster A remediation, thematically continues the audit-trail durability work hardened by OBS-002+DAT-009).
+
+
+## 2026-05-25 — DAT-007 closed (Project hard-delete preserves history via RESTRICT FKs + ConflictException pre-check + PROJECT_DELETED snapshot)
+
+- **Session ID:** 2026-05-25-dat-007
+- **Tasks closed:** DAT-007 (Phase 10, Cluster G — cross-validated).
+- **Tasks moved to BLOCKED:** none.
+- **Commits:** `2384cb8` (IN_PROGRESS anchor), `0eae219` (fix — `[closes DAT-007]`), `<pending>` (closeout).
+- **Counter:** no count change — DAT-007 was already in the finding totals; only its Status flipped (coherence checked-set 12→13 DONE/VERIFIED).
+- **Duration:** ~50 minutes
+- **FK design choice:** Cascade/SetNull → **RESTRICT** on tasks/project_snapshots/documents/time_entries `projectId`. RESTRICT (not NoAction) — it's the audit's literal Suggested-fix and immediate-check aligns with the app pre-check. *Diverges from d6299cc's NoAction* on purpose: NoAction there was forced by the audit_logs immutability trigger rejecting SetNull's UPDATE; no such trigger exists on these tables, so the forcing constraint is absent.
+- **Learnings (non-trivial):**
+  - **Two readings of the invariant collided on TimeEntry.** Strict ("must not *destroy*") was already met by SetNull; the audit *description* ("lose their project link silently") demanded Restrict. Picked Restrict — `grep project.delete` showed **zero** callers besides hardDelete+spec, so no teardown/seed regression, and it makes the pre-check and FK gate block on an identical set. Documented in the fix-commit body + BACKLOG Learnings.
+  - **Audit pattern = `AuditPersistenceService.log()` direct** (the archive/unarchive pattern, 2 existing sites → TST-011's "2 call sites" confirmed). Added a 3rd: `PROJECT_DELETED` (free-string, no enum migration) with a column snapshot in `payload.snapshot` before the delete (suggested-fix b).
+  - **Atomicity scope conflict:** advisor preferred `$transaction` for trail integrity, but `log()` takes no tx client and making it tx-aware = audit-pipeline change (DAT-007 forbids). Prioritized scope → emit-before-delete, non-atomic (archive() precedent, DAT-006 owns the non-atomicity finding). Rare race window, detectable via hash chain.
+  - **ProjectSnapshot = operational read-model, NOT audit trail** (daily cron producer PER-003; analytics-advanced consumer; no hash/trigger/actor columns). Loss was correctness, not audit-durability — still Restrict-protected, but not bound by audit_logs rules.
+  - **Real-DB witness ACHIEVED** (bridged [[TST-DB-001]] for this task): dev DB up, applied migration, psql confirmed all 4 FKs `confdeltype='r'` + DELETE on a project with 5 snapshots blocked by RESTRICT with the snapshots/project surviving. Automated-CI gap (vitest `vi.mock('database')`) still stands.
+  - **USR-DEL-001 symmetry resisted/deferred:** `checkProjectDependencies()` mirrors `UsersService.checkDependencies()`; USR-DEL-001 inherits the pre-check shape, ConflictException convention, actor-threading, and the answered "yes, hardDelete emits `<ENTITY>_DELETED` with a snapshot" policy. Not implemented (stayed in scope).
+- **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1579** (68 files, +4 net witnesses over d6299cc's 1575), web 579 passed / 14 skipped. `pnpm run test:e2e` 4/4 turbo green (apps/api app e2e, mocked DB, invariant — no Playwright spec touches `/projects/:id/hard`). Unit witnesses FAIL-pre 4/4 → PASS-post; real-DB W-2 pass.
+- **Open questions for next session:** USR-DEL-001 + DAT-007 share the `check<Entity>Dependencies` + `<ENTITY>_DELETED` pattern — candidate paired session. DAT-008 (Leave.user Cascade — same Phase 10 Cluster G cascade theme, retention obligation). Frontend `projects/[id]/page.tsx` hardDelete now can receive a 409 ConflictException (was a 500 on FK violation) — UX copy could surface the dependency list, but that's web scope, out of this task.
