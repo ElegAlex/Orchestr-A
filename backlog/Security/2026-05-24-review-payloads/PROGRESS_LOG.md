@@ -503,3 +503,25 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **[[TST-011]] delta:** +2 planning-export.service witnesses + 1 entityType pair (audit.service.spec).
 - **Cour-des-Comptes question:** "who exported planning data on date Z?" → **YES** for the planning ICS export. `SELECT "actorId", payload->>'scope', payload->>'recordCount', payload->'dateRange', "createdAt" FROM audit_logs WHERE action='DATA_EXPORTED'`. **NOT yet** for tasks/milestones CSV (→ [[OBS-026]]).
 - **Open questions for next session:** OBS-018 (backfill/seed scripts → SYSTEM_BACKFILL) is task 4/4 (final). Scripts don't run under vitest → extract a testable emission helper (AUD-EMIT-001 / OBS-002+DAT-009 precedent for the manual-verification divergence).
+
+## 2026-05-25 — OBS-018 closed (SYSTEM_BACKFILL audit on backfill-snapshots start+end; seed/holidays deferred)
+
+- **Session ID:** 2026-05-25-obs-chain (task 4/4 — final)
+- **Tasks closed:** OBS-018 (Phase 2, Cluster A — claude-only, severity important). Last task of the autonomous chain.
+- **Tasks moved to BLOCKED:** none.
+- **Commits:** `79a5804` (IN_PROGRESS anchor), `986c06f` (fix — `[closes OBS-018]`), `<pending>` (closeout).
+- **Counter:** OBS-018 Status flipped (coherence checked-set 20→21 DONE/VERIFIED).
+- **Duration:** ~40 minutes
+- **Enum members added (1):** SYSTEM_BACKFILL; ENTITY_TYPE_BY_ACTION union widened `+'SystemMaintenance'` (exhaustive-Record compile-forced).
+- **Design choices:**
+  - **Testable-helper pattern:** scripts don't run under vitest → emission extracted to `src/scripts/system-backfill-audit.ts` (`emitSystemBackfill` + `resolveBackfillActor`), tested at the `.log` boundary. Script-level verification = real dry run on dev DB (AUD-EMIT-001 / OBS-002+DAT-009 manual-verification divergence).
+  - **Single SYSTEM_BACKFILL** with `phase` in payload (OBS-012 RELEASE_DEPLOYED precedent). affectedCount omitted at STARTED.
+  - **actorId = resolveBackfillActor** prefers DEPLOYED_BY (OBS-012 deploy identity) over the finding-suggested DEPLOY_USER; honest null otherwise.
+  - **Scope = backfill-snapshots only.** seed.ts + import-french-holidays.ts construct their own PrismaClient (no Nest context) → deferred (chain contract's skip-and-document clause); the helper is reusable for them later.
+- **Learnings (non-trivial):**
+  - **Hash-chain constraint drove the scope:** SYSTEM_BACKFILL MUST go through AuditPersistenceService (OBS-002 computes the hash chain there) — a raw audit_logs insert from a script breaks the chain. backfill-snapshots already has a Nest app context → AuditPersistenceService for free; the other two scripts don't, hence deferred.
+  - **DEPLOYED_BY now exists in the api container** (58d1c00, OBS-012 refinement) — a more reliable operator identity than the finding's DEPLOY_USER guess.
+- **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1626** (+6 over OBS-007's 1620, new spec file), web 579 passed / 14 skipped. `pnpm run test:e2e` 2/2 (mocked DB — backfill-snapshots is not run/imported by any spec; no surface touched). Witnesses FAIL-pre (STARTED action undefined + audit-table 'Auth' default) → PASS-post.
+- **[[TST-011]] delta:** +6 helper witnesses + 1 entityType pair (audit.service.spec).
+- **Cour-des-Comptes question:** "when did backfill script S run, what did it touch?" → **YES** for backfill-snapshots. `SELECT "actorId", payload->>'phase', payload->>'affectedCount', "createdAt" FROM audit_logs WHERE action='SYSTEM_BACKFILL' AND "entityId"='backfill-snapshots' ORDER BY "createdAt"` pairs each STARTED with its COMPLETED + row count. **NOT yet** for seed/holidays (deferred, documented).
+- **Chain complete (4/4):** OBS-003, OBS-021, OBS-007 (partial → OBS-026), OBS-018. No 4th resilience commit needed on any task (OBS-006/OBS-012 precedent unused). See the chain's cumulative report.

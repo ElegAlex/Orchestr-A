@@ -1291,7 +1291,7 @@ pnpm test apps/api/src/tasks/tasks.service.spec.ts apps/api/src/milestones/miles
 ---
 ### OBS-018 — Backfill / seed scripts have no persisted audit trail
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -1328,8 +1328,16 @@ Each script writes one AuditLog row { action: 'SYSTEM_BACKFILL', entityType: 'Sy
 pnpm test apps/api/src/scripts/backfill-snapshots.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 986c06f
+**Learnings:** Instrumented the named `backfill-snapshots.ts` (the finding's File) with SYSTEM_BACKFILL at START + COMPLETED.
+- **Testable-helper pattern (scripts don't run under vitest):** emission extracted to `src/scripts/system-backfill-audit.ts` (`emitSystemBackfill` + `resolveBackfillActor`), tested directly at the `AuditPersistenceService.log` boundary. The script itself is verified by a real dry run on a dev DB; the vitest divergence is the AUD-EMIT-001 / OBS-002+DAT-009 precedent.
+- **Single SYSTEM_BACKFILL enum** with `phase` ('STARTED'|'COMPLETED') in payload (OBS-012 single-RELEASE_DEPLOYED precedent, not split enums). entityType 'SystemMaintenance' (new exhaustive-Record subject). Payload `{ script, args, phase, dryRun, affectedCount? }` — affectedCount OMITTED at STARTED (unknown then, not a misleading 0).
+- **Must route through AuditPersistenceService, NOT a raw insert:** OBS-002's hash chain is computed inside AuditPersistenceService — a raw `audit_logs` insert from a script would break the chain. backfill-snapshots.ts already has a Nest application context (`NestFactory.createApplicationContext`) so it `app.get(AuditPersistenceService)` for free.
+- **actorId = `resolveBackfillActor`:** prefers `DEPLOYED_BY` (the [[OBS-012]] deploy identity already injected into the api container by 58d1c00) over the finding's suggested `DEPLOY_USER`; null when neither set (honest null for a local manual run, not a fabricated operator).
+- **SCOPE — backfill-snapshots only; seed.ts + import-french-holidays.ts DEFERRED.** Both construct their own `PrismaClient` outside any Nest container, so wiring them through the hash-chained AuditPersistenceService needs a Nest-context bootstrap = larger refactor than this finding. Per the chain contract's "skip one-off / awkward scripts, document" clause. seed.ts = dev/initial-setup tool (never-seed-prod rule); holiday import = idempotent, low-frequency. The `emitSystemBackfill` helper is reusable for them when/if they gain a Nest context (candidate follow-up, not filed — lower value than OBS-026).
+- **[[OBS-024]] enum side advanced:** SYSTEM_BACKFILL enum-from-creation, no free-string carry-over.
+- **[[TST-011]] delta:** +6 helper witnesses (3 emit phase/actor + 3 actor env-precedence) + 1 entityType pair (audit.service.spec).
+- **AC evaluation:** AC#1 ✓ (SYSTEM_BACKFILL at start+end per Suggested fix); AC#2 ✓ (FAIL-pre → PASS-post via enum-stash); AC#3 ✓ (`pnpm test` api 1626 / web 579, `test:e2e` 2/2); AC#4 n/a (a script run is not one of the listed audit-sensitive mutation paths, but it now writes its own audit_logs rows); AC#5 ✓; AC#6 ✓ (5 files: audit/ + scripts/). Seed/holidays deferral documented above.
 
 ---
 ### OBS-020 — Audit retention undocumented, no archival strategy for 5+ year horizon
