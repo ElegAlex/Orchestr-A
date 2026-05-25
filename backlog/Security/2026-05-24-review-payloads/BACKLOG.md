@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 176 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25)
+> **Total tasks:** 177 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 1 session-hygiene (TOOL-COH-001, 2026-05-25)
 
 ## Schema legend
 
@@ -27,7 +27,7 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 ## Totals
 
 - **By severity:** 32 blocking · 118 important · 21 nit · 5 suggestion
-- **By category:** 33 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 25 tests · 2 tooling
+- **By category:** 33 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 25 tests · 3 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -59,7 +59,7 @@ See `CLAUDE_SESSION_CONTRACT.md` in this directory for the exact session protoco
 
 
 ## Phase 1 — Stop the bleed (audit-prescribed blockers)
-*7 tasks in this phase.*
+*8 tasks in this phase.*
 
 ### COR-003 — Leave day calculation never subtracts public holidays
 
@@ -429,6 +429,50 @@ TBD — manual verification (config change, no automated test)
 
 ---
 
+### TOOL-COH-001 — Coherence gate regex misses multi-segment IDs
+
+- **Status:** TODO
+- **Phase:** 1
+- **Cluster:** —
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** tooling
+- **File:** `backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh`
+- **Source:** Session-derived. AUD-EMIT-001 (ffc4cf4, 2026-05-25) closeout report flagged that the coherence check's ID regex `[A-Z]+-\d+` did not match `AUD-EMIT-001` (double-dash form). The task was silently skipped by the gate — substantively fine that time (commit message and Closed_by were correct) but any future multi-segment ID (AUD-EMIT-002, RBAC-PEER-001, TOOL-COH-001 itself, etc.) would also be skipped.
+
+**Description:**
+check-backlog-coherence.sh extracts task IDs with a regex of the form `[A-Z]+-\d+`. This pattern matches single-segment IDs (SEC-001, DAT-002, OBS-001, PERF-001) but does not match multi-segment IDs (AUD-EMIT-001, TOOL-COH-001). Multi-segment IDs are silently dropped from the coherence check's set, meaning a missing Closed_by SHA or a stale status on such an entry would not raise.
+
+**Root cause:**
+Original regex authored when only single-segment IDs existed in the backlog. AUD-EMIT-001 introduced the first multi-segment ID without a corresponding script update.
+
+**Code evidence:**
+```
+grep -E '\[A-Z\]\+-' backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh
+```
+
+**Suggested fix:**
+Update the ID regex to `[A-Z]+(?:-[A-Z]+)*-\d+` (or equivalent). Add a regression test fixture that includes at least three IDs spanning the conventions: SEC-001 (single-segment), AUD-EMIT-001 (double-segment), TOOL-COH-001 (double-segment, alternate prefix). The test must FAIL on the current single-segment regex and PASS after the fix.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in the coherence script, addressing the exact failure mode described in **Description**.
+2. A regression test or fixture exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after.
+3. The script remains POSIX-shell-compatible (or matches whatever shell flavor the existing script uses — do not change interpreter as a side effect).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — N/A (tooling, not application code).
+5. Commit message includes `[closes TOOL-COH-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh <path-to-BACKLOG.md>
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+
 ## Phase 2 — Cour des Comptes ready — Audit log durcissement
 *17 tasks in this phase.*
 
@@ -599,7 +643,7 @@ pnpm test apps/api/src/audit/audit-persistence.service.spec.ts  # may need creat
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:** Quasi-duplicate of DAT-009 — two sub-agents independently flagged the same finding from different JSON sources (observability vs data_integrity). DAT-009's Suggested fix is a superset (adds actorEmail/actorLabel snapshot replacing actorId SetNull). Implementation should close BOTH in one session: commit message includes [closes OBS-002][closes DAT-009] and both Closed_by point to the same SHA. Track as a single unit going forward.
 
 ---
 ### AUD-EMIT-001 — ROLE_CHANGE and USER_DEACTIVATED have no live emitters in UsersService
@@ -692,7 +736,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:** Capability partially shipped by OBS-001 (1ff6c9a, 2026-05-25): payload now supports before/after, ua, reason, requestId-shaped fields via AuditEvent extension; ENTITY_TYPE_BY_ACTION maps LEAVE_* to entityType 'Leave'. Remaining scope: enrich LEAVE_APPROVED/REJECTED emitters in leaves.service.ts with actor.roleCode + actor.templateKey + actor.permissions[] snapshot, subject.{leaveId,userId}, before.status, after.{status,validatorId,validatedAt,validationComment}. ip/ua already reachable via @Req in the controller.
 
 ---
 ### OBS-004 — Role changes on users are NOT audited
@@ -735,7 +779,7 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:** Partial closure: AUD-EMIT-001 (ffc4cf4, 2026-05-25) shipped live emitters for ROLE_CHANGE + USER_DEACTIVATED (both via UsersService.update() and remove() soft-delete branch). Remaining scope for OBS-004: USER_REACTIVATED, PASSWORD_RESET_BY_ADMIN (overlap with SEC-003 [2763552] — verify before re-emitting), SERVICE_MEMBERSHIP_CHANGED, DEPARTMENT_CHANGED.
 
 ---
 ### OBS-005 — Role template / institutional role mutations are NOT audited
@@ -907,7 +951,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:** Quasi-duplicate of OBS-002 — see OBS-002 Learnings for context. DAT-009 ⊃ OBS-002 (adds actorEmail/actorLabel snapshot scope). Single implementation closes both; commit [closes OBS-002][closes DAT-009].
 
 ---
 ### DAT-021 — AuditLog.payload Json? has no schema validation, no JSONB GIN index
@@ -1122,7 +1166,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:** Partial closure: DAT-001 (b14cdd5, 2026-05-24) wired AuditPersistenceService.log for approve/reject/cancel transactional paths — LEAVE_CANCELLED is emitted. Remaining scope for OBS-021: LEAVE_CANCELLATION_REQUESTED, LEAVE_UPDATED (date range change), LEAVE_DELETED, LEAVE_BALANCE_ADJUSTED. The self-approval LEAVE_APPROVED via create() still routes through AuditService logger-only (noted in DAT-001 Learnings as out-of-scope).
 
 ---
 ### OBS-024 — Two divergent audit codebases (enum vs free-string) — no schema for action codes
@@ -1165,7 +1209,7 @@ pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missi
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:** Partial closure: DAT-002 (c62ac8d, 2026-05-25) made AuditService dual-write through AuditPersistenceService — the "Unify into one AuditService writing to DB" half of Suggested fix is achieved at the routing level. OBS-001 (1ff6c9a) added ENTITY_TYPE_BY_ACTION typing the entityType per AuditAction. Remaining scope: converge AuditAction enum (audit.service.ts) and the free-string action codes accepted by AuditPersistenceService.log (e.g., 'PROJECT_ARCHIVED' from projects.service.ts) into a single source of truth — central const or enum, compile-time enforced.
 
 ---
 ### TST-011 — Audit emission almost never asserted — only one leaves test spies AuditService.log
@@ -1208,7 +1252,7 @@ pnpm test apps/api/src/audit/audit-persistence.service.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:** Coverage cumulatively expanded since the original audit baseline by: DAT-001 (b14cdd5) — leaves approve/reject/cancel transactional + audit assertions; DAT-002 (c62ac8d) — AuditService dual-write spec; OBS-001 (1ff6c9a) — per-action entityType + ua/reason/attemptedEmail bcrypt-redaction tests; AUD-EMIT-001 (ffc4cf4) — UsersService ROLE_CHANGE + USER_DEACTIVATED emission assertions; SEC-003 (2763552) — admin password reset audit assertion. Remaining gaps per original Suggested fix: project archive (projects.service.spec), document delete (documents.service.spec), role create/update/delete (rbac/roles.service.spec — OBS-005 territory).
 
 ---
 

@@ -251,3 +251,15 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Gates:** `pnpm run build` 3/3 turbo green (tsc). `pnpm run test` 6/6 turbo — **api 1567** tests green (68 files), web 579 passed / 14 skipped. Witness FAIL-pre on (a ROLE_CHANGE / b1 USER_DEACTIVATED-update / b2 USER_DEACTIVATED-remove) with "Number of calls: 0" (assertion, not crash), (c no-op) passed pre+post; PASS-post 4/4.
 - **E2E not run (documented divergence, DAT-005 precedent):** diff confined to an internal service method's audit emission — no controller/route/DTO/UI/permission-matrix surface, no E2E spec asserts `audit_logs`, and the local API/web dev servers were down (ports 3001/4001). Suite is invariant to this change; the 4-case unit witness is the substitute verification.
 - **Open questions for next session:** OBS-003 (leave-approval before/after + role snapshot) remains TODO in Phase 2 Cluster A. The peer-ADMIN mutation guard (SEC-002 / SEC-003 open question) and self-deactivation prevention are still unaddressed (SEC concerns, deliberately out of AUD-EMIT-001 scope).
+
+
+## 2026-05-25 — BACKLOG hygiene pass after Cluster A waves
+
+- **Session ID:** 2026-05-25-hygiene
+- **Tasks closed:** OBS-008 (retroactive closure — covered by OBS-001 / 1ff6c9a).
+- **Tasks moved to BLOCKED:** none.
+- **Other backlog touches:** Learnings notes appended to OBS-003, OBS-004, OBS-021, OBS-024, TST-011 documenting partial closures from DAT-001/DAT-002/OBS-001/AUD-EMIT-001/SEC-003 (no scope change, Description/Suggested fix verbatim per schema). Cross-link Learnings added to OBS-002 ↔ DAT-009 (quasi-duplicate, attack as bundle). TOOL-COH-001 filed (Phase 1, tooling).
+- **Commits:** 247f2e9 (OBS-008 closure), <pending> (hygiene + TOOL-COH-001).
+- **Duration:** ~30 minutes
+- **Learnings:** Backlog scan after each remediation wave is mandatory to catch (a) findings now retroactively done, (b) findings now partially covered, (c) quasi-duplicates from different JSON source agents. The audit's per-agent JSON files don't deduplicate across agents — the workbench MD inherits that.
+- **Open questions for next session:** OBS-002 + DAT-009 should be tackled in a single session with dual [closes ...] in the fix commit (next planned remediation after this hygiene pass).
