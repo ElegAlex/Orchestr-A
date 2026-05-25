@@ -945,7 +945,7 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ---
 ### OBS-005 — Role template / institutional role mutations are NOT audited
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -982,8 +982,19 @@ Audit ROLE_CREATED/ROLE_UPDATED/ROLE_DELETED/ROLE_DEFAULT_CHANGED with full diff
 pnpm test apps/api/src/rbac/roles.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** ec88cc9
+**Learnings:** Wired `AuditPersistenceService` directly into RolesService create/update/delete (OBS-004 / SEC-003 / AUD-EMIT-001 emitter pattern). 4 enum members added: `ROLE_CREATED`, `ROLE_UPDATED`, `ROLE_DELETED`, `ROLE_DEFAULT_CHANGED`.
+- **Enum names confirmed, no collision.** The 4 are exactly the Suggested-fix names. `ROLE_CHANGE` already existed but is a **different subject** (a *user* being reassigned to another role, entityType='User'); the 4 new ones are the role *entity* lifecycle, entityType='Role'. ENTITY_TYPE_BY_ACTION union widened `'User'|'Auth'|'Leave'` → `+'Role'`; the exhaustive `Record<AuditAction,…>` made the 4 mappings compile-mandatory. **Advances [[OBS-024]]** (enum-vs-free-string unification): RolesService emitted zero free-strings — all 4 are enum from the start, unlike DAT-007's free-string `'PROJECT_DELETED'`.
+- **ROLE_UPDATED diff encoding = OBS-004's "both".** `payload {before, after, changed[]}` over `{label, description}` only. `isDefault` is **deliberately carved out** to its own ROLE_DEFAULT_CHANGED event (mirrors OBS-004's dedicated SERVICE_MEMBERSHIP_CHANGED carve-out for the serviceIds field) — so ROLE_UPDATED is *not* a literal "full before/after scalars" diff. Documented divergence from the Suggested-fix phrasing; the trade is clean event separation + no double-encoding of the default flip.
+- **ROLE_DEFAULT_CHANGED = both directions, singleton-shift semantics.** `before/after = {defaultRoleId}`. `false→true` reads the prior holder (findFirst) before `unsetCurrentDefault`, emits `{before: prevId, after: newId}`; `true→false` (default removed, no replacement) emits `{before: id, after: null}`. entityId = the role that is/was the subject of the flip.
+- **ROLE_DELETED = DAT-007 PROJECT_DELETED symmetry.** Full-row `payload.snapshot` emitted BEFORE `role.delete`, plain await (non-transactional, audit-pipeline out of scope — DAT-006/DAT-007 precedent). Witness asserts the snapshot row is present at delete-time via a `delete` mock implementation.
+- **templateKey-hash deploy row DEFERRED → [[OBS-012]].** The Suggested fix's "deploy-time audit row recording each templateKey hash" is a deploy/boot concern (main.ts/onModuleInit + previously-seen-hash state + ROLE_TEMPLATES ordering stability), deploy-infra surface outside roles/ + audit/. OBS-012 explicitly owns "no deploy audit trail" — filed there, not shipped here. AC#6 (scope confinement) preserved.
+- **Caller threading was NET-NEW (controller surface).** Unlike UsersService (SEC-002 already threaded the actor), RolesController passed no caller. Added `@CurrentUser()` to the 3 mutating handlers + optional 3rd RolesService arg. Caller-undefined (seed/internal/test) emits nothing (OBS-004 backward-compat invariant). Flagged because it's controller surface — but within roles/ scope, so AC#6 holds.
+- **Prisma roundtrips:** update/delete unchanged — the existing `findUnique` already returns the full before-/delete-snapshot (no new include). create + update add **one** `findFirst` only on the default-setting path AND only when a caller is present.
+- **[[TST-011]] incidental:** +10 RolesService witnesses (6 positive across the 4 events incl. both ROLE_DEFAULT_CHANGED directions, 4 negative = 3 caller-undefined + 1 no-op) + 4 `Role` pairs in the audit.service.spec entityType table. api suite 1586 → 1596.
+- **No-op + caller-undefined invariants preserved.** ROLE_UPDATED with an unchanged monitored set emits nothing; any mutation with caller undefined emits nothing. RbacModule needed no change — AuditModule is `@Global` and exports AuditPersistenceService.
+- **AC evaluation:** AC#1 (fix per Suggested fix — 4 named events with diff; templateKey-hash deferred w/ rationale) ✓; AC#2 (FAIL-pre/PASS-post) ✓ 6/6 positives FAIL-pre → PASS-post; AC#3 (`pnpm test` api 1596 + web 579/14-skip, `pnpm test:e2e` 2/2 green) ✓; AC#4 (RBAC mutation → audit_logs with before/after) ✓; AC#5 (`[closes OBS-005]`) ✓; AC#6 (diff confined to rbac/ + audit/ + specs) ✓.
+- **[[TST-DB-001]] still applies:** vitest globally `vi.mock('database')`, so no real `audit_logs` row was asserted — emission verified at the AuditPersistenceService.log call boundary (mocked), consistent with OBS-004.
 
 ---
 ### OBS-006 — Document access/downloads are NOT logged

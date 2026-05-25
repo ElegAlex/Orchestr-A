@@ -351,3 +351,29 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1586** (68 files, +7 net witnesses over DAT-007's 1579), web 579 passed / 14 skipped. `pnpm run test:e2e` 2/2 (api app e2e, mocked DB, invariant — no Playwright spec touches the users-update / audit_logs surface; AUD-EMIT-001/DAT-007 precedent). Witness FAIL-pre 5/5 (4 OBS-004 positives + renamed SEC-003 assertion) → PASS-post; negatives vacuous pre+post. TST-DB-001 still applies (vitest mocks 'database'; no real audit_logs row asserted).
 - **Invariant priority call:** none forced — the only collision (existing AUD-EMIT-001 no-op fixture vs the new DEPARTMENT_CHANGED emit) was resolved by tightening the fixture, not weakening an invariant.
 - **Open questions for next session:** OBS-003 (leave-approval before/after + role snapshot) remains the last Phase 2 Cluster A audit-emitter TODO. OBS-005 (RBAC role/template mutations unaudited) is the natural follow-on. OBS-024 now carries the explicit PASSWORD_RESET_ADMIN↔PASSWORD_RESET_BY_ADMIN query-time-alias requirement.
+
+
+## 2026-05-25 — OBS-005 closed (RolesService audit emitters: ROLE_CREATED + ROLE_UPDATED + ROLE_DELETED + ROLE_DEFAULT_CHANGED)
+
+- **Session ID:** 2026-05-25-obs-005
+- **Tasks closed:** OBS-005 (Phase 2, Cluster A — claude-only). Natural follow-on to OBS-004; completes the RBAC-mutation side of AC#4's audit surface.
+- **Tasks moved to BLOCKED:** none.
+- **Commits:** `fad2be9` (IN_PROGRESS anchor), `ec88cc9` (fix — `[closes OBS-005]`), `<pending>` (closeout).
+- **Counter:** no count change — OBS-005 was already in the finding totals; only its Status flipped (coherence checked-set 14→15 DONE/VERIFIED).
+- **Duration:** ~55 minutes
+- **Enum members added (4):** `ROLE_CREATED`, `ROLE_UPDATED`, `ROLE_DELETED`, `ROLE_DEFAULT_CHANGED`. No collision with the pre-existing `ROLE_CHANGE` (user-reassignment, entityType='User'); the 4 new ones are the role *entity* lifecycle, entityType='Role'. Exhaustive `Record<AuditAction,…>` widened to include 'Role' so the 4 mappings are compile-mandatory.
+- **Design choices (5):**
+  - **ROLE_UPDATED diff = OBS-004's "both"** — `{before, after, changed[]}` over `{label, description}`. `isDefault` carved out to its own event (per-field-event philosophy = OBS-004 SERVICE_MEMBERSHIP_CHANGED precedent), so ROLE_UPDATED is intentionally not a literal "full scalar" diff — documented divergence from Suggested-fix phrasing.
+  - **ROLE_DEFAULT_CHANGED both directions** — system-wide singleton shift. false→true reads prior holder (findFirst) before unset; true→false records removal (after=null).
+  - **ROLE_DELETED snapshot-before-delete** — DAT-007 PROJECT_DELETED symmetry, `payload.snapshot` of the full row, plain await.
+  - **templateKey-hash deploy row DEFERRED → OBS-012** (deploy audit trail). Boot-hook + previously-seen-hash state is deploy-infra surface outside roles/ + audit/. Cross-linked.
+  - **Caller threading NET-NEW** — RolesController had none (unlike SEC-002's UsersService). Added @CurrentUser() to 3 mutating handlers + optional 3rd RolesService arg; caller-undefined emits nothing. Controller surface but within roles/ scope → AC#6 holds.
+- **Learnings (non-trivial):**
+  - **Prisma roundtrips minimized:** update/delete unchanged (existing findUnique already returns the full before-/delete-snapshot). create + update add ONE findFirst, only on the default-setting path AND only when caller present.
+  - **RbacModule needed no change** — AuditModule is `@Global` + exports AuditPersistenceService, so RolesService injects it without an explicit import (same as UsersService).
+  - **[[OBS-024]] advanced (enum side):** RolesService emits zero free-strings — all 4 codes are enum from creation, unlike DAT-007's free-string `'PROJECT_DELETED'`. No prod-namespace carry-over risk (these codes are net-new, never deployed as free-strings).
+  - **[[TST-011]] incidental:** +10 RolesService witnesses (6 positive / 4 negative) + 4 Role pairs in audit.service.spec entityType table.
+- **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1596** (68 files, +10 over OBS-004's 1586), web 579 passed / 14 skipped. `pnpm run test:e2e` 2/2 (api app e2e, mocked DB, invariant — no Playwright spec touches the roles/audit surface; OBS-004/AUD-EMIT-001 precedent). Witness FAIL-pre 6/6 positives → PASS-post; 4 negatives vacuous pre+post.
+- **Invariant priority call:** none forced — no collision between the new emitters and existing RolesService tests (the isDefault-transition specs call the service without a caller, so emission is skipped and their `updateMany` assertions stand).
+- **[[TST-DB-001]] still applies:** vitest mocks 'database'; emission verified at the AuditPersistenceService.log call boundary (mocked), no real audit_logs row asserted.
+- **Open questions for next session:** OBS-006 (document read/download logging) is the next Phase 2 Cluster A audit-emitter TODO — but it's controller-level (DocumentsController) and adds DOCUMENT_READ/DOCUMENT_DOWNLOADED with request metadata (ip/ua), a different shape than the service-level mutation emitters. OBS-012 now carries the explicit OBS-005 templateKey-hash deploy-row deferral.
