@@ -577,3 +577,14 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Gates:** `nest build` (source typecheck, the authoritative API build) EXIT 0. `pnpm test` (api) **1632 passed** (delta **0** — the 3 PROJECT_* rows went into an existing *looped* entityType test, not new `it()` blocks; the witness is compile-time, not a runtime spec). `pnpm test:e2e` (api) **2 passed**. Witness FAIL-pre (TS2578) → PASS-post; real-call-site free-string rejection demonstrated (TS2820) and reverted.
 - **[[TST-011]] delta:** +0 runtime witnesses (refactor session — the existing projects.service.spec assertions on `'PROJECT_*'` literals now exercise the enum path unchanged; 3 entityType rows added to audit.service.spec's existing looped test). New *compile-time* coverage: the witness file is a permanent type-level regression guard.
 - **Cour-des-Comptes question:** "are audit action codes coherent across modules / can an auditor query one namespace?" → **YES, now compiler-guaranteed.** Every action written to `audit_logs.action` is an `AuditAction` enum member; a free-string action code can no longer compile. Single source of truth: `audit/audit-action.enum.ts`.
+
+## 2026-05-25 — File AUD-READ-001 (legacy PASSWORD_RESET_ADMIN read-side alias)
+
+- **Session ID:** 2026-05-25-aud-read-filing
+- **Tasks closed:** none (filing-only).
+- **Tasks moved to BLOCKED:** none.
+- **Other backlog touches:** AUD-READ-001 filed (Phase 2, cluster A, observability — read-side alias for legacy free-string rows un-backfillable under the audit_logs immutability trigger).
+- **Commits:** <pending> (filing).
+- **Duration:** <approx>
+- **Learnings:** OBS-024's write-side convergence revealed a read-side asymmetry: the immutability trigger makes string-value evolution permanent unless the read pipeline aliases. Pattern to watch for any future enum rename — the canonical naming on the write path must be reconcilable with prior naming on the read path, otherwise the audit narrative silently fragments.
+- **Open questions for next session:** USR-DEL-001 implementation (Phase 2, pattern-direct mirror of DAT-007).

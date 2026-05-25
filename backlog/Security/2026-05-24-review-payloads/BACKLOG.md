@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 181 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 2 session-derived follow-ups (USR-DEL-001, TST-DB-001, 2026-05-25)
+> **Total tasks:** 182 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25)
 
 ## Schema legend
 
@@ -27,7 +27,7 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 ## Totals
 
 - **By severity:** 32 blocking · 118 important · 21 nit · 6 suggestion
-- **By category:** 34 correctness · 31 data_integrity · 26 observability · 30 performance · 30 security · 26 tests · 5 tooling
+- **By category:** 34 correctness · 31 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 5 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -619,7 +619,7 @@ pnpm test:integration
 ---
 
 ## Phase 2 — Cour des Comptes ready — Audit log durcissement
-*18 tasks in this phase.*
+*19 tasks in this phase.*
 
 ### DAT-002 — AuditService is logger-only — security events not persisted
 
@@ -1575,6 +1575,53 @@ Extend `checkDependencies()` in UsersService to query `prisma.auditLog.count({ w
 **Verification command:**
 ```
 pnpm test apps/api/src/users/users.service.spec.ts
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+
+### AUD-READ-001 — Legacy PASSWORD_RESET_ADMIN audit rows are invisible when filtering by the current enum name
+
+- **Status:** TODO
+- **Phase:** 2
+- **Cluster:** A
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** observability
+- **File:** `apps/api/src/audit/` (read pipeline — implementer locates the audit query service / repository)
+- **Source:** Session-derived. OBS-024 closeout (7393b5d, 2026-05-25) flagged this gap explicitly under "Flagged, not actioned": legacy production rows under action='PASSWORD_RESET_ADMIN' (the free-string emitted by SEC-003 / 2763552, before OBS-004's rename to AuditAction.PASSWORD_RESET_BY_ADMIN at 330a8eb) cannot be backfilled because the audit_logs immutability trigger (d6299cc) blocks UPDATE. A read-side alias is the only path to a coherent audit narrative.
+
+**Description:**
+Production audit_logs may contain rows with `action = 'PASSWORD_RESET_ADMIN'` (free-string, emitted by SEC-003 before OBS-004 renamed the emit site to `AuditAction.PASSWORD_RESET_BY_ADMIN`). The OBS-002+DAT-009 immutability trigger prevents UPDATE on audit_logs, so these rows cannot be normalized in place. An auditor (Cour des Comptes) querying `WHERE action = 'PASSWORD_RESET_BY_ADMIN'` to enumerate admin-initiated password resets will miss every row emitted before commit 330a8eb. The audit narrative is silently incomplete for that time window.
+
+**Root cause:**
+String value evolution across three commits (SEC-003 → OBS-004 → OBS-024) without an alias-table or read-side normalization mechanism. The immutability trigger — a correct and desired property — makes the legacy data permanent. No prior session anticipated the read-side reconciliation when introducing the enum rename.
+
+**Code evidence:**
+```
+git log -1 --format=%H 2763552  # SEC-003 emitted 'PASSWORD_RESET_ADMIN' (free-string)
+git log -1 --format=%H 330a8eb  # OBS-004 renamed to AuditAction.PASSWORD_RESET_BY_ADMIN
+git log -1 --format=%H d6299cc  # OBS-002+DAT-009 immutability trigger
+grep -rn "PASSWORD_RESET_ADMIN\|PASSWORD_RESET_BY_ADMIN" apps/api/src/audit/  # to verify current read pipeline does no aliasing
+```
+
+**Suggested fix:**
+Add a query-time alias map in the audit read pipeline. When a caller filters audit_logs by `action = 'PASSWORD_RESET_BY_ADMIN'`, expand the WHERE clause to `action IN ('PASSWORD_RESET_BY_ADMIN', 'PASSWORD_RESET_ADMIN')`. Centralize the alias map in a single file (e.g., `apps/api/src/audit/legacy-action-aliases.ts`) so future enum renames have a documented landing pad. Read-side only — no write-time changes, no trigger interaction, no migration. Optionally extend to other future rename cases by making the alias map keyed on current canonical name.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Witness: insert a row directly via prisma with `action: 'PASSWORD_RESET_ADMIN'` (bypassing AuditPersistenceService's enum-only type), then query the audit read API filtering by `PASSWORD_RESET_BY_ADMIN`, assert the legacy row is returned. Pre-fix: legacy row absent from results. Post-fix: present.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — N/A (read pipeline change, not an emission; the immutability trigger ensures audit_logs is not modified).
+5. Commit message includes `[closes AUD-READ-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm test apps/api/src/audit/
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
