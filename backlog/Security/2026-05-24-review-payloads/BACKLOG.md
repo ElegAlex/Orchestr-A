@@ -1444,7 +1444,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ---
 ### OBS-024 — Two divergent audit codebases (enum vs free-string) — no schema for action codes
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
