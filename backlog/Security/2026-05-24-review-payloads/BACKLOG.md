@@ -485,7 +485,7 @@ pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missi
 ---
 ### OBS-001 — Security audit events go to console only, not to durable storage
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** cross-validated
@@ -524,6 +524,32 @@ pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missi
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
 **Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### PERF-001 — Audit dual-write is synchronous fire-and-forget — unbounded under high-volume LOGIN_SUCCESS
+
+- **Status:** TODO
+- **Phase:** 2
+- **Cluster:** A
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** non-blocking
+- **Category:** performance · audit_log
+- **File:** `apps/api/src/audit/audit.service.ts`
+- **Source:** flagged by Alexandre during DAT-002 review; carried forward from OBS-001
+
+**Description:**
+DAT-002 made `AuditService.log()` dual-write each security event to `audit_logs` via a synchronous fire-and-forget call (`void this.auditPersistence.log(...).catch(...)`). This is correct for durability but does not bound concurrency: every LOGIN_SUCCESS, ACCESS_DENIED, and leave decision issues an immediate INSERT. The DAT-002 learnings explicitly flagged this — under a burst of authentication traffic (login storms, credential-stuffing waves throttled at 30/min/IP × N IPs, SSO re-auth fan-out) the unthrottled per-event INSERT could contend for connection-pool slots with the request path it is meant to observe, and OBS-002's future append-only trigger + hash-chain will add per-row work on top. Decide whether high-volume audit events should remain synchronous fire-and-forget or move to a bounded queue / batched-write sink before the emitter surface widens. No code change is mandated by this stub — it is the decision record.
+
+**Root cause:**
+Durability (DAT-002) was prioritized over backpressure; the write path is unbatched and unthrottled by design, deferring the volume concern.
+
+**Acceptance criteria:**
+1. Decision documented (keep synchronous fire-and-forget, or adopt a queue/batched-write sink) with rationale tied to observed or projected audit-event volume.
+2. If a queue/batched implementation is chosen, a benchmark run is included comparing sustained INSERT throughput and request-path latency under load before/after.
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty)
 
 ---
 ### OBS-002 — Append-only is a convention, not enforced by DB
