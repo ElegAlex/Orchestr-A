@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 178 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25)
+> **Total tasks:** 179 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25)
 
 ## Schema legend
 
@@ -27,7 +27,7 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 ## Totals
 
 - **By severity:** 32 blocking · 118 important · 21 nit · 5 suggestion
-- **By category:** 33 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 25 tests · 4 tooling
+- **By category:** 33 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 25 tests · 5 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -59,7 +59,7 @@ See `CLAUDE_SESSION_CONTRACT.md` in this directory for the exact session protoco
 
 
 ## Phase 1 — Stop the bleed (audit-prescribed blockers)
-*9 tasks in this phase.*
+*10 tasks in this phase.*
 
 ### COR-003 — Leave day calculation never subtracts public holidays
 
@@ -518,6 +518,54 @@ backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh <
 
 ---
 
+### TOOL-DEPLOY-001 — Two-role DB split (restricted app role + DDL migration role) for audit_logs defence-in-depth
+
+- **Status:** TODO
+- **Phase:** 1
+- **Cluster:** —
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** tooling
+- **File:** `apps/api/docker-entrypoint.sh` · `docker-compose.prod.yml` · `packages/database/prisma/schema.prisma` (datasource) · `.github/workflows/ci.yml` · `scripts/deploy-vps.sh`
+- **Source:** Session-derived (Verdict B). OBS-002 + DAT-009 remediation (`d6299cc`, 2026-05-25) shipped sub-pieces (a) immutability trigger, (c) hash chain, (d) actor snapshot, but DESCOPED sub-piece (b) "run the application with a DB role that has only INSERT+SELECT on audit_logs". Decision-gate finding: the pipeline uses a single `DATABASE_URL` everywhere — `apps/api/docker-entrypoint.sh` runs `prisma migrate deploy` and `node main.js` under the same credentials; `schema.prisma` datasource has only `url = env("DATABASE_URL")` (no `directUrl`); `.github/workflows/ci.yml` and `scripts/deploy-vps.sh` compose one connection string. Splitting roles touches deploy infrastructure + CI secrets → non-trivial → Verdict B descope.
+
+**Description:**
+The audit_logs immutability trigger (OBS-002/DAT-009) blocks UPDATE/DELETE for ALL roles, including the application's. That is the primary control. Defence-in-depth (OBS-002 Suggested fix, sentence 2) additionally wants the app to connect with a DB role granted only INSERT+SELECT on audit_logs, with UPDATE/DELETE/TRUNCATE revoked, so that even a hypothetical trigger bypass (e.g. an operator running `ALTER TABLE … DISABLE TRIGGER` then mutating) is blocked at the privilege layer for the runtime role. Implementing this requires a second DB connection string: a DDL-capable migration role for `prisma migrate deploy`, and a restricted `app_user` for the NestJS runtime. The current single-`DATABASE_URL` pipeline cannot express that split without infrastructure changes.
+
+**Root cause:**
+The deploy pipeline was built single-credential (migrate + runtime + seed all use `DATABASE_URL`). Prisma's `datasource` block exposes one `url`; migration vs runtime credential separation needs `directUrl` (or an out-of-band migrate step with its own secret) plus matching changes in compose, the container entrypoint, CI secrets, and the VPS deploy script.
+
+**Code evidence:**
+```
+schema.prisma datasource db { url = env("DATABASE_URL") }   # no directUrl
+apps/api/docker-entrypoint.sh: npx prisma migrate deploy … then exec node main.js  # same env
+.github/workflows/ci.yml: single DATABASE_URL per job (migrate + app)
+```
+
+**Residual risk until closed:** an ADMIN/operator with direct DB access using the app credentials retains theoretical UPDATE/DELETE rights on audit_logs, blocked ONLY by the trigger (a single control, defeatable by a superuser who disables the trigger). The hash chain (rowHash/prevHash) still makes any such tampering DETECTABLE after the fact, and the actorEmail/actorLabel snapshot survives. Documented in OBS-002/DAT-009 Learnings.
+
+**Suggested fix:**
+(1) Add `directUrl = env("DATABASE_MIGRATION_URL")` to the schema datasource (or an out-of-band migrate step). (2) Create `prisma/init-roles.sql` run once per environment by a superuser: `CREATE ROLE app_user WITH LOGIN PASSWORD …; GRANT INSERT, SELECT ON audit_logs TO app_user; REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM app_user;` (plus the per-table grants the app needs elsewhere). (3) Point `DATABASE_URL` at `app_user`, `DATABASE_MIGRATION_URL` at the DDL role; update `docker-entrypoint.sh`, `docker-compose.prod.yml`, CI secrets, `scripts/deploy-vps.sh`. (4) Document in a `prisma/README.md`.
+
+**Acceptance criteria:**
+1. The application runtime connects as a role with only INSERT+SELECT on audit_logs; `prisma migrate deploy` runs as a distinct DDL role.
+2. A test/script connects as the app role and attempts UPDATE/DELETE on audit_logs → expect a permission-denied error (SQLSTATE 42501), distinct from the trigger's RAISE (SQLSTATE 23514). FAILS before (single role), PASSES after.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — N/A (deploy infrastructure, not application code).
+5. Commit message includes `[closes TOOL-DEPLOY-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+psql "$DATABASE_URL" -c "UPDATE audit_logs SET action='x' WHERE false;"  # expect ERROR: permission denied for table audit_logs
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+
 ## Phase 2 — Cour des Comptes ready — Audit log durcissement
 *17 tasks in this phase.*
 
@@ -645,12 +693,13 @@ Durability (DAT-002) was prioritized over backpressure; the write path is unbatc
 2. If a queue/batched implementation is chosen, a benchmark run is included comparing sustained INSERT throughput and request-path latency under load before/after.
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty)
+**Learnings:**
+- **OBS-002/DAT-009 (`d6299cc`, 2026-05-25) strengthens this task's case.** The hash chain now serializes EVERY audit INSERT on a single `pg_advisory_xact_lock` (an append-only ledger must be totally ordered), so concurrent LOGIN_SUCCESS bursts no longer just contend for pool slots — they serialize on one mutex and queue behind each other inside their transactions. The synchronous fire-and-forget `void auditPersistence.log(...)` path is now a global serialization point, not just an unbatched write. This makes the async/queued-sink decision (this task) materially more pressing once the emitter surface widens. No change made here; decision record only.
 
 ---
 ### OBS-002 — Append-only is a convention, not enforced by DB
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -687,8 +736,14 @@ Add a Postgres trigger BEFORE UPDATE/DELETE ON audit_logs that RAISE EXCEPTION. 
 pnpm test apps/api/src/audit/audit-persistence.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** Quasi-duplicate of DAT-009 — two sub-agents independently flagged the same finding from different JSON sources (observability vs data_integrity). DAT-009's Suggested fix is a superset (adds actorEmail/actorLabel snapshot replacing actorId SetNull). Implementation should close BOTH in one session: commit message includes [closes OBS-002][closes DAT-009] and both Closed_by point to the same SHA. Track as a single unit going forward.
+**Closed_by:** d6299cc
+**Learnings:**
+- **Closed jointly with DAT-009 in one fix commit `d6299cc`** (both `Closed_by` point to it; subject carries `[closes OBS-002][closes DAT-009]`). Shipped (a) `audit_logs_no_update_delete` BEFORE UPDATE/DELETE trigger → RAISE EXCEPTION (ERRCODE check_violation/23514), (c) prevHash/rowHash sha256 chain at INSERT, (d) actorEmail/actorLabel snapshot. Migration `20260525190000_audit_logs_immutability_hash_chain_actor_snapshot` (122 lines).
+- **Verdict B — DB role split (Suggested-fix sentence 2) descoped to TOOL-DEPLOY-001.** The pipeline is single-`DATABASE_URL` (migrate + runtime + seed share credentials in `docker-entrypoint.sh`; datasource has no `directUrl`; CI/deploy compose one string). Splitting roles touches deploy infra + CI secrets → non-trivial. **Residual risk:** the app role retains theoretical UPDATE/DELETE on audit_logs, blocked ONLY by the trigger (one control; a superuser could `DISABLE TRIGGER`). The hash chain keeps any such tamper DETECTABLE; actor snapshot survives. TOOL-DEPLOY-001 adds the privilege-layer second control.
+- **Concurrency (decision #3 / #2):** chose `pg_advisory_xact_lock(hashtext('audit_logs_chain'))` over the contract's "FOR UPDATE on the prior row" — the latter FORKS the chain under READ COMMITTED (lock release re-checks the locked row via EvalPlanQual, not the result set, so a concurrent next-row insert is missed and two rows chain off the same prevHash). Advisory lock totally-orders inserts; auto-released at COMMIT. Rejected SERIALIZABLE+retry (extra complexity, no benefit at this scale). This serialization strengthens PERF-001's async-queue case (noted there).
+- **No real-DB vitest harness:** both vitest configs load `vitest.setup.ts` which `vi.mock('database')`, so `*.spec.ts` and the e2e suite use a mock PrismaClient and never hit Postgres. The trigger witness (W-a) and the real end-to-end chain were verified by direct dev-DB scripts (documented divergence, AUD-EMIT-001 precedent): UPDATE/DELETE raise, row stays intact, INSERT still allowed; 2 real service inserts chain off the backfilled legacy tip with JS recompute matching. The 11-test unit witness (W-c/W-d, mocked) is the `pnpm test` artifact (FAIL-pre 11/11, PASS-post 11/11).
+- **A real bug only the live DB caught:** `SELECT pg_advisory_xact_lock(...)` returns `void`; `$queryRaw` can't deserialize it (P2010). Switched the lock to `$executeRaw` (runs for side effect, returns affected-count). The mock would never have surfaced this.
+- **Column case:** new columns use camelCase (`prevHash`/`rowHash`/`actorEmail`/`actorLabel`) to match the existing table (`entityType`/`entityId`/`actorId`/`createdAt`), not the spec's illustrative snake_case.
 
 ---
 ### AUD-EMIT-001 — ROLE_CHANGE and USER_DEACTIVATED have no live emitters in UsersService
@@ -958,7 +1013,7 @@ TBD — manual verification (config change, no automated test)
 ---
 ### DAT-009 — AuditLog has no append-only enforcement and no integrity hash chain
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -995,8 +1050,13 @@ Create a trigger BEFORE UPDATE/DELETE on audit_logs that RAISE EXCEPTION (except
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** Quasi-duplicate of OBS-002 — see OBS-002 Learnings for context. DAT-009 ⊃ OBS-002 (adds actorEmail/actorLabel snapshot scope). Single implementation closes both; commit [closes OBS-002][closes DAT-009].
+**Closed_by:** d6299cc
+**Learnings:**
+- **Closed jointly with OBS-002 in fix commit `d6299cc`** (see OBS-002 Learnings for the trigger/chain/concurrency/test-harness/`$executeRaw`-bug detail). DAT-009 ⊃ OBS-002: it adds the actorEmail/actorLabel snapshot scope, shipped here as columns frozen at INSERT in `AuditPersistenceService.log()` (email + `firstName lastName` label; NULL for system events and for any actorId that resolves to no user).
+- **"Replace actorId → SetNull with snapshot" interpreted as ADD ALONGSIDE, not replace (decision #5).** `actorId` is preserved (existing JOINs/tests depend on it); the snapshot is additive. Rationale: column replacement would have far broader blast radius than this session admits.
+- **But the FK `onDelete` HAD to change: SetNull → NoAction (hard blocker).** A SET NULL on user deletion issues `UPDATE audit_logs SET "actorId"=NULL`, which the new immutability trigger (OBS-002) REJECTS — a user with audit rows would become undeletable with a raw trigger error. NoAction keeps the `actorId` column (decision #5's rationale intact — joins unaffected) while removing the SetNull that DAT-009 itself flagged as the problem; the snapshot now preserves actor identity. The OBS-002 AC#1 trigger is the binding requirement, so the SetNull-keeping interpretation bent.
+- **Downstream UX consequence (not fixed — out of scope):** `UsersService.hardDelete()` calls `checkDependencies()` which does NOT consider `audit_logs`, then `tx.user.delete()`. With NoAction, hard-deleting a user who has audit rows now fails with a raw Postgres FK violation mid-transaction instead of a clean `ConflictException`. Fixing that cleanly requires touching `users.service.ts` (out of this session's scope). Candidate follow-up — not filed unless requested.
+- **Backfill:** dev `audit_logs` = **0 rows**; per decision #4's <1000 branch the migration backfills inline (recursive CTE in createdAt/id order, no separate script). Prod (Phase-1 deploy 2026-05-25, audit emitters live) likely has a small row set — the same migration backfills it before `SET NOT NULL`. Legacy rows form a **sealed segment** hashed with Postgres canonicalization (`payload::text`); new app rows use fast-key-sorted JSON. The segments join transparently: each new row chains off the previous STORED rowHash as an opaque string (verified end-to-end on dev). Legacy rows are therefore NOT JS-re-verifiable from source fields — documented limitation, acceptable for a sealed pre-chain segment. **Prod runbook:** confirm `SELECT COUNT(*) FROM audit_logs < 1000` before deploy; if ≥1000, extract the backfill to a one-shot script before `migrate deploy` (the inline CTE is still O(n) recursive — fine for thousands, reconsider for millions).
 
 ---
 ### DAT-021 — AuditLog.payload Json? has no schema validation, no JSONB GIN index
