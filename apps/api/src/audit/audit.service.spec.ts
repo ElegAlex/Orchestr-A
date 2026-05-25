@@ -233,6 +233,8 @@ describe('AuditService', () => {
         [AuditAction.DOCUMENT_DOWNLOADED, 'Document'],
         // OBS-012 — deploy/boot lifecycle subject (release pinned at boot).
         [AuditAction.RELEASE_DEPLOYED, 'Deployment'],
+        // OBS-007 — personal-data egress subject.
+        [AuditAction.DATA_EXPORTED, 'Export'],
         [AuditAction.LOGIN_SUCCESS, 'Auth'],
         [AuditAction.LOGIN_FAILURE, 'Auth'],
         [AuditAction.ACCESS_DENIED, 'Auth'],

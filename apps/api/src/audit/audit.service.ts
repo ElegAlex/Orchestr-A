@@ -44,6 +44,11 @@ export enum AuditAction {
   // `deployments` table; this audit row is the Cour-des-Comptes narrative
   // cross-reference so deploy events sit inline with user actions.
   RELEASE_DEPLOYED = 'RELEASE_DEPLOYED',
+  // OBS-007 — personal-data egress (RGPD). One action with `scope` in the
+  // payload disambiguating the export domain (planning / …). Currently wired on
+  // the planning ICS export; CSV exports (tasks/milestones) are a documented
+  // follow-up (see OBS-007 Learnings).
+  DATA_EXPORTED = 'DATA_EXPORTED',
 }
 
 /**
@@ -63,13 +68,15 @@ export enum AuditAction {
  *               row in the `documents` table (OBS-006).
  *   - `Deployment` — release/boot events. The subject is the release SHA, also
  *               persisted as a row in the `deployments` table (OBS-012).
+ *   - `Export` — personal-data egress events (RGPD). The subject is the export
+ *               operation; `scope` in the payload names the domain (OBS-007).
  *
  * Typed as an exhaustive `Record<AuditAction, ...>` so adding an AuditAction
  * without a subject type is a compile error, not a silent 'unknown'.
  */
 const ENTITY_TYPE_BY_ACTION: Record<
   AuditAction,
-  'User' | 'Auth' | 'Leave' | 'Role' | 'Document' | 'Deployment'
+  'User' | 'Auth' | 'Leave' | 'Role' | 'Document' | 'Deployment' | 'Export'
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
@@ -96,6 +103,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.LEAVE_DELETED]: 'Leave',
   [AuditAction.LEAVE_BALANCE_ADJUSTED]: 'Leave',
   [AuditAction.RELEASE_DEPLOYED]: 'Deployment',
+  [AuditAction.DATA_EXPORTED]: 'Export',
 };
 
 /**

@@ -1,7 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
 import ical, { ICalCalendar } from 'ical-generator';
 import * as nodeIcal from 'node-ical';
+
+/**
+ * OBS-007 — request metadata for the data-export audit trail. `ip`/`ua` are
+ * threaded from the controller (extractMeta); optional so non-HTTP callers
+ * (none today) degrade gracefully.
+ */
+export interface ExportMeta {
+  ip?: string;
+  ua?: string;
+}
 
 export interface IcsPreviewEvent {
   title: string;
@@ -25,12 +37,18 @@ function strVal(v: ParameterValue | undefined): string | undefined {
 
 @Injectable()
 export class PlanningExportService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(PlanningExportService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditPersistence: AuditPersistenceService,
+  ) {}
 
   async exportIcs(
     userId: string,
     start?: string,
     end?: string,
+    meta?: ExportMeta,
   ): Promise<string> {
     const calendar: ICalCalendar = ical({ name: "Planning ORCHESTR'A" });
 
@@ -118,6 +136,35 @@ export class PlanningExportService {
         allDay: true,
       });
     }
+
+    // OBS-007 — RGPD personal-data egress: record who exported which planning
+    // range and how many rows. recordCount is the exact materialized row count
+    // (events + leaves + telework), computed at egress time, not estimated.
+    // Fire-and-forget: an export is a read path (GET), so a transient audit
+    // hiccup must not 500 a successful export (OBS-006 read-path nuance).
+    const recordCount = events.length + leaves.length + teleworkDays.length;
+    void this.auditPersistence
+      .log({
+        action: AuditAction.DATA_EXPORTED,
+        entityType: 'Export',
+        entityId: userId,
+        actorId: userId,
+        payload: {
+          format: 'ics',
+          scope: 'planning',
+          dateRange: { start: start ?? null, end: end ?? null },
+          recordCount,
+          ...(meta?.ip !== undefined ? { ip: meta.ip } : {}),
+          ...(meta?.ua !== undefined ? { ua: meta.ua } : {}),
+        },
+      })
+      .catch((err) => {
+        this.logger.error(
+          `Failed to persist DATA_EXPORTED audit event: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      });
 
     return calendar.toString();
   }

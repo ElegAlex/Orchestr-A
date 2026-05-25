@@ -2,12 +2,16 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlanningExportService } from './planning-export.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
 
 const mockPrisma = {
   event: { findMany: vi.fn(), create: vi.fn() },
   leave: { findMany: vi.fn() },
   teleworkSchedule: { findMany: vi.fn() },
 };
+
+// OBS-007 — the export emits a fire-and-forget DATA_EXPORTED audit row.
+const mockAuditPersistence = { log: vi.fn().mockResolvedValue(undefined) };
 
 describe('PlanningExportService', () => {
   let service: PlanningExportService;
@@ -17,6 +21,7 @@ describe('PlanningExportService', () => {
       providers: [
         PlanningExportService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: AuditPersistenceService, useValue: mockAuditPersistence },
       ],
     }).compile();
 
@@ -26,6 +31,7 @@ describe('PlanningExportService', () => {
     mockPrisma.event.findMany.mockResolvedValue([]);
     mockPrisma.leave.findMany.mockResolvedValue([]);
     mockPrisma.teleworkSchedule.findMany.mockResolvedValue([]);
+    mockAuditPersistence.log.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -145,6 +151,73 @@ describe('PlanningExportService', () => {
       const result = await service.exportIcs('user-1');
 
       expect(result).toContain('Teletravail');
+    });
+
+    // OBS-007 — the export must leave a DATA_EXPORTED RGPD-egress trail with the
+    // exact materialized recordCount, scope, format, dateRange and ip. Pre-fix
+    // exportIcs emitted nothing.
+    it('emits DATA_EXPORTED with scope/format/recordCount/dateRange/ip (OBS-007)', async () => {
+      mockPrisma.event.findMany.mockResolvedValue([
+        {
+          id: 'event-1',
+          title: 'E1',
+          date: new Date('2025-06-15'),
+          isAllDay: true,
+          startTime: null,
+          endTime: null,
+          description: null,
+        },
+        {
+          id: 'event-2',
+          title: 'E2',
+          date: new Date('2025-06-16'),
+          isAllDay: true,
+          startTime: null,
+          endTime: null,
+          description: null,
+        },
+      ]);
+      mockPrisma.leave.findMany.mockResolvedValue([
+        {
+          id: 'leave-1',
+          startDate: new Date('2025-07-01'),
+          endDate: new Date('2025-07-05'),
+          leaveType: { name: 'CP' },
+        },
+      ]);
+      mockPrisma.teleworkSchedule.findMany.mockResolvedValue([
+        { id: 'tw-1', date: new Date('2025-06-16') },
+      ]);
+
+      await service.exportIcs('user-1', '2025-06-01', '2025-07-31', {
+        ip: '10.0.0.12',
+        ua: 'vitest',
+      });
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      const call = mockAuditPersistence.log.mock.calls[0][0];
+      expect(call.action).toBe('DATA_EXPORTED');
+      expect(call.entityType).toBe('Export');
+      expect(call.actorId).toBe('user-1');
+      expect(call.payload.format).toBe('ics');
+      expect(call.payload.scope).toBe('planning');
+      // 2 events + 1 leave + 1 telework = 4 rows materialized.
+      expect(call.payload.recordCount).toBe(4);
+      expect(call.payload.dateRange).toEqual({
+        start: '2025-06-01',
+        end: '2025-07-31',
+      });
+      expect(call.payload.ip).toBe('10.0.0.12');
+    });
+
+    // OBS-007 — fire-and-forget resilience: a rejecting audit log must NOT make
+    // the export throw (read-path nuance, OBS-006 precedent).
+    it('still returns the ICS even when the audit log rejects (OBS-007)', async () => {
+      mockAuditPersistence.log.mockRejectedValueOnce(new Error('audit down'));
+
+      const result = await service.exportIcs('user-1');
+
+      expect(result).toContain('BEGIN:VCALENDAR');
     });
 
     it('applies only start filter when only start is provided', async () => {

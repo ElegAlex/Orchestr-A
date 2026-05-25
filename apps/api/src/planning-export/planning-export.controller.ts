@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Req, Res } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -14,6 +14,22 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 
+/**
+ * OBS-007 — extract request IP / User-Agent for the data-export audit trail.
+ * Mirrors the documents/leaves controller precedent (UA capped at 512, IP from
+ * the proxy-forwarded chain head).
+ */
+function extractMeta(req?: {
+  headers?: Record<string, unknown>;
+  ip?: string;
+  ips?: string[];
+}): { ip?: string; ua?: string } {
+  const uaRaw = req?.headers?.['user-agent'];
+  const ua = typeof uaRaw === 'string' ? uaRaw.slice(0, 512) : undefined;
+  const ip = req?.ips?.length ? req.ips[0] : (req?.ip ?? undefined);
+  return { ip, ua };
+}
+
 @ApiTags('planning-export')
 @Controller('planning-export')
 @ApiBearerAuth()
@@ -28,6 +44,7 @@ export class PlanningExportController {
   @ApiResponse({ status: 200, description: 'Fichier ICS genere' })
   async exportIcs(
     @CurrentUser('id') userId: string,
+    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
     @Query('start') start?: string,
     @Query('end') end?: string,
     @Res() res?: FastifyReply,
@@ -36,6 +53,7 @@ export class PlanningExportController {
       userId,
       start,
       end,
+      extractMeta(req),
     );
     res!
       .header('Content-Type', 'text/calendar; charset=utf-8')
