@@ -246,6 +246,8 @@ describe('AuditService', () => {
         [AuditAction.LEAVE_UPDATED, 'Leave'],
         [AuditAction.LEAVE_DELETED, 'Leave'],
         [AuditAction.LEAVE_BALANCE_ADJUSTED, 'Leave'],
+        // OBS-018 — operational backfill/seed/maintenance script subject.
+        [AuditAction.SYSTEM_BACKFILL, 'SystemMaintenance'],
       ];
 
       for (const [action, expectedEntityType] of expectations) {

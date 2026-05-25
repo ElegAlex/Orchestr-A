@@ -49,6 +49,11 @@ export enum AuditAction {
   // the planning ICS export; CSV exports (tasks/milestones) are a documented
   // follow-up (see OBS-007 Learnings).
   DATA_EXPORTED = 'DATA_EXPORTED',
+  // OBS-018 — operational backfill/seed/maintenance scripts. One action with a
+  // `phase` ('STARTED' | 'COMPLETED') in the payload (single-enum, mirrors the
+  // OBS-012 RELEASE_DEPLOYED precedent rather than split STARTED/COMPLETED
+  // enums). entityId = the script name.
+  SYSTEM_BACKFILL = 'SYSTEM_BACKFILL',
 }
 
 /**
@@ -70,13 +75,23 @@ export enum AuditAction {
  *               persisted as a row in the `deployments` table (OBS-012).
  *   - `Export` — personal-data egress events (RGPD). The subject is the export
  *               operation; `scope` in the payload names the domain (OBS-007).
+ *   - `SystemMaintenance` — operational backfill/seed/maintenance script runs.
+ *               The subject is the script name; `phase` in the payload marks
+ *               start vs completion (OBS-018).
  *
  * Typed as an exhaustive `Record<AuditAction, ...>` so adding an AuditAction
  * without a subject type is a compile error, not a silent 'unknown'.
  */
 const ENTITY_TYPE_BY_ACTION: Record<
   AuditAction,
-  'User' | 'Auth' | 'Leave' | 'Role' | 'Document' | 'Deployment' | 'Export'
+  | 'User'
+  | 'Auth'
+  | 'Leave'
+  | 'Role'
+  | 'Document'
+  | 'Deployment'
+  | 'Export'
+  | 'SystemMaintenance'
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
@@ -104,6 +119,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.LEAVE_BALANCE_ADJUSTED]: 'Leave',
   [AuditAction.RELEASE_DEPLOYED]: 'Deployment',
   [AuditAction.DATA_EXPORTED]: 'Export',
+  [AuditAction.SYSTEM_BACKFILL]: 'SystemMaintenance',
 };
 
 /**
