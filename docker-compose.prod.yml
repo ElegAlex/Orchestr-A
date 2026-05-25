@@ -125,6 +125,15 @@ services:
       # Rate Limiting
       THROTTLE_TTL: ${THROTTLE_TTL:-60}
       THROTTLE_LIMIT: ${THROTTLE_LIMIT:-100}
+
+      # OBS-012 — release pinning. scripts/deploy-prod.sh writes these into
+      # .env.production; `docker compose --env-file .env.production` interpolates
+      # them here so the api container actually sees them. Without this passthrough
+      # the boot hook (DeploymentsService) would record releaseSha='unknown' on
+      # every boot and the deployments ledger could not pin the live release.
+      RELEASE_SHA: ${RELEASE_SHA:-unknown}
+      DEPLOYED_BY: ${DEPLOYED_BY:-ci}
+      DEPLOY_ENVIRONMENT: ${DEPLOY_ENVIRONMENT:-production}
     # Port interne uniquement (accès via nginx)
     expose:
       - "4000"
