@@ -296,3 +296,15 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1575** (68 files, +8 net witnesses over AUD-EMIT-001's 1567), web 579 passed / 14 skipped. `pnpm run test:e2e` 2/2 (mocked DB, invariant). Unit witness FAIL-pre 11/11 → PASS-post 11/11.
 - **AUD-EMIT-001 interaction:** `log()`'s INPUT signature is unchanged (new fields computed internally), so AUD-EMIT-001's emitters and their mocked-service specs needed zero changes — `ffc4cf4`'s witnesses still pass within the 1575.
 - **Open questions for next session:** OBS-003 (leave-approval before/after + role snapshot) remains TODO in Phase 2 Cluster A. TOOL-DEPLOY-001 (DB role split) now filed for a deploy-infra session. PERF-001's async-queue case is materially strengthened (advisory-lock serialization) — candidate before the emitter surface widens.
+
+
+## 2026-05-25 — File two follow-ups from OBS-002+DAT-009 closeout (USR-DEL-001, TST-DB-001)
+
+- **Session ID:** 2026-05-25-followup-filing
+- **Tasks closed:** none (filing-only).
+- **Tasks moved to BLOCKED:** none.
+- **Other backlog touches:** USR-DEL-001 filed (Phase 2, cluster —, correctness — hardDelete UX regression from d6299cc's FK SetNull→NoAction change). TST-DB-001 filed (Phase 1, cluster —, tests — recurrent gap observed across AUD-EMIT-001 e2e skip and OBS-002+DAT-009 trigger witness skip).
+- **Commits:** <pending> (filing).
+- **Duration:** <approx>
+- **Learnings:** Filing follow-ups within one session of the remediation that surfaced them. Pattern correction vs the earlier SEC-002 / OBS-001 "deferred Q in Learnings" approach which led to AUD-EMIT-001 having to retroactively close threads — explicit filings as standalone entries are more durable than Learnings notes.
+- **Open questions for next session:** DAT-007 (Task.projectId Cascade — next cross-validated Cluster A remediation, thematically continues the audit-trail durability work hardened by OBS-002+DAT-009).

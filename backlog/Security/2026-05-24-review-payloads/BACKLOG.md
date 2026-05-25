@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 179 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25)
+> **Total tasks:** 181 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 2 session-derived follow-ups (USR-DEL-001, TST-DB-001, 2026-05-25)
 
 ## Schema legend
 
@@ -27,7 +27,7 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 ## Totals
 
 - **By severity:** 32 blocking · 118 important · 21 nit · 5 suggestion
-- **By category:** 33 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 25 tests · 5 tooling
+- **By category:** 34 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 26 tests · 5 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -59,7 +59,7 @@ See `CLAUDE_SESSION_CONTRACT.md` in this directory for the exact session protoco
 
 
 ## Phase 1 — Stop the bleed (audit-prescribed blockers)
-*10 tasks in this phase.*
+*11 tasks in this phase.*
 
 ### COR-003 — Leave day calculation never subtracts public holidays
 
@@ -566,8 +566,59 @@ psql "$DATABASE_URL" -c "UPDATE audit_logs SET action='x' WHERE false;"  # expec
 
 ---
 
+### TST-DB-001 — No real-DB integration test harness; trigger, FK, migration behaviour untestable in CI
+
+- **Status:** TODO
+- **Phase:** 1
+- **Cluster:** —
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** tests
+- **File:** `apps/api/vitest.config.ts` + `vitest.config.ts` (root) + `apps/api/src/test-setup.ts` (or equivalent)
+- **Source:** Session-derived. Pattern observed across two consecutive Cluster A remediations: AUD-EMIT-001 closeout (ffc4cf4, 2026-05-25) skipped e2e for emitter coverage with the rationale "local API/web dev servers were down (3001/4001)"; OBS-002+DAT-009 closeout (d6299cc, 2026-05-25) verified the immutability trigger and FK NoAction behaviour manually via psql because "no vitest real-DB harness exists — both configs globally vi.mock('database')". Both sessions documented honest divergence rather than masking the gap, but the gap itself is now recurrent and amplifies as we move into more infra-level remediations (DAT-007 cascade, OBS-005 role mutations, future DB triggers).
+
+**Description:**
+Both apps/api and the root vitest configurations apply a global `vi.mock('database')` (or equivalent) that substitutes the Prisma client and all schema-dependent behaviour with mocks. This is appropriate for unit tests but precludes any integration test that exercises real Postgres semantics: triggers (the new audit_logs immutability trigger), FK cascade rules (ON DELETE NO ACTION, SetNull), migration ordering effects, generated columns, schema-level constraints, advisory locks, and any application code whose correctness depends on real SQL execution.
+
+**Root cause:**
+The global mock is set up once for the whole vitest run with no scoping. There's no per-suite escape hatch, no parallel project running against a real DB, and no `pnpm test:integration` (or equivalent) target distinct from `pnpm test` (unit) and `pnpm test:e2e` (full app boot with mocked Prisma).
+
+**Code evidence:**
+```
+grep -rn "vi.mock.*database" apps/api/ vitest.config.ts apps/api/vitest.config.ts
+grep -rn "testcontainers\|TESTCONTAINERS" apps/api/ packages/  # expect 0 hits
+ls -la apps/api/src/**/*integration*  # expect no integration test directory
+```
+
+**Suggested fix:**
+Add a vitest project (or a separate test suite under a `pnpm test:integration` target) that:
+(a) opts out of the global `vi.mock('database')`,
+(b) spins up an ephemeral Postgres via testcontainers-node (or a docker-compose-managed local test DB),
+(c) runs `prisma migrate deploy` against it in the setup phase,
+(d) exposes a real PrismaClient to the tests.
+Add two seed integration tests as proof-of-concept and regression coverage for the two recently-skipped witnesses: (1) the audit_logs immutability trigger blocks UPDATE and DELETE (closing the OBS-002+DAT-009 real-DB witness gap), (2) the FK NoAction prevents user hardDelete when audit rows exist (closing the USR-DEL-001 real-DB witness gap once USR-DEL-001 itself lands). Document in CONTRIBUTING.md (or equivalent) when to use the real-DB harness vs the mocked harness.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied (the new test suite cannot run at all on master because the harness doesn't exist), PASSES after. Both seed integration tests pass against a real ephemeral DB.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green; the new `pnpm test:integration` target is additive, not a replacement).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — N/A (test infrastructure, not application code).
+5. Commit message includes `[closes TST-DB-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm test:integration
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+
 ## Phase 2 — Cour des Comptes ready — Audit log durcissement
-*17 tasks in this phase.*
+*18 tasks in this phase.*
 
 ### DAT-002 — AuditService is logger-only — security events not persisted
 
@@ -1358,6 +1409,51 @@ pnpm test apps/api/src/audit/audit-persistence.service.spec.ts
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
 **Learnings:** Coverage cumulatively expanded since the original audit baseline by: DAT-001 (b14cdd5) — leaves approve/reject/cancel transactional + audit assertions; DAT-002 (c62ac8d) — AuditService dual-write spec; OBS-001 (1ff6c9a) — per-action entityType + ua/reason/attemptedEmail bcrypt-redaction tests; AUD-EMIT-001 (ffc4cf4) — UsersService ROLE_CHANGE + USER_DEACTIVATED emission assertions; SEC-003 (2763552) — admin password reset audit assertion. Remaining gaps per original Suggested fix: project archive (projects.service.spec), document delete (documents.service.spec), role create/update/delete (rbac/roles.service.spec — OBS-005 territory).
+
+---
+
+### USR-DEL-001 — hardDelete of users with audit_logs rows fails with raw FK violation instead of typed ConflictException
+
+- **Status:** TODO
+- **Phase:** 2
+- **Cluster:** —
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** correctness
+- **File:** `apps/api/src/users/users.service.ts` (hardDelete + checkDependencies)
+- **Source:** Session-derived. OBS-002+DAT-009 closeout (d6299cc, 2026-05-25) — under "actorId interpretation + forced FK change" — noted that switching the `audit_logs.actor_id` FK from `SetNull` to `NoAction` (required by the immutability trigger) regresses the hardDelete UX. Out-of-scope at that point; filed now as a follow-up per advisor discipline.
+
+**Description:**
+After d6299cc, the `audit_logs.actor_id → users.id` FK uses ON DELETE NO ACTION (changed from SET NULL because SET NULL issues an UPDATE on audit_logs that the new immutability trigger rejects, making users with audit rows undeletable). `UsersService.hardDelete()` calls `checkDependencies()` to pre-validate that a user has no blocking relations before deletion, raising a typed `ConflictException` if any exist. `checkDependencies()` checks Leave, TimeEntry, ProjectMembership, etc., but does NOT check `audit_logs`. As a result, hardDelete of a user with audit rows fails downstream in Prisma with a raw `P2003` (foreign key constraint violated) error instead of the clean `ConflictException` the rest of the codepath promises.
+
+**Root cause:**
+Pre-d6299cc the FK was SetNull, so audit rows were never a hardDelete blocker — they silently lost their actor reference. d6299cc changed the FK semantics but did not update the pre-check accordingly. The check function pre-dates the FK change.
+
+**Code evidence:**
+```
+grep -n "audit" apps/api/src/users/users.service.ts  # 0 hits in checkDependencies-related code
+git show d6299cc -- packages/database/prisma/migrations/ | grep -i "no action\|set null"  # confirms FK semantic change
+```
+
+**Suggested fix:**
+Extend `checkDependencies()` in UsersService to query `prisma.auditLog.count({ where: { actorId: userId } })`. If `> 0`, throw `ConflictException` with a message naming the count and recommending soft-deactivation (USER_DEACTIVATED) as the alternative. Mirror the wording and shape of the existing dependency checks. Document in the Learnings on AUD-EMIT-001's USER_DEACTIVATED path that this is the canonical user-removal action when audit history exists.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Witness: call hardDelete on a user with ≥1 audit_logs row (mocked via the AuditPersistenceService mock pattern from AUD-EMIT-001's specs, OR a direct prisma mock returning count > 0), assert `ConflictException` raised with a message containing the audit log count, and assert `prisma.user.delete` is not called.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green). Specifically: AUD-EMIT-001's USER_DEACTIVATED tests must still pass (the soft-deactivation path is unaffected).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Confirm whether hardDelete itself should emit an audit event (USER_DELETED — net-new enum value) or whether the soft-deactivation alternative is the only allowed user-removal path. If the latter, document the policy decision in the fix's closeout Learnings; if the former, USER_DELETED enum addition is a separate task and must be filed.
+5. Commit message includes `[closes USR-DEL-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm test apps/api/src/users/users.service.spec.ts
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
 
 ---
 
