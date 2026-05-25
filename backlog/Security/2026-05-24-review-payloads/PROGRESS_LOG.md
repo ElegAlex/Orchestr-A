@@ -185,3 +185,20 @@ Append a new entry at the bottom after each Claude Code session that touched the
   - **Disk was at 99% (999 MB free).** `docker builder prune -f` alone reclaimed 34.6 GB of stale build cache (→ 41 GB free) — no volumes/tagged-anchor images touched.
   - Structural fix for BUILD-001 (pin `rootDir: ./src`) tracked as the backlog item; the `scripts/**` exclude is the deployed workaround.
 - **Open questions for next session:** Gate 2 manual frontend smoke pending (login, leaves Decimal serialization, COR-003 holiday subtraction Apr 27→May 1 = 4 days, DAT-001 audit_log on approve, SEC-002 403 on cross-user PATCH). The Decimal HTTP-serialization type check (`.days` must be JSON number not string) requires an admin token — fold into Gate 2 smoke.
+
+
+## 2026-05-25 — DAT-002 closed (AuditService dual-writes security events to audit_logs)
+
+- **Session ID:** 2026-05-25-dat-002
+- **Tasks closed:** DAT-002 (Phase 2, Cluster A)
+- **Tasks moved to BLOCKED:** none
+- **Commits:** 5b16800 (in_progress anchor), c62ac8d (fix + 3 dual-write witness tests), <pending> (closeout)
+- **Duration:** ~40 minutes
+- **Learnings (non-trivial):**
+  - **No circular dep, no module change.** `AuditService` + `AuditPersistenceService` already co-reside in the `@Global() AuditModule`; the latter depends only on `PrismaService`. Direct constructor injection resolved with zero wiring change — forwardRef was anticipated by the task but proved unnecessary.
+  - **`log()` kept synchronous (`void`).** All 11 emitter call-sites fire-and-forget without `await`; an async signature would orphan their promises. Persistence is fired internally as `void this.auditPersistence.log(...).catch(err => logger.error(...))`. The `.catch` is load-bearing — a DB failure degrades to logger-only and must never crash a login/leave flow. Logger emission stays as the durable floor; DB write is best-effort until OBS-002 hardens append-only + hash chain.
+  - **Mapping:** actorId=`userId??null`, entityId=`targetId??userId??'unknown'`, entityType=`'SecurityEvent'` (constant; per-action subject typing deferred to OBS-001), payload JSONB = `{ip, details, success, timestamp}` as today's `AuditEvent` exposes them. LOGIN_FAILURE (no userId/targetId) → `entityId='unknown'`, `actorId=null`; no FK violation (`actorId` nullable, SetNull).
+  - **No spec flipped logger-only→dual-write.** The 4 existing tests assert logger emission, never "DB not called", so they stayed valid; only DI was fixed (mock `AuditPersistenceService` added to the `TestingModule`). 3 new witness tests: FAIL-pre = `persistence.log` called 0 times on logger-only master; PASS-post = 7/7 green. Consumer specs (auth/leaves/users) use `useValue: mockAuditService` so are unaffected.
+  - **Scope held tight:** diff = `apps/api/src/audit/audit.service.ts` + `audit.service.spec.ts` only (131 +, 1 −). No emitter touches, no schema migration, no payload restructure (OBS-001/OBS-002 scope). AC#4 N/A — DAT-002 IS the durability enablement, no separate audit_logs entry of its own.
+  - **Gates:** `pnpm test` 6/6 turbo, 1558 tests green; `pnpm test:e2e` 4/4 turbo, `app.e2e-spec.ts` 2 tests green (real DB boot; no audit_logs row assertions → no drift from new writes).
+- **Open questions for next session (OBS-001 — emitter migration):** refine `entityType` to per-action subject types (User/Auth); enrich payload with `ua`/`reason`/structured before-after at the emitter sites; decide LOGIN_FAILURE subject (capture attempted login string?); evaluate sync fire-and-forget vs queue/batch for high-volume LOGIN_SUCCESS before more emitters multiply DB write load.

@@ -434,7 +434,7 @@ TBD — manual verification (config change, no automated test)
 
 ### DAT-002 — AuditService is logger-only — security events not persisted
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** cross-validated
@@ -471,8 +471,16 @@ Make AuditService write to both the logger AND audit_logs. Add columns for ip an
 pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** c62ac8d61530c596619b9cf643de0ffeb7a8ad5f
+**Learnings:**
+- **No circular dep — forwardRef NOT needed.** `AuditService` and `AuditPersistenceService` already co-reside in the `@Global() AuditModule` (both provided + exported), and `AuditPersistenceService` depends only on `PrismaService`. Direct constructor injection compiles and resolves; no module wiring change was required at all.
+- **`log()` stays synchronous (`void` return).** All 11 call-sites (`auth.service.ts` ×5, `leaves.service.ts` ×1, `users.service.ts` ×1, …) invoke `auditService.log({...})` fire-and-forget without `await`. Making `log()` async would have orphaned those promises. Instead the persistence write is fired internally as `void this.auditPersistence.log(...).catch(...)`. The `.catch` is load-bearing: a DB failure logs an error via the logger and degrades to logger-only — it must never crash a login or leave-approval flow. This dual-write contract (logger = durable floor, DB = best-effort until OBS-002 hardens append-only + hash chain) is deliberate.
+- **Field mapping (AuditEvent → AuditPersistenceService.log):** `action`→`action`; `actorId`=`userId ?? null` (the actor); `entityId`=`targetId ?? userId ?? 'unknown'` (the subject — ROLE_CHANGE puts admin in actorId and target user in entityId; LOGIN_FAILURE passes neither, so `entityId='unknown'`, `actorId=null` — clean, no FK violation since `actorId` is nullable FK with onDelete SetNull); `entityType`='SecurityEvent' (single constant — per-action subject typing is OBS-001 scope); `payload` JSONB carries `ip`/`details`/`success`/`timestamp` as today's AuditEvent exposes them (`ua`/`reason` enrichment is OBS-001).
+- **NO spec flipped from logger-only to dual-write.** The 4 pre-existing tests in `audit.service.spec.ts` assert logger emission (`logger.log`/`logger.warn` called with the JSON entry); none asserted "DB is NOT called", so they remained semantically valid. The ONLY change to them was a DI fix: the `TestingModule` now also provides a mock `AuditPersistenceService` (the real `AuditService` constructor now requires it). Three new dual-write witness tests were added (FAIL-pre: `persistence.log` called 0 times on logger-only master; PASS-post: 7/7 green).
+- **Consumer specs unaffected.** `auth/leaves/users` service specs inject `AuditService` via `useValue: mockAuditService`, so they never instantiate the real service and don't hit the new constructor dependency.
+- **AC#4 = N/A.** DAT-002 IS the audit-trail durability enablement; this commit creates no separate `audit_logs` entry of its own.
+- **Gates:** `pnpm test` 6/6 turbo tasks, 1558 tests green; `pnpm test:e2e` 4/4 tasks, `app.e2e-spec.ts` 2 tests green (real DB-backed boot, no audit_logs row-count assertions so no drift from the new writes).
+- **Friction handed to OBS-001 (emitter migration):** (1) the `entityType='SecurityEvent'` constant should be refined to per-action subject types (User for ROLE_CHANGE/USER_DEACTIVATED/PASSWORD_CHANGED, Auth for LOGIN_*); (2) emitters must start passing `ua`/`reason` and structured before/after so the payload schema is enriched (DAT-002 only carries what today's `AuditEvent` shape exposes); (3) LOGIN_FAILURE currently lands `entityId='unknown'` — OBS-001 should decide whether to capture the attempted login string as the subject; (4) consider whether high-volume LOGIN_SUCCESS should remain a synchronous fire-and-forget DB write or move to a queue/batched write before emitter call-sites multiply the load.
 
 ---
 ### OBS-001 — Security audit events go to console only, not to durable storage
