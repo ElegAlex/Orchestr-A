@@ -1053,7 +1053,7 @@ pnpm test apps/api/src/documents/documents.controller.spec.ts  # may need creati
 ---
 ### OBS-012 — Deploy workflow is theatrical — no real deploy and no deploy audit trail
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
