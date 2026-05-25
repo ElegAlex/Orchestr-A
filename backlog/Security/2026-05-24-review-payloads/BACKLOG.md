@@ -650,7 +650,7 @@ Durability (DAT-002) was prioritized over backpressure; the write path is unbatc
 ---
 ### OBS-002 — Append-only is a convention, not enforced by DB
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -958,7 +958,7 @@ TBD — manual verification (config change, no automated test)
 ---
 ### DAT-009 — AuditLog has no append-only enforcement and no integrity hash chain
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
