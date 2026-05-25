@@ -1253,7 +1253,7 @@ pnpm test apps/api/src/planning-export/planning-export.service.spec.ts  # may ne
 ---
 ### OBS-026 — Project CSV exports (tasks / milestones) are NOT audited
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
