@@ -210,7 +210,7 @@ describe('AuditService', () => {
     // from DAT-002 is refined to subject types so an auditor can filter by what
     // the event is about: User for account mutations, Auth for login/access,
     // Leave for leave decisions.
-    it('should stamp entityType per action (User / Auth / Leave)', () => {
+    it('should stamp entityType per action (User / Auth / Leave / Role)', () => {
       vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
       vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
 
@@ -223,6 +223,11 @@ describe('AuditService', () => {
         [AuditAction.SERVICE_MEMBERSHIP_CHANGED, 'User'],
         [AuditAction.DEPARTMENT_CHANGED, 'User'],
         [AuditAction.REGISTER, 'User'],
+        // OBS-005 — institutional-role lifecycle subjects.
+        [AuditAction.ROLE_CREATED, 'Role'],
+        [AuditAction.ROLE_UPDATED, 'Role'],
+        [AuditAction.ROLE_DELETED, 'Role'],
+        [AuditAction.ROLE_DEFAULT_CHANGED, 'Role'],
         [AuditAction.LOGIN_SUCCESS, 'Auth'],
         [AuditAction.LOGIN_FAILURE, 'Auth'],
         [AuditAction.ACCESS_DENIED, 'Auth'],

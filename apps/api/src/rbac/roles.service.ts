@@ -12,9 +12,18 @@ import {
   type RoleTemplateKey,
 } from 'rbac';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
 import { PermissionsService } from './permissions.service';
 import type { CreateRoleDto } from './dto/create-role.dto';
 import type { UpdateRoleDto } from './dto/update-role.dto';
+
+/**
+ * Actor performing a role mutation. The audit trail stamps `actorId` from this.
+ * Optional: internal / seed / test paths pass no caller and emit nothing
+ * (OBS-004 / SEC-002 caller-optional precedent).
+ */
+export type RoleMutationActor = { id: string };
 
 export interface RoleWithStats {
   id: string;
@@ -67,6 +76,7 @@ export class RolesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissionsService: PermissionsService,
+    private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
   /**
@@ -107,7 +117,10 @@ export class RolesService {
     return this.toRoleWithStats(row);
   }
 
-  async createRole(dto: CreateRoleDto): Promise<RoleWithStats> {
+  async createRole(
+    dto: CreateRoleDto,
+    caller?: RoleMutationActor,
+  ): Promise<RoleWithStats> {
     // Garde-fou : un code identique à un templateKey système → conflit avec
     // l'un des 26 rôles seedés (qui ont code = templateKey).
     const existing = await this.prisma.role.findUnique({
@@ -119,7 +132,14 @@ export class RolesService {
       );
     }
 
+    // OBS-005 — capture the prior default before the singleton shifts, but only
+    // when we will actually emit (caller present). +1 findFirst on the
+    // default-setting path only; no extra roundtrip otherwise.
+    let prevDefaultRoleId: string | null = null;
     if (dto.isDefault) {
+      if (caller) {
+        prevDefaultRoleId = await this.captureCurrentDefaultId();
+      }
       await this.unsetCurrentDefault();
     }
 
@@ -135,10 +155,39 @@ export class RolesService {
       },
       include: { _count: { select: { users: true } } },
     });
+
+    // OBS-005 — durable audit trail. Caller-undefined (seed/internal/test
+    // paths) emits nothing, mirroring the OBS-004 / SEC-002 precedent.
+    if (caller) {
+      await this.auditPersistence.log({
+        action: AuditAction.ROLE_CREATED,
+        entityType: 'Role',
+        entityId: created.id,
+        actorId: caller.id,
+        payload: {
+          after: {
+            code: created.code,
+            label: created.label,
+            templateKey: created.templateKey,
+            description: created.description,
+            isDefault: created.isDefault,
+            isSystem: created.isSystem,
+          },
+        },
+      });
+      if (created.isDefault) {
+        await this.emitDefaultChanged(caller, prevDefaultRoleId, created.id);
+      }
+    }
+
     return this.toRoleWithStats(created);
   }
 
-  async updateRole(id: string, dto: UpdateRoleDto): Promise<RoleWithStats> {
+  async updateRole(
+    id: string,
+    dto: UpdateRoleDto,
+    caller?: RoleMutationActor,
+  ): Promise<RoleWithStats> {
     const existing = await this.prisma.role.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`Role ${id} introuvable`);
     if (existing.isSystem) {
@@ -147,7 +196,16 @@ export class RolesService {
       );
     }
 
-    if (dto.isDefault === true && !existing.isDefault) {
+    const defaultGoingTrue = dto.isDefault === true && !existing.isDefault;
+    const defaultGoingFalse = dto.isDefault === false && existing.isDefault;
+
+    // OBS-005 — read the prior default before unsetting it (only on the
+    // false→true transition, where the singleton holder is some *other* row).
+    let prevDefaultRoleId: string | null = null;
+    if (defaultGoingTrue) {
+      if (caller) {
+        prevDefaultRoleId = await this.captureCurrentDefaultId();
+      }
       await this.unsetCurrentDefault();
     }
 
@@ -164,10 +222,39 @@ export class RolesService {
       include: { _count: { select: { users: true } } },
     });
 
+    // OBS-005 — ROLE_UPDATED tracks the free-text descriptive scalars
+    // (label, description). `isDefault` is intentionally NOT in this set: its
+    // transition is a system-wide singleton shift owned by ROLE_DEFAULT_CHANGED
+    // (mirrors OBS-004's dedicated SERVICE_MEMBERSHIP_CHANGED carve-out). No-op
+    // DTOs (nothing in the monitored set changed) emit nothing.
+    if (caller) {
+      const before = { label: existing.label, description: existing.description };
+      const after = { label: updated.label, description: updated.description };
+      const changed = (['label', 'description'] as const).filter(
+        (k) => before[k] !== after[k],
+      );
+      if (changed.length > 0) {
+        await this.auditPersistence.log({
+          action: AuditAction.ROLE_UPDATED,
+          entityType: 'Role',
+          entityId: id,
+          actorId: caller.id,
+          payload: { before, after, changed },
+        });
+      }
+
+      if (defaultGoingTrue) {
+        await this.emitDefaultChanged(caller, prevDefaultRoleId, id);
+      } else if (defaultGoingFalse) {
+        // Default removed with no replacement → the system pointer goes to null.
+        await this.emitDefaultChanged(caller, id, null);
+      }
+    }
+
     return this.toRoleWithStats(updated);
   }
 
-  async deleteRole(id: string): Promise<void> {
+  async deleteRole(id: string, caller?: RoleMutationActor): Promise<void> {
     const existing = await this.prisma.role.findUnique({
       where: { id },
       include: {
@@ -195,6 +282,33 @@ export class RolesService {
         users: dependents,
       });
     }
+
+    // OBS-005 — final snapshot to the immutable trail BEFORE the row is erased
+    // (DAT-007 PROJECT_DELETED precedent). Plain await, not transactional with
+    // the delete, matching the existing emission pattern; the audit pipeline is
+    // out of scope. Caller-undefined emits nothing.
+    if (caller) {
+      await this.auditPersistence.log({
+        action: AuditAction.ROLE_DELETED,
+        entityType: 'Role',
+        entityId: existing.id,
+        actorId: caller.id,
+        payload: {
+          snapshot: {
+            id: existing.id,
+            code: existing.code,
+            label: existing.label,
+            templateKey: existing.templateKey,
+            description: existing.description,
+            isSystem: existing.isSystem,
+            isDefault: existing.isDefault,
+            createdAt: existing.createdAt,
+            updatedAt: existing.updatedAt,
+          },
+        },
+      });
+    }
+
     await this.prisma.role.delete({ where: { id } });
     await this.permissionsService.invalidateRoleCache(existing.code);
   }
@@ -205,6 +319,40 @@ export class RolesService {
     await this.prisma.role.updateMany({
       where: { isDefault: true },
       data: { isDefault: false },
+    });
+  }
+
+  /**
+   * OBS-005 — id of the role currently flagged default (or null). Read before
+   * `unsetCurrentDefault` so ROLE_DEFAULT_CHANGED can name the prior holder.
+   */
+  private async captureCurrentDefaultId(): Promise<string | null> {
+    const current = await this.prisma.role.findFirst({
+      where: { isDefault: true },
+      select: { id: true },
+    });
+    return current?.id ?? null;
+  }
+
+  /**
+   * OBS-005 — emit the system-wide default-role singleton shift. `before`/
+   * `after` carry the prior and new default role ids (either may be null: no
+   * prior default, or default removed without replacement).
+   */
+  private async emitDefaultChanged(
+    caller: RoleMutationActor,
+    fromRoleId: string | null,
+    toRoleId: string | null,
+  ): Promise<void> {
+    await this.auditPersistence.log({
+      action: AuditAction.ROLE_DEFAULT_CHANGED,
+      entityType: 'Role',
+      entityId: toRoleId ?? fromRoleId ?? 'unknown',
+      actorId: caller.id,
+      payload: {
+        before: { defaultRoleId: fromRoleId },
+        after: { defaultRoleId: toRoleId },
+      },
     });
   }
 

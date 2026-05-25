@@ -20,6 +20,7 @@ import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { RequirePermissions } from './decorators/require-permissions.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 /**
  * RolesController — V1 D de Spec 2.
@@ -80,8 +81,11 @@ export class RolesController {
   })
   @ApiResponse({ status: 201, description: 'Rôle créé' })
   @ApiResponse({ status: 409, description: 'Code déjà existant' })
-  create(@Body() dto: CreateRoleDto) {
-    return this.rolesService.createRole(dto);
+  create(
+    @Body() dto: CreateRoleDto,
+    @CurrentUser() caller: { id: string },
+  ) {
+    return this.rolesService.createRole(dto, caller);
   }
 
   @Patch(':id')
@@ -93,8 +97,12 @@ export class RolesController {
   @ApiResponse({ status: 200, description: 'Rôle mis à jour' })
   @ApiResponse({ status: 403, description: 'Rôle système non modifiable' })
   @ApiResponse({ status: 404, description: 'Rôle introuvable' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRoleDto) {
-    return this.rolesService.updateRole(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateRoleDto,
+    @CurrentUser() caller: { id: string },
+  ) {
+    return this.rolesService.updateRole(id, dto, caller);
   }
 
   @Delete(':id')
@@ -110,7 +118,10 @@ export class RolesController {
     status: 409,
     description: 'Rôle rattaché à des users — réassigner avant suppression',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.rolesService.deleteRole(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() caller: { id: string },
+  ) {
+    return this.rolesService.deleteRole(id, caller);
   }
 }

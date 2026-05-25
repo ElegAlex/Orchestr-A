@@ -13,6 +13,12 @@ export enum AuditAction {
   PASSWORD_RESET_BY_ADMIN = 'PASSWORD_RESET_BY_ADMIN',
   SERVICE_MEMBERSHIP_CHANGED = 'SERVICE_MEMBERSHIP_CHANGED',
   DEPARTMENT_CHANGED = 'DEPARTMENT_CHANGED',
+  // OBS-005 — institutional-role (table `roles`) lifecycle mutations. Distinct
+  // from ROLE_CHANGE, which records a *user* being reassigned to another role.
+  ROLE_CREATED = 'ROLE_CREATED',
+  ROLE_UPDATED = 'ROLE_UPDATED',
+  ROLE_DELETED = 'ROLE_DELETED',
+  ROLE_DEFAULT_CHANGED = 'ROLE_DEFAULT_CHANGED',
   LEAVE_APPROVED = 'LEAVE_APPROVED',
   LEAVE_REJECTED = 'LEAVE_REJECTED',
 }
@@ -27,11 +33,17 @@ export enum AuditAction {
  *   - `Auth`  — authentication / authorization events (login outcomes, access
  *               denial). The subject is the auth attempt, not a stored row.
  *   - `Leave` — leave-request decisions (approve / reject).
+ *   - `Role`  — institutional-role lifecycle (create / update / delete /
+ *               default change). The subject is a row in the `roles` table
+ *               (OBS-005).
  *
  * Typed as an exhaustive `Record<AuditAction, ...>` so adding an AuditAction
  * without a subject type is a compile error, not a silent 'unknown'.
  */
-const ENTITY_TYPE_BY_ACTION: Record<AuditAction, 'User' | 'Auth' | 'Leave'> = {
+const ENTITY_TYPE_BY_ACTION: Record<
+  AuditAction,
+  'User' | 'Auth' | 'Leave' | 'Role'
+> = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
   [AuditAction.ACCESS_DENIED]: 'Auth',
@@ -43,6 +55,10 @@ const ENTITY_TYPE_BY_ACTION: Record<AuditAction, 'User' | 'Auth' | 'Leave'> = {
   [AuditAction.PASSWORD_RESET_BY_ADMIN]: 'User',
   [AuditAction.SERVICE_MEMBERSHIP_CHANGED]: 'User',
   [AuditAction.DEPARTMENT_CHANGED]: 'User',
+  [AuditAction.ROLE_CREATED]: 'Role',
+  [AuditAction.ROLE_UPDATED]: 'Role',
+  [AuditAction.ROLE_DELETED]: 'Role',
+  [AuditAction.ROLE_DEFAULT_CHANGED]: 'Role',
   [AuditAction.LEAVE_APPROVED]: 'Leave',
   [AuditAction.LEAVE_REJECTED]: 'Leave',
 };
