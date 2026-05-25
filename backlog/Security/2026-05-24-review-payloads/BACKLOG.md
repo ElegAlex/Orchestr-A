@@ -485,7 +485,7 @@ pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missi
 ---
 ### OBS-001 — Security audit events go to console only, not to durable storage
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** cross-validated
@@ -522,8 +522,15 @@ Make AuditService persist to audit_logs via AuditPersistenceService in addition 
 pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 1ff6c9a
+**Learnings:**
+- **Witness lives in audit.service.spec.ts, not at emitters.** All 4 enumerated assertions (per-action entityType, attemptedEmail→entityId, ua/reason round-trip, before/after for ROLE_CHANGE) are pure unit tests on `AuditService.log()` — they pass an enriched `AuditEvent` and assert the mapping. FAIL-pre/PASS-post is achievable on audit.service.ts alone; emitter wiring is the propagation layer, not the witness.
+- **DAT-002 entityType expectations rewritten, not weakened.** Three DAT-002 dual-write tests hard-coded `entityType: 'SecurityEvent'` — the exact constant OBS-001 refines. Updated to 'Auth'/'User' (the intended behavior change). The other assertions (entityId, actorId, payload) are untouched.
+- **`Record<AuditAction, 'User'|'Auth'|'Leave'>` is exhaustive on purpose.** REGISTER (active emitter, not in the task's map) + ACCESS_DENIED (enum-only, no emitter) both needed entries or the Record fails to typecheck. REGISTER→User (account creation), ACCESS_DENIED→Auth.
+- **bcrypt guard has teeth.** entityId for LOGIN_FAILURE = `attemptedEmail.toLowerCase().slice(0,254)`, but a bcrypt-shaped attemptedEmail (`/\$2[aby]\$/`) is refused → 'unknown', so a password fat-fingered into the login field never lands in the trail. attemptedEmail only feeds entityId (never the payload), so it cannot leak via JSONB either.
+- **ROLE_CHANGE / USER_DEACTIVATED have NO emitters today** — they are enum values with zero call sites. `users.service.update()/remove()` emit no audit event (SEC-002 explicitly deferred "users:update to audit_logs"). The task's step-4 directive to wire them collides with its own OUT-scope ("users.service … leave them alone") and SEC-002 precedent. AuditService now *supports* before/after for ROLE_CHANGE (witness d proves the round-trip); wiring a live emitter into users.service is net-new audit emission = deferred (see PROGRESS_LOG follow-up). No users.service.ts churn this session.
+- **LEAVE_APPROVED/REJECTED durable paths bypass auditService.** `leaves.service.ts:1565/:1677` write to AuditPersistenceService directly (OUT-scope, untouched) and already carry before/after + the rejection reason as `validationComment`. The one LEAVE site on `auditService.log()` (self-approval, :587) auto-maps to entityType 'Leave' with no wiring; auto-validation has no rejection reason. So no leaves.service.ts change was needed.
+- **`ua` reachable only at LOGIN_*.** `AuthService.login()` receives request `meta` (userAgent+ip) from the controller, so LOGIN_SUCCESS/FAILURE get ip+ua. The PASSWORD_CHANGED service methods (`generateResetToken`, `resetPassword` in auth + `resetPassword` in users) don't receive meta — ua not reachable without a controller signature change; left optional per scope.
 
 ---
 ### PERF-001 — Audit dual-write is synchronous fire-and-forget — unbounded under high-volume LOGIN_SUCCESS
