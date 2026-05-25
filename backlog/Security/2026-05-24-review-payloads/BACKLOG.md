@@ -999,7 +999,7 @@ pnpm test apps/api/src/rbac/roles.service.spec.ts  # may need creation if missin
 ---
 ### OBS-006 — Document access/downloads are NOT logged
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
