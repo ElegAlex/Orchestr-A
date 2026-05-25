@@ -1204,7 +1204,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### OBS-007 — Data exports (ICS/CSV/XLSX) are NOT audited
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
