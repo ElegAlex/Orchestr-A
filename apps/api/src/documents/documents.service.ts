@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
@@ -15,6 +15,8 @@ export type DocumentAccessMeta = { ip?: string; ua?: string };
 
 @Injectable()
 export class DocumentsService {
+  private readonly logger = new Logger(DocumentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly accessScope: AccessScopeService,
@@ -104,22 +106,38 @@ export class DocumentsService {
     // the access check and existence check pass (no trail for denied/missing
     // reads). Internal callers (update/remove call findOne(id) with no
     // currentUser) skip emission — backward-compat + avoids spurious reads.
+    //
+    // Fire-and-forget (NOT awaited): this is a READ path, higher-frequency than
+    // the mutation emitters (OBS-005/DAT-007) that could afford a plain await.
+    // A transient audit-chain hiccup must NOT turn a successful read into a 500,
+    // and the read must not block on the audit advisory lock — mirrors the
+    // AuditService floor pattern (`void …log().catch()`) for high-frequency
+    // events. findUnique above already proved the DB reachable, so the realistic
+    // loss window is tiny; the `.catch` surfaces any dropped row as an error log.
     if (currentUser) {
-      await this.auditPersistence.log({
-        action: AuditAction.DOCUMENT_READ,
-        entityType: 'Document',
-        entityId: document.id,
-        actorId: currentUser.id,
-        payload: {
-          documentId: document.id,
-          mimeType: document.mimeType,
-          // sizeBytes sourced from the Document.size column (bytes) — cheaper
-          // and consistent; the API never streams the binary (see Document.url).
-          sizeBytes: document.size,
-          ...(meta?.ip !== undefined ? { ip: meta.ip } : {}),
-          ...(meta?.ua !== undefined ? { ua: meta.ua } : {}),
-        },
-      });
+      void this.auditPersistence
+        .log({
+          action: AuditAction.DOCUMENT_READ,
+          entityType: 'Document',
+          entityId: document.id,
+          actorId: currentUser.id,
+          payload: {
+            documentId: document.id,
+            mimeType: document.mimeType,
+            // sizeBytes from the Document.size column (bytes) — cheaper and
+            // consistent; the API never streams the binary (see Document.url).
+            sizeBytes: document.size,
+            ...(meta?.ip !== undefined ? { ip: meta.ip } : {}),
+            ...(meta?.ua !== undefined ? { ua: meta.ua } : {}),
+          },
+        })
+        .catch((err) => {
+          this.logger.error(
+            `Failed to persist DOCUMENT_READ for document ${document.id}: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          );
+        });
     }
 
     return document;

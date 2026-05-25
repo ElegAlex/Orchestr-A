@@ -173,6 +173,17 @@ describe('DocumentsService', () => {
       );
     });
 
+    it('does NOT fail the read when audit persistence rejects (fire-and-forget)', async () => {
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
+      mockAuditPersistence.log.mockRejectedValueOnce(new Error('chain down'));
+
+      // The read must still resolve with the document even if the audit
+      // emission fails — a read path must not 500 on an audit hiccup.
+      await expect(service.findOne('doc-1', caller, meta)).resolves.toMatchObject(
+        { id: 'doc-1' },
+      );
+    });
+
     it('does NOT emit when caller is undefined (internal findOne / backward-compat)', async () => {
       mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
 
