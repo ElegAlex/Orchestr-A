@@ -850,7 +850,7 @@ pnpm test apps/api/src/users/users.service.spec.ts
 ---
 ### OBS-003 — Leave approval audit lacks before/after state and role snapshot
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
