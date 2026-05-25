@@ -163,3 +163,10 @@ Prompt/
 
 # Playwright auth storage states
 playwright/.auth/
+
+# ===========================
+# AGENT TOOL RUNTIME (Claude Code / Codex / Superpowers)
+# ===========================
+.codex
+.superpowers/
+.claude/scheduled_tasks.lock
