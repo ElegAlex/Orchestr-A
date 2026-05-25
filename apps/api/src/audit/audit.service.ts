@@ -19,6 +19,12 @@ export enum AuditAction {
   ROLE_UPDATED = 'ROLE_UPDATED',
   ROLE_DELETED = 'ROLE_DELETED',
   ROLE_DEFAULT_CHANGED = 'ROLE_DEFAULT_CHANGED',
+  // OBS-006 — document access lifecycle. READ = explicit metadata fetch-by-id
+  // (DocumentsController GET /:id). DOWNLOADED = actual binary stream; reserved
+  // and currently unwired — the binary lives in external storage referenced by
+  // `Document.url`, so byte transfer bypasses the API and is not observable here.
+  DOCUMENT_READ = 'DOCUMENT_READ',
+  DOCUMENT_DOWNLOADED = 'DOCUMENT_DOWNLOADED',
   LEAVE_APPROVED = 'LEAVE_APPROVED',
   LEAVE_REJECTED = 'LEAVE_REJECTED',
 }
@@ -36,13 +42,15 @@ export enum AuditAction {
  *   - `Role`  — institutional-role lifecycle (create / update / delete /
  *               default change). The subject is a row in the `roles` table
  *               (OBS-005).
+ *   - `Document` — document access events (read / download). The subject is a
+ *               row in the `documents` table (OBS-006).
  *
  * Typed as an exhaustive `Record<AuditAction, ...>` so adding an AuditAction
  * without a subject type is a compile error, not a silent 'unknown'.
  */
 const ENTITY_TYPE_BY_ACTION: Record<
   AuditAction,
-  'User' | 'Auth' | 'Leave' | 'Role'
+  'User' | 'Auth' | 'Leave' | 'Role' | 'Document'
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
@@ -59,6 +67,8 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.ROLE_UPDATED]: 'Role',
   [AuditAction.ROLE_DELETED]: 'Role',
   [AuditAction.ROLE_DEFAULT_CHANGED]: 'Role',
+  [AuditAction.DOCUMENT_READ]: 'Document',
+  [AuditAction.DOCUMENT_DOWNLOADED]: 'Document',
   [AuditAction.LEAVE_APPROVED]: 'Leave',
   [AuditAction.LEAVE_REJECTED]: 'Leave',
 };

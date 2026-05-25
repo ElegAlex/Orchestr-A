@@ -7,12 +7,18 @@ import {
   AccessScopeService,
   AccessUser,
 } from '../common/services/access-scope.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
+
+/** Request metadata threaded from the controller for audit emission (OBS-006). */
+export type DocumentAccessMeta = { ip?: string; ua?: string };
 
 @Injectable()
 export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly accessScope: AccessScopeService,
+    private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
   async create(
@@ -77,7 +83,11 @@ export class DocumentsService {
     };
   }
 
-  async findOne(id: string, currentUser?: AccessUser) {
+  async findOne(
+    id: string,
+    currentUser?: AccessUser,
+    meta?: DocumentAccessMeta,
+  ) {
     if (currentUser) {
       await this.accessScope.assertCanReadDocument(id, currentUser);
     }
@@ -89,6 +99,29 @@ export class DocumentsService {
       },
     });
     if (!document) throw new NotFoundException('Document introuvable');
+
+    // OBS-006 — emit DOCUMENT_READ only on a caller-driven fetch-by-id, AFTER
+    // the access check and existence check pass (no trail for denied/missing
+    // reads). Internal callers (update/remove call findOne(id) with no
+    // currentUser) skip emission — backward-compat + avoids spurious reads.
+    if (currentUser) {
+      await this.auditPersistence.log({
+        action: AuditAction.DOCUMENT_READ,
+        entityType: 'Document',
+        entityId: document.id,
+        actorId: currentUser.id,
+        payload: {
+          documentId: document.id,
+          mimeType: document.mimeType,
+          // sizeBytes sourced from the Document.size column (bytes) — cheaper
+          // and consistent; the API never streams the binary (see Document.url).
+          sizeBytes: document.size,
+          ...(meta?.ip !== undefined ? { ip: meta.ip } : {}),
+          ...(meta?.ua !== undefined ? { ua: meta.ua } : {}),
+        },
+      });
+    }
+
     return document;
   }
 

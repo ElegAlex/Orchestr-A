@@ -4,9 +4,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotFoundException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { AccessScopeService } from '../common/services/access-scope.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
 
 describe('DocumentsService', () => {
   let service: DocumentsService;
+  let accessScope: {
+    documentReadWhere: ReturnType<typeof vi.fn>;
+    assertCanReadDocument: ReturnType<typeof vi.fn>;
+    assertCanAccessProject: ReturnType<typeof vi.fn>;
+  };
 
   const mockPrismaService = {
     document: {
@@ -22,11 +28,15 @@ describe('DocumentsService', () => {
     },
   };
 
+  const mockAuditPersistence = {
+    log: vi.fn().mockResolvedValue(undefined),
+  };
+
   const mockDocument = {
     id: 'doc-1',
     name: 'Test Document',
     url: 'https://example.com/doc.pdf',
-    type: 'PDF',
+    mimeType: 'application/pdf',
     size: 1024,
     projectId: 'project-1',
     uploadedBy: 'user-1',
@@ -35,6 +45,12 @@ describe('DocumentsService', () => {
   };
 
   beforeEach(async () => {
+    accessScope = {
+      documentReadWhere: vi.fn().mockResolvedValue({}),
+      assertCanReadDocument: vi.fn().mockResolvedValue(undefined),
+      assertCanAccessProject: vi.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DocumentsService,
@@ -44,11 +60,11 @@ describe('DocumentsService', () => {
         },
         {
           provide: AccessScopeService,
-          useValue: {
-            documentReadWhere: vi.fn().mockResolvedValue({}),
-            assertCanReadDocument: vi.fn().mockResolvedValue(undefined),
-            assertCanAccessProject: vi.fn().mockResolvedValue(undefined),
-          },
+          useValue: accessScope,
+        },
+        {
+          provide: AuditPersistenceService,
+          useValue: mockAuditPersistence,
         },
       ],
     }).compile();
@@ -123,6 +139,75 @@ describe('DocumentsService', () => {
       await expect(service.findOne('nonexistent')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  // OBS-006 — document access must leave an audit trail (RGPD Art. 30 /
+  // Cour des Comptes: "who read what when"). DOCUMENT_READ is emitted on the
+  // explicit fetch-by-id path (findOne) with the caller as actor; entityType
+  // 'Document', entityId the document id, payload carries the request metadata.
+  describe('audit emission (OBS-006)', () => {
+    const caller = { id: 'user-1', role: 'ADMIN' };
+    const meta = { ip: '203.0.113.5', ua: 'test-agent/1.0' };
+
+    it('emits DOCUMENT_READ with caller-as-actor on findOne by id', async () => {
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
+
+      await service.findOne('doc-1', caller, meta);
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'DOCUMENT_READ',
+          entityType: 'Document',
+          entityId: 'doc-1',
+          actorId: 'user-1',
+          payload: expect.objectContaining({
+            documentId: 'doc-1',
+            mimeType: 'application/pdf',
+            sizeBytes: 1024,
+            ip: '203.0.113.5',
+            ua: 'test-agent/1.0',
+          }),
+        }),
+      );
+    });
+
+    it('does NOT emit when caller is undefined (internal findOne / backward-compat)', async () => {
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
+
+      await service.findOne('doc-1');
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+
+    it('does NOT emit when access is denied (assertCanReadDocument rejects)', async () => {
+      accessScope.assertCanReadDocument.mockRejectedValueOnce(
+        new Error('forbidden'),
+      );
+
+      await expect(service.findOne('doc-1', caller, meta)).rejects.toThrow();
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+
+    it('does NOT emit when the document does not exist (404 before emit)', async () => {
+      mockPrismaService.document.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.findOne('nonexistent', caller, meta),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+
+    it('does NOT emit on the list endpoint (findAll) — high-volume, skipped', async () => {
+      mockPrismaService.document.findMany.mockResolvedValue([mockDocument]);
+      mockPrismaService.document.count.mockResolvedValue(1);
+
+      await service.findAll(1, 10, undefined, caller);
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
     });
   });
 

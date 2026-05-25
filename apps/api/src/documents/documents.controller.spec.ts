@@ -147,15 +147,28 @@ describe('DocumentsController', () => {
   });
 
   describe('findOne', () => {
-    it('should return a document by id', async () => {
+    // OBS-006 — the GET /:id handler threads request metadata (ip/ua) into the
+    // service so DocumentsService can emit DOCUMENT_READ with the caller as actor.
+    const mockReq = {
+      headers: { 'user-agent': 'test-agent/1.0' },
+      ip: '203.0.113.5',
+      ips: [],
+    };
+
+    it('should return a document by id and thread caller + request metadata', async () => {
       mockDocumentsService.findOne.mockResolvedValue(mockDocument);
 
-      const result = await controller.findOne('doc-id-1', mockCurrentUser);
+      const result = await controller.findOne(
+        'doc-id-1',
+        mockCurrentUser,
+        mockReq,
+      );
 
       expect(result).toEqual(mockDocument);
       expect(mockDocumentsService.findOne).toHaveBeenCalledWith(
         'doc-id-1',
         normalizedCurrentUser,
+        { ip: '203.0.113.5', ua: 'test-agent/1.0' },
       );
     });
 
@@ -165,7 +178,7 @@ describe('DocumentsController', () => {
       );
 
       await expect(
-        controller.findOne('nonexistent', mockCurrentUser),
+        controller.findOne('nonexistent', mockCurrentUser, mockReq),
       ).rejects.toThrow(NotFoundException);
     });
   });

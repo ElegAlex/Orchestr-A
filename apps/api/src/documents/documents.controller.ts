@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  Req,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -28,6 +29,22 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OwnershipGuard } from '../common/guards/ownership.guard';
 import { OwnershipCheck } from '../common/decorators/ownership-check.decorator';
+
+/**
+ * Extract request IP / User-Agent for the OBS-006 audit trail. Mirrors the
+ * auth.controller precedent (AUD-EMIT-001 / OBS-008): UA capped at 512 chars,
+ * IP preferring the proxy-forwarded chain head.
+ */
+function extractMeta(req?: {
+  headers?: Record<string, unknown>;
+  ip?: string;
+  ips?: string[];
+}): { ip?: string; ua?: string } {
+  const uaRaw = req?.headers?.['user-agent'];
+  const ua = typeof uaRaw === 'string' ? uaRaw.slice(0, 512) : undefined;
+  const ip = req?.ips?.length ? req.ips[0] : (req?.ip ?? undefined);
+  return { ip, ua };
+}
 
 @ApiTags('documents')
 @Controller('documents')
@@ -75,11 +92,13 @@ export class DocumentsController {
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: { id: string; role?: { code: string } | null },
+    @Req() req: any,
   ) {
-    return this.documentsService.findOne(id, {
-      id: user.id,
-      role: user.role?.code ?? null,
-    });
+    return this.documentsService.findOne(
+      id,
+      { id: user.id, role: user.role?.code ?? null },
+      extractMeta(req),
+    );
   }
 
   @Patch(':id')

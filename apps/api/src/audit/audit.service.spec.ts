@@ -228,6 +228,9 @@ describe('AuditService', () => {
         [AuditAction.ROLE_UPDATED, 'Role'],
         [AuditAction.ROLE_DELETED, 'Role'],
         [AuditAction.ROLE_DEFAULT_CHANGED, 'Role'],
+        // OBS-006 — document access subjects (read / download).
+        [AuditAction.DOCUMENT_READ, 'Document'],
+        [AuditAction.DOCUMENT_DOWNLOADED, 'Document'],
         [AuditAction.LOGIN_SUCCESS, 'Auth'],
         [AuditAction.LOGIN_FAILURE, 'Auth'],
         [AuditAction.ACCESS_DENIED, 'Auth'],
