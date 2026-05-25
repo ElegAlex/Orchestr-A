@@ -4416,7 +4416,7 @@ pnpm test apps/api/src/analytics/analytics.service.spec.ts  # may need creation 
 
 ### DAT-007 — Task.projectId onDelete: Cascade — hard-delete of a Project nukes its TimeEntries, ProjectSnapshots, Documents — losing audit history
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 10
 - **Cluster:** G
 - **Confidence:** cross-validated
