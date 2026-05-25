@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
+import type { AuditAction } from './audit-action.enum';
 
 /**
  * Deterministic, stable-key JSON serialization. Object keys are sorted
@@ -77,7 +78,11 @@ export class AuditPersistenceService {
   constructor(private readonly prisma: PrismaService) {}
 
   async log(event: {
-    action: string;
+    // OBS-024 — AuditAction enum ONLY. The compile-time witness
+    // (`audit-action.compile-witness.ts`) guards against regressing this to
+    // `string`. The enum's string value is what lands in `audit_logs.action`,
+    // so the persisted codes are unchanged.
+    action: AuditAction;
     entityType: string;
     entityId: string;
     actorId?: string | null;

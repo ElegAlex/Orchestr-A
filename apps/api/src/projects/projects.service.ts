@@ -17,6 +17,7 @@ import {
 } from '../common/services/access-scope.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
 import { ProjectStatus, TaskStatus } from 'database';
 import { ArchivedFilter, archivedWhere } from './dto/archived-filter.dto';
 
@@ -658,7 +659,7 @@ export class ProjectsService {
     });
 
     await this.auditPersistence.log({
-      action: 'PROJECT_ARCHIVED',
+      action: AuditAction.PROJECT_ARCHIVED,
       entityType: 'Project',
       entityId: id,
       actorId: user.id,
@@ -688,7 +689,7 @@ export class ProjectsService {
     });
 
     await this.auditPersistence.log({
-      action: 'PROJECT_UNARCHIVED',
+      action: AuditAction.PROJECT_UNARCHIVED,
       entityType: 'Project',
       entityId: id,
       actorId: user.id,
@@ -787,7 +788,7 @@ export class ProjectsService {
     // match the existing archive()/unarchive() emission pattern; the audit
     // pipeline (AuditPersistenceService) is out of DAT-007 scope.
     await this.auditPersistence.log({
-      action: 'PROJECT_DELETED',
+      action: AuditAction.PROJECT_DELETED,
       entityType: 'Project',
       entityId: id,
       actorId: user.id,

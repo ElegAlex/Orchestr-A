@@ -1,60 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AuditPersistenceService } from './audit-persistence.service';
+import { AuditAction } from './audit-action.enum';
 
-export enum AuditAction {
-  LOGIN_SUCCESS = 'LOGIN_SUCCESS',
-  LOGIN_FAILURE = 'LOGIN_FAILURE',
-  REGISTER = 'REGISTER',
-  ACCESS_DENIED = 'ACCESS_DENIED',
-  ROLE_CHANGE = 'ROLE_CHANGE',
-  USER_DEACTIVATED = 'USER_DEACTIVATED',
-  USER_REACTIVATED = 'USER_REACTIVATED',
-  PASSWORD_CHANGED = 'PASSWORD_CHANGED',
-  PASSWORD_RESET_BY_ADMIN = 'PASSWORD_RESET_BY_ADMIN',
-  SERVICE_MEMBERSHIP_CHANGED = 'SERVICE_MEMBERSHIP_CHANGED',
-  DEPARTMENT_CHANGED = 'DEPARTMENT_CHANGED',
-  // OBS-005 — institutional-role (table `roles`) lifecycle mutations. Distinct
-  // from ROLE_CHANGE, which records a *user* being reassigned to another role.
-  ROLE_CREATED = 'ROLE_CREATED',
-  ROLE_UPDATED = 'ROLE_UPDATED',
-  ROLE_DELETED = 'ROLE_DELETED',
-  ROLE_DEFAULT_CHANGED = 'ROLE_DEFAULT_CHANGED',
-  // OBS-006 — document access lifecycle. READ = explicit metadata fetch-by-id
-  // (DocumentsController GET /:id). DOWNLOADED = actual binary stream; reserved
-  // and currently unwired — the binary lives in external storage referenced by
-  // `Document.url`, so byte transfer bypasses the API and is not observable here.
-  DOCUMENT_READ = 'DOCUMENT_READ',
-  DOCUMENT_DOWNLOADED = 'DOCUMENT_DOWNLOADED',
-  LEAVE_APPROVED = 'LEAVE_APPROVED',
-  LEAVE_REJECTED = 'LEAVE_REJECTED',
-  // OBS-021 — full leave lifecycle beyond approve/reject. LEAVE_CANCELLED was
-  // already emitted by DAT-001's cancel() path as a free-string; promoted to an
-  // enum member here (identical value → zero prod-data impact, advances the
-  // OBS-024 enum-vs-free-string unification). The other four are net-new
-  // emitters on the update / hard-delete / cancellation-request / balance-
-  // adjustment paths so an auditor can reconstruct "leave approved on T1 then
-  // its dates were silently changed on T2".
-  LEAVE_CANCELLED = 'LEAVE_CANCELLED',
-  LEAVE_CANCELLATION_REQUESTED = 'LEAVE_CANCELLATION_REQUESTED',
-  LEAVE_UPDATED = 'LEAVE_UPDATED',
-  LEAVE_DELETED = 'LEAVE_DELETED',
-  LEAVE_BALANCE_ADJUSTED = 'LEAVE_BALANCE_ADJUSTED',
-  // OBS-012 — a release booted. Written on every container boot in a deploy
-  // context (DeploymentsService). The durable source of truth is the
-  // `deployments` table; this audit row is the Cour-des-Comptes narrative
-  // cross-reference so deploy events sit inline with user actions.
-  RELEASE_DEPLOYED = 'RELEASE_DEPLOYED',
-  // OBS-007 — personal-data egress (RGPD). One action with `scope` in the
-  // payload disambiguating the export domain (planning / …). Currently wired on
-  // the planning ICS export; CSV exports (tasks/milestones) are a documented
-  // follow-up (see OBS-007 Learnings).
-  DATA_EXPORTED = 'DATA_EXPORTED',
-  // OBS-018 — operational backfill/seed/maintenance scripts. One action with a
-  // `phase` ('STARTED' | 'COMPLETED') in the payload (single-enum, mirrors the
-  // OBS-012 RELEASE_DEPLOYED precedent rather than split STARTED/COMPLETED
-  // enums). entityId = the script name.
-  SYSTEM_BACKFILL = 'SYSTEM_BACKFILL',
-}
+// OBS-024 — AuditAction is the single source of truth for audit action codes;
+// it lives in `audit-action.enum.ts` so AuditPersistenceService can type its
+// `action` parameter without an import cycle. Re-exported here so the many
+// existing `'../audit/audit.service'` import sites keep working unchanged.
+export { AuditAction };
 
 /**
  * Subject type stamped on each security event row in `audit_logs`.
@@ -78,6 +30,9 @@ export enum AuditAction {
  *   - `SystemMaintenance` — operational backfill/seed/maintenance script runs.
  *               The subject is the script name; `phase` in the payload marks
  *               start vs completion (OBS-018).
+ *   - `Project` — project lifecycle (archive / unarchive / hard-delete). The
+ *               subject is a row in the `projects` table; converged from
+ *               free-string codes by OBS-024.
  *
  * Typed as an exhaustive `Record<AuditAction, ...>` so adding an AuditAction
  * without a subject type is a compile error, not a silent 'unknown'.
@@ -92,6 +47,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   | 'Deployment'
   | 'Export'
   | 'SystemMaintenance'
+  | 'Project'
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
@@ -120,6 +76,9 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.RELEASE_DEPLOYED]: 'Deployment',
   [AuditAction.DATA_EXPORTED]: 'Export',
   [AuditAction.SYSTEM_BACKFILL]: 'SystemMaintenance',
+  [AuditAction.PROJECT_ARCHIVED]: 'Project',
+  [AuditAction.PROJECT_UNARCHIVED]: 'Project',
+  [AuditAction.PROJECT_DELETED]: 'Project',
 };
 
 /**

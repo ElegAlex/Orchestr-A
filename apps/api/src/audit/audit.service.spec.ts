@@ -248,6 +248,10 @@ describe('AuditService', () => {
         [AuditAction.LEAVE_BALANCE_ADJUSTED, 'Leave'],
         // OBS-018 — operational backfill/seed/maintenance script subject.
         [AuditAction.SYSTEM_BACKFILL, 'SystemMaintenance'],
+        // OBS-024 — project lifecycle subjects, converged from free-strings.
+        [AuditAction.PROJECT_ARCHIVED, 'Project'],
+        [AuditAction.PROJECT_UNARCHIVED, 'Project'],
+        [AuditAction.PROJECT_DELETED, 'Project'],
       ];
 
       for (const [action, expectedEntityType] of expectations) {
