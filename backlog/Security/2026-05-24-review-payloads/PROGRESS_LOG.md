@@ -525,3 +525,26 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **[[TST-011]] delta:** +6 helper witnesses + 1 entityType pair (audit.service.spec).
 - **Cour-des-Comptes question:** "when did backfill script S run, what did it touch?" → **YES** for backfill-snapshots. `SELECT "actorId", payload->>'phase', payload->>'affectedCount', "createdAt" FROM audit_logs WHERE action='SYSTEM_BACKFILL' AND "entityId"='backfill-snapshots' ORDER BY "createdAt"` pairs each STARTED with its COMPLETED + row count. **NOT yet** for seed/holidays (deferred, documented).
 - **Chain complete (4/4):** OBS-003, OBS-021, OBS-007 (partial → OBS-026), OBS-018. No 4th resilience commit needed on any task (OBS-006/OBS-012 precedent unused). See the chain's cumulative report.
+
+## 2026-05-25 — OBS-026 closed (DATA_EXPORTED on tasks + milestones CSV exports; OBS-007 partial-close completed)
+
+- **Session ID:** 2026-05-25-obs-026
+- **Tasks closed:** OBS-026 (Phase 2, Cluster A — claude-only, severity suggestion). Completes OBS-007's deferred CSV pair.
+- **Tasks moved to BLOCKED:** none.
+- **Commits:** `01c6aa1` (IN_PROGRESS anchor), `a42d663` (fix — `[closes OBS-026]`), `<pending>` (closeout).
+- **Counter:** OBS-026 Status flipped (coherence checked-set 21→22 DONE/VERIFIED). **Totals header bumped +1** (suggestion 5→6, observability 25→26): OBS-007's closeout flagged OBS-026 as "+1 to total findings" but never edited the header (the "5 suggestion" line predates OBS-026's filing, set in 08fff11) — applied now so the header reflects the filed finding.
+- **Enum members added:** none — DATA_EXPORTED + 'Export' entityType already shipped by OBS-007 (4711097). Purely additional emit sites.
+- **Duration:** ~30 minutes
+- **Design choices:**
+  - **Helper extraction (OBS-007 had inlined):** factored the emission shape into `src/audit/export-audit.helper.ts` (`emitDataExported` + `ExportMeta`), consumed by both new call sites. planning-export left untouched (AC#6 confine) — converging it is a trivial deferred cleanup.
+  - **scope = 'tasks' / 'milestones'** (Suggested fix). **entityId = actorId** (mirrors planning's entityId=userId, per advisor); exported resource named in `payload.subject = { projectId }`.
+  - **recordCount exact** (tasks.length / milestones.length), materialized not estimated.
+  - **dateRange OMITTED** — neither CSV is date-filtered (both filter by projectId); projectId encoded under `payload.subject` instead (open design question resolved). Cross-domain: planning rows carry `dateRange`, CSV rows carry `subject.projectId`, both under scope-disambiguated DATA_EXPORTED.
+  - **Fire-and-forget, caller-as-actor, caller-undefined skips.** milestones.controller gained `@CurrentUser('id')` (had no actor before); tasks.controller gained `@Req()`.
+- **Learnings (non-trivial):**
+  - **AuditModule is @Global** → AuditPersistenceService injectable into TasksService/MilestonesService with no module edits (OBS-007/OBS-012 precedent).
+  - **Additional export surface discovered — scope-creep avoided:** `analytics.controller GET /analytics/export` returns aggregate analytics JSON (no Content-Disposition, no CSV/ICS/XLSX), not a personal-data file egress → out of OBS-007/OBS-026 category; candidate finding for aggregate-export tracking, NOT filed. leaves/school-vacations grep matches were `toString()` false-positives. So the file-format egress surface = planning ICS (OBS-007) + tasks/milestones CSV (this task), fully covered.
+  - **Priority enum has no MEDIUM** (LOW/NORMAL/HIGH/CRITICAL) — first witness draft crashed in `escapeField(undefined)`; fixed test data to Priority.NORMAL. The crash usefully proved the CSV builder is undefined-fragile, but that's pre-existing, not OBS-026 scope.
+- **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1632** (+6 over OBS-018's 1626, new witnesses), web 579 passed / 14 skipped. `pnpm run test:e2e` **NOT run** — Orchestra dev stack (postgres) not up, and OBS-026 adds no new route/UI surface; the DATA_EXPORTED row is a fire-and-forget `audit_logs` write, not observable via Playwright. Witnesses FAIL-pre (2 positive emission tests) → PASS-post; negative + fire-and-forget resilience tests vacuous pre-fix.
+- **[[TST-011]] delta:** +6 service witnesses (tasks + milestones: 1 positive payload + 1 caller-undefined-no-emit + 1 fire-and-forget resilience each). No new audit.service.spec entityType pair (DATA_EXPORTED→Export already covered by OBS-007). +1 milestones.controller.spec call-site update (new actor/req params).
+- **Cour-des-Comptes question:** "who exported project P's tasks/milestones, when, how many rows?" → **YES.** `SELECT "actorId", payload->>'scope', payload->>'recordCount', payload->'subject'->>'projectId', "createdAt" FROM audit_logs WHERE action='DATA_EXPORTED' AND payload->>'scope' IN ('tasks','milestones')`. Combined with OBS-007, all personal-data file egress (ICS + CSV) is now traced.

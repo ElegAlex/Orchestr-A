@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 118 important · 21 nit · 5 suggestion
-- **By category:** 34 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 26 tests · 5 tooling
+- **By severity:** 32 blocking · 118 important · 21 nit · 6 suggestion
+- **By category:** 34 correctness · 31 data_integrity · 26 observability · 30 performance · 30 security · 26 tests · 5 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -1253,7 +1253,7 @@ pnpm test apps/api/src/planning-export/planning-export.service.spec.ts  # may ne
 ---
 ### OBS-026 — Project CSV exports (tasks / milestones) are NOT audited
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -1285,8 +1285,15 @@ Reuse the OBS-007 DATA_EXPORTED enum + 'Export' entityType. Emit at each export 
 pnpm test apps/api/src/tasks/tasks.service.spec.ts apps/api/src/milestones/milestones.service.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** Filed by OBS-007's partial-close. Cross-link: [[OBS-007]]. The DATA_EXPORTED enum + 'Export' entityType already exist (shipped in 4711097) — this is purely additional emit sites, no new enum.
+**Closed_by:** a42d663
+**Learnings:** Completes OBS-007's partial-close. Cross-link: [[OBS-007]]. No new enum — DATA_EXPORTED + 'Export' entityType already shipped in 4711097; this is purely additional emit sites.
+- **Helper extraction (OBS-007 had inlined):** OBS-007 inlined its planning-ICS emission. Factored the repeated shape into `apps/api/src/audit/export-audit.helper.ts` (`emitDataExported` + `ExportMeta`), consumed by both new call sites (tasks + milestones services). **planning-export left untouched** to keep the diff confined (AC#6) — converging it onto the helper is a trivial, deferred cleanup (not OBS-026 scope).
+- **scope values:** `'tasks'` / `'milestones'` (per Suggested fix).
+- **entityId = actorId** (mirrors planning's `entityId=userId`); the exported resource is named in `payload.subject = { projectId }`. recordCount = exact materialized row count (`tasks.length` / `milestones.length`), not estimated.
+- **dateRange OMITTED:** neither CSV is date-filtered (both filter by projectId). Per the open design question, the projectId filter is encoded under `payload.subject` instead of `dateRange`. Auditor sees `dateRange` on planning rows, `subject.projectId` on CSV rows — both under scope-disambiguated DATA_EXPORTED.
+- **caller-as-actor / caller-undefined skips emission** (fire-and-forget read path, OBS-006/OBS-007 precedent). `milestones.controller` gained `@CurrentUser('id')` (it had no actor before); `tasks.controller` gained `@Req()` for ip/ua. AuditModule is `@Global` → no module edits.
+- **Additional export surface discovered — scope-creep avoided:** `analytics.controller GET /analytics/export` returns aggregate analytics as JSON (no Content-Disposition / no CSV-ICS-XLSX file egress), not a personal-data file export. Out of the OBS-007/OBS-026 category; a candidate finding if RGPD wants aggregate-export tracking, **not filed here**. No other CSV/ICS/XLSX egress endpoints exist (leaves/school-vacations grep matches were `toString()` false-positives).
+- **AC evaluation:** AC#1 ✓; AC#2 ✓ (2 positive witnesses FAIL-pre → PASS-post); AC#3 ✓ (`pnpm test` api 1632 / web 579, build 3/3; e2e not run — Orchestra dev stack down + no new route/UI surface, audit row is a fire-and-forget `audit_logs` write not observable via Playwright); AC#4 ✓ (export is a read, but a DATA_EXPORTED row is written for RGPD); AC#5 ✓; AC#6 ✓ (8 files: tasks/ + milestones/ + audit/ helper + specs).
 
 ---
 ### OBS-018 — Backfill / seed scripts have no persisted audit trail
