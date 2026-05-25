@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 177 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 1 session-hygiene (TOOL-COH-001, 2026-05-25)
+> **Total tasks:** 178 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25)
 
 ## Schema legend
 
@@ -27,7 +27,7 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 ## Totals
 
 - **By severity:** 32 blocking · 118 important · 21 nit · 5 suggestion
-- **By category:** 33 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 25 tests · 3 tooling
+- **By category:** 33 correctness · 31 data_integrity · 25 observability · 30 performance · 30 security · 25 tests · 4 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -59,7 +59,7 @@ See `CLAUDE_SESSION_CONTRACT.md` in this directory for the exact session protoco
 
 
 ## Phase 1 — Stop the bleed (audit-prescribed blockers)
-*8 tasks in this phase.*
+*9 tasks in this phase.*
 
 ### COR-003 — Leave day calculation never subtracts public holidays
 
@@ -461,6 +461,51 @@ Update the ID regex to `[A-Z]+(?:-[A-Z]+)*-\d+` (or equivalent). Add a regressio
 3. The script remains POSIX-shell-compatible (or matches whatever shell flavor the existing script uses — do not change interpreter as a side effect).
 4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — N/A (tooling, not application code).
 5. Commit message includes `[closes TOOL-COH-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh <path-to-BACKLOG.md>
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+
+### TOOL-COH-002 — Coherence gate has no native support for retroactive task closures
+
+- **Status:** TODO
+- **Phase:** 1
+- **Cluster:** —
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** tooling
+- **File:** `backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh`
+- **Source:** Session-derived. OBS-008 closure (247f2e9, 2026-05-25 hygiene pass) hit the coherence gate's rule 3 violation because the material fix commit (1ff6c9a, OBS-001) predated the OBS-008 task being marked DONE — its message contains `[closes OBS-001]` only, not `[closes OBS-008]`. Resolved tactically via an empty anchor commit; the underlying tooling gap needs codification.
+
+**Description:**
+The coherence gate enforces a one-to-one mapping between a DONE task's `Closed_by` SHA and a commit message containing `[closes <task-id>]`. This works for direct closures (the fix commit itself is named in `Closed_by`) but breaks for retroactive closures (a task is recognized as done after-the-fact, because earlier remediation work already covered its scope). The current workaround is to create an empty anchor commit whose only purpose is to host the `[closes <id>]` token in its message. This is undocumented in the script and in CLAUDE_SESSION_CONTRACT.md, and risks divergent practice across sessions.
+
+**Root cause:**
+Script written when only forward-closures were expected. The retroactive-closure pattern emerged organically when post-remediation backlog hygiene revealed tasks already fully covered by upstream commits.
+
+**Code evidence:**
+```
+git log -1 --format=%B 1ff6c9a  # contains [closes OBS-001], not [closes OBS-008]
+git log -1 --format=%B 2188b3d  # empty commit containing [closes OBS-008] — the tactical workaround
+```
+
+**Suggested fix:**
+Either (a) document the anchor-commit pattern in the script's header comment + in CLAUDE_SESSION_CONTRACT.md so it is the canonical retroactive-closure mechanism, or (b) extend the gate to accept an alternate closure-attestation form (e.g., a `Closure_anchor:` field in the backlog entry, separate from `Closed_by`, that names the formal anchor without requiring an empty commit). Option (a) is cheaper; option (b) is cleaner. Choose at implementation time; document the rationale in Learnings.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented, addressing the exact failure mode described in **Description**.
+2. A regression test or fixture exists that exercises the retroactive-closure case (a task whose `Closed_by` references either an empty anchor commit or an alternate attestation form per the chosen option): the test must FAIL with the current script behavior if no anchor support exists, and PASS after the fix.
+3. CLAUDE_SESSION_CONTRACT.md and/or the script's inline documentation explicitly describe how to perform a retroactive closure, with OBS-008 as the worked example.
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — N/A (tooling, not application code).
+5. Commit message includes `[closes TOOL-COH-002]`.
 6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
 
 **Verification command:**
@@ -2080,8 +2125,10 @@ Add ip and userAgent to the AuditService event signature; emit them from all aut
 pnpm test apps/api/src/auth/auth.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** 1ff6c9a
+**Closed_by:** 2188b3d
 **Learnings:** Fully covered by OBS-001 (1ff6c9a, 2026-05-25). AuthService.login() wires ip/ua/attemptedEmail/reason for LOGIN_FAILURE and ip/ua for LOGIN_SUCCESS via controller's extractMeta(req). Witness tests in OBS-001 spec cover both branches. No additional implementation required; this closure documents the coverage retroactively.
+
+Closed_by points to anchor commit 2188b3d (empty, gate-compliant). Material code change remains 1ff6c9a. This retroactive-closure pattern is now formalized as TOOL-COH-002.
 
 ---
 ### OBS-013 — Failed login details log raw user-supplied 'login' value to stdout
