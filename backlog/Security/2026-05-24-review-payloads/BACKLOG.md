@@ -999,7 +999,7 @@ pnpm test apps/api/src/rbac/roles.service.spec.ts  # may need creation if missin
 ---
 ### OBS-006 — Document access/downloads are NOT logged
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -1036,8 +1036,18 @@ Emit DOCUMENT_READ / DOCUMENT_DOWNLOADED audit events with { actorId, documentId
 pnpm test apps/api/src/documents/documents.controller.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 4bee971
+**Learnings:**
+- **DocumentsController is pure metadata CRUD — there is NO API-mediated binary download.** `Document.url` points to external storage; the client follows that URL directly to fetch bytes, bypassing the NestJS pipeline. There is no `StreamableFile`/`@Res`/`sendFile` anywhere, and no `apps/web/src/services/documents.service.ts` exists (web pulls via generic `api.get`). Consequence: the API physically *cannot* observe an actual byte download from this controller.
+- **Endpoint → event mapping:** GET /:id (findOne) → **DOCUMENT_READ** (explicit fetch-by-id; the response hands over `url`, the download handle). GET / (findAll list) → **NO emission** (high-volume, per-doc fan-out, collection-browse ≠ doc-specific access; PERF-001 territory). POST/PATCH/DELETE → **out of scope** (OBS-006 is the read/download finding; document-delete audit stays a [[TST-011]] follow-up gap).
+- **DOCUMENT_DOWNLOADED added to the enum but UNWIRED** — distinct event per Suggested fix + PHASE 3's explicit "extend enum (READ, DOWNLOADED)", but no endpoint maps to it (per the no-binary-stream architecture above). Reserved for a future streaming/proxy endpoint. The exhaustive `Record<AuditAction,…>` (union widened +'Document') compile-forces both mappings; audit.service.spec asserts both entityType pairs. NOT a free-string — no prod-namespace carry-over ([[OBS-024]] enum side advanced).
+- **Emission ordering pinned (advisor point):** `assertCanReadDocument → findUnique → null-check → EMIT → return`. No DOCUMENT_READ for a denied (403) or missing (404) read. Covered by two dedicated negative witnesses (access-denied, not-found) — needed here because the access check is *service-level*, not guard-level (unlike OBS-005's controller guards).
+- **Caller-undefined backward compat:** `update()`/`remove()` call `this.findOne(id)` with no currentUser → no emission. Negative witness guards against a future maintainer threading currentUser into those internal calls and accidentally emitting DOCUMENT_READ on every mutation.
+- **Payload:** actorId → dedicated AuditPersistence actor field (matches OBS-005/DAT-007 precedent + PHASE 2's payload-shape list); payload = `{documentId, mimeType, sizeBytes, ip, ua}`. **sizeBytes from the `Document.size` column** (bytes, cheaper, consistent — no stream to measure). ip/ua conditionally spread (only when defined), mirroring AuditService's optional-metadata treatment.
+- **Prisma load:** zero extra round-trips, zero extra includes — emission reuses the document already loaded by findOne. One advisory-locked INSERT per read inside `AuditPersistenceService.log` (the existing chain mechanism), `await`ed (not fire-and-forget; consistent with DAT-007/OBS-005 direct-persistence emits).
+- **Caller threading:** `@CurrentUser()` already on GET /:id (pre-existing); `@Req()` + `extractMeta` net-new (local helper mirroring auth.controller; UA capped 512, IP = forwarded-chain head). `extractMeta` made `req?`-tolerant so the controller-spec routing tests stay simple.
+- **Bulk download:** none exists — N/A.
+- **[[TST-DB-001]] still applies:** vitest mocks 'database'; emission verified at the mocked `AuditPersistenceService.log` boundary, no real `audit_logs` row asserted.
 
 ---
 ### OBS-012 — Deploy workflow is theatrical — no real deploy and no deploy audit trail

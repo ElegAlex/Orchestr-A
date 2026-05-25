@@ -377,3 +377,31 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Invariant priority call:** none forced — no collision between the new emitters and existing RolesService tests (the isDefault-transition specs call the service without a caller, so emission is skipped and their `updateMany` assertions stand).
 - **[[TST-DB-001]] still applies:** vitest mocks 'database'; emission verified at the AuditPersistenceService.log call boundary (mocked), no real audit_logs row asserted.
 - **Open questions for next session:** OBS-006 (document read/download logging) is the next Phase 2 Cluster A audit-emitter TODO — but it's controller-level (DocumentsController) and adds DOCUMENT_READ/DOCUMENT_DOWNLOADED with request metadata (ip/ua), a different shape than the service-level mutation emitters. OBS-012 now carries the explicit OBS-005 templateKey-hash deploy-row deferral.
+
+
+## 2026-05-25 — OBS-006 closed (DocumentsService audit emitter: DOCUMENT_READ on fetch-by-id; DOCUMENT_DOWNLOADED reserved-unwired)
+
+- **Session ID:** 2026-05-25-obs-006
+- **Tasks closed:** OBS-006 (Phase 2, Cluster A — claude-only). Continues the Phase-2 Cluster-A audit-emitter sweep after OBS-005; first emitter on the read/access (not mutation) side.
+- **Tasks moved to BLOCKED:** none.
+- **Commits:** `b8a65ee` (IN_PROGRESS anchor), `4bee971` (fix — `[closes OBS-006]`), `<pending>` (closeout).
+- **Counter:** no count change — OBS-006 was already in the finding totals; only its Status flipped (coherence checked-set 15→16 DONE/VERIFIED).
+- **Duration:** ~45 minutes
+- **Enum members added (2):** `DOCUMENT_READ`, `DOCUMENT_DOWNLOADED`; ENTITY_TYPE_BY_ACTION union widened `'User'|'Auth'|'Leave'|'Role'` → `+'Document'`, both compile-forced by the exhaustive `Record<AuditAction,…>`.
+- **Design choices:**
+  - **No API-mediated download exists.** DocumentsController is pure metadata CRUD; `Document.url` → external storage, client fetches bytes directly (no `StreamableFile`/`@Res`/`sendFile`; no `apps/web` documents service). The API cannot observe a real byte download from this controller.
+  - **GET /:id → DOCUMENT_READ** (explicit fetch-by-id; response hands over the download `url`). **GET / list → no emission** (high-volume / per-doc fan-out / collection-browse ≠ doc-specific access; PERF-001 territory). POST/PATCH/DELETE out of scope (read/download finding; doc-delete audit = TST-011 gap).
+  - **DOCUMENT_DOWNLOADED added but UNWIRED** — distinct event per Suggested fix + PHASE 3's explicit enum instruction, reserved for a future streaming endpoint. Documented in the fix-commit body (reviewers see commits first) AND BACKLOG Learnings.
+  - **Emit AFTER access-check + null-check** (`assertCanReadDocument → findUnique → null-check → EMIT`): no trail for 403/404. Two dedicated negative witnesses; needed because the access gate is service-level here, not a controller guard (unlike OBS-005).
+  - **sizeBytes from `Document.size` column** (bytes; cheaper, consistent — nothing to measure on a stream). actorId → dedicated actor field; payload `{documentId, mimeType, sizeBytes, ip, ua}` (ip/ua conditional).
+- **Learnings (non-trivial):**
+  - **Zero extra Prisma load:** emission reuses the document findOne already loaded — no extra include, no extra round-trip. One advisory-locked INSERT per read via the existing `AuditPersistenceService.log` chain, `await`ed (DAT-007/OBS-005 direct-persistence precedent).
+  - **Caller threading partly pre-existing:** `@CurrentUser()` already on GET /:id; `@Req()` + local `extractMeta` net-new (auth.controller mirror — UA cap 512, IP = forwarded-chain head). `extractMeta` made `req?`-tolerant so routing-only controller specs need no req.
+  - **Caller-undefined = backward compat AND correctness:** `update()`/`remove()` call `findOne(id)` with no caller → skip. Negative witness locks this so a future maintainer can't accidentally emit DOCUMENT_READ on every mutation.
+  - **[[OBS-024]] enum side advanced:** both codes are enum from creation (no free-string) → no prod-namespace carry-over risk.
+  - **[[TST-011]] incidental:** +5 DocumentsService witnesses (1 positive / 4 negative) + 1 controller routing assertion + 2 Document entityType pairs in audit.service.spec.
+- **Gates:** `pnpm run build` 3/3 turbo green (BUILD_EXIT=0). `pnpm run test` — **api 1601** (68 files, +5 over OBS-005's 1596), web 579 passed / 14 skipped (TEST_EXIT=0). `pnpm run test:e2e` 4/4 turbo, api app e2e 2/2 (mocked DB, invariant — no Playwright spec touches the documents/audit surface; OBS-005/OBS-004 precedent). Witness FAIL-pre 1/1 positive → PASS-post; 4 negatives + list-skip vacuous pre+post.
+- **Invariant priority call:** none forced — the only existing-test interaction (controller findOne routing tests lacked a `req` arg) was resolved by passing a mock req + making `extractMeta` req-optional, not by weakening any invariant.
+- **[[TST-DB-001]] still applies:** vitest mocks 'database'; emission asserted at the mocked `AuditPersistenceService.log` boundary, no real `audit_logs` row.
+- **PERF-001 note for future:** GET /documents/:id now emits one advisory-locked audit INSERT per call. Document detail-view is lower-frequency than the (deliberately skipped) list endpoint, but under heavy single-doc polling this is the same per-call-emit volume concern PERF-001's eventual queue would absorb.
+- **Open questions for next session:** OBS-007 (data exports ICS/CSV/XLSX — `planning-export.service.ts`, DATA_EXPORTED) is the next Phase-2 Cluster-A audit-emitter TODO — adjacent RGPD-egress territory but a different module/shape (format/scope/dateRange/recordCount). OBS-003 (leave-approval before/after) if still open. DOCUMENT_DOWNLOADED stays reserved pending an API-mediated download endpoint.
