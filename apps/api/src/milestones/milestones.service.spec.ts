@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MilestonesService } from './milestones.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { NotFoundException } from '@nestjs/common';
 import { MilestoneStatus } from 'database';
 
@@ -23,6 +24,9 @@ describe('MilestonesService', () => {
     },
   };
 
+  // OBS-026 — the CSV export emits a fire-and-forget DATA_EXPORTED audit row.
+  const mockAuditPersistence = { log: vi.fn().mockResolvedValue(undefined) };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -31,10 +35,15 @@ describe('MilestonesService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: AuditPersistenceService,
+          useValue: mockAuditPersistence,
+        },
       ],
     }).compile();
 
     service = module.get<MilestonesService>(MilestonesService);
+    mockAuditPersistence.log.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -578,6 +587,59 @@ describe('MilestonesService', () => {
       const columns = headerLine.split(';');
       expect(columns).toHaveLength(3);
       expect(columns).toEqual(['name', 'description', 'dueDate']);
+    });
+  });
+
+  // OBS-026 — the project CSV export egresses milestone rows; it must leave a
+  // DATA_EXPORTED RGPD trail naming who exported which project.
+  describe('exportProjectMilestonesCsv', () => {
+    const project = { id: 'project-1', name: 'Test Project' };
+    const milestones = [
+      { name: 'M1', description: '', dueDate: new Date('2025-01-01') },
+      { name: 'M2', description: 'desc', dueDate: new Date('2025-02-01') },
+    ];
+
+    beforeEach(() => {
+      mockPrismaService.project.findUnique.mockResolvedValue(project);
+      mockPrismaService.milestone.findMany.mockResolvedValue(milestones);
+    });
+
+    it('emits DATA_EXPORTED with scope/format/recordCount/subject/ip/ua (OBS-026)', async () => {
+      await service.exportProjectMilestonesCsv(
+        'project-1',
+        { id: 'user-1' },
+        { ip: '10.0.0.7', ua: 'vitest' },
+      );
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      const call = mockAuditPersistence.log.mock.calls[0][0];
+      expect(call.action).toBe('DATA_EXPORTED');
+      expect(call.entityType).toBe('Export');
+      expect(call.actorId).toBe('user-1');
+      expect(call.entityId).toBe('user-1');
+      expect(call.payload.format).toBe('csv');
+      expect(call.payload.scope).toBe('milestones');
+      // 2 milestone rows materialized — exact, not estimated.
+      expect(call.payload.recordCount).toBe(2);
+      expect(call.payload.subject).toEqual({ projectId: 'project-1' });
+      expect(call.payload.ip).toBe('10.0.0.7');
+      expect(call.payload.ua).toBe('vitest');
+    });
+
+    it('does NOT emit when caller is undefined (caller-as-actor invariant)', async () => {
+      await service.exportProjectMilestonesCsv('project-1');
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+
+    it('still returns the CSV even when the audit log rejects (fire-and-forget)', async () => {
+      mockAuditPersistence.log.mockRejectedValueOnce(new Error('audit down'));
+
+      const result = await service.exportProjectMilestonesCsv('project-1', {
+        id: 'user-1',
+      });
+
+      expect(result.csv).toContain('name;description;dueDate');
     });
   });
 });

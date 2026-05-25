@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   ParseUUIDPipe,
+  Req,
   Res,
 } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
@@ -40,6 +41,22 @@ import {
   type AuthenticatedUser,
 } from '../auth/decorators/current-user.decorator';
 import { TaskStatus, RACIRole } from 'database';
+
+/**
+ * OBS-026 — extract request IP / User-Agent for the data-export audit trail.
+ * Mirrors the planning-export controller precedent (UA capped at 512, IP from
+ * the proxy-forwarded chain head).
+ */
+function extractMeta(req?: {
+  headers?: Record<string, unknown>;
+  ip?: string;
+  ips?: string[];
+}): { ip?: string; ua?: string } {
+  const uaRaw = req?.headers?.['user-agent'];
+  const ua = typeof uaRaw === 'string' ? uaRaw.slice(0, 512) : undefined;
+  const ip = req?.ips?.length ? req.ips[0] : (req?.ip ?? undefined);
+  return { ip, ua };
+}
 
 @ApiTags('tasks')
 @Controller('tasks')
@@ -183,6 +200,7 @@ export class TasksController {
   async exportProjectTasks(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @CurrentUser() currentUser: AuthenticatedUser,
+    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
     @Res() reply: FastifyReply,
   ) {
     const { csv, filename } = await this.tasksService.exportProjectTasksCsv(
@@ -191,6 +209,7 @@ export class TasksController {
         id: currentUser.id,
         role: currentUser.role?.code ?? null,
       },
+      extractMeta(req),
     );
     reply
       .header('Content-Type', 'text/csv; charset=utf-8')

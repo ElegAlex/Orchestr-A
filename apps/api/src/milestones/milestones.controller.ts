@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   ParseUUIDPipe,
+  Req,
   Res,
 } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
@@ -35,6 +36,22 @@ import {
   CurrentUserRoleCode,
 } from '../auth/decorators/current-user.decorator';
 import { MilestoneStatus } from 'database';
+
+/**
+ * OBS-026 — extract request IP / User-Agent for the data-export audit trail.
+ * Mirrors the planning-export controller precedent (UA capped at 512, IP from
+ * the proxy-forwarded chain head).
+ */
+function extractMeta(req?: {
+  headers?: Record<string, unknown>;
+  ip?: string;
+  ips?: string[];
+}): { ip?: string; ua?: string } {
+  const uaRaw = req?.headers?.['user-agent'];
+  const ua = typeof uaRaw === 'string' ? uaRaw.slice(0, 512) : undefined;
+  const ip = req?.ips?.length ? req.ips[0] : (req?.ip ?? undefined);
+  return { ip, ua };
+}
 
 @ApiTags('milestones')
 @Controller('milestones')
@@ -161,10 +178,16 @@ export class MilestonesController {
   @ApiResponse({ status: 404, description: 'Projet introuvable' })
   async exportProjectMilestones(
     @Param('projectId', ParseUUIDPipe) projectId: string,
+    @CurrentUser('id') userId: string,
+    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
     @Res() reply: FastifyReply,
   ) {
     const { csv, filename } =
-      await this.milestonesService.exportProjectMilestonesCsv(projectId);
+      await this.milestonesService.exportProjectMilestonesCsv(
+        projectId,
+        { id: userId },
+        extractMeta(req),
+      );
     reply
       .header('Content-Type', 'text/csv; charset=utf-8')
       .header('Content-Disposition', `attachment; filename="${filename}"`)

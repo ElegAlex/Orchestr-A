@@ -1,9 +1,15 @@
 import {
   Injectable,
+  Logger,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import {
+  emitDataExported,
+  type ExportMeta,
+} from '../audit/export-audit.helper';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
 import {
@@ -17,7 +23,12 @@ import { MilestoneStatus, Prisma } from 'database';
 
 @Injectable()
 export class MilestonesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(MilestonesService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditPersistence: AuditPersistenceService,
+  ) {}
 
   async create(createMilestoneDto: CreateMilestoneDto) {
     const project = await this.prisma.project.findUnique({
@@ -335,6 +346,8 @@ export class MilestonesService {
    */
   async exportProjectMilestonesCsv(
     projectId: string,
+    currentUser?: { id: string },
+    meta?: ExportMeta,
   ): Promise<{ csv: string; filename: string }> {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
@@ -368,6 +381,21 @@ export class MilestonesService {
     ].join('\n');
 
     const sanitizedName = project.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+    // OBS-026 — RGPD personal-data egress: record who exported which project's
+    // milestones and the exact materialized row count. caller-as-actor; a
+    // non-HTTP / unidentified caller skips emission.
+    if (currentUser) {
+      emitDataExported(this.auditPersistence, this.logger, {
+        actorId: currentUser.id,
+        format: 'csv',
+        scope: 'milestones',
+        recordCount: milestones.length,
+        subject: { projectId },
+        meta,
+      });
+    }
+
     return { csv, filename: `milestones-export-${sanitizedName}.csv` };
   }
 

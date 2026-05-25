@@ -1,11 +1,17 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import {
+  emitDataExported,
+  type ExportMeta,
+} from '../audit/export-audit.helper';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { AddDependencyDto } from './dto/add-dependency.dto';
@@ -30,10 +36,13 @@ import { UpdateSubtaskDto } from './dto/update-subtask.dto';
 
 @Injectable()
 export class TasksService {
+  private readonly logger = new Logger(TasksService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissionsService: PermissionsService,
     private readonly accessScope: AccessScopeService,
+    private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
   /**
@@ -1757,6 +1766,7 @@ export class TasksService {
   async exportProjectTasksCsv(
     projectId: string,
     currentUser?: AccessUser,
+    meta?: ExportMeta,
   ): Promise<{ csv: string; filename: string }> {
     if (currentUser) {
       await this.accessScope.assertCanAccessProject(projectId, currentUser, [
@@ -1821,6 +1831,21 @@ export class TasksService {
     ].join('\n');
 
     const sanitizedName = project.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+    // OBS-026 — RGPD personal-data egress (task rows include assignee emails):
+    // record who exported which project and the exact materialized row count.
+    // caller-as-actor; a non-HTTP / unidentified caller skips emission.
+    if (currentUser) {
+      emitDataExported(this.auditPersistence, this.logger, {
+        actorId: currentUser.id,
+        format: 'csv',
+        scope: 'tasks',
+        recordCount: tasks.length,
+        subject: { projectId },
+        meta,
+      });
+    }
+
     return { csv, filename: `tasks-export-${sanitizedName}.csv` };
   }
 

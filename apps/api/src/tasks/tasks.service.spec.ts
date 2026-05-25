@@ -11,6 +11,7 @@ import { TaskStatus, RACIRole, Role, Priority } from 'database';
 import { getTaskProgress } from './task-progress.helper';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AccessScopeService } from '../common/services/access-scope.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -74,6 +75,9 @@ describe('TasksService', () => {
     ),
   };
 
+  // OBS-026 — the CSV export emits a fire-and-forget DATA_EXPORTED audit row.
+  const mockAuditPersistence = { log: vi.fn().mockResolvedValue(undefined) };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -107,10 +111,15 @@ describe('TasksService', () => {
             assertCanAccessProject: vi.fn().mockResolvedValue(undefined),
           },
         },
+        {
+          provide: AuditPersistenceService,
+          useValue: mockAuditPersistence,
+        },
       ],
     }).compile();
 
     service = module.get<TasksService>(TasksService);
+    mockAuditPersistence.log.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -1739,6 +1748,82 @@ describe('TasksService', () => {
           }) as object,
         }),
       );
+    });
+  });
+
+  // OBS-026 — the project CSV export egresses task rows (including assignee
+  // emails = personal data); it must leave a DATA_EXPORTED RGPD trail.
+  describe('exportProjectTasksCsv', () => {
+    const project = { id: 'project-1', name: 'Test Project' };
+    const tasks = [
+      {
+        title: 'T1',
+        description: '',
+        status: TaskStatus.TODO,
+        priority: Priority.NORMAL,
+        assignee: { email: 'a@x.fr' },
+        milestone: null,
+        estimatedHours: null,
+        startDate: null,
+        endDate: null,
+        subtasks: [],
+      },
+      {
+        title: 'T2',
+        description: '',
+        status: TaskStatus.DONE,
+        priority: Priority.HIGH,
+        assignee: null,
+        milestone: { name: 'M1' },
+        estimatedHours: null,
+        startDate: null,
+        endDate: null,
+        subtasks: [],
+      },
+    ];
+
+    beforeEach(() => {
+      mockPrismaService.project.findUnique.mockResolvedValue(project);
+      mockPrismaService.task.findMany.mockResolvedValue(tasks);
+    });
+
+    it('emits DATA_EXPORTED with scope/format/recordCount/subject/ip/ua (OBS-026)', async () => {
+      await service.exportProjectTasksCsv(
+        'project-1',
+        { id: 'user-1', role: 'ADMIN' },
+        { ip: '10.0.0.7', ua: 'vitest' },
+      );
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      const call = mockAuditPersistence.log.mock.calls[0][0];
+      expect(call.action).toBe('DATA_EXPORTED');
+      expect(call.entityType).toBe('Export');
+      expect(call.actorId).toBe('user-1');
+      expect(call.entityId).toBe('user-1');
+      expect(call.payload.format).toBe('csv');
+      expect(call.payload.scope).toBe('tasks');
+      // 2 task rows materialized — exact, not estimated.
+      expect(call.payload.recordCount).toBe(2);
+      expect(call.payload.subject).toEqual({ projectId: 'project-1' });
+      expect(call.payload.ip).toBe('10.0.0.7');
+      expect(call.payload.ua).toBe('vitest');
+    });
+
+    it('does NOT emit when caller is undefined (caller-as-actor invariant)', async () => {
+      await service.exportProjectTasksCsv('project-1');
+
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+
+    it('still returns the CSV even when the audit log rejects (fire-and-forget)', async () => {
+      mockAuditPersistence.log.mockRejectedValueOnce(new Error('audit down'));
+
+      const result = await service.exportProjectTasksCsv('project-1', {
+        id: 'user-1',
+        role: 'ADMIN',
+      });
+
+      expect(result.csv).toContain('title;description');
     });
   });
 });

@@ -320,7 +320,12 @@ describe('MilestonesController', () => {
         send: vi.fn(),
       } as any;
 
-      await controller.exportProjectMilestones('project-id-1', mockReply);
+      await controller.exportProjectMilestones(
+        'project-id-1',
+        'user-1',
+        { headers: {}, ip: '127.0.0.1' },
+        mockReply,
+      );
 
       expect(mockReply.header).toHaveBeenCalledWith(
         'Content-Type',
