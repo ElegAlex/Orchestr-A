@@ -1444,7 +1444,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ---
 ### OBS-024 — Two divergent audit codebases (enum vs free-string) — no schema for action codes
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -1481,8 +1481,16 @@ Unify into one AuditService writing to DB. Export a single AuditAction enum/cons
 pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** Partial closure: DAT-002 (c62ac8d, 2026-05-25) made AuditService dual-write through AuditPersistenceService — the "Unify into one AuditService writing to DB" half of Suggested fix is achieved at the routing level. OBS-001 (1ff6c9a) added ENTITY_TYPE_BY_ACTION typing the entityType per AuditAction. Remaining scope: converge AuditAction enum (audit.service.ts) and the free-string action codes accepted by AuditPersistenceService.log (e.g., 'PROJECT_ARCHIVED' from projects.service.ts) into a single source of truth — central const or enum, compile-time enforced.
+**Closed_by:** 7393b5d
+**Learnings:** CLOSED (7393b5d, 2026-05-25). Convergence completed: **signature option (a)** — `AuditPersistenceService.log()` now types `action: AuditAction` (was `string`). A free-string at any call site is now a compile error (proven: TS2820 `Type '"PROJECT_ARCHIVED_TYPO"' is not assignable to type 'AuditAction'` injected at a real site, reverted).
+- **Single source of truth:** AuditAction enum extracted into `audit/audit-action.enum.ts` and re-exported from `audit.service.ts`. Extraction (not in-place) was required: AuditService imports AuditPersistenceService, so the persistence service typing its param via `audit.service.ts` would have been an import cycle. The enum file is the lower-layer primitive both writers depend on; re-export kept all 12 existing `'../audit/audit.service'` import sites untouched.
+- **Enum members added this session: 3** — PROJECT_ARCHIVED, PROJECT_UNARCHIVED, PROJECT_DELETED (the last free-strings, all from projects.service.ts archive/unarchive/DAT-007-hardDelete). Identical string values → zero prod-data impact, no carry-over alias. ENTITY_TYPE_BY_ACTION union widened +'Project'; the exhaustive `Record<AuditAction,…>` compile-forced the 3 mappings. **No net-new audit events** — pure rename of existing emitters' action codes.
+- **Free-string call sites converted: 3** (projects.service.ts L661/L691/L790). "Justified as string" exceptions: **zero** — the codebase now has a single audit-action namespace.
+- **Compile witness:** `audit/audit-action.compile-witness.ts` — a *source* file (typechecked by `nest build`, the real CI gate; vitest/esbuild does NOT typecheck and full-project `tsc --noEmit` is red on pre-existing spec errors, so a spec witness would be decorative). `@ts-expect-error` over a non-member string literal: failed pre-fix (TS2578 unused directive = string was accepted), passes post-fix. Durable guard against re-loosening to `string`.
+- **`computeRowHash` kept `action: string`** deliberately — pure helper, external chain-verifiers pass raw `audit_logs.action` values. Enum→string widening is automatic at the call site.
+- **Cross-references (prior partial convergence):** DAT-002 (c62ac8d) routed AuditService through AuditPersistenceService (the "one writer to DB" half). OBS-001 (1ff6c9a) added per-action ENTITY_TYPE_BY_ACTION. OBS-004 renamed PASSWORD_RESET_ADMIN→PASSWORD_RESET_BY_ADMIN (enum). OBS-005 (Role lifecycle), OBS-006 (Document), OBS-007/OBS-026 (DATA_EXPORTED), OBS-012 (RELEASE_DEPLOYED), OBS-018 (SYSTEM_BACKFILL), OBS-021 (LEAVE_* lifecycle + LEAVE_CANCELLED promotion) each converged their own module's codes to enum-from-creation. This session converged the final divergent surface (projects) and made the *type system* enforce the convergence permanently.
+- **OBS-004 read-side alias is a deliberate follow-up, NOT closed here.** Legacy prod rows under 'PASSWORD_RESET_ADMIN' (SEC-003 is an ancestor of prod HEAD; OBS-002 immutability blocks UPDATE backfill) need a query-time alias 'PASSWORD_RESET_ADMIN' ↔ 'PASSWORD_RESET_BY_ADMIN' when audit_logs is *read*. OBS-024 is the write-side convergence; the read-side alias should be a new filing against the audit-query/export path (none exists yet — candidate filing, not blocking).
+- **Tooling candidate (not pre-filed):** an ESLint rule banning string-literal `action:` in `*.log({…})` calls would enforce the convention even for any future second audit sink that bypasses the typed boundary. Low urgency — the type now covers every current sink.
 
 ---
 ### TST-011 — Audit emission almost never asserted — only one leaves test spies AuditService.log

@@ -548,3 +548,32 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Gates:** `pnpm run build` 3/3 turbo green. `pnpm run test` — **api 1632** (+6 over OBS-018's 1626, new witnesses), web 579 passed / 14 skipped. `pnpm run test:e2e` **NOT run** — Orchestra dev stack (postgres) not up, and OBS-026 adds no new route/UI surface; the DATA_EXPORTED row is a fire-and-forget `audit_logs` write, not observable via Playwright. Witnesses FAIL-pre (2 positive emission tests) → PASS-post; negative + fire-and-forget resilience tests vacuous pre-fix.
 - **[[TST-011]] delta:** +6 service witnesses (tasks + milestones: 1 positive payload + 1 caller-undefined-no-emit + 1 fire-and-forget resilience each). No new audit.service.spec entityType pair (DATA_EXPORTED→Export already covered by OBS-007). +1 milestones.controller.spec call-site update (new actor/req params).
 - **Cour-des-Comptes question:** "who exported project P's tasks/milestones, when, how many rows?" → **YES.** `SELECT "actorId", payload->>'scope', payload->>'recordCount', payload->'subject'->>'projectId', "createdAt" FROM audit_logs WHERE action='DATA_EXPORTED' AND payload->>'scope' IN ('tasks','milestones')`. Combined with OBS-007, all personal-data file egress (ICS + CSV) is now traced.
+
+## 2026-05-25 — OBS-024 closed (enum vs free-string converged into one compile-time AuditAction registry)
+
+- **Session ID:** 2026-05-25-obs-024
+- **Tasks closed:** OBS-024 (Phase 2, Cluster A — claude-only, severity important). The convergence finding that every audit session since DAT-002 nibbled at; this one made the type system enforce it.
+- **Tasks moved to BLOCKED:** none.
+- **Commits:** `64d009b` (IN_PROGRESS anchor), `7393b5d` (fix — `[closes OBS-024]`), `<pending>` (closeout).
+- **Counter:** OBS-024 Status flipped (coherence checked-set 22→23 DONE/VERIFIED). **No totals-header change** — OBS-024 was already a filed/counted finding (unlike OBS-026's late header bump).
+- **Signature choice: (a) hard type.** `AuditPersistenceService.log()`'s `action: string` → `action: AuditAction`. Only option that closes OBS-024 (no `@deprecated` overload, no branded escape hatch). Proven to bite: injecting `action: 'PROJECT_ARCHIVED_TYPO'` at a real call site → `nest build` TS2820 "not assignable to type 'AuditAction'"; reverted.
+- **Enum members added: 3** — PROJECT_ARCHIVED / PROJECT_UNARCHIVED / PROJECT_DELETED (the last free-strings, from projects.service.ts). Identical string values → zero prod-data impact, no carry-over alias. **No net-new audit events** (pure action-code rename of existing emitters). ENTITY_TYPE_BY_ACTION union +'Project'; exhaustive `Record<AuditAction,…>` compile-forced the 3 mappings.
+- **Free-string call sites converted: 3.**
+  | file:line | was | now |
+  |---|---|---|
+  | projects.service.ts:661 (archive) | `'PROJECT_ARCHIVED'` | `AuditAction.PROJECT_ARCHIVED` |
+  | projects.service.ts:691 (unarchive) | `'PROJECT_UNARCHIVED'` | `AuditAction.PROJECT_UNARCHIVED` |
+  | projects.service.ts:790 (hardDelete) | `'PROJECT_DELETED'` | `AuditAction.PROJECT_DELETED` |
+  "Justified as string" exceptions: **zero**.
+- **Duration:** ~40 minutes
+- **Design choices:**
+  - **Enum extracted to `audit/audit-action.enum.ts`, re-exported from `audit.service.ts`.** Not in-place: AuditService imports AuditPersistenceService, so typing the persistence param via `audit.service.ts` would be an import cycle. The enum is the lower-layer primitive both writers share; re-export kept all 12 existing import sites untouched (zero churn outside audit/ + projects/).
+  - **Witness in `src/` not a spec.** `audit/audit-action.compile-witness.ts` with `@ts-expect-error` over a non-member literal. Rationale: `nest build` (tsconfig.build.json) typechecks all source files and is the real CI gate; vitest uses esbuild (no typecheck) and full-project `tsc --noEmit` is red on pre-existing spec errors → a spec witness would be decorative/unenforced. FAIL-pre (TS2578 unused-directive = string accepted = the bug) → PASS-post.
+  - **`computeRowHash` left `action: string`** — pure helper, external chain-verifiers pass raw audit_logs values; enum→string widens automatically at the call site.
+- **Learnings (non-trivial):**
+  - **Most of OBS-024 was already done.** Projected 10-20 files; actual **6 source files** (2 new: enum + witness; 4 modified: audit-persistence, audit.service, audit.service.spec, projects.service). Every prior session (OBS-001/004/005/006/007/012/018/021/026) had already converted its own module's codes to enum-from-creation. Only projects.service.ts still emitted free-strings. This session converged the last surface + locked it with the type.
+  - **Read-side alias is a separate follow-up.** OBS-004's renamed legacy prod rows ('PASSWORD_RESET_ADMIN', un-backfillable under OBS-002 immutability) need a query-time alias when audit_logs is *read* — out of scope for this write-side convergence. Flagged in OBS-024 Learnings as a candidate filing against the audit-query/export path (not pre-filed).
+  - **Tooling candidate (not pre-filed):** an ESLint rule banning string-literal `action:` in audit `.log({…})` calls would cover any future audit sink that bypasses the typed boundary. Low urgency — the type covers every current sink.
+- **Gates:** `nest build` (source typecheck, the authoritative API build) EXIT 0. `pnpm test` (api) **1632 passed** (delta **0** — the 3 PROJECT_* rows went into an existing *looped* entityType test, not new `it()` blocks; the witness is compile-time, not a runtime spec). `pnpm test:e2e` (api) **2 passed**. Witness FAIL-pre (TS2578) → PASS-post; real-call-site free-string rejection demonstrated (TS2820) and reverted.
+- **[[TST-011]] delta:** +0 runtime witnesses (refactor session — the existing projects.service.spec assertions on `'PROJECT_*'` literals now exercise the enum path unchanged; 3 entityType rows added to audit.service.spec's existing looped test). New *compile-time* coverage: the witness file is a permanent type-level regression guard.
+- **Cour-des-Comptes question:** "are audit action codes coherent across modules / can an auditor query one namespace?" → **YES, now compiler-guaranteed.** Every action written to `audit_logs.action` is an `AuditAction` enum member; a free-string action code can no longer compile. Single source of truth: `audit/audit-action.enum.ts`.
