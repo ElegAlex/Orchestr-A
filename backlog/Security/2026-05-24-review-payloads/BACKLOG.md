@@ -892,7 +892,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ---
 ### OBS-004 — Role changes on users are NOT audited
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
