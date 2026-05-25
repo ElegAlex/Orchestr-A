@@ -36,6 +36,35 @@ const APPROVE_LEAVES = 'leaves:approve';
 const DELETE_LEAVES = 'leaves:delete';
 const MANAGE_DELEGATIONS = 'leaves:manage_delegations';
 
+/**
+ * OBS-003 — caller context threaded from the controller for the audit actor
+ * snapshot. `roleCode` / `templateKey` come from the JWT-loaded `req.user.role`
+ * (no DB hit); `ip` / `ua` from `extractMeta(req)`. All optional so legacy
+ * callers (and the no-op / backward-compat paths) still compile — a caller
+ * that omits this degrades the actor detail, it never blocks the mutation.
+ */
+export interface LeaveActorMeta {
+  roleCode?: string | null;
+  templateKey?: string | null;
+  ip?: string;
+  ua?: string;
+}
+
+/**
+ * OBS-003 — structured actor snapshot persisted in the audit payload so an
+ * auditor can answer "who approved leave X, with which role/permissions AT THE
+ * TIME". `permissions` is the RBAC compile-time resolution (the same source the
+ * `RequirePermissions` guard consumes: `PermissionsService.getPermissionsForRole`)
+ * captured at emit time, because `templateKey → permissions` can change between
+ * deploys with no DB trace.
+ */
+interface LeaveActorSnapshot {
+  id: string;
+  roleCode: string | null;
+  templateKey: string | null;
+  permissions: readonly PermissionCode[];
+}
+
 @Injectable()
 export class LeavesService {
   /**
@@ -1477,9 +1506,38 @@ export class LeavesService {
   }
 
   /**
+   * OBS-003 — Build the structured actor snapshot for a leave audit event.
+   * Resolved BEFORE the surrounding `$transaction` (the permission lookup hits
+   * Redis / Prisma and must not sit inside a Postgres tx holding row locks).
+   * `permissions` uses the same resolver the RBAC guard consumes, so the trail
+   * records exactly what the actor was authorized to do at decision time even
+   * though `templateKey → permissions` is compile-time and leaves no DB trace.
+   * Shared by approve/reject (OBS-003) and the OBS-021 lifecycle emitters.
+   */
+  private async buildActorSnapshot(
+    actorId: string,
+    actor?: LeaveActorMeta,
+  ): Promise<LeaveActorSnapshot> {
+    const roleCode = actor?.roleCode ?? null;
+    return {
+      id: actorId,
+      roleCode,
+      templateKey: actor?.templateKey ?? null,
+      permissions: await this.permissionsService.getPermissionsForRole(
+        roleCode,
+      ),
+    };
+  }
+
+  /**
    * Approuver une demande de congé
    */
-  async approve(id: string, validatorId: string, comment?: string) {
+  async approve(
+    id: string,
+    validatorId: string,
+    comment?: string,
+    actor?: LeaveActorMeta,
+  ) {
     const leave = await this.prisma.leave.findUnique({
       where: { id },
     });
@@ -1505,6 +1563,10 @@ export class LeavesService {
         "Vous n'êtes pas autorisé à valider cette demande",
       );
     }
+
+    // OBS-003 — actor snapshot resolved BEFORE the tx (Redis/Prisma read must
+    // not sit inside the Postgres tx holding the leave row lock).
+    const actorSnapshot = await this.buildActorSnapshot(validatorId, actor);
 
     // DAT-001 — état + écriture d'audit doivent partager une seule
     // transaction. Pré-fix : leave.update puis auditService.log (logger-only)
@@ -1568,6 +1630,14 @@ export class LeavesService {
         entityId: id,
         actorId: validatorId,
         payload: {
+          // OBS-003 — actor + subject snapshots so an auditor can answer "who
+          // approved leave X, with which role/permissions at the time". ip/ua
+          // conditional (mirrors OBS-006). requestId omitted: no request-id
+          // propagation exists yet (OBS-009 open — not implemented inline).
+          actor: actorSnapshot,
+          subject: { leaveId: id, userId: current.userId },
+          ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
+          ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
           targetUserId: current.userId,
           validatorAssigned: current.validatorId,
           // Wave 3 : `selfApproved` est figé à la création (true seulement si
@@ -1595,7 +1665,12 @@ export class LeavesService {
   /**
    * Refuser une demande de congé
    */
-  async reject(id: string, validatorId: string, reason?: string) {
+  async reject(
+    id: string,
+    validatorId: string,
+    reason?: string,
+    actor?: LeaveActorMeta,
+  ) {
     const leave = await this.prisma.leave.findUnique({
       where: { id },
     });
@@ -1621,6 +1696,9 @@ export class LeavesService {
         "Vous n'êtes pas autorisé à valider cette demande",
       );
     }
+
+    // OBS-003 — actor snapshot resolved before the tx (see approve()).
+    const actorSnapshot = await this.buildActorSnapshot(validatorId, actor);
 
     // DAT-001 — mêmes garanties que approve() : status + audit durables
     // doivent partager une transaction unique avec re-lecture du statut.
@@ -1680,6 +1758,11 @@ export class LeavesService {
         entityId: id,
         actorId: validatorId,
         payload: {
+          // OBS-003 — see approve() for the actor/subject snapshot rationale.
+          actor: actorSnapshot,
+          subject: { leaveId: id, userId: current.userId },
+          ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
+          ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
           targetUserId: current.userId,
           validatorAssigned: current.validatorId,
           selfApproved: current.selfApproved,

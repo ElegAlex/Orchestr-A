@@ -453,14 +453,24 @@ describe('LeavesController', () => {
       const result = await controller.approve(
         'leave-id-1',
         'manager-id-1',
+        { code: 'ADMIN', templateKey: 'ADMIN' },
+        { headers: { 'user-agent': 'jest' }, ip: '127.0.0.1' },
         'Approuvé',
       );
 
       expect(result.status).toBe('APPROVED');
+      // OBS-003 — controller threads the actor role snapshot + ip/ua into the
+      // service so the durable audit row can record who decided, with what role.
       expect(mockLeavesService.approve).toHaveBeenCalledWith(
         'leave-id-1',
         'manager-id-1',
         'Approuvé',
+        expect.objectContaining({
+          roleCode: 'ADMIN',
+          templateKey: 'ADMIN',
+          ip: '127.0.0.1',
+          ua: 'jest',
+        }),
       );
     });
 
@@ -472,7 +482,7 @@ describe('LeavesController', () => {
       );
 
       await expect(
-        controller.approve('leave-id-1', 'other-user', undefined),
+        controller.approve('leave-id-1', 'other-user', null, {}, undefined),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -484,7 +494,7 @@ describe('LeavesController', () => {
       );
 
       await expect(
-        controller.approve('leave-id-1', 'manager-id-1', undefined),
+        controller.approve('leave-id-1', 'manager-id-1', null, {}, undefined),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -501,6 +511,8 @@ describe('LeavesController', () => {
       const result = await controller.reject(
         'leave-id-1',
         'manager-id-1',
+        { code: 'ADMIN', templateKey: 'ADMIN' },
+        { headers: { 'user-agent': 'jest' }, ip: '127.0.0.1' },
         'Non disponible',
       );
 
@@ -509,6 +521,12 @@ describe('LeavesController', () => {
         'leave-id-1',
         'manager-id-1',
         'Non disponible',
+        expect.objectContaining({
+          roleCode: 'ADMIN',
+          templateKey: 'ADMIN',
+          ip: '127.0.0.1',
+          ua: 'jest',
+        }),
       );
     });
 
@@ -520,7 +538,7 @@ describe('LeavesController', () => {
       );
 
       await expect(
-        controller.reject('leave-id-1', 'other-user', undefined),
+        controller.reject('leave-id-1', 'other-user', null, {}, undefined),
       ).rejects.toThrow(ForbiddenException);
     });
   });

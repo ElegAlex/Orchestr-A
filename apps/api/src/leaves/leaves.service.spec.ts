@@ -2174,6 +2174,67 @@ describe('LeavesService', () => {
       );
     });
 
+    // OBS-003 — the durable approve audit row must carry the actor snapshot
+    // (id + roleCode + templateKey + resolved permissions AT decision time),
+    // the subject, and ip/ua. Pre-fix the payload had none of these keys, so
+    // the actor/subject/ip/ua assertions below fail.
+    it('enriches the LEAVE_APPROVED audit payload with actor role/permissions snapshot + subject + ip/ua (OBS-003)', async () => {
+      const pendingLeave = {
+        ...mockLeave,
+        status: LeaveStatus.PENDING,
+        validatorId: 'manager-1',
+        selfApproved: false,
+      };
+      const approvedLeave = {
+        ...pendingLeave,
+        status: LeaveStatus.APPROVED,
+        validatedById: 'admin-1',
+        validatedAt: new Date('2026-05-24T10:00:00Z'),
+        validationComment: 'OK',
+      };
+
+      mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
+      mockPrismaService.leave.update.mockResolvedValue(approvedLeave);
+
+      await service.approve('leave-1', 'admin-1', 'OK', {
+        roleCode: 'ADMIN',
+        templateKey: 'ADMIN',
+        ip: '10.0.0.7',
+        ua: 'vitest-agent',
+      });
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      const call = mockAuditPersistence.log.mock.calls[0][0];
+      expect(call.payload.actor).toEqual(
+        expect.objectContaining({
+          id: 'admin-1',
+          roleCode: 'ADMIN',
+          templateKey: 'ADMIN',
+        }),
+      );
+      // permissions resolved via PermissionsService (RBAC guard source),
+      // non-empty for ADMIN.
+      expect(Array.isArray(call.payload.actor.permissions)).toBe(true);
+      expect(call.payload.actor.permissions.length).toBeGreaterThan(0);
+      expect(call.payload.actor.permissions).toContain('leaves:approve');
+      expect(call.payload.subject).toEqual({
+        leaveId: 'leave-1',
+        userId: 'user-1',
+      });
+      expect(call.payload.before).toEqual(
+        expect.objectContaining({ status: LeaveStatus.PENDING }),
+      );
+      expect(call.payload.after).toEqual(
+        expect.objectContaining({ status: LeaveStatus.APPROVED }),
+      );
+      expect(call.payload.ip).toBe('10.0.0.7');
+      expect(call.payload.ua).toBe('vitest-agent');
+    });
+
     // DAT-001 — re-read sous tx : si une mutation concurrente a déjà fait
     // sortir le congé de PENDING (race avec un autre validateur), on doit
     // refuser au lieu d'écraser silencieusement.
@@ -2309,6 +2370,55 @@ describe('LeavesService', () => {
           }),
         }),
       );
+    });
+
+    // OBS-003 — symmetric to the approve enrichment witness: the reject audit
+    // row must carry the same actor snapshot + subject + ip/ua.
+    it('enriches the LEAVE_REJECTED audit payload with actor role/permissions snapshot + subject + ip/ua (OBS-003)', async () => {
+      const pendingLeave = {
+        ...mockLeave,
+        status: LeaveStatus.PENDING,
+        validatorId: 'manager-1',
+        selfApproved: false,
+      };
+      const rejectedLeave = {
+        ...pendingLeave,
+        status: LeaveStatus.REJECTED,
+        validatedById: 'admin-1',
+        validatedAt: new Date('2026-05-24T10:00:00Z'),
+        validationComment: 'No',
+      };
+
+      mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
+      mockPrismaService.leave.update.mockResolvedValue(rejectedLeave);
+
+      await service.reject('leave-1', 'admin-1', 'No', {
+        roleCode: 'ADMIN',
+        templateKey: 'ADMIN',
+        ip: '10.0.0.8',
+        ua: 'vitest-agent',
+      });
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledTimes(1);
+      const call = mockAuditPersistence.log.mock.calls[0][0];
+      expect(call.payload.actor).toEqual(
+        expect.objectContaining({
+          id: 'admin-1',
+          roleCode: 'ADMIN',
+          templateKey: 'ADMIN',
+        }),
+      );
+      expect(call.payload.actor.permissions).toContain('leaves:approve');
+      expect(call.payload.subject).toEqual({
+        leaveId: 'leave-1',
+        userId: 'user-1',
+      });
+      expect(call.payload.ip).toBe('10.0.0.8');
+      expect(call.payload.ua).toBe('vitest-agent');
     });
   });
 

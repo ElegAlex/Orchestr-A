@@ -12,6 +12,7 @@ import {
   ParseIntPipe,
   ParseUUIDPipe,
   ForbiddenException,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -39,6 +40,22 @@ import {
   CurrentUserRoleCode,
 } from '../auth/decorators/current-user.decorator';
 import { LeaveStatus, LeaveType } from 'database';
+
+/**
+ * OBS-003 — extract request IP / User-Agent for the leave-decision audit
+ * trail. Mirrors the documents.controller (OBS-006) precedent: UA capped at
+ * 512 chars, IP preferring the proxy-forwarded chain head.
+ */
+function extractMeta(req?: {
+  headers?: Record<string, unknown>;
+  ip?: string;
+  ips?: string[];
+}): { ip?: string; ua?: string } {
+  const uaRaw = req?.headers?.['user-agent'];
+  const ua = typeof uaRaw === 'string' ? uaRaw.slice(0, 512) : undefined;
+  const ip = req?.ips?.length ? req.ips[0] : (req?.ip ?? undefined);
+  return { ip, ua };
+}
 
 @ApiTags('leaves')
 @Controller('leaves')
@@ -450,9 +467,15 @@ export class LeavesController {
   approve(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') validatorId: string,
+    @CurrentUser('role') role: { code: string; templateKey: string } | null,
+    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
     @Body('comment') comment?: string,
   ) {
-    return this.leavesService.approve(id, validatorId, comment);
+    return this.leavesService.approve(id, validatorId, comment, {
+      roleCode: role?.code ?? null,
+      templateKey: role?.templateKey ?? null,
+      ...extractMeta(req),
+    });
   }
 
   @Post(':id/reject')
@@ -490,9 +513,15 @@ export class LeavesController {
   reject(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') validatorId: string,
+    @CurrentUser('role') role: { code: string; templateKey: string } | null,
+    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
     @Body('reason') reason?: string,
   ) {
-    return this.leavesService.reject(id, validatorId, reason);
+    return this.leavesService.reject(id, validatorId, reason, {
+      roleCode: role?.code ?? null,
+      templateKey: role?.templateKey ?? null,
+      ...extractMeta(req),
+    });
   }
 
   @Post(':id/request-cancel')
