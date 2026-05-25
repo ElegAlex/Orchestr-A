@@ -1,91 +1,93 @@
 # ORCHESTR'A V2
 
-Application de gestion de projets et RH pour collectivités territoriales. Monorepo Turborepo. Licence MIT.
+@CLAUDE-OPTIMIZATION.md
+
+Project and HR management application for French local government. Turborepo monorepo. MIT licensed.
 
 ## Stack
 
-- API : NestJS 11 + Fastify 5, Prisma 6, PostgreSQL 18, Redis 7.4
-- Frontend : Next.js 16 App Router, React 19, TanStack Query, Zustand, Tailwind 4, Radix UI
-- Tests : Vitest (API, `*.spec.ts`), Jest (Frontend, `*.test.ts`), Playwright (E2E)
-- Infra : Docker Compose, Nginx
+- API: NestJS 11 + Fastify 5, Prisma 6, PostgreSQL 18, Redis 7.4
+- Frontend: Next.js 16 App Router, React 19, TanStack Query, Zustand, Tailwind 4, Radix UI
+- Tests: Vitest (API, `*.spec.ts`), Jest (Frontend, `*.test.ts`), Playwright (E2E)
+- Infra: Docker Compose, Nginx
 
 ## Structure
 
 ```
 apps/api/src/[module]/     → controller + service + dto + tests
-apps/web/app/[page]/       → pages Next.js (App Router uniquement)
-apps/web/src/components/   → composants React
-apps/web/src/services/     → services API Axios (1 par domaine)
-apps/web/src/stores/       → stores Zustand
-apps/web/src/hooks/        → hooks custom
-packages/database/prisma/  → schema.prisma (source de vérité unique)
-packages/types/            → types partagés API ↔ Frontend
+apps/web/app/[page]/       → Next.js pages (App Router only)
+apps/web/src/components/   → React components
+apps/web/src/services/     → Axios API services (1 per domain)
+apps/web/src/stores/       → Zustand stores
+apps/web/src/hooks/        → custom hooks
+packages/database/prisma/  → schema.prisma (single source of truth)
+packages/types/            → shared types API ↔ Frontend
 ```
 
-## Commandes
+## Commands
 
 ```bash
-pnpm run build        # Build complet — toujours vérifier avant de livrer
-pnpm run test         # Tests unitaires
+pnpm run build        # Full build — always verify before shipping
+pnpm run test         # Unit tests
 pnpm run dev          # Dev mode
 pnpm run docker:dev   # PostgreSQL + Redis
 pnpm run db:migrate   # Prisma migrate dev
 pnpm run db:seed      # Seed (login: admin / admin123)
 ```
 
-Toujours `pnpm`, jamais npm ni yarn.
+Always `pnpm`, never npm or yarn.
 
 ## Conventions
 
-Suivre les patterns existants. Référence : `apps/api/src/tasks/` et `apps/web/app/tasks/`.
+Follow existing patterns. Reference: `apps/api/src/tasks/` and `apps/web/app/tasks/`.
 
-- Backend : modules NestJS, DTOs class-validator, PrismaService singleton, exceptions NestJS
-- Frontend : services Axios, stores Zustand, React Hook Form + Zod, Tailwind + Radix UI
-- Auth : JwtAuthGuard + RolesGuard, décorateurs @CurrentUser() et @Roles()
-- Nommage : kebab-case fichiers, PascalCase composants, `*.spec.ts` backend, `*.test.ts` frontend
+- Backend: NestJS modules, class-validator DTOs, PrismaService singleton, NestJS exceptions
+- Frontend: Axios services, Zustand stores, React Hook Form + Zod, Tailwind + Radix UI
+- Auth: JwtAuthGuard + RolesGuard, `@CurrentUser()` and `@Roles()` decorators
+- Naming: kebab-case files, PascalCase components, `*.spec.ts` backend, `*.test.ts` frontend
 
-## Rôles RBAC
+## RBAC roles
 
 ADMIN > RESPONSABLE > MANAGER > REFERENT_TECHNIQUE > CONTRIBUTEUR > OBSERVATEUR
 
-## Vérification obligatoire
+## Mandatory pre-flight check
 
-Avant tout travail, vérifier que le codebase existe et que l'environnement fonctionne :
+Before any work, verify the codebase exists and the environment is up:
 
 ```bash
-echo "Fichiers API : $(find apps/api/src -name '*.ts' 2>/dev/null | wc -l)"
-echo "Fichiers Web : $(find apps/web -name '*.tsx' -o -name '*.ts' 2>/dev/null | wc -l)"
-docker ps --format '{{.Names}}' | grep -E "postgres|redis" || echo "⚠️ Docker manquant"
+echo "API files: $(find apps/api/src -name '*.ts' 2>/dev/null | wc -l)"
+echo "Web files: $(find apps/web -name '*.tsx' -o -name '*.ts' 2>/dev/null | wc -l)"
+docker ps --format '{{.Names}}' | grep -E "postgres|redis" || echo "⚠️ Docker missing"
 pnpm run build 2>&1 | tail -3
 ```
 
-Si des fichiers source existent → travailler avec le code existant. Ne JAMAIS recréer des fichiers existants. L'absence de .git ne signifie pas repo vide. Si un check échoue → le corriger AVANT de commencer.
+If source files exist → work with existing code. NEVER recreate existing files. Missing `.git` does not mean empty repo. If a check fails → fix it BEFORE starting.
 
-## Pièges connus
+## Known pitfalls
 
-- schema.prisma = un seul fichier, un seul éditeur à la fois en agent team
-- Tâches sans projet = intentionnel (réunions, transverse), pas un bug
-- Personal Todos : limite 20 items hard-codée
-- JWT dans localStorage : choix conscient, ne pas migrer sans demande
-- Soft delete projets : status CANCELLED, hard delete via endpoint séparé
-- Next.js 16 + React 19 : vérifier compatibilité libs tierces
+- `schema.prisma` = single file, one editor at a time in agent teams
+- Tasks without a project = intentional (meetings, cross-cutting work), not a bug
+- Personal Todos: hard-coded 20-item limit
+- JWT in localStorage: deliberate choice, do not migrate without request
+- Project soft-delete: status `CANCELLED`, hard delete via dedicated endpoint
+- Next.js 16 + React 19: verify third-party lib compatibility
 
-## Pour aller plus loin
+## Further reading
 
-- Routes API (107 endpoints) : Swagger à `/api/docs` en dev
-- Schéma complet : `packages/database/prisma/schema.prisma`
-- Docker prod : `docker-compose.prod.yml`
-- CI/CD : `.github/workflows/`
+- API routes (107 endpoints): Swagger at `/api/docs` in dev
+- Full schema: `packages/database/prisma/schema.prisma`
+- Prod Docker: `docker-compose.prod.yml`
+- CI/CD: `.github/workflows/`
 
 ## E2E Testing
 
-- Toute feature/bugfix DOIT inclure des tests E2E Playwright
-- Les tests utilisent la permission matrix dans e2e/fixtures/permission-matrix.ts
-- Chaque test vérifie les 6 rôles : ADMIN, RESPONSABLE, MANAGER, REFERENT_TECHNIQUE, CONTRIBUTEUR, OBSERVATEUR
-- Auth par API (jamais login UI dans les tests) via les storage states dans playwright/.auth/
-- Fixture asRole() pour les workflows multi-rôles
-- Tests négatifs obligatoires : vérifier que les rôles non-autorisés reçoivent 403 ou redirect
-- Taguer les tests critiques avec @smoke
-- Lancer tous les tests : pnpm run test:e2e
-- Par rôle : npx playwright test --project=admin
-- Multi-rôle : npx playwright test --project=multi-role
+- Every feature/bugfix MUST include Playwright E2E tests
+- Tests use the permission matrix in `e2e/fixtures/permission-matrix.ts`
+- Each test covers all 6 roles: ADMIN, RESPONSABLE, MANAGER, REFERENT_TECHNIQUE, CONTRIBUTEUR, OBSERVATEUR
+- Auth via API (never UI login in tests) using storage states in `playwright/.auth/`
+- `asRole()` fixture for multi-role workflows
+- Negative tests required: verify unauthorized roles get 403 or redirect
+- Tag critical tests with `@smoke`
+- Run all: `pnpm run test:e2e`
+- Per role: `npx playwright test --project=admin`
+- Multi-role: `npx playwright test --project=multi-role`
