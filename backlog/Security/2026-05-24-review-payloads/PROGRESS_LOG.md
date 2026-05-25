@@ -222,3 +222,12 @@ Append a new entry at the bottom after each Claude Code session that touched the
   - **`ua` reachable only at LOGIN_*.** `AuthService.login(loginDto, meta?)` gets request meta (userAgent+ip) from the controller's `extractMeta(req)` → LOGIN_SUCCESS/FAILURE now carry ip+ua. PASSWORD_CHANGED service methods receive no meta; ua left optional per scope (no controller signature change this session).
 - **Gates:** `pnpm test` 6/6 turbo, **1563** api tests green; `pnpm test:e2e` 4/4 turbo (build + `app.e2e-spec.ts` 2 tests green, real DB boot). audit spec 12/12. Diff confined to `audit.service.ts` + `audit.service.spec.ts` + `auth.service.ts` (LOGIN_* sites). No schema, no module wiring, no audit-persistence.service.ts.
 - **Follow-up filed:** ROLE_CHANGE/USER_DEACTIVATED live emitters in `users.service.update()/remove()` (with before/after roleCode and isActive true→false) — deferred net-new audit emission, candidate for a dedicated audit-trail task alongside the SEC-002 "users:update to audit_logs" question. PERF-001 (sync-vs-queue audit write) stubbed TODO.
+
+
+## 2026-05-25 — AUD-EMIT-001 filed (live ROLE_CHANGE/USER_DEACTIVATED emitters for UsersService)
+
+- **Session ID:** 2026-05-25-aud-emit-001
+- **Tasks closed:** none — filing-only session
+- **Commits:** <pending> (filing)
+- **Duration:** ~10 minutes
+- **Learnings:** Filing-only session. AUD-EMIT-001 is the explicit close to the deferred questions from SEC-002 (2026-05-24) and OBS-001 (2026-05-25); both PROGRESS_LOG entries had flagged a missing audit-emitter wiring on user mutations.

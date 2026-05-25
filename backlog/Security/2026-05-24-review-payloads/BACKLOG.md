@@ -430,7 +430,7 @@ TBD — manual verification (config change, no automated test)
 ---
 
 ## Phase 2 — Cour des Comptes ready — Audit log durcissement
-*16 tasks in this phase.*
+*17 tasks in this phase.*
 
 ### DAT-002 — AuditService is logger-only — security events not persisted
 
@@ -600,6 +600,50 @@ pnpm test apps/api/src/audit/audit-persistence.service.spec.ts  # may need creat
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
 **Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### AUD-EMIT-001 — ROLE_CHANGE and USER_DEACTIVATED have no live emitters in UsersService
+
+- **Status:** TODO
+- **Phase:** 2
+- **Cluster:** A
+- **Confidence:** cross-validated
+- **Blocked_by:** (none)
+- **Severity:** blocking
+- **Category:** data_integrity · audit_log
+- **File:** `apps/api/src/users/users.service.ts` (update + remove)
+- **Source:** Session-derived. Convergent from three artefacts: (a) PROGRESS_LOG 2026-05-25 OBS-001 deferred-emitter note; (b) PROGRESS_LOG 2026-05-24 SEC-002 closeout open question ("users:update to audit_logs"); (c) CLAUDE_SESSION_CONTRACT.md AC#4 (audit-sensitive paths include "user delete", and ROLE_CHANGE/USER_DEACTIVATED are enum values defined but never emitted).
+
+**Description:**
+UsersService.update() mutates roleId, isActive, departmentId, serviceIds with zero call to AuditService or AuditPersistenceService. UsersService.remove() deactivates a user with no audit emission. The AuditAction enum defines ROLE_CHANGE and USER_DEACTIVATED, OBS-001 enriched the payload to carry structured before/after for exactly these actions, and DAT-002 made AuditService durable — yet no business code calls them. An auditor (Cour des Comptes) asking "when did user X become MANAGER, who promoted them" or "when was user Y deactivated, by whom, why" gets no answer despite the trail being technically ready to receive these rows.
+
+**Root cause:**
+DAT-002 made AuditService dual-write. OBS-001 enriched the payload schema (before/after, ua, reason, per-action entityType). Both shipped without retro-fitting the live call sites in UsersService because each task's scope was the audit infrastructure, not the emitter coverage. The capability is live; the call sites are missing.
+
+**Code evidence:**
+```
+grep -rn "ROLE_CHANGE\|USER_DEACTIVATED" apps/api/src/users/ → 0 hits
+grep -rn "auditService\|auditPersistence" apps/api/src/users/users.service.ts → 0 hits
+```
+
+**Suggested fix:**
+In UsersService.update(): when roleId in the DTO differs from the loaded user's current roleId, emit ROLE_CHANGE with before={roleCode: old.role.code}, after={roleCode: new.role.code}, actor=caller. When isActive transitions true→false (either via update() or remove()), emit USER_DEACTIVATED with before={isActive:true}, after={isActive:false}, actor=caller, reason from DTO if provided. Use AuditPersistenceService directly (consistent with SEC-003's pattern); no AuditService console mirror needed since OBS-001 already routes both sinks through the dual-write path.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Witness must spy AuditPersistenceService and assert (a) ROLE_CHANGE is emitted with structured before/after.roleCode on role transitions, (b) USER_DEACTIVATED is emitted with before/after.isActive on the deactivation path (both via update() and remove()), (c) no emission when neither field changes.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot.
+5. Commit message includes `[closes AUD-EMIT-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm test apps/api/src/users/users.service.spec.ts
+```
+
+**Closed_by:** (empty)
+**Learnings:** (empty)
 
 ---
 ### OBS-003 — Leave approval audit lacks before/after state and role snapshot
