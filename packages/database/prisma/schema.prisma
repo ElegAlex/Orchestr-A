@@ -1137,3 +1137,30 @@ model AuditLog {
   @@index([actorId, createdAt])
   @@map("audit_logs")
 }
+
+/// OBS-012 — Deploy / release ledger. One row per running-container boot in a
+/// deploy context, written by DeploymentsService at OnApplicationBootstrap. Lets
+/// an auditor answer "which release was live at time T" by ordering on deployedAt.
+/// No FK to users: deployedBy is a frozen string (operator email / 'ci'), so the
+/// record survives user deletion — same RGPD snapshot rationale as audit_logs
+/// actorEmail. Infra event, NOT bound by the audit_logs immutability trigger.
+model Deployment {
+  id                  String   @id @default(uuid())
+  /// Git commit SHA of the running release, injected via env RELEASE_SHA at deploy
+  /// time (scripts/deploy-prod.sh). 'unknown' if the operator did not pin it.
+  releaseSha          String
+  /// When this release booted (= the start of its running interval).
+  deployedAt          DateTime @default(now())
+  /// Who triggered the deploy: operator email or 'ci'. Frozen string, no FK.
+  deployedBy          String
+  /// Target environment: 'production' / 'staging' / 'development'.
+  environment         String
+  /// process.version of the running Node runtime.
+  nodeVersion         String
+  /// Names of the Prisma migrations applied at boot (from _prisma_migrations).
+  dbMigrationsApplied Json?
+
+  @@index([deployedAt])
+  @@index([environment, deployedAt])
+  @@map("deployments")
+}

@@ -27,6 +27,11 @@ export enum AuditAction {
   DOCUMENT_DOWNLOADED = 'DOCUMENT_DOWNLOADED',
   LEAVE_APPROVED = 'LEAVE_APPROVED',
   LEAVE_REJECTED = 'LEAVE_REJECTED',
+  // OBS-012 — a release booted. Written on every container boot in a deploy
+  // context (DeploymentsService). The durable source of truth is the
+  // `deployments` table; this audit row is the Cour-des-Comptes narrative
+  // cross-reference so deploy events sit inline with user actions.
+  RELEASE_DEPLOYED = 'RELEASE_DEPLOYED',
 }
 
 /**
@@ -44,13 +49,15 @@ export enum AuditAction {
  *               (OBS-005).
  *   - `Document` — document access events (read / download). The subject is a
  *               row in the `documents` table (OBS-006).
+ *   - `Deployment` — release/boot events. The subject is the release SHA, also
+ *               persisted as a row in the `deployments` table (OBS-012).
  *
  * Typed as an exhaustive `Record<AuditAction, ...>` so adding an AuditAction
  * without a subject type is a compile error, not a silent 'unknown'.
  */
 const ENTITY_TYPE_BY_ACTION: Record<
   AuditAction,
-  'User' | 'Auth' | 'Leave' | 'Role' | 'Document'
+  'User' | 'Auth' | 'Leave' | 'Role' | 'Document' | 'Deployment'
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
@@ -71,6 +78,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.DOCUMENT_DOWNLOADED]: 'Document',
   [AuditAction.LEAVE_APPROVED]: 'Leave',
   [AuditAction.LEAVE_REJECTED]: 'Leave',
+  [AuditAction.RELEASE_DEPLOYED]: 'Deployment',
 };
 
 /**

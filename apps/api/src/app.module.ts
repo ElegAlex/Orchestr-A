@@ -28,6 +28,7 @@ import { HolidaysModule } from './holidays/holidays.module';
 import { EventsModule } from './events/events.module';
 import { PlanningExportModule } from './planning-export/planning-export.module';
 import { AuditModule } from './audit/audit.module';
+import { DeploymentsModule } from './deployments/deployments.module';
 import { PredefinedTasksModule } from './predefined-tasks/predefined-tasks.module';
 import { SchoolVacationsModule } from './school-vacations/school-vacations.module';
 import { ThirdPartiesModule } from './third-parties/third-parties.module';
@@ -55,6 +56,7 @@ import { CommonModule } from './common/common.module';
     ]),
     ScheduleModule.forRoot(),
     AuditModule,
+    DeploymentsModule,
     PrismaModule,
     AuthModule,
     UsersModule,

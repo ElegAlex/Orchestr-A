@@ -231,6 +231,8 @@ describe('AuditService', () => {
         // OBS-006 — document access subjects (read / download).
         [AuditAction.DOCUMENT_READ, 'Document'],
         [AuditAction.DOCUMENT_DOWNLOADED, 'Document'],
+        // OBS-012 — deploy/boot lifecycle subject (release pinned at boot).
+        [AuditAction.RELEASE_DEPLOYED, 'Deployment'],
         [AuditAction.LOGIN_SUCCESS, 'Auth'],
         [AuditAction.LOGIN_FAILURE, 'Auth'],
         [AuditAction.ACCESS_DENIED, 'Auth'],
