@@ -521,7 +521,7 @@ backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh <
 
 ### TOOL-DEPLOY-001 — Two-role DB split (restricted app role + DDL migration role) for audit_logs defence-in-depth
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 1
 - **Cluster:** —
 - **Confidence:** claude-only
