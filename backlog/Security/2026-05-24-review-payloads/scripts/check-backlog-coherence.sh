@@ -4,11 +4,47 @@
 # referenced by a commit message containing [closes <task-id>].
 #
 # Usage: ./scripts/check-backlog-coherence.sh [path-to-backlog.md]
-# Exit codes: 0 if all DONE tasks are coherent, 1 if any violation.
+#   - With an explicit argument, that path is checked (this is how CI invokes it).
+#   - With NO argument, defaults to the BACKLOG.md sibling of this script's parent
+#     directory, resolved relative to the script's own location (BASH_SOURCE), so the
+#     default survives `cd`, symlinks, and repo reorganization. For this repo that
+#     resolves to backlog/Security/2026-05-24-review-payloads/BACKLOG.md.
+# Exit codes: 0 if all DONE/VERIFIED tasks are coherent, 1 if any violation.
+#
+# Task-ID regex: `[A-Z]+(?:-[A-Z]+)*-\d+` matches both single-segment IDs (SEC-001,
+# DAT-002, OBS-001, PERF-001, TST-011) and multi-segment IDs (AUD-EMIT-001, TOOL-COH-001,
+# USR-DEL-001, AUD-READ-001, TST-DB-001, TOOL-DEPLOY-001, CLAUDE-CFG-001). It subsumes the
+# former `[A-Z]+-\d+|CLAUDE-CFG-\d+` alternation (TOOL-COH-001).
+#
+# ──────────────────────────────────────────────────────────────────────────────────────
+# Retroactive closures — the anchor-commit pattern (TOOL-COH-002)
+# ──────────────────────────────────────────────────────────────────────────────────────
+# Rule 3 below requires the commit named in `Closed_by` to carry `[closes <id>]` in its
+# message. For a DIRECT closure the fix commit itself carries the token. But sometimes a
+# task is recognized as already-done after the fact — its scope was fully covered by an
+# EARLIER commit closing a DIFFERENT task (e.g. OBS-008's scope was covered by 1ff6c9a,
+# whose message says `[closes OBS-001]`, not `[closes OBS-008]`). That earlier commit
+# cannot be edited, so it can never satisfy rule 3 for the retroactive task.
+#
+# Canonical mechanism: create an EMPTY anchor commit whose sole purpose is to host the
+# `[closes <id>]` token, then point `Closed_by` at the anchor. The gate then passes
+# unchanged — no special-casing here; the anchor IS a real commit with the right token.
+#
+# Worked example (real, on master):
+#   git commit --allow-empty -m "chore(backlog): anchor OBS-008 retroactive closure [closes OBS-008]
+#
+#   Material fix was 1ff6c9a (OBS-001) ... This empty commit exists solely to satisfy the
+#   coherence gate's rule that Closed_by must point to a commit whose message contains
+#   [closes <id>]."
+#   → anchor SHA 2188b3d; OBS-008.Closed_by = 2188b3d. (OBS-020 → bfc7a78 is a second precedent.)
+# The anchor commit's body MUST name the upstream material-fix SHA so the trail stays auditable.
+# See CLAUDE_SESSION_CONTRACT.md § "Retroactive closures" for the full procedure.
 
 set -euo pipefail
 
-BACKLOG="${1:-backlog/Security/BACKLOG.md}"
+# Resolve the script's own directory (canonicalizing idiom: survives cd / symlinks / sourcing).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKLOG="${1:-$SCRIPT_DIR/../BACKLOG.md}"
 if [[ ! -f "$BACKLOG" ]]; then
     echo "ERROR: BACKLOG file not found at $BACKLOG" >&2
     exit 1
@@ -26,8 +62,15 @@ from pathlib import Path
 backlog_path = Path(sys.argv[1])
 content = backlog_path.read_text()
 
-# Split into task blocks
-task_pattern = re.compile(r'^### ([A-Z]+-\d+|CLAUDE-CFG-\d+) — (.+)$', re.MULTILINE)
+# Anchor git operations to the BACKLOG's own directory so the no-arg default works from
+# any cwd (git discovers the repo by walking up from here). Running from the repo root —
+# how CI invokes the script — yields the identical repo, so this is non-regressive.
+git_cwd = str(backlog_path.resolve().parent)
+
+# Split into task blocks.
+# `[A-Z]+(?:-[A-Z]+)*-\d+` matches single-segment (SEC-001) AND multi-segment
+# (AUD-EMIT-001, TOOL-COH-001, CLAUDE-CFG-001) IDs — see header (TOOL-COH-001).
+task_pattern = re.compile(r'^### ([A-Z]+(?:-[A-Z]+)*-\d+) — (.+)$', re.MULTILINE)
 matches = list(task_pattern.finditer(content))
 
 violations = []
@@ -59,7 +102,7 @@ for i, m in enumerate(matches):
 
     # The SHA must exist in git history.
     try:
-        subprocess.run(["git", "cat-file", "-e", closed_by], check=True, capture_output=True)
+        subprocess.run(["git", "cat-file", "-e", closed_by], check=True, capture_output=True, cwd=git_cwd)
     except subprocess.CalledProcessError:
         violations.append(f"  [{task_id}] Closed_by SHA {closed_by} does not exist in git history")
         continue
@@ -68,7 +111,7 @@ for i, m in enumerate(matches):
     try:
         msg = subprocess.run(
             ["git", "log", "-1", "--format=%B", closed_by],
-            check=True, capture_output=True, text=True
+            check=True, capture_output=True, text=True, cwd=git_cwd
         ).stdout
     except subprocess.CalledProcessError:
         violations.append(f"  [{task_id}] Could not read commit message for {closed_by}")

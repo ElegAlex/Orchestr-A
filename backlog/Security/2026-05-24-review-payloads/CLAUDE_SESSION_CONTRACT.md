@@ -79,3 +79,27 @@ The `scripts/check-backlog-coherence.sh` script (run by GitHub Actions on PR) en
 - Every closing commit message contains `[closes <task-id>]`.
 
 Failing this CI gate blocks the PR. The gate is not a suggestion.
+
+The gate's task-ID parser matches both single-segment IDs (`SEC-001`) and multi-segment IDs (`AUD-EMIT-001`, `TOOL-COH-001`, `CLAUDE-CFG-001`) via the regex `[A-Z]+(?:-[A-Z]+)*-\d+`. Run with no argument and it auto-resolves the BACKLOG.md beside the script (robust to `cd`/symlinks); CI passes the path explicitly.
+
+## Retroactive closures — the anchor-commit pattern
+
+Most closures are **direct**: the fix commit's message carries `[closes <id>]` and `Closed_by` points at it. But sometimes a task is recognized as **already done after the fact** — its scope was fully covered by an *earlier* commit that closed a *different* task. That earlier commit's message names the other task (e.g. `[closes OBS-001]`), not the retroactive one, and it cannot be edited. The CI gate's rule 3 (`Closed_by`'s commit message must contain `[closes <this-id>]`) can therefore never be satisfied by pointing `Closed_by` directly at the upstream material fix.
+
+**Canonical mechanism — the empty anchor commit:**
+
+```bash
+git commit --allow-empty -m "chore(backlog): anchor <ID> retroactive closure [closes <ID>]
+
+Material fix was <upstream-sha> (<upstream-task-id>), which <one line on why it covers
+<ID>'s scope>. This empty commit exists solely to satisfy the coherence gate's rule that
+Closed_by must point to a commit whose message contains [closes <id>]."
+```
+
+Then set the entry's `Closed_by` to the **anchor SHA**. The gate passes with no special-casing — the anchor is a real commit carrying the right token. The anchor body MUST name the upstream material-fix SHA so the audit trail stays intact.
+
+**Worked example (real, on master):** OBS-008 was covered by `1ff6c9a` (which says `[closes OBS-001]`). Anchor commit `2188b3d` — `chore(backlog): anchor OBS-008 retroactive closure [closes OBS-008]` — was created `--allow-empty`, and `OBS-008.Closed_by` was set to `2188b3d`. A second precedent: OBS-020 → anchor `bfc7a78`.
+
+**Process rule:** any BACKLOG-editing task that touches `Closed_by` must read `scripts/check-backlog-coherence.sh` before prescribing a SHA — pointing `Closed_by` at an upstream material fix whose message names a *different* task is schema-naive and will fail the gate. Use an anchor commit instead.
+
+(Tooling history: the regex multi-segment fix is TOOL-COH-001; formalizing this anchor pattern is TOOL-COH-002. The gate does not implement a separate `Closure_anchor:` field — the anchor commit IS the attestation.)
