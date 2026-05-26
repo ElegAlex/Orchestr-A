@@ -34,7 +34,10 @@ export default defineConfig({
       },
     },
     include: ['src/**/*.spec.ts'],
-    exclude: ['node_modules/', 'dist/'],
+    // `*.int.spec.ts` is the real-DB integration suite (TST-DB-001) — it opts out
+    // of the global vi.mock('database') and runs via `pnpm test:integration`.
+    // Exclude it here so the mocked unit run never picks it up.
+    exclude: ['node_modules/', 'dist/', 'src/**/*.int.spec.ts'],
     server: {
       deps: {
         inline: ['database'],

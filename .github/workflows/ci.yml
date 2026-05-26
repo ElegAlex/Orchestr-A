@@ -108,6 +108,17 @@ jobs:
           REDIS_URL: redis://localhost:6379
           TZ: Europe/Paris
 
+      # TST-DB-001 — real-DB integration harness. Creates its own ephemeral
+      # database on the postgres service (the orchestr_a user is the service's
+      # POSTGRES_USER → superuser → CREATEDB), `prisma migrate deploy`s into it,
+      # runs the *.int.spec.ts suite against a real PrismaClient, then drops it.
+      # The pre-migrated orchestr_a_v2_test DB above is left untouched.
+      - name: Run Backend Integration Tests (real DB)
+        run: pnpm --filter api test:integration
+        env:
+          DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_test
+          TZ: Europe/Paris
+
       - name: Generate Coverage Report
         run: pnpm --filter api test:cov
         env:

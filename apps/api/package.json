@@ -25,6 +25,7 @@
     "test:cov": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:integration": "vitest run --config vitest.int.config.ts",
     "test:tz-utc": "TZ=UTC LEAVE_TZ_OVERRIDE_OFF=1 vitest run src/leaves/",
     "clean": "rm -rf dist node_modules"
   },
