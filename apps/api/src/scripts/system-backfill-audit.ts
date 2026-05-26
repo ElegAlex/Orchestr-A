@@ -36,6 +36,14 @@ export interface SystemBackfillContext {
   affectedCount?: number;
   /** Whether the run was a no-write dry run. */
   dryRun?: boolean;
+  /**
+   * For value-normalization runs (AUD-READ-001): the legacy code being rewritten
+   * and its canonical replacement. Surfaced top-level in the payload so an auditor
+   * can query `payload->>'fromValue'` / `payload->>'toValue'` to see exactly what
+   * the maintenance event normalized. Omitted from the payload when undefined.
+   */
+  fromValue?: string;
+  toValue?: string;
 }
 
 /**
@@ -74,6 +82,8 @@ export async function emitSystemBackfill(
       ...(ctx.affectedCount !== undefined
         ? { affectedCount: ctx.affectedCount }
         : {}),
+      ...(ctx.fromValue !== undefined ? { fromValue: ctx.fromValue } : {}),
+      ...(ctx.toValue !== undefined ? { toValue: ctx.toValue } : {}),
     },
   });
 }
