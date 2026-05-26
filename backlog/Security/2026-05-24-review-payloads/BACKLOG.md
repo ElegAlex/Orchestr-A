@@ -1508,7 +1508,7 @@ pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missi
 ---
 ### TST-011 — Audit emission almost never asserted — only one leaves test spies AuditService.log
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -1545,8 +1545,15 @@ Add audit-emission assertions on every state transition that the audit policy re
 pnpm test apps/api/src/audit/audit-persistence.service.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** Coverage cumulatively expanded since the original audit baseline by: DAT-001 (b14cdd5) — leaves approve/reject/cancel transactional + audit assertions; DAT-002 (c62ac8d) — AuditService dual-write spec; OBS-001 (1ff6c9a) — per-action entityType + ua/reason/attemptedEmail bcrypt-redaction tests; AUD-EMIT-001 (ffc4cf4) — UsersService ROLE_CHANGE + USER_DEACTIVATED emission assertions; SEC-003 (2763552) — admin password reset audit assertion. Remaining gaps per original Suggested fix: project archive (projects.service.spec), document delete (documents.service.spec), role create/update/delete (rbac/roles.service.spec — OBS-005 territory).
+**Closed_by:** 870cd81
+**Learnings:**
+- **Gap audit (final, every audit.log call site in apps/api/src + scripts):** auth.service (5 sites, **0** assertions → the only true residual gap; the audit's headline finding) · users.service L994 PASSWORD_CHANGED console-parity dual-write (1 site, 0 → the persistence twin PASSWORD_RESET_BY_ADMIN was asserted by SEC-003/OBS-004 but the AuditService.log sink was not) · export-audit.helper emitDataExported (1 site, asserted ×2 transitively by tasks/milestones specs but no dedicated spec, resilience branch untested). Everything else was **already covered** by the cumulative arc: projects (3/3, DAT-007+PROJECT_DELETED), leaves (9 sites/19 assertions, DAT-001+OBS-003+OBS-021), rbac roles (4/9, OBS-005), documents (1/6, OBS-006), deployments (1/3, OBS-012), planning-export (1 site, pos+resilience, OBS-007), tasks+milestones CSV (OBS-026), system-backfill (OBS-018), users 8 persistence sites (AUD-EMIT-001+USR-DEL-001). The stale "remaining gaps" note (project archive / document delete / role lifecycle) was already closed by DAT-007/OBS-005/OBS-006 between the audit baseline and this session.
+- **No gap > call anywhere** (no orphan assertion asserting an emission no call site produces). No code-level emission bug surfaced — every call site emits correctly; this was a pure test-coverage closeout (AC#4 N/A — no application audit emission added).
+- **AUD-EMIT-001 triple adapted, not forced:** auth flows have no injected actor dep, so the "caller-undefined" leg is N/A; the natural negatives are the existing throw-tests (duplicate-email, unknown/forbidden target, unknown/expired/used token) — each got a `not.toHaveBeenCalled()`. login() emits LOGIN_FAILURE *before* throwing; the mock state is observable after `rejects.toThrow` settles.
+- **FAIL-pre witness (AC#2):** neutering auth.service.ts:167 (LOGIN_SUCCESS) makes the new assertion fail; reverted, never committed. The assertions have teeth.
+- **Mocking pattern standardized** on providers `useValue: { log: vi.fn() }` + `expect(mock.log).toHaveBeenCalledWith(...)` (DAT-021/USR-DEL-001 convention). No `vi.mock()` factory introduced. Diff confined to `apps/api/src/**/*.spec.ts`.
+- **Inherent uncoverable residual:** none material. The two pure helpers (`emitSystemBackfill`, `emitDataExported`) and the operational scripts that don't run under vitest are covered by testing the *extracted helper* directly at the `.log` boundary (the OBS-018 precedent), so there is no vitest-blind emission site left. `audit.service.ts:150` (the AuditService→AuditPersistence internal dual-write plumbing) is the audit module's own unit, covered by DAT-002/OBS-001 audit.service.spec — not a business state-transition call site.
+- **Delta:** api 1645 → 1650 (+5 test cases: 2 auth LOGIN_* + 3 export-helper; the rest are inline assertions on existing tests). ~19 new audit-emission assertions. Cross-ref the cumulative arc: [[DAT-001]] [[DAT-002]] [[OBS-001]] [[AUD-EMIT-001]] [[SEC-003]] [[OBS-003]] [[OBS-004]] [[OBS-005]] [[OBS-006]] [[OBS-007]] [[OBS-012]] [[OBS-018]] [[OBS-021]] [[OBS-024]] [[OBS-026]] [[USR-DEL-001]] [[DAT-021]] each pre-deposited their share; TST-011 filled the last hole (auth) and ratified full coverage.
 
 ---
 
