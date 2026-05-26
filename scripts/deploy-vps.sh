@@ -306,7 +306,13 @@ create_env_file() {
 # ===========================
 
 # === BASE DE DONNEES ===
+# TOOL-DEPLOY-001 — DATABASE_MIGRATION_URL is the DDL/owner role used by
+# `prisma migrate deploy` (schema datasource directUrl). At first install both URLs
+# point at the owner so bootstrap works. HARDENING (post-install, see prisma/README.md):
+# run prisma/init-roles.sql once to create the restricted app_user, then repoint
+# DATABASE_URL at app_user so the runtime cannot UPDATE/DELETE audit_logs.
 DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}"
+DATABASE_MIGRATION_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}"
 POSTGRES_USER=${DB_USER}
 POSTGRES_PASSWORD=${DB_PASSWORD}
 POSTGRES_DB=${DB_NAME}
@@ -419,6 +425,12 @@ run_migrations() {
 
     cd "$INSTALL_DIR"
     log_success "Migrations terminees"
+
+    # TOOL-DEPLOY-001 — defence-in-depth role split (post-install hardening).
+    log_warning "HARDENING audit_logs (TOOL-DEPLOY-001): exécuter une fois :"
+    log_warning "  psql \"\$DATABASE_MIGRATION_URL\" -v app_password=\"'<mdp-fort>'\" \\"
+    log_warning "       -f packages/database/prisma/init-roles.sql"
+    log_warning "  puis repointer DATABASE_URL vers app_user dans ${ENV_FILE} (cf. prisma/README.md)."
 }
 
 build_application() {

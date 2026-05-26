@@ -8,6 +8,9 @@
     "**/*spec.ts",
     "vitest.setup.ts",
     "vitest.config.ts",
-    "vitest.e2e.config.ts"
+    "vitest.e2e.config.ts",
+    "vitest.int.config.ts",
+    "vitest.int.setup.ts",
+    "vitest.int.global-setup.ts"
   ]
 }

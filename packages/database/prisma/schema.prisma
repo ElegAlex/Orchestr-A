@@ -7,7 +7,15 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // TOOL-DEPLOY-001 — two-role DB split (defence-in-depth for audit_logs).
+  // `url` is the RUNTIME connection: the restricted app role (INSERT+SELECT on
+  // audit_logs, full CRUD elsewhere — UPDATE/DELETE/TRUNCATE on audit_logs are
+  // REVOKEd, so a trigger bypass is still blocked at the privilege layer).
+  // `directUrl` is the DDL connection used by `prisma migrate deploy`, `db push`,
+  // `db pull` and the audit hash-chain maintenance scripts: a role that OWNS the
+  // schema (full privileges). See prisma/README.md + prisma/init-roles.sql.
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_MIGRATION_URL")
 }
 
 // ===========================

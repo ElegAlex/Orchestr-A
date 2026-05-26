@@ -26,6 +26,24 @@
 # Prereqs: run as the deploy user with docker access, SSH key present, the prod
 # .env.production in place. This script does NOT provision a fresh host — that is
 # scripts/deploy-vps.sh (first-install only).
+#
+# TOOL-DEPLOY-001 — two-role DB split (audit_logs defence-in-depth). .env.production
+# MUST define BOTH credential sets that docker-compose.prod.yml composes:
+#   DATABASE_USER / DATABASE_PASSWORD  → the DDL/owner role (POSTGRES_USER). Compose
+#                                        builds DATABASE_MIGRATION_URL from these; it
+#                                        runs `prisma migrate deploy` + the audit
+#                                        hash-chain maintenance scripts.
+#   APP_DATABASE_USER / APP_DATABASE_PASSWORD → the restricted runtime role (app_user:
+#                                        only INSERT+SELECT on audit_logs). Compose
+#                                        builds DATABASE_URL from these for the API.
+# ONE-TIME per environment (BEFORE the first deploy that relies on the split), the
+# operator provisions app_user with a superuser/owner psql session:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production exec -T postgres \
+#     psql -U "$DATABASE_USER" -d "$DATABASE_NAME" \
+#       -v app_password="'$APP_DATABASE_PASSWORD'" < packages/database/prisma/init-roles.sql
+# See packages/database/prisma/README.md for the full procedure + verification.
+# The audit maintenance scripts (normalize-action-codes / recompute-chain-on-schema-bump)
+# refuse to run unless DATABASE_MIGRATION_URL is exported (they need the owner role).
 ###############################################################################
 
 set -euo pipefail

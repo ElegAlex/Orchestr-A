@@ -10,9 +10,20 @@ import { PrismaClient } from 'database';
  * `vi.mock('database')`.
  *
  * Runs against the ephemeral migrated DB provisioned by vitest.int.global-setup.ts.
+ *
+ * TOOL-DEPLOY-001 — this spec connects as the MIGRATION role
+ * (DATABASE_MIGRATION_URL), NOT the default restricted app role. Postgres checks
+ * table privileges BEFORE firing a BEFORE-trigger: an app-role UPDATE/DELETE on
+ * audit_logs fails with `permission denied` (SQLSTATE 42501) and never reaches the
+ * trigger. To witness the TRIGGER itself (`/append-only/`, SQLSTATE 23514) we must
+ * use a role that HOLDS the UPDATE/DELETE privilege — the migration/owner role.
+ * The privilege-layer REVOKE (the app role can't even attempt) is the separate
+ * witness in audit-role-revoke.int.spec.ts.
  */
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: { db: { url: process.env.DATABASE_MIGRATION_URL } },
+});
 
 /** Insert one independent audit row (chain validity is irrelevant to the trigger). */
 async function seedRow(): Promise<string> {

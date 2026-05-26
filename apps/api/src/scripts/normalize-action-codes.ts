@@ -195,6 +195,22 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
 
+  // TOOL-DEPLOY-001 — this script DISABLE/ENABLEs the immutability trigger (DDL)
+  // and rewrites audit_logs rows: it MUST run as the migration/owner role, never
+  // the restricted runtime app role (which lacks UPDATE on audit_logs and ALTER on
+  // the table). Fail fast if the migration URL is absent rather than silently
+  // booting under the restricted DATABASE_URL and failing confusingly mid-recompute.
+  if (!process.env.DATABASE_MIGRATION_URL) {
+    logger.error(
+      'DATABASE_MIGRATION_URL is not set. This maintenance script must run as the ' +
+        'migration/owner role (it disables the immutability trigger and rewrites ' +
+        'audit_logs). Export DATABASE_MIGRATION_URL=<owner connection string> and re-run.',
+    );
+    process.exit(1);
+  }
+  // Boot the Nest PrismaService against the migration role, not the restricted app role.
+  process.env.DATABASE_URL = process.env.DATABASE_MIGRATION_URL;
+
   const app = await NestFactory.createApplicationContext(AppModule, {
     logger: ['error', 'warn', 'log'],
   });

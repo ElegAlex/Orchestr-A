@@ -54,11 +54,25 @@ echo ""
 # ========================================
 echo "[2/4] Running database migrations..."
 
+# TOOL-DEPLOY-001 — two-role DB split. The runtime (node main.js) connects via
+# DATABASE_URL as the restricted app role (INSERT+SELECT only on audit_logs).
+# DDL — `prisma migrate deploy` — needs the DDL-capable migration/owner role, which
+# schema.prisma reads from DATABASE_MIGRATION_URL (the datasource `directUrl`).
+# Prisma automatically routes migrate deploy through directUrl when it is set.
+if [ -z "$DATABASE_MIGRATION_URL" ]; then
+    echo "      ERROR: DATABASE_MIGRATION_URL is not set."
+    echo "      The schema datasource requires directUrl (the DDL/owner role) to run"
+    echo "      migrate deploy. Set DATABASE_MIGRATION_URL in the environment"
+    echo "      (see prisma/README.md + docker-compose.prod.yml) and restart."
+    exit 1
+fi
+
 cd /app/packages/database
 
 # Prisma migrate deploy (safe for production)
 # - Only applies pending migrations
 # - Does not generate new migrations
+# - Connects as the migration/owner role via directUrl (DATABASE_MIGRATION_URL)
 if npx prisma migrate deploy; then
     echo "      Migrations applied successfully"
 else

@@ -100,8 +100,16 @@ services:
       NODE_ENV: production
       PORT: 4000
 
-      # Database
-      DATABASE_URL: postgresql://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME:-orchestr_a_prod}?schema=public
+      # Database — TOOL-DEPLOY-001 two-role split.
+      # DATABASE_URL = restricted RUNTIME role (app_user): full CRUD everywhere but
+      # only INSERT+SELECT on audit_logs (UPDATE/DELETE/TRUNCATE revoked at the
+      # privilege layer). DATABASE_MIGRATION_URL = the DDL/owner role (the
+      # POSTGRES_USER) used by `prisma migrate deploy` (datasource directUrl) and by
+      # the audit hash-chain maintenance scripts. app_user is provisioned ONCE per
+      # environment via prisma/init-roles.sql (see prisma/README.md). Set
+      # APP_DATABASE_USER / APP_DATABASE_PASSWORD in .env.production.
+      DATABASE_URL: postgresql://${APP_DATABASE_USER:-app_user}:${APP_DATABASE_PASSWORD:?APP_DATABASE_PASSWORD is required}@postgres:5432/${DATABASE_NAME:-orchestr_a_prod}?schema=public
+      DATABASE_MIGRATION_URL: postgresql://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME:-orchestr_a_prod}?schema=public
 
       # Redis
       REDIS_HOST: redis

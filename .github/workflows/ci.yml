@@ -95,10 +95,15 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm --filter database db:generate
 
+      # TOOL-DEPLOY-001 — schema datasource now has directUrl (DATABASE_MIGRATION_URL).
+      # `migrate deploy` runs as the DDL/migration role. In CI both URLs point at the
+      # same postgres service superuser (orchestr_a); the runtime role split is exercised
+      # by the integration harness, which provisions its own restricted app_user.
       - name: Run Database Migrations
         run: pnpm --filter database db:migrate:deploy
         env:
           DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_test
+          DATABASE_MIGRATION_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_test
 
       - name: Run Backend Unit Tests
         run: pnpm --filter api test
@@ -233,10 +238,12 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm --filter database db:generate
 
+      # TOOL-DEPLOY-001 — directUrl (DATABASE_MIGRATION_URL) required by migrate deploy.
       - name: Run Database Migrations
         run: pnpm --filter database db:migrate:deploy
         env:
           DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
+          DATABASE_MIGRATION_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
 
       - name: Seed Database
         run: pnpm --filter database db:seed

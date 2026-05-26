@@ -35,11 +35,35 @@ function urlForDatabase(base: string, dbName: string): string {
   return u.toString();
 }
 
+/** Re-point a connection string at the same DB/host but different credentials. */
+function urlWithCredentials(
+  base: string,
+  user: string,
+  password: string,
+): string {
+  const u = new URL(base);
+  u.username = user;
+  u.password = password;
+  return u.toString();
+}
+
+// TOOL-DEPLOY-001 — the harness provisions the SAME two-role split as production
+// (mirrors packages/database/prisma/init-roles.sql). The BASE_URL credentials are
+// the owner / migration role (creates the DB, runs migrate deploy, owns the trigger).
+// `app_user` is the restricted runtime role: full CRUD everywhere, but only
+// INSERT+SELECT on audit_logs (UPDATE/DELETE/TRUNCATE revoked). Tests connect as
+// app_user by default (`new PrismaClient()` → DATABASE_URL); specs that exercise the
+// DDL/trigger path connect via DATABASE_MIGRATION_URL. If these grants drift from
+// init-roles.sql, the audit-role-revoke.int.spec.ts witnesses break — self-checking.
+const APP_ROLE = 'app_user';
+const APP_ROLE_PASSWORD = 'int_test_app_pw';
+
 // Unique per process + clock so parallel CI matrices / crash-leftover re-runs
 // never collide. Lowercase + underscore only → safe unquoted identifier.
 const EPHEMERAL_DB = `orchestr_a_int_${process.pid}_${Date.now()}`;
 const MAINTENANCE_URL = urlForDatabase(BASE_URL, 'postgres');
 const EPHEMERAL_URL = urlForDatabase(BASE_URL, EPHEMERAL_DB);
+const APP_URL = urlWithCredentials(EPHEMERAL_URL, APP_ROLE, APP_ROLE_PASSWORD);
 
 let created = false;
 
@@ -66,14 +90,66 @@ export async function setup(): Promise<void> {
   });
 
   console.log(`[int-harness] migrating ephemeral DB "${EPHEMERAL_DB}"…`);
+  // schema.prisma now requires directUrl (DATABASE_MIGRATION_URL) for migrate
+  // deploy; here both point at the owner-credentialled ephemeral URL.
   execSync('pnpm --filter database run db:migrate:deploy', {
     cwd: REPO_ROOT,
-    env: { ...process.env, DATABASE_URL: EPHEMERAL_URL },
+    env: {
+      ...process.env,
+      DATABASE_URL: EPHEMERAL_URL,
+      DATABASE_MIGRATION_URL: EPHEMERAL_URL,
+    },
     stdio: 'inherit',
   });
 
-  // Workers (forked after this resolves) read this for `new PrismaClient()`.
-  process.env.DATABASE_URL = EPHEMERAL_URL;
+  // Provision the restricted runtime role on the freshly-migrated DB (all tables
+  // + the audit trigger now exist). Connect as the owner (EPHEMERAL_URL) to run
+  // the grants. Mirrors packages/database/prisma/init-roles.sql.
+  const owner = new PrismaClient({
+    datasources: { db: { url: EPHEMERAL_URL } },
+  });
+  try {
+    // Cluster-level role: guard creation (another concurrent ephemeral DB on the
+    // same server may have created it already). Password re-asserted so it matches
+    // APP_URL regardless of which process created it.
+    await owner.$executeRawUnsafe(
+      `DO $$ BEGIN
+         IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${APP_ROLE}') THEN
+           CREATE ROLE ${APP_ROLE} WITH LOGIN PASSWORD '${APP_ROLE_PASSWORD}';
+         END IF;
+       END $$;`,
+    );
+    await owner.$executeRawUnsafe(
+      `ALTER ROLE ${APP_ROLE} WITH LOGIN PASSWORD '${APP_ROLE_PASSWORD}'`,
+    );
+    await owner.$executeRawUnsafe(
+      `GRANT CONNECT ON DATABASE "${EPHEMERAL_DB}" TO ${APP_ROLE}`,
+    );
+    await owner.$executeRawUnsafe(
+      `GRANT USAGE ON SCHEMA public TO ${APP_ROLE}`,
+    );
+    await owner.$executeRawUnsafe(
+      `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${APP_ROLE}`,
+    );
+    await owner.$executeRawUnsafe(
+      `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${APP_ROLE}`,
+    );
+    // The defence-in-depth REVOKE: audit_logs is append-only for the runtime role.
+    await owner.$executeRawUnsafe(
+      `REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM ${APP_ROLE}`,
+    );
+  } finally {
+    await owner.$disconnect();
+  }
+
+  // Workers (forked after this resolves) inherit these. Default `new PrismaClient()`
+  // connects as the restricted app role (production parity); specs that need DDL or
+  // a trigger-disable connect explicitly via DATABASE_MIGRATION_URL (the owner).
+  process.env.DATABASE_URL = APP_URL;
+  process.env.DATABASE_MIGRATION_URL = EPHEMERAL_URL;
+  console.log(
+    `[int-harness] provisioned restricted role "${APP_ROLE}" on "${EPHEMERAL_DB}".`,
+  );
 }
 
 export async function teardown(): Promise<void> {
