@@ -569,7 +569,7 @@ psql "$DATABASE_URL" -c "UPDATE audit_logs SET action='x' WHERE false;"  # expec
 
 ### TST-DB-001 — No real-DB integration test harness; trigger, FK, migration behaviour untestable in CI
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -613,8 +613,16 @@ Add two seed integration tests as proof-of-concept and regression coverage for t
 pnpm test:integration
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** e30292c
+**Learnings:**
+- **Mechanism = option (b), NOT the BACKLOG's strong default (a) testcontainers.** The repo decided it: the CI `backend-tests` job ALREADY provisions a `postgres:18` service and runs `prisma migrate deploy` against it (`ci.yml`) — testcontainers would duplicate that container; adding `@testcontainers/postgresql` would break `pnpm install --frozen-lockfile` until a lockfile bump ships; an offline-package release job makes a runtime image pull a footgun. Decisively, option (b) IS the AUD-READ-001 (`normalize-action-codes`) / DAT-021 (`recompute-chain-on-schema-bump.witness.ts`) throwaway-DB prototype — this task industrializes it, it does not introduce a new pattern. The advisor independently confirmed (b) on the same evidence.
+- **The recurring-gap arc this closes (6 sessions):** AUD-EMIT-001 (skipped e2e, servers down) → OBS-002+DAT-009 (immutability trigger + FK verified by hand via psql) → DAT-007 (FK RESTRICT, manual dev-DB witness) → USR-DEL-001 (FK NoAction P2003→ConflictException, real-DB witness deferred, "stack down") → AUD-READ-001 (first throwaway-DB witness) → DAT-021 (second throwaway-DB witness). Every one documented honest divergence (`vitest globally vi.mock('database')`). The pattern is now an automatable CI target, not a per-session manual gesture.
+- **Vitest project shape:** a separate config file (`vitest.int.config.ts`), not a workspace — the repo has no root vitest config / workspace, so a parallel config is the smallest blast radius. Opt-out of the global mock = simply not loading `vitest.setup.ts`; a minimal `vitest.int.setup.ts` keeps only `reflect-metadata` + TZ. File pattern `src/**/*.int.spec.ts`, **also added to the unit config's `exclude`** (it matches `*.spec.ts`) so `pnpm test` stays mocked-unit-only — that one-line `exclude` edit is the only change to the contract's named **File** (`apps/api/vitest.config.ts`).
+- **vitest 4 gotcha:** `poolOptions.forks.singleFork` was REMOVED in vitest 4 — the equivalent is top-level `fileParallelism: false`. The build (typecheck gate) catches this because `nest build` typechecks the root `vitest.*.config.ts` files (it excludes `*.spec.ts`/`scripts/**` but not these). [[project_nest_build_is_typecheck_gate]].
+- **AC#2 FAIL-pre is structural** (BACKLOG's literal phrasing: "the new test suite cannot run at all on master because the harness doesn't exist"). PASS-post: `pnpm test:integration` runs 4 tests green. `.rejects.toThrow(/append-only/i)` gives the trigger assertions teeth by construction (a missing trigger → the promise resolves → the test fails); no redundant neuter-and-rerun needed.
+- **Worker env propagation works:** globalSetup mutates `process.env.DATABASE_URL`; vitest forks the worker pool AFTER globalSetup resolves, so `new PrismaClient()` in the spec reads the ephemeral URL. Confirmed empirically (trigger/FK only exist on the migrated ephemeral DB, and the assertions passed).
+- **Diff = 10 files, stretches the 8-file cap — pre-authorized & justified:** test infrastructure legitimately spans config + setup + global-setup + 2 seed specs + 2 package.json (root delegate + api runner) + ci.yml + CONTRIBUTING.md. No application code touched (the contract's **File** scope is vitest config + setup; `audit-persistence.service.ts` and all app code untouched).
+- **CI watch-point (next push):** the nested-pnpm chain (`pnpm --filter api test:integration` → globalSetup `execSync('pnpm --filter database run db:migrate:deploy')`) and the CI `orchestr_a` user's superuser/CREATEDB grant are only fully provable on the runner. If the nested pnpm bites, fallback is `npx prisma migrate deploy` with `cwd: packages/database`.
 
 ---
 
