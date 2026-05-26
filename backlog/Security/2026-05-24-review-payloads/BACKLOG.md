@@ -1397,8 +1397,10 @@ Document retention (e.g. 6 years online, 10 years cold). Add @@index([createdAt]
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** 8beb389
+**Closed_by:** bfc7a78
 **Learnings:** Policy decision: no application-level retention or purge for audit_logs. Storage and backup management is delegated to the infrastructure/DBA layer. The application does not implement a TTL, does not run a purge job, does not maintain an archival pipeline, and does not add cleanup-specific indexes. The original finding's assumption (5-10 year application-managed retention for Cour des Comptes compliance) was an auditor extrapolation that does not match this project's actual obligations. Audit_logs row growth is unbounded by application policy; operational concerns (DB size, query performance over large tables, restore-from-backup procedures) are handled at the admin/infra layer outside the scope of the application codebase.
+
+Closed_by repointed from orphan SHA 8beb389 (pre-amend, never pushed) to anchor commit bfc7a78. Material closeout remains de9da22. This pattern formalization is TOOL-COH-002 territory.
 
 ---
 ### OBS-021 — Self-approval audited; cancellation / cancellation-request / update / delete are not
