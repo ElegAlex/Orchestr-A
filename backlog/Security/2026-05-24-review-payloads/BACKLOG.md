@@ -1539,7 +1539,7 @@ pnpm test apps/api/src/audit/audit-persistence.service.spec.ts
 
 ### USR-DEL-001 — hardDelete of users with audit_logs rows fails with raw FK violation instead of typed ConflictException
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** claude-only
