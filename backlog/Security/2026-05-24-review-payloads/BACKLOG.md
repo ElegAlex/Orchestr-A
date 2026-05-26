@@ -1539,7 +1539,7 @@ pnpm test apps/api/src/audit/audit-persistence.service.spec.ts
 
 ### USR-DEL-001 — hardDelete of users with audit_logs rows fails with raw FK violation instead of typed ConflictException
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -1577,8 +1577,18 @@ Extend `checkDependencies()` in UsersService to query `prisma.auditLog.count({ w
 pnpm test apps/api/src/users/users.service.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 950068f
+**Learnings:**
+- **AC#4 policy decision: (a) — emit USER_DELETED.** Chose the DAT-007-symmetric path over (b) trail-less-by-construction. hardDelete now writes a `USER_DELETED` audit row with a column `payload.snapshot` BEFORE erasing the user, symmetric with PROJECT_DELETED (0eae219) and ROLE_DELETED (OBS-005). Rationale: lets a Cour-des-Comptes auditor see the deletion event inline in the immutable trail. (b) was defensible (the pre-check guarantees zero prior audit rows, so the account is trail-less anyway) but leaves the *act of deletion* itself unrecorded — (a) closes that gap at the cost of one net-new enum member. Net effect: a user is provably unremovable without a trace.
+- **checkDependencies() is the single source of truth** (no new helper — the function already existed and is grep-symmetric with `checkProjectDependencies()`). It now pre-checks **TASKS / PROJECTS / LEAVES / LEAVES_VALIDATION / DEPARTMENTS / SERVICES / AUDIT_LOGS**. The audit count is `prisma.auditLog.count({ where: { actorId: userId } })` — one extra read-only roundtrip, no transaction. A non-zero count surfaces as a typed `ConflictException` instead of the raw P2003 the `audit_logs.actor_id` ON DELETE NO ACTION FK (d6299cc) would otherwise raise.
+- **ConflictException shape mirrored from projects.service.ts hardDelete** — `throw new ConflictException({ message, dependencies })`. The generic top-level message is unchanged (it covers all dependency types); the audit count + soft-deactivation recommendation live in the `AUDIT_LOGS` dependency `description`, matching how every other user dependency carries its count/wording.
+- **Cross-ref [[DAT-007]]** (pattern source): inherited the pre-check shape, the `ConflictException({message, dependencies})` convention, and the final-snapshot-before-delete emission (plain await, non-transactional — AuditPersistenceService takes no tx client, archive()/unarchive() precedent). DAT-007's closeout pre-answered AC#4 affirmatively for projects; this task confirms it for users.
+- **Cross-ref [[AUD-EMIT-001]]** (soft path): USER_DEACTIVATED via update()/remove() (isActive=false) is the canonical user-removal action when audit history exists. Its specs passed unchanged — the soft path was not touched. The `AUDIT_LOGS` dependency description points the caller at it explicitly.
+- **Snapshot is an explicit allow-list, NOT a spread+delete** (advisor flag): id, email, login, firstName, lastName, roleId, departmentId, isActive, avatarUrl, avatarPreset, forcePasswordChange, createdAt, updatedAt. `passwordHash` and the token relations (PasswordResetToken, RefreshToken) are never serialized into the trail. A spec assertion guards `snapshot` has no `passwordHash` property.
+- **Side effect on the read endpoint:** `checkDependencies()` also backs `GET /users/:id/dependencies` (users.controller.ts:365). The `AUDIT_LOGS` entry is now visible there too — intended UX (the frontend can render "X audit entries — use deactivation"), but it IS a behavior change for the read path. Flagged here per advisor.
+- **Actor threading already in place (SEC-002):** hardDelete receives `requestingUserId` via `@CurrentUser('id')` (users.controller.ts:389). Used as `actorId: requestingUserId ?? null`; no controller surface was added.
+- **USER_DELETED enum addition:** net-new member in `audit/audit-action.enum.ts` (value `'USER_DELETED'`); `ENTITY_TYPE_BY_ACTION` mapped to `'User'`. The exhaustive `Record<AuditAction,…>` made the mapping compile-mandatory (post-OBS-024 the enum is the only legal codepath — no free-string). `nest build` EXIT 0 confirms exhaustiveness.
+- **Real-DB witness gap (TST-DB-001):** the FK-level P2003→ConflictException behaviour is proven at the unit level (mocked `auditLog.count`); the actual ON DELETE NO ACTION rejection on a real DB is the witness TST-DB-001 will automate. Orchestra postgres dev stack was down this session.
 
 ---
 
