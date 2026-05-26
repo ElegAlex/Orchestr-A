@@ -1508,7 +1508,7 @@ pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missi
 ---
 ### TST-011 — Audit emission almost never asserted — only one leaves test spies AuditService.log
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
