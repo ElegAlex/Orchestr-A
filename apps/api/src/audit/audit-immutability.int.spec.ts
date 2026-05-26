@@ -57,9 +57,9 @@ describe('audit_logs immutability trigger (real DB)', () => {
 
   it('blocks DELETE (ORM + raw) and the row survives', async () => {
     const id = await seedRow();
-    await expect(
-      prisma.auditLog.delete({ where: { id } }),
-    ).rejects.toThrow(/append-only/i);
+    await expect(prisma.auditLog.delete({ where: { id } })).rejects.toThrow(
+      /append-only/i,
+    );
     await expect(
       prisma.$executeRawUnsafe('DELETE FROM audit_logs WHERE id = $1', id),
     ).rejects.toThrow(/append-only/i);

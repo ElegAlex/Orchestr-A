@@ -43,7 +43,9 @@ const EPHEMERAL_URL = urlForDatabase(BASE_URL, EPHEMERAL_DB);
 
 let created = false;
 
-async function withAdmin<T>(fn: (admin: PrismaClient) => Promise<T>): Promise<T> {
+async function withAdmin<T>(
+  fn: (admin: PrismaClient) => Promise<T>,
+): Promise<T> {
   const admin = new PrismaClient({
     datasources: { db: { url: MAINTENANCE_URL } },
   });

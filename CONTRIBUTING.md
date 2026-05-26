@@ -52,16 +52,17 @@ pnpm run dev
 
 Trois suites distinctes, **additives** (chacune indépendante des autres) :
 
-| Commande | Périmètre | Base de données |
-|----------|-----------|-----------------|
-| `pnpm test` | Tests unitaires (`*.spec.ts`) | **Mockée** — `vi.mock('database')` dans `apps/api/vitest.setup.ts`. Aucun Postgres requis. |
-| `pnpm test:integration` | Intégration réelle (`*.int.spec.ts`) | **Réelle** — base éphémère provisionnée par migration. |
-| `pnpm test:e2e` | E2E (Playwright + boot app, Prisma mocké) | Mockée. |
+| Commande                | Périmètre                                 | Base de données                                                                            |
+| ----------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `pnpm test`             | Tests unitaires (`*.spec.ts`)             | **Mockée** — `vi.mock('database')` dans `apps/api/vitest.setup.ts`. Aucun Postgres requis. |
+| `pnpm test:integration` | Intégration réelle (`*.int.spec.ts`)      | **Réelle** — base éphémère provisionnée par migration.                                     |
+| `pnpm test:e2e`         | E2E (Playwright + boot app, Prisma mocké) | Mockée.                                                                                    |
 
 **Quand écrire un test d'intégration plutôt qu'un test unitaire ?**
 Uniquement pour ce qui dépend de la sémantique réelle de Postgres et qui est donc invisible au mock : triggers (immutabilité `audit_logs`), actions référentielles des clés étrangères (`ON DELETE NO ACTION` / `SET NULL`), contraintes de schéma, colonnes générées, comportement du SQL brut. Toute logique applicative pure reste en test unitaire mocké (rapide, sans I/O).
 
 **Mécanisme (TST-DB-001).** `apps/api/vitest.int.config.ts` est un projet vitest séparé : motif de fichiers `src/**/*.int.spec.ts`, setup `vitest.int.setup.ts` (qui **n'**applique **pas** `vi.mock('database')`), et un `globalSetup` (`vitest.int.global-setup.ts`) qui :
+
 1. se connecte au Postgres fourni (variable `DATABASE_URL`, ou la base dev `:5433` par défaut) ;
 2. `CREATE DATABASE` une base éphémère unique (`orchestr_a_int_<pid>_<timestamp>`) ;
 3. y applique **toutes** les migrations via `prisma migrate deploy` (schéma réel, pas de fixtures) ;
