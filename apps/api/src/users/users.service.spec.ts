@@ -1109,6 +1109,17 @@ describe('UsersService', () => {
       const auditPayload = mockAuditPersistence.log.mock.calls[0][0].payload;
       expect(JSON.stringify(auditPayload)).not.toContain('NewSecret1!');
       expect(JSON.stringify(auditPayload)).not.toMatch(/\$2[aby]\$/);
+      // TST-011 — the parallel console-parity PASSWORD_CHANGED dual-write at
+      // users.service.ts:994 (AuditService.log, distinct from the
+      // PASSWORD_RESET_BY_ADMIN persistence row above) was wired but unasserted.
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'PASSWORD_CHANGED',
+          userId: 'caller-admin',
+          targetId: 'user-1',
+          success: true,
+        }),
+      );
     });
   });
 

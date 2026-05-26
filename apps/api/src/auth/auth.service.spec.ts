@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { PermissionsService } from '../rbac/permissions.service';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, AuditAction } from '../audit/audit.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { ConfigService } from '@nestjs/config';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
@@ -184,12 +184,65 @@ describe('AuthService', () => {
       expect(result.user.id).toBe(mockUser.id);
     });
 
+    // TST-011 — assert the LOGIN_SUCCESS audit emission at the call site
+    // (auth.service.ts:167). Pre-TST-011 the AuditService mock was wired but
+    // never asserted, so a silent regression dropping the row went unnoticed.
+    it('emits LOGIN_SUCCESS on a successful login (TST-011)', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+      mockJwtService.sign.mockReturnValue('mock-jwt-token');
+
+      await service.login(
+        { login: 'testuser', password: 'password123' },
+        { ip: '10.1.2.3', userAgent: 'vitest' },
+      );
+
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.LOGIN_SUCCESS,
+          userId: mockUser.id,
+          ip: '10.1.2.3',
+          ua: 'vitest',
+          success: true,
+        }),
+      );
+      // The success path must not also emit a LOGIN_FAILURE row.
+      expect(mockAuditService.log).not.toHaveBeenCalledWith(
+        expect.objectContaining({ action: AuditAction.LOGIN_FAILURE }),
+      );
+    });
+
     it('should throw UnauthorizedException for invalid credentials', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       await expect(
         service.login({ login: 'nonexistent', password: 'password123' }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+
+    // TST-011 — LOGIN_FAILURE fires BEFORE the UnauthorizedException throw
+    // (auth.service.ts:97); the emission is observable once the rejection
+    // settles. attemptedEmail carries the OBS-001 "who was targeted" subject.
+    it('emits LOGIN_FAILURE before throwing on invalid credentials (TST-011)', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.login(
+          { login: 'nonexistent', password: 'password123' },
+          { ip: '10.9.9.9', userAgent: 'attacker' },
+        ),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.LOGIN_FAILURE,
+          attemptedEmail: 'nonexistent',
+          ip: '10.9.9.9',
+          ua: 'attacker',
+          reason: 'invalid_credentials',
+          success: false,
+        }),
+      );
     });
   });
 
@@ -244,6 +297,14 @@ describe('AuthService', () => {
           data: expect.objectContaining({ isActive: false }),
         }),
       );
+      // TST-011 — REGISTER audit emission at auth.service.ts:255.
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.REGISTER,
+          userId: 'new-user-id',
+          success: true,
+        }),
+      );
     });
 
     it('should throw ConflictException if email already exists', async () => {
@@ -255,6 +316,9 @@ describe('AuthService', () => {
       await expect(service.register(registerDto)).rejects.toThrow(
         ConflictException,
       );
+      // TST-011 — no-op negative: a rejected registration (duplicate email)
+      // must leave no REGISTER row; the emission is downstream of the guard.
+      expect(mockAuditService.log).not.toHaveBeenCalled();
     });
 
     it('should always assign the default role regardless of input', async () => {
@@ -419,6 +483,15 @@ describe('AuthService', () => {
           }),
         }),
       );
+      // TST-011 — PASSWORD_CHANGED audit emission at auth.service.ts:407
+      // (reset-token generated). The actor is the caller (createdById).
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.PASSWORD_CHANGED,
+          userId: 'admin-id',
+          success: true,
+        }),
+      );
     });
 
     it('should throw NotFoundException if user does not exist', async () => {
@@ -427,6 +500,8 @@ describe('AuthService', () => {
       await expect(
         service.generateResetToken('nonexistent-id', 'admin-id'),
       ).rejects.toThrow('Utilisateur introuvable');
+      // TST-011 — no-op negative: an unknown target emits nothing.
+      expect(mockAuditService.log).not.toHaveBeenCalled();
     });
 
     it('should throw ForbiddenException when caller is not above target (Issue 2: cross-tier reset)', async () => {
@@ -446,6 +521,9 @@ describe('AuthService', () => {
       expect(
         mockPrismaService.passwordResetToken.create,
       ).not.toHaveBeenCalled();
+      // TST-011 — no-op negative: a guard-rejected reset emits no
+      // PASSWORD_CHANGED row (emission is downstream of the hierarchy gate).
+      expect(mockAuditService.log).not.toHaveBeenCalled();
     });
 
     it('should NOT expose token/resetUrl when AUTH_EXPOSE_RESET_TOKEN is false (Issue 2: disclosure)', async () => {
@@ -517,6 +595,16 @@ describe('AuthService', () => {
           data: expect.objectContaining({ usedAt: expect.any(Date) }),
         }),
       );
+      // TST-011 — PASSWORD_CHANGED audit emission at auth.service.ts:460
+      // (reset via token). Subject is the token's owner.
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.PASSWORD_CHANGED,
+          userId: validToken.userId,
+          details: 'Password reset via token',
+          success: true,
+        }),
+      );
     });
 
     it('should throw UnauthorizedException for an unknown token', async () => {
@@ -525,6 +613,8 @@ describe('AuthService', () => {
       await expect(
         service.resetPassword('unknown-token', 'NewPassword1!'),
       ).rejects.toThrow(UnauthorizedException);
+      // TST-011 — no-op negative: an unknown token emits nothing.
+      expect(mockAuditService.log).not.toHaveBeenCalled();
     });
 
     it('should throw UnauthorizedException for an expired token', async () => {
@@ -539,6 +629,8 @@ describe('AuthService', () => {
       await expect(
         service.resetPassword('expired-token', 'NewPassword1!'),
       ).rejects.toThrow('Ce token de réinitialisation a expiré');
+      // TST-011 — no-op negative: an expired token emits nothing.
+      expect(mockAuditService.log).not.toHaveBeenCalled();
     });
 
     it('should throw UnauthorizedException for an already used token', async () => {
@@ -553,6 +645,8 @@ describe('AuthService', () => {
       await expect(
         service.resetPassword('used-token', 'NewPassword1!'),
       ).rejects.toThrow('Ce token de réinitialisation a déjà été utilisé');
+      // TST-011 — no-op negative: an already-used token emits nothing.
+      expect(mockAuditService.log).not.toHaveBeenCalled();
     });
   });
 
