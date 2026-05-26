@@ -432,7 +432,7 @@ TBD — manual verification (config change, no automated test)
 
 ### TOOL-COH-001 — Coherence gate regex misses multi-segment IDs
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -469,14 +469,14 @@ Update the ID regex to `[A-Z]+(?:-[A-Z]+)*-\d+` (or equivalent). Add a regressio
 backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh <path-to-BACKLOG.md>
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** e6b836c
+**Learnings:** Regex `[A-Z]+-\d+|CLAUDE-CFG-\d+` → `[A-Z]+(?:-[A-Z]+)*-\d+`. The new pattern subsumes the former `CLAUDE-CFG-\d+` alternation (dropped as dead code — verified CLAUDE-CFG-001 still matched). Witnessed with an in-repo fixture (`.coh-witness-fixture.md`, temporary/uncommitted) carrying a single-segment DONE, a multi-segment DONE (AUD-EMIT-001 @ ffc4cf4), an anchor-closed DONE (OBS-008 @ 2188b3d), a multi-segment IN_PROGRESS, and a deliberately-broken multi-segment DONE (`ZZZ-BROKEN-001` @ deadbeef…): **pre-fix** the broken entry was silently skipped → false green (`Checked 2`, EXIT 0); **post-fix** it is caught (`Checked 4`, EXIT 1). On the real BACKLOG the checked-set expanded **26 → 29** (AUD-EMIT-001 + USR-DEL-001 + AUD-READ-001 became visible), EXIT 0 — no real violation surfaced (every DONE multi-segment entry already had a valid `Closed_by` carrying its `[closes <id>]` token; we'd been disciplined). Exit-code contract and the rule-3 message-match logic unchanged. **Default-path: option (iii)** — `SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"`, default `$SCRIPT_DIR/../BACKLOG.md`; git ops anchored to the BACKLOG's dir via `cwd=` so the no-arg default works from any cwd. Non-regressive: CI passes the path explicitly from repo root (same repo → identical output).
 
 ---
 
 ### TOOL-COH-002 — Coherence gate has no native support for retroactive task closures
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -514,8 +514,8 @@ Either (a) document the anchor-commit pattern in the script's header comment + i
 backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh <path-to-BACKLOG.md>
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** e6b836c
+**Learnings:** Chose **option (a)** (documentation), not (b) (no `Closure_anchor:` field). Rationale: the gate **already accepts** anchor commits — rule 3 matches `[closes <id>]` whether the commit is a material fix or an empty anchor, so no matching-logic change was needed; the anchor commit *is* the attestation. Consequence for AC#2: its "must FAIL with the current script behavior if no anchor support exists" predicate presupposed option (b). Under (a) anchor support already exists implicitly, so the anchor witness is **positive-only** (the fixture's OBS-008 entry @ anchor `2188b3d` passes the gate); the genuine FAIL-pre→PASS-post belongs to the [[TOOL-COH-001]] regex change, with which this task was bundled (one script). Documented the anchor-commit pattern in (1) the script's header comment block and (2) `CLAUDE_SESSION_CONTRACT.md` § "Retroactive closures". Worked example: **OBS-008** (anchor `2188b3d` carrying `[closes OBS-008]`; material fix `1ff6c9a`/OBS-001); **OBS-020** (anchor `bfc7a78`) cited as second precedent. Process rule added: any task touching `Closed_by` must read the gate script first (pointing `Closed_by` at an upstream material fix that names a *different* task is schema-naive — the 2026-05-25 hygiene-pass mistake that triggered this filing). No BACKLOG schema change.
 
 ---
 
