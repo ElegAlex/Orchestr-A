@@ -1594,14 +1594,14 @@ pnpm test apps/api/src/users/users.service.spec.ts
 
 ### AUD-READ-001 — Legacy PASSWORD_RESET_ADMIN audit rows are invisible when filtering by the current enum name
 
-- **Status:** BLOCKED
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
-- **Blocked_by:** audit-revision-required
+- **Blocked_by:** (none)
 - **Severity:** important
 - **Category:** observability
-- **File:** `apps/api/src/audit/` (read pipeline — implementer locates the audit query service / repository)
+- **File:** `apps/api/src/scripts/normalize-action-codes.ts` (one-shot operational normalization script — re-scoped from the originally-assumed `apps/api/src/audit/` read pipeline, which does not exist; see Learnings 2026-05-26 re-scoping note)
 - **Source:** Session-derived. OBS-024 closeout (7393b5d, 2026-05-25) flagged this gap explicitly under "Flagged, not actioned": legacy production rows under action='PASSWORD_RESET_ADMIN' (the free-string emitted by SEC-003 / 2763552, before OBS-004's rename to AuditAction.PASSWORD_RESET_BY_ADMIN at 330a8eb) cannot be backfilled because the audit_logs immutability trigger (d6299cc) blocks UPDATE. A read-side alias is the only path to a coherent audit narrative.
 
 **Description:**
@@ -1618,16 +1618,29 @@ git log -1 --format=%H d6299cc  # OBS-002+DAT-009 immutability trigger
 grep -rn "PASSWORD_RESET_ADMIN\|PASSWORD_RESET_BY_ADMIN" apps/api/src/audit/  # to verify current read pipeline does no aliasing
 ```
 
-**Suggested fix:**
-Add a query-time alias map in the audit read pipeline. When a caller filters audit_logs by `action = 'PASSWORD_RESET_BY_ADMIN'`, expand the WHERE clause to `action IN ('PASSWORD_RESET_BY_ADMIN', 'PASSWORD_RESET_ADMIN')`. Centralize the alias map in a single file (e.g., `apps/api/src/audit/legacy-action-aliases.ts`) so future enum renames have a documented landing pad. Read-side only — no write-time changes, no trigger interaction, no migration. Optionally extend to other future rename cases by making the alias map keyed on current canonical name.
+**Suggested fix:** *(re-scoped 2026-05-26 — dérogation from "verbatim, do not rewrite", justified: this is a session-derived task and the original Suggested fix presupposed an audit read pipeline that the BLOCKED escalation a4617db proved does not exist. The corrected fix normalizes the underlying data so that EVERY consumer — direct psql, a future read API, an export — sees the canonical code, instead of patching one (non-existent) layer.)*
+
+A one-shot operational **TS normalization script** `apps/api/src/scripts/normalize-action-codes.ts`, mirroring the OBS-018 SYSTEM_BACKFILL backfill runbook pattern (`backfill-snapshots.ts` → `emitSystemBackfill` → `resolveBackfillActor`). It rewrites the legacy free-string `action='PASSWORD_RESET_ADMIN'` rows in place to the canonical `'PASSWORD_RESET_BY_ADMIN'` and **recomputes the hash chain** so integrity is preserved. Mechanism:
+
+1. Emit a `SYSTEM_BACKFILL` row (`phase: STARTED`, payload `{ script, fromValue, toValue, dryRun }`) so the normalization itself is in the trail.
+2. Open a single Prisma interactive `$transaction`; take `pg_advisory_xact_lock(hashtext('audit_logs_chain'))` (the same lock the write path uses — serializes against concurrent emissions).
+3. Find the first affected row in deterministic `(createdAt ASC, id ASC)` order. If none → 0 affected, skip steps 4–8 (idempotency).
+4. `ALTER TABLE audit_logs DISABLE TRIGGER audit_logs_no_update_delete` (DDL is transactional in Postgres — a rollback auto-reverts the DISABLE; primary safety, with a try/finally + explicit ENABLE as belt-and-suspenders).
+5. `UPDATE` the legacy rows' `action` → canonical value.
+6. Recompute the chain from the first affected row forward — walk `("createdAt", id) >= (firstTs, firstId)` in order; each row's `prevHash` = the previous row's recomputed `rowHash` (first row anchors on its predecessor's untouched stored `rowHash`); `rowHash = computeRowHash(...)` **imported from `audit-persistence.service.ts`, NOT reimplemented** (write-time/migration-time logic divergence would silently desync the chain).
+7. `ALTER TABLE audit_logs ENABLE TRIGGER audit_logs_no_update_delete`.
+8. Verify: re-walk the affected segment, assert every recomputed `rowHash` equals stored; assert the predecessor row was untouched.
+9. Commit (or rollback under `--dry-run`). Emit a `SYSTEM_BACKFILL` row (`phase: COMPLETED`, payload `{ affectedCount, dryRun }`).
+
+**Invariants:** facts (who/what/when + actor snapshot) unchanged — only the action code STRING is normalized; chain verifiable end-to-end after; trigger re-enabled with identical semantics; single all-or-nothing transaction; idempotent (2nd run finds 0 rows, recomputes nothing). **Runbook:** manual operator invocation per environment (`DATABASE_URL` + optional `DEPLOYED_BY`/`DEPLOY_USER` operator identity; `--dry-run` flag). Requires the `DATABASE_URL` role to own `audit_logs` (ALTER TABLE privilege). Rejected alternatives: pl/pgsql (would duplicate `computeRowHash` in SQL — divergence risk); Prisma `.sql` migration (awkward for TS-import recompute logic).
 
 **Acceptance criteria:**
-1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
-2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Witness: insert a row directly via prisma with `action: 'PASSWORD_RESET_ADMIN'` (bypassing AuditPersistenceService's enum-only type), then query the audit read API filtering by `PASSWORD_RESET_BY_ADMIN`, assert the legacy row is returned. Pre-fix: legacy row absent from results. Post-fix: present.
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description** (legacy rows normalized so the canonical filter returns them).
+2. Witnesses (re-scoped from the original read-API witness — see PHASE 1 re-cadrage) demonstrated against a real Postgres with the actual immutability trigger (vitest mocks the `database` module, so a direct-DB witness script is the only faithful test per the no-real-DB-vitest-harness constraint): **W-1** seed rows A(`PASSWORD_RESET_ADMIN`)/B(`LOGIN_SUCCESS`)/C(`PASSWORD_RESET_ADMIN`) via the write-time hash path, chain valid; **W-2** run → 2 rows (A,C) updated to canonical, all rows recomputed, chain verifies, trigger re-enabled; **W-3** idempotency → 2nd run 0 updated, chain still valid; **W-4** post-migration direct `UPDATE` raises the immutability exception; **W-5** two `SYSTEM_BACKFILL` rows (`phase` STARTED + COMPLETED); **W-6** complex/nested payload round-trips through the recompute (jsonb ↔ `stableStringify` stability). FAIL-pre on master (script absent), PASS-post.
 3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
-4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — N/A (read pipeline change, not an emission; the immutability trigger ensures audit_logs is not modified).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — SATISFIED: the normalization emits `SYSTEM_BACKFILL` rows (STARTED/COMPLETED, with fromValue/toValue/affectedCount), so the operation is itself in the immutable trail.
 5. Commit message includes `[closes AUD-READ-001]`.
-6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit (diff confined to `apps/api/src/scripts/` + this BACKLOG + PROGRESS_LOG; no schema change, no `.sql` migration, `audit-persistence.service.ts` not modified, no new `AuditAction` enum member).
 
 **Verification command:**
 ```
@@ -1641,6 +1654,11 @@ pnpm test apps/api/src/audit/
 - **The legacy-data risk is real but unreachable in this layer.** An auditor enumerating admin password resets today can only do so via direct SQL on the prod DB (`WHERE action = 'PASSWORD_RESET_BY_ADMIN'`), which a TypeScript alias map cannot intercept. Option (a) is moot; option (b) a SQL VIEW would cover direct-psql access but is a different design+scope; option (c) Prisma middleware needs a Prisma read query to intercept (none exists).
 - **Shipping a standalone `legacy-action-aliases.ts` + pure `expandActionFilter()` with no consumer was rejected** as decorative dead code (over-design): future renames would discover an uncalled file the same way they'd discover a comment. Per contract §"When the audit is wrong or outdated" + design-question #4 (server-side filtering assumed but absent), flagged for human review rather than improvised.
 - **Three forks for the human (see PROGRESS_LOG):** (1) **defer** until a read API is actually built — most likely, no auditor has a TS query path today; (2) **pivot to option (b) SQL VIEW** to cover direct-psql auditor access — rewrites the task's layer; (3) **scope-extend** into a new `GET /audit/logs?action=…` read endpoint + alias map + wiring as one feature — substantial scope explosion. **Future-rename guidance still stands for whichever fork lands:** when an enum value replaces a prior string, add the legacy string to the alias map in the SAME commit as the rename — but the alias map must have a live read consumer first.
+
+- **RE-SCOPED 2026-05-26 (BLOCKED → IN_PROGRESS): a fourth fork, superior to all three above, normalizes the DATA not a read layer.** The BLOCKED escalation (a4617db) was correct that the *query-time alias* approach had nothing to attach to — but it framed the problem as "which read layer do we patch?" The right question is "why is the data non-canonical at all?" The answer: a string value evolved (SEC-003 free-string → OBS-004 enum rename) and the immutability trigger froze the legacy spelling. **Normalizing the legacy `action` string in place — with a full hash-chain recompute — makes EVERY consumer (direct psql, a future read API, a CSV export) see the canonical code, with zero alias maps to maintain.** It dominates fork (1) (no deferral — the gap is closed now), fork (2) (no VIEW to maintain — the base table is correct), and fork (3) (no endpoint to build).
+  - **Philosophical correction — normalization ≠ history rewriting.** The immutability trigger exists to stop tampering with audit FACTS: who did what, when, with which actor snapshot. None of those change here. We change one derived label (`'PASSWORD_RESET_ADMIN'` → `'PASSWORD_RESET_BY_ADMIN'`, the SAME event, renamed in code at 330a8eb) and recompute the integrity hashes that depend on it. This is a **schema/vocabulary migration of historical rows**, the same class as the OBS-002 backfill that *created* the hash chain over pre-existing rows — not a falsification. To keep the act itself honest and auditable, the normalization writes its own `SYSTEM_BACKFILL` rows into the very trail it touches, and runs inside one bracketed transaction with the operator identity captured. The trigger is the guardrail against *casual/uncontrolled* mutation; a controlled, audited, operator-invoked, fully-recomputed normalization is the legitimate exception — exactly why the trigger is `DISABLE`-able by the table owner rather than enforced by a read-only role (that defence-in-depth layer is the separate TOOL-DEPLOY-001).
+  - **Why a TS script and not SQL:** the recompute MUST use the write path's `computeRowHash` (imported), or write-time and migration-time hashing diverge and the chain silently desyncs. A pl/pgsql reimplementation of sha256-over-`stableStringify` is exactly that divergence. See Suggested fix for the full mechanism + runbook.
+  - **Runbook reference:** operator invocation, env vars, dry-run flag, and the privilege requirement are documented in the fix commit body (PHASE 5) and the Suggested fix above.
 
 ---
 
