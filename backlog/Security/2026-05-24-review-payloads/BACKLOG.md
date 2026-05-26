@@ -569,7 +569,7 @@ psql "$DATABASE_URL" -c "UPDATE audit_logs SET action='x' WHERE false;"  # expec
 
 ### TST-DB-001 — No real-DB integration test harness; trigger, FK, migration behaviour untestable in CI
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 1
 - **Cluster:** —
 - **Confidence:** claude-only
