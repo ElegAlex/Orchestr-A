@@ -60,6 +60,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.PASSWORD_RESET_BY_ADMIN]: 'User',
   [AuditAction.SERVICE_MEMBERSHIP_CHANGED]: 'User',
   [AuditAction.DEPARTMENT_CHANGED]: 'User',
+  [AuditAction.USER_DELETED]: 'User',
   [AuditAction.ROLE_CREATED]: 'Role',
   [AuditAction.ROLE_UPDATED]: 'Role',
   [AuditAction.ROLE_DELETED]: 'Role',

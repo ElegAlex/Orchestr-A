@@ -27,6 +27,13 @@ export enum AuditAction {
   PASSWORD_RESET_BY_ADMIN = 'PASSWORD_RESET_BY_ADMIN',
   SERVICE_MEMBERSHIP_CHANGED = 'SERVICE_MEMBERSHIP_CHANGED',
   DEPARTMENT_CHANGED = 'DEPARTMENT_CHANGED',
+  // USR-DEL-001 — definitive user removal (UsersService.hardDelete). Net-new
+  // emitter, symmetric with DAT-007's PROJECT_DELETED / OBS-005's ROLE_DELETED:
+  // a final column snapshot is written to payload.snapshot BEFORE the row is
+  // erased, so an auditor sees the deletion in the immutable trail. Distinct
+  // from USER_DEACTIVATED (the soft-deactivation path), which is the canonical
+  // removal action for a user that already authored audit history.
+  USER_DELETED = 'USER_DELETED',
   // OBS-005 — institutional-role (table `roles`) lifecycle mutations. Distinct
   // from ROLE_CHANGE, which records a *user* being reassigned to another role.
   ROLE_CREATED = 'ROLE_CREATED',

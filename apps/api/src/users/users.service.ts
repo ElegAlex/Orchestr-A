@@ -733,6 +733,24 @@ export class UsersService {
       });
     }
 
+    // USR-DEL-001 — audit_logs.actor_id is ON DELETE NO ACTION (d6299cc, forced
+    // by the OBS-002 immutability trigger which rejects the implicit UPDATE a
+    // SET NULL would issue). A user who authored ≥1 audit row therefore cannot
+    // be hard-deleted: the DB raises a raw P2003. Counting the rows here turns
+    // that into the same typed ConflictException as the other dependencies and
+    // points the caller at the canonical alternative — soft-deactivation
+    // (USER_DEACTIVATED via update()/remove()), which preserves the trail.
+    const auditLogs = await this.prisma.auditLog.count({
+      where: { actorId: userId },
+    });
+    if (auditLogs > 0) {
+      dependencies.push({
+        type: 'AUDIT_LOGS',
+        count: auditLogs,
+        description: `${auditLogs} entrée(s) d'audit attribuée(s) à cet utilisateur — désactivez le compte (USER_DEACTIVATED) au lieu de le supprimer pour préserver la traçabilité`,
+      });
+    }
+
     return {
       userId,
       canDelete: dependencies.length === 0,
@@ -764,6 +782,39 @@ export class UsersService {
         dependencies,
       });
     }
+
+    // USR-DEL-001 — final snapshot to the immutable audit trail BEFORE the row
+    // is erased, mirroring DAT-007's PROJECT_DELETED and OBS-005's ROLE_DELETED.
+    // The pre-check above guarantees this user authored zero audit_logs rows, so
+    // hardDelete is reserved for trail-less accounts; this USER_DELETED row is
+    // the deletion's only record. Plain await, non-transactional with the delete
+    // (AuditPersistenceService runs its own client + advisory lock and takes no
+    // tx client — the archive()/unarchive() + DAT-007 precedent). The snapshot
+    // is an explicit allow-list: passwordHash and the token relations are never
+    // included.
+    await this.auditPersistence.log({
+      action: AuditAction.USER_DELETED,
+      entityType: 'User',
+      entityId: id,
+      actorId: requestingUserId ?? null,
+      payload: {
+        snapshot: {
+          id: user.id,
+          email: user.email,
+          login: user.login,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          roleId: user.roleId,
+          departmentId: user.departmentId,
+          isActive: user.isActive,
+          avatarUrl: user.avatarUrl,
+          avatarPreset: user.avatarPreset,
+          forcePasswordChange: user.forcePasswordChange,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
+      },
+    });
 
     await this.prisma.$transaction(async (tx) => {
       await tx.personalTodo.deleteMany({

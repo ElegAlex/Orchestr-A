@@ -101,6 +101,9 @@ describe('UsersService', () => {
       count: vi.fn(),
       deleteMany: vi.fn(),
     },
+    auditLog: {
+      count: vi.fn(),
+    },
     $transaction: vi.fn(async (callback) => callback(mockPrismaService)),
   };
 
@@ -1330,6 +1333,120 @@ describe('UsersService', () => {
       await expect(service.hardDelete('user-1', 'admin-1')).rejects.toThrow(
         ConflictException,
       );
+    });
+
+    // USR-DEL-001 — audit_logs.actor_id is ON DELETE NO ACTION (d6299cc), so a
+    // user who authored ≥1 audit row cannot be hard-deleted; checkDependencies
+    // must surface this as a typed ConflictException (not a raw P2003) naming
+    // the audit count and recommending soft-deactivation (USER_DEACTIVATED).
+    it('throws ConflictException (not raw P2003) when the user authored audit_logs rows, and does NOT delete', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+      });
+      // No "active" dependencies — only audit history blocks the delete.
+      mockPrismaService.task.count.mockResolvedValue(0);
+      mockPrismaService.projectMember.count.mockResolvedValue(0);
+      mockPrismaService.leave.count.mockResolvedValue(0);
+      mockPrismaService.department.count.mockResolvedValue(0);
+      mockPrismaService.service.count.mockResolvedValue(0);
+      mockPrismaService.auditLog.count.mockResolvedValue(7);
+
+      let caught: ConflictException | undefined;
+      try {
+        await service.hardDelete('user-1', 'admin-1');
+      } catch (err) {
+        caught = err as ConflictException;
+      }
+
+      expect(caught).toBeInstanceOf(ConflictException);
+      const response = caught!.getResponse() as {
+        message: string;
+        dependencies: { type: string; count: number; description: string }[];
+      };
+      const auditDep = response.dependencies.find(
+        (d) => d.type === 'AUDIT_LOGS',
+      );
+      expect(auditDep).toBeDefined();
+      expect(auditDep!.count).toBe(7);
+      // Description names the count and recommends soft-deactivation.
+      expect(auditDep!.description).toContain('7');
+      expect(auditDep!.description).toMatch(/USER_DEACTIVATED|désactiv/i);
+
+      // The row is NOT erased and no USER_DELETED event is emitted.
+      expect(mockPrismaService.user.delete).not.toHaveBeenCalled();
+      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+
+    it('hard-deletes and emits USER_DELETED with a column snapshot when the user has zero audit_logs rows', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+        login: 'jdupont',
+        firstName: 'Jean',
+        lastName: 'Dupont',
+        passwordHash: 'super-secret-hash',
+        roleId: 'role-1',
+        departmentId: 'dept-1',
+        isActive: false,
+        avatarUrl: null,
+        avatarPreset: null,
+        forcePasswordChange: false,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-02-01T00:00:00.000Z'),
+      });
+      mockPrismaService.task.count.mockResolvedValue(0);
+      mockPrismaService.projectMember.count.mockResolvedValue(0);
+      mockPrismaService.leave.count.mockResolvedValue(0);
+      mockPrismaService.department.count.mockResolvedValue(0);
+      mockPrismaService.service.count.mockResolvedValue(0);
+      mockPrismaService.auditLog.count.mockResolvedValue(0);
+      mockPrismaService.personalTodo.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.timeEntry.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.comment.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.userSkill.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.teleworkSchedule.deleteMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.leaveValidationDelegate.deleteMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.projectMember.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.userService.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.leave.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.task.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.user.delete.mockResolvedValue({ id: 'user-1' });
+
+      const result = await service.hardDelete('user-1', 'admin-1');
+
+      expect(result).toEqual({
+        success: true,
+        message: 'Utilisateur supprimé définitivement',
+      });
+      expect(mockPrismaService.user.delete).toHaveBeenCalled();
+
+      // USER_DELETED emitted before the delete, mirroring DAT-007 PROJECT_DELETED.
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'USER_DELETED',
+          entityType: 'User',
+          entityId: 'user-1',
+          actorId: 'admin-1',
+          payload: expect.objectContaining({
+            snapshot: expect.objectContaining({
+              id: 'user-1',
+              email: 'user@example.com',
+              login: 'jdupont',
+            }),
+          }),
+        }),
+      );
+      // The snapshot never leaks the password hash.
+      const logArg = mockAuditPersistence.log.mock.calls[0][0] as {
+        payload: { snapshot: Record<string, unknown> };
+      };
+      expect(logArg.payload.snapshot).not.toHaveProperty('passwordHash');
     });
   });
 
