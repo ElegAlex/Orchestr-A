@@ -1594,11 +1594,11 @@ pnpm test apps/api/src/users/users.service.spec.ts
 
 ### AUD-READ-001 — Legacy PASSWORD_RESET_ADMIN audit rows are invisible when filtering by the current enum name
 
-- **Status:** TODO
+- **Status:** BLOCKED
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
-- **Blocked_by:** (none)
+- **Blocked_by:** audit-revision-required
 - **Severity:** important
 - **Category:** observability
 - **File:** `apps/api/src/audit/` (read pipeline — implementer locates the audit query service / repository)
@@ -1634,8 +1634,13 @@ Add a query-time alias map in the audit read pipeline. When a caller filters aud
 pnpm test apps/api/src/audit/
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** (empty — BLOCKED, no fix commit)
+**Learnings:** **BLOCKED on audit-revision-required (2026-05-26): the audit read pipeline this task assumes does not exist.** The Suggested fix (option a — expand the WHERE clause in the read pipeline) has nothing to attach to, and AC#2's witness ("query the audit read API filtering by `PASSWORD_RESET_BY_ADMIN`, assert the legacy row is returned") is unsatisfiable because there is no audit read API.
+- **Exhaustive search (5 angles) found zero read surface for `audit_logs`:** no `audit.controller.ts` (no controller mentions audit beyond write-side `emitDataExported`); no `auditLog.findMany / findFirst / findUnique / groupBy / aggregate` anywhere in `apps/api/src`; no `@Get`/`@Controller` audit endpoint; no `AuditLog`-typed read DTO/resolver; no web-side service consumes audit logs. The audit module (`audit.module.ts`) exports only `AuditService` + `AuditPersistenceService` (both write-side).
+- **The only two reads of `audit_logs`** are internal/incidental: `audit-persistence.service.ts:111` (hash-chain tail `SELECT "rowHash" … LIMIT 1`, write-side integrity) and `users.service.ts:743` (`auditLog.count({ where: { actorId } })`, USR-DEL-001 dependency pre-check — filters by `actorId`, never by `action`).
+- **The legacy-data risk is real but unreachable in this layer.** An auditor enumerating admin password resets today can only do so via direct SQL on the prod DB (`WHERE action = 'PASSWORD_RESET_BY_ADMIN'`), which a TypeScript alias map cannot intercept. Option (a) is moot; option (b) a SQL VIEW would cover direct-psql access but is a different design+scope; option (c) Prisma middleware needs a Prisma read query to intercept (none exists).
+- **Shipping a standalone `legacy-action-aliases.ts` + pure `expandActionFilter()` with no consumer was rejected** as decorative dead code (over-design): future renames would discover an uncalled file the same way they'd discover a comment. Per contract §"When the audit is wrong or outdated" + design-question #4 (server-side filtering assumed but absent), flagged for human review rather than improvised.
+- **Three forks for the human (see PROGRESS_LOG):** (1) **defer** until a read API is actually built — most likely, no auditor has a TS query path today; (2) **pivot to option (b) SQL VIEW** to cover direct-psql auditor access — rewrites the task's layer; (3) **scope-extend** into a new `GET /audit/logs?action=…` read endpoint + alias map + wiring as one feature — substantial scope explosion. **Future-rename guidance still stands for whichever fork lands:** when an enum value replaces a prior string, add the legacy string to the alias map in the SAME commit as the rename — but the alias map must have a live read consumer first.
 
 ---
 
