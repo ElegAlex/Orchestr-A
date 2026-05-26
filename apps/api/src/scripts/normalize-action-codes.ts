@@ -2,10 +2,8 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { PrismaClient } from 'database';
 import { AppModule } from '../app.module';
-import {
-  AuditPersistenceService,
-  computeRowHash,
-} from '../audit/audit-persistence.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { recomputeChainFrom } from '../audit/recompute-chain';
 import { PrismaService } from '../prisma/prisma.service';
 import { type AuditLogPort, emitSystemBackfill } from './system-backfill-audit';
 
@@ -71,19 +69,6 @@ class DryRunRollback extends Error {
     super('dry-run rollback');
     this.name = 'DryRunRollback';
   }
-}
-
-/** Raw row shape pulled for the recompute walk. */
-interface ChainRow {
-  id: string;
-  action: string;
-  entityType: string;
-  entityId: string;
-  actorId: string | null;
-  createdAt: Date;
-  payload: Record<string, unknown> | null;
-  prevHash: string | null;
-  rowHash: string;
 }
 
 export interface NormalizeDeps {
@@ -153,20 +138,6 @@ export async function normalizeActionCodes(
       const first = firstRows[0];
       result.firstAffected = { id: first.id, createdAt: first.createdAt };
 
-      // Anchor: the row immediately BEFORE the first affected row in chain order.
-      // Its stored rowHash becomes the opaque prevHash of the first affected row and
-      // must remain UNTOUCHED (we never rewrite rows before the first affected one).
-      const predRows = await tx.$queryRaw<
-        Array<{ id: string; rowHash: string }>
-      >`
-        SELECT id, "rowHash" FROM audit_logs
-        WHERE ("createdAt", id) < (${first.createdAt}, ${first.id})
-        ORDER BY "createdAt" DESC, id DESC
-        LIMIT 1
-      `;
-      const anchorPrevHash = predRows.length > 0 ? predRows[0].rowHash : null;
-      const predecessor = predRows.length > 0 ? predRows[0] : null;
-
       // DDL: disable the immutability trigger. Transactional — rolled back (trigger
       // re-enabled) automatically if anything below throws.
       await tx.$executeRawUnsafe(
@@ -178,87 +149,19 @@ export async function normalizeActionCodes(
       `;
       result.affectedCount = Number(affected);
 
-      // Walk every row from the first affected row to the tail, in chain order, with
-      // the action change already applied, recomputing prevHash + rowHash.
-      const rows = await tx.$queryRaw<ChainRow[]>`
-        SELECT id, action, "entityType", "entityId", "actorId", "createdAt",
-               payload, "prevHash", "rowHash"
-        FROM audit_logs
-        WHERE ("createdAt", id) >= (${first.createdAt}, ${first.id})
-        ORDER BY "createdAt" ASC, id ASC
-      `;
-
-      let prevHash = anchorPrevHash;
-      for (const row of rows) {
-        const newRowHash = computeRowHash({
-          action: row.action,
-          entityType: row.entityType,
-          entityId: row.entityId,
-          actorId: row.actorId,
-          createdAt: row.createdAt,
-          payload: row.payload,
-          prevHash,
-        });
-        await tx.$executeRaw`
-          UPDATE audit_logs SET "prevHash" = ${prevHash}, "rowHash" = ${newRowHash}
-          WHERE id = ${row.id}
-        `;
-        prevHash = newRowHash;
-      }
-      result.recomputedCount = rows.length;
+      // Recompute prevHash + rowHash from the first affected row to the tail, in
+      // chain order, with the action change already applied. The shared primitive
+      // (DAT-021) anchors on the untouched predecessor row, walks + recomputes,
+      // re-verifies in-tx, and asserts the predecessor was not modified. The hash
+      // is imported from the write path inside the helper — never reimplemented.
+      const rec = await recomputeChainFrom(tx, first);
+      result.recomputedCount = rec.recomputedCount;
 
       await tx.$executeRawUnsafe(
         `ALTER TABLE audit_logs ENABLE TRIGGER ${IMMUTABILITY_TRIGGER}`,
       );
 
-      // In-transaction verification: re-read the affected segment fresh and assert
-      // every stored rowHash recomputes from its own fields + (new) prevHash. Catches
-      // any walk logic error before commit.
-      const verifyRows = await tx.$queryRaw<ChainRow[]>`
-        SELECT id, action, "entityType", "entityId", "actorId", "createdAt",
-               payload, "prevHash", "rowHash"
-        FROM audit_logs
-        WHERE ("createdAt", id) >= (${first.createdAt}, ${first.id})
-        ORDER BY "createdAt" ASC, id ASC
-      `;
-      let expectedPrev = anchorPrevHash;
-      for (const row of verifyRows) {
-        if (row.prevHash !== expectedPrev) {
-          throw new Error(
-            `[${SCRIPT_NAME}] chain verify failed at row ${row.id}: prevHash mismatch`,
-          );
-        }
-        const expected = computeRowHash({
-          action: row.action,
-          entityType: row.entityType,
-          entityId: row.entityId,
-          actorId: row.actorId,
-          createdAt: row.createdAt,
-          payload: row.payload,
-          prevHash: row.prevHash,
-        });
-        if (row.rowHash !== expected) {
-          throw new Error(
-            `[${SCRIPT_NAME}] chain verify failed at row ${row.id}: rowHash mismatch`,
-          );
-        }
-        expectedPrev = row.rowHash;
-      }
-
-      // Guard against an off-by-one in the tuple comparison: the predecessor row must
-      // be exactly as it was before — we must NOT have rewritten any sealed prefix row.
-      if (predecessor) {
-        const afterPred = await tx.$queryRaw<Array<{ rowHash: string }>>`
-          SELECT "rowHash" FROM audit_logs WHERE id = ${predecessor.id}
-        `;
-        if (afterPred.length !== 1 || afterPred[0].rowHash !== predecessor.rowHash) {
-          throw new Error(
-            `[${SCRIPT_NAME}] predecessor row ${predecessor.id} was unexpectedly modified`,
-          );
-        }
-      }
-
-      result.verified = true;
+      result.verified = rec.verified;
       log(
         `[${SCRIPT_NAME}] normalized ${result.affectedCount} row(s), recomputed ${result.recomputedCount} hash(es).`,
       );

@@ -1127,6 +1127,11 @@ model AuditLog {
   actorLabel String?
   /// Payload contextuel (before/after, raison, plage...). JSONB côté Postgres.
   payload    Json?
+  /// DAT-021 — version du schéma Zod du payload (payload-schemas.ts). v1 = forme
+  /// implicite courante de tous les codes d'action. Incluse dans le hash de la
+  /// ligne (computeRowHash) : une dérive de version se propage au rowHash. Une v2
+  /// future coexisterait dans le registre Zod, dispatchée sur cette colonne.
+  schemaVersion Int   @default(1)
   /// Hash sha256 (hex) de la ligne précédente — NULL pour la première ligne (genèse).
   prevHash   String?
   /// Hash sha256 (hex) de cette ligne (chaîne d'intégrité, calculé à l'INSERT).
@@ -1135,6 +1140,8 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@index([actorId, createdAt])
+  /// DAT-021 — supporte le futur dispatch de lecture v1/v2 par version de schéma.
+  @@index([schemaVersion])
   @@map("audit_logs")
 }
 

@@ -3,6 +3,12 @@ import { createHash } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuditPersistenceService } from './audit-persistence.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditAction } from './audit-action.enum';
+import {
+  AUDIT_PAYLOAD_SCHEMAS,
+  AuditPayloadValidationError,
+  validatePayloadForAction,
+} from './payload-schemas';
 
 // ---------------------------------------------------------------------------
 // Independent re-implementation of the documented hash-chain formula
@@ -33,6 +39,7 @@ function recomputeRowHash(row: {
   entityType: string;
   entityId: string;
   actorId: string | null | undefined;
+  schemaVersion: number;
   createdAt: Date;
   payload: Record<string, unknown> | null | undefined;
   prevHash: string | null | undefined;
@@ -42,6 +49,7 @@ function recomputeRowHash(row: {
     row.entityType,
     row.entityId,
     row.actorId ?? '',
+    String(row.schemaVersion),
     row.createdAt.toISOString(),
     stableStringify(row.payload ?? null),
     row.prevHash ?? '',
@@ -166,7 +174,10 @@ describe('AuditPersistenceService', () => {
         entityType: 'Auth',
         entityId: 'user-1',
         actorId: 'user-1',
-        payload: { ip: '10.0.0.1' },
+        // DAT-021 — LOGIN_SUCCESS routes the AuditService security envelope, so a
+        // valid payload carries success + timestamp (the gate would reject a bare
+        // { ip }). Hash mechanics are unaffected by the payload's exact shape.
+        payload: { success: true, timestamp: new Date().toISOString(), ip: '10.0.0.1' },
       });
 
       expect(created[0].rowHash).toBeDefined();
@@ -212,6 +223,7 @@ describe('AuditPersistenceService', () => {
         entityType: row.entityType as string,
         entityId: row.entityId as string,
         actorId: row.actorId as string | null,
+        schemaVersion: row.schemaVersion as number,
         createdAt: row.createdAt as Date,
         payload: row.payload as Record<string, unknown> | null,
         prevHash: row.prevHash as string | null,
@@ -225,7 +237,7 @@ describe('AuditPersistenceService', () => {
         entityType: 'Leave',
         entityId: 'leave-9',
         actorId: 'validator-1',
-        payload: { status: 'APPROVED' },
+        payload: { before: { status: 'PENDING' }, after: { status: 'APPROVED' } },
       });
       const row = created[0];
       const tampered = recomputeRowHash({
@@ -233,6 +245,7 @@ describe('AuditPersistenceService', () => {
         entityType: row.entityType as string,
         entityId: row.entityId as string,
         actorId: row.actorId as string | null,
+        schemaVersion: row.schemaVersion as number,
         createdAt: row.createdAt as Date,
         payload: { status: 'REJECTED' }, // mutated
         prevHash: row.prevHash as string | null,
@@ -268,7 +281,7 @@ describe('AuditPersistenceService', () => {
         entityType: 'Leave',
         entityId: 'leave-1',
         actorId: 'validator-1',
-        payload: { status: 'APPROVED' },
+        payload: { after: { status: 'APPROVED' } },
       });
 
       expect(created[0].actorEmail).toBe('validator@cpam92.fr');
@@ -296,6 +309,148 @@ describe('AuditPersistenceService', () => {
 
       expect(created[0].actorEmail).toBeNull();
       expect(created[0].actorLabel).toBeNull();
+    });
+  });
+
+  // ===========================================================================
+  // WITNESS W-1 / W-2 — DAT-021 payload validation gate
+  // FAILS on master (no validatePayloadForAction; malformed payloads accepted).
+  // ===========================================================================
+  describe('WITNESS W-1/W-2 — payload Zod validation gate', () => {
+    it('W-1 — rejects a malformed payload for a registered action; no row inserted', async () => {
+      await expect(
+        service.log({
+          action: AuditAction.LOGIN_SUCCESS,
+          entityType: 'Auth',
+          entityId: 'user-1',
+          actorId: 'user-1',
+          // LOGIN_SUCCESS expects the security envelope (success + timestamp).
+          payload: { intentionally_malformed: true } as Record<string, unknown>,
+        }),
+      ).rejects.toBeInstanceOf(AuditPayloadValidationError);
+
+      // The write is rejected BEFORE the transaction — no partial row.
+      expect(created).toHaveLength(0);
+    });
+
+    it('W-2 — accepts a valid payload; row inserted with schemaVersion=1', async () => {
+      await service.log({
+        action: AuditAction.LOGIN_SUCCESS,
+        entityType: 'Auth',
+        entityId: 'user-1',
+        actorId: 'user-1',
+        payload: {
+          success: true,
+          timestamp: new Date().toISOString(),
+          ip: '10.0.0.1',
+        },
+      });
+
+      expect(created).toHaveLength(1);
+      expect(created[0].schemaVersion).toBe(1);
+    });
+
+    it('every audit row persists schemaVersion (folded into the hash chain)', async () => {
+      await service.log({
+        action: AuditAction.SYSTEM_BACKFILL,
+        entityType: 'SystemMaintenance',
+        entityId: 'backfill-1',
+      });
+      expect(created[0].schemaVersion).toBe(1);
+    });
+  });
+
+  // ===========================================================================
+  // Payload registry unit tests (DAT-021 (c)) — the runtime half of the
+  // exhaustive Record; the compile-time half is audit-payload-registry.compile-witness.ts.
+  // ===========================================================================
+  describe('AUDIT_PAYLOAD_SCHEMAS registry', () => {
+    it('has a schema for every AuditAction enum member (runtime exhaustiveness)', () => {
+      for (const action of Object.values(AuditAction)) {
+        expect(AUDIT_PAYLOAD_SCHEMAS[action]).toBeDefined();
+      }
+    });
+
+    it('accepts the observed shape of representative direct emitters', () => {
+      expect(() =>
+        validatePayloadForAction(AuditAction.USER_DELETED, {
+          snapshot: { id: 'u1', email: 'a@b.fr', createdAt: new Date() },
+        }),
+      ).not.toThrow();
+      expect(() =>
+        validatePayloadForAction(AuditAction.ROLE_CHANGE, {
+          before: { roleCode: 'X' },
+          after: { roleCode: 'Y' },
+        }),
+      ).not.toThrow();
+      expect(() =>
+        validatePayloadForAction(AuditAction.DATA_EXPORTED, {
+          format: 'ics',
+          scope: 'planning',
+          dateRange: { start: null, end: null },
+          recordCount: 3,
+        }),
+      ).not.toThrow();
+      expect(() =>
+        validatePayloadForAction(AuditAction.SYSTEM_BACKFILL, {
+          script: 's',
+          args: [],
+          phase: 'STARTED',
+          dryRun: false,
+        }),
+      ).not.toThrow();
+    });
+
+    it('LEAVE_APPROVED accepts BOTH provenances (rich direct row and envelope self-approval)', () => {
+      // Rich direct row (leaves.service approve()).
+      expect(() =>
+        validatePayloadForAction(AuditAction.LEAVE_APPROVED, {
+          actor: { id: 'v1' },
+          subject: { leaveId: 'l1', userId: 'u1' },
+          before: { status: 'PENDING' },
+          after: { status: 'APPROVED' },
+          targetUserId: 'u1',
+          validatorAssigned: 'v1',
+          selfApproved: false,
+        }),
+      ).not.toThrow();
+      // Security envelope (leaves.service self-approval via AuditService).
+      expect(() =>
+        validatePayloadForAction(AuditAction.LEAVE_APPROVED, {
+          ip: undefined,
+          details: 'Auto-validation',
+          success: true,
+          timestamp: new Date().toISOString(),
+        }),
+      ).not.toThrow();
+    });
+
+    it('rejects an unexpected top-level key (.strict()) for a known action', () => {
+      expect(() =>
+        validatePayloadForAction(AuditAction.ROLE_CHANGE, {
+          before: {},
+          after: {},
+          surprise: true,
+        }),
+      ).toThrow(AuditPayloadValidationError);
+    });
+
+    it('absent payload is a no-op (no shape to be malformed)', () => {
+      expect(() =>
+        validatePayloadForAction(AuditAction.LOGIN_SUCCESS, null),
+      ).not.toThrow();
+      expect(() =>
+        validatePayloadForAction(AuditAction.LOGIN_SUCCESS, undefined),
+      ).not.toThrow();
+    });
+
+    it('unknown (non-enum) action is a no-op — unreachable in prod via the OBS-024 type gate', () => {
+      expect(() =>
+        validatePayloadForAction(
+          'NOT_A_REAL_ACTION' as AuditAction,
+          { anything: true },
+        ),
+      ).not.toThrow();
     });
   });
 });

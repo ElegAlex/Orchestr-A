@@ -30,6 +30,7 @@
     "db:reset": "pnpm --filter database run db:reset",
     "snapshot:backfill": "pnpm --filter api run build && node apps/api/dist/scripts/backfill-snapshots.js",
     "normalize:action-codes": "pnpm --filter api run build && node apps/api/dist/scripts/normalize-action-codes.js",
+    "audit:recompute-chain": "pnpm --filter api run build && node apps/api/dist/scripts/recompute-chain-on-schema-bump.js",
     "pre-deploy": "bash scripts/pre-deploy-check.sh",
     "prepare": "husky install"
   },

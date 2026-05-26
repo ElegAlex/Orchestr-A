@@ -54,6 +54,7 @@ type Row = {
   entityType: string;
   entityId: string;
   actorId: string | null;
+  schemaVersion: number;
   createdAt: Date;
   payload: Record<string, unknown> | null;
   prevHash: string | null;
@@ -63,8 +64,8 @@ type Row = {
 /** Read the full chain in deterministic order. */
 async function readChain(prisma: PrismaClient): Promise<Row[]> {
   return prisma.$queryRaw<Row[]>`
-    SELECT id, action, "entityType", "entityId", "actorId", "createdAt",
-           payload, "prevHash", "rowHash"
+    SELECT id, action, "entityType", "entityId", "actorId", "schemaVersion",
+           "createdAt", payload, "prevHash", "rowHash"
     FROM audit_logs
     ORDER BY "createdAt" ASC, id ASC
   `;
@@ -82,6 +83,7 @@ function verifyChain(rows: Row[]): { ok: boolean; detail: string } {
       entityType: r.entityType,
       entityId: r.entityId,
       actorId: r.actorId,
+      schemaVersion: r.schemaVersion,
       createdAt: r.createdAt,
       payload: r.payload,
       prevHash: r.prevHash,
@@ -106,11 +108,14 @@ async function seed(
     payload: Record<string, unknown> | null;
   },
 ): Promise<string> {
+  // DAT-021 — rows get schemaVersion=1 (the DB column default); the seed hash must
+  // fold the same version the recompute walk will read back.
   const rowHash = computeRowHash({
     action: row.action,
     entityType: row.entityType,
     entityId: row.entityId,
     actorId: null,
+    schemaVersion: 1,
     createdAt: row.createdAt,
     payload: row.payload,
     prevHash,
@@ -121,6 +126,7 @@ async function seed(
       entityType: row.entityType,
       entityId: row.entityId,
       actorId: null,
+      schemaVersion: 1,
       payload: row.payload === null ? undefined : (row.payload as object),
       prevHash,
       rowHash,

@@ -3,6 +3,16 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuditAction } from './audit-action.enum';
+import { validatePayloadForAction } from './payload-schemas';
+
+/**
+ * DAT-021 — the payload schema version of every row this build writes. The Zod
+ * registry (`payload-schemas.ts`) describes the v1 shape; a future v2 would bump
+ * this and dispatch validation per-row on the stored value. Folded into the hash
+ * (see `computeRowHash`) so schema-version drift propagates to `rowHash` and
+ * cannot be backdated without breaking the chain.
+ */
+export const CURRENT_AUDIT_SCHEMA_VERSION = 1;
 
 /**
  * Deterministic, stable-key JSON serialization. Object keys are sorted
@@ -32,17 +42,26 @@ export function stableStringify(value: unknown): string {
  * Computes the integrity hash for one audit row (OBS-002 / DAT-009).
  *
  *   rowHash = sha256( action | entityType | entityId | actorId? |
- *                     createdAt.toISOString() | stableStringify(payload) | prevHash? )
+ *                     schemaVersion | createdAt.toISOString() |
+ *                     stableStringify(payload) | prevHash? )
  *
  * sha256, hex, lowercase, no truncation. Empty string stands in for a NULL
  * actorId / prevHash. Exported so an external verifier (production runbook,
  * chain-audit script) can recompute and compare against stored values.
+ *
+ * DAT-021 — `schemaVersion` is folded into the canonical concat (positioned
+ * between actorId and createdAt) so a row's payload-schema version is part of
+ * its integrity hash. Without this, a schema-version edit on a stored row would
+ * leave `rowHash` unchanged, defeating tamper detection on that metadata. Adding
+ * the column to every existing row therefore changes every `rowHash` and
+ * mandates a full-chain recompute (scripts/recompute-chain-on-schema-bump.ts).
  */
 export function computeRowHash(input: {
   action: string;
   entityType: string;
   entityId: string;
   actorId: string | null;
+  schemaVersion: number;
   createdAt: Date;
   payload: Record<string, unknown> | null;
   prevHash: string | null;
@@ -52,6 +71,7 @@ export function computeRowHash(input: {
     input.entityType,
     input.entityId,
     input.actorId ?? '',
+    String(input.schemaVersion),
     input.createdAt.toISOString(),
     stableStringify(input.payload ?? null),
     input.prevHash ?? '',
@@ -90,6 +110,15 @@ export class AuditPersistenceService {
   }): Promise<void> {
     const actorId = event.actorId ?? null;
     const payload = event.payload ?? null;
+
+    // DAT-021 — validation gate. Runs BEFORE the transaction (it needs no DB
+    // connection): a malformed payload fails fast without opening a tx or
+    // holding the chain advisory lock. Throws AuditPayloadValidationError — the
+    // write is rejected, no partial row. A present payload whose top-level shape
+    // is unexpected for `action` (per the Zod registry) never reaches the chain.
+    validatePayloadForAction(event.action, payload);
+
+    const schemaVersion = CURRENT_AUDIT_SCHEMA_VERSION;
     // createdAt is generated here (not via @default(now())) so the value we hash
     // is exactly the value stored — the chain must be recomputable from the row.
     const createdAt = new Date();
@@ -136,6 +165,7 @@ export class AuditPersistenceService {
         entityType: event.entityType,
         entityId: event.entityId,
         actorId,
+        schemaVersion,
         createdAt,
         payload,
         prevHash,
@@ -149,6 +179,7 @@ export class AuditPersistenceService {
           actorId,
           actorEmail,
           actorLabel,
+          schemaVersion,
           payload: (payload as Prisma.InputJsonValue) ?? undefined,
           prevHash,
           rowHash,
