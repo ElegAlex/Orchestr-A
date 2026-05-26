@@ -432,7 +432,7 @@ TBD — manual verification (config change, no automated test)
 
 ### TOOL-COH-001 — Coherence gate regex misses multi-segment IDs
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 1
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -476,7 +476,7 @@ backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh <
 
 ### TOOL-COH-002 — Coherence gate has no native support for retroactive task closures
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 1
 - **Cluster:** —
 - **Confidence:** claude-only
