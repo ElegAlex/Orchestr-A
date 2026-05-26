@@ -521,7 +521,7 @@ backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh <
 
 ### TOOL-DEPLOY-001 — Two-role DB split (restricted app role + DDL migration role) for audit_logs defence-in-depth
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -562,8 +562,18 @@ apps/api/docker-entrypoint.sh: npx prisma migrate deploy … then exec node main
 psql "$DATABASE_URL" -c "UPDATE audit_logs SET action='x' WHERE false;"  # expect ERROR: permission denied for table audit_logs
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 8c37e1d
+**Learnings:**
+- **Mechanism = strong-default (b):** one-shot `packages/database/prisma/init-roles.sql`, run once per environment by a superuser/owner, separate concern from per-deploy migrations. NOT a Prisma migration (a) (CREATE ROLE/password is environment-specific, not schema) and NOT baked into the entrypoint (c) (idempotent per-env init ≠ per-deploy step). Documented in `prisma/README.md` + both deploy runbooks.
+- **The migration role is the EXISTING schema owner, not a new role.** init-roles.sql creates ONLY the restricted `app_user`; `DATABASE_MIGRATION_URL` reuses the `POSTGRES_USER` owner. Creating a fresh `migration_user` would require reassigning ownership of every existing table (it must OWN audit_logs to `ALTER TABLE … DISABLE TRIGGER`). Reusing the owner sidesteps that and the owner already runs migrate deploy.
+- **Error-message discriminator drove the test split (the non-obvious core).** Postgres checks table privilege BEFORE firing a BEFORE-trigger: an app-role UPDATE/DELETE on audit_logs fails with `permission denied` (SQLSTATE **42501**) and NEVER reaches the trigger's `/append-only/` RAISE (SQLSTATE **23514**). So a single role cannot witness both controls — the REVOKE *shadows* the trigger. `audit-immutability.int.spec.ts` therefore connects as the MIGRATION role (privileged → reaches the trigger → 23514); the new `audit-role-revoke.int.spec.ts` connects as the app role (42501). W-2 proves independence: with the trigger DISABLED, the app role STILL gets 42501.
+- **Datasource shape:** `url = env(DATABASE_URL)` (app role, runtime) + `directUrl = env(DATABASE_MIGRATION_URL)` (owner, migrate/maintenance). Verified: `prisma generate` tolerates an unset `directUrl` env (build job + Dockerfile unaffected); `migrate deploy`/`db push`/`db pull` REQUIRE it (validation error otherwise) → every standalone migrate step (entrypoint, both CI migrate steps, deploy scripts) must set it.
+- **Harness adaptation:** globalSetup migrates as owner (`DATABASE_MIGRATION_URL`), provisions `app_user` on the ephemeral DB (mirrors init-roles.sql — self-checking: grant drift breaks W-2/3/4), then exports `DATABASE_URL=app_user` (default `new PrismaClient()` = restricted role = prod parity) + `DATABASE_MIGRATION_URL=owner`. Integration suite 4 → 8 tests.
+- **Operational scripts = fail-fast (option ii):** normalize-action-codes + recompute-chain-on-schema-bump set `process.env.DATABASE_URL = DATABASE_MIGRATION_URL` BEFORE `NestFactory` (PrismaService binds at construction) and `process.exit(1)` if `DATABASE_MIGRATION_URL` is absent — no silent fallback to the restricted role, which would fail confusingly mid-recompute at the trigger DISABLE.
+- **CI:** the two standalone `migrate deploy` steps (backend-tests + e2e-tests) now also set `DATABASE_MIGRATION_URL`. The integration step is self-contained (harness injects both URLs + provisions app_user). **Unit + coverage steps deliberately stay one-URL** — `vi.mock('database')` is global, so no real PrismaClient is constructed and the schema env vars are never validated; adding the second URL there would be cargo-cult.
+- **TST-DB-001 build-output regression caught + fixed (in scope — build-correctness this change required).** `tsconfig.build.json` did not exclude the new `vitest.int.*` files, so `nest build` pulled `rootDir` to `apps/api/` and emitted `dist/src/main.js` instead of `dist/main.js` — breaking docker-entrypoint.sh's `exec node apps/api/dist/main.js` (one of THIS commit's edits) + the `normalize:action-codes`/`audit:recompute-chain` paths. Added the three files to the existing exclude list (same pattern as vitest.config.ts/vitest.e2e.config.ts). NOT the BUILD-001 structural `rootDir: ./src` fix — that remains separately filed.
+- **Residual risk now CLOSED for the runtime role:** the app role can no longer UPDATE/DELETE audit_logs even with the trigger disabled. The residual operator-with-owner-credentials path remains (the owner can DISABLE TRIGGER + mutate) — that is the legitimate maintenance path (normalize/recompute run as owner), kept DETECTABLE by the hash chain. Defence-in-depth layers on audit_logs: immutability trigger (d6299cc) + hash chain (d6299cc) + actor snapshot (d6299cc) + Zod payload validation (DAT-021) + **DB role REVOKE (this task)**.
+- **Verification:** nest build EXIT 0; `pnpm test` api 1650 (zero regression); `pnpm test:integration` 8 (was 4); `pnpm --filter api test:e2e` 2; `pnpm run build` 3/3; W-5 fail-fast both scripts (exit 1) + positive path boots past guard; `dist/main.js` boots. ESLint pre-broken repo-wide (documented dette, untouched).
 
 ---
 
