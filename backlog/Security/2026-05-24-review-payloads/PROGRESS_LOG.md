@@ -681,3 +681,9 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **[[TST-011]] delta:** +9 vitest witnesses (W-1 reject + W-2 accept + schemaVersion-persisted + runtime exhaustiveness + representative-emitter shapes + dual-writer union + strict-rejection + 2 no-op cases) + 1 new compile witness (audit-payload-registry) + new real-DB witness (recompute-chain-on-schema-bump.witness.ts, not vitest-counted). Third compile-time enforcement layer for the audit trail.
 - **Cour-des-Comptes question:** "Can an auditor confirm that no audit row has ever been written with an unexpected payload shape since DAT-021 landed?" → **YES (post-landing).** Compile-time: the exhaustive `Record<AuditAction,…>` guarantees every action has a schema and the OBS-024 enum gate guarantees every write uses a real AuditAction. Runtime: `validatePayloadForAction` `.strict()`-parses every present payload at INSERT, rejecting any unexpected top-level key with AuditPayloadValidationError before the row is hashed/inserted. A malformed payload cannot reach audit_logs.
 - **Open questions for next session:** TST-011 (project archive / document delete / role lifecycle emission assertions remain), TST-DB-001 (real-DB witness automation — now has TWO throwaway-DB witness precedents), operator runbook executions (AUD-READ-001 prod normalize + DAT-021 prod migrate+recompute, both separate operator gestures), TOOL-COH-001 (multi-segment ID regex).
+
+## 2026-05-26 — OBS-020 closed (policy: no app-level retention)
+- **Session ID:** 2026-05-26-obs020-policy
+- **Tasks closed:** OBS-020 (no implementation — policy decision; finding's premise overrode).
+- **Commits:** 8beb389 (single closeout).
+- **Learnings:** Auditor findings can carry assumptions (e.g. retention obligations) that don't match the project's actual constraints. Policy decisions belong to the project owner, not the auditor. Confirmed with project owner: no application-level retention.
