@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 187 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012)
+> **Total tasks:** 189 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016)
 
 ## Schema legend
 
@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 122 important · 22 nit · 6 suggestion
-- **By category:** 35 correctness · 34 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
+- **By severity:** 32 blocking · 123 important · 23 nit · 6 suggestion
+- **By category:** 36 correctness · 35 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -2149,7 +2149,7 @@ Add @unique on Department.name and @@unique([departmentId, name]) on Service.
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** `ce8877a`
+**Closed_by:** ce8877a
 **Learnings:**
 - **DSL-expressible → schema.prisma WAS edited** (unlike DAT-003/004/013/014, which were CHECK/trigger SQL-only): `@unique` on `Department.name`, `@@unique([departmentId, name])` on `Service`. Migration `20260527160000` hand-authored but **byte-equivalent to `migrate dev` output** (`CREATE UNIQUE INDEX`, Prisma `<table>_<col>_key` naming → `departments_name_key`, `services_departmentId_name_key`) because the dev DB stays `migrate dev`-blocked by the `_dat005_backup_*` drift (TOOL-DBSYNC-001); applied via `migrate deploy` (drift-tolerant). A `pg_indexes` test pins the convention names so a future drift-clean `migrate dev` produces no shadow diff.
 - **Composite, NOT global** on Service (literal Suggested fix). Positive test (same name, two different departments → both accepted) is the load-bearing proof. Matches the app's existing `services.service.ts` pre-check on `{ name, departmentId }`.
@@ -2462,6 +2462,93 @@ Decide between (a) a documented free-form policy with input normalization (trim 
 **Verification command:**
 ```
 pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### DAT-036 — Client.name lacks a UNIQUE constraint
+
+- **Status:** TODO
+- **Phase:** 3
+- **Cluster:** F
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** data_integrity · constraint
+- **File:** `packages/database/prisma/schema.prisma:526`
+- **Source:** Session-derived. DAT-016 closeout (`ce8877a`, 2026-05-27). DAT-016's **Description** named `Client.name` as a third instance of the missing-UNIQUE failure mode ("Same for Client.name") but its **Suggested fix** list enumerated only Department + Service, so Client stayed out of DAT-016's literal scope (bundle-discipline; same closeout-filing pattern as DAT-004→DAT-032). Filed here as the defense-in-depth follow-up.
+
+**Description:**
+`Client.name` (schema.prisma:526, `model Client { name String … @@index([name]) }`) has a non-unique index only — two clients can be created with identical names, indistinguishable in the UI except by UUID. Projects link to clients via `ProjectClient`; a duplicate client name makes project-client attribution ambiguous. Same failure mode DAT-016 closed for Department/Service.
+
+**Root cause:**
+Schema author treated UUID as identity and left `name` as a label (identical to DAT-016's root cause). The existing `@@index([name])` optimizes lookup but does not enforce uniqueness.
+
+**Code evidence:**
+```
+schema.prisma:526-537 model Client: name String; @@index([name]) — no @unique. clients table (dev): indexes clients_pkey, clients_isActive_idx, clients_name_idx — no unique on name.
+```
+
+**Suggested fix:**
+Add `@unique` on `Client.name` (replacing or alongside the existing `@@index([name])` — a unique index already serves the lookup, so the plain `@@index` becomes redundant and should be dropped). Mirror DAT-016's mechanism exactly: DSL `@unique` + a `CREATE UNIQUE INDEX "clients_name_key"` migration byte-equivalent to `migrate dev` output, applied via `migrate deploy`. Pre-flight: `SELECT name, count(*) FROM clients GROUP BY 1 HAVING count(*) > 1` (dev + prod) — `CREATE UNIQUE INDEX` aborts on existing dups; resolve by rename if any. Witness under TST-DB-001 (FAIL-pre→PASS-post, 23505 on the `Key (name)=` signature). Check `clients.service.ts` create path for the same TOCTOU/23505-leak adjacency DAT-016 deferred to COR-034.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Expected N/A: schema migration, not audit-sensitive (DAT-016 precedent).
+5. Commit message includes `[closes DAT-036]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### COR-034 — Department/Service create leaks a 500 on the unique-constraint race (should be 409)
+
+- **Status:** TODO
+- **Phase:** 3
+- **Cluster:** F
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** nit
+- **Category:** correctness · error_handling
+- **File:** `apps/api/src/departments/departments.service.ts:30`, `apps/api/src/services/services.service.ts:44`
+- **Source:** Session-derived. DAT-016 closeout (`ce8877a`, 2026-05-27). Surfaced in DAT-016's pre-flight: both create paths pre-check uniqueness via `findFirst` → `ConflictException`, but the `.create()` is unguarded. With DAT-016's DB-level UNIQUE now live, a TOCTOU race (two concurrent creates both pass the pre-check) or a direct write surfaces Prisma `P2002` unhandled → HTTP 500. DAT-016 stayed schema+spec-only (advisor-confirmed); this is the deferred application-layer hardening.
+
+**Description:**
+After DAT-016, `departments.service.ts:30` and `services.service.ts:44` can throw an unmapped `PrismaClientKnownRequestError` (code `P2002`, unique constraint failed) in the narrow window where two concurrent requests both pass the `findFirst` pre-check and then both attempt `.create()`. The second `INSERT` hits the DB UNIQUE index (23505); with no try/catch around `.create()`, Nest returns a generic 500 instead of the `409 ConflictException` the sequential path already returns. The duplicate is correctly *prevented* either way (DAT-016 is doing its job) — this is purely the error surface.
+
+**Root cause:**
+The uniqueness check is a non-atomic read-then-write (TOCTOU). Before DAT-016 the race silently created a duplicate; DAT-016 closed the correctness gap but converts the race into a 500 because `P2002` is not mapped to a domain exception.
+
+**Code evidence:**
+```
+departments.service.ts:22-35  findFirst({where:{name}}) → ConflictException; then unguarded prisma.department.create({...})
+services.service.ts:31-51     findFirst({where:{name,departmentId}}) → ConflictException; then unguarded prisma.service.create({...})
+```
+
+**Suggested fix:**
+Wrap each `.create()` in a try/catch mapping Prisma `P2002` → the same `ConflictException` message the pre-check already returns (so the race collapses to the identical 409). Keep the pre-check (fast path / friendly message for the common case). Optionally factor a small `isUniqueViolation(err)` helper. Witness: a unit test asserting a mocked `P2002` from `.create()` yields `ConflictException`, not a leaked 500.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Expected N/A: department/service create is not in the audit-sensitive list.
+5. Commit message includes `[closes COR-034]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm test apps/api/src/departments apps/api/src/services
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
