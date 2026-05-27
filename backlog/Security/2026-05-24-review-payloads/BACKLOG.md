@@ -2273,6 +2273,8 @@ grep -n 'time_entries_hours_ck' packages/database/prisma/migrations/  # expect 0
 **Suggested fix:**
 `ALTER TABLE time_entries ADD CONSTRAINT time_entries_hours_ck CHECK (hours >= 0 AND hours <= 24)` in a new hand-authored migration (CHECK not expressible in Prisma 6 DSL — DAT-003/004 precedent). Note `hours = 0` must stay valid for dismissals (`isDismissal = true`). The per-day sum cap is out of scope for a single-column CHECK and remains the COR-022 service-level guard (a DB trigger for the aggregate is a separate, heavier decision — do not bundle). Mirror the DAT-004 witness pattern in `apps/api/src/schema-constraints/` (raw INSERT, SQLSTATE 23514 + constraint name).
 
+> **Residual the implementer should know (from COR-022 closeout):** the COR-022 per-day cap is a non-transactional read-then-write (`aggregate` then `create`/`update`) → **TOCTOU race**: two concurrent same-(userId, date) requests can each read the pre-state and both commit, overshooting 24h. A per-row `time_entries_hours_ck` (this task) does NOT close it (CHECK is per-row, not cross-row aggregate). Fully closing the aggregate invariant under concurrency needs a serializable transaction around the read+write or a DB trigger — a heavier, separate decision; do not fold it into this CHECK. Same residual applies to DAT-034's third-party path.
+
 **Acceptance criteria:**
 1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
 2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
