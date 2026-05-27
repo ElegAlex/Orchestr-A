@@ -2031,7 +2031,7 @@ non-audit-sensitive — DAT-005/DAT-012 precedent).
 ---
 ### DAT-014 — Leave.type LeaveType? legacy enum still exists alongside leaveTypeId — drift risk
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
