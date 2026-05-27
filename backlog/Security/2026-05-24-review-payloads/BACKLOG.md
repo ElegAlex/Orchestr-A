@@ -1955,7 +1955,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-013 — Time-of-day stored as String 'HH:MM' instead of Postgres TIME / minutes-int
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -1992,8 +1992,41 @@ Use @db.Time or store minutes-since-midnight Int. Add CHECK constraint if keepin
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** c0189c1
+**Learnings:**
+Chose **option (c)** of the audit's three (String + CHECK regex), not (a) @db.Time.
+Pre-flight ruled (a) out empirically: `@db.Time` requires a `DateTime` Prisma scalar,
+and this repo's generated client maps `DateTime` → JS `Date` (verified in
+`node_modules/.pnpm/@prisma+client@6.19.1.../.prisma/client/index.d.ts`: `createdAt: Date`).
+Adopting (a) would cascade `string`→`Date` through the 6 DTO fields (each currently
+`@Matches`-validated `string`), `planning-export.service.ts` (`event.startTime.split(':')`),
+`predefined-tasks.service.ts`, the frontend (`usePlanningData` `localeCompare`,
+`TaskForm` `<input type="time">` which emits/consumes strings) and `packages/types` —
+>20 adjacent edits, the contract's scope-creep bail. The codebase does **no**
+minutes-since-midnight arithmetic, so Int (b) is unjustified. (c) has zero TS surface
+change and delivers the same Phase-3 invariant: the DB rejects malformed.
+
+**Non-obvious — the CHECK is deliberately the floor, not equality.** Regex
+`^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$` is the *lenient* pattern: it is exactly the
+Task/Event DTO regex and a strict **superset** of the PredefinedTask DTO regex
+(`^([01]\d|2[0-3]):[0-5]\d$`, 2-digit hour only). Chosen so nothing the application
+layer accepts is rejected by the DB (no app-accepts/DB-rejects 500s on legit input);
+per-table DTOs may stay stricter. Defense-in-depth ≠ DTO equality — the CHECK rejects
+the audit-named invalids ('9:5', '25:99', '') plus '24:00'/'12:60'/whitespace, which
+is the invariant. Verified semantically in PG before authoring (13-value VALUES probe).
+
+**schema.prisma intentionally unchanged** (columns stay `String?`) — CHECK is not
+Prisma-6-DSL-expressible (DAT-003/004 precedent, not DAT-012's enum-DSL path).
+Hand-authored raw SQL migration `20260527140000_dat013_time_format_check`, 6 CHECKs
+named `<table>_<col>_format_ck`. Nullable columns need no IS NULL guard (CHECK passes
+on NULL under three-valued logic). Pre-flight (dev): only 4 well-formed HH:MM rows in
+predefined_tasks, zero in tasks/events, **zero malformed** → no data-cleanup bail,
+every ADD CONSTRAINT validated instantly. Applied via `migrate deploy` (not
+`migrate dev`, still blocked by `_dat005_backup_*` drift — TOOL-DBSYNC-001).
+Witness `dat013-time-format.int.spec.ts` (4 tests): FAIL-pre demonstrated by
+neutralizing the migration to `SELECT 1;` (3 negatives fail non-vacuously, positive
+still passes), restored byte-identical → PASS-post. AC#4 skipped (schema migration,
+non-audit-sensitive — DAT-005/DAT-012 precedent).
 
 ---
 ### DAT-014 — Leave.type LeaveType? legacy enum still exists alongside leaveTypeId — drift risk

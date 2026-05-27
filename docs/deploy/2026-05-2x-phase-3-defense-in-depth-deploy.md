@@ -6,8 +6,8 @@ ahead of execution**: the known scope, migrations, pre-deploy checks, verificati
 rollback templates are pre-filled now; every command and its output are captured at deploy time,
 in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 
-> **Seed status (2026-05-27):** Phase 3 is **4/10 closed**. This batch covers the 3 schema/data
-> tasks closed so far. The 6 remaining Phase 3 *important* tasks (DAT-013/014/016/017/018/023) are
+> **Seed status (2026-05-27):** Phase 3 is **5/10 closed**. This batch covers the 4 schema/data
+> tasks closed so far. The 5 remaining Phase 3 *important* tasks (DAT-014/016/017/018/023) are
 > not yet started; **as each closes, append a row to the Scope table and a bullet to Operational
 > notes — do not restructure this document.**
 >
@@ -28,6 +28,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `DAT-003` + `DAT-004` (bundle) | `62c2fc4` | blocking | **14 CHECK constraints** — 7 date-range (`end >= start`, incl. the `events` recurrence variant) + 7 numeric bounds (progress 0–100, weight 1–5, allocation 0–100, days > 0, size/totalDays ≥ 0). One migration. |
 | `COR-022` | `760aa58` | important | Per-`(userId, date)` daily **hours cap (≤ 24)** on TimeEntry create/update. **DTO + service only — no migration, no schema change.** |
 | `DAT-012` | `c8b618e` | important | **5 native Postgres enums** promoting 6 free-string columns (predefined-task duration/period/completionStatus/recurrenceType, app-settings category). `AuditLog.action`/`entityType` deliberately **stayed `String`** (document route — see Operational notes). One migration. |
+| `DAT-013` | `c0189c1` | important | **6 CHECK constraints** enforcing `HH:MM` time-of-day format on `Task`/`Event`/`PredefinedTask` `startTime`/`endTime` (regex `^([0-1]?[0-9]\|2[0-3]):[0-5][0-9]$`, the lenient DTO-floor superset). `schema.prisma` unchanged (columns stay `String?`). One migration. |
 
 - **Prod baseline (expected):** TBD: commits behind master at deploy time. Expected last applied
   migration `20260524100100_dat005_convert_float_to_decimal` — the Phase-1 closeout left prod at git
@@ -45,12 +46,13 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 - **DB:** `orchestr_a_prod`, user `orchestr_a`. Host has **no** `psql`/`pg_dump` binaries → all
   Postgres ops run inside the db container (`docker exec`).
 
-### Migrations applied by this batch (2)
+### Migrations applied by this batch (3)
 
 | Migration folder | Task(s) | Introduces |
 |------------------|---------|------------|
 | `20260527120000_dat003_dat004_business_invariants` | DAT-003 + DAT-004 | 14 `ADD CONSTRAINT … CHECK (…)` (7 date-range + 7 numeric). Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). |
 | `20260527130000_dat012_promote_string_enums` | DAT-012 | `CREATE TYPE` ×5 + `ALTER COLUMN … TYPE … USING (col::"Enum")` ×6 (defaults dropped/re-set around the casts). Hand-authored; `schema.prisma` **was** edited (enum blocks + column types — baked into the rebuilt api image). |
+| `20260527140000_dat013_time_format_check` | DAT-013 | 6 `ADD CONSTRAINT … CHECK (col ~ '^([0-1]?[0-9]\|2[0-3]):[0-5][0-9]$')` on Task/Event/PredefinedTask `startTime`/`endTime`. Hand-authored raw SQL; `schema.prisma` unchanged. **No pre-deploy probe needed** — CHECK on already-format-valid data is uneventful (dev pre-flight: 4 well-formed rows, zero malformed; like DAT-003/004, unlike the DAT-012 enum cast). |
 
 > COR-022 is **not** in this sub-table — it ships entirely in the api image (`760aa58`), no DDL.
 >
@@ -64,14 +66,14 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 ## Deploy plan (phases, 2 human gates)
 
 1. **Pre-deploy baseline (read-only).** git/containers/images/`_prisma_migrations` HEAD/row counts.
-   Confirm the 2 batch migrations are exactly the pending delta `HEAD → origin/master` under
+   Confirm the 3 batch migrations are exactly the pending delta `HEAD → origin/master` under
    `packages/database/prisma/migrations/`. STOP if any surprise migration appears.
 2. **Pre-deploy data probe (read-only) — the DAT-012 cast-safety gate.** Per-column out-of-enum-set
    probe (below). DAT-003/004 needs no probe (dev pre-flight was 0-violators across all 14
    predicates, validated clean by `migrate deploy` on dev). **→ GATE 1.**
 3. **Deploy execution** (after Gate 1 greenlight). Safety dump → `git pull` → `build api` →
-   `migrate deploy` (must be exactly the 2 batch migrations) → `up -d api` → health check.
-4. **Post-deploy verification.** Both migrations in `_prisma_migrations`; CHECK + enum smoke
+   `migrate deploy` (must be exactly the 3 batch migrations) → `up -d api` → health check.
+4. **Post-deploy verification.** All migrations in `_prisma_migrations`; CHECK + enum smoke
    (INSERT-then-ROLLBACK); time_entries sanity; audit_logs sanity. **→ GATE 2** (operator UI smoke).
 5. **Rollback (conditional).** Per-migration templates below. Log + push even on rollback.
 
@@ -92,10 +94,10 @@ origin/master = TBD
 commits behind origin/master: TBD
 
 $ git diff --name-status HEAD origin/master -- packages/database/prisma/migrations/
-TBD: must show exactly the 2 batch migration folders (20260527120000_…, 20260527130000_…) as `A`,
+TBD: must show exactly the 3 batch migration folders (20260527120000_…, 20260527130000_…, 20260527140000_…) as `A`,
      plus schema.prisma as `M` under packages/database/prisma/ (the DAT-012 enum edits).
 ```
-TBD: ✅/⚠️ assumption check — only the 2 batch migrations are pending; no surprise migration.
+TBD: ✅/⚠️ assumption check — only the 3 batch migrations are pending; no surprise migration.
 
 ### `_prisma_migrations` HEAD + row counts (Phase-4 baseline)
 ```
@@ -234,7 +236,7 @@ TBD: must show EXACTLY:
   All migrations have been successfully applied.
 $ docker compose -f docker-compose.prod.yml --env-file .env.production up -d api    # TBD: healthy in ~Ns
 ```
-TBD: confirm exactly the 2 batch migrations applied (no more, no fewer). TBD: running api image id
+TBD: confirm exactly the 3 batch migrations applied (no more, no fewer). TBD: running api image id
 (should be the freshly built image, not the `pre-phase3-defense-in-depth` anchor).
 
 ---
@@ -245,7 +247,7 @@ TBD: confirm exactly the 2 batch migrations applied (no more, no fewer). TBD: ru
 
 | Check | Command / method | Result |
 |-------|------------------|--------|
-| V1 — both migrations applied | `SELECT migration_name, applied_steps_count, finished_at FROM _prisma_migrations WHERE migration_name IN ('20260527120000_dat003_dat004_business_invariants','20260527130000_dat012_promote_string_enums');` | TBD: 2 rows, each `applied_steps_count=1`, no mixed state |
+| V1 — all migrations applied | `SELECT migration_name, applied_steps_count, finished_at FROM _prisma_migrations WHERE migration_name IN ('20260527120000_dat003_dat004_business_invariants','20260527130000_dat012_promote_string_enums','20260527140000_dat013_time_format_check');` | TBD: 3 rows, each `applied_steps_count=1`, no mixed state |
 | V2 — enum columns are now `USER-DEFINED` | `SELECT table_name, column_name, udt_name FROM information_schema.columns WHERE udt_name IN ('PredefinedTaskDuration','DayPeriod','AssignmentCompletionStatus','RecurrenceType','AppSettingsCategory');` | TBD: 6 rows mapping the 6 promoted columns |
 | V3 — all services healthy | `docker compose … ps` | TBD: api/web/nginx/postgres/redis `Up (healthy)` |
 | V4 — running api image | `docker inspect …` | TBD: freshly built image, not the anchor |
@@ -268,9 +270,15 @@ BEGIN;
   INSERT INTO tasks (id, title, progress, "updatedAt")
   VALUES (gen_random_uuid(), 'phase3 smoke bad progress', -1, now());
 ROLLBACK;
+
+-- 3) malformed time-of-day (DAT-013) → expect ERROR 23514 violating "tasks_startTime_format_ck"
+BEGIN;
+  INSERT INTO tasks (id, title, "startTime", "updatedAt")
+  VALUES (gen_random_uuid(), 'phase3 smoke bad time', '25:99', now());
+ROLLBACK;
 ```
-TBD: paste both errors (must name the constraint + SQLSTATE 23514). If either INSERT *succeeds*,
-the constraint did not deploy → investigate before declaring done.
+TBD: paste all three errors (must name the constraint + SQLSTATE 23514). If any INSERT *succeeds*,
+that constraint did not deploy → investigate before declaring done.
 
 ### Enum smoke (DAT-012 analog — INSERT-then-ROLLBACK)
 
@@ -388,6 +396,20 @@ DROP TYPE IF EXISTS "AppSettingsCategory";
 --       and redeploy the pre-batch (String-expecting) api image.
 ```
 
+### DAT-013 (`c0189c1`, migration `20260527140000`) — idempotent DROP CONSTRAINT
+
+Symmetric and cheap (same shape as DAT-003/004 — columns stay `String?`, no type to recast):
+
+```sql
+ALTER TABLE "tasks"            DROP CONSTRAINT IF EXISTS "tasks_startTime_format_ck";
+ALTER TABLE "tasks"            DROP CONSTRAINT IF EXISTS "tasks_endTime_format_ck";
+ALTER TABLE "events"           DROP CONSTRAINT IF EXISTS "events_startTime_format_ck";
+ALTER TABLE "events"           DROP CONSTRAINT IF EXISTS "events_endTime_format_ck";
+ALTER TABLE "predefined_tasks" DROP CONSTRAINT IF EXISTS "predefined_tasks_startTime_format_ck";
+ALTER TABLE "predefined_tasks" DROP CONSTRAINT IF EXISTS "predefined_tasks_endTime_format_ck";
+-- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260527140000_dat013_time_format_check';
+```
+
 ---
 
 ## Operational notes (carry-forwards)
@@ -413,7 +435,7 @@ DROP TYPE IF EXISTS "AppSettingsCategory";
 
 ## Future Phase 3 closures — append here, do not restructure
 
-As DAT-013/014/016/017/018/023 (or the filed follow-ups) close and join a deploy:
+As DAT-014/016/017/018/023 (or the filed follow-ups) close and join a deploy:
 1. Add a row to the **Scope & metadata** table and, if it ships DDL, to the **Migrations applied**
    sub-table.
 2. If it needs a pre-deploy data check, add a subsection under **Pre-deploy data probe**.
