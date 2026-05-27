@@ -94,7 +94,7 @@ model User {
 
 model Department {
   id          String   @id @default(uuid())
-  name        String
+  name        String   @unique
   description String?
   managerId   String?
   createdAt   DateTime @default(now())
@@ -123,6 +123,10 @@ model Service {
   manager      User?         @relation("ServiceManager", fields: [managerId], references: [id], onDelete: SetNull)
   userServices UserService[]
 
+  // DAT-016 — name unique PER department, NOT globally: two services with the
+  // same name in different departments remain legal (the app layer already
+  // pre-checks { name, departmentId }).
+  @@unique([departmentId, name])
   @@map("services")
 }
 
