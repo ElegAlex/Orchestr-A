@@ -6,9 +6,9 @@ ahead of execution**: the known scope, migrations, pre-deploy checks, verificati
 rollback templates are pre-filled now; every command and its output are captured at deploy time,
 in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 
-> **Seed status (2026-05-27):** Phase 3 is **8/10 closed**. This batch covers the 6 schema/data
-> migrations closed so far (DAT-003/004, DAT-012, DAT-013, DAT-014, DAT-016, DAT-017) plus the code-only
-> COR-022. The 2 remaining Phase 3 *important* tasks (DAT-018/023) are
+> **Seed status (2026-05-27):** Phase 3 is **9/10 closed**. This batch covers the 7 schema/data
+> migrations closed so far (DAT-003/004, DAT-012, DAT-013, DAT-014, DAT-016, DAT-017, DAT-018) plus the code-only
+> COR-022. The 1 remaining Phase 3 *important* task (DAT-023) is
 > not yet started; **as each closes, append a row to the Scope table and a bullet to Operational
 > notes — do not restructure this document.**
 >
@@ -33,6 +33,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `DAT-014` | `f8a5ce9` | important | **1 BEFORE INSERT/UPDATE trigger** (`leaves_sync_type_trg` + fn `leaves_sync_type_from_config`) auto-deriving the legacy `leaves.type` enum from the FK `leave_type_configs.code` (member→verbatim, else `OTHER`, via `enum_range`). Makes the column a read-only mirror of the FK → kills the dual-source drift without dropping it (DROP blocked by active frontend readers). Includes a one-time backfill reconciling existing rows. `schema.prisma` unchanged (column stays `LeaveType?`). One migration. |
 | `DAT-016` | `ce8877a` | important | **2 UNIQUE indexes** — `departments_name_key` (Department.name globally unique) + `services_departmentId_name_key` (Service.name unique **per department**, composite — same name in different departments stays legal). DSL-expressible: `schema.prisma` **was** edited (`@unique` / `@@unique` — baked into the rebuilt api image). One migration. The app layer already pre-checked uniqueness; this is the DB-level floor closing the TOCTOU/direct-SQL gap. |
 | `DAT-017` | `f6ca325` | important | **1 CHECK constraint** `tasks_parent_requires_project_ck` — `("projectId" IS NOT NULL OR ("epicId" IS NULL AND "milestoneId" IS NULL))`. Rejects the orphan combination (a task linked to an epic/milestone but to NO project). Single-row invariant only; cross-table equality (epic.projectId = task.projectId) is **out of scope** — filed as DAT-037. Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). One migration. |
+| `DAT-018` | `fff93ce` | important | **1 CHECK + 1 BEFORE INSERT/UPDATE trigger** on `task_dependencies` — CHECK `task_dependencies_no_self_ck` (`"taskId" <> "dependsOnTaskId"`) blocks the 1-hop self-loop; trigger `task_dependencies_no_cycle_trg` (+ fn `task_dependencies_check_cycle`) walks the existing graph forward from `NEW."dependsOnTaskId"` and RAISEs (identifier `task_dependencies_no_cycle`) if `NEW."taskId"` is reachable — blocks multi-hop cycles. Defense-in-depth: the service (`addDependency` → `checkCircularDependency`) already returns 400 first; this is the DB floor for direct-SQL/bypass paths. Hand-authored raw SQL; `schema.prisma` unchanged (neither DSL-expressible). One migration. |
 
 - **Prod baseline (expected):** TBD: commits behind master at deploy time. Expected last applied
   migration `20260524100100_dat005_convert_float_to_decimal` — the Phase-1 closeout left prod at git
@@ -50,7 +51,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 - **DB:** `orchestr_a_prod`, user `orchestr_a`. Host has **no** `psql`/`pg_dump` binaries → all
   Postgres ops run inside the db container (`docker exec`).
 
-### Migrations applied by this batch (6)
+### Migrations applied by this batch (7)
 
 | Migration folder | Task(s) | Introduces |
 |------------------|---------|------------|
@@ -60,6 +61,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `20260527150000_dat014_leave_type_autosync_trigger` | DAT-014 | `CREATE OR REPLACE FUNCTION leaves_sync_type_from_config()` + `CREATE TRIGGER leaves_sync_type_trg BEFORE INSERT OR UPDATE ON leaves` + a one-time backfill `UPDATE leaves SET type = <derived> … WHERE type IS DISTINCT FROM <derived>`. Hand-authored raw SQL; `schema.prisma` unchanged (column stays `LeaveType?`; triggers are not DSL-expressible). **Pre-deploy precaution:** the trigger function compiles at `migrate deploy` time (no separate probe). The backfill is a single bounded pass touching only drifted/NULL rows; on a large prod `leaves` table it is still one `UPDATE` — verify no prod codebase reference writes `leave.type` independently *outside this commit's diff* (the service already derives it; this only enforces it). Dev pre-flight: 3 rows, 1 NULL/`CP_E2E` reconciled to `OTHER`, 2 CP unchanged. |
 | `20260527160000_dat016_unique_name_constraints` | DAT-016 | `CREATE UNIQUE INDEX "departments_name_key" ON "departments"("name")` + `CREATE UNIQUE INDEX "services_departmentId_name_key" ON "services"("departmentId", "name")`. Hand-authored, but **byte-equivalent to `migrate dev` output** (Prisma `<table>_<col>_key` naming) so a future drift-clean `migrate dev` sees no diff; `schema.prisma` **was** edited (`@unique` / `@@unique` — DSL-expressible, baked into the rebuilt api image). **Pre-deploy precaution (required):** run a read-only duplicate SELECT on prod BEFORE `migrate deploy` — `CREATE UNIQUE INDEX` validates against existing rows and aborts with 23505 if any duplicate exists. Resolve by rename if found (see probe below). Dev pre-flight: 0 duplicates (2 depts, 4 services). |
 | `20260527170000_dat017_task_parent_requires_project_check` | DAT-017 | `ALTER TABLE "tasks" ADD CONSTRAINT "tasks_parent_requires_project_ck" CHECK ("projectId" IS NOT NULL OR ("epicId" IS NULL AND "milestoneId" IS NULL))`. Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). **Pre-deploy precaution (required):** `ADD CONSTRAINT … CHECK` validates against existing rows and aborts with 23514 if any orphan exists — run a read-only violator SELECT on prod BEFORE `migrate deploy` (see DAT-017 probe below). Resolve by backfilling `projectId` from the epic/milestone parent, or DELETE if truly orphan. Dev pre-flight: 0 violators (3288 tasks). |
+| `20260527180000_dat018_task_dependency_cycle_prevention` | DAT-018 | `ALTER TABLE "task_dependencies" ADD CONSTRAINT "task_dependencies_no_self_ck" CHECK ("taskId" <> "dependsOnTaskId")` + `CREATE OR REPLACE FUNCTION task_dependencies_check_cycle()` (recursive-CTE forward walk, RAISEs `task_dependencies_no_cycle` on a multi-hop cycle) + `CREATE TRIGGER task_dependencies_no_cycle_trg BEFORE INSERT OR UPDATE ON task_dependencies`. Hand-authored raw SQL; `schema.prisma` unchanged (neither DSL-expressible). **Pre-deploy precaution (required):** both guards validate against existing rows at deploy — the CHECK aborts with 23514 on an existing self-loop, and an existing cycle would make the trigger fire on the next legitimate write. Run the read-only self-loop + recursive-CTE cycle scan on prod `task_dependencies` BEFORE `migrate deploy` (see DAT-018 probe below); resolve any existing cycle by deleting one edge per cycle. Dev pre-flight: 0 self-loops, 0 multi-hop cycles (table empty, 0 rows). |
 
 > COR-022 is **not** in this sub-table — it ships entirely in the api image (`760aa58`), no DDL.
 >
@@ -73,13 +75,13 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 ## Deploy plan (phases, 2 human gates)
 
 1. **Pre-deploy baseline (read-only).** git/containers/images/`_prisma_migrations` HEAD/row counts.
-   Confirm the 6 batch migrations are exactly the pending delta `HEAD → origin/master` under
+   Confirm the 7 batch migrations are exactly the pending delta `HEAD → origin/master` under
    `packages/database/prisma/migrations/`. STOP if any surprise migration appears.
 2. **Pre-deploy data probe (read-only) — the DAT-012 cast-safety gate.** Per-column out-of-enum-set
    probe (below). DAT-003/004 needs no probe (dev pre-flight was 0-violators across all 14
    predicates, validated clean by `migrate deploy` on dev). **→ GATE 1.**
 3. **Deploy execution** (after Gate 1 greenlight). Safety dump → `git pull` → `build api` →
-   `migrate deploy` (must be exactly the 6 batch migrations) → `up -d api` → health check.
+   `migrate deploy` (must be exactly the 7 batch migrations) → `up -d api` → health check.
 4. **Post-deploy verification.** All migrations in `_prisma_migrations`; CHECK + enum + leave-type
    trigger smoke (INSERT-then-ROLLBACK); time_entries sanity; audit_logs sanity. **→ GATE 2**
    (operator UI smoke).
@@ -102,10 +104,10 @@ origin/master = TBD
 commits behind origin/master: TBD
 
 $ git diff --name-status HEAD origin/master -- packages/database/prisma/migrations/
-TBD: must show exactly the 6 batch migration folders (20260527120000_…, 20260527130000_…, 20260527140000_…, 20260527150000_…, 20260527160000_…, 20260527170000_…) as `A`,
-     plus schema.prisma as `M` under packages/database/prisma/ (the DAT-012 enum edits + DAT-016 @unique/@@unique; DAT-013/014/017 leave schema.prisma untouched).
+TBD: must show exactly the 7 batch migration folders (20260527120000_…, 20260527130000_…, 20260527140000_…, 20260527150000_…, 20260527160000_…, 20260527170000_…, 20260527180000_…) as `A`,
+     plus schema.prisma as `M` under packages/database/prisma/ (the DAT-012 enum edits + DAT-016 @unique/@@unique; DAT-013/014/017/018 leave schema.prisma untouched).
 ```
-TBD: ✅/⚠️ assumption check — only the 6 batch migrations are pending; no surprise migration.
+TBD: ✅/⚠️ assumption check — only the 7 batch migrations are pending; no surprise migration.
 
 ### `_prisma_migrations` HEAD + row counts (Phase-4 baseline)
 ```
@@ -257,6 +259,37 @@ predicate) it is not a violator; a row that is *truly* orphan (no parent to back
 the inverse, which the predicate excludes — so backfill resolves every case. Re-run the probe → must
 be 0 rows. Capture before/after in the deploy log (manual data edit, no audit emitter).
 
+### DAT-018 cycle probe (CRITICAL, read-only — the CHECK aborts on an existing self-loop; an existing cycle would make the trigger fire on the next write)
+
+`20260527180000` adds a self-loop CHECK and a cycle-prevention trigger. The CHECK validates against
+existing rows at `ADD CONSTRAINT` time and aborts the whole `migrate deploy` with 23514 if any row has
+`taskId = dependsOnTaskId`. The trigger only fires on *future* writes, but if the existing graph already
+contains a multi-hop cycle, the trigger would reject the next legitimate write that touches it — so the
+cycle scan must also be clean BEFORE deploy. Run both; each must return `(0 rows)`.
+
+```sql
+-- 1) direct self-loop — the CHECK forbids it; aborts migrate deploy if present
+SELECT "taskId", "dependsOnTaskId" FROM task_dependencies WHERE "taskId" = "dependsOnTaskId";
+
+-- 2) multi-hop cycle scan (forward walk; columns are text, so a plain text[] path).
+--    Any row = an existing cycle that the trigger would later choke on.
+WITH RECURSIVE walk(start_id, current_id, path) AS (
+  SELECT "taskId", "dependsOnTaskId", ARRAY["taskId"] FROM task_dependencies
+  UNION ALL
+  SELECT w.start_id, td."dependsOnTaskId", w.path || td."taskId"
+  FROM walk w JOIN task_dependencies td ON td."taskId" = w.current_id
+  WHERE NOT td."taskId" = ANY(w.path)
+)
+SELECT DISTINCT start_id FROM walk WHERE current_id = start_id;
+```
+TBD: probe output — both expected `(0 rows)`. Dev pre-flight returned 0/0 (table empty, 0 rows).
+
+**Resolution if any row returns** (do NOT run `migrate deploy` until clean): for a self-loop, `DELETE`
+the offending row (`DELETE FROM task_dependencies WHERE "taskId" = "dependsOnTaskId";`). For a multi-hop
+cycle, delete one edge per cycle (deterministically — e.g. the edge with the highest `(taskId,
+dependsOnTaskId)` pair on each `start_id` returned by the scan), then re-run the scan → must be 0 rows.
+Capture before/after in the deploy log (manual data edit, no audit emitter).
+
 ---
 
 ## GATE 1 — probe outcome reported to operator (awaiting greenlight)
@@ -301,10 +334,11 @@ TBD: must show EXACTLY:
   Applying migration `20260527150000_dat014_leave_type_autosync_trigger`
   Applying migration `20260527160000_dat016_unique_name_constraints`
   Applying migration `20260527170000_dat017_task_parent_requires_project_check`
+  Applying migration `20260527180000_dat018_task_dependency_cycle_prevention`
   All migrations have been successfully applied.
 $ docker compose -f docker-compose.prod.yml --env-file .env.production up -d api    # TBD: healthy in ~Ns
 ```
-TBD: confirm exactly the 6 batch migrations applied (no more, no fewer). TBD: running api image id
+TBD: confirm exactly the 7 batch migrations applied (no more, no fewer). TBD: running api image id
 (should be the freshly built image, not the `pre-phase3-defense-in-depth` anchor).
 
 ---
@@ -315,7 +349,7 @@ TBD: confirm exactly the 6 batch migrations applied (no more, no fewer). TBD: ru
 
 | Check | Command / method | Result |
 |-------|------------------|--------|
-| V1 — all migrations applied | `SELECT migration_name, applied_steps_count, finished_at FROM _prisma_migrations WHERE migration_name IN ('20260527120000_dat003_dat004_business_invariants','20260527130000_dat012_promote_string_enums','20260527140000_dat013_time_format_check','20260527150000_dat014_leave_type_autosync_trigger','20260527160000_dat016_unique_name_constraints','20260527170000_dat017_task_parent_requires_project_check');` | TBD: 6 rows, each `applied_steps_count=1`, no mixed state |
+| V1 — all migrations applied | `SELECT migration_name, applied_steps_count, finished_at FROM _prisma_migrations WHERE migration_name IN ('20260527120000_dat003_dat004_business_invariants','20260527130000_dat012_promote_string_enums','20260527140000_dat013_time_format_check','20260527150000_dat014_leave_type_autosync_trigger','20260527160000_dat016_unique_name_constraints','20260527170000_dat017_task_parent_requires_project_check','20260527180000_dat018_task_dependency_cycle_prevention');` | TBD: 7 rows, each `applied_steps_count=1`, no mixed state |
 | V2 — enum columns are now `USER-DEFINED` | `SELECT table_name, column_name, udt_name FROM information_schema.columns WHERE udt_name IN ('PredefinedTaskDuration','DayPeriod','AssignmentCompletionStatus','RecurrenceType','AppSettingsCategory');` | TBD: 6 rows mapping the 6 promoted columns |
 | V3 — all services healthy | `docker compose … ps` | TBD: api/web/nginx/postgres/redis `Up (healthy)` |
 | V4 — running api image | `docker inspect …` | TBD: freshly built image, not the anchor |
@@ -470,6 +504,90 @@ list it.) Note the negatives read an existing epic/milestone id so the row trips
 random non-existent parent id could surface 23503 instead and muddy the assertion. If `epics` or
 `milestones` is empty in prod, skip that negative (there is nothing to orphan) and rely on the witness
 spec + dev pre-flight for that half; the positives still run (Positive 1 needs no parent).
+
+### TaskDependency cycle smoke (DAT-018 — INSERT-then-ROLLBACK; 3 negatives + 3 positives)
+
+The self-loop CHECK rejects `A→A` (23514), the trigger rejects multi-hop cycles (RAISE carrying
+`task_dependencies_no_cycle`), and DAGs (linear / tree / diamond) are accepted. All wrapped in
+`BEGIN; … ROLLBACK;` so prod data is never mutated. Each transaction creates throwaway tasks inside
+itself so it needs no pre-existing rows. Run via `docker exec orchestr-a-postgres-prod psql -U
+orchestr_a -d orchestr_a_prod`.
+
+```sql
+-- NEGATIVE 1: self-loop A->A → expect ERROR 23514 violating "task_dependencies_no_self_ck"
+BEGIN;
+  WITH a AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke self', now()) RETURNING id)
+  INSERT INTO task_dependencies (id, "taskId", "dependsOnTaskId", "createdAt")
+  SELECT gen_random_uuid(), a.id, a.id, now() FROM a;
+ROLLBACK;
+
+-- NEGATIVE 2: 2-hop cycle A->B then B->A → 2nd INSERT raises, message contains "task_dependencies_no_cycle"
+BEGIN;
+  WITH a AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke 2a', now()) RETURNING id),
+       b AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke 2b', now()) RETURNING id)
+  INSERT INTO task_dependencies (id, "taskId", "dependsOnTaskId", "createdAt")
+  SELECT gen_random_uuid(), a.id, b.id, now() FROM a, b;   -- A->B accepted
+  INSERT INTO task_dependencies (id, "taskId", "dependsOnTaskId", "createdAt")
+  SELECT gen_random_uuid(), d."dependsOnTaskId", d."taskId", now()
+  FROM task_dependencies d WHERE d."taskId" IN (SELECT id FROM tasks WHERE title='dat018 smoke 2a');  -- B->A raises
+ROLLBACK;
+
+-- NEGATIVE 3: 3-hop cycle A->B, B->C, then C->A → 3rd INSERT raises "task_dependencies_no_cycle"
+BEGIN;
+  WITH a AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke 3a', now()) RETURNING id),
+       b AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke 3b', now()) RETURNING id),
+       c AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke 3c', now()) RETURNING id)
+  INSERT INTO task_dependencies (id, "taskId", "dependsOnTaskId", "createdAt")
+  SELECT gen_random_uuid(), a.id, b.id, now() FROM a, b
+  UNION ALL SELECT gen_random_uuid(), b.id, c.id, now() FROM b, c;   -- A->B, B->C accepted
+  INSERT INTO task_dependencies (id, "taskId", "dependsOnTaskId", "createdAt")
+  SELECT gen_random_uuid(),
+         (SELECT id FROM tasks WHERE title='dat018 smoke 3c'),
+         (SELECT id FROM tasks WHERE title='dat018 smoke 3a'), now();   -- C->A raises
+ROLLBACK;
+
+-- POSITIVE 1: linear chain A->B->C->D → all 3 edges accepted (no cycle)
+BEGIN;
+  WITH a AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke lA', now()) RETURNING id),
+       b AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke lB', now()) RETURNING id),
+       c AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke lC', now()) RETURNING id),
+       d AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke lD', now()) RETURNING id)
+  INSERT INTO task_dependencies (id, "taskId", "dependsOnTaskId", "createdAt")
+  SELECT gen_random_uuid(), a.id, b.id, now() FROM a, b
+  UNION ALL SELECT gen_random_uuid(), b.id, c.id, now() FROM b, c
+  UNION ALL SELECT gen_random_uuid(), c.id, d.id, now() FROM c, d;
+  SELECT count(*) AS linear_ok FROM task_dependencies td JOIN tasks t ON t.id=td."taskId" WHERE t.title LIKE 'dat018 smoke l%';  -- expect 3
+ROLLBACK;
+
+-- POSITIVE 2: tree A->B, A->C → both accepted (shared parent is not a cycle)
+BEGIN;
+  WITH a AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke tA', now()) RETURNING id),
+       b AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke tB', now()) RETURNING id),
+       c AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke tC', now()) RETURNING id)
+  INSERT INTO task_dependencies (id, "taskId", "dependsOnTaskId", "createdAt")
+  SELECT gen_random_uuid(), a.id, b.id, now() FROM a, b
+  UNION ALL SELECT gen_random_uuid(), a.id, c.id, now() FROM a, c;   -- both accepted
+ROLLBACK;
+
+-- POSITIVE 3: diamond A->B, A->C, B->D, C->D → all 4 accepted (convergence, no cycle)
+BEGIN;
+  WITH a AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke dA', now()) RETURNING id),
+       b AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke dB', now()) RETURNING id),
+       c AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke dC', now()) RETURNING id),
+       d AS (INSERT INTO tasks (id, title, "updatedAt") VALUES (gen_random_uuid(), 'dat018 smoke dD', now()) RETURNING id)
+  INSERT INTO task_dependencies (id, "taskId", "dependsOnTaskId", "createdAt")
+  SELECT gen_random_uuid(), a.id, b.id, now() FROM a, b
+  UNION ALL SELECT gen_random_uuid(), a.id, c.id, now() FROM a, c
+  UNION ALL SELECT gen_random_uuid(), b.id, d.id, now() FROM b, d
+  UNION ALL SELECT gen_random_uuid(), c.id, d.id, now() FROM c, d;   -- all 4 accepted
+ROLLBACK;
+```
+TBD: paste the self-loop 23514 (must name `task_dependencies_no_self_ck`) + the two trigger raises
+(each message must contain `task_dependencies_no_cycle`) + the three positives succeeding (`linear_ok=3`,
+the tree/diamond INSERTs returning their row counts with no error). If a NEGATIVE *succeeds*, that guard
+did not deploy; if a POSITIVE *errors*, the trigger false-rejects a DAG → investigate before declaring
+done. (Also confirm the objects exist: `SELECT conname FROM pg_constraint WHERE conname='task_dependencies_no_self_ck';`
+and `SELECT tgname FROM pg_trigger WHERE tgname='task_dependencies_no_cycle_trg';` → must list each.)
 
 ### COR-022 sanity (no migration — confirm the cap path doesn't 500)
 ```sql
@@ -630,6 +748,19 @@ ALTER TABLE "tasks" DROP CONSTRAINT IF EXISTS "tasks_parent_requires_project_ck"
 -- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260527170000_dat017_task_parent_requires_project_check';
 ```
 
+### DAT-018 (`fff93ce`, migration `20260527180000`) — DROP TRIGGER + DROP FUNCTION + DROP CONSTRAINT (idempotent, no data change)
+
+Symmetric and cheap — both guards are pure additive checks, no data was written. `schema.prisma` was
+unchanged, so no image revert is needed for this one. Drop the trigger before its function; order is
+otherwise free (`IF EXISTS` makes the chain re-runnable):
+
+```sql
+DROP TRIGGER IF EXISTS task_dependencies_no_cycle_trg ON "task_dependencies";
+DROP FUNCTION IF EXISTS task_dependencies_check_cycle();
+ALTER TABLE "task_dependencies" DROP CONSTRAINT IF EXISTS "task_dependencies_no_self_ck";
+-- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260527180000_dat018_task_dependency_cycle_prevention';
+```
+
 ---
 
 ## Operational notes (carry-forwards)
@@ -651,14 +782,18 @@ ALTER TABLE "tasks" DROP CONSTRAINT IF EXISTS "tasks_parent_requires_project_ck"
   (`ProjectMember.role` free-string institutional labels — the DAT-012 bail), `DAT-037` (cross-table
   trigger validating `task.projectId = epic/milestone.projectId` — the DAT-017 "Consider trigger"
   discretionary clause; dev drift 0/0 so its data-cleanup burden is ≈ nil), `COR-035` (DTO cross-field
-  guard returning 400 for the orphan task combination, so DAT-017's CHECK doesn't surface a raw 500).
+  guard returning 400 for the orphan task combination, so DAT-017's CHECK doesn't surface a raw 500),
+  `DAT-038` (mirror DAT-018's self-loop CHECK + cycle trigger onto `Event.parentEventId` — the audit's
+  "Same for Event.parentEventId"; dev pre-flight 0 self-cycles / 0 multi-hop / 0 of 195 events parented,
+  so its data-cleanup burden is ≈ nil). NOTE: DAT-018 needed **no** COR-style 409 follow-up — the
+  service's `checkCircularDependency` already returns 400 before the DB, so the trigger is bypass-only.
   All `TODO`; future closures, if they ship DDL, append to the Scope + Migrations tables above.
 
 ---
 
 ## Future Phase 3 closures — append here, do not restructure
 
-As DAT-018/023 (or the filed follow-ups) close and join a deploy:
+As DAT-023 (or the filed follow-ups) close and join a deploy:
 1. Add a row to the **Scope & metadata** table and, if it ships DDL, to the **Migrations applied**
    sub-table.
 2. If it needs a pre-deploy data check, add a subsection under **Pre-deploy data probe**.

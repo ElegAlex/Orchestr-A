@@ -2205,7 +2205,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-018 — TaskDependency self-relation has no cycle prevention
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2242,8 +2242,20 @@ Add CHECK ("taskId" <> "dependsOnTaskId"). For multi-hop cycles, implement WITH 
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** fff93ce
+**Learnings:**
+- **Both Suggested-fix items implemented; trigger path chosen for Item 2 (defense-in-depth), service-only rejected.** Item 1 = raw-SQL CHECK `task_dependencies_no_self_ck` (`"taskId" <> "dependsOnTaskId"`). Item 2 = BEFORE INSERT OR UPDATE trigger `task_dependencies_no_cycle_trg` (fn `task_dependencies_check_cycle`) walking the existing graph FORWARD from `NEW."dependsOnTaskId"`; if it reaches `NEW."taskId"`, RAISE (P0001) carrying identifier `task_dependencies_no_cycle`. The "and/or" in the Suggested fix is a design call: Phase-3 thesis is "DB floor for what services should already reject" (the DAT-017 DTO finding proved services don't always reject), so a DB trigger — not service-only — is the correct floor.
+- **Service-layer check ALREADY EXISTS — kept alongside (defense-in-depth), NOT touched, NOT made redundant.** Pre-flight found `tasks.service.ts:853` `addDependency` → `checkCircularDependency()` (BFS walk), which throws `BadRequestException` (400) on both multi-hop cycles AND the 1-hop self-loop (its `startTaskId === targetTaskId` short-circuit catches A→A). So the documented controller path returns a clean 400 BEFORE any DB write; the trigger/CHECK fire only on a direct-SQL / admin-console / future-code bypass. This is the brief's "existing method that throws → keep alongside" branch.
+- **COR-036 NOT filed.** Its trigger would be a trigger→500 leak on the controller path; there is none, because the service rejects with 400 before the DB is hit (and `tasks.service.ts` has no Prisma error handling per DAT-017's finding, but that handler is never reached for cycles). The trigger is bypass-only defense-in-depth → no app-layer 409 mapping needed.
+- **Self-loop is left to the CHECK by design, not the trigger.** For a 1-hop self-loop (`NEW.taskId = NEW.dependsOnTaskId = X`) the forward walk seeds from X's existing outgoing edges; in a valid DAG X is never reachable from itself, so the trigger stays silent and the CHECK fires → 23514 with `task_dependencies_no_self_ck`. The two guards never both fire on one row; each negative test asserts a distinct, documented signal (23514+name vs the `task_dependencies_no_cycle` identifier).
+- **UPDATE false-positive caught in review (advisor) and fixed.** Trigger is BEFORE INSERT OR UPDATE; during a BEFORE UPDATE the OLD row is still in the table, so a naive forward walk traverses the edge being replaced and false-rejects a legitimate re-point (UPDATE `(A→B)` → `(A→C)`: stale A→B makes B reachable). Both CTE arms exclude the modified row via `(TG_OP = 'INSERT' OR id <> OLD."id")`. A 7th test (UPDATE-positive) locks this clause so it can't silently regress. `TG_OP` is the discriminator — on INSERT, OLD's *fields* are NULL but OLD itself is not a NULL composite.
+- **Recursive CTE: UNION (not UNION ALL)** so Postgres dedups by row and terminates even on a pre-existing cycle (free defensive guard). Columns are `text` (Prisma String → text), NOT uuid — the pre-flight scan's `ARRAY[...]::uuid[]` errored until cast to text[]; the trigger uses plain text throughout.
+- **Pre-flight (dev DB :5433, 2026-05-27):** `task_dependencies` holds **0 rows** → 0 direct self-loops, 0 multi-hop cycles → both ADD CONSTRAINT and the trigger attach cleanly, no in-migration cleanup. **Event.parentEventId** (DAT-038 sizing): 0 self-cycles, 0 multi-hop, **0 of 195 events have a parent** → DAT-038 data-cleanup burden ≈ nil (recorded in the filing).
+- **schema.prisma UNCHANGED (Invariant 1):** neither CHECK nor trigger is Prisma-6-DSL-expressible — hand-authored raw SQL `20260527180000_dat018_task_dependency_cycle_prevention` (same pattern as dat003/004/013/014). Applied to dev via `migrate deploy` (TOOL-DBSYNC-001: `migrate dev` still drift-blocked; both `DATABASE_URL` and `DATABASE_MIGRATION_URL` = the orchestr_a owner URL on :5433). Constraint + trigger + function confirmed in `pg_constraint`/`pg_trigger`/`pg_proc`.
+- **AC#4 skipped** — schema migration, not an audit-sensitive business mutation (DAT-005/012/013/014/016/017 precedent).
+- **Diff scope (AC#6 — fix commit `fff93ce`):** 2 files, both new — the migration + the int spec. No schema.prisma, no service, no DTO, no controller, no frontend edit.
+- **Witnesses (AC#2, TST-DB-001 harness, `apps/api/src/schema-constraints/dat018-task-dependency-cycle.int.spec.ts`):** 7 tests — 3 negatives (self-loop→23514+name; 2-hop A→B,B→A; 3-hop A→B,B→C,C→A → `task_dependencies_no_cycle`), 3 INSERT-positives (linear chain A→B→C→D; tree A→B,A→C; diamond A→B,A→C,B→D,C→D — prove no DAG false-reject), 1 UPDATE-positive. **FAIL-pre demonstrated:** neutralized migration → `SELECT 1;` → the 3 negatives fail non-vacuously ("expected … but the INSERT was accepted"), 4 positives pass; restored byte-identical (diff-verified). PASS-post: full integration **49** (was 42; +7).
+- **Filed at closeout:** DAT-038 (Event.parentEventId cycle prevention — the audit's "Same for Event.parentEventId", omitted from the literal Suggested fix; closeout-filing precedent DAT-004→DAT-032, DAT-016→DAT-036, DAT-017→DAT-037). COR-036 NOT filed (see above).
 
 ---
 ### DAT-023 — Leave: no overlap constraint (EXCLUDE USING gist) — same user can have overlapping approved leaves
