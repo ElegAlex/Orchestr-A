@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 182 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25)
+> **Total tasks:** 184 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27)
 
 ## Schema legend
 
@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 118 important · 21 nit · 6 suggestion
-- **By category:** 34 correctness · 31 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 5 tooling
+- **By severity:** 32 blocking · 120 important · 21 nit · 6 suggestion
+- **By category:** 34 correctness · 32 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -59,7 +59,7 @@ See `CLAUDE_SESSION_CONTRACT.md` in this directory for the exact session protoco
 
 
 ## Phase 1 — Stop the bleed (audit-prescribed blockers)
-*11 tasks in this phase.*
+*12 tasks in this phase.*
 
 ### COR-003 — Leave day calculation never subtracts public holidays
 
@@ -633,6 +633,53 @@ pnpm test:integration
 - **Worker env propagation works:** globalSetup mutates `process.env.DATABASE_URL`; vitest forks the worker pool AFTER globalSetup resolves, so `new PrismaClient()` in the spec reads the ephemeral URL. Confirmed empirically (trigger/FK only exist on the migrated ephemeral DB, and the assertions passed).
 - **Diff = 10 files, stretches the 8-file cap — pre-authorized & justified:** test infrastructure legitimately spans config + setup + global-setup + 2 seed specs + 2 package.json (root delegate + api runner) + ci.yml + CONTRIBUTING.md. No application code touched (the contract's **File** scope is vitest config + setup; `audit-persistence.service.ts` and all app code untouched).
 - **CI watch-point (next push):** the nested-pnpm chain (`pnpm --filter api test:integration` → globalSetup `execSync('pnpm --filter database run db:migrate:deploy')`) and the CI `orchestr_a` user's superuser/CREATEDB grant are only fully provable on the runner. If the nested pnpm bites, fallback is `npx prisma migrate deploy` with `cwd: packages/database`.
+
+---
+
+### TOOL-DBSYNC-001 — Dev-DB `_dat005_backup_*` drift blocks `prisma migrate dev --create-only`
+
+- **Status:** TODO
+- **Phase:** 1
+- **Cluster:** —
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** tooling
+- **File:** `packages/database/prisma/migrations/` (dev-DB state) + chosen mechanism (`scripts/db/` or `CLAUDE_SESSION_CONTRACT.md`)
+- **Source:** Session-derived. DAT-003/DAT-004 bundle (`62c2fc4`, 2026-05-27) — `prisma migrate dev --create-only` errored non-interactively because the dev DB holds leftover `_dat005_backup_*` tables (the intentional two-migration safety net from DAT-005, prod-stable since 2026-05-25) that are absent from schema.prisma, so Prisma's drift detection wants to DROP them. The `migrate deploy` workaround succeeded but loses the create-only scaffold/safety. Every remaining Phase 3 task hits the same wall. See the 2026-05-27 PROGRESS_LOG entry.
+
+**Description:**
+Dev-DB drift from `_dat005_backup_*` tables blocks `prisma migrate dev --create-only` on every Phase 3 pickup. The backup tables were intentionally retained for DAT-005 rollback safety; ~10 days post-deploy (2026-05-25 → 2026-05-27) with no rollback need, the retention policy needs an explicit decision.
+
+**Root cause:**
+DAT-005 (`20260524100000_dat005_backup_float_columns`) created backup tables as a rollback safety net and no later migration drops them. They live in the DB but not in schema.prisma, so `prisma migrate dev` (which reconciles ALL drift, not just the intended diff) flags them for a destructive DROP and aborts in non-interactive mode. `migrate deploy` is unaffected (it only applies pending migrations, ignoring drift) — which is why prod and CI stay healthy.
+
+**Code evidence:**
+```
+# in the dev DB — 4 leftover tables:
+#   _dat005_backup_leaves_days, _dat005_backup_project_snapshots_progress,
+#   _dat005_backup_tasks_estimated_hours, _dat005_backup_time_entries_hours
+pnpm --filter database exec prisma migrate dev --create-only  # → "about to drop the _dat005_backup_* table … non-interactive … not supported"
+```
+
+**Suggested fix:**
+Pick ONE — (a) drop the backup tables now via a one-shot SQL script committed under `scripts/db/`, with a `-- drop after YYYY-MM-DD` comment; (b) add the backup tables to a shadow-database ignore list if Prisma supports it; (c) document a pre-session manual cleanup step in `CLAUDE_SESSION_CONTRACT.md`. Coordinate with the operator on the prod implication (prod backups should follow the same retention decision, handled separately).
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated. — For mechanism (a): `migrate dev --create-only` errors before, succeeds after; for (c): documented step is the witness.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — N/A (tooling, no business mutation).
+5. Commit message includes `[closes TOOL-DBSYNC-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm --filter database exec prisma migrate dev --create-only --name _probe  # succeeds (no drift error) after the chosen mechanism; delete the probe migration afterwards
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — document chosen mechanism a/b/c when execution reveals the trade-off)
 
 ---
 
@@ -1713,7 +1760,7 @@ pnpm test apps/api/src/audit/
 ---
 
 ## Phase 3 — Defense-in-depth schema — Invariants métier en SQL
-*10 tasks in this phase.*
+*11 tasks in this phase.*
 
 ### DAT-003 — No DB CHECK on Leave.endDate >= startDate (and others)
 
@@ -2139,6 +2186,51 @@ CREATE EXTENSION btree_gist; ALTER TABLE leaves ADD CONSTRAINT leaves_no_overlap
 **Verification command:**
 ```
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+
+### DAT-032 — No DB CHECK on Subtask.position >= 0
+
+- **Status:** TODO
+- **Phase:** 3
+- **Cluster:** F
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** data_integrity · constraint
+- **File:** `packages/database/prisma/schema.prisma` (Subtask model)
+- **Source:** Session-derived. DAT-004 closeout (`62c2fc4`, 2026-05-27) — DAT-004's Description named `Subtask.position Int` among the bound-less columns, but its Suggested fix list omitted it (7 CHECKs listed for 8 columns described). Bundle discipline kept it out of scope (stayed literal to the Suggested-fix list); filed now as the defense-in-depth completion. See [[DAT-004]] Learnings and the 2026-05-27 PROGRESS_LOG entry.
+
+**Description:**
+No DB CHECK on `Subtask.position >= 0` — the bound is mentioned in DAT-004's Description but absent from its Suggested fix list, so it was not covered by the bundle migration `20260527120000_dat003_dat004_business_invariants`. A buggy service path or a direct admin SQL fix can persist a negative ordering position.
+
+**Root cause:**
+The non-negative ordering-position invariant is encoded only in DTO validators / application logic, with no defense-in-depth at the DB layer — the same gap DAT-004 closed for the other numeric columns, minus this one column that fell between the audit's Description and its Suggested fix.
+
+**Code evidence:**
+```
+schema.prisma — Subtask model: position Int — no CHECK constraint.
+grep -n 'subtasks_position_ck' packages/database/prisma/migrations/  # expect 0 hits (not in 20260527120000)
+```
+
+**Suggested fix:**
+`ALTER TABLE subtasks ADD CONSTRAINT subtasks_position_ck CHECK ("position" >= 0)` in a new hand-authored migration (CHECK is not expressible in the Prisma 6 DSL — see DAT-003/DAT-004 precedent). Mirror the DAT-004 witness pattern in `apps/api/src/schema-constraints/` (FAIL-pre/PASS-post via raw INSERT, asserting SQLSTATE 23514 + the constraint name).
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Skipped: schema migration, not audit-sensitive code; precedent DAT-005.
+5. Commit message includes `[closes DAT-032]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm prisma migrate deploy && pnpm test:integration  # apply migration + real-DB witness (migrate dev --create-only blocked by _dat005_backup_* drift — see TOOL-DBSYNC-001)
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
