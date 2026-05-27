@@ -1850,7 +1850,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### COR-022 — No upper bound on TimeEntry.hours; no per-day cap
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
