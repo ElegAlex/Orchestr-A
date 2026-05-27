@@ -1717,7 +1717,7 @@ pnpm test apps/api/src/audit/
 
 ### DAT-003 — No DB CHECK on Leave.endDate >= startDate (and others)
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -1760,7 +1760,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-004 — No CHECK on LeaveBalance.totalDays >= 0 / Leave.days > 0
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
