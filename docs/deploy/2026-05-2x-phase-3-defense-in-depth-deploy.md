@@ -6,9 +6,9 @@ ahead of execution**: the known scope, migrations, pre-deploy checks, verificati
 rollback templates are pre-filled now; every command and its output are captured at deploy time,
 in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 
-> **Seed status (2026-05-27):** Phase 3 is **7/10 closed**. This batch covers the 5 schema/data
-> migrations closed so far (DAT-003/004, DAT-012, DAT-013, DAT-014, DAT-016) plus the code-only
-> COR-022. The 3 remaining Phase 3 *important* tasks (DAT-017/018/023) are
+> **Seed status (2026-05-27):** Phase 3 is **8/10 closed**. This batch covers the 6 schema/data
+> migrations closed so far (DAT-003/004, DAT-012, DAT-013, DAT-014, DAT-016, DAT-017) plus the code-only
+> COR-022. The 2 remaining Phase 3 *important* tasks (DAT-018/023) are
 > not yet started; **as each closes, append a row to the Scope table and a bullet to Operational
 > notes — do not restructure this document.**
 >
@@ -32,6 +32,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `DAT-013` | `c0189c1` | important | **6 CHECK constraints** enforcing `HH:MM` time-of-day format on `Task`/`Event`/`PredefinedTask` `startTime`/`endTime` (regex `^([0-1]?[0-9]\|2[0-3]):[0-5][0-9]$`, the lenient DTO-floor superset). `schema.prisma` unchanged (columns stay `String?`). One migration. |
 | `DAT-014` | `f8a5ce9` | important | **1 BEFORE INSERT/UPDATE trigger** (`leaves_sync_type_trg` + fn `leaves_sync_type_from_config`) auto-deriving the legacy `leaves.type` enum from the FK `leave_type_configs.code` (member→verbatim, else `OTHER`, via `enum_range`). Makes the column a read-only mirror of the FK → kills the dual-source drift without dropping it (DROP blocked by active frontend readers). Includes a one-time backfill reconciling existing rows. `schema.prisma` unchanged (column stays `LeaveType?`). One migration. |
 | `DAT-016` | `ce8877a` | important | **2 UNIQUE indexes** — `departments_name_key` (Department.name globally unique) + `services_departmentId_name_key` (Service.name unique **per department**, composite — same name in different departments stays legal). DSL-expressible: `schema.prisma` **was** edited (`@unique` / `@@unique` — baked into the rebuilt api image). One migration. The app layer already pre-checked uniqueness; this is the DB-level floor closing the TOCTOU/direct-SQL gap. |
+| `DAT-017` | `f6ca325` | important | **1 CHECK constraint** `tasks_parent_requires_project_ck` — `("projectId" IS NOT NULL OR ("epicId" IS NULL AND "milestoneId" IS NULL))`. Rejects the orphan combination (a task linked to an epic/milestone but to NO project). Single-row invariant only; cross-table equality (epic.projectId = task.projectId) is **out of scope** — filed as DAT-037. Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). One migration. |
 
 - **Prod baseline (expected):** TBD: commits behind master at deploy time. Expected last applied
   migration `20260524100100_dat005_convert_float_to_decimal` — the Phase-1 closeout left prod at git
@@ -49,7 +50,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 - **DB:** `orchestr_a_prod`, user `orchestr_a`. Host has **no** `psql`/`pg_dump` binaries → all
   Postgres ops run inside the db container (`docker exec`).
 
-### Migrations applied by this batch (5)
+### Migrations applied by this batch (6)
 
 | Migration folder | Task(s) | Introduces |
 |------------------|---------|------------|
@@ -58,6 +59,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `20260527140000_dat013_time_format_check` | DAT-013 | 6 `ADD CONSTRAINT … CHECK (col ~ '^([0-1]?[0-9]\|2[0-3]):[0-5][0-9]$')` on Task/Event/PredefinedTask `startTime`/`endTime`. Hand-authored raw SQL; `schema.prisma` unchanged. **No pre-deploy probe needed** — CHECK on already-format-valid data is uneventful (dev pre-flight: 4 well-formed rows, zero malformed; like DAT-003/004, unlike the DAT-012 enum cast). |
 | `20260527150000_dat014_leave_type_autosync_trigger` | DAT-014 | `CREATE OR REPLACE FUNCTION leaves_sync_type_from_config()` + `CREATE TRIGGER leaves_sync_type_trg BEFORE INSERT OR UPDATE ON leaves` + a one-time backfill `UPDATE leaves SET type = <derived> … WHERE type IS DISTINCT FROM <derived>`. Hand-authored raw SQL; `schema.prisma` unchanged (column stays `LeaveType?`; triggers are not DSL-expressible). **Pre-deploy precaution:** the trigger function compiles at `migrate deploy` time (no separate probe). The backfill is a single bounded pass touching only drifted/NULL rows; on a large prod `leaves` table it is still one `UPDATE` — verify no prod codebase reference writes `leave.type` independently *outside this commit's diff* (the service already derives it; this only enforces it). Dev pre-flight: 3 rows, 1 NULL/`CP_E2E` reconciled to `OTHER`, 2 CP unchanged. |
 | `20260527160000_dat016_unique_name_constraints` | DAT-016 | `CREATE UNIQUE INDEX "departments_name_key" ON "departments"("name")` + `CREATE UNIQUE INDEX "services_departmentId_name_key" ON "services"("departmentId", "name")`. Hand-authored, but **byte-equivalent to `migrate dev` output** (Prisma `<table>_<col>_key` naming) so a future drift-clean `migrate dev` sees no diff; `schema.prisma` **was** edited (`@unique` / `@@unique` — DSL-expressible, baked into the rebuilt api image). **Pre-deploy precaution (required):** run a read-only duplicate SELECT on prod BEFORE `migrate deploy` — `CREATE UNIQUE INDEX` validates against existing rows and aborts with 23505 if any duplicate exists. Resolve by rename if found (see probe below). Dev pre-flight: 0 duplicates (2 depts, 4 services). |
+| `20260527170000_dat017_task_parent_requires_project_check` | DAT-017 | `ALTER TABLE "tasks" ADD CONSTRAINT "tasks_parent_requires_project_ck" CHECK ("projectId" IS NOT NULL OR ("epicId" IS NULL AND "milestoneId" IS NULL))`. Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). **Pre-deploy precaution (required):** `ADD CONSTRAINT … CHECK` validates against existing rows and aborts with 23514 if any orphan exists — run a read-only violator SELECT on prod BEFORE `migrate deploy` (see DAT-017 probe below). Resolve by backfilling `projectId` from the epic/milestone parent, or DELETE if truly orphan. Dev pre-flight: 0 violators (3288 tasks). |
 
 > COR-022 is **not** in this sub-table — it ships entirely in the api image (`760aa58`), no DDL.
 >
@@ -223,6 +225,38 @@ UPDATE departments d SET name = d.name || ' (' || left(d.id::text, 8) || ')'
 Mirror for `services` keyed on `("departmentId", name)`. Re-run the probe → must be 0 rows. Capture
 the before/after in the deploy log (manual data edit, no audit emitter — like DAT-012's normalization).
 
+### DAT-017 orphan-task probe (CRITICAL, read-only — `ADD CONSTRAINT … CHECK` aborts on existing violators)
+
+`20260527170000` adds a CHECK; Postgres validates it against the existing rows at `ADD CONSTRAINT`
+time and aborts the whole `migrate deploy` with 23514 if any orphan row exists. Run this BEFORE
+deploy; it must return `(0 rows)`.
+
+```sql
+-- a task linked to an epic/milestone but to NO project — the orphan the CHECK forbids
+SELECT id, "projectId", "epicId", "milestoneId"
+  FROM tasks
+ WHERE "projectId" IS NULL AND ("epicId" IS NOT NULL OR "milestoneId" IS NOT NULL);
+```
+TBD: probe output — expected `(0 rows)`. Dev pre-flight returned 0 violators (3288 tasks).
+
+**Resolution if any row returns** (do NOT run `migrate deploy` until clean): backfill the missing
+`projectId` from the epic/milestone parent (the canonical project the orphan should have named), then
+re-probe. Example:
+```sql
+-- backfill from the epic parent (epics.projectId is NOT NULL)
+UPDATE tasks t SET "projectId" = e."projectId"
+  FROM epics e
+ WHERE t."epicId" = e.id AND t."projectId" IS NULL;
+-- backfill from the milestone parent (milestones.projectId is NOT NULL)
+UPDATE tasks t SET "projectId" = m."projectId"
+  FROM milestones m
+ WHERE t."milestoneId" = m.id AND t."projectId" IS NULL;
+```
+If a flagged row has BOTH `epicId` and `milestoneId` NULL yet still trips the probe (impossible by the
+predicate) it is not a violator; a row that is *truly* orphan (no parent to backfill from) can only be
+the inverse, which the predicate excludes — so backfill resolves every case. Re-run the probe → must
+be 0 rows. Capture before/after in the deploy log (manual data edit, no audit emitter).
+
 ---
 
 ## GATE 1 — probe outcome reported to operator (awaiting greenlight)
@@ -266,10 +300,11 @@ TBD: must show EXACTLY:
   Applying migration `20260527140000_dat013_time_format_check`
   Applying migration `20260527150000_dat014_leave_type_autosync_trigger`
   Applying migration `20260527160000_dat016_unique_name_constraints`
+  Applying migration `20260527170000_dat017_task_parent_requires_project_check`
   All migrations have been successfully applied.
 $ docker compose -f docker-compose.prod.yml --env-file .env.production up -d api    # TBD: healthy in ~Ns
 ```
-TBD: confirm exactly the 5 batch migrations applied (no more, no fewer). TBD: running api image id
+TBD: confirm exactly the 6 batch migrations applied (no more, no fewer). TBD: running api image id
 (should be the freshly built image, not the `pre-phase3-defense-in-depth` anchor).
 
 ---
@@ -280,7 +315,7 @@ TBD: confirm exactly the 5 batch migrations applied (no more, no fewer). TBD: ru
 
 | Check | Command / method | Result |
 |-------|------------------|--------|
-| V1 — all migrations applied | `SELECT migration_name, applied_steps_count, finished_at FROM _prisma_migrations WHERE migration_name IN ('20260527120000_dat003_dat004_business_invariants','20260527130000_dat012_promote_string_enums','20260527140000_dat013_time_format_check','20260527150000_dat014_leave_type_autosync_trigger','20260527160000_dat016_unique_name_constraints');` | TBD: 5 rows, each `applied_steps_count=1`, no mixed state |
+| V1 — all migrations applied | `SELECT migration_name, applied_steps_count, finished_at FROM _prisma_migrations WHERE migration_name IN ('20260527120000_dat003_dat004_business_invariants','20260527130000_dat012_promote_string_enums','20260527140000_dat013_time_format_check','20260527150000_dat014_leave_type_autosync_trigger','20260527160000_dat016_unique_name_constraints','20260527170000_dat017_task_parent_requires_project_check');` | TBD: 6 rows, each `applied_steps_count=1`, no mixed state |
 | V2 — enum columns are now `USER-DEFINED` | `SELECT table_name, column_name, udt_name FROM information_schema.columns WHERE udt_name IN ('PredefinedTaskDuration','DayPeriod','AssignmentCompletionStatus','RecurrenceType','AppSettingsCategory');` | TBD: 6 rows mapping the 6 promoted columns |
 | V3 — all services healthy | `docker compose … ps` | TBD: api/web/nginx/postgres/redis `Up (healthy)` |
 | V4 — running api image | `docker inspect …` | TBD: freshly built image, not the anchor |
@@ -391,6 +426,50 @@ INSERT *succeeds*, the index did not deploy; if the POSITIVE 23505s, an accident
 `services.name` was created → investigate before declaring done. (Also confirm the indexes exist:
 `SELECT indexname FROM pg_indexes WHERE indexname IN ('departments_name_key','services_departmentId_name_key');`
 → must list both.)
+
+### Task parent-consistency smoke (DAT-017 — INSERT-then-ROLLBACK; 2 negatives + 2 positives)
+
+The CHECK rejects an orphan (epic/milestone set but no project) and accepts both the all-null
+transverse task and a regular project task. All wrapped in `BEGIN; … ROLLBACK;` so prod data is never
+mutated.
+
+```sql
+-- NEGATIVE 1: epic set, no project → expect ERROR 23514 violating "tasks_parent_requires_project_ck"
+BEGIN;
+  INSERT INTO tasks (id, title, "projectId", "epicId", "updatedAt")
+  SELECT gen_random_uuid(), 'dat017 smoke orphan-epic', NULL, e.id, now()
+  FROM epics e LIMIT 1;
+ROLLBACK;
+
+-- NEGATIVE 2: milestone set, no project → expect ERROR 23514 violating "tasks_parent_requires_project_ck"
+BEGIN;
+  INSERT INTO tasks (id, title, "projectId", "milestoneId", "updatedAt")
+  SELECT gen_random_uuid(), 'dat017 smoke orphan-ms', NULL, m.id, now()
+  FROM milestones m LIMIT 1;
+ROLLBACK;
+
+-- POSITIVE 1: true transverse task — all three NULL → succeeds (the legitimate use case preserved)
+BEGIN;
+  INSERT INTO tasks (id, title, "projectId", "epicId", "milestoneId", "updatedAt")
+  VALUES (gen_random_uuid(), 'dat017 smoke transverse', NULL, NULL, NULL, now());
+ROLLBACK;
+
+-- POSITIVE 2: regular project task with an epic → succeeds (projectId non-null satisfies the CHECK)
+BEGIN;
+  INSERT INTO tasks (id, title, "projectId", "epicId", "updatedAt")
+  SELECT gen_random_uuid(), 'dat017 smoke regular', e."projectId", e.id, now()
+  FROM epics e LIMIT 1;
+ROLLBACK;
+```
+TBD: paste the two 23514 errors (each must name `tasks_parent_requires_project_ck`) + confirm both
+positives `INSERT 0 1`. If a NEGATIVE INSERT *succeeds*, the CHECK did not deploy; if a POSITIVE
+errors, the predicate is wrong → investigate before declaring done. (Also confirm the constraint
+exists: `SELECT conname FROM pg_constraint WHERE conname='tasks_parent_requires_project_ck';` → must
+list it.) Note the negatives read an existing epic/milestone id so the row trips ONLY the CHECK
+(23514), not the FK (23503) — Postgres does not guarantee CHECK-before-FK evaluation order, so a
+random non-existent parent id could surface 23503 instead and muddy the assertion. If `epics` or
+`milestones` is empty in prod, skip that negative (there is nothing to orphan) and rely on the witness
+spec + dev pre-flight for that half; the positives still run (Positive 1 needs no parent).
 
 ### COR-022 sanity (no migration — confirm the cap path doesn't 500)
 ```sql
@@ -541,6 +620,16 @@ DROP INDEX IF EXISTS "services_departmentId_name_key";
 -- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260527160000_dat016_unique_name_constraints';
 ```
 
+### DAT-017 (`f6ca325`, migration `20260527170000`) — idempotent DROP CONSTRAINT
+
+Symmetric and cheap (same shape as DAT-003/004/013 — a table CHECK, no data change; `schema.prisma`
+was unchanged, so no image revert is needed for this one):
+
+```sql
+ALTER TABLE "tasks" DROP CONSTRAINT IF EXISTS "tasks_parent_requires_project_ck";
+-- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260527170000_dat017_task_parent_requires_project_check';
+```
+
 ---
 
 ## Operational notes (carry-forwards)
@@ -559,14 +648,17 @@ DROP INDEX IF EXISTS "services_departmentId_name_key";
 - **Follow-up TODOs filed during Phase 3 (NOT in this deploy — listed for traceability):**
   `DAT-032` (DB CHECK on `Subtask.position ≥ 0`), `DAT-033` (DB CHECK on `TimeEntry.hours` —
   COR-022's DB-layer companion), `DAT-034` (per-day cap for third-party declarations), `DAT-035`
-  (`ProjectMember.role` free-string institutional labels — the DAT-012 bail). All `TODO`; future
-  closures, if they ship DDL, append to the Scope + Migrations tables above.
+  (`ProjectMember.role` free-string institutional labels — the DAT-012 bail), `DAT-037` (cross-table
+  trigger validating `task.projectId = epic/milestone.projectId` — the DAT-017 "Consider trigger"
+  discretionary clause; dev drift 0/0 so its data-cleanup burden is ≈ nil), `COR-035` (DTO cross-field
+  guard returning 400 for the orphan task combination, so DAT-017's CHECK doesn't surface a raw 500).
+  All `TODO`; future closures, if they ship DDL, append to the Scope + Migrations tables above.
 
 ---
 
 ## Future Phase 3 closures — append here, do not restructure
 
-As DAT-017/018/023 (or the filed follow-ups) close and join a deploy:
+As DAT-018/023 (or the filed follow-ups) close and join a deploy:
 1. Add a row to the **Scope & metadata** table and, if it ships DDL, to the **Migrations applied**
    sub-table.
 2. If it needs a pre-deploy data check, add a subsection under **Pre-deploy data probe**.

@@ -2162,7 +2162,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-017 — Task.projectId nullable creates orphan tasks with no integrity check
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2199,8 +2199,8 @@ Add CHECK ("projectId" IS NOT NULL OR ("epicId" IS NULL AND "milestoneId" IS NUL
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** f6ca325
+**Learnings:** Path A only (CHECK), per pre-decided split. **Pre-flight (dev psql, 2026-05-27):** 0 CHECK violators → clean (3288 tasks; 3 with projectId NULL, all epic/milestone-null = legitimate transverse). Cross-table drift 0/0 (epic + milestone joins); `epics.projectId`/`milestones.projectId` both NOT NULL → DAT-037's data-cleanup burden ≈ nil. **DTO finding (drives COR-035, NOT a DAT-016-shape leak):** `create-task.dto.ts` declares `projectId`/`epicId`/`milestoneId` each `@IsOptional` with NO cross-field `@ValidateIf` — the orphan combo was DTO-accepted, so the CHECK is the only thing closing it. `tasks.service.ts` has no Prisma error handling/global filter → after the CHECK, an orphan-create (plain invalid input) surfaces as a 500. Unlike DAT-016 (pre-check exists → 500 only on TOCTOU race → P2002→409), here the lead fix is a DTO cross-field guard returning **400** *before* the DB hit; service-side 23514→BadRequest mapping is the fallback. Filed COR-035 — kept DAT-017 schema+spec-only (DAT-013/014/016 precedent), zero TS. **Mechanism:** raw-SQL migration `20260527170000`, `tasks_parent_requires_project_ck`; not Prisma-DSL-expressible, schema.prisma unchanged. Predicate is fully non-NULL-valued (no 3VL surprise; all-null transverse task passes the right disjunct). **Witness** (`dat017-task-parent-consistency.int.spec.ts`, TST-DB-001): 2 negatives (orphan epic / orphan milestone → 23514 + constraint name via `$executeRawUnsafe`) + 2 positives (all-null transverse; project task with epic — asserted accepted because projectId is non-null, NOT because epic.projectId matches, since the CHECK does no cross-table work). FAIL-pre demonstrated (neutralized → `SELECT 1;`: 2 negatives accept, positives pass; restored byte-identical) → PASS-post 4/4, full integration **42** (was 38). **Gates:** `migrate deploy` clean (constraint confirmed in `pg_constraint`); `nest build` EXIT 0; `pnpm test` api **1658** unchanged (integration-only); `pnpm test:integration` **42**; `pnpm test:e2e` **2**. AC#4 skipped (schema migration, not audit-sensitive; DAT-005/012/013/014/016 precedent).
 
 ---
 ### DAT-018 — TaskDependency self-relation has no cycle prevention
