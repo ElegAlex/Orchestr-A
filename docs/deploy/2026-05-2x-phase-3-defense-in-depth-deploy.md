@@ -73,13 +73,13 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 ## Deploy plan (phases, 2 human gates)
 
 1. **Pre-deploy baseline (read-only).** git/containers/images/`_prisma_migrations` HEAD/row counts.
-   Confirm the 4 batch migrations are exactly the pending delta `HEAD → origin/master` under
+   Confirm the 6 batch migrations are exactly the pending delta `HEAD → origin/master` under
    `packages/database/prisma/migrations/`. STOP if any surprise migration appears.
 2. **Pre-deploy data probe (read-only) — the DAT-012 cast-safety gate.** Per-column out-of-enum-set
    probe (below). DAT-003/004 needs no probe (dev pre-flight was 0-violators across all 14
    predicates, validated clean by `migrate deploy` on dev). **→ GATE 1.**
 3. **Deploy execution** (after Gate 1 greenlight). Safety dump → `git pull` → `build api` →
-   `migrate deploy` (must be exactly the 4 batch migrations) → `up -d api` → health check.
+   `migrate deploy` (must be exactly the 6 batch migrations) → `up -d api` → health check.
 4. **Post-deploy verification.** All migrations in `_prisma_migrations`; CHECK + enum + leave-type
    trigger smoke (INSERT-then-ROLLBACK); time_entries sanity; audit_logs sanity. **→ GATE 2**
    (operator UI smoke).
@@ -102,10 +102,10 @@ origin/master = TBD
 commits behind origin/master: TBD
 
 $ git diff --name-status HEAD origin/master -- packages/database/prisma/migrations/
-TBD: must show exactly the 4 batch migration folders (20260527120000_…, 20260527130000_…, 20260527140000_…, 20260527150000_…) as `A`,
-     plus schema.prisma as `M` under packages/database/prisma/ (the DAT-012 enum edits; DAT-013/014 leave schema.prisma untouched).
+TBD: must show exactly the 6 batch migration folders (20260527120000_…, 20260527130000_…, 20260527140000_…, 20260527150000_…, 20260527160000_…, 20260527170000_…) as `A`,
+     plus schema.prisma as `M` under packages/database/prisma/ (the DAT-012 enum edits + DAT-016 @unique/@@unique; DAT-013/014/017 leave schema.prisma untouched).
 ```
-TBD: ✅/⚠️ assumption check — only the 4 batch migrations are pending; no surprise migration.
+TBD: ✅/⚠️ assumption check — only the 6 batch migrations are pending; no surprise migration.
 
 ### `_prisma_migrations` HEAD + row counts (Phase-4 baseline)
 ```
