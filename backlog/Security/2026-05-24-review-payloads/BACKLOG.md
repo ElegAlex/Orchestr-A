@@ -1717,7 +1717,7 @@ pnpm test apps/api/src/audit/
 
 ### DAT-003 — No DB CHECK on Leave.endDate >= startDate (and others)
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -1754,13 +1754,13 @@ Add ALTER TABLE leaves ADD CONSTRAINT leaves_dates_ck CHECK ("endDate" >= "start
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 62c2fc4
+**Learnings:** Bundled with [[DAT-004]] (same fix `62c2fc4`) — shared source file (`schema.prisma`), SQL mechanism (CHECK), and witness path (TST-DB-001 `*.int.spec.ts`); precedent TOOL-COH-001/002. 7 date CHECKs added: leaves/projects/epics/telework_recurring_rules/school_vacations use `"endDate" >= "startDate"`; `leave_validation_delegates` uses the physical `end_date >= start_date` (Prisma `@map`); `events` is the column-name variant `"recurrenceEndDate" >= "date"`. NULL passes a CHECK under SQL 3-valued logic, so nullable ranges need no IS NULL guard. **CHECK is not expressible in the Prisma 6 DSL** → hand-authored raw-SQL migration (precedent: 20260525190000 immutability, 200000 dat007, 210000 obs012, 120000 dat021); `schema.prisma` intentionally unchanged. The verification command's `migrate dev --create-only` is blocked by **pre-existing dev-DB drift** (leftover `_dat005_backup_*` tables, unrelated to this task, out of scope) → used the established hand-author + `migrate deploy` path instead, which is the real mechanism for every raw-SQL migration here. **Adjacent files (AC#6):** the migration dir + `apps/api/src/schema-constraints/*.int.spec.ts` — both within the contract's "schema.prisma + integration spec files" scope; specs placed in a neutral dir as the constraints are cross-cutting (not one domain) and `*.int.spec.ts` is excluded from `nest build`. Witness: FAIL-pre (constraints neutralized → 10 INSERTs accepted → assertions fail) → PASS-post (19/19). Pre-flight: 0 violating rows for all 14 predicates. **AC#4 (audit_logs entry) skipped** — schema migration, not audit-sensitive code (auth/leaves-approve/RBAC/doc-access/user-delete/password-reset); precedent DAT-005 (PROGRESS_LOG).
 
 ---
 ### DAT-004 — No CHECK on LeaveBalance.totalDays >= 0 / Leave.days > 0
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -1797,8 +1797,8 @@ Add CHECKs: leave_balances_totaldays_ck, leaves_days_ck, tasks_progress_ck, epic
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 62c2fc4
+**Learnings:** Bundled with [[DAT-003]] (same fix `62c2fc4`, same migration `20260527120000_dat003_dat004_business_invariants`) — see DAT-003 Learnings for the full bundle rationale. 7 numeric CHECKs: `leave_balances.totalDays >= 0`, `leaves.days > 0` (strict — `calculateLeaveDays()` is floored at 0.5 globally, so a positive minimum is the product invariant and a 0-day leave is always a bug; verified no product path writes a non-positive `days`), `tasks.progress`/`epics.progress` BETWEEN 0 AND 100, `predefined_tasks.weight` BETWEEN 1 AND 5, `project_members.allocation` BETWEEN 0 AND 100 (nullable → NULL passes), `documents.size >= 0`. **Scope note (literal per audit Suggested fix):** `Subtask.position` is named in the Description prose but NOT in the Suggested-fix constraint list — excluded, stayed literal. Witnesses assert SQLSTATE 23514 + the constraint name via raw INSERT; one negative case per numeric family + a positive case proving inclusive boundaries (0/100/1/5) and the 0.5 minimum are accepted. **AC#4 skipped** — schema migration, not audit-sensitive; precedent DAT-005.
 
 ---
 ### COR-022 — No upper bound on TimeEntry.hours; no per-day cap
