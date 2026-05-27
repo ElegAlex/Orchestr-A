@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 189 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016)
+> **Total tasks:** 191 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017)
 
 ## Schema legend
 
@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 123 important · 23 nit · 6 suggestion
-- **By category:** 36 correctness · 35 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
+- **By severity:** 32 blocking · 124 important · 24 nit · 6 suggestion
+- **By category:** 37 correctness · 36 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -2549,6 +2549,87 @@ Wrap each `.create()` in a try/catch mapping Prisma `P2002` → the same `Confli
 **Verification command:**
 ```
 pnpm test apps/api/src/departments apps/api/src/services
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### DAT-037 — Task.projectId may disagree with its epic/milestone's project (no cross-table check)
+
+- **Status:** TODO
+- **Phase:** 3
+- **Cluster:** F
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** data_integrity · constraint
+- **File:** `packages/database/prisma/schema.prisma:288`
+- **Source:** Session-derived. DAT-017 closeout (`f6ca325`, 2026-05-27). DAT-017's **Suggested fix** had two clauses of different mandatoriness: the **mandatory** single-row CHECK (closed by DAT-017) and a **discretionary** "Consider trigger validating epic.projectId = task.projectId". The latter is a cross-table consistency property with a different risk profile (a per-write lookup into `epics`/`milestones`) — deliberately split out per the same precedent as DAT-013 (regex CHECK chosen, the heavier mechanism deferred). Filed here as the cross-table follow-up.
+
+**Description:**
+DAT-017's CHECK guarantees that a task with an epic or milestone also names *a* project, but NOT that it names the *same* project the epic/milestone belongs to. A task can have `projectId = A` while `epic.projectId = B` (or `milestone.projectId = B`). Because `epics.projectId` and `milestones.projectId` are both `NOT NULL`, every linked task has an unambiguous "true" project via its parent; a mismatch means a project-scoped RBAC decision or rollup pivoting on `task.projectId` attributes the task to the wrong project from the parent's point of view.
+
+**Root cause:**
+Three independently-writable FK columns (`projectId`, `epicId`, `milestoneId`) with no constraint tying `task.projectId` to the parent's `projectId`. Single-row CHECKs cannot express cross-row/cross-table predicates — this requires a trigger.
+
+**Code evidence:**
+```
+schema.prisma:288-290 Task.projectId / epicId / milestoneId — independent FKs, no cross-table equality.
+Dev drift (psql, 2026-05-27): 0/0 — `tasks JOIN epics` and `tasks JOIN milestones` where the projectIds differ both returned 0 rows (DAT-017 pre-flight step 2). So the data-cleanup burden is ≈ nil; this is invariant-tightening, not data-rescue.
+```
+
+**Suggested fix:**
+A `BEFORE INSERT OR UPDATE` trigger on `tasks` that, when `epicId`/`milestoneId` is set, asserts (or coerces) `NEW.projectId = (SELECT "projectId" FROM epics/milestones WHERE id = NEW.<fk>)`. **Decide reject-vs-coerce in pre-flight** (DAT-014 chose coerce to avoid 500s on legitimate writes; a reject trigger is simpler but must not break the create path — check `tasks.service.ts` write sites). **Mechanism note (advisor, important):** the invariant can drift from BOTH sides — a `tasks` write AND an `UPDATE epics/milestones SET "projectId" = …` that re-parents an epic. A `tasks`-only trigger leaves existing task rows stale after a parent re-parent (the exact gap DAT-014's Learnings flagged for `leave_type_configs`). Either add a companion trigger on `epics`/`milestones` propagating the change, or document the limitation. `schema.prisma` stays untouched (triggers not DSL-expressible; raw-SQL migration — DAT-014 precedent). Witness under TST-DB-001: FAIL-pre→PASS-post, mismatch insert rejected/coerced; pre-flight drift re-confirmed 0 before attaching.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Expected N/A: schema migration, not audit-sensitive (DAT-014/017 precedent).
+5. Commit message includes `[closes DAT-037]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### COR-035 — Orphan task create leaks a 500 on the DAT-017 CHECK (should be 400 at the DTO)
+
+- **Status:** TODO
+- **Phase:** 3
+- **Cluster:** F
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** nit
+- **Category:** correctness · error_handling
+- **File:** `apps/api/src/tasks/dto/create-task.dto.ts:19`, `apps/api/src/tasks/tasks.service.ts:223`
+- **Source:** Session-derived. DAT-017 closeout (`f6ca325`, 2026-05-27). Surfaced in DAT-017's pre-flight: `create-task.dto.ts` declares `projectId`/`epicId`/`milestoneId` each `@IsOptional` with NO cross-field `@ValidateIf` tying them, and `tasks.service.ts` has no Prisma error handling. With DAT-017's CHECK now live, an API request supplying an `epicId`/`milestoneId` but no `projectId` (the orphan combination) hits the DB CHECK (23514) unmapped → HTTP 500. DAT-017 stayed schema+spec-only; this is the deferred application-layer hardening.
+
+**Description:**
+After DAT-017, a `POST /tasks` (or update) with `epicId` set and `projectId` omitted is accepted by the DTO validators (each field is independently optional) and reaches `prisma.task.create`, where Postgres rejects it with 23514 on `tasks_parent_requires_project_ck`. With no try/catch, Nest returns a generic 500 for what is plainly invalid client input. The orphan row is correctly *prevented* either way (DAT-017 is doing its job) — this is the error surface.
+
+**Root cause:**
+The DTO never expressed the cross-field invariant "epicId/milestoneId imply projectId", so invalid combinations passed validation and only the DB CHECK caught them — too late for a clean 4xx.
+
+**Suggested fix — LEAD is DTO-side, NOT the DAT-016/COR-034 try/catch shape:** add a class-validator cross-field guard on `CreateTaskDto`/`UpdateTaskDto` — e.g. a `@ValidateIf((o) => o.epicId || o.milestoneId)` plus a custom validator (or a `@Validate` constraint) requiring `projectId` to be present — so the orphan combination returns **400 Bad Request** *before* the DB hit. This differs from COR-034: DAT-016's leak was a 500 only on a TOCTOU race past an existing pre-check (→ `P2002`→409 was right); here there is no pre-check and the input is simply invalid (→ 400 at the DTO is the lead). A service-side `23514`→`BadRequestException` mapping is the **fallback** only if a non-DTO write path (e.g. import/bulk at `tasks.service.ts:1383`) can construct the orphan combination. Witness: a controller/DTO unit test asserting the orphan payload yields 400, not 500.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Expected N/A: task create is not in the audit-sensitive list.
+5. Commit message includes `[closes COR-035]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm test apps/api/src/tasks
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
