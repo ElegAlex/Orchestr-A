@@ -1955,7 +1955,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-013 — Time-of-day stored as String 'HH:MM' instead of Postgres TIME / minutes-int
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
