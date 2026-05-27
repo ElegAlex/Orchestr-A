@@ -6,11 +6,10 @@ ahead of execution**: the known scope, migrations, pre-deploy checks, verificati
 rollback templates are pre-filled now; every command and its output are captured at deploy time,
 in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 
-> **Seed status (2026-05-27):** Phase 3 is **9/10 closed**. This batch covers the 7 schema/data
-> migrations closed so far (DAT-003/004, DAT-012, DAT-013, DAT-014, DAT-016, DAT-017, DAT-018) plus the code-only
-> COR-022. The 1 remaining Phase 3 *important* task (DAT-023) is
-> not yet started; **as each closes, append a row to the Scope table and a bullet to Operational
-> notes — do not restructure this document.**
+> **Seed status (2026-05-27):** Phase 3 is **10/10 closed — COMPLETE**. This batch covers the 8 schema/data
+> migrations (DAT-003/004, DAT-012, DAT-013, DAT-014, DAT-016, DAT-017, DAT-018, DAT-023) plus the code-only
+> COR-022. No Phase 3 task remains; **the next session is a meta-session (HANDOVER refresh +
+> finalize this doc + decide the actual prod deploy of this batch) — do not restructure this document.**
 >
 > **Every unfilled value carries a `TBD:` prefix.** At deploy time, run `grep -n 'TBD:' <thisdoc>`
 > to enumerate everything still to fill (date, operator, baseline counts, per-column probe outputs,
@@ -34,6 +33,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `DAT-016` | `ce8877a` | important | **2 UNIQUE indexes** — `departments_name_key` (Department.name globally unique) + `services_departmentId_name_key` (Service.name unique **per department**, composite — same name in different departments stays legal). DSL-expressible: `schema.prisma` **was** edited (`@unique` / `@@unique` — baked into the rebuilt api image). One migration. The app layer already pre-checked uniqueness; this is the DB-level floor closing the TOCTOU/direct-SQL gap. |
 | `DAT-017` | `f6ca325` | important | **1 CHECK constraint** `tasks_parent_requires_project_ck` — `("projectId" IS NOT NULL OR ("epicId" IS NULL AND "milestoneId" IS NULL))`. Rejects the orphan combination (a task linked to an epic/milestone but to NO project). Single-row invariant only; cross-table equality (epic.projectId = task.projectId) is **out of scope** — filed as DAT-037. Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). One migration. |
 | `DAT-018` | `fff93ce` | important | **1 CHECK + 1 BEFORE INSERT/UPDATE trigger** on `task_dependencies` — CHECK `task_dependencies_no_self_ck` (`"taskId" <> "dependsOnTaskId"`) blocks the 1-hop self-loop; trigger `task_dependencies_no_cycle_trg` (+ fn `task_dependencies_check_cycle`) walks the existing graph forward from `NEW."dependsOnTaskId"` and RAISEs (identifier `task_dependencies_no_cycle`) if `NEW."taskId"` is reachable — blocks multi-hop cycles. Defense-in-depth: the service (`addDependency` → `checkCircularDependency`) already returns 400 first; this is the DB floor for direct-SQL/bypass paths. Hand-authored raw SQL; `schema.prisma` unchanged (neither DSL-expressible). One migration. |
+| `DAT-023` | `c27862a` | important | **1 EXCLUDE constraint** `leaves_no_overlap` on `leaves` — `EXCLUDE USING gist ("userId" WITH =, daterange("startDate","endDate",'[]') WITH &&) WHERE (status = 'APPROVED')`. Forbids two APPROVED leaves for the same user with overlapping date ranges. Partial WHERE (only APPROVED rows; re-checks on PENDING→APPROVED UPDATE — the audit's race path); `[]` inclusive bounds match `checkOverlap`'s inclusive semantics (`halfDay` is not a same-day-pair feature — `checkOverlap` ignores it). **Requires `btree_gist`** — `CREATE EXTENSION IF NOT EXISTS btree_gist` is in the migration but needs **superuser** (see DAT-023 probe + pre-deploy). Defense-in-depth: the service already 409s on create/update; this is the DB floor for the TOCTOU/approve race. Hand-authored raw SQL; `schema.prisma` unchanged (EXCLUDE not DSL-expressible). One migration. |
 
 - **Prod baseline (expected):** TBD: commits behind master at deploy time. Expected last applied
   migration `20260524100100_dat005_convert_float_to_decimal` — the Phase-1 closeout left prod at git
@@ -51,7 +51,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 - **DB:** `orchestr_a_prod`, user `orchestr_a`. Host has **no** `psql`/`pg_dump` binaries → all
   Postgres ops run inside the db container (`docker exec`).
 
-### Migrations applied by this batch (7)
+### Migrations applied by this batch (8)
 
 | Migration folder | Task(s) | Introduces |
 |------------------|---------|------------|
@@ -62,6 +62,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `20260527160000_dat016_unique_name_constraints` | DAT-016 | `CREATE UNIQUE INDEX "departments_name_key" ON "departments"("name")` + `CREATE UNIQUE INDEX "services_departmentId_name_key" ON "services"("departmentId", "name")`. Hand-authored, but **byte-equivalent to `migrate dev` output** (Prisma `<table>_<col>_key` naming) so a future drift-clean `migrate dev` sees no diff; `schema.prisma` **was** edited (`@unique` / `@@unique` — DSL-expressible, baked into the rebuilt api image). **Pre-deploy precaution (required):** run a read-only duplicate SELECT on prod BEFORE `migrate deploy` — `CREATE UNIQUE INDEX` validates against existing rows and aborts with 23505 if any duplicate exists. Resolve by rename if found (see probe below). Dev pre-flight: 0 duplicates (2 depts, 4 services). |
 | `20260527170000_dat017_task_parent_requires_project_check` | DAT-017 | `ALTER TABLE "tasks" ADD CONSTRAINT "tasks_parent_requires_project_ck" CHECK ("projectId" IS NOT NULL OR ("epicId" IS NULL AND "milestoneId" IS NULL))`. Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). **Pre-deploy precaution (required):** `ADD CONSTRAINT … CHECK` validates against existing rows and aborts with 23514 if any orphan exists — run a read-only violator SELECT on prod BEFORE `migrate deploy` (see DAT-017 probe below). Resolve by backfilling `projectId` from the epic/milestone parent, or DELETE if truly orphan. Dev pre-flight: 0 violators (3288 tasks). |
 | `20260527180000_dat018_task_dependency_cycle_prevention` | DAT-018 | `ALTER TABLE "task_dependencies" ADD CONSTRAINT "task_dependencies_no_self_ck" CHECK ("taskId" <> "dependsOnTaskId")` + `CREATE OR REPLACE FUNCTION task_dependencies_check_cycle()` (recursive-CTE forward walk, RAISEs `task_dependencies_no_cycle` on a multi-hop cycle) + `CREATE TRIGGER task_dependencies_no_cycle_trg BEFORE INSERT OR UPDATE ON task_dependencies`. Hand-authored raw SQL; `schema.prisma` unchanged (neither DSL-expressible). **Pre-deploy precaution (required):** both guards validate against existing rows at deploy — the CHECK aborts with 23514 on an existing self-loop, and an existing cycle would make the trigger fire on the next legitimate write. Run the read-only self-loop + recursive-CTE cycle scan on prod `task_dependencies` BEFORE `migrate deploy` (see DAT-018 probe below); resolve any existing cycle by deleting one edge per cycle. Dev pre-flight: 0 self-loops, 0 multi-hop cycles (table empty, 0 rows). |
+| `20260527190000_dat023_leave_no_overlap_exclude` | DAT-023 | `CREATE EXTENSION IF NOT EXISTS btree_gist` + `ALTER TABLE "leaves" ADD CONSTRAINT "leaves_no_overlap" EXCLUDE USING gist ("userId" WITH =, daterange("startDate","endDate",'[]') WITH &&) WHERE (status = 'APPROVED')`. Hand-authored raw SQL; `schema.prisma` unchanged (EXCLUDE not DSL-expressible). **Pre-deploy precaution (required, two parts):** (a) **`CREATE EXTENSION` needs superuser** — confirm the deploy/migration role can create extensions, or have a superuser run `CREATE EXTENSION IF NOT EXISTS btree_gist;` in `orchestr_a_prod` BEFORE `migrate deploy` (idempotent; if already present the migration's CREATE is a no-op); (b) `ADD CONSTRAINT … EXCLUDE` validates against existing rows and aborts (23P01) if any overlapping APPROVED pair exists — run the read-only overlap SELECT on prod BEFORE `migrate deploy` (see DAT-023 probe below); resolve by setting the older row to a non-APPROVED status. Dev pre-flight: btree_gist not pre-installed (created cleanly, role is superuser); 0 overlapping APPROVED pairs (3 leaves). |
 
 > COR-022 is **not** in this sub-table — it ships entirely in the api image (`760aa58`), no DDL.
 >
@@ -104,10 +105,10 @@ origin/master = TBD
 commits behind origin/master: TBD
 
 $ git diff --name-status HEAD origin/master -- packages/database/prisma/migrations/
-TBD: must show exactly the 7 batch migration folders (20260527120000_…, 20260527130000_…, 20260527140000_…, 20260527150000_…, 20260527160000_…, 20260527170000_…, 20260527180000_…) as `A`,
-     plus schema.prisma as `M` under packages/database/prisma/ (the DAT-012 enum edits + DAT-016 @unique/@@unique; DAT-013/014/017/018 leave schema.prisma untouched).
+TBD: must show exactly the 8 batch migration folders (20260527120000_…, 20260527130000_…, 20260527140000_…, 20260527150000_…, 20260527160000_…, 20260527170000_…, 20260527180000_…, 20260527190000_…) as `A`,
+     plus schema.prisma as `M` under packages/database/prisma/ (the DAT-012 enum edits + DAT-016 @unique/@@unique; DAT-013/014/017/018/023 leave schema.prisma untouched).
 ```
-TBD: ✅/⚠️ assumption check — only the 7 batch migrations are pending; no surprise migration.
+TBD: ✅/⚠️ assumption check — only the 8 batch migrations are pending; no surprise migration.
 
 ### `_prisma_migrations` HEAD + row counts (Phase-4 baseline)
 ```
@@ -290,6 +291,43 @@ cycle, delete one edge per cycle (deterministically — e.g. the edge with the h
 dependsOnTaskId)` pair on each `start_id` returned by the scan), then re-run the scan → must be 0 rows.
 Capture before/after in the deploy log (manual data edit, no audit emitter).
 
+### DAT-023 overlap probe (CRITICAL — two parts: btree_gist availability + existing overlap; either aborts `migrate deploy`)
+
+`20260527190000` adds `CREATE EXTENSION IF NOT EXISTS btree_gist` then an EXCLUDE constraint on `leaves`.
+Two pre-conditions must hold or `migrate deploy` aborts:
+
+1. **btree_gist must be creatable (superuser).** `CREATE EXTENSION` requires superuser (or a role with the
+   privilege). Check whether it is already installed and whether the deploy role can create it:
+   ```sql
+   -- already installed? (if so the migration's CREATE is a no-op, no superuser needed at deploy)
+   SELECT extname FROM pg_extension WHERE extname = 'btree_gist';
+   -- can the migration role create extensions? (rolsuper = t, or a member of a role that can)
+   SELECT rolname, rolsuper FROM pg_roles WHERE rolname = current_user;
+   ```
+   TBD: probe output. **If btree_gist is absent AND the deploy role is not superuser**, have a superuser run
+   `CREATE EXTENSION IF NOT EXISTS btree_gist;` in `orchestr_a_prod` BEFORE `migrate deploy` (idempotent). The
+   migration's own `CREATE EXTENSION IF NOT EXISTS` then no-ops. Dev: role `orchestr_a` is superuser, extension
+   was absent and created cleanly.
+
+2. **No existing overlapping APPROVED pair** — the `ADD CONSTRAINT … EXCLUDE` validates against existing rows
+   and aborts with 23P01 if any APPROVED pair for one user overlaps. Run read-only; must return `(0 rows)`:
+   ```sql
+   SELECT l1.id AS id1, l2.id AS id2, l1."userId",
+          l1."startDate" AS s1, l1."endDate" AS e1,
+          l2."startDate" AS s2, l2."endDate" AS e2
+   FROM leaves l1
+   JOIN leaves l2 ON l1."userId" = l2."userId" AND l1.id < l2.id
+   WHERE l1.status = 'APPROVED' AND l2.status = 'APPROVED'
+     AND daterange(l1."startDate", l1."endDate", '[]') && daterange(l2."startDate", l2."endDate", '[]');
+   ```
+   TBD: probe output — expected `(0 rows)`. Dev pre-flight returned 0 (3 leaves, all APPROVED, none overlap).
+
+**Resolution if any pair returns** (do NOT run `migrate deploy` until clean): for each overlapping pair, set the
+**older** row (lower `id1`, or the one with the earlier `createdAt` if preferred) to a non-APPROVED status —
+e.g. `UPDATE leaves SET status = 'CANCELLED', "validationComment" = COALESCE("validationComment",'') || ' [DAT-023 pre-deploy overlap resolution]' WHERE id = '<id1>';` — then re-run the scan → must be 0 rows. Only
+APPROVED rows are constrained, so demoting one of each pair clears the conflict. Capture before/after in the
+deploy log (manual data edit, no audit emitter).
+
 ---
 
 ## GATE 1 — probe outcome reported to operator (awaiting greenlight)
@@ -335,10 +373,11 @@ TBD: must show EXACTLY:
   Applying migration `20260527160000_dat016_unique_name_constraints`
   Applying migration `20260527170000_dat017_task_parent_requires_project_check`
   Applying migration `20260527180000_dat018_task_dependency_cycle_prevention`
+  Applying migration `20260527190000_dat023_leave_no_overlap_exclude`
   All migrations have been successfully applied.
 $ docker compose -f docker-compose.prod.yml --env-file .env.production up -d api    # TBD: healthy in ~Ns
 ```
-TBD: confirm exactly the 7 batch migrations applied (no more, no fewer). TBD: running api image id
+TBD: confirm exactly the 8 batch migrations applied (no more, no fewer). TBD: running api image id
 (should be the freshly built image, not the `pre-phase3-defense-in-depth` anchor).
 
 ---
@@ -349,7 +388,7 @@ TBD: confirm exactly the 7 batch migrations applied (no more, no fewer). TBD: ru
 
 | Check | Command / method | Result |
 |-------|------------------|--------|
-| V1 — all migrations applied | `SELECT migration_name, applied_steps_count, finished_at FROM _prisma_migrations WHERE migration_name IN ('20260527120000_dat003_dat004_business_invariants','20260527130000_dat012_promote_string_enums','20260527140000_dat013_time_format_check','20260527150000_dat014_leave_type_autosync_trigger','20260527160000_dat016_unique_name_constraints','20260527170000_dat017_task_parent_requires_project_check','20260527180000_dat018_task_dependency_cycle_prevention');` | TBD: 7 rows, each `applied_steps_count=1`, no mixed state |
+| V1 — all migrations applied | `SELECT migration_name, applied_steps_count, finished_at FROM _prisma_migrations WHERE migration_name IN ('20260527120000_dat003_dat004_business_invariants','20260527130000_dat012_promote_string_enums','20260527140000_dat013_time_format_check','20260527150000_dat014_leave_type_autosync_trigger','20260527160000_dat016_unique_name_constraints','20260527170000_dat017_task_parent_requires_project_check','20260527180000_dat018_task_dependency_cycle_prevention','20260527190000_dat023_leave_no_overlap_exclude');` | TBD: 8 rows, each `applied_steps_count=1`, no mixed state |
 | V2 — enum columns are now `USER-DEFINED` | `SELECT table_name, column_name, udt_name FROM information_schema.columns WHERE udt_name IN ('PredefinedTaskDuration','DayPeriod','AssignmentCompletionStatus','RecurrenceType','AppSettingsCategory');` | TBD: 6 rows mapping the 6 promoted columns |
 | V3 — all services healthy | `docker compose … ps` | TBD: api/web/nginx/postgres/redis `Up (healthy)` |
 | V4 — running api image | `docker inspect …` | TBD: freshly built image, not the anchor |
@@ -589,6 +628,83 @@ did not deploy; if a POSITIVE *errors*, the trigger false-rejects a DAG → inve
 done. (Also confirm the objects exist: `SELECT conname FROM pg_constraint WHERE conname='task_dependencies_no_self_ck';`
 and `SELECT tgname FROM pg_trigger WHERE tgname='task_dependencies_no_cycle_trg';` → must list each.)
 
+### Leave no-overlap smoke (DAT-023 — INSERT-then-ROLLBACK; 3 negatives + 3 positives)
+
+Each negative is its own `BEGIN; … ROLLBACK;` (a 23P01 aborts the transaction, so a shared block would
+fail subsequent statements with "current transaction is aborted"). Prod data is never mutated. **Use
+far-future dates (2099)** so the inserted APPROVED rows cannot overlap any real leave of the picked user
+(which would itself raise 23P01 on the *first* insert and mask the test). Run via
+`docker exec orchestr-a-postgres-prod psql -U orchestr_a -d orchestr_a_prod`.
+
+```sql
+-- NEGATIVE 1: two APPROVED leaves, same user, overlapping → 2nd ERROR 23P01 violating "leaves_no_overlap"
+BEGIN;
+  WITH u AS (SELECT id FROM users LIMIT 1), c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT gen_random_uuid(), u.id, c.id, DATE '2099-03-01', DATE '2099-03-10', 1, 'APPROVED', now() FROM u, c;
+  WITH u AS (SELECT id FROM users LIMIT 1), c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT gen_random_uuid(), u.id, c.id, DATE '2099-03-05', DATE '2099-03-15', 1, 'APPROVED', now() FROM u, c;  -- expect ERROR 23P01
+ROLLBACK;
+
+-- NEGATIVE 2: [] inclusive-bound adjacency — one ends 2099-04-05, next starts 2099-04-05 → ERROR 23P01
+BEGIN;
+  WITH u AS (SELECT id FROM users LIMIT 1), c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT gen_random_uuid(), u.id, c.id, DATE '2099-04-01', DATE '2099-04-05', 1, 'APPROVED', now() FROM u, c;
+  WITH u AS (SELECT id FROM users LIMIT 1), c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT gen_random_uuid(), u.id, c.id, DATE '2099-04-05', DATE '2099-04-10', 1, 'APPROVED', now() FROM u, c;  -- expect ERROR 23P01
+ROLLBACK;
+
+-- NEGATIVE 3: the race path — two overlapping PENDING accepted; approving the 2nd → ERROR 23P01
+BEGIN;
+  WITH u AS (SELECT id FROM users LIMIT 1), c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT 'dat023-race-1', u.id, c.id, DATE '2099-05-01', DATE '2099-05-05', 1, 'PENDING', now() FROM u, c;
+  WITH u AS (SELECT id FROM users LIMIT 1), c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT 'dat023-race-2', u.id, c.id, DATE '2099-05-03', DATE '2099-05-07', 1, 'PENDING', now() FROM u, c;
+  UPDATE "leaves" SET status = 'APPROVED' WHERE id = 'dat023-race-1';   -- accepted (first APPROVED)
+  UPDATE "leaves" SET status = 'APPROVED' WHERE id = 'dat023-race-2';   -- expect ERROR 23P01 (enters predicate)
+ROLLBACK;
+
+-- POSITIVE 1: same user, overlapping, but one PENDING → both accepted (partial WHERE)
+BEGIN;
+  WITH u AS (SELECT id FROM users LIMIT 1), c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT gen_random_uuid(), u.id, c.id, DATE '2099-06-01', DATE '2099-06-10', 1, 'APPROVED', now() FROM u, c;
+  WITH u AS (SELECT id FROM users LIMIT 1), c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT gen_random_uuid(), u.id, c.id, DATE '2099-06-05', DATE '2099-06-15', 1, 'PENDING', now() FROM u, c;   -- accepted
+ROLLBACK;
+
+-- POSITIVE 2: two APPROVED overlapping for DIFFERENT users → both accepted (userId scoping). Needs ≥2 users.
+BEGIN;
+  WITH c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT gen_random_uuid(), (SELECT id FROM users ORDER BY id LIMIT 1 OFFSET 0), c.id, DATE '2099-07-01', DATE '2099-07-10', 1, 'APPROVED', now() FROM c;
+  WITH c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT gen_random_uuid(), (SELECT id FROM users ORDER BY id LIMIT 1 OFFSET 1), c.id, DATE '2099-07-01', DATE '2099-07-10', 1, 'APPROVED', now() FROM c;   -- accepted (different user)
+ROLLBACK;
+
+-- POSITIVE 3: same user, two APPROVED, non-overlapping gap → both accepted
+BEGIN;
+  WITH u AS (SELECT id FROM users LIMIT 1), c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT gen_random_uuid(), u.id, c.id, DATE '2099-08-01', DATE '2099-08-05', 1, 'APPROVED', now() FROM u, c;
+  WITH u AS (SELECT id FROM users LIMIT 1), c AS (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1)
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "startDate", "endDate", days, status, "updatedAt")
+  SELECT gen_random_uuid(), u.id, c.id, DATE '2099-08-12', DATE '2099-08-15', 1, 'APPROVED', now() FROM u, c;   -- accepted (gap)
+ROLLBACK;
+```
+TBD: paste the three negatives erroring with 23P01 (each must name `leaves_no_overlap`) + the three positives
+succeeding. If a NEGATIVE *succeeds*, the constraint did not deploy; if a POSITIVE *errors*, the WHERE/userId
+scoping is wrong → investigate before declaring done. (Also confirm the objects exist:
+`SELECT extname FROM pg_extension WHERE extname='btree_gist';` and
+`SELECT conname FROM pg_constraint WHERE conname='leaves_no_overlap';` → must list each.)
+
 ### COR-022 sanity (no migration — confirm the cap path doesn't 500)
 ```sql
 SELECT count(*) FROM time_entries;   -- TBD: returns a count, no error (read path healthy)
@@ -761,6 +877,21 @@ ALTER TABLE "task_dependencies" DROP CONSTRAINT IF EXISTS "task_dependencies_no_
 -- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260527180000_dat018_task_dependency_cycle_prevention';
 ```
 
+### DAT-023 (`c27862a`, migration `20260527190000`) — idempotent DROP CONSTRAINT (+ conditional DROP EXTENSION)
+
+Symmetric and cheap — a pure additive constraint, no data was written. `schema.prisma` was unchanged, so no
+image revert is needed. Drop the constraint first; **the extension drop is conditional**: only drop
+`btree_gist` if no *other* object depends on it (it is a shared extension — other EXCLUDE/GiST constraints or
+indexes could rely on it; `DROP EXTENSION` without `CASCADE` will refuse if anything depends on it, which is
+the safe default — do NOT add `CASCADE`):
+
+```sql
+ALTER TABLE "leaves" DROP CONSTRAINT IF EXISTS "leaves_no_overlap";
+-- Optional, only if nothing else uses btree_gist (no CASCADE — let it refuse if depended upon):
+DROP EXTENSION IF EXISTS btree_gist;
+-- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260527190000_dat023_leave_no_overlap_exclude';
+```
+
 ---
 
 ## Operational notes (carry-forwards)
@@ -787,13 +918,18 @@ ALTER TABLE "task_dependencies" DROP CONSTRAINT IF EXISTS "task_dependencies_no_
   "Same for Event.parentEventId"; dev pre-flight 0 self-cycles / 0 multi-hop / 0 of 195 events parented,
   so its data-cleanup burden is ≈ nil). NOTE: DAT-018 needed **no** COR-style 409 follow-up — the
   service's `checkCircularDependency` already returns 400 before the DB, so the trigger is bypass-only.
-  All `TODO`; future closures, if they ship DDL, append to the Scope + Migrations tables above.
+  `COR-037` (typed **409** on the `leaves_no_overlap` 23P01 at the leave **approve/import** path — unlike
+  create/update, `approve` does not re-check overlap and the leaves module has no Prisma error filter, so the
+  EXCLUDE currently leaks as a generic 500 on the TOCTOU/approve race; the create/update happy paths already
+  409 first and are unaffected). All `TODO`; future closures, if they ship DDL, append to the Scope +
+  Migrations tables above.
 
 ---
 
-## Future Phase 3 closures — append here, do not restructure
+## Future closures — append here, do not restructure
 
-As DAT-023 (or the filed follow-ups) close and join a deploy:
+**Phase 3 is 10/10 complete** (DAT-023 was the last; closed `c27862a`). The remaining follow-ups
+(DAT-032/033/034/035/037/038, COR-034/035/037) are Phase 4+ items — should any close and join a deploy:
 1. Add a row to the **Scope & metadata** table and, if it ships DDL, to the **Migrations applied**
    sub-table.
 2. If it needs a pre-deploy data check, add a subsection under **Pre-deploy data probe**.

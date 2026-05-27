@@ -2260,7 +2260,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-023 — Leave: no overlap constraint (EXCLUDE USING gist) — same user can have overlapping approved leaves
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2297,8 +2297,20 @@ CREATE EXTENSION btree_gist; ALTER TABLE leaves ADD CONSTRAINT leaves_no_overlap
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** c27862a
+**Learnings:**
+- **Literal Suggested fix kept verbatim — all three baked-in choices validated against the code, none needed adjusting.**
+  1. *`'[]'` inclusive bounds.* `leaves.service.ts` `checkOverlap` (line 2782) already treats overlap inclusively (`startDate <= endDate AND endDate >= startDate`) and **ignores the `halfDay` enum entirely** — so two same-day leaves (incl. a morning + an afternoon) are already a conflict at the service layer. Morning+afternoon-same-day pairs are NOT a supported product feature → no half-day carve-out needed, no `AND NOT "halfDay"` widening. The inclusive `[]` matches existing semantics exactly. **DAT-039 NOT filed** (the conditional filing was gated on "WHERE clause needed widening"; it did not).
+  2. *Partial `WHERE (status = 'APPROVED')`.* Only APPROVED rows mutually exclude; PENDING/REJECTED/CANCELLED overlap freely. A partial EXCLUDE also **re-checks on UPDATE when a row ENTERS the predicate** (PENDING→APPROVED) — which is precisely the audit's race path, pinned by witness Negative #3.
+  3. *No `::date` cast.* `leaves."startDate"`/`"endDate"` are already Postgres `date` (`@db.Date`), so `daterange(date, date, '[]')` resolves directly (verified `format_type` in pre-flight). Note the schema has **no `halfDayStart` column** — the brief's pre-flight query referenced one; the real model is a single `halfDay HalfDay?` (MORNING|AFTERNOON).
+- **btree_gist required** (mixes `=` on text userId with `&&` range in one GiST index; stock GiST has no equality opclass for text). `CREATE EXTENSION IF NOT EXISTS btree_gist` is idempotent. Dev role `orchestr_a` is **superuser** (`rolsuper=t`) so CREATE succeeds on dev + in the int harness (owner runs `migrate deploy`); **prod must run CREATE EXTENSION as superuser** before/at `migrate deploy` — surfaced in the deploy doc.
+- **Pre-flight (dev psql, 2026-05-27, container orchestr-a-db :5433):** btree_gist NOT pre-installed; **0 overlapping APPROVED pairs** (3 leaves total, all APPROVED) → clean to proceed, no in-migration cleanup, no bail.
+- **Service-layer overlap check EXISTS on create (433) + update (1248) → `ConflictException` (409); but `approve` (1619) does NOT re-check overlap and the leaves module has no Prisma error handler.** So the EXCLUDE (23P01) can only fire on the APPROVE path (or import auto-approve), where it currently leaks as a generic **500**. → **COR-037 filed** (typed 409 on 23P01 at approve/import). The create/update happy paths are unaffected (their 409 fires first).
+- **Mechanism:** raw-SQL migration `20260527190000_dat023_leave_no_overlap_exclude`, constraint `leaves_no_overlap` (`contype='x'`), confirmed via `pg_get_constraintdef`. schema.prisma UNCHANGED (EXCLUDE not Prisma-6-DSL-expressible; DAT-013/017/018 precedent). Applied to dev via `migrate deploy` (TOOL-DBSYNC-001: both DATABASE_URL + DATABASE_MIGRATION_URL = owner URL).
+- **Witnesses (TST-DB-001, `apps/api/src/schema-constraints/dat023-leave-no-overlap.int.spec.ts`):** 7 tests — 3 negatives (INSERT 2 APPROVED overlapping; `[]` adjacency `[Mar1,Mar5]`+`[Mar5,Mar10]` proving inclusive bounds discriminately, per advisor; the PENDING→APPROVED race via two UPDATEs — the audit's exact scenario, advisor-added), 3 positives (overlap allowed when one is PENDING; cross-user overlap allowed = userId scoping; same-user gap allowed), 1 `pg_constraint` name pin (advisor-added, mirrors DAT-016's `pg_indexes` pin). Each test uses its own throwaway user. **FAIL-pre demonstrated** (migration → `SELECT 1;` → the 3 negatives + the pin fail non-vacuously `expected '' to match /23P01/`, 3 positives pass); restored byte-identical (diff-verified) → PASS-post 7/7, integration **49→56**.
+- **AC#4 skipped** — structural schema constraint, not an audit-sensitive business mutation (DAT-005/012/013/014/016/017/018 precedent), even though `leaves` is in the audit-sensitive list.
+- **Forward adjacency:** COR-024 (Phase 7) + DAT-024 (Phase 7) flag the race window on leave create/import; this EXCLUDE is the DB floor those race-resolution tasks will rely on.
+- **Phase 3 close-out: this is the 10th and LAST Phase-3 task → Phase 3 is 10/10 DONE.**
 
 ---
 
