@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 184 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022)
+> **Total tasks:** 187 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012)
 
 ## Schema legend
 
@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 121 important · 22 nit · 6 suggestion
-- **By category:** 35 correctness · 33 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
+- **By severity:** 32 blocking · 122 important · 22 nit · 6 suggestion
+- **By category:** 35 correctness · 34 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -1760,7 +1760,7 @@ pnpm test apps/api/src/audit/
 ---
 
 ## Phase 3 — Defense-in-depth schema — Invariants métier en SQL
-*13 tasks in this phase.*
+*14 tasks in this phase.*
 
 ### DAT-003 — No DB CHECK on Leave.endDate >= startDate (and others)
 
@@ -1902,7 +1902,7 @@ pnpm test apps/api/src/time-tracking/time-tracking.service.spec.ts  # may need c
 ---
 ### DAT-012 — Free-string fields where enum would prevent drift
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -1939,8 +1939,18 @@ Promote to enums where the value set is closed. For AuditLog.action keep String 
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** c8b618e
+
+**Learnings:**
+- **6 columns → 5 enums; 1 bail.** Promoted: `defaultDuration`→`PredefinedTaskDuration`, `PredefinedTaskAssignment.period`+`PredefinedTaskRecurringRule.period`→shared `DayPeriod`, `completionStatus`→`AssignmentCompletionStatus`, `recurrenceType`→`RecurrenceType`, `AppSettings.category`→`AppSettingsCategory`. Migration `20260527130000_dat012_promote_string_enums`, hand-authored + `migrate deploy` (DAT-003/004 precedent; `migrate dev --create-only` still blocked by `_dat005_backup_*` drift, TOOL-DBSYNC-001). schema.prisma WAS edited this time (enum blocks expressible in Prisma DSL, unlike CHECK).
+- **ProjectMember.role BAILED → filed DAT-035.** DB distinct = free-form FR institutional labels (`Chef de projet`×2944, `Membre`, `Responsable infra`, `Référente support`, `Lead dev`), matching the task's verbatim bail example. Not a closed code set.
+- **AppSettings.category was bail-leaning, REVERSED on advisor review.** The literal bail trigger ("admin UI lets users define categories") is NOT met: `SettingsService.update()` gates on `isKnownKey`, category derives from hardcoded `DEFAULT_SETTINGS`; the dead `|| 'custom'` at L242 was unreachable (key always ∈ DEFAULT_SETTINGS by the L226 gate) and removed with the promotion. Net 1 bail, not 2 — under the 3-bail whole-task-pause threshold.
+- **AuditLog.action/entityType → document route, NOT CHECK** (`docs/audit/canonical-action-codes.md`). Write side already compile-guaranteed (`AuditAction` enum + exhaustive `ENTITY_TYPE_BY_ACTION` + `audit-payload-registry.compile-witness.ts`); TOOL-DEPLOY-001 REVOKE + immutability trigger block any untyped write. CHECK would couple a migration to every new action (31, growing) and risk failing on un-enumerable prod legacy (PASSWORD_RESET_ADMIN / AUD-READ-001).
+- **completionStatus is write-dead in current source** (no service path mutates it; only the DB default `NOT_DONE`). The 4-value enum set was taken from the schema comment as design intent — future-proofing, not observed writes.
+- **No service-file edits needed** — enum-typed DTOs flowed through Prisma client regen without service-boundary casts. Adjacent type-boundary touches (Invariant 5): 6 DTOs swapped `@IsIn`→`@IsEnum(PrismaEnum)` (idiom: `import-leaves.dto.ts`); `settings.service.ts` (typed `DEFAULT_SETTINGS.category` + `findByCategory` guard against 22P02 on unknown input + dead-fallback removal); `vitest.setup.ts` global `database` mock exports the 5 enums.
+- **Witness** (`apps/api/src/schema-constraints/dat012-enum-promotion.int.spec.ts`): 1 representative INSERT per distinct enum rejected with SQLSTATE 22P02. FAIL-pre (neutralized migration → columns stay text): 5 negative assertions fail (bogus accepted); PASS-post 25/25 integration. Parent task created via raw SQL so FAIL-pre exercises the assertions, not the typed client's enum cast.
+- **AC#4 skipped** — schema migration, not audit-sensitive business mutation (DAT-005 / DAT-003-004 precedent).
+- **⚠️ PROD DEPLOY:** `ALTER … USING col::"Enum"` aborts if any prod row holds a value outside the enum set. Dev pre-flight `SELECT DISTINCT` was clean across all 6 columns and the DTO `@IsIn` historically gated writes, but prod cannot be enumerated from here — run the same read-only `SELECT DISTINCT … FROM <table>` against prod BEFORE `migrate deploy` (DAT-003/004 prod pre-flight pattern). Migration `20260527130000` joins the pending Phase 3 prod batch (with `20260527120000`).
 
 ---
 ### DAT-013 — Time-of-day stored as String 'HH:MM' instead of Postgres TIME / minutes-int
@@ -2329,6 +2339,51 @@ Generalize `ensureDailyCapNotExceeded` to accept the actor dimension — sum `WH
 **Verification command:**
 ```
 pnpm test apps/api/src/time-tracking/
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+
+### DAT-035 — ProjectMember.role is a free-string holding institutional labels, not codes
+
+- **Status:** TODO
+- **Phase:** 3
+- **Cluster:** F
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** data_integrity · schema
+- **File:** `packages/database/prisma/schema.prisma:220`
+- **Source:** Session-derived. DAT-012 pre-flight (`c8b618e`, 2026-05-27) — one of DAT-012's (A) enum-promotion candidates. Bailed per DAT-012's per-column bail condition: a `SELECT DISTINCT role FROM project_members` returned free-form FR labels, not UPPERCASE_UNDERSCORE codes, so it cannot be honestly closed into a fixed enum. See the 2026-05-27 DAT-012 PROGRESS_LOG entry. Aligns with [[project_responsable_scope_perimeter]] / SEC-002 ("institutional roles vary per collectivité; only templateKey is stable").
+
+**Description:**
+`ProjectMember.role String` (schema.prisma:220, comment "Chef de projet, Membre, Observateur...") stores human-authored project-role labels. Dev DB distinct values: `Chef de projet` (2944), `Membre` (12), `Responsable infra` (1), `Référente support` (1), `Lead dev` (1). These are display labels in mixed case/accents, not a closed code set — DAT-012 promoted the other 6 columns to enums but bailed this one because an enum would either reject existing labels or freeze a set that legitimately varies. Typos still silently create near-duplicate roles (`Chef de projet` vs `Chef de Projet`), the original DAT-012 failure mode, but enum is the wrong remedy here.
+
+**Root cause:**
+Project member roles were modeled as free text to allow per-project / per-collectivité variation; no normalization or reference list constrains them.
+
+**Code evidence:**
+```
+schema.prisma:220  role String // Chef de projet, Membre, Observateur...
+project_members.role distinct (dev): 'Chef de projet', 'Membre', 'Responsable infra', 'Référente support', 'Lead dev'
+```
+
+**Suggested fix:**
+Decide between (a) a documented free-form policy with input normalization (trim + canonical-case) to stop near-duplicate drift, or (b) a `project_member_roles` reference table (institutional, per-collectivité-extensible) with a FK from `project_members.role` — mirroring how institutional roles are handled elsewhere (templateKey-bound). NOT a native enum (the DAT-012 bail rationale). Execution session picks the mechanism; back it with a witness over the chosen drift-prevention.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Expected N/A: project membership is not in the audit-sensitive list.
+5. Commit message includes `[closes DAT-035]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
