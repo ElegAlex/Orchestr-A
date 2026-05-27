@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 191 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017)
+> **Total tasks:** 192 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018)
 
 ## Schema legend
 
@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 124 important · 24 nit · 6 suggestion
-- **By category:** 37 correctness · 36 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
+- **By severity:** 32 blocking · 125 important · 24 nit · 6 suggestion
+- **By category:** 37 correctness · 37 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -2642,6 +2642,50 @@ The DTO never expressed the cross-field invariant "epicId/milestoneId imply proj
 **Verification command:**
 ```
 pnpm test apps/api/src/tasks
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### DAT-038 — Event.parentEventId has no cycle prevention (the audit's "Same for Event.parentEventId")
+
+- **Status:** TODO
+- **Phase:** 3
+- **Cluster:** F
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** data_integrity · cascade
+- **File:** `packages/database/prisma/schema.prisma:920`
+- **Source:** Session-derived. DAT-018 closeout (`fff93ce`, 2026-05-27). DAT-018's **Description** AND **Code evidence** both named `Event.parentEventId` as a second instance of the missing cycle-guard ("Same for Event.parentEventId", `schema.prisma:899-906 Event.parentEventId: no CHECK`), but its **Suggested fix** named only `TaskDependency` literally, so `Event.parentEventId` stayed out of DAT-018's literal scope (bundle-discipline; same closeout-filing pattern as DAT-004→DAT-032, DAT-016→DAT-036, DAT-017→DAT-037). Filed here as the defense-in-depth follow-up.
+
+**Description:**
+`Event.parentEventId` is a self-FK (`Event? @relation("EventRecurrence")`, used for recurrence) with `onDelete: Cascade`. Nothing at the DB level stops the 1-hop self-loop (`parentEventId = id`) or a longer cycle (A.parent=B, B.parent=A, …). A cycle makes the recurrence parent chain non-terminating, so any walk up the parent chain (recurrence expansion, "is this the master event?" rollups) loops forever. Exactly the DAT-018 failure mode on a different self-relation. NOTE: unlike `task_dependencies` (a join table, edge = a row), this is a single nullable column on `events`, so the trigger walks `id → parentEventId` and the self-loop CHECK is `"parentEventId" IS DISTINCT FROM "id"` (must tolerate the common NULL case — most events have no parent).
+
+**Root cause:**
+Self-reference modelled without a recursive-CTE guard (same as DAT-018).
+
+**Code evidence:**
+```
+schema.prisma:920 Event.parentEventId String?  +  :926 parentEvent self-relation (onDelete: Cascade). No CHECK, no trigger.
+Dev pre-flight (psql, 2026-05-27, DAT-018 step 4): 0 direct self-cycles (parentEventId = id), 0 multi-hop cycles, and 0 of 195 events have a parentEventId at all → both the CHECK and the trigger attach cleanly with NOTHING to reject; data-cleanup burden = nil. This is invariant-tightening, not data-rescue.
+```
+
+**Suggested fix:**
+Mirror DAT-018 (`fff93ce`, migration `20260527180000`) on `events`: (1) raw-SQL CHECK `events_parent_no_self_ck` `CHECK ("parentEventId" IS DISTINCT FROM "id")` — `IS DISTINCT FROM` so the NULL-parent case passes cleanly (most events have no parent); (2) a `BEFORE INSERT OR UPDATE` trigger walking `parentEventId` upward from `NEW."parentEventId"`; if it reaches `NEW."id"`, RAISE with identifier `events_parent_no_cycle`. **Carry over the DAT-018 advisor catch:** the trigger fires on UPDATE too, so exclude the row under modification on both CTE arms via `(TG_OP = 'INSERT' OR id <> OLD."id")` to avoid false-rejecting a legitimate re-parent. UNION (not UNION ALL) for cycle-safe termination; columns are `text`. As in DAT-018 the self-loop is left to the CHECK (the trigger seeds from the parent, never reaches itself in a valid tree). `schema.prisma` stays untouched (raw-SQL migration; DAT-018 precedent). Check whether any service method already rejects event-parent cycles (DAT-018 found `tasks.service.ts checkCircularDependency` for the task case) — if so keep it alongside; if a controller path can hit the trigger raw, consider a typed-400/409 follow-up (DAT-018 did NOT need one because the service rejected first). Witness under TST-DB-001: FAIL-pre→PASS-post — self-loop→23514+`events_parent_no_self_ck`, 2-hop/3-hop→`events_parent_no_cycle`, plus DAG positives (linear parent chain, NULL-parent event) and an UPDATE-positive re-parent.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Expected N/A: schema migration, not audit-sensitive (DAT-014/017/018 precedent).
+5. Commit message includes `[closes DAT-038]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
