@@ -29,6 +29,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `COR-022` | `760aa58` | important | Per-`(userId, date)` daily **hours cap (≤ 24)** on TimeEntry create/update. **DTO + service only — no migration, no schema change.** |
 | `DAT-012` | `c8b618e` | important | **5 native Postgres enums** promoting 6 free-string columns (predefined-task duration/period/completionStatus/recurrenceType, app-settings category). `AuditLog.action`/`entityType` deliberately **stayed `String`** (document route — see Operational notes). One migration. |
 | `DAT-013` | `c0189c1` | important | **6 CHECK constraints** enforcing `HH:MM` time-of-day format on `Task`/`Event`/`PredefinedTask` `startTime`/`endTime` (regex `^([0-1]?[0-9]\|2[0-3]):[0-5][0-9]$`, the lenient DTO-floor superset). `schema.prisma` unchanged (columns stay `String?`). One migration. |
+| `DAT-014` | `f8a5ce9` | important | **1 BEFORE INSERT/UPDATE trigger** (`leaves_sync_type_trg` + fn `leaves_sync_type_from_config`) auto-deriving the legacy `leaves.type` enum from the FK `leave_type_configs.code` (member→verbatim, else `OTHER`, via `enum_range`). Makes the column a read-only mirror of the FK → kills the dual-source drift without dropping it (DROP blocked by active frontend readers). Includes a one-time backfill reconciling existing rows. `schema.prisma` unchanged (column stays `LeaveType?`). One migration. |
 
 - **Prod baseline (expected):** TBD: commits behind master at deploy time. Expected last applied
   migration `20260524100100_dat005_convert_float_to_decimal` — the Phase-1 closeout left prod at git
@@ -46,13 +47,14 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 - **DB:** `orchestr_a_prod`, user `orchestr_a`. Host has **no** `psql`/`pg_dump` binaries → all
   Postgres ops run inside the db container (`docker exec`).
 
-### Migrations applied by this batch (3)
+### Migrations applied by this batch (4)
 
 | Migration folder | Task(s) | Introduces |
 |------------------|---------|------------|
 | `20260527120000_dat003_dat004_business_invariants` | DAT-003 + DAT-004 | 14 `ADD CONSTRAINT … CHECK (…)` (7 date-range + 7 numeric). Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). |
 | `20260527130000_dat012_promote_string_enums` | DAT-012 | `CREATE TYPE` ×5 + `ALTER COLUMN … TYPE … USING (col::"Enum")` ×6 (defaults dropped/re-set around the casts). Hand-authored; `schema.prisma` **was** edited (enum blocks + column types — baked into the rebuilt api image). |
 | `20260527140000_dat013_time_format_check` | DAT-013 | 6 `ADD CONSTRAINT … CHECK (col ~ '^([0-1]?[0-9]\|2[0-3]):[0-5][0-9]$')` on Task/Event/PredefinedTask `startTime`/`endTime`. Hand-authored raw SQL; `schema.prisma` unchanged. **No pre-deploy probe needed** — CHECK on already-format-valid data is uneventful (dev pre-flight: 4 well-formed rows, zero malformed; like DAT-003/004, unlike the DAT-012 enum cast). |
+| `20260527150000_dat014_leave_type_autosync_trigger` | DAT-014 | `CREATE OR REPLACE FUNCTION leaves_sync_type_from_config()` + `CREATE TRIGGER leaves_sync_type_trg BEFORE INSERT OR UPDATE ON leaves` + a one-time backfill `UPDATE leaves SET type = <derived> … WHERE type IS DISTINCT FROM <derived>`. Hand-authored raw SQL; `schema.prisma` unchanged (column stays `LeaveType?`; triggers are not DSL-expressible). **Pre-deploy precaution:** the trigger function compiles at `migrate deploy` time (no separate probe). The backfill is a single bounded pass touching only drifted/NULL rows; on a large prod `leaves` table it is still one `UPDATE` — verify no prod codebase reference writes `leave.type` independently *outside this commit's diff* (the service already derives it; this only enforces it). Dev pre-flight: 3 rows, 1 NULL/`CP_E2E` reconciled to `OTHER`, 2 CP unchanged. |
 
 > COR-022 is **not** in this sub-table — it ships entirely in the api image (`760aa58`), no DDL.
 >
@@ -66,15 +68,16 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 ## Deploy plan (phases, 2 human gates)
 
 1. **Pre-deploy baseline (read-only).** git/containers/images/`_prisma_migrations` HEAD/row counts.
-   Confirm the 3 batch migrations are exactly the pending delta `HEAD → origin/master` under
+   Confirm the 4 batch migrations are exactly the pending delta `HEAD → origin/master` under
    `packages/database/prisma/migrations/`. STOP if any surprise migration appears.
 2. **Pre-deploy data probe (read-only) — the DAT-012 cast-safety gate.** Per-column out-of-enum-set
    probe (below). DAT-003/004 needs no probe (dev pre-flight was 0-violators across all 14
    predicates, validated clean by `migrate deploy` on dev). **→ GATE 1.**
 3. **Deploy execution** (after Gate 1 greenlight). Safety dump → `git pull` → `build api` →
-   `migrate deploy` (must be exactly the 3 batch migrations) → `up -d api` → health check.
-4. **Post-deploy verification.** All migrations in `_prisma_migrations`; CHECK + enum smoke
-   (INSERT-then-ROLLBACK); time_entries sanity; audit_logs sanity. **→ GATE 2** (operator UI smoke).
+   `migrate deploy` (must be exactly the 4 batch migrations) → `up -d api` → health check.
+4. **Post-deploy verification.** All migrations in `_prisma_migrations`; CHECK + enum + leave-type
+   trigger smoke (INSERT-then-ROLLBACK); time_entries sanity; audit_logs sanity. **→ GATE 2**
+   (operator UI smoke).
 5. **Rollback (conditional).** Per-migration templates below. Log + push even on rollback.
 
 ---
@@ -94,10 +97,10 @@ origin/master = TBD
 commits behind origin/master: TBD
 
 $ git diff --name-status HEAD origin/master -- packages/database/prisma/migrations/
-TBD: must show exactly the 3 batch migration folders (20260527120000_…, 20260527130000_…, 20260527140000_…) as `A`,
-     plus schema.prisma as `M` under packages/database/prisma/ (the DAT-012 enum edits).
+TBD: must show exactly the 4 batch migration folders (20260527120000_…, 20260527130000_…, 20260527140000_…, 20260527150000_…) as `A`,
+     plus schema.prisma as `M` under packages/database/prisma/ (the DAT-012 enum edits; DAT-013/014 leave schema.prisma untouched).
 ```
-TBD: ✅/⚠️ assumption check — only the 3 batch migrations are pending; no surprise migration.
+TBD: ✅/⚠️ assumption check — only the 4 batch migrations are pending; no surprise migration.
 
 ### `_prisma_migrations` HEAD + row counts (Phase-4 baseline)
 ```
@@ -236,7 +239,7 @@ TBD: must show EXACTLY:
   All migrations have been successfully applied.
 $ docker compose -f docker-compose.prod.yml --env-file .env.production up -d api    # TBD: healthy in ~Ns
 ```
-TBD: confirm exactly the 3 batch migrations applied (no more, no fewer). TBD: running api image id
+TBD: confirm exactly the 4 batch migrations applied (no more, no fewer). TBD: running api image id
 (should be the freshly built image, not the `pre-phase3-defense-in-depth` anchor).
 
 ---
@@ -292,6 +295,28 @@ ROLLBACK;
 ```
 TBD: paste the 22P02 error (confirms the enum type is enforced in prod).
 
+### Leave-type auto-sync trigger smoke (DAT-014 — INSERT-then-ROLLBACK, asserts COERCION not rejection)
+
+Unlike the CHECK/enum smokes (which expect an ERROR), the DAT-014 trigger **silently coerces**: it
+must *accept* a deliberately-wrong `type` and rewrite it to the FK-derived value. The smoke inserts a
+mismatched row inside a transaction, reads it back, and rolls back — prod data is never mutated.
+
+```sql
+BEGIN;
+  -- pick any existing user + the 'CP' config; force a wrong type='RTT'
+  INSERT INTO "leaves" (id, "userId", "leave_type_id", "type", "startDate", "endDate", days, status, "updatedAt")
+  SELECT 'dat014-prod-smoke', u.id, c.id, 'RTT'::"LeaveType",
+         DATE '2026-03-01', DATE '2026-03-02', 1, 'PENDING', now()
+  FROM (SELECT id FROM users LIMIT 1) u, (SELECT id FROM leave_type_configs WHERE code='CP' LIMIT 1) c;
+  -- expect: type = 'CP' (trigger coerced 'RTT' → the FK code), NOT 'RTT'
+  SELECT "type"::text AS coerced_type FROM "leaves" WHERE id = 'dat014-prod-smoke';
+ROLLBACK;
+```
+TBD: paste the `coerced_type` value — must be `CP`, not `RTT`. If it reads back `RTT`, the trigger did
+not deploy → investigate before declaring done. (Also confirm the trigger exists:
+`SELECT tgname FROM pg_trigger WHERE tgrelid='leaves'::regclass AND NOT tgisinternal;` → must list
+`leaves_sync_type_trg`.)
+
 ### COR-022 sanity (no migration — confirm the cap path doesn't 500)
 ```sql
 SELECT count(*) FROM time_entries;   -- TBD: returns a count, no error (read path healthy)
@@ -301,7 +326,9 @@ return HTTP 400, not 500). Code-only change; the DB smoke above is just a livene
 
 ### audit_logs sanity
 TBD: confirm **no `SYSTEM_BACKFILL` row was emitted by this batch** — these are pure DDL/code
-deploys with no backfill script:
+deploys with no application backfill script. (DAT-014's migration contains a one-time `UPDATE leaves`
+reconciliation, but it runs as raw SQL inside `migrate deploy`, not through the app's audit emitter —
+so it correctly produces no `audit_logs` row, same as DAT-005's in-migration numeric conversion.)
 ```sql
 SELECT action, count(*) FROM audit_logs
  WHERE action = 'SYSTEM_BACKFILL' AND "createdAt" >= TBD: deploy-window-start
@@ -408,6 +435,20 @@ ALTER TABLE "events"           DROP CONSTRAINT IF EXISTS "events_endTime_format_
 ALTER TABLE "predefined_tasks" DROP CONSTRAINT IF EXISTS "predefined_tasks_startTime_format_ck";
 ALTER TABLE "predefined_tasks" DROP CONSTRAINT IF EXISTS "predefined_tasks_endTime_format_ck";
 -- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260527140000_dat013_time_format_check';
+```
+
+### DAT-014 (`f8a5ce9`, migration `20260527150000`) — DROP TRIGGER + DROP FUNCTION (cheap, but backfill is one-way)
+
+Removing the trigger is symmetric and idempotent. **The trigger itself is fully reversible; the
+one-time backfill is not** — it overwrote drifted/NULL `leaves.type` values with the FK-derived value
+and the prior values are not retained. That is intentional (the derived value is the *correct* one),
+but note that a rollback restores the *enforcement*-free state, not the pre-backfill column contents
+(which were stale by definition). No data is lost that anything should have been reading.
+
+```sql
+DROP TRIGGER IF EXISTS leaves_sync_type_trg ON "leaves";
+DROP FUNCTION IF EXISTS leaves_sync_type_from_config();
+-- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260527150000_dat014_leave_type_autosync_trigger';
 ```
 
 ---

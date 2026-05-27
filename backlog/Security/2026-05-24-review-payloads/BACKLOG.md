@@ -2031,7 +2031,7 @@ non-audit-sensitive — DAT-005/DAT-012 precedent).
 ---
 ### DAT-014 — Leave.type LeaveType? legacy enum still exists alongside leaveTypeId — drift risk
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2068,8 +2068,46 @@ Drop column leaves.type in a migration after verifying no SELECT references it. 
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** f8a5ce9
+**Learnings:**
+- **Path B (trigger), NOT Path A (DROP COLUMN) — blocked by active frontend display.** The audit's
+  primary fix (drop `leaves.type`) is gated on "no SELECT references it." Pre-flight found `leave.type`
+  consumed by **three active frontend sites** — `apps/web/app/[locale]/leaves/page.tsx:486,508`
+  (`switch (leave.type)`), `.../users/[id]/suivi/page.tsx:912` (i18n key `leaves.types.${leave.type}`),
+  `src/components/planning/DayCell.tsx:152` (legacy fallback) — plus the `findAll` `?type=` API filter
+  (`leaves.service.ts:715`). Per the contract's bail condition (active frontend display ⇒ Path A
+  blocked) this took the audit's stopgap path.
+- **Auto-sync (self-healing) trigger style, NOT validate-and-reject** (a deliberate deviation from
+  Invariant #2's "P0001/reject" witness language, blessed by the bail-condition's "pick an auto-sync
+  style that's self-healing" clause). `leaves_sync_type_trg` BEFORE INSERT OR UPDATE derives `NEW.type`
+  from the joined `leave_type_configs.code` (member→verbatim, else `OTHER`), making the column a
+  read-only mirror of the FK — this removes the dual *writeable* source of truth without physically
+  dropping the column. Chosen over a CHECK/validation trigger because the service maps arbitrary
+  custom codes (e.g. `CP_E2E`) to enum `OTHER`, so a naive `NEW.type = code` validation would wrongly
+  REJECT every legitimate custom leave type. Witness is therefore **coercion-style** (insert wrong
+  type → reads back coerced), not rejection.
+- **`enum_range(NULL::"LeaveType")::text[]`** used for the membership test (advisor's catch) instead of
+  a hardcoded `IN ('CP','RTT',…)` list — adding a future enum member won't silently miscoerce. Verified
+  on PG18: `'CP' = ANY(…)` → t, `'CP_E2E' = ANY(…)` → f.
+- **One-time backfill in the same migration** (advisor): `UPDATE leaves SET type = <derived> … WHERE
+  type IS DISTINCT FROM <derived>` reconciles existing rows so the invariant holds immediately, not
+  just on the next write. Dev (3 rows): the 1 NULL/`CP_E2E` row → `OTHER`; the 2 CP rows unchanged.
+- **COR-029 disposition:** `getPendingDays` (`leaves.service.ts:2507`, reads `where: { type: CP }`) is
+  confirmed **dead** (`grep` → 0 callers). COR-029's audit text invites deleting it. Left untouched
+  here (Path B needs zero TS edits — Invariant 5/6); its `type` read is now harmless since the trigger
+  guarantees `type` mirrors the FK. COR-029 (Phase 13) can delete it without risk.
+- **Adjacent-file inventory: ZERO TS files touched.** Fix = 2 new files (migration + int spec). Under
+  Path B the column stays, so the service's `type: enumType` writes, the `findAll ?type=` filter, the
+  DTO/controller `type?` params, and all unit-spec assertions stand unchanged — and the trigger is
+  invisible to the mocked-`database` unit suite (confirmed: 1658 unchanged). schema.prisma unchanged
+  (triggers aren't Prisma-6-DSL-expressible; same raw-SQL pattern as DAT-003/004/013).
+- **Known limitation (noted for a future task, advisor):** the trigger fires on writes to `leaves`,
+  not to `leave_type_configs`. If an admin changes a config's `code`, existing leave rows keep their
+  old derived `type` until next written. The audit's concern is write-time drift, which this closes; a
+  config-side propagation trigger would be separate scope.
+- **FAIL-pre demonstrated live** on the triggerless dev DB (BEGIN…ROLLBACK): `INSERT … type='RTT'`
+  against a CP config persists `RTT`; post-migration (ephemeral harness) the same insert reads back
+  `CP`. Witness has real teeth.
 
 ---
 ### DAT-016 — Department.name and Service.name lack UNIQUE constraints
