@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 192 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018)
+> **Total tasks:** 193 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018) + 1 session-derived follow-up (COR-037, 2026-05-27, from DAT-023)
 
 ## Schema legend
 
@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 125 important · 24 nit · 6 suggestion
-- **By category:** 37 correctness · 37 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
+- **By severity:** 32 blocking · 125 important · 25 nit · 6 suggestion
+- **By category:** 38 correctness · 37 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -2698,6 +2698,53 @@ Mirror DAT-018 (`fff93ce`, migration `20260527180000`) on `events`: (1) raw-SQL 
 **Verification command:**
 ```
 pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+
+### COR-037 — Leave approve/import leaks a 500 on the DAT-023 EXCLUDE (should be 409)
+
+- **Status:** TODO
+- **Phase:** 3
+- **Cluster:** F
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** nit
+- **Category:** correctness · error_handling
+- **File:** `apps/api/src/leaves/leaves.service.ts:1619` (`approve`), `apps/api/src/leaves/leaves.service.ts:2856`/`3055` (import paths)
+- **Source:** Session-derived. DAT-023 closeout (`c27862a`, 2026-05-27). Surfaced in DAT-023's pre-flight: `checkOverlap` guards `create` (line 433) and `update` (line 1248) with a `ConflictException` (409), but `approve` (line 1619) does NOT re-check overlap, and the leaves module has no Prisma error filter. With DAT-023's `leaves_no_overlap` EXCLUDE now live, the second of two overlapping PENDING leaves transitioning to APPROVED (the audit's TOCTOU race — two concurrent creates slip past `checkOverlap`, then both get approved) hits the DB constraint (23P01) unmapped → HTTP 500. DAT-023 stayed schema+spec-only (advisor-confirmed); this is the deferred application-layer hardening.
+
+**Description:**
+After DAT-023, `leaves.service.ts` `approve()` (and the auto-approve branches of the CSV import at ~2856/3055) can throw an unmapped `PrismaClientKnownRequestError` (SQLSTATE `23P01`, exclusion_violation, constraint `leaves_no_overlap`) when approving a leave that overlaps an already-APPROVED leave for the same user. With no try/catch mapping it, Nest returns a generic 500 instead of the `409 ConflictException` the create/update paths already return for overlaps. The overlap is correctly *prevented* either way (DAT-023 is doing its job) — this is purely the error surface. NOTE: the create/update happy paths are unaffected — their `checkOverlap` 409 fires first; only the approve/import transition (which does not re-check) reaches the raw constraint.
+
+**Root cause:**
+`checkOverlap` runs at create/update but not at approve; the PENDING→APPROVED transition is where two overlapping leaves can first both become APPROVED, and that path has no Prisma `23P01` mapping.
+
+**Code evidence:**
+```
+leaves.service.ts:433   create  → checkOverlap → ConflictException (409)   [guarded]
+leaves.service.ts:1248  update  → checkOverlap → ConflictException (409)   [guarded]
+leaves.service.ts:1619  approve → NO overlap re-check; tx update status=APPROVED → can hit 23P01 unmapped → 500
+leaves.service.ts:2856/3055  import auto-approve branches → same unmapped-23P01 exposure
+```
+
+**Suggested fix:**
+Wrap the approve-path status mutation (and the import auto-approve write) in a try/catch mapping Prisma `23P01` on `leaves_no_overlap` → the same `ConflictException` message the create/update overlap path returns (so the race collapses to the identical 409). Factor a small `isLeaveOverlapViolation(err)` helper if it reads cleaner. Witness: a test asserting a mocked/real `23P01` from the approve transition yields `ConflictException`, not a leaked 500.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Expected N/A: this maps an error surface only; it does not change the approve mutation or its existing `LEAVE_APPROVED` audit emission (which fires only on a successful approve, not on the 23P01 reject).
+5. Commit message includes `[closes COR-037]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm test apps/api/src/leaves
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
