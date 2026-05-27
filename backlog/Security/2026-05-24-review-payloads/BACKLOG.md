@@ -2112,7 +2112,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-016 — Department.name and Service.name lack UNIQUE constraints
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
