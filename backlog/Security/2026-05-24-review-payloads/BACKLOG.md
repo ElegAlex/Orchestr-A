@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 184 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27)
+> **Total tasks:** 184 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022)
 
 ## Schema legend
 
@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 120 important · 21 nit · 6 suggestion
-- **By category:** 34 correctness · 32 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
+- **By severity:** 32 blocking · 121 important · 22 nit · 6 suggestion
+- **By category:** 35 correctness · 33 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -1760,7 +1760,7 @@ pnpm test apps/api/src/audit/
 ---
 
 ## Phase 3 — Defense-in-depth schema — Invariants métier en SQL
-*11 tasks in this phase.*
+*13 tasks in this phase.*
 
 ### DAT-003 — No DB CHECK on Leave.endDate >= startDate (and others)
 
@@ -1850,7 +1850,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### COR-022 — No upper bound on TimeEntry.hours; no per-day cap
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -1887,8 +1887,17 @@ Add @Min(0) @Max(24) on CreateTimeEntryDto.hours. Sum existing same-(userId, dat
 pnpm test apps/api/src/time-tracking/time-tracking.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 760aa58
+**Learnings:**
+- **Partial false positive (NOT escalated to BLOCKED).** The audit's Root cause ("DTO validation likely uses @IsNumber without a range") was wrong: `CreateTimeEntryDto.hours` already carried `@Min(0.25) @Max(24)`. So the single-entry bound and negative-hours rejection were *already* enforced (a typo of `80` is already rejected by `@Max(24)`). The genuinely-missing half of the Suggested fix was the **per-(userId, date) aggregate cap**, which was still reproducible — hence TODO→DONE, not the contract's "no longer reproducible" → BLOCKED path. Only the missing mechanism was implemented; no redundant DTO edit. (Discipline precedent: DAT-032 literal-scope reasoning.)
+- **AC#2 witness placement.** A DTO test for `hours=25` cannot witness FAIL-pre (the bound already exists → it passes before *and* after). It is committed as a **regression guard** (locks `@Min/@Max` against future removal), explicitly NOT the witness. The genuine FAIL-pre→PASS-post witness is the **service-level sum-cap test** (mock aggregate returns 20h existing + 5h new = 25h → expect `BadRequestException`, `create` not called). Neutralized-code check confirmed teeth: pre-fix the 4 service cap tests fail non-vacuously ("expected rejected promise, received undefined"; `aggregate` called 0×), post-fix 87/87 green.
+- **Threshold = 24** (`MAX_HOURS_PER_DAY`), per the task default; no existing constant/config implied another value. Boundary is inclusive — sum == 24 is allowed, sum > 24 rejected ("exceed the threshold").
+- **Mechanism = service + DTO level only**, no DB CHECK (per Invariant 1). A complementary `time_entries_hours_ck` / per-day-sum DB guard would close the defense-in-depth gap (Phase 3 theme) but is **filed session-derived** rather than added in this commit — see DAT-033 (filed in closeout).
+- **Exception type = `BadRequestException`** — grep confirmed the module uses it exclusively for validation rejections (no `ConflictException` import).
+- **Write-path coverage.** Grep of `timeEntry.{create,update}` in the module found 4 sites: `create()` L141 (guarded), `update()` L496 (guarded), and the two `upsertDismissal` writes (`hours=0`, dismissal — no cap risk, untouched). The cap is keyed on `userId`; **third-party declarations (`userId = null`) are out of the audit's literal `per-(userId, date)` scope** and remain uncapped — filed session-derived as DAT-034.
+- **Day boundary** computed as a UTC `[startOfDay, nextDay)` range (prod = UTC per [[project_prod_behind_master_dat005]]); robust to entries stored with a time component. Update path recomputes `effectiveHours/effectiveDate` (falling back to the existing row) and excludes the entry's own id (`id: { not }`) from the sum.
+- **Spec mock gap fixed (adjacent, justified):** two pre-existing `update` tests mocked `findUnique` without `date`/`hours`; real rows are NOT NULL, and the new cap reads `existing.date`. Added those fields to the two mocks (the mocks were incomplete vs the real row shape). Added `aggregate: vi.fn()` to the Prisma mock with a default `{ _sum: { hours: 0 } }` so unrelated tests treat the cap as a no-op.
+- **AC#4 N/A:** time tracking is not in the contract's audit-sensitive list (auth / leaves approve-reject / RBAC mutations / document access / user delete / password reset) — no `audit_logs` entry required.
 
 ---
 ### DAT-012 — Free-string fields where enum would prevent drift
@@ -2231,6 +2240,93 @@ grep -n 'subtasks_position_ck' packages/database/prisma/migrations/  # expect 0 
 **Verification command:**
 ```
 pnpm prisma migrate deploy && pnpm test:integration  # apply migration + real-DB witness (migrate dev --create-only blocked by _dat005_backup_* drift — see TOOL-DBSYNC-001)
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### DAT-033 — No DB-level guard on TimeEntry hours (single-entry bound + per-day cap)
+
+- **Status:** TODO
+- **Phase:** 3
+- **Cluster:** F
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** data_integrity · constraint
+- **File:** `packages/database/prisma/schema.prisma` (TimeEntry model)
+- **Source:** Session-derived. COR-022 closeout (`760aa58`, 2026-05-27) — COR-022 enforced the single-entry bound (DTO `@Min/@Max`) and the per-(userId, date) cap at the **service layer only** (Invariant 1 forbade adding a DB CHECK inside that commit). Filed now as the defense-in-depth completion (Phase 3 theme: business invariants descended to the DB). See [[COR-022]] Learnings and the 2026-05-27 PROGRESS_LOG entry. Precedent: DAT-032 (DAT-004 → session-derived DB-CHECK completion).
+
+**Description:**
+`TimeEntry.hours` has no DB CHECK. The single-entry bound `[0.25, 24]` lives only in `CreateTimeEntryDto` (class-validator) and the per-day aggregate cap lives only in `TimeTrackingService` (COR-022). A direct admin SQL write or a service path that bypasses the DTO can persist negative or absurdly large hours. The single-column bound (`hours >= 0`, or `> 0 AND <= 24`) is expressible as a column CHECK; the per-day sum cap is NOT (cross-row aggregate — would need a trigger).
+
+**Root cause:**
+Business invariant encoded only at the application layer; no defense-in-depth at the DB layer — the same gap DAT-003/DAT-004 closed for other numeric/date columns.
+
+**Code evidence:**
+```
+schema.prisma — TimeEntry model: hours Decimal — no CHECK constraint.
+grep -n 'time_entries_hours_ck' packages/database/prisma/migrations/  # expect 0 hits
+```
+
+**Suggested fix:**
+`ALTER TABLE time_entries ADD CONSTRAINT time_entries_hours_ck CHECK (hours >= 0 AND hours <= 24)` in a new hand-authored migration (CHECK not expressible in Prisma 6 DSL — DAT-003/004 precedent). Note `hours = 0` must stay valid for dismissals (`isDismissal = true`). The per-day sum cap is out of scope for a single-column CHECK and remains the COR-022 service-level guard (a DB trigger for the aggregate is a separate, heavier decision — do not bundle). Mirror the DAT-004 witness pattern in `apps/api/src/schema-constraints/` (raw INSERT, SQLSTATE 23514 + constraint name).
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Expected N/A: schema migration, not audit-sensitive code; precedent DAT-005.
+5. Commit message includes `[closes DAT-033]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm prisma migrate deploy && pnpm test:integration  # apply migration + real-DB witness (migrate dev --create-only blocked by _dat005_backup_* drift — see TOOL-DBSYNC-001)
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### DAT-034 — Per-day hours cap not enforced for third-party time declarations
+
+- **Status:** TODO
+- **Phase:** 3
+- **Cluster:** F
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** nit
+- **Category:** correctness · quota
+- **File:** `apps/api/src/time-tracking/time-tracking.service.ts`
+- **Source:** Session-derived. COR-022 closeout (`760aa58`, 2026-05-27) — COR-022's per-day cap is keyed on `userId` (the audit's literal `per-(userId, date)` scope). Third-party declarations store `userId = null` (actor = `thirdPartyId`), so they bypass the cap entirely. Kept out of COR-022's literal scope (contract forbids scope-expansion; [[feedback_no_overdesign]]). See [[COR-022]] Learnings.
+
+**Description:**
+`TimeTrackingService.create()` resolves an actor that is either a `user` (`userId` set) or a `thirdParty` (`thirdPartyId` set, `userId = null`). The COR-022 per-day cap runs only when `actor.kind === 'user'`. A caller with `time_tracking:declare_for_third_party` can therefore log unbounded same-day hours against a third party (each entry still bounded to ≤ 24 by the DTO, but the daily aggregate is uncapped).
+
+**Root cause:**
+The cap helper is keyed on `userId`; the third-party dimension (`thirdPartyId`) was deliberately left out of COR-022 to stay literal to the audit's `per-(userId, date)` wording.
+
+**Code evidence:**
+```
+time-tracking.service.ts — create(): `if (actor.kind === 'user') { await this.ensureDailyCapNotExceeded(...) }`  — no thirdParty branch.
+```
+
+**Suggested fix:**
+Generalize `ensureDailyCapNotExceeded` to accept the actor dimension — sum `WHERE thirdPartyId = <id>` (instead of `userId`) for third-party entries — and call it on the third-party create/update path too. Same threshold (24) and same `BadRequestException`. Add a service-level witness mirroring the COR-022 user-path test but with `thirdPartyId`.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Expected N/A: time tracking is not audit-sensitive (see COR-022).
+5. Commit message includes `[closes DAT-034]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm test apps/api/src/time-tracking/
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
