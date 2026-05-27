@@ -6,8 +6,9 @@ ahead of execution**: the known scope, migrations, pre-deploy checks, verificati
 rollback templates are pre-filled now; every command and its output are captured at deploy time,
 in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 
-> **Seed status (2026-05-27):** Phase 3 is **5/10 closed**. This batch covers the 4 schema/data
-> tasks closed so far. The 5 remaining Phase 3 *important* tasks (DAT-014/016/017/018/023) are
+> **Seed status (2026-05-27):** Phase 3 is **7/10 closed**. This batch covers the 5 schema/data
+> migrations closed so far (DAT-003/004, DAT-012, DAT-013, DAT-014, DAT-016) plus the code-only
+> COR-022. The 3 remaining Phase 3 *important* tasks (DAT-017/018/023) are
 > not yet started; **as each closes, append a row to the Scope table and a bullet to Operational
 > notes — do not restructure this document.**
 >
@@ -30,6 +31,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `DAT-012` | `c8b618e` | important | **5 native Postgres enums** promoting 6 free-string columns (predefined-task duration/period/completionStatus/recurrenceType, app-settings category). `AuditLog.action`/`entityType` deliberately **stayed `String`** (document route — see Operational notes). One migration. |
 | `DAT-013` | `c0189c1` | important | **6 CHECK constraints** enforcing `HH:MM` time-of-day format on `Task`/`Event`/`PredefinedTask` `startTime`/`endTime` (regex `^([0-1]?[0-9]\|2[0-3]):[0-5][0-9]$`, the lenient DTO-floor superset). `schema.prisma` unchanged (columns stay `String?`). One migration. |
 | `DAT-014` | `f8a5ce9` | important | **1 BEFORE INSERT/UPDATE trigger** (`leaves_sync_type_trg` + fn `leaves_sync_type_from_config`) auto-deriving the legacy `leaves.type` enum from the FK `leave_type_configs.code` (member→verbatim, else `OTHER`, via `enum_range`). Makes the column a read-only mirror of the FK → kills the dual-source drift without dropping it (DROP blocked by active frontend readers). Includes a one-time backfill reconciling existing rows. `schema.prisma` unchanged (column stays `LeaveType?`). One migration. |
+| `DAT-016` | `ce8877a` | important | **2 UNIQUE indexes** — `departments_name_key` (Department.name globally unique) + `services_departmentId_name_key` (Service.name unique **per department**, composite — same name in different departments stays legal). DSL-expressible: `schema.prisma` **was** edited (`@unique` / `@@unique` — baked into the rebuilt api image). One migration. The app layer already pre-checked uniqueness; this is the DB-level floor closing the TOCTOU/direct-SQL gap. |
 
 - **Prod baseline (expected):** TBD: commits behind master at deploy time. Expected last applied
   migration `20260524100100_dat005_convert_float_to_decimal` — the Phase-1 closeout left prod at git
@@ -47,7 +49,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 - **DB:** `orchestr_a_prod`, user `orchestr_a`. Host has **no** `psql`/`pg_dump` binaries → all
   Postgres ops run inside the db container (`docker exec`).
 
-### Migrations applied by this batch (4)
+### Migrations applied by this batch (5)
 
 | Migration folder | Task(s) | Introduces |
 |------------------|---------|------------|
@@ -55,6 +57,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `20260527130000_dat012_promote_string_enums` | DAT-012 | `CREATE TYPE` ×5 + `ALTER COLUMN … TYPE … USING (col::"Enum")` ×6 (defaults dropped/re-set around the casts). Hand-authored; `schema.prisma` **was** edited (enum blocks + column types — baked into the rebuilt api image). |
 | `20260527140000_dat013_time_format_check` | DAT-013 | 6 `ADD CONSTRAINT … CHECK (col ~ '^([0-1]?[0-9]\|2[0-3]):[0-5][0-9]$')` on Task/Event/PredefinedTask `startTime`/`endTime`. Hand-authored raw SQL; `schema.prisma` unchanged. **No pre-deploy probe needed** — CHECK on already-format-valid data is uneventful (dev pre-flight: 4 well-formed rows, zero malformed; like DAT-003/004, unlike the DAT-012 enum cast). |
 | `20260527150000_dat014_leave_type_autosync_trigger` | DAT-014 | `CREATE OR REPLACE FUNCTION leaves_sync_type_from_config()` + `CREATE TRIGGER leaves_sync_type_trg BEFORE INSERT OR UPDATE ON leaves` + a one-time backfill `UPDATE leaves SET type = <derived> … WHERE type IS DISTINCT FROM <derived>`. Hand-authored raw SQL; `schema.prisma` unchanged (column stays `LeaveType?`; triggers are not DSL-expressible). **Pre-deploy precaution:** the trigger function compiles at `migrate deploy` time (no separate probe). The backfill is a single bounded pass touching only drifted/NULL rows; on a large prod `leaves` table it is still one `UPDATE` — verify no prod codebase reference writes `leave.type` independently *outside this commit's diff* (the service already derives it; this only enforces it). Dev pre-flight: 3 rows, 1 NULL/`CP_E2E` reconciled to `OTHER`, 2 CP unchanged. |
+| `20260527160000_dat016_unique_name_constraints` | DAT-016 | `CREATE UNIQUE INDEX "departments_name_key" ON "departments"("name")` + `CREATE UNIQUE INDEX "services_departmentId_name_key" ON "services"("departmentId", "name")`. Hand-authored, but **byte-equivalent to `migrate dev` output** (Prisma `<table>_<col>_key` naming) so a future drift-clean `migrate dev` sees no diff; `schema.prisma` **was** edited (`@unique` / `@@unique` — DSL-expressible, baked into the rebuilt api image). **Pre-deploy precaution (required):** run a read-only duplicate SELECT on prod BEFORE `migrate deploy` — `CREATE UNIQUE INDEX` validates against existing rows and aborts with 23505 if any duplicate exists. Resolve by rename if found (see probe below). Dev pre-flight: 0 duplicates (2 depts, 4 services). |
 
 > COR-022 is **not** in this sub-table — it ships entirely in the api image (`760aa58`), no DDL.
 >
@@ -196,6 +199,30 @@ For each offending value, pick one:
 >
 > COR-022: **no migration, no pre-deploy check** — it ships in the api image only.
 
+### DAT-016 duplicate-name probe (CRITICAL, read-only — `CREATE UNIQUE INDEX` aborts on existing dups)
+
+`20260527160000` builds two UNIQUE indexes; Postgres validates each against the existing rows at
+build time and aborts the whole `migrate deploy` with 23505 if any duplicate exists. Run these BEFORE
+deploy; both must return `(0 rows)`.
+
+```sql
+-- Department.name globally unique
+SELECT name, count(*) FROM departments GROUP BY name HAVING count(*) > 1;
+-- Service.name unique PER department (composite)
+SELECT "departmentId", name, count(*) FROM services GROUP BY "departmentId", name HAVING count(*) > 1;
+```
+TBD: probe output — both expected `(0 rows)`. Dev pre-flight returned 0/0 (2 depts, 4 services).
+
+**Resolution if any row returns** (do NOT run `migrate deploy` until clean): rename the duplicate(s)
+in place, suffixing with a short disambiguator, then re-probe. Example:
+```sql
+-- rename the newer-by-createdAt duplicate(s), keeping the oldest row's name intact
+UPDATE departments d SET name = d.name || ' (' || left(d.id::text, 8) || ')'
+ WHERE EXISTS (SELECT 1 FROM departments d2 WHERE d2.name = d.name AND d2."createdAt" < d."createdAt");
+```
+Mirror for `services` keyed on `("departmentId", name)`. Re-run the probe → must be 0 rows. Capture
+the before/after in the deploy log (manual data edit, no audit emitter — like DAT-012's normalization).
+
 ---
 
 ## GATE 1 — probe outcome reported to operator (awaiting greenlight)
@@ -236,10 +263,13 @@ $ docker compose -f docker-compose.prod.yml --env-file .env.production run --rm 
 TBD: must show EXACTLY:
   Applying migration `20260527120000_dat003_dat004_business_invariants`
   Applying migration `20260527130000_dat012_promote_string_enums`
+  Applying migration `20260527140000_dat013_time_format_check`
+  Applying migration `20260527150000_dat014_leave_type_autosync_trigger`
+  Applying migration `20260527160000_dat016_unique_name_constraints`
   All migrations have been successfully applied.
 $ docker compose -f docker-compose.prod.yml --env-file .env.production up -d api    # TBD: healthy in ~Ns
 ```
-TBD: confirm exactly the 4 batch migrations applied (no more, no fewer). TBD: running api image id
+TBD: confirm exactly the 5 batch migrations applied (no more, no fewer). TBD: running api image id
 (should be the freshly built image, not the `pre-phase3-defense-in-depth` anchor).
 
 ---
@@ -250,7 +280,7 @@ TBD: confirm exactly the 4 batch migrations applied (no more, no fewer). TBD: ru
 
 | Check | Command / method | Result |
 |-------|------------------|--------|
-| V1 — all migrations applied | `SELECT migration_name, applied_steps_count, finished_at FROM _prisma_migrations WHERE migration_name IN ('20260527120000_dat003_dat004_business_invariants','20260527130000_dat012_promote_string_enums','20260527140000_dat013_time_format_check');` | TBD: 3 rows, each `applied_steps_count=1`, no mixed state |
+| V1 — all migrations applied | `SELECT migration_name, applied_steps_count, finished_at FROM _prisma_migrations WHERE migration_name IN ('20260527120000_dat003_dat004_business_invariants','20260527130000_dat012_promote_string_enums','20260527140000_dat013_time_format_check','20260527150000_dat014_leave_type_autosync_trigger','20260527160000_dat016_unique_name_constraints');` | TBD: 5 rows, each `applied_steps_count=1`, no mixed state |
 | V2 — enum columns are now `USER-DEFINED` | `SELECT table_name, column_name, udt_name FROM information_schema.columns WHERE udt_name IN ('PredefinedTaskDuration','DayPeriod','AssignmentCompletionStatus','RecurrenceType','AppSettingsCategory');` | TBD: 6 rows mapping the 6 promoted columns |
 | V3 — all services healthy | `docker compose … ps` | TBD: api/web/nginx/postgres/redis `Up (healthy)` |
 | V4 — running api image | `docker inspect …` | TBD: freshly built image, not the anchor |
@@ -316,6 +346,51 @@ TBD: paste the `coerced_type` value — must be `CP`, not `RTT`. If it reads bac
 not deploy → investigate before declaring done. (Also confirm the trigger exists:
 `SELECT tgname FROM pg_trigger WHERE tgrelid='leaves'::regclass AND NOT tgisinternal;` → must list
 `leaves_sync_type_trg`.)
+
+### Name-uniqueness smoke (DAT-016 — INSERT-then-ROLLBACK; one negative per index + one positive)
+
+Both directions in a single transaction, rolled back so prod data is never mutated. Run via
+`docker exec orchestr-a-postgres-prod psql -U orchestr_a -d orchestr_a_prod`. Unlike the witness
+spec (which goes through Prisma and sees only the `Key (<cols>)=` detail), a raw `psql` session
+surfaces the full Postgres message **naming the index** — assert on that.
+
+```sql
+-- NEGATIVE 1: two departments, same name → expect ERROR 23505 violating "departments_name_key"
+BEGIN;
+  INSERT INTO departments (id, name, "updatedAt") VALUES (gen_random_uuid(), 'dat016 prod smoke dept', now());
+  INSERT INTO departments (id, name, "updatedAt") VALUES (gen_random_uuid(), 'dat016 prod smoke dept', now());
+ROLLBACK;
+
+-- NEGATIVE 2: two services, same name, SAME department → expect ERROR 23505
+--             violating "services_departmentId_name_key"
+BEGIN;
+  WITH d AS (
+    INSERT INTO departments (id, name, "updatedAt")
+    VALUES (gen_random_uuid(), 'dat016 smoke parent', now()) RETURNING id
+  )
+  INSERT INTO services (id, name, "departmentId", "updatedAt")
+  SELECT gen_random_uuid(), 'dat016 dup svc', d.id, now() FROM d;
+  INSERT INTO services (id, name, "departmentId", "updatedAt")
+  SELECT gen_random_uuid(), 'dat016 dup svc', id, now()
+  FROM departments WHERE name = 'dat016 smoke parent';
+ROLLBACK;
+
+-- POSITIVE: same service name in DIFFERENT departments → BOTH succeed (proves composite, not global).
+BEGIN;
+  INSERT INTO departments (id, name, "updatedAt") VALUES (gen_random_uuid(), 'dat016 smoke A', now());
+  INSERT INTO departments (id, name, "updatedAt") VALUES (gen_random_uuid(), 'dat016 smoke B', now());
+  INSERT INTO services (id, name, "departmentId", "updatedAt")
+  SELECT gen_random_uuid(), 'dat016 shared svc', id, now() FROM departments WHERE name = 'dat016 smoke A';
+  INSERT INTO services (id, name, "departmentId", "updatedAt")
+  SELECT gen_random_uuid(), 'dat016 shared svc', id, now() FROM departments WHERE name = 'dat016 smoke B';
+  SELECT count(*) AS shared_ok FROM services WHERE name = 'dat016 shared svc';  -- expect 2, no error
+ROLLBACK;
+```
+TBD: paste the two 23505 errors (each must name its index) + the positive `shared_ok=2`. If a NEGATIVE
+INSERT *succeeds*, the index did not deploy; if the POSITIVE 23505s, an accidental global unique on
+`services.name` was created → investigate before declaring done. (Also confirm the indexes exist:
+`SELECT indexname FROM pg_indexes WHERE indexname IN ('departments_name_key','services_departmentId_name_key');`
+→ must list both.)
 
 ### COR-022 sanity (no migration — confirm the cap path doesn't 500)
 ```sql
@@ -451,6 +526,21 @@ DROP FUNCTION IF EXISTS leaves_sync_type_from_config();
 -- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260527150000_dat014_leave_type_autosync_trigger';
 ```
 
+### DAT-016 (`ce8877a`, migration `20260527160000`) — idempotent DROP INDEX
+
+⚠️ **Shape differs from DAT-003/004/013** (which `DROP CONSTRAINT`): these are plain UNIQUE *indexes*
+created via `CREATE UNIQUE INDEX` (the shape Prisma emits for `@unique` / `@@unique`), not table
+constraints — so they are reversed with `DROP INDEX`, not `ALTER TABLE … DROP CONSTRAINT`. Idempotent
+and fully reversible (no data change). Note `schema.prisma` carried the `@unique` / `@@unique` (baked
+into the api image), so a true rollback also reverts the image to the `pre-phase3-defense-in-depth`
+anchor — otherwise the app's Prisma client still believes the constraints exist.
+
+```sql
+DROP INDEX IF EXISTS "departments_name_key";
+DROP INDEX IF EXISTS "services_departmentId_name_key";
+-- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260527160000_dat016_unique_name_constraints';
+```
+
 ---
 
 ## Operational notes (carry-forwards)
@@ -476,7 +566,7 @@ DROP FUNCTION IF EXISTS leaves_sync_type_from_config();
 
 ## Future Phase 3 closures — append here, do not restructure
 
-As DAT-014/016/017/018/023 (or the filed follow-ups) close and join a deploy:
+As DAT-017/018/023 (or the filed follow-ups) close and join a deploy:
 1. Add a row to the **Scope & metadata** table and, if it ships DDL, to the **Migrations applied**
    sub-table.
 2. If it needs a pre-deploy data check, add a subsection under **Pre-deploy data probe**.

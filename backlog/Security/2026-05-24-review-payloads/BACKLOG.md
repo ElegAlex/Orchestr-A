@@ -2112,7 +2112,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-016 — Department.name and Service.name lack UNIQUE constraints
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2149,8 +2149,15 @@ Add @unique on Department.name and @@unique([departmentId, name]) on Service.
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** `ce8877a`
+**Learnings:**
+- **DSL-expressible → schema.prisma WAS edited** (unlike DAT-003/004/013/014, which were CHECK/trigger SQL-only): `@unique` on `Department.name`, `@@unique([departmentId, name])` on `Service`. Migration `20260527160000` hand-authored but **byte-equivalent to `migrate dev` output** (`CREATE UNIQUE INDEX`, Prisma `<table>_<col>_key` naming → `departments_name_key`, `services_departmentId_name_key`) because the dev DB stays `migrate dev`-blocked by the `_dat005_backup_*` drift (TOOL-DBSYNC-001); applied via `migrate deploy` (drift-tolerant). A `pg_indexes` test pins the convention names so a future drift-clean `migrate dev` produces no shadow diff.
+- **Composite, NOT global** on Service (literal Suggested fix). Positive test (same name, two different departments → both accepted) is the load-bearing proof. Matches the app's existing `services.service.ts` pre-check on `{ name, departmentId }`.
+- **Pre-flight (dev psql):** both `name` columns already `NOT NULL` → no `NULLS NOT DISTINCT` consideration. **0 duplicates** in both `departments(name)` and `services(departmentId, name)` (2 depts, 4 svcs) → clean-to-proceed, no in-session rename. Only PK indexes existed before; no leftover stray unique on `services.name` alone.
+- **23505-leak adjacency — NOT extended into this commit (advisor-confirmed).** Both `departments.service.ts` and `services.service.ts` already pre-check uniqueness via `findFirst` → `ConflictException`, so the happy-path stays unchanged. The DB constraint introduces a new 500 ONLY in the TOCTOU race (concurrent creates both pass the pre-check) or a direct-SQL bypass. That post-constraint behavior (one row created, the other 500s) is *strictly better* than pre-DAT-016 (silent duplicate — the audit's exact complaint). The brief's "23505-leak surprise" anticipated a *generic try/catch swallowing* Prisma errors; what we found is no catch + an explicit pre-check, a narrower risk. Kept DAT-016 schema+spec-only (zero TS, DAT-013/014 precedent); filed **COR-034** to map `P2002 → ConflictException` on dept/service create as the race-window hardening.
+- **Witness gotcha:** Prisma's `$executeRawUnsafe` reformats a unique violation to `Key (<cols>)=(<vals>) already exists` and **drops the index name** (unlike CHECK 23514, which keeps the constraint name — DAT-013). Asserted on the key-column tuple instead (`Key (name)=`, `Key ("departmentId", name)=`) — equally discriminating (a PK collision reads `Key (id)=`) and directly proves composite-vs-global. The raw `psql` prod smoke *does* name the index, so that smoke asserts the index name.
+- **AC#4 skipped** — schema migration, not an audit-sensitive business mutation (DAT-005/012/013/014 precedent).
+- **Client.name** (named in the Description as a third instance but omitted from the literal Suggested fix list) filed as session-derived **DAT-036** — defense-in-depth follow-up, NOT in this scope (same closeout-filing pattern as DAT-004→DAT-032).
 
 ---
 ### DAT-017 — Task.projectId nullable creates orphan tasks with no integrity check
