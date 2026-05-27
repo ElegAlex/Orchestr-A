@@ -2260,7 +2260,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-023 — Leave: no overlap constraint (EXCLUDE USING gist) — same user can have overlapping approved leaves
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
