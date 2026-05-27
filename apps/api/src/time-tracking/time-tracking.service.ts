@@ -18,6 +18,14 @@ const DECLARE_FOR_THIRD_PARTY_PERMISSION =
 const MANAGE_ANY_PERMISSION = 'time_tracking:manage_any';
 const VIEW_ANY_PERMISSION = 'time_tracking:view_any';
 
+/**
+ * Per-(userId, calendar day) ceiling on declared hours (COR-022). The single
+ * entry is already bounded to [0.25, 24] by CreateTimeEntryDto; this guards the
+ * aggregate so that several entries on the same day cannot silently inflate a
+ * user's total beyond a physically plausible 24h.
+ */
+const MAX_HOURS_PER_DAY = 24;
+
 type TimeEntryActor =
   | { kind: 'user'; userId: string }
   | { kind: 'thirdParty'; thirdPartyId: string };
@@ -57,6 +65,44 @@ export class TimeTrackingService {
     );
     if (permissions.includes(MANAGE_ANY_PERMISSION)) return;
     throw new ForbiddenException('Time entry ownership violation');
+  }
+
+  /**
+   * Enforce the per-(userId, calendar day) hours cap (COR-022). Sums the user's
+   * existing non-dismissal hours for the UTC day of `date` (excluding the entry
+   * being updated, if any) and rejects if the running total + `newHours` would
+   * exceed {@link MAX_HOURS_PER_DAY}. Scope is `userId` only — third-party
+   * declarations (userId = null) are out of this finding's literal scope.
+   */
+  private async ensureDailyCapNotExceeded(
+    userId: string,
+    date: Date,
+    newHours: number,
+    excludeEntryId?: string,
+  ): Promise<void> {
+    const startOfDay = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+    );
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
+
+    const aggregate = await this.prisma.timeEntry.aggregate({
+      _sum: { hours: true },
+      where: {
+        userId,
+        isDismissal: false,
+        date: { gte: startOfDay, lt: endOfDay },
+        ...(excludeEntryId ? { id: { not: excludeEntryId } } : {}),
+      },
+    });
+
+    const existingHours = Number(aggregate._sum.hours ?? 0);
+    const total = existingHours + newHours;
+    if (total > MAX_HOURS_PER_DAY) {
+      throw new BadRequestException(
+        `Le total d'heures déclarées pour cette journée (${total}h) dépasse la limite de ${MAX_HOURS_PER_DAY}h`,
+      );
+    }
   }
 
   /**
@@ -137,6 +183,13 @@ export class TimeTrackingService {
       taskId,
       projectId: effectiveProjectId ?? undefined,
     });
+
+    // Per-day hours cap (COR-022) — userId-scoped, so only the standard
+    // (own-account) write path is guarded; third-party declarations are out of
+    // this finding's literal scope.
+    if (actor.kind === 'user') {
+      await this.ensureDailyCapNotExceeded(actor.userId, new Date(date), hours);
+    }
 
     return this.prisma.timeEntry.create({
       data: {
@@ -491,6 +544,21 @@ export class TimeTrackingService {
       if (!project) {
         throw new NotFoundException('Projet introuvable');
       }
+    }
+
+    // Per-day hours cap (COR-022) — re-check against the effective hours/date
+    // after the update, excluding this entry's own contribution. userId-scoped:
+    // third-party entries (userId = null) are out of this finding's scope.
+    if (existing.userId) {
+      const effectiveHours =
+        hours !== undefined ? hours : Number(existing.hours);
+      const effectiveDate = date ? new Date(date) : existing.date;
+      await this.ensureDailyCapNotExceeded(
+        existing.userId,
+        effectiveDate,
+        effectiveHours,
+        id,
+      );
     }
 
     const entry = await this.prisma.timeEntry.update({

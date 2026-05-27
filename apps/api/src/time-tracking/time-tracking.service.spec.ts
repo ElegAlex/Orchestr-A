@@ -25,6 +25,7 @@ describe('TimeTrackingService', () => {
       findFirst: vi.fn(),
       findUnique: vi.fn(),
       count: vi.fn(),
+      aggregate: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
     },
@@ -72,6 +73,11 @@ describe('TimeTrackingService', () => {
       ],
     }).compile();
     service = module.get<TimeTrackingService>(TimeTrackingService);
+    // Default: no existing hours for the day, so the per-day cap (COR-022) is a
+    // no-op for tests that don't exercise it. Cap tests override this.
+    mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+      _sum: { hours: 0 },
+    });
   });
 
   afterEach(() => {
@@ -489,6 +495,8 @@ describe('TimeTrackingService', () => {
         id: '1',
         userId: 'user-1',
         thirdPartyId: null,
+        date: new Date('2025-01-01T00:00:00.000Z'),
+        hours: 4,
       });
       mockOwnershipService.isOwner.mockResolvedValue(true);
       mockPrismaService.timeEntry.update.mockResolvedValue({
@@ -539,6 +547,8 @@ describe('TimeTrackingService', () => {
         userId: 'user-other',
         thirdPartyId: null,
         declaredById: 'user-other',
+        date: new Date('2025-01-01T00:00:00.000Z'),
+        hours: 4,
       });
       mockOwnershipService.isOwner.mockResolvedValue(false);
       mockPermissionsService.getPermissionsForRole.mockResolvedValue([
@@ -846,6 +856,151 @@ describe('TimeTrackingService', () => {
       });
       const errors = await validate(dto);
       expect(errors.filter((e) => e.property === 'hours')).toHaveLength(0);
+    });
+  });
+
+  // ── COR-022 — single-entry bound (DTO) regression guards ──────────────────
+  // The @Min(0.25)/@Max(24) bounds already exist on CreateTimeEntryDto.hours.
+  // These lock that invariant so a future removal is caught; they are NOT the
+  // FAIL-pre→PASS-post witness for COR-022 (they pass before and after the fix).
+  describe('CreateTimeEntryDto — single-entry hours bound (COR-022 guard)', () => {
+    const baseDto = {
+      date: '2025-01-01T00:00:00Z',
+      activityType: 'DEVELOPMENT',
+      taskId: '11111111-1111-1111-1111-111111111111',
+    };
+
+    it('rejects a single entry above 24 hours (hours=25)', async () => {
+      const dto = plainToInstance(CreateTimeEntryDto, { ...baseDto, hours: 25 });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'hours')).toBe(true);
+    });
+
+    it('rejects negative hours (hours=-1)', async () => {
+      const dto = plainToInstance(CreateTimeEntryDto, { ...baseDto, hours: -1 });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'hours')).toBe(true);
+    });
+
+    it('accepts a single entry at the 24-hour bound', async () => {
+      const dto = plainToInstance(CreateTimeEntryDto, { ...baseDto, hours: 24 });
+      const errors = await validate(dto);
+      expect(errors.filter((e) => e.property === 'hours')).toHaveLength(0);
+    });
+  });
+
+  // ── COR-022 — per-(userId, date) daily sum cap (service-level witness) ─────
+  describe('per-day hours cap (COR-022)', () => {
+    const dto = {
+      date: '2025-01-01',
+      hours: 5,
+      activityType: 'DEVELOPMENT' as const,
+      taskId: 'task-1',
+      projectId: 'project-1',
+      description: 'More work',
+    };
+
+    beforeEach(() => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: 'project-1',
+      });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+    });
+
+    it('rejects a create when existing same-day hours + new hours exceed 24', async () => {
+      // 20h already logged that day + 5h new = 25h > 24 → reject
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: 20 },
+      });
+
+      await expect(service.create(currentUser, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockPrismaService.timeEntry.create).not.toHaveBeenCalled();
+    });
+
+    it('scopes the daily sum to the entry actor and calendar day', async () => {
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: 20 },
+      });
+
+      await service.create(currentUser, dto).catch(() => undefined);
+
+      expect(mockPrismaService.timeEntry.aggregate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          _sum: { hours: true },
+          where: expect.objectContaining({
+            userId: 'user-1',
+            isDismissal: false,
+            date: expect.objectContaining({
+              gte: new Date('2025-01-01T00:00:00.000Z'),
+              lt: new Date('2025-01-02T00:00:00.000Z'),
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('allows a create when existing + new hours land exactly on 24', async () => {
+      // 19h already logged + 5h new = 24h == cap → allowed
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: 19 },
+      });
+      mockPrismaService.timeEntry.create.mockResolvedValue({ id: '1' });
+
+      await service.create(currentUser, dto);
+
+      expect(mockPrismaService.timeEntry.create).toHaveBeenCalled();
+    });
+
+    it('rejects an update when existing same-day hours + new hours exceed 24', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: '1',
+        userId: 'user-1',
+        thirdPartyId: null,
+        date: new Date('2025-01-01T00:00:00.000Z'),
+        hours: 3,
+      });
+      mockOwnershipService.isOwner.mockResolvedValue(true);
+      // 22h on OTHER entries that day (self excluded) + new 5h = 27h > 24
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: 22 },
+      });
+
+      await expect(
+        service.update('1', { hours: 5 }, currentUser),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockPrismaService.timeEntry.update).not.toHaveBeenCalled();
+    });
+
+    it('excludes the entry being updated from the daily sum', async () => {
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+        id: 'entry-self',
+        userId: 'user-1',
+        thirdPartyId: null,
+        date: new Date('2025-01-01T00:00:00.000Z'),
+        hours: 3,
+      });
+      mockOwnershipService.isOwner.mockResolvedValue(true);
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: 10 },
+      });
+      mockPrismaService.timeEntry.update.mockResolvedValue({ id: 'entry-self' });
+
+      await service.update('entry-self', { hours: 5 }, currentUser);
+
+      expect(mockPrismaService.timeEntry.aggregate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user-1',
+            id: { not: 'entry-self' },
+          }),
+        }),
+      );
     });
   });
 
