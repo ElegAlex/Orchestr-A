@@ -2714,7 +2714,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 - **Blocked_by:** (none)
 - **Severity:** nit
 - **Category:** correctness · error_handling
-- **File:** `apps/api/src/leaves/leaves.service.ts:1619` (`approve`), `apps/api/src/leaves/leaves.service.ts:2856`/`3055` (import paths)
+- **File:** `apps/api/src/leaves/leaves.service.ts:1619` (`approve`); import auto-approve write sites in the CSV-import executors (~`3055`/`3147`/`3207`, not the `validateLeavesImport` validation pass at `2856`) — grep `status.*APPROVED` in the import methods for the exact write
 - **Source:** Session-derived. DAT-023 closeout (`c27862a`, 2026-05-27). Surfaced in DAT-023's pre-flight: `checkOverlap` guards `create` (line 433) and `update` (line 1248) with a `ConflictException` (409), but `approve` (line 1619) does NOT re-check overlap, and the leaves module has no Prisma error filter. With DAT-023's `leaves_no_overlap` EXCLUDE now live, the second of two overlapping PENDING leaves transitioning to APPROVED (the audit's TOCTOU race — two concurrent creates slip past `checkOverlap`, then both get approved) hits the DB constraint (23P01) unmapped → HTTP 500. DAT-023 stayed schema+spec-only (advisor-confirmed); this is the deferred application-layer hardening.
 
 **Description:**
@@ -2728,7 +2728,7 @@ After DAT-023, `leaves.service.ts` `approve()` (and the auto-approve branches of
 leaves.service.ts:433   create  → checkOverlap → ConflictException (409)   [guarded]
 leaves.service.ts:1248  update  → checkOverlap → ConflictException (409)   [guarded]
 leaves.service.ts:1619  approve → NO overlap re-check; tx update status=APPROVED → can hit 23P01 unmapped → 500
-leaves.service.ts:2856/3055  import auto-approve branches → same unmapped-23P01 exposure
+leaves.service.ts:~3055/3147/3207  import auto-approve write branches → same unmapped-23P01 exposure (2856 is validateLeavesImport, the validation pass, not a write)
 ```
 
 **Suggested fix:**
