@@ -1,13 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsString,
   IsNotEmpty,
   IsUUID,
   IsArray,
   IsDateString,
-  IsIn,
+  IsEnum,
   ArrayMinSize,
 } from 'class-validator';
+import { DayPeriod } from 'database';
 
 export class BulkAssignmentDto {
   @ApiProperty({
@@ -40,11 +40,9 @@ export class BulkAssignmentDto {
 
   @ApiProperty({
     description: "Période de l'assignation",
-    enum: ['MORNING', 'AFTERNOON', 'FULL_DAY'],
+    enum: DayPeriod,
     example: 'FULL_DAY',
   })
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['MORNING', 'AFTERNOON', 'FULL_DAY'])
-  period: string;
+  @IsEnum(DayPeriod)
+  period: DayPeriod;
 }

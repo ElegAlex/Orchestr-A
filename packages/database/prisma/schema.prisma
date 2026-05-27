@@ -802,11 +802,20 @@ model PersonalTodo {
 // APPLICATION SETTINGS
 // ===========================
 
+// DAT-012 — enum promotion. Values stay lowercase to match existing data (no
+// data migration). The set is developer-extended via SettingsService.DEFAULT_SETTINGS;
+// adding a category here is the deliberate compile-time coupling that prevents drift.
+enum AppSettingsCategory {
+  display
+  general
+  planning
+}
+
 model AppSettings {
   id          String   @id @default(uuid())
   key         String   @unique
   value       String // JSON stringified value
-  category    String   @default("general") // general, display, notifications, etc.
+  category    AppSettingsCategory @default(general) // DAT-012: was String
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -955,13 +964,41 @@ model TeleworkRecurringRule {
 // PREDEFINED TASKS
 // ===========================
 
+// DAT-012 — enum promotion of closed free-string value sets.
+enum PredefinedTaskDuration {
+  HALF_DAY
+  FULL_DAY
+  TIME_SLOT
+}
+
+// Shared by PredefinedTaskAssignment.period and PredefinedTaskRecurringRule.period
+// (identical value set). Distinct from HalfDay (leaves) which has no FULL_DAY.
+enum DayPeriod {
+  MORNING
+  AFTERNOON
+  FULL_DAY
+}
+
+enum AssignmentCompletionStatus {
+  NOT_DONE
+  IN_PROGRESS
+  DONE
+  NOT_APPLICABLE
+}
+
+enum RecurrenceType {
+  WEEKLY
+  MONTHLY_ORDINAL
+  MONTHLY_DAY
+}
+
 model PredefinedTask {
   id                     String   @id @default(uuid())
   name                   String
   description            String?
   color                  String?
   icon                   String?
-  defaultDuration        String // "HALF_DAY" | "FULL_DAY" | "TIME_SLOT"
+  defaultDuration        PredefinedTaskDuration // DAT-012: was String "HALF_DAY"|"FULL_DAY"|"TIME_SLOT"
   startTime              String? // Format "HH:mm", utilisé quand defaultDuration = "TIME_SLOT"
   endTime                String? // Format "HH:mm", utilisé quand defaultDuration = "TIME_SLOT"
   isExternalIntervention Boolean  @default(false)
@@ -985,11 +1022,11 @@ model PredefinedTaskAssignment {
   predefinedTaskId    String
   userId              String
   date                DateTime
-  period              String // "MORNING" | "AFTERNOON" | "FULL_DAY"
+  period              DayPeriod // DAT-012: was String "MORNING"|"AFTERNOON"|"FULL_DAY"
   assignedById        String
   isRecurring         Boolean   @default(false)
   recurringRuleId     String?
-  completionStatus    String    @default("NOT_DONE") // NOT_DONE | IN_PROGRESS | DONE | NOT_APPLICABLE
+  completionStatus    AssignmentCompletionStatus @default(NOT_DONE) // DAT-012: was String
   completedAt         DateTime?
   completedById       String?
   notApplicableReason String?
@@ -1014,9 +1051,9 @@ model PredefinedTaskRecurringRule {
   predefinedTaskId  String
   userId            String
   dayOfWeek         Int? // 0=Monday..6=Sunday ; NULL pour MONTHLY_DAY
-  period            String // "MORNING" | "AFTERNOON" | "FULL_DAY"
+  period            DayPeriod // DAT-012: was String "MORNING"|"AFTERNOON"|"FULL_DAY"
   weekInterval      Int       @default(1) // 1=weekly, 2=biweekly... pour WEEKLY uniquement
-  recurrenceType    String    @default("WEEKLY") // WEEKLY | MONTHLY_ORDINAL | MONTHLY_DAY
+  recurrenceType    RecurrenceType @default(WEEKLY) // DAT-012: was String
   monthlyOrdinal    Int? // 1..5 (5 = dernière occurrence du mois) pour MONTHLY_ORDINAL
   monthlyDayOfMonth Int? // 1..31 pour MONTHLY_DAY
   startDate         DateTime

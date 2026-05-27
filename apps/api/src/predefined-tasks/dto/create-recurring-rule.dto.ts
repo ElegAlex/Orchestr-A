@@ -1,10 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsString,
   IsNotEmpty,
   IsUUID,
   IsDateString,
-  IsIn,
+  IsEnum,
   IsInt,
   Min,
   Max,
@@ -16,6 +15,7 @@ import {
   ValidationOptions,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { RecurrenceType, DayPeriod } from 'database';
 
 // ─── Cross-field validator ───────────────────────────────────────────────────
 
@@ -114,12 +114,12 @@ export class CreateRecurringRuleDto {
   @ApiPropertyOptional({
     description:
       'Type de récurrence : WEEKLY (hebdo), MONTHLY_DAY (même jour chaque mois), MONTHLY_ORDINAL (N-ième jour de la semaine)',
-    enum: ['WEEKLY', 'MONTHLY_ORDINAL', 'MONTHLY_DAY'],
+    enum: RecurrenceType,
     default: 'WEEKLY',
   })
   @IsOptional()
-  @IsIn(['WEEKLY', 'MONTHLY_ORDINAL', 'MONTHLY_DAY'])
-  recurrenceType: string = 'WEEKLY';
+  @IsEnum(RecurrenceType)
+  recurrenceType: RecurrenceType = RecurrenceType.WEEKLY;
 
   @ApiPropertyOptional({
     description: 'Jour de la semaine (0=Lundi, ..., 6=Dimanche). Requis pour WEEKLY et MONTHLY_ORDINAL.',
@@ -136,13 +136,11 @@ export class CreateRecurringRuleDto {
 
   @ApiProperty({
     description: 'Période',
-    enum: ['MORNING', 'AFTERNOON', 'FULL_DAY'],
+    enum: DayPeriod,
     example: 'FULL_DAY',
   })
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['MORNING', 'AFTERNOON', 'FULL_DAY'])
-  period: string;
+  @IsEnum(DayPeriod)
+  period: DayPeriod;
 
   @ApiProperty({
     description: 'Date de début de la règle (ISO)',
@@ -205,11 +203,11 @@ export class CreateRecurringRuleDto {
 export class UpdateRecurringRuleDto {
   @ApiPropertyOptional({
     description: 'Type de récurrence',
-    enum: ['WEEKLY', 'MONTHLY_ORDINAL', 'MONTHLY_DAY'],
+    enum: RecurrenceType,
   })
   @IsOptional()
-  @IsIn(['WEEKLY', 'MONTHLY_ORDINAL', 'MONTHLY_DAY'])
-  recurrenceType?: string;
+  @IsEnum(RecurrenceType)
+  recurrenceType?: RecurrenceType;
 
   @ApiPropertyOptional({
     description: 'Jour de la semaine (0=Lundi, ..., 6=Dimanche)',
@@ -249,12 +247,11 @@ export class UpdateRecurringRuleDto {
 
   @ApiPropertyOptional({
     description: 'Période',
-    enum: ['MORNING', 'AFTERNOON', 'FULL_DAY'],
+    enum: DayPeriod,
   })
-  @IsString()
   @IsOptional()
-  @IsIn(['MORNING', 'AFTERNOON', 'FULL_DAY'])
-  period?: string;
+  @IsEnum(DayPeriod)
+  period?: DayPeriod;
 
   @ApiPropertyOptional({
     description: 'Date de début de la règle (ISO)',

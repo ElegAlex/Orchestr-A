@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit, BadRequestException } from '@nestjs/common';
+import { AppSettingsCategory } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
 
 // Types for settings
@@ -6,7 +7,10 @@ type SettingValue = string | number | boolean | number[];
 
 interface SettingConfig {
   value: SettingValue;
-  category: string;
+  // DAT-012: promoted to enum. Adding a new settings category requires adding
+  // a value to the AppSettingsCategory enum (one Prisma migration) — the
+  // deliberate compile-time coupling that prevents free-string drift.
+  category: AppSettingsCategory;
   description: string;
 }
 
@@ -160,8 +164,16 @@ export class SettingsService implements OnModuleInit {
    * Récupérer les paramètres par catégorie
    */
   async findByCategory(category: string) {
+    // DAT-012: category is now a native enum. An unknown category string would
+    // make Postgres reject the WHERE comparison (22P02); short-circuit to []
+    // to preserve the prior "unknown category → empty result" read behaviour.
+    if (
+      !(Object.values(AppSettingsCategory) as string[]).includes(category)
+    ) {
+      return [];
+    }
     const settings = await this.prisma.appSettings.findMany({
-      where: { category },
+      where: { category: category as AppSettingsCategory },
       orderBy: { key: 'asc' },
     });
 
@@ -237,9 +249,13 @@ export class SettingsService implements OnModuleInit {
         ...(description && { description }),
       },
       create: {
+        // isKnownKey(key) above guarantees DEFAULT_SETTINGS[key] is defined, so
+        // category always resolves to a valid enum value (DAT-012: the prior
+        // `|| 'custom'` fallback was unreachable dead code and 'custom' is not a
+        // valid AppSettingsCategory).
         key,
         value: stringValue,
-        category: DEFAULT_SETTINGS[key]?.category || 'custom',
+        category: DEFAULT_SETTINGS[key].category,
         description: description || DEFAULT_SETTINGS[key]?.description,
       },
     });

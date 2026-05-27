@@ -6,12 +6,12 @@ import {
   IsInt,
   Min,
   Max,
-  IsString,
   IsNotEmpty,
-  IsIn,
+  IsEnum,
   IsDateString,
   IsOptional,
 } from 'class-validator';
+import { DayPeriod } from 'database';
 
 export class CreateBulkRecurringRulesDto {
   @ApiProperty({
@@ -44,13 +44,11 @@ export class CreateBulkRecurringRulesDto {
 
   @ApiProperty({
     description: 'Période',
-    enum: ['MORNING', 'AFTERNOON', 'FULL_DAY'],
+    enum: DayPeriod,
     example: 'FULL_DAY',
   })
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['MORNING', 'AFTERNOON', 'FULL_DAY'])
-  period: string;
+  @IsEnum(DayPeriod)
+  period: DayPeriod;
 
   @ApiPropertyOptional({
     description: 'Intervalle en semaines (1=hebdo, 2=bihebdo)',

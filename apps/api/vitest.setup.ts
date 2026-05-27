@@ -132,6 +132,38 @@ export enum ThirdPartyType {
   LEGAL_ENTITY = 'LEGAL_ENTITY',
 }
 
+// DAT-012 — string→enum promotions.
+export enum PredefinedTaskDuration {
+  HALF_DAY = 'HALF_DAY',
+  FULL_DAY = 'FULL_DAY',
+  TIME_SLOT = 'TIME_SLOT',
+}
+
+export enum DayPeriod {
+  MORNING = 'MORNING',
+  AFTERNOON = 'AFTERNOON',
+  FULL_DAY = 'FULL_DAY',
+}
+
+export enum AssignmentCompletionStatus {
+  NOT_DONE = 'NOT_DONE',
+  IN_PROGRESS = 'IN_PROGRESS',
+  DONE = 'DONE',
+  NOT_APPLICABLE = 'NOT_APPLICABLE',
+}
+
+export enum RecurrenceType {
+  WEEKLY = 'WEEKLY',
+  MONTHLY_ORDINAL = 'MONTHLY_ORDINAL',
+  MONTHLY_DAY = 'MONTHLY_DAY',
+}
+
+export enum AppSettingsCategory {
+  display = 'display',
+  general = 'general',
+  planning = 'planning',
+}
+
 // Mock PrismaClient for tests
 class MockPrismaClient {
   $connect = vi.fn();
@@ -170,5 +202,10 @@ vi.mock('database', () => {
     SchoolVacationZone,
     SchoolVacationSource,
     ThirdPartyType,
+    PredefinedTaskDuration,
+    DayPeriod,
+    AssignmentCompletionStatus,
+    RecurrenceType,
+    AppSettingsCategory,
   };
 });

@@ -3,7 +3,7 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
-  IsIn,
+  IsEnum,
   IsBoolean,
   IsInt,
   Min,
@@ -11,6 +11,7 @@ import {
   Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PredefinedTaskDuration } from 'database';
 
 export class CreatePredefinedTaskDto {
   @ApiProperty({
@@ -47,13 +48,11 @@ export class CreatePredefinedTaskDto {
 
   @ApiProperty({
     description: 'Durée par défaut de la tâche',
-    enum: ['HALF_DAY', 'FULL_DAY', 'TIME_SLOT'],
+    enum: PredefinedTaskDuration,
     example: 'FULL_DAY',
   })
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['HALF_DAY', 'FULL_DAY', 'TIME_SLOT'])
-  defaultDuration: string;
+  @IsEnum(PredefinedTaskDuration)
+  defaultDuration: PredefinedTaskDuration;
 
   @ApiPropertyOptional({
     description: 'Heure de début du créneau (format HH:mm)',
