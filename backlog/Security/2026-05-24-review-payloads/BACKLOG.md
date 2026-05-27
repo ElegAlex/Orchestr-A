@@ -1902,7 +1902,7 @@ pnpm test apps/api/src/time-tracking/time-tracking.service.spec.ts  # may need c
 ---
 ### DAT-012 — Free-string fields where enum would prevent drift
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
