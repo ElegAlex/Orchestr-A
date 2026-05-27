@@ -13,9 +13,11 @@ Discipline obligatoire: lire `CLAUDE_SESSION_CONTRACT.md` EN PREMIER. Pattern pa
 ## Current state (master @ 3fd8986, working tree clean)
 
 ### Phase 1 — blockers audit-prescribed : 7/7 DONE + déployés prod (2026-05-25)
-SEC-001 `507d755`, SEC-002 `24bbfe7`, SEC-003 `2763552`, DAT-001 `b14cdd5`, DAT-005 `bcb7ec3`, COR-003 `8fc6c92`, CLAUDE-CFG-001 `a4c3ec2`. Audit-trail: `docs/deploy/2026-05-25-phase-1-remediation-deploy.md`. Prod HEAD = `8e4b593`.
+SEC-001 `507d755`, SEC-002 `24bbfe7`, SEC-003 `2763552`, DAT-001 `b14cdd5`, DAT-005 `bcb7ec3`, COR-003 `8fc6c92`, CLAUDE-CFG-001 `a4c3ec2`. Audit-trail: `docs/deploy/2026-05-25-phase-1-remediation-deploy.md`.
 
-### Phase 1 — tooling : 5/5 DONE (infra de session, PAS encore déployé pour les parties prod)
+> **Prod git HEAD = `3fd8986`** (= master courant, vérifié sur le VPS 2026-05-27). La prod est à jour pour le code+schéma jusqu'à TOOL-DEPLOY-001 inclus.
+
+### Phase 1 — tooling : 5/5 DONE (déployé prod 2026-05-26, voir § deploy)
 | Task | Closed_by | Origine | Nature (≠ stub — substantiel) |
 |---|---|---|---|
 | CLAUDE-CFG-001 | `a4c3ec2` | audit (codex-only) | config repo |
@@ -53,28 +55,22 @@ Pris hors séquence pendant l'arc audit (FK `Task.projectId` Cascade → Restric
 
 ---
 
-## Pending prod deploy — STATUS : NON DÉPLOYÉ (pré-deploy)
-Le dernier artefact de deploy est Phase 1 (`docs/deploy/2026-05-25-phase-1-remediation-deploy.md`, prod HEAD `8e4b593`, 2026-05-25). **Aucun** deploy depuis : chaque closeout depuis `d6299cc` se termine par « no prod migration run; no deploy », et les open questions listent les runbooks en attente. Aucun deploy doc post-Phase-1 n'existe.
+## Prod deploy — STATUS : ✅ DÉPLOYÉ (2026-05-26, vérifié terrain 2026-05-27)
+Le batch a été exécuté en fin de session précédente (2026-05-26 ~21:00–21:18). Vérifié directement sur le VPS le 2026-05-27. **Tout est en place et sain :**
 
-**Batch en attente (à exécuter en une opération coordonnée) :**
+| Élément du batch | État prod vérifié |
+|---|---|
+| prod git HEAD | `3fd8986` (master courant) |
+| **4 migrations Prisma** appliquées (`_prisma_migrations`) | `20260525190000_audit_logs_immutability…` (`d6299cc`), `20260525200000_dat007_project_fk…` (`0eae219`), `20260525210000_obs012_deployments…` (`189344f`), `20260526120000_dat021_audit_payload…` (`33f7a9c`) |
+| **`app_user` role + REVOKE** (`init-roles.sql`) | rôle créé ; privilèges sur `audit_logs` = `INSERT, SELECT` seulement (REVOKE UPDATE/DELETE/TRUNCATE effectif) |
+| **2 scripts op** (`normalize-action-codes`, `recompute-chain-on-schema-bump`) | exécutés — 5 paires `SYSTEM_BACKFILL` STARTED/COMPLETED propres (21:15→21:18), 0 row legacy `PASSWORD_RESET_ADMIN`, `schemaVersion` peuplé 100% (0 null / 28 rows) |
+| **`.env.production`** | mis à jour 2026-05-26 21:06 — `APP_DATABASE_USER`/`APP_DATABASE_PASSWORD` ajoutés (le compose dérive l'URL app-role à partir de ces vars ; backup `.bak-20260526-210337` conservé) |
 
-**4 migrations Prisma** (delta `8e4b593` → master) :
-1. `20260525190000_audit_logs_immutability_hash_chain_actor_snapshot` ← `d6299cc` (OBS-002 + DAT-009)
-2. `20260525200000_dat007_project_fk_restrict_preserve_history` ← `0eae219` (DAT-007)
-3. `20260525210000_obs012_deployments_table` ← `189344f` (OBS-012)
-4. `20260526120000_dat021_audit_payload_schema_version_gin_index` ← `33f7a9c` (DAT-021)
+> Note 1 : **4 migrations, pas 5** (le batch a parfois été décrit « 5 » de mémoire — la vérité git/prod est 4).
+> Note 2 : **lacune process** — ce batch n'a PAS de deploy doc (seul Phase 1 en a un). Les closeouts PROGRESS_LOG disent « no deploy » car écrits *avant* l'opération batch ; ne pas s'y fier pour l'état prod. **Pour Phase 3 : produire un `docs/deploy/2026-05-2x-phase-3-…md` au moment du deploy.**
+> Note 3 : la mémoire `[[project_prod_behind_master_dat005]]` (« prod HEAD=8e4b593 ») est périmée — corrigée en session.
 
-> Note : 4 migrations, pas 5. (Le batch a parfois été décrit « 5 migrations » de mémoire — la vérité git est 4 répertoires de migration en attente.)
-
-**2 scripts opérationnels** (one-shot, rôle owner) :
-- `apps/api/src/scripts/normalize-action-codes.ts` — AUD-READ-001 : normalise les rows legacy `PASSWORD_RESET_ADMIN` → `PASSWORD_RESET_BY_ADMIN` + recompute hash chain depuis la première row affectée. Idempotent. `--dry-run` dispo.
-- `apps/api/src/scripts/recompute-chain-on-schema-bump.ts` — DAT-021 : recompute la chaîne entière (genesis) après le bump `schemaVersion`.
-
-**1 init-roles** : `packages/database/prisma/init-roles.sql` — créer `app_user`, GRANT CRUD, REVOKE UPDATE/DELETE/TRUNCATE sur `audit_logs`. Run une fois par environnement par un superuser/owner.
-
-**1 mise à jour .env (prod)** : ajouter `DATABASE_MIGRATION_URL` (rôle owner, pour migrate + scripts de maintenance) ; repointer `DATABASE_URL` vers `app_user` (rôle restreint runtime). Rappel [[project_vps_deploy_env_file]] : passer `--env-file .env.production` à chaque `docker compose build/up`.
-
-**Ordre recommandé** (source-baked image, précédent BUILD-001) : init-roles.sql (owner) → build image → `migrate deploy` (via `DATABASE_MIGRATION_URL`) → run les 2 scripts (owner) → up. Les scripts fail-fast si `DATABASE_MIGRATION_URL` absent.
+**→ Rien en attente de deploy. Phase 3 démarre sur une prod alignée.**
 
 ---
 
