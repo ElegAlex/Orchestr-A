@@ -33,8 +33,8 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 
 ## Scope & metadata
 
-- **Date:** TBD-DEPLOY: deploy date (Europe/Paris) — prod host clock is UTC.
-- **Operator:** TBD-DEPLOY: operator (e.g. Claude Code (Opus 4.7), driven by repository owner).
+- **Date:** **2026-05-28 (UTC)** — deploy executed 2026-05-28 12:44 UTC (backup) → 12:54 UTC (migrate deploy) → 13:05 UTC (api `up -d`) → 13:09 UTC (Gate 6 final).
+- **Operator:** **Claude Code (Opus 4.7, 1M context), driven by repository owner.**
 - **Phase 3 + mini-arc batch — 20 tasks / 19 scope rows (all `DONE` in `BACKLOG.md`, all on `origin/master`):**
 
 | Task(s) | Commit | Severity | What it introduces |
@@ -1658,3 +1658,49 @@ finalize-time unified ordered checklist + post-arc re-finalize if mini-arc tail 
 template; copy it.
 
 TBD-DEPLOY: subsequent-closure rows (none expected in this batch — listed for shape).
+
+---
+
+## DEPLOY EXECUTION LOG — 2026-05-28 (UTC)
+
+**Operator:** Claude Code (Opus 4.7, 1M context), driven by repository owner. **SSH key auth, no password ever exposed.**
+
+**Outcome:** ✅ **SUCCESSFUL DEPLOY** — all 13 Phase 3 + completion mini-arc migrations applied to PROD; all post-deploy smokes pass; service healthy. **HR system live and verified.**
+
+### Gate-by-gate ledger
+
+| Gate | Time (UTC) | Result | Key artifact |
+|------|------------|--------|--------------|
+| **Gate 0 — Pre-connection sanity** | ~12:43 | ✅ + 1 reassessment | Host `vps-69b63bbf @ 92.222.35.25`; cwd `/opt/orchestra`; remote = expected; current prod SHA `3fd8986`; DB connected as `orchestr_a` superuser via peer auth (no password). **Reassessment:** Phase 2 migrations were ALREADY on prod (last applied `20260526120000_dat021_audit_payload_schema_version_gin_index`) — delta confirmed as exactly the 13 Phase 3 batch (0 of 13 pre-applied; 43 total → 56 expected). |
+| **Gate 1 — pg_dump backup** | 12:44:39 | ✅ | `/opt/orchestra/backups/pre-phase3-batch-deploy-20260528-124439.sql` · **1.5 MB** · pg_dump exit 0 · 50 CREATE TABLE / 50 COPY / 65 indexes · headers + footer present. **Source row counts:** leaves 137 / tasks 321 / project_members 121 / time_entries 15 / clients 7 / events 8 / subtasks 1030. |
+| **Gate 2 — btree_gist** | ~12:45 | ✅ | `pg_extension WHERE extname='btree_gist'` → `(0 rows)`; deploy role `Superuser: on` → row 2 of doc matrix (migration creates it during deploy). No pre-step needed. |
+| **Gate 3 — Pre-deploy data scans** | ~12:50 | ✅ ALL CLEAN | DAT-012 (6 cols) `(0 rows)` · DAT-016/036 dup (3 SELECTs) `(0 rows)` · DAT-017 orphan `(0 rows)` · DAT-037 drift/topology `0/0/0` · DAT-018 cycle (self-loop + recursive) `(0 rows)` · DAT-038 events cycle `(0 rows)` · DAT-023 overlap `(0 rows)` · DAT-035 length `maxlen=49 nulls=0 empties=0` (note: prod maxlen 49 > dev's 17; still ~2x under N=100) · DAT-032/033 numeric: 0 position violators, 1 legitimate dismissal, 0 negatives/over_cap/partial · DAT-013 (6 cols regex) all 0 · DAT-003/004 (14 predicates) all 0. |
+| **Gate 4 — Deploy execution** | 12:54:17 | ✅ | Rollback anchor tagged: `orchestra-api:pre-phase3-defense-in-depth = 10c69f6fbce8`. `docker compose build api` → new image `sha256:3c264f51b8133b…`. `migrate deploy` via container entrypoint applied all 13 in deploy order between 12:54:17.553 → 12:54:17.860 (~307 ms total). Prod git HEAD moved `3fd8986` → `ebcd9e1` (the re-finalize commit). |
+| **Gate 5 — Post-deploy smokes** | ~13:07–13:08 | ✅ ALL PASS | V1: 13 rows in `_prisma_migrations`, applied_steps_count=1 each. V2: 6 enum columns USER-DEFINED (5 enum types). V3: btree_gist + leaves_no_overlap present. V5: row counts UNCHANGED across 7 touched tables (no data loss). CHECK smokes: 8 negatives fire (`projects_dates_ck`, `tasks_progress_ck`, `tasks_startTime_format_ck`, `subtasks_position_ck`, `time_entries_hours_ck` × 2, `project_members_role_length_ck` × 2); 1 positive PIN (`hours=0, isDismissal=true` → INSERT 0 1 — load-bearing dismissal floor preserved). UNIQUE smokes: 3 indexes fire 23505 (`departments_name_key`, `services_departmentId_name_key`, `clients_name_key`). Cycle smokes: `task_dependencies_no_self_ck`, `events_parent_no_self_ck` fire. **DAT-037 BEFORE-REJECT + AFTER-CASCADE both proven**: mismatch INSERT → P0001 `tasks_project_matches_epic`; UPDATE epic.projectId → 2 dependent tasks auto-moved (non-deadlocking proof). audit_logs: 0 SYSTEM_BACKFILL in deploy window. Object existence: 6 constraints, 6 triggers, 3 unique indexes all listed. DAT-014 backfill: leaves.type distribution clean (CP 95 / RTT 28 / OTHER 11 / SICK_LEAVE 3 — no NULLs, 137 total = unchanged baseline). |
+| **Gate 6 — Service restart + final** | 13:05–13:09 | ✅ | `docker compose up -d api` recreated `orchestr-a-api-prod` running `sha256:3c264f51b8133b…` (new image, NOT the pre-Phase-3 anchor). Public health: `GET https://localhost/api/health` → `{"status":"ok","uptime":225s}` ✅. All 6 compose services `(healthy)` post-restart. Web public `HTTP/1.1 307 Temporary Redirect` (nginx 1.22.1 routing to login as expected). |
+
+### Critical operational reminders now LIVE on prod
+
+- **DAT-037 silent cascade** is live. Any UPDATE on `epics.projectId` or `milestones.projectId` will silently rewrite dependent tasks' projectId. This is INTENDED system-derived consistency, AC#4 N/A. Support awareness: "I moved an epic and my tasks moved with it" is by design, not a bug.
+- **DAT-038 trigger is the SOLE line of defense** on event parent cycles. A controller path that tries to set a cyclic parentEventId surfaces P0001 → HTTP 500 (Prisma has no dedicated code for P0001 from a trigger). A COR-style typed-exception wrapper is a plausible follow-up.
+- **DAT-033 + COR-022 TOCTOU residual** remains open (per-day hours cap is a non-transactional aggregate-then-write — both user and third-party dimensions). DAT-033's per-row CHECK structurally cannot close this; serializable transaction or trigger needed for a future fix.
+- **DAT-035 role DB floor admits whitespace-only** by design (DTO trims at API boundary). A future tightening to `length(btrim(role)) >= 1` would be a separate decision; integration witness pins the current contract.
+
+### What changed vs the prior prod state
+
+- Prod git SHA: `3fd8986` → `ebcd9e1` (mini-arc complete + re-finalized deploy doc).
+- Prod api image: `10c69f6fbce8` (anchor, tagged `orchestra-api:pre-phase3-defense-in-depth`) → `3c264f51b8133b…` (new image with 13 batch migrations + schema.prisma edits + 5 code-only changes baked in).
+- _prisma_migrations: 43 → **56** rows (+13).
+- DB now carries 13 new constraints/triggers/indexes + 5 new PG enum types (DAT-012). schema.prisma reflects DAT-012 enum blocks + DAT-016 `@unique`/`@@unique` + DAT-036 `@unique` (and `@@index([name])` removed).
+
+### Rollback path (if needed post-deploy — full recovery)
+
+1. **Restore from Gate-1 backup** (ultimate fallback): `cat /opt/orchestra/backups/pre-phase3-batch-deploy-20260528-124439.sql | docker exec -i orchestr-a-postgres-prod psql -U orchestr_a -d orchestr_a_prod` (drops & recreates all objects deterministically).
+2. **Image revert:** `docker tag orchestra-api:pre-phase3-defense-in-depth orchestra-api:latest && docker compose -f docker-compose.prod.yml --env-file .env.production up -d api`.
+3. **Or per-migration DDL rollback** in reverse deploy order — see §"Rollback sequence" and §"Rollback (per migration)" above. **Operator note:** the DAT-014 backfill is one-way (drifted/NULL `leaves.type` values were overwritten with the FK-derived value; prior contents not retained — intentional, audit-required behavior).
+
+### Next steps (not in this session)
+
+- HANDOVER refresh capturing the post-deploy state.
+- Phase 4 decision (RBAC complétude — TST-001, COR-001, COR-002 + 3 more; per the prior HANDOVER's roadmap).
+- Operational follow-up on the carry-forward TOCTOU residuals if the threat model justifies (DAT-033/COR-022 aggregate cap → serializable / trigger).

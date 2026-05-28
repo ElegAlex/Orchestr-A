@@ -1248,3 +1248,25 @@ Append a new entry at the bottom after each Claude Code session that touched the
   - **Re-finalize after mini-arc tail.** The "accumulate per-task during arc, then re-finalize" pattern works — but it requires explicit banner state (`accumulating` vs `finalized`) so the operator never deploys mid-arc. Update the banner at every state change, not just at the structural edits.
   - **Code-only rollback notes should be forward+backward-compatible.** The mini-arc's COR-* and DAT-034 changes only translate errors that the DB layer may or may not raise. Rolling them back is safe in both directions — re-introducing the 500-on-race (if DB stays live) or being benign dead code (if DB also rolls back). Documenting this explicitly in each rollback subsection prevents an operator from over-ordering the rollback steps and prematurely reverting harmless code.
 - **Out of scope (next session):** operator-driven prod deploy (the doc is now operator-ready). HANDOVER refresh + Phase 4 decision typically follow the deploy itself.
+
+
+## 2026-05-28 — Phase 3 + completion mini-arc DEPLOYED to prod ✅
+
+- **Session ID:** 2026-05-28-prod-deploy
+- **Tasks closed:** none — deploy execution session (no BACKLOG changes, no code changes).
+- **Counter:** unchanged at **52**.
+- **Outcome:** ✅ **SUCCESSFUL** — 13 Phase 3 batch migrations applied; all post-deploy smokes pass; service healthy. **HR system live and verified.**
+- **Prod state delta:**
+  - git SHA: `3fd8986` → `ebcd9e1` (mini-arc complete + re-finalized deploy doc).
+  - api image: `10c69f6fbce8` (anchor `orchestra-api:pre-phase3-defense-in-depth`) → `3c264f51b8133b…` (new image, 13 migrations + 5 code-only changes baked).
+  - `_prisma_migrations`: 43 → **56** rows (+13).
+- **Gate-by-gate ledger (see DEPLOY EXECUTION LOG at end of deploy doc for full detail):** Gate 0 (sanity + Phase-2-already-on-prod reassessment); Gate 1 (pg_dump 1.5MB, integrity verified); Gate 2 (btree_gist absent but superuser → migration creates it); Gate 3 (ALL 14 scan families clean — only notable: prod `project_members.role` maxlen=49, well under N=100); Gate 4 (rollback anchor tagged, image built, 13 migrations applied in 307ms via entrypoint); Gate 5 (all smokes pass — V1/V2/V3/V5 + CHECK/UNIQUE/cycle/DAT-037-cascade-proof + 0 SYSTEM_BACKFILL + leaves.type clean); Gate 6 (api healthy at new image, public `/api/health` 200).
+- **Notable surprise (handled cleanly):** Phase 2 migrations were ALREADY on prod (operator-applied out-of-band on 2026-05-26 alongside TOOL-DEPLOY-001 closeout). Doc's "Expected last applied = `20260524100100`" was outdated. Delta confirmed still exactly 13 (0 of the 13 Phase 3 batch pre-applied). Worth a HANDOVER note: the audit trail under `docs/deploy/` is missing a Phase 2 deploy doc — operator may want to backfill one for Cour-des-Comptes completeness.
+- **Doc TBD-DEPLOY: markers** in the body (per-scan output blobs, per-smoke output snapshots) intentionally left in place — they're the structural template for future deploy docs. The consolidated `## DEPLOY EXECUTION LOG — 2026-05-28 (UTC)` section at the end captures all outcomes in one place; the Date + Operator markers at the top of §Scope were filled.
+- **Operational items NOW LIVE on prod (carry-forward to HANDOVER + support team):**
+  - DAT-037 silent cascade is live — epic/milestone projectId UPDATE rewrites dependent task projectId; not a bug, intended consistency.
+  - DAT-038 trigger is sole line of defense (no service-layer guard); P0001 → 500 if cyclic parentEventId reaches DB.
+  - DAT-033 + COR-022 TOCTOU residual still open (aggregate cap, both dimensions).
+  - DAT-035 whitespace-only role admitted at DB by design (DTO trims).
+- **Rollback path (preserved):** ① restore from Gate-1 backup `/opt/orchestra/backups/pre-phase3-batch-deploy-20260528-124439.sql`; ② image revert to `orchestra-api:pre-phase3-defense-in-depth`; ③ or per-migration DDL (see §"Rollback sequence"). DAT-014 backfill is one-way (intentional, audit-required).
+- **Out of scope (next session):** HANDOVER refresh (post-deploy state, Phase 2 docs-trail gap noted, all 20 Phase 3 + mini-arc tasks DONE + live); Phase 4 decision.
