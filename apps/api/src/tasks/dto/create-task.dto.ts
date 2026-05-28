@@ -10,11 +10,45 @@ import {
   MaxLength,
   MinLength,
   Min,
+  Validate,
   ValidateIf,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
   IsArray,
   Matches,
 } from 'class-validator';
 import { TaskStatus, Priority } from 'database';
+
+// COR-035: cross-field guard implementing the layer-of-rejection partner to
+// DAT-017's DB CHECK `tasks_parent_requires_project_ck`. When `epicId` or
+// `milestoneId` is set, `projectId` is required — the audit's orphan combination
+// must return 400 at the DTO instead of leaking the DB 23514 as a 500.
+// Applied only to CreateTaskDto; UpdateTaskDto overrides projectId without it
+// because partial updates that only touch one field must not 400 on an
+// already-consistent DB row (the DB CHECK + DAT-037 cover the update path).
+@ValidatorConstraint({ name: 'projectRequiredWhenParented', async: false })
+export class ProjectRequiredWhenParentedConstraint
+  implements ValidatorConstraintInterface
+{
+  validate(_value: unknown, args: ValidationArguments): boolean {
+    const dto = args.object as {
+      projectId?: string | null;
+      epicId?: string;
+      milestoneId?: string;
+    };
+    const hasParent = Boolean(dto.epicId || dto.milestoneId);
+    if (!hasParent) return true;
+    return (
+      dto.projectId !== null &&
+      dto.projectId !== undefined &&
+      dto.projectId !== ''
+    );
+  }
+  defaultMessage(): string {
+    return 'projectId is required when epicId or milestoneId is set (orphan task combination is forbidden — DAT-017)';
+  }
+}
 
 export class CreateTaskDto {
   @ApiProperty({
@@ -78,6 +112,11 @@ export class CreateTaskDto {
   })
   @IsUUID()
   @IsOptional()
+  // COR-035: when epicId (or milestoneId) is set, projectId must be present.
+  // Attaching the cross-field check here (not on projectId) avoids the
+  // @ValidateIf short-circuit that would skip the check exactly when
+  // projectId is the missing one (the failure mode the audit cites).
+  @Validate(ProjectRequiredWhenParentedConstraint)
   epicId?: string;
 
   @ApiProperty({
@@ -87,6 +126,7 @@ export class CreateTaskDto {
   })
   @IsUUID()
   @IsOptional()
+  @Validate(ProjectRequiredWhenParentedConstraint)
   milestoneId?: string;
 
   @ApiProperty({
