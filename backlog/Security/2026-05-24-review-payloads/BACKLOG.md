@@ -2413,7 +2413,7 @@ pnpm prisma migrate deploy && pnpm test:integration  # apply migration + real-DB
 ---
 ### DAT-034 — Per-day hours cap not enforced for third-party time declarations
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2450,8 +2450,13 @@ Generalize `ensureDailyCapNotExceeded` to accept the actor dimension — sum `WH
 pnpm test apps/api/src/time-tracking/
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** `6b17ec9` (2026-05-28) — generalized `ensureDailyCapNotExceeded` to accept an actor discriminator, dropped the user-only guards in `create()` and `update()`, added `else if (existing.thirdPartyId)` branch on update. Witness: 3 new tests in `time-tracking.service.spec.ts`.
+**Learnings:**
+- **Cap-key semantics pre-flight CLEAR.** `resolveActor` (lines 240-262) already produces a clean discriminated union `{kind:'user',userId}|{kind:'thirdParty',thirdPartyId}`; passing the union through to the cap helper makes the dimension switch one `where` clause. No ambiguity → no halt.
+- **TOCTOU residual carries verbatim from COR-022.** The cap is still a non-transactional `aggregate`-then-`create/update`; both the user dimension AND the new third-party dimension race in the same way. Closing it would need a serializable transaction or a DB trigger — heavier, separate decision; DAT-033's per-row CHECK structurally can't close cross-row aggregate races.
+- **Cross-actor mutation guard already in place.** The update path's pre-existing `'thirdPartyId' in updateTimeEntryDto` guard (line 518) refuses to switch a row's actor dimension. So at update time, the existing row's `userId`/`thirdPartyId` field tells us unambiguously which cap to apply — no need to read the DTO to decide. The new `else if (existing.thirdPartyId)` branch reads the right field.
+- **One spec adjacency needed.** The pre-existing test "allows update when caller is the declaredBy" mocked a thirdParty entry without `date`/`hours`, which was fine before DAT-034 (the cap was userId-only and skipped). With the cap now firing for thirdPartyId entries on update, the test mock had to supply `date` and `hours` + a default `aggregate` mock. Trivial fixture fix, but a recurring lesson: when generalizing a helper, audit every test that exercised the helper's previous skip-conditions.
+- **AC#4 N/A** — time tracking is not audit-sensitive (COR-022 precedent).
 
 ---
 

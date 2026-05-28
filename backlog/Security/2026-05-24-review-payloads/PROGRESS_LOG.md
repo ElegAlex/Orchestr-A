@@ -1159,3 +1159,19 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Gates:** `migrate deploy` clean; `pnpm test` 1675 unchanged (integration-only); `pnpm test:integration` 79/79 (was 72, +7); `pnpm test:e2e` turbo 4/4.
 - **Deploy-doc append:** Scope row, Migrations sub-table row (11→12), pre-deploy drift scan grouped with DAT-017's, rollback (DROP TRIGGER × 3 + DROP FUNCTION × 3 — schema.prisma unchanged, no image revert), Operational note for the both-parents-different-projects edge case.
 - **Continuing the arc** — DAT-034 next (third-party daily cap; pre-flight first).
+
+
+## 2026-05-28 — DAT-034 closed (third-party daily cap) — Phase 3 mini-arc 8/9 (resume)
+
+- **Session ID:** 2026-05-28-mini-arc-resume
+- **Tasks closed:** DAT-034.
+- **Commits:** `9960016` (in_progress), `6b17ec9` (fix), `<pending>` (closeout).
+- **Counter:** **50 → 51**.
+- **Pre-flight (cap-key semantics):** `resolveActor` already produces a clean discriminated union. Passing it through the cap helper makes the dimension switch one `where` clause. No ambiguity → halt criterion NOT met.
+- **Diff scope (AC#6 — fix commit `6b17ec9`):** 2 files — `time-tracking.service.ts` (helper signature + 2 call sites + 1 update-branch addition) + `time-tracking.service.spec.ts` (3 new tests + 1 mock fixture fix for an existing on-behalf-update test that no longer skipped the cap).
+- **TOCTOU residual carries forward.** Cap is non-transactional in both dimensions now; closing the race requires a serializable transaction or a DB trigger — heavier, separate decision; explicitly out of scope per COR-022's framing.
+- **AC#4 N/A** — time tracking is not audit-sensitive.
+- **Gates:** `nest build` clean; `pnpm test` 1678 (was 1675, +3); `pnpm test:integration` 79/79; `pnpm test:e2e` turbo 4/4.
+- **FAIL-pre/PASS-post:** neutralized create-site to pre-fix `if (actor.kind === 'user')` shape, 2/3 new tests failed (the create-path tests); restored byte-identical, all 3 pass.
+- **Deploy-doc append:** Scope row noting "1 task, 0 migration" (code-only, COR-022/COR-034/COR-035/COR-037 precedent).
+- **Continuing the arc** — DAT-035 next (MANDATORY HALT — pre-flight only, decision surface).
