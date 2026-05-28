@@ -3196,7 +3196,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ---
 ### SEC-030 — GET /users/:id has no horizontal scope filter — any role with users:read can read every user's full profile
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
