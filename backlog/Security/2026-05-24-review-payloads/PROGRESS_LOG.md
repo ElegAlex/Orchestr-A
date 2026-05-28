@@ -1110,3 +1110,18 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Gates:** `pnpm test` 1664 (was 1658, +6 from this commit — 2 per entity); `pnpm test:integration` 72/72 unchanged; `pnpm test:e2e` turbo 4/4 green.
 - **No deploy-doc append needed for migrations count (this is a code-only task) — but a Scope row is added noting "1 task, 0 migration" (COR-022 precedent).**
 - **Continuing the arc** — COR-035 next.
+
+
+## 2026-05-28 — COR-035 closed (DTO 400 on orphan task combination) — Phase 3 mini-arc 5/9 (resume)
+
+- **Session ID:** 2026-05-28-mini-arc-resume
+- **Tasks closed:** COR-035.
+- **Commits:** `641d769` (in_progress), `d5ac36a` (fix), `<pending>` (closeout).
+- **Counter:** **47 → 48**.
+- **Pre-flight:** confirmed (1) CreateTaskDto had three independent @IsOptional fields with no cross-field guard; (2) bulk-import path at tasks.service.ts:1383 resolves projectId server-side from a project name (never orphan); (3) the @ValidateIf on projectId would short-circuit any same-field @Validate decorator — must attach the cross-field check elsewhere.
+- **Two load-bearing trap dodges (Learnings):** @ValidateIf short-circuit on projectId — attached the constraint to epicId+milestoneId instead, where no competing @ValidateIf exists. UpdateTaskDto inheritance — OmitType+redeclare to remove the constraint on update, since partial updates have no DB view and would 400 legitimate `{epicId: X}`-only updates.
+- **AC#4 N/A** — task create is not in the audit-sensitive list.
+- **Diff scope (AC#6 — fix commit `d5ac36a`):** 3 files — `create-task.dto.ts` (validator class + 2 decorator attachments), `update-task.dto.ts` (OmitType override), new `create-task.dto.spec.ts` (10 tests).
+- **Gates:** `pnpm test` 1674 (+10 — was 1664); `pnpm test:integration` 72/72; `pnpm test:e2e` turbo 4/4.
+- **Deploy-doc append:** Scope row noting "1 task, 0 migration" (code-only, COR-022/COR-034 precedent).
+- **Continuing the arc** — COR-037 next (the third layer-of-rejection partner: DAT-023 EXCLUDE 23P01 → 409 on leaves approve/import).

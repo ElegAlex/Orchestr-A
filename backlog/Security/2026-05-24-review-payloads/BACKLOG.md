@@ -2653,7 +2653,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ---
 ### COR-035 — Orphan task create leaks a 500 on the DAT-017 CHECK (should be 400 at the DTO)
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2684,8 +2684,11 @@ The DTO never expressed the cross-field invariant "epicId/milestoneId imply proj
 pnpm test apps/api/src/tasks
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** `d5ac36a` (2026-05-28) — `ProjectRequiredWhenParentedConstraint` in `create-task.dto.ts`, `UpdateTaskDto` overrides in `update-task.dto.ts`, witness `create-task.dto.spec.ts` (10 tests).
+**Learnings:**
+- **@ValidateIf short-circuit trap (load-bearing).** The audit's natural read suggests attaching the cross-field check to `projectId`. But `projectId` already carries `@ValidateIf((o) => o.projectId !== null && undefined && '')` which short-circuits ALL property validators on that field when projectId is empty — exactly the failure mode the check needs to catch. The fix: attach `@Validate(ProjectRequiredWhenParentedConstraint)` to `epicId` AND `milestoneId` instead; those fields don't have a competing `@ValidateIf` and the validator reads the full DTO via `ValidationArguments.object`. Witness has a "projectId explicitly empty" test that would have silently passed under the wrong attachment point.
+- **UpdateTaskDto inheritance trap.** Default `PartialType(CreateTaskDto)` inherits ALL property decorators, including the new `@Validate`. On a partial update with `{ epicId: X }` alone, the DTO would 400 even though the DB row already holds `projectId` — a false positive. Fixed via `OmitType` + redeclaration without the constraint. The DB CHECK + DAT-037 still cover the update path; the trade-off is a (rare) post-update 500 if a service path constructs an orphan via update, which the audit's "fallback only for non-DTO write paths" sentence anticipates.
+- **Layer-of-rejection partner pattern explicit.** COR-034 (P2002→409 race) and COR-035 (DTO 400 plainly-invalid input) are distinct handlers for distinct error-classes — DAT-016/036 races vs DAT-017 plainly-invalid combos. The pattern carries forward to COR-037 next (DAT-023 race) for the leaves no-overlap surface. Three closures, three distinct mappings — never blend them.
 
 ---
 ### DAT-038 — Event.parentEventId has no cycle prevention (the audit's "Same for Event.parentEventId")
