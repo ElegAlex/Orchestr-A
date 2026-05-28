@@ -2462,7 +2462,7 @@ pnpm test apps/api/src/time-tracking/
 
 ### DAT-035 — ProjectMember.role is a free-string holding institutional labels, not codes
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2518,6 +2518,18 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 - **NOT RECOMMENDED — Option (b) reference table:** Over-engineered for 5 values when the value space is fundamentally open. Only justified if the operator wants curated role-list management as a separate product feature.
 - **NOT RECOMMENDED — CHECK or native enum:** DAT-012 already bailed exactly because of the open value space.
 - **Status moved to `BLOCKED-DESIGN-DECISION`.** Operator picks Option (a-lightweight), (a) with the OwnershipService dead-code removal, or (b) reference table. A halt-for-decision is a clean termination of the mini-arc — 8/9 implemented + 1 decision-surface stop = full coverage of the audit-prescribed Phase 3 follow-ups.
+- **(2026-05-28, mini-arc closer session) RESUMED + CLOSED via Option (a)+dead-code — operator-decided.** `Closed_by: 148b713` — migration `20260528160000_dat035_project_member_role_length` + DTO edits to `add-member.dto.ts` and `update-member.dto.ts` + dead-code removal in `ownership.service.ts` + witnesses `dat035-project-member-role-length.int.spec.ts` and `projects/dto/member.dto.spec.ts`.
+- **Pre-flight pinned the design choices:**
+  - role NOT NULL at schema level → CHECK doesn't need an `IS NULL` arm.
+  - 0 nulls / 0 empties / 0 whitespace-only across 2959 rows → CHECK validates clean, no in-migration data cleanup.
+  - maxlen 17 → chosen N=100 gives ~5.8x headroom (justified in migration header).
+  - RBAC-sensitivity verdict: `OwnershipService.isProjectOwner` reads role as a leader-determinant fallback, but all live values (`Chef de projet` 2944, `Membre` 12, plus the 3 institutional one-offs) pass CHECK + DTO unchanged → live RBAC preserved 100%. Not a halt.
+  - Dead-code re-grep: `'OWNER'` and `'LEAD'` declared only at `ownership.service.ts:24`, used only at line 114, zero references in `apps/web` or `packages/`, zero matching rows in `project_members` → safe to delete; behavior byte-equivalent because the `role: { in: [...] }` filter against those codes always returned an empty set.
+- **Layer-of-rejection split codified:** DB CHECK is the structural floor (length 1..100); DTO is the canonicalization + 400 partner (trim + length 1..100). They share bounds so the DTO never produces a value the CHECK rejects, and the CHECK catches direct SQL writes that bypass the DTO. Whitespace-only is deliberately NOT a CHECK concern (the DTO trims; the int witness has a dedicated test pinning the design contract so a future reviewer who would tighten the CHECK to `length(btrim(role)) >= 1` notices and updates the DTO at the same time).
+- **Dead-code removal motivation (in-scope per the decided (a)+dead-code):** the UPPERCASE codes were the artifact of the exact closed-set / enum idea this task declines. Keeping them would have left a misleading list that suggests a future seed will introduce code-style labels — but the audit's resolution is precisely that the value space stays open and free-form. Removing them states the design intent in the code.
+- **AC#4 N/A** — schema CHECK migration is not audit-sensitive (DAT-005/012/013/014/016/017/018/023/032/033/036/037/038 precedent); the DTO normalization + dead-code removal touch no audit-emission paths (project membership is not in the audit-sensitive list).
+- **FAIL-pre/PASS-post protocol applied non-vacuously:** commented out the migration's `ADD CONSTRAINT`, ran int suite → 2 negatives failed (empty + 101 accepted); restored byte-identical → all 6 pass. DTO + dead-code removal verified by absence-of-breakage (zero live refs grep + green nest build + full suite pass post — honest AC#2 note: 2 of 3 changes have explicit FAIL-pre/PASS-post; the third is verified by absence-of-breakage, as the prompt allowed).
+- **This closes the Phase 3 mini-arc — 9/9 done.** Mini-arc total: 6 migrations + 5 code-only changes (COR-022 from Phase 3 audit-prescribed counts separately). Coherence 43→52 across both mini-arc sessions. Deploy-doc stays accumulating; re-finalize is the next (separate) session.
 
 ---
 ### DAT-036 — Client.name lacks a UNIQUE constraint

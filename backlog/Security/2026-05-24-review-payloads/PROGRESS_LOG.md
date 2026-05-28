@@ -1194,3 +1194,29 @@ Append a new entry at the bottom after each Claude Code session that touched the
   4. **NOT recommended** — native enum or CHECK; DAT-012's bail rationale still applies (open value space).
 - **No code, no commit.** BACKLOG.md status moved TODO → `BLOCKED-DESIGN-DECISION`, Learnings carry the full analysis + 3 recommended options. Operator picks the path next session.
 - **Mini-arc summary: 9/9 — 8 closed + 1 HALT-for-decision.** Plus DAT-037 resumed from prior-session BLOCKED-DESIGN-DECISION via Option A. Coherence checked-set 43→51 (+8) across both mini-arc sessions.
+
+
+## 2026-05-28 — DAT-035 closed (Option (a)+dead-code) — Phase 3 mini-arc 9/9 COMPLETE
+
+- **Session ID:** 2026-05-28-mini-arc-final
+- **Tasks closed:** DAT-035 (resumed from BLOCKED-DESIGN-DECISION; operator chose Option (a)+dead-code).
+- **Commits:** `8503273` (in_progress; HALT→IN_PROGRESS with decision recorded), `148b713` (fix — migration + 2 DTOs + dead-code), `<pending>` (closeout).
+- **Counter:** **51 → 52**.
+- **Pre-flight CLEAR:** 0 nulls / 0 empties / 0 whitespace-only across 2959 rows; role NOT NULL at the schema level (no IS NULL arm needed); maxlen 17 → chosen N=100 (5.8x headroom). RBAC-sensitivity assessed and dismissed (live values pass CHECK + DTO unchanged; dead-code removal is byte-equivalent because the codes matched 0 rows). Dead-code re-grep returned zero live refs.
+- **Design (3 coordinated changes, ONE commit):**
+  1. Migration `20260528160000_dat035_project_member_role_length` — raw-SQL `CHECK (char_length("role") BETWEEN 1 AND 100)`. Whitespace-only intentionally NOT rejected at the DB layer (DTO trims; the witness has a dedicated design-contract test pinning that decision).
+  2. `AddMemberDto` + `UpdateMemberDto` — `@Transform(trim) + @Length(1, 100)`. Layer-of-rejection partner returning 400 before the DB hit.
+  3. `OwnershipService.PROJECT_LEADER_MEMBER_ROLES` — removed vestigial `'OWNER'` and `'LEAD'` (artifacts of the abandoned closed-set idea); behavior byte-equivalent.
+- **AC#4 N/A** — schema CHECK is not audit-sensitive; DTO + dead-code touch no audit path.
+- **Diff scope (AC#6 — fix commit `148b713`):** 6 files — migration, 2 DTOs, ownership.service.ts (dead-code), int witness, DTO witness. schema.prisma untouched.
+- **Gates:** `migrate deploy` clean; `pnpm test` 1689 (was 1678, +11 DTO tests); `pnpm test:integration` 85 (was 79, +6 CHECK tests); `pnpm test:e2e` turbo 4/4.
+- **FAIL-pre/PASS-post (honest split):** the int CHECK witness has a true FAIL-pre/PASS-post (commented out the ADD CONSTRAINT → 2 negatives failed → restored byte-identical → all 6 pass). The DTO witness is also FAIL-pre by construction (the new validators are the surface under test). The dead-code removal is verified by absence-of-breakage as the prompt allowed (grep-zero-live-refs pre + green build + green suite post).
+- **Deploy-doc append:** Scope row, Migrations sub-table row (12→13), pre-deploy length scan into §checklist (recommended, dev pre-flight clean), Rollback row (idempotent `DROP CONSTRAINT IF EXISTS`).
+
+## 2026-05-28 — Phase 3 mini-arc CLOSED — 9/9 done
+
+- **Headline:** the Phase 3 mini-arc (session-derived follow-ups to the audit-prescribed Phase 3 batch) is now **fully closed**. 8 implementations + 1 halt-and-resume = 9/9 covered.
+- **Migrations landed across the mini-arc (6):** `20260528120000` (DAT-032 + DAT-033); `20260528130000` (DAT-036); `20260528140000` (DAT-038); `20260528150000` (DAT-037 — Option A REJECT+CASCADE); `20260528160000` (DAT-035). Plus 5 code-only closures (COR-034, COR-035, COR-037, DAT-034) and one design-decision pause (DAT-035 → resumed). Total 13 migrations on the Phase 3 deploy doc (8 audit-prescribed + 5 mini-arc + 0 COR-022 which is code-only).
+- **Coherence checked-set across both mini-arc sessions:** 43 → 52 (+9 audit-derived closures captured one bundle per checked entry, per TOOL-COH-001/002 jurisprudence).
+- **Deploy-doc status:** still **accumulating**. Operator MUST NOT deploy mid-arc per the doc's own banner. **Next session = deploy-doc re-finalize** (TBD-DEPLOY scan, count reconciliation 13 migrations / 19 scope rows, ordered pre-deploy checklist extension, rollback sequence renumbering). After that, the operator-driven actual prod deploy.
+- **No VPS deploy this session.** Pushed only.
