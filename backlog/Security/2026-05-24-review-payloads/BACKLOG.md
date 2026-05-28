@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 193 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018) + 1 session-derived follow-up (COR-037, 2026-05-27, from DAT-023)
+> **Total tasks:** 195 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018) + 1 session-derived follow-up (COR-037, 2026-05-27, from DAT-023) + 2 deploy-surfaced follow-ups (COR-038, DOC-001, 2026-05-28, from Phase 3 prod deploy)
 
 ## Schema legend
 
@@ -2834,6 +2834,101 @@ pnpm test apps/api/src/leaves
 - **Import path was already swallowed-by-line-catch, not a 500.** The audit listed import auto-approve in scope, but `importLeaves` had a line-level try/catch pushing errors to `result.errorDetails`. The fix here is UX — substitute a friendly "Chevauchement détecté avec un congé approuvé existant" for the raw Prisma dump — not a 500-fix. The 500-fix is the approve path.
 - **Layer-of-rejection pattern, third instance (race-window 23P01 → 409).** COR-034 = race-window P2002 → 409 (Dept/Service/Client). COR-035 = plainly-invalid DTO input → 400 (orphan task). COR-037 = race-window 23P01 → 409 (leaves). Three distinct mappings for three distinct error classes — never blend.
 - **FAIL-pre/PASS-post protocol applied non-vacuously.** Temporarily neutralized the catch (`throw err`) → witness failed (Error propagates, expected ConflictException). Restored byte-identical → witness passed. Non-vacuous teeth confirmed.
+
+---
+
+### COR-038 — Event parent-cycle trigger error leaks as 500 (no service-layer guard, unlike DAT-018)
+
+- **Status:** TODO
+- **Phase:** 3
+- **Cluster:** F
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** correctness · error_handling
+- **File:** `apps/api/src/events/events.service.ts` (create + update write sites; grep `parentEventId` for the controller-reachable mutations)
+- **Source:** Session-derived from the 2026-05-28 prod deploy (Gate-5 operational reminder + DAT-038 closeout `a99dda5`). DAT-038's BEFORE INSERT/UPDATE trigger `events_parent_no_cycle_trg` is the **SOLE line of defense** for event parent cycles — unlike DAT-018 (which is a DB floor on top of `tasks.service.ts checkCircularDependency` returning 400), `events.service.ts` has NO equivalent service-layer cycle guard. A controller path that constructs a cyclic `parentEventId` raises P0001 from the trigger → Prisma has no dedicated code for P0001 from a trigger → leaks as HTTP 500. Deliberately not folded into DAT-038's literal scope (the trigger was the load-bearing guarantee); filed here as the layer-of-rejection partner. Precedent: COR-037 closure pattern (`leaves_no_overlap` 23P01 → 409).
+
+**Description:**
+After DAT-038, `events.service.ts` create + update paths can throw an unmapped P0001 from `events_parent_no_cycle_trg` (message contains `events_parent_no_cycle`) when the request constructs a cyclic parent chain (self-loop caught by `events_parent_no_self_ck` → 23514; multi-hop cycle caught by the trigger → P0001). Neither error is mapped to a typed exception, so Nest returns a generic 500 for what is a client-facing constraint violation. The cycle is correctly *prevented* either way (DAT-038 is doing its job) — this is the error surface only.
+
+**Root cause:**
+`events.service.ts` has no service-layer cycle pre-check (no `checkCircularDependency` analog), no `try/catch` around the create/update write, and no Prisma error filter at the module level. The trigger is bypass-only by intent (defense-in-depth), but here there is no application-layer guard *to* defend.
+
+**Code evidence:**
+```
+events.service.ts — create() / update() / recurrence-instance generation: prisma.event.create()/update() unguarded; no try/catch around P0001 / 23514 from events_parent_no_cycle_trg / events_parent_no_self_ck.
+DAT-038 witness (apps/api/src/schema-constraints/dat038-event-parent-cycle.int.spec.ts) — confirms the trigger surfaces verbatim message `events_parent_no_cycle` on P0001, and CHECK surfaces 23514 + `events_parent_no_self_ck`.
+```
+
+**Suggested fix:**
+Wrap the event create + update write sites in a try/catch mapping (a) P0001 messages containing `events_parent_no_cycle` → `ConflictException(409)` with a clean message (e.g. "Cet événement créerait une boucle dans la chaîne de récurrence parente"), and (b) 23514 messages containing `events_parent_no_self_ck` → same 409 (treat self-loop and multi-hop uniformly at the app layer; the DB still distinguishes). Factor a small `isEventParentCycleViolation(err)` helper mirroring `isLeaveOverlapViolation` from COR-037. **Optionally** (operator-decided in pre-flight): add a service-layer pre-check mirroring `tasks.service.ts checkCircularDependency` — walks parent chain in JS before the write, returns `BadRequestException(400)` for plainly-invalid input. Layer-of-rejection partner pattern: pre-check is 400 (plainly-invalid input, like COR-035 for orphan tasks), DB trigger is 409 (race or bypass, like COR-037 for leaves overlap). Witness: service-level, simulate a cyclic INSERT → expect ConflictException(409), not 500.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — Expected N/A: events create/update is not in the audit-sensitive list (mirror COR-037's verdict — error translation only, no mutation/audit-emission change if implemented at the catch level; if a service-layer pre-check is added, it short-circuits before any audit-relevant write).
+5. Commit message includes `[closes COR-038]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm test apps/api/src/events
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+
+### DOC-001 — Phase 2 deploy doc backfill (audit-trail completeness for Cour des Comptes)
+
+- **Status:** TODO
+- **Phase:** 2
+- **Cluster:** —
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** documentation · audit_trail
+- **File:** `docs/deploy/` (new file: `docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md`)
+- **Source:** Session-derived from the 2026-05-28 Phase 3 prod deploy (Gate-0 finding). The 4 Phase 2 migrations (`20260525190000_audit_logs_immutability_hash_chain_actor_snapshot`, `20260525200000_dat007_project_fk_restrict_preserve_history`, `20260525210000_obs012_deployments_table`, `20260526120000_dat021_audit_payload_schema_version_gin_index`) were applied to prod on 2026-05-26 alongside the TOOL-DEPLOY-001 closeout, but WITHOUT a dedicated `docs/deploy/` runbook. The HANDOVER's deploy section recorded them in summary, but there is no Cour-des-Comptes-grade deploy doc capturing the per-migration probes, smokes, rollback paths, and operator decisions for that batch. Surfaced when the Phase 3 deploy doc's "Expected last applied migration" baseline turned out to be stale (it expected `20260524100100`, prod actually had through `20260526120000` — confirming Phase 2 was deployed out-of-band).
+
+**Description:**
+The audit trail under `docs/deploy/` is incomplete. Phase 1 has `2026-05-25-phase-1-remediation-deploy.md`. Phase 3 has `2026-05-2x-phase-3-defense-in-depth-deploy.md`. Phase 2 has nothing. Anyone reconstructing the prod deployment history (auditor, ops, future Claude session) cannot trace what was done on 2026-05-26 — they have to dig through PROGRESS_LOG entries, the HANDOVER summary, and `_prisma_migrations` finished_at timestamps.
+
+**Root cause:**
+The Phase 2 deploy happened in the TOOL-DEPLOY-001 closeout session, which was framed as a tooling task (DB role split + init-roles) — the 4 audit-log migrations rode along as a logistically-coupled deploy without surfacing as their own "deploy this batch" doc. No process rule required a deploy doc for non-Phase-1, non-Phase-3 batches; Phase 1 + Phase 3 happened to author docs because their session prompts demanded them.
+
+**Code evidence:**
+```
+ls docs/deploy/ — finds Phase 1 + Phase 3 docs, no Phase 2.
+_prisma_migrations finished_at — the 4 Phase 2 migrations cluster around 2026-05-26 21:09 UTC (verified on prod 2026-05-28 12:43).
+docs/deploy/2026-05-2x-phase-3-defense-in-depth-deploy.md — Gate-0 "Prod baseline (expected)" originally said "Expected last applied migration `20260524100100_dat005_convert_float_to_decimal`"; actual prod had `20260526120000_dat021…` (Phase 2's last) → confirms Phase 2 was deployed and the doc trail missed it.
+```
+
+**Suggested fix:**
+Retroactively author `docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md` mirroring the Phase 1 + Phase 3 doc structure: **(1)** scope & metadata (date 2026-05-26, operator, 4 migrations, the OBS-012 + DAT-009 + DAT-021 + DAT-007 task mapping, the rollback anchor image used at the time if recoverable from docker history); **(2)** migrations applied sub-table with the exact SQL each migration introduced (verbatim from the committed migration files); **(3)** what was verified post-deploy (operator-recall from PROGRESS_LOG entries — the 2 maintenance scripts `normalize-action-codes` + `recompute-chain-on-schema-bump` were run, app_user REVOKE was applied via init-roles.sql); **(4)** rollback path (per-migration DROP DDL — derive from each migration file); **(5)** a clear **retroactive** banner stating this doc was authored AFTER the deploy from `_prisma_migrations` evidence + PROGRESS_LOG records, NOT seeded ahead of execution like Phase 1/3. No pre-deploy checklist (it was already deployed); operational notes carry only what the operator can recall + what's verifiable post-hoc. **Optionally** also backfill a Phase-1-tooling deploy doc covering TOOL-DEPLOY-001 itself (the 0-migration code+config-only init-roles deploy) if completeness demands it; surface that decision to the operator.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated. — **N/A: documentation backfill, not code. Verify by inspection that the new doc covers the 4 migrations + rollback + verification, and that `ls docs/deploy/` lists Phase 1 / 2 / 3 all present.**
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green). — **N/A: docs-only.**
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot. — **N/A: documentation only, no code touched.**
+5. Commit message includes `[closes DOC-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit. — Doc-only commit; only `docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md` (and possibly the Phase-1-tooling doc if option is taken) created.
+
+**Verification command:**
+```
+# Verify the doc exists and covers the 4 Phase 2 migrations:
+ls docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md && \
+  grep -E '20260525190000|20260525200000|20260525210000|20260526120000' docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md
+# Verify rollback DDL is present for each:
+grep -c 'DROP\|REVOKE\|rollback' docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
 
 ---
 
