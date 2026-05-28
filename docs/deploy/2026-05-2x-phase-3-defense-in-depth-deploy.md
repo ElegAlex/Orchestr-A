@@ -6,15 +6,22 @@ ahead of execution**: the known scope, migrations, pre-deploy checks, verificati
 rollback templates are pre-filled now; every command and its output are captured at deploy time,
 in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 
-> **Status (2026-05-28):** Phase 3 is **10/10 closed — COMPLETE** on `origin/master`. This batch covers
+> **Status (2026-05-28, post-finalize):** Phase 3 (audit-prescribed) is **10/10 closed** on `origin/master` —
 > the 8 schema/data migrations (DAT-003/004 bundle, DAT-012, DAT-013, DAT-014, DAT-016, DAT-017, DAT-018,
-> DAT-023) plus the code-only COR-022 (1 task, 0 migration). The doc was **seeded 2026-05-27** alongside
-> Phase 3 closure (each task's per-migration probe + smoke + rollback landed in the same commit that
-> closed the task) and **finalized 2026-05-28 (this commit)**: TBD-DEPLOY convention applied to every
-> deploy-time-only blank, an ordered pre-deploy checklist extracted as §"Pre-deploy checklist", a
-> consolidated reverse-order rollback table extracted as §"Rollback sequence". The HANDOVER refresh
-> shipped at `321092f`. **The doc is now operator-ready.** The actual prod deploy is a separate
-> operator-driven step (not a Claude Code action).
+> DAT-023) plus the code-only COR-022. The doc was **seeded 2026-05-27** alongside Phase 3 closure and
+> **finalized 2026-05-28** at `43ed9a8` (TBD-DEPLOY convention applied, ordered pre-deploy checklist, consolidated
+> reverse-order rollback table).
+>
+> **REVERTED TO ACCUMULATING (2026-05-28, mini-arc in progress).** A **Phase-3 mini-arc** closing the 10
+> session-derived Phase-3-tagged follow-ups (DAT-032/033/034/035/036/037/038, COR-034/035/037) is now
+> in progress; each closure that ships DDL extends this batch. **Task 1/9 landed: DAT-032 + DAT-033** (one
+> bundled migration `20260528120000_dat032_dat033_position_and_hours_bounds`, commit `7af1991`) — completing
+> the DAT-004 numeric-bound family with CHECKs on `subtasks.position` and `time_entries.hours`. Migrations
+> sub-table is now **9** (was 8); Scope table carries 10 rows + 2 new (12 total); Pre-deploy checklist Step 1
+> row 6 widened to cover the 2 new predicates; Rollback sequence prepended with the new migration in reverse
+> deploy order. **The doc is NOT operator-ready while the mini-arc accumulates** — it re-finalizes after the
+> mini-arc's last task lands (operator MUST NOT deploy off the doc mid-arc). The actual prod deploy is a
+> separate operator-driven step, scheduled for after the mini-arc closes.
 >
 > **Convention — deploy-time fill markers.** Every value the operator captures at deploy time is
 > tagged with the prefix `TBD-DEPLOY:` (date, operator, baseline counts, per-scan outputs, smoke-test
@@ -42,6 +49,8 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `DAT-017` | `f6ca325` | important | **1 CHECK constraint** `tasks_parent_requires_project_ck` — `("projectId" IS NOT NULL OR ("epicId" IS NULL AND "milestoneId" IS NULL))`. Rejects the orphan combination (a task linked to an epic/milestone but to NO project). Single-row invariant only; cross-table equality (epic.projectId = task.projectId) is **out of scope** — filed as DAT-037. Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). One migration. |
 | `DAT-018` | `fff93ce` | important | **1 CHECK + 1 BEFORE INSERT/UPDATE trigger** on `task_dependencies` — CHECK `task_dependencies_no_self_ck` (`"taskId" <> "dependsOnTaskId"`) blocks the 1-hop self-loop; trigger `task_dependencies_no_cycle_trg` (+ fn `task_dependencies_check_cycle`) walks the existing graph forward from `NEW."dependsOnTaskId"` and RAISEs (identifier `task_dependencies_no_cycle`) if `NEW."taskId"` is reachable — blocks multi-hop cycles. Defense-in-depth: the service (`addDependency` → `checkCircularDependency`) already returns 400 first; this is the DB floor for direct-SQL/bypass paths. Hand-authored raw SQL; `schema.prisma` unchanged (neither DSL-expressible). One migration. |
 | `DAT-023` | `c27862a` | important | **1 EXCLUDE constraint** `leaves_no_overlap` on `leaves` — `EXCLUDE USING gist ("userId" WITH =, daterange("startDate","endDate",'[]') WITH &&) WHERE (status = 'APPROVED')`. Forbids two APPROVED leaves for the same user with overlapping date ranges. Partial WHERE (only APPROVED rows; re-checks on PENDING→APPROVED UPDATE — the audit's race path); `[]` inclusive bounds match `checkOverlap`'s inclusive semantics (`halfDay` is not a same-day-pair feature — `checkOverlap` ignores it). **Requires `btree_gist`** — `CREATE EXTENSION IF NOT EXISTS btree_gist` is in the migration but needs **superuser** (see DAT-023 probe + pre-deploy). Defense-in-depth: the service already 409s on create/update; this is the DB floor for the TOCTOU/approve race. Hand-authored raw SQL; `schema.prisma` unchanged (EXCLUDE not DSL-expressible). One migration. |
+| `DAT-032` | `7af1991` | important | **1 CHECK constraint** `subtasks_position_ck` (`"position" >= 0`). Defense-in-depth completion of the DAT-004 numeric-bound family — DAT-004's Description named `Subtask.position Int` among the bound-less columns but its Suggested-fix list omitted it (7 CHECKs for 8 described columns; bundle discipline kept it out). The non-negative ordering-position invariant now has a DB floor matching the DTO. Bundled with DAT-033 in one migration. Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). |
+| `DAT-033` | `7af1991` | important | **1 CHECK constraint** `time_entries_hours_ck` (`"hours" >= 0 AND "hours" <= 24`). DB-layer floor for the single-row TimeEntry hours bound — COR-022 enforced it at DTO + service only (Invariant 1 forbade DDL in that commit). **Floor predicate `>= 0` is intentional, NOT `>= 0.25`:** `CreateTimeEntryDto.hours` carries `@Min(0.25)` gated by `@ValidateIf(!isDismissal)`, and `TimeTrackingService` writes dismissals with `hours = 0` (line 308). The legitimate persisted range is `{0} ∪ [0.25, 24]`; the DB admits hours=0 (101 such dismissal rows on dev today) and leaves the `(0, 0.25)` partial-hour exclusion to the DTO. **Per-day aggregate cap stays at the service layer (cross-row, not a per-row CHECK); the COR-022 TOCTOU residual remains open** — same residual will apply to DAT-034's third-party path. Bundled with DAT-032 in one migration. Hand-authored raw SQL; `schema.prisma` unchanged. |
 
 - **Prod baseline (expected):** TBD-DEPLOY: commits behind master at deploy time. Expected last applied
   migration `20260524100100_dat005_convert_float_to_decimal` — the Phase-1 closeout left prod at git
@@ -59,7 +68,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 - **DB:** `orchestr_a_prod`, user `orchestr_a`. Host has **no** `psql`/`pg_dump` binaries → all
   Postgres ops run inside the db container (`docker exec`).
 
-### Migrations applied by this batch (8)
+### Migrations applied by this batch (9)
 
 | Migration folder | Task(s) | Introduces |
 |------------------|---------|------------|
@@ -71,6 +80,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 | `20260527170000_dat017_task_parent_requires_project_check` | DAT-017 | `ALTER TABLE "tasks" ADD CONSTRAINT "tasks_parent_requires_project_ck" CHECK ("projectId" IS NOT NULL OR ("epicId" IS NULL AND "milestoneId" IS NULL))`. Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). **Pre-deploy precaution (required):** `ADD CONSTRAINT … CHECK` validates against existing rows and aborts with 23514 if any orphan exists — run a read-only violator SELECT on prod BEFORE `migrate deploy` (see DAT-017 probe below). Resolve by backfilling `projectId` from the epic/milestone parent, or DELETE if truly orphan. Dev pre-flight: 0 violators (3288 tasks). |
 | `20260527180000_dat018_task_dependency_cycle_prevention` | DAT-018 | `ALTER TABLE "task_dependencies" ADD CONSTRAINT "task_dependencies_no_self_ck" CHECK ("taskId" <> "dependsOnTaskId")` + `CREATE OR REPLACE FUNCTION task_dependencies_check_cycle()` (recursive-CTE forward walk, RAISEs `task_dependencies_no_cycle` on a multi-hop cycle) + `CREATE TRIGGER task_dependencies_no_cycle_trg BEFORE INSERT OR UPDATE ON task_dependencies`. Hand-authored raw SQL; `schema.prisma` unchanged (neither DSL-expressible). **Pre-deploy precaution (required):** both guards validate against existing rows at deploy — the CHECK aborts with 23514 on an existing self-loop, and an existing cycle would make the trigger fire on the next legitimate write. Run the read-only self-loop + recursive-CTE cycle scan on prod `task_dependencies` BEFORE `migrate deploy` (see DAT-018 probe below); resolve any existing cycle by deleting one edge per cycle. Dev pre-flight: 0 self-loops, 0 multi-hop cycles (table empty, 0 rows). |
 | `20260527190000_dat023_leave_no_overlap_exclude` | DAT-023 | `CREATE EXTENSION IF NOT EXISTS btree_gist` + `ALTER TABLE "leaves" ADD CONSTRAINT "leaves_no_overlap" EXCLUDE USING gist ("userId" WITH =, daterange("startDate","endDate",'[]') WITH &&) WHERE (status = 'APPROVED')`. Hand-authored raw SQL; `schema.prisma` unchanged (EXCLUDE not DSL-expressible). **Pre-deploy precaution (required, two parts):** (a) **`CREATE EXTENSION` needs superuser** — confirm the deploy/migration role can create extensions, or have a superuser run `CREATE EXTENSION IF NOT EXISTS btree_gist;` in `orchestr_a_prod` BEFORE `migrate deploy` (idempotent; if already present the migration's CREATE is a no-op); (b) `ADD CONSTRAINT … EXCLUDE` validates against existing rows and aborts (23P01) if any overlapping APPROVED pair exists — run the read-only overlap SELECT on prod BEFORE `migrate deploy` (see DAT-023 probe below); resolve by setting the older row to a non-APPROVED status. Dev pre-flight: btree_gist not pre-installed (created cleanly, role is superuser); 0 overlapping APPROVED pairs (3 leaves). |
+| `20260528120000_dat032_dat033_position_and_hours_bounds` | DAT-032 + DAT-033 | `ALTER TABLE "subtasks" ADD CONSTRAINT "subtasks_position_ck" CHECK ("position" >= 0)` + `ALTER TABLE "time_entries" ADD CONSTRAINT "time_entries_hours_ck" CHECK ("hours" >= 0 AND "hours" <= 24)`. Defense-in-depth completion of the DAT-004 numeric-bound family — bundle rationale: same source file (schema.prisma), same SQL mechanism (single-column CHECK), same witness path. Hand-authored raw SQL; `schema.prisma` unchanged (CHECK not DSL-expressible). **Pre-deploy precaution (recommended, two scans):** `ADD CONSTRAINT … CHECK` validates against existing rows and aborts with 23514 if any violator exists — run the read-only violator SELECTs on prod BEFORE `migrate deploy` (see DAT-032/033 probe below). The hours floor is the superset `>= 0` to admit legitimate dismissal rows (`hours = 0`, `isDismissal = true`); do not confuse this with the DTO floor `>= 0.25` for non-dismissal entries (which stays at the application layer). Dev pre-flight: 0 violators on `subtasks.position < 0`; on `time_entries`: 101 legitimate dismissals admitted, 0 negatives, 0 over-24, 0 in (0, 0.25). |
 
 > COR-022 is **not** in this sub-table — it ships entirely in the api image (`760aa58`), no DDL.
 >
@@ -148,7 +158,7 @@ resolution path, re-scan → must be 0 rows → proceed.
 | 3 | `20260527170000` (DAT-017) | `ADD CONSTRAINT … CHECK` aborts 23514 on orphan-task row | orphan-task SELECT returns `(0 rows)` | [DAT-017 orphan-task probe](#dat-017-orphan-task-probe-critical-read-only--add-constraint--check-aborts-on-existing-violators) |
 | 4 | `20260527180000` (DAT-018) | self-loop CHECK aborts 23514 at `ADD CONSTRAINT`; an existing multi-hop cycle would later choke the trigger on the next legitimate write | both SELECTs (direct self-loop + recursive-CTE cycle scan) return `(0 rows)` | [DAT-018 cycle probe](#dat-018-cycle-probe-critical-read-only--the-check-aborts-on-an-existing-self-loop-an-existing-cycle-would-make-the-trigger-fire-on-the-next-write) |
 | 5 | `20260527190000` (DAT-023) | `ADD CONSTRAINT … EXCLUDE` aborts 23P01 on existing overlapping APPROVED pair | overlap-pair SELECT returns `(0 rows)` (part 2 of the DAT-023 probe) | [DAT-023 overlap probe (part 2)](#dat-023-overlap-probe-critical--two-parts-btree_gist-availability--existing-overlap-either-aborts-migrate-deploy) |
-| 6 | `20260527120000` (DAT-003/004) | `ADD CONSTRAINT … CHECK` aborts 23514 on first violator across the 14 predicates | dev pre-flight was 0/14 (every CHECK validated clean on dev). **Recommended prod safety scan** — for each of the 14 predicates listed in `migration.sql` (L22–67), run `SELECT count(*) FROM <table> WHERE NOT (<predicate>);` and confirm 0. Predicates: `leaves.endDate >= startDate`, `projects.endDate >= startDate`, `epics.endDate >= startDate`, `telework_recurring_rules.endDate >= startDate`, `leave_validation_delegates.end_date >= start_date`, `school_vacations.endDate >= startDate`, `events.recurrenceEndDate >= date`, `leave_balances.totalDays >= 0`, `leaves.days > 0`, `tasks.progress BETWEEN 0 AND 100`, `epics.progress BETWEEN 0 AND 100`, `predefined_tasks.weight BETWEEN 1 AND 5`, `project_members.allocation BETWEEN 0 AND 100`, `documents.size >= 0` | every safety SELECT returns 0 |
+| 6 | `20260527120000` (DAT-003/004) **+ `20260528120000` (DAT-032/033)** | `ADD CONSTRAINT … CHECK` aborts 23514 on first violator across the 14 DAT-003/004 predicates **+ the 2 DAT-032/033 predicates** | dev pre-flight: 0/14 + 0/2 (every CHECK validated clean on dev). **Recommended prod safety scan** — for each of the 14 DAT-003/004 predicates listed in `migration.sql` (L22–67), run `SELECT count(*) FROM <table> WHERE NOT (<predicate>);` and confirm 0. Predicates: `leaves.endDate >= startDate`, `projects.endDate >= startDate`, `epics.endDate >= startDate`, `telework_recurring_rules.endDate >= startDate`, `leave_validation_delegates.end_date >= start_date`, `school_vacations.endDate >= startDate`, `events.recurrenceEndDate >= date`, `leave_balances.totalDays >= 0`, `leaves.days > 0`, `tasks.progress BETWEEN 0 AND 100`, `epics.progress BETWEEN 0 AND 100`, `predefined_tasks.weight BETWEEN 1 AND 5`, `project_members.allocation BETWEEN 0 AND 100`, `documents.size >= 0`. **Plus the 2 DAT-032/033 predicates:** `SELECT count(*) FROM subtasks WHERE "position" < 0;` (must return 0) and `SELECT count(*) FILTER (WHERE hours = 0) AS dismissals, count(*) FILTER (WHERE hours < 0) AS negatives, count(*) FILTER (WHERE hours > 24) AS over_cap, count(*) FILTER (WHERE hours > 0 AND hours < 0.25) AS partial_below_quarter FROM time_entries;` (must return `negatives = 0`, `over_cap = 0`, `partial_below_quarter = 0`; `dismissals` may be > 0 — the floor `>= 0` admits them by design). | every safety SELECT returns 0 (and DAT-033 scan's `negatives`/`over_cap`/`partial_below_quarter` columns return 0) |
 | 7 | `20260527140000` (DAT-013) | `ADD CONSTRAINT … CHECK` aborts 23514 on first malformed time string | dev pre-flight: only 4 well-formed rows. **Recommended prod safety scan** — for each of the 6 columns: `SELECT count(*) FROM <table> WHERE "<col>" IS NOT NULL AND "<col>" !~ '^([0-1]?[0-9]\|2[0-3]):[0-5][0-9]$';` on `tasks.startTime`/`endTime`, `events.startTime`/`endTime`, `predefined_tasks.startTime`/`endTime` | every safety SELECT returns 0 |
 
 **DAT-014 (`20260527150000`) needs no scan, BUT the operator must expect a *write* during `migrate
@@ -846,15 +856,16 @@ TBD-DEPLOY: GATE 2 decision (passed / rollback).
 
 | # | Step | Migration / SHA | Side-effects / image revert | Detail |
 |---|------|------------------|------------------------------|--------|
-| 1 | DAT-023 — `DROP CONSTRAINT leaves_no_overlap;` then **conditional** `DROP EXTENSION btree_gist` (only if nothing else depends on it; **no `CASCADE`** — let it refuse if depended upon) | `20260527190000` / `c27862a` | no image revert (schema.prisma unchanged) | [DAT-023 rollback](#dat-023-c27862a-migration-20260527190000--idempotent-drop-constraint--conditional-drop-extension) |
-| 2 | DAT-018 — `DROP TRIGGER task_dependencies_no_cycle_trg ON "task_dependencies";` + `DROP FUNCTION task_dependencies_check_cycle();` + `ALTER TABLE "task_dependencies" DROP CONSTRAINT task_dependencies_no_self_ck;` | `20260527180000` / `fff93ce` | no image revert | [DAT-018 rollback](#dat-018-fff93ce-migration-20260527180000--drop-trigger--drop-function--drop-constraint-idempotent-no-data-change) |
-| 3 | DAT-017 — `ALTER TABLE "tasks" DROP CONSTRAINT tasks_parent_requires_project_ck;` | `20260527170000` / `f6ca325` | no image revert | [DAT-017 rollback](#dat-017-f6ca325-migration-20260527170000--idempotent-drop-constraint) |
-| 4 | DAT-016 — `DROP INDEX departments_name_key;` + `DROP INDEX services_departmentId_name_key;` | `20260527160000` / `ce8877a` | **image revert mandatory** to `orchestra-api:pre-phase3-defense-in-depth` — `schema.prisma` carried `@unique` / `@@unique` so the Prisma client expects the indexes | [DAT-016 rollback](#dat-016-ce8877a-migration-20260527160000--idempotent-drop-index) |
-| 5 | DAT-014 — `DROP TRIGGER leaves_sync_type_trg ON "leaves";` + `DROP FUNCTION leaves_sync_type_from_config();` | `20260527150000` / `f8a5ce9` | no image revert; **the one-time backfill is one-way** — drifted/NULL `leaves.type` rows were overwritten with the FK-derived value and the prior contents are not retained (audit-required behavior, not a regression) | [DAT-014 rollback](#dat-014-f8a5ce9-migration-20260527150000--drop-trigger--drop-function-cheap-but-backfill-is-one-way) |
-| 6 | DAT-013 — `ALTER TABLE … DROP CONSTRAINT` × 6 (tasks/events/predefined_tasks startTime+endTime format CHECKs) | `20260527140000` / `c0189c1` | no image revert | [DAT-013 rollback](#dat-013-c0189c1-migration-20260527140000--idempotent-drop-constraint) |
-| 7 | DAT-012 — drop the 3 enum-typed defaults → recast 6 columns back to `text` (`USING (col::text)`, lossless) → restore the 3 text defaults → `DROP TYPE` × 5 (PredefinedTaskDuration, DayPeriod, AssignmentCompletionStatus, RecurrenceType, AppSettingsCategory) | `20260527130000` / `c8b618e` | **image revert mandatory** to `orchestra-api:pre-phase3-defense-in-depth` (schema.prisma carried the 5 enum blocks + 6 column type changes); the asymmetric order matters — the non-deployed `down.sql.md`-style reference below carries the exact sequence | [DAT-012 rollback](#dat-012-c8b618e-migration-20260527130000--harder-recast-enumstring--drop-type) |
-| 8 | DAT-003/004 — `ALTER TABLE … DROP CONSTRAINT` × 14 (7 date-range + 7 numeric) | `20260527120000` / `62c2fc4` | no image revert | [DAT-003/004 rollback](#dat-003004-62c2fc4-migration-20260527120000--idempotent-drop-constraint) |
-| 9 | COR-022 — `git revert 760aa58`, rebuild + redeploy api image | (no migration) / `760aa58` | rebuild required (DTO + service constants); cheapest rollback in the batch | [COR-022 rollback](#cor-022-760aa58--code-only) |
+| 1 | DAT-032/033 — `ALTER TABLE "subtasks" DROP CONSTRAINT IF EXISTS subtasks_position_ck;` + `ALTER TABLE "time_entries" DROP CONSTRAINT IF EXISTS time_entries_hours_ck;` | `20260528120000` / `7af1991` | no image revert (schema.prisma unchanged) | [DAT-032/033 rollback](#dat-032033-7af1991-migration-20260528120000--idempotent-drop-constraint) |
+| 2 | DAT-023 — `DROP CONSTRAINT leaves_no_overlap;` then **conditional** `DROP EXTENSION btree_gist` (only if nothing else depends on it; **no `CASCADE`** — let it refuse if depended upon) | `20260527190000` / `c27862a` | no image revert (schema.prisma unchanged) | [DAT-023 rollback](#dat-023-c27862a-migration-20260527190000--idempotent-drop-constraint--conditional-drop-extension) |
+| 3 | DAT-018 — `DROP TRIGGER task_dependencies_no_cycle_trg ON "task_dependencies";` + `DROP FUNCTION task_dependencies_check_cycle();` + `ALTER TABLE "task_dependencies" DROP CONSTRAINT task_dependencies_no_self_ck;` | `20260527180000` / `fff93ce` | no image revert | [DAT-018 rollback](#dat-018-fff93ce-migration-20260527180000--drop-trigger--drop-function--drop-constraint-idempotent-no-data-change) |
+| 4 | DAT-017 — `ALTER TABLE "tasks" DROP CONSTRAINT tasks_parent_requires_project_ck;` | `20260527170000` / `f6ca325` | no image revert | [DAT-017 rollback](#dat-017-f6ca325-migration-20260527170000--idempotent-drop-constraint) |
+| 5 | DAT-016 — `DROP INDEX departments_name_key;` + `DROP INDEX services_departmentId_name_key;` | `20260527160000` / `ce8877a` | **image revert mandatory** to `orchestra-api:pre-phase3-defense-in-depth` — `schema.prisma` carried `@unique` / `@@unique` so the Prisma client expects the indexes | [DAT-016 rollback](#dat-016-ce8877a-migration-20260527160000--idempotent-drop-index) |
+| 6 | DAT-014 — `DROP TRIGGER leaves_sync_type_trg ON "leaves";` + `DROP FUNCTION leaves_sync_type_from_config();` | `20260527150000` / `f8a5ce9` | no image revert; **the one-time backfill is one-way** — drifted/NULL `leaves.type` rows were overwritten with the FK-derived value and the prior contents are not retained (audit-required behavior, not a regression) | [DAT-014 rollback](#dat-014-f8a5ce9-migration-20260527150000--drop-trigger--drop-function-cheap-but-backfill-is-one-way) |
+| 7 | DAT-013 — `ALTER TABLE … DROP CONSTRAINT` × 6 (tasks/events/predefined_tasks startTime+endTime format CHECKs) | `20260527140000` / `c0189c1` | no image revert | [DAT-013 rollback](#dat-013-c0189c1-migration-20260527140000--idempotent-drop-constraint) |
+| 8 | DAT-012 — drop the 3 enum-typed defaults → recast 6 columns back to `text` (`USING (col::text)`, lossless) → restore the 3 text defaults → `DROP TYPE` × 5 (PredefinedTaskDuration, DayPeriod, AssignmentCompletionStatus, RecurrenceType, AppSettingsCategory) | `20260527130000` / `c8b618e` | **image revert mandatory** to `orchestra-api:pre-phase3-defense-in-depth` (schema.prisma carried the 5 enum blocks + 6 column type changes); the asymmetric order matters — the non-deployed `down.sql.md`-style reference below carries the exact sequence | [DAT-012 rollback](#dat-012-c8b618e-migration-20260527130000--harder-recast-enumstring--drop-type) |
+| 9 | DAT-003/004 — `ALTER TABLE … DROP CONSTRAINT` × 14 (7 date-range + 7 numeric) | `20260527120000` / `62c2fc4` | no image revert | [DAT-003/004 rollback](#dat-003004-62c2fc4-migration-20260527120000--idempotent-drop-constraint) |
+| 10 | COR-022 — `git revert 760aa58`, rebuild + redeploy api image | (no migration) / `760aa58` | rebuild required (DTO + service constants); cheapest rollback in the batch | [COR-022 rollback](#cor-022-760aa58--code-only) |
 
 TBD-DEPLOY: rollback execution log — operator-filled only if GATE 2 fails. Capture per-row:
 timestamp, DDL output (`DROP …` + `DELETE FROM _prisma_migrations`), and the post-rollback state
@@ -868,6 +879,17 @@ timestamp, DDL output (`DROP …` + `DELETE FROM _prisma_migrations`), and the p
 > SQL rollback below, also `DELETE FROM _prisma_migrations WHERE migration_name = '<folder>';` (and
 > redeploy the pre-batch api image where flagged in §"Rollback sequence"), else `migrate deploy`
 > will believe the migration is still applied.
+
+### DAT-032/033 (`7af1991`, migration `20260528120000`) — idempotent DROP CONSTRAINT
+
+Pure additive guards; dropping them is safe and order-independent. `schema.prisma` was unchanged, so no
+image revert is needed:
+
+```sql
+ALTER TABLE "subtasks"     DROP CONSTRAINT IF EXISTS "subtasks_position_ck";
+ALTER TABLE "time_entries" DROP CONSTRAINT IF EXISTS "time_entries_hours_ck";
+-- then: DELETE FROM _prisma_migrations WHERE migration_name = '20260528120000_dat032_dat033_position_and_hours_bounds';
+```
 
 ### COR-022 (`760aa58`) — code only
 `git revert 760aa58`, rebuild + redeploy the api image. **No DB change to undo.** This is the
@@ -1036,9 +1058,25 @@ DROP EXTENSION IF EXISTS btree_gist;
   TOOL-DEPLOY-001 REVOKE + immutability trigger block any untyped write. **Companion artifact:**
   [`docs/audit/canonical-action-codes.md`](../audit/canonical-action-codes.md) (DAT-012 closeout).
   No migration; cross-linked here so the auditor sees why these two columns are intentionally free.
+- **DAT-033 / COR-022 TOCTOU residual — STILL OPEN.** The DAT-033 per-row CHECK `time_entries_hours_ck`
+  closes the single-row bound, but **not** the per-(userId, date) aggregate cap. COR-022 reads the
+  daily sum then writes non-transactionally; two concurrent same-day requests can each see the pre-state
+  and both commit past 24h. Per-row CHECK is structurally incapable of closing this (CHECK is per-row,
+  not cross-row aggregate). Fully closing under concurrency needs a serializable transaction around
+  read+write or a DB trigger — heavier, separate decision; not folded into this bundle. **The same
+  residual applies to DAT-034's third-party path** — when DAT-034 lands the service-level cap, the
+  TOCTOU stays open on both actor dimensions until the cross-row guard ships. Flagged for an explicit
+  follow-up decision; not actioned by this deploy.
+- **DAT-033 DTO floor stays at the application layer (intentional).** The DB floor is the superset
+  `hours >= 0 AND hours <= 24` to admit legitimate dismissal rows (`hours = 0`, `isDismissal = true`);
+  the `(0, 0.25)` partial-hour exclusion lives in `CreateTimeEntryDto.hours` via `@Min(0.25)` gated
+  by `@ValidateIf(!isDismissal)`. **Do NOT encode 0.25 at the DB layer** — it would reject 101
+  legitimate dismissals (dev count, 2026-05-28). This is documented on the migration header so a
+  future "tighten the DB CHECK" reviewer sees the rationale.
 - **Follow-up TODOs filed during Phase 3 (NOT in this deploy — listed for traceability):**
-  `DAT-032` (DB CHECK on `Subtask.position ≥ 0`), `DAT-033` (DB CHECK on `TimeEntry.hours` —
-  COR-022's DB-layer companion), `DAT-034` (per-day cap for third-party declarations), `DAT-035`
+  ~~`DAT-032` (DB CHECK on `Subtask.position ≥ 0`)~~ **DONE `7af1991` — bundled with DAT-033 in
+  `20260528120000`**, ~~`DAT-033` (DB CHECK on `TimeEntry.hours` — COR-022's DB-layer companion)~~
+  **DONE `7af1991` — bundled with DAT-032**, `DAT-034` (per-day cap for third-party declarations), `DAT-035`
   (`ProjectMember.role` free-string institutional labels — the DAT-012 bail), `DAT-037` (cross-table
   trigger validating `task.projectId = epic/milestone.projectId` — the DAT-017 "Consider trigger"
   discretionary clause; dev drift 0/0 so its data-cleanup burden is ≈ nil), `COR-035` (DTO cross-field
@@ -1057,8 +1095,13 @@ DROP EXTENSION IF EXISTS btree_gist;
 
 ## Future closures — append here, do not restructure
 
-**Phase 3 is 10/10 complete** (DAT-023 was the last; closed `c27862a`). The remaining follow-ups
-(DAT-032/033/034/035/037/038, COR-034/035/037) are Phase 4+ items — should any close and join a deploy:
+**Phase 3 (audit-prescribed) is 10/10 complete** (DAT-023 was the last of the audit set, closed `c27862a`).
+A **Phase-3 mini-arc** is in progress closing the 10 session-derived Phase-3-tagged follow-ups
+(DAT-032/033/034/035/036/037/038, COR-034/035/037); each closure shipping DDL extends this batch.
+**Mini-arc closures so far:** DAT-032 + DAT-033 (`7af1991`, migration `20260528120000`).
+**Remaining:** DAT-034, DAT-035, DAT-036, DAT-037, DAT-038, COR-034, COR-035, COR-037.
+The doc re-finalizes after the mini-arc's last closure; until then, **operator MUST NOT deploy**.
+For each future closure that ships DDL:
 1. Add a row to the **Scope & metadata** table and, if it ships DDL, to the **Migrations applied**
    sub-table.
 2. If it needs a pre-deploy data check, add a subsection under **Pre-deploy data probe**.

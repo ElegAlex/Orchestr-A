@@ -2316,7 +2316,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 
 ### DAT-032 — No DB CHECK on Subtask.position >= 0
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2354,13 +2354,16 @@ grep -n 'subtasks_position_ck' packages/database/prisma/migrations/  # expect 0 
 pnpm prisma migrate deploy && pnpm test:integration  # apply migration + real-DB witness (migrate dev --create-only blocked by _dat005_backup_* drift — see TOOL-DBSYNC-001)
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** `7af1991` (2026-05-28) — bundled with [[DAT-033]] in migration `20260528120000_dat032_dat033_position_and_hours_bounds` + witness `apps/api/src/schema-constraints/dat032-dat033-position-and-hours-bounds.int.spec.ts`.
+**Learnings:**
+- Bundle rationale: same source file (schema.prisma), same SQL mechanism (single-column CHECK), same witness path. Tighter than DAT-003/004 jurisprudence (one family, not two) — literally the two columns DAT-004 should have covered. Dual-close per TOOL-COH-001/002 + DAT-003/004 precedent.
+- DAT-004's Description listed 8 numeric columns but its Suggested-fix block listed only 7 CHECKs; bundle discipline (stay literal) kept Subtask.position out. The session-derived backfill is the right escape hatch — file the gap, don't silently widen scope mid-bundle. See [[DAT-033]] for the COR-022 analogue.
+- Pre-flight on dev: 0 violators. Witness pattern reused verbatim from `dat004-numeric-bounds.int.spec.ts` (raw `$executeRawUnsafe` INSERT, SQLSTATE 23514 + constraint-name assertion).
 
 ---
 ### DAT-033 — No DB-level guard on TimeEntry hours (single-entry bound + per-day cap)
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2400,8 +2403,12 @@ grep -n 'time_entries_hours_ck' packages/database/prisma/migrations/  # expect 0
 pnpm prisma migrate deploy && pnpm test:integration  # apply migration + real-DB witness (migrate dev --create-only blocked by _dat005_backup_* drift — see TOOL-DBSYNC-001)
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** `7af1991` (2026-05-28) — bundled with [[DAT-032]] in migration `20260528120000_dat032_dat033_position_and_hours_bounds` + witness `apps/api/src/schema-constraints/dat032-dat033-position-and-hours-bounds.int.spec.ts`.
+**Learnings:**
+- **CHECK-floor over-constraint trap (load-bearing).** `CreateTimeEntryDto.hours` carries `@Min(0.25) @Max(24)` BUT gated by `@ValidateIf((dto) => !dto.isDismissal)`; `TimeTrackingService` writes dismissal rows with `hours: 0` (lines 308, time-tracking.service.ts). The legitimate persisted range is therefore `{0} ∪ [0.25, 24]`, NOT `[0.25, 24]`. A CHECK `hours >= 0.25` would have rejected 101 legitimate dismissal rows on dev today (pre-flight scan). The correct DB floor is the superset `hours >= 0 AND hours <= 24`, leaving the `(0, 0.25)` exclusion to the DTO where it belongs. Witness includes a load-bearing positive `hours = 0` test that would fail under the over-constraint — keep it.
+- **TOCTOU residual (carried forward from COR-022 closeout — implementer note).** This per-row CHECK does NOT close the COR-022 per-(userId, date) aggregate-cap race: the cap is `aggregate` then `create` / `update` non-transactional, so two concurrent same-day requests can each read the pre-state and both commit past 24h. Closing the aggregate invariant under concurrency requires a serializable transaction around read+write or a DB trigger — heavier, separate decision; deliberately not folded in. **The same residual applies to DAT-034's third-party path** — when DAT-034 lands the service-level cap, the residual will still apply to both actor dimensions.
+- **time_entries actor-XOR check ordering.** The pre-existing `time_entries_actor_xor_check` (requires exactly one of `userId` / `thirdPartyId`) can fire before `time_entries_hours_ck` on a row that lacks both. Negative witnesses must set `userId` so the row satisfies the XOR and the bound is the only failing predicate. First attempt didn't set it and failed with `actor_xor_check` instead of `hours_ck`; trivial fix but caught only because the assertion pins the constraint name. Lesson: when adding a CHECK to a table that already has constraints, design witness rows to satisfy ALL existing CHECKs so the new one is the unique failure mode.
+- Bundle rationale + dual-close: see [[DAT-032]] Learnings.
 
 ---
 ### DAT-034 — Per-day hours cap not enforced for third-party time declarations
