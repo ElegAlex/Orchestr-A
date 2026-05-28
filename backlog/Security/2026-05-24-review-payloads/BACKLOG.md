@@ -2316,7 +2316,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 
 ### DAT-032 — No DB CHECK on Subtask.position >= 0
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2360,7 +2360,7 @@ pnpm prisma migrate deploy && pnpm test:integration  # apply migration + real-DB
 ---
 ### DAT-033 — No DB-level guard on TimeEntry hours (single-entry bound + per-day cap)
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
