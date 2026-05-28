@@ -3141,7 +3141,7 @@ pnpm test apps/api/src/milestones/milestones.service.spec.ts  # may need creatio
 ---
 ### COR-028 — getUserLeaves does not enforce ownership — exposes any user's leaves to a request specifying that userId
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
@@ -3178,8 +3178,20 @@ Either accept a currentUserId and assert equality (or canManageLeave), or rename
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** d1c420d
+**Learnings:**
+- **Pre-flight line re-derivation:** `getUserLeaves` was at `leaves.service.ts:1046` (BACKLOG `File:` said `:1004` — stale; no behavioral drift, just line). Method took one param `userId`, queried `leave.findMany({ where: { userId } })`, computed `canEdit = status===PENDING`, `canDelete = PENDING||REJECTED`. Comment already read "Own leaves".
+- **Callers grep (re-verified, not trusted from kickoff):** `grep -rn getUserLeaves apps/api/src` → sole non-spec caller = `leaves.controller.ts:233` inside `getMyLeaves(@CurrentUser('id') userId)` (`@Get('me')`, `@AllowSelfService()`), passing the JWT-scoped id. No polymorphic / second caller emerged. Kickoff's mono-caller typing confirmed.
+- **Option B (rename) chosen, not A (assert-equality).** Mono-caller confirmed → no caller-shape to preserve, no `getUserLeaves(userId, currentUserId)` variant in use. Option A's entry-assert would guard a surface that Option B simply deletes. No reason-to-flip surfaced in pre-flight.
+- **Framing — defense-in-depth, NOT exploit fix (HANDOVER §Next gravé).** The "exposes any user's leaves" failure mode is NOT exploitable today: the only caller passes `@CurrentUser('id')`. For support/audit: *service-layer hardening, no current vulnerability surfaced to users.* The rename is a naming/contract signal (one id = the caller → no caller≠owner confusion inside the method), NOT runtime enforcement — boundary safety still comes from `getMyLeaves` passing the JWT id. Concrete real defect addressed structurally = canEdit/canDelete computed on owned-only rows (carry-forward "API computed flags", [[feedback_api_computed_flags]]).
+- **No calc "simplification" — the audit/kickoff presumed a `caller===owner` conditional that does not exist in this body.** Flags are computed purely from `leave.status`; there was no ownership branch to collapse. Pure rename + where-clause param rename only; touching the flag formula would have been scope creep + a fabricated delta. (Same shape as TST-018's moot audit-presupposition.)
+- **Witness shape (AC#2) — surface-elimination + new coverage, NOT a behavioral fail-pre.** Because the rename has ZERO behavioral delta, no test FAILs-pre / PASSes-post on behavior (a behavioral test passes identically under either name). The honest AC#2 witness is twofold: (1) **compile-time fence** — `grep getUserLeaves apps/api/src` finds the method pre-rename, finds NOTHING post-rename (mis-wireable surface eliminated; `nest build` clean proves no dangling ref); (2) **new non-vacuous coverage** — added `should scope the leave query to the current user id only` (asserts `findMany` called with `where: { userId: <id> }`) + `should compute canEdit/canDelete per leave status on owned leaves` (PENDING→edit+delete, APPROVED→neither, REJECTED→delete-only). Non-vacuous by construction: the pre-existing `should return user leaves` test asserted ONLY `toHaveLength(1)` — neither flags nor query-scope were covered before. These new tests would pass under the old name too; their value is coverage, not delta. Documented here because the rename's witness genuinely differs from the sibling COR-001/002 (which had a real membership-fallthrough fail-pre).
+- **Proof-of-defect two-arg spec (contract optional) = MOOT.** `getUserLeaves(otherUser, caller)` doesn't match the actual single-arg signature, and flags are status-derived not caller-derived → no caller≠owner code path exists to exercise. Not attempted.
+- **AC#4 (audit-emission) N/A — path-specific, not inherited.** COR-028 touches a READ-PATH (fetch own leaves), NOT the leaves approve/reject mutation. The contract's audit-sensitive list names "leaves approve/reject"; this path is not in it. No `audit_logs` entry. (HANDOVER learning #16: AC#4 N/A is path-specific.)
+- **Existing-coverage state at pre-flight (pre-#5):** `describe('getUserLeaves')` had 2 tests — `should return user leaves` (length-1 only) + `should throw NotFoundException`. Controller spec: `getMyLeaves` test asserting `getUserLeaves` called with `'user-id-1'`. All renamed to `getOwnLeaves`.
+- **Gates:** leaves suite `pnpm vitest run src/leaves` 229 ✓ (service 166→**168**); `nest build` clean (typecheck gate — `tsc --noEmit` RED on master by design); `pnpm test` 1697→**1699** (+2 coverage) across 73 files / 6 turbo tasks; `pnpm test:e2e` turbo **4/4** (3 cached + web:build).
+- **Scope discipline:** 4 files, all leaves-module (service + controller + 2 specs). NOT touched: `users.service.ts` / `access-scope.service.ts` (SEC-030, Cluster B sibling — different domain/mechanism/witness, separate session), milestones/epics (COR-001/002 closed). No shared helper, no AccessScopeService extension.
+- **Deploy posture:** code-only, no migration. NOT auto-deployed. Adds to the undeployed stack (COR-038 `24c6929` + COR-001 `cb3b5e1` + COR-002 `27c0424` + this `d1c420d`); prod stays `ebcd9e1`.
 
 ---
 ### SEC-030 — GET /users/:id has no horizontal scope filter — any role with users:read can read every user's full profile
