@@ -1,10 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsOptional,
   IsString,
   IsInt,
   Min,
   Max,
+  Length,
   IsDateString,
 } from 'class-validator';
 
@@ -13,8 +15,16 @@ export class UpdateMemberDto {
     description: 'Rôle du membre dans le projet',
     example: 'Développeur Frontend',
     required: false,
+    minLength: 1,
+    maxLength: 100,
   })
+  // DAT-035 — same trim + length contract as AddMemberDto; see that file for
+  // the layer-of-rejection rationale.
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
+  @Length(1, 100)
   @IsOptional()
   role?: string;
 

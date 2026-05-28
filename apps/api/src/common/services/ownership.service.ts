@@ -11,17 +11,28 @@ export type OwnedResource =
 
 /**
  * ProjectMember.role is a free-form string in the schema (see
- * packages/database/prisma/schema.prisma, ProjectMember.role). The known
- * "leader" labels used in seeds and the UI are listed below. For the purposes
- * of ownership, a user is considered "project owner" when they are:
+ * packages/database/prisma/schema.prisma, ProjectMember.role; DAT-035 declined
+ * to close it into an enum because the value space is genuinely open per
+ * collectivité). The known "leader" label used in seeds and the UI is listed
+ * below. For the purposes of ownership, a user is considered "project owner"
+ * when they are:
  *   - the Project.createdById, OR
  *   - the Project.managerId, OR
  *   - the Project.sponsorId, OR
  *   - a ProjectMember with one of the leader role labels below.
  * The bypassPermission mechanism (e.g. 'projects:manage_any') handles the
  * admin-level override at the guard layer.
+ *
+ * DAT-035 (2026-05-28): removed vestigial UPPERCASE codes `'OWNER'` and `'LEAD'`
+ * from this list. Grep across `apps/` + `packages/` confirmed they were the
+ * artifact of an abandoned closed-set / enum idea — they matched ZERO rows in
+ * actual data and ZERO live writers (`projects.service.ts:134` seeds the live
+ * literal `'Chef de projet'`). Behavior is byte-equivalent to before because
+ * the filter `role: { in: [...] }` against a list containing those codes never
+ * found any row carrying them. If a future arc introduces code-style leader
+ * labels, add them here explicitly (and seed them).
  */
-const PROJECT_LEADER_MEMBER_ROLES = ['Chef de projet', 'OWNER', 'LEAD'];
+const PROJECT_LEADER_MEMBER_ROLES = ['Chef de projet'];
 
 /**
  * Shared, low-level ownership checker used by OwnershipGuard.

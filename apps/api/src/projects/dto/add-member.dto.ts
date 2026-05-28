@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsUUID,
   IsNotEmpty,
@@ -7,6 +8,7 @@ import {
   IsInt,
   Min,
   Max,
+  Length,
   IsDateString,
 } from 'class-validator';
 
@@ -23,8 +25,20 @@ export class AddMemberDto {
     description: 'Rôle du membre dans le projet',
     example: 'Développeur Frontend',
     required: false,
+    minLength: 1,
+    maxLength: 100,
   })
+  // DAT-035 — DTO layer-of-rejection partner to project_members_role_length_ck.
+  // Trim first (so a value like '  Chef de projet  ' canonicalizes to 'Chef de
+  // projet' AND a whitespace-only input collapses to '' before length check),
+  // then enforce 1..100 — matches the DB CHECK bounds; the DTO rejects 400
+  // before the request hits the DB. Value space stays open per the audit's
+  // free-form decision (DAT-012 bail rationale).
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
+  @Length(1, 100)
   @IsOptional()
   role?: string;
 
