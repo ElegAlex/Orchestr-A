@@ -2839,7 +2839,7 @@ pnpm test apps/api/src/leaves
 
 ### COR-038 — Event parent-cycle trigger error leaks as 500 (no service-layer guard, unlike DAT-018)
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
