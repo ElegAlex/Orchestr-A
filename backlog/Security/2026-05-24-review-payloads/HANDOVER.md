@@ -1,83 +1,119 @@
-# ORCHESTRA Audit Remediation — Session Handover (post-Phase-3 completion)
+# ORCHESTRA Audit Remediation — Session Handover (post-prod-deploy, Phase 3 + mini-arc LIVE)
 
 ## Contexte projet
 Repo: /home/alex/Documents/REPO/ORCHESTRA (NestJS + Prisma + Next.js monorepo)
 User: Alexandre, DSI CPAM 92. Audit Cour des Comptes window S1 2026.
 Communication: French (user). Code/docs en English.
-Stack prod: VPS 92.222.35.25 (debian@), Docker Compose, PostgreSQL 18, accès SSH via ~/.ssh/id_ed25519, repo prod à /opt/orchestra. Container DB = postgres service (orchestr-a-postgres-prod), DB=orchestr_a_prod, user=orchestr_a. Prod runs UTC.
+Stack prod: VPS 92.222.35.25 (debian@), Docker Compose, PostgreSQL 18, accès SSH via ~/.ssh/id_ed25519 (clé uniquement, jamais le mot de passe), repo prod à /opt/orchestra. Container DB = postgres service (orchestr-a-postgres-prod), DB=orchestr_a_prod, user=orchestr_a (superuser via peer auth dans le conteneur). Prod runs UTC.
 
 Discipline obligatoire: lire `CLAUDE_SESSION_CONTRACT.md` EN PREMIER. Pattern par task: IN_PROGRESS commit AVANT code → fix commit `[closes X]` → BACKLOG (DONE + Closed_by) + PROGRESS_LOG closeout. Master-only (pas de PR). `scripts/check-backlog-coherence.sh` = gate (DONE ⇒ SHA + `[closes X]` dans le commit).
 
 ---
 
-## Current state (master @ `59db83c`, working tree clean, coherence gate = 43 DONE/VERIFIED)
+## Current state (master HEAD `5ec83f7`; coherence script = 53 DONE entries; running checked-set = 52)
 
-### Phase 1 — blockers audit-prescribed : 7/7 DONE + déployés prod (2026-05-25)
-SEC-001 `507d755`, SEC-002 `24bbfe7`, SEC-003 `2763552`, DAT-001 `b14cdd5`, DAT-005 `bcb7ec3`, COR-003 `8fc6c92`, CLAUDE-CFG-001 `a4c3ec2`. Audit-trail: `docs/deploy/2026-05-25-phase-1-remediation-deploy.md`.
+**Compte cohérence — convention.** Le script `bash backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh` reporte **53 entries DONE**. Notre compteur interne "checked-set" (utilisé tout au long du mini-arc) est à **52** parce que le bundle DAT-003+DAT-004 a été compté comme 1 unité (1 migration, 1 SHA partagé). Les deux nombres sont corrects sous leurs rubriques respectives. Pour les rapports Cour des Comptes, le compte par task (53) est l'autorité ; pour le suivi de progression mini-arc, le compte checked-set (52) est la métrique.
 
-### Phase 1 — tooling : 5/5 DONE (déployé prod 2026-05-26)
-| Task | Closed_by | Origine | Nature |
+### Phase 3 + completion mini-arc — ✅ 20 TASKS DONE ET LIVE EN PROD (2026-05-28)
+
+**Phase 3 audit-prescribed (10/10 DONE):**
+
+| Task | Closed_by | Nature |
+|---|---|---|
+| DAT-003 + DAT-004 (bundled) | `62c2fc4` | 7 date CHECKs + 7 numeric CHECKs |
+| COR-022 | `760aa58` | TimeEntry single-entry bound + per-(userId,date) daily cap (service-layer) |
+| DAT-012 | `c8b618e` | string→enum promotion of 6 columns; AuditLog canonical codes documented |
+| DAT-013 | `c0189c1` | HH:MM time-of-day format as DB CHECK on 6 String columns |
+| DAT-014 | `f8a5ce9` | `leaves.type` auto-sync trigger; legacy enum column now a read-only FK mirror |
+| DAT-016 | `ce8877a` | UNIQUE on `departments.name` + composite UNIQUE on `services(departmentId, name)` |
+| DAT-017 | `f6ca325` | CHECK `tasks_parent_requires_project_ck` — epic/milestone requires `projectId` |
+| DAT-018 | `fff93ce` | CHECK no-self-loop + BEFORE trigger no-cycle on `task_dependencies` |
+| DAT-023 | `c27862a` | `leaves_no_overlap` EXCLUDE USING gist (partial WHERE APPROVED) |
+
+**Phase 3 completion mini-arc (10/10 DONE — 9 work-units across 2 sessions + 1 HALT-and-resume on each design decision):**
+
+| Task | Closed_by | Migration / Code | Nature |
 |---|---|---|---|
-| CLAUDE-CFG-001 | `a4c3ec2` | audit (codex-only) | config repo |
-| TOOL-COH-001 | `e6b836c` | session-derived | coherence gate : regex multi-segment `[A-Z]+(?:-[A-Z]+)*-\d+` |
-| TOOL-COH-002 | `e6b836c` | session-derived | formalisation du pattern anchor-commit (doc) |
-| TST-DB-001 | `e30292c` | session-derived | harness d'intégration real-DB (`vitest.int.config.ts`, `pnpm test:integration`) |
-| TOOL-DEPLOY-001 | `8c37e1d` | session-derived | split rôle DB app_user/owner + `directUrl` + `init-roles.sql` |
+| DAT-032 + DAT-033 (bundled) | `7af1991` | `20260528120000` | CHECK `subtasks.position >= 0` + CHECK `time_entries.hours BETWEEN 0 AND 24` (dismissal floor preserved) |
+| DAT-036 | `ce026d6` | `20260528130000` | UNIQUE `clients.name` — third instance of DAT-016 family |
+| DAT-038 | `a99dda5` | `20260528140000` | CHECK `events_parent_no_self_ck` + cycle trigger `events_parent_no_cycle_trg` — DAT-018 analog on self-FK |
+| COR-034 | `08d04b1` | code-only | Map P2002 → 409 on Department/Service/Client create+update (race-window past pre-check; widened to Client per DAT-036) |
+| COR-035 | `d5ac36a` | code-only | DTO orphan-task 400 — `ProjectRequiredWhenParentedConstraint` on CreateTaskDto |
+| COR-037 | `abd6982` | code-only | Map 23P01 → 409 on leaves approve + import (AC#4 N/A verified) |
+| DAT-037 | `128393e` | `20260528150000` | Cross-table task↔epic/milestone projectId consistency: task-side BEFORE REJECT + 2 parent-side AFTER CASCADE triggers (Option A, resumed from BLOCKED-DESIGN-DECISION) |
+| DAT-034 | `6b17ec9` | code-only | Per-day hours cap extended to third-party declarations (mirror COR-022 on `thirdPartyId` dimension) |
+| DAT-035 | `148b713` | `20260528160000` | CHECK `project_members.role` length 1..100 + DTO trim/length + dead-code removal of UPPERCASE `OWNER`/`LEAD` (Option (a)+dead-code, resumed from BLOCKED-DESIGN-DECISION) |
 
-### Phase 2 — Cour des Comptes audit-log durcissement : 20/21 DONE (PERF-001 stub différé)
-**16 audit-sourced :** DAT-002 `c62ac8d`, OBS-001 `1ff6c9a`, OBS-002 `d6299cc`, OBS-003 `1aa24b5`, OBS-004 `330a8eb`, OBS-005 `ec88cc9`, OBS-006 `4bee971`, OBS-007 `4711097`, OBS-012 `189344f`, OBS-018 `986c06f`, OBS-020 `bfc7a78`, OBS-021 `c45f209`, OBS-024 `7393b5d`, DAT-009 `d6299cc`, DAT-021 `33f7a9c`, TST-011 `870cd81`.
-**4 session-derived :** AUD-EMIT-001 `ffc4cf4`, OBS-026 `a42d663`, USR-DEL-001 `950068f`, AUD-READ-001 `5f87026`.
-
-### Phase 3 — Defense-in-depth schema — Invariants métier en SQL
-
-**⚠️ Phase 3 is NOT a clean "10/10-and-done" — two distinct counts apply.** Be explicit when reporting state:
-
-- **Phase 3 audit-prescribed: 10/10 DONE.** All ten tasks named in the original audit closed in the 2026-05-27 arc:
-
-  | Task | Closed_by | Nature |
-  |---|---|---|
-  | DAT-003 + DAT-004 (bundled) | `62c2fc4` | 7 date CHECKs + 7 numeric CHECKs |
-  | COR-022 | `760aa58` | TimeEntry single-entry bound + per-(userId,date) daily cap (service-layer) |
-  | DAT-012 | `c8b618e` | string→enum promotion of 6 columns; AuditLog canonical codes documented |
-  | DAT-013 | `c0189c1` | HH:MM time-of-day format as DB CHECK on 6 String columns |
-  | DAT-014 | `f8a5ce9` | `leaves.type` auto-sync trigger; legacy enum column now a read-only FK mirror |
-  | DAT-016 | `ce8877a` | UNIQUE on `departments.name` + composite UNIQUE on `services(departmentId, name)` |
-  | DAT-017 | `f6ca325` | CHECK `tasks_parent_requires_project_ck` — epic/milestone requires `projectId` |
-  | DAT-018 | `fff93ce` | CHECK no-self-loop + BEFORE trigger no-cycle on `task_dependencies` |
-  | DAT-023 | `c27862a` | `leaves_no_overlap` EXCLUDE USING gist (partial WHERE APPROVED) |
-
-- **Phase 3 defense-in-depth follow-ups (session-derived, TODO): 10 filings tagged Phase 3, still open.** See catalog below. The Cour-des-Comptes narrative coherence question for the next arc is whether these get cleared first (mini-arc) or deferred behind Phase 4.
-
-> Phase 3 BACKLOG header still reads *« 14 tasks in this phase »* — **stale**. Real count is **20** (10 original audit-prescribed + 10 session-derived). Don't trust the header.
+**Doc trail:**
+- `docs/deploy/2026-05-2x-phase-3-defense-in-depth-deploy.md` — seeded 2026-05-27, finalized 2026-05-28 `43ed9a8`, re-finalized post-mini-arc 2026-05-28 `ebcd9e1`, deploy-execution-log appended `5ec83f7` (current master HEAD).
+- Counts in the doc are canonical: **20 tasks / 19 scope rows / 13 migrations / 5 code-only / 18 rollback steps** (the DAT-003+004 bundle = 1 row for 2 tasks; the DAT-032+033 bundle = 1 row for 2 tasks but listed in the doc as 2 rows for narrative reasons → 19 scope rows total).
 
 ### DAT-007 (Phase 10) — DONE `0eae219`, pickup hors-phase
 Pris hors séquence pendant l'arc audit (FK `Task.projectId` Cascade → Restrict, préserve l'historique). Sert de pattern-mirror direct pour USR-DEL-001. **Le reste de Phase 10 (DAT-008/022/025/026) est TODO** — ne pas y toucher avant les décisions de séquence (voir §Next).
 
 ---
 
-## Filings nés pendant Phase 3 (11 total — 10 Phase-3-tagged + 1 Phase-1-tagged)
+## ✅ PROD DEPLOY — Phase 3 + mini-arc DEPLOYÉ (2026-05-28)
 
-| ID | Phase | Sev | Origine | Nature de la dette |
+| Élément | État prod vérifié |
+|---|---|
+| **Prod git HEAD (déployé)** | **`ebcd9e1`** (re-finalized deploy doc; mini-arc complete) |
+| **Master HEAD (current)** | **`5ec83f7`** — adds ONLY the deploy-log doc commit; **NO code delta vs prod** (diff `ebcd9e1..5ec83f7` = `PROGRESS_LOG.md` + `2026-05-2x-phase-3-defense-in-depth-deploy.md` only). **Prod is functionally current.** |
+| **api image (running)** | `sha256:3c264f51b8133b…` (built 2026-05-28 ~12:48 UTC) |
+| **Rollback anchor image** | `orchestra-api:pre-phase3-defense-in-depth = 10c69f6fbce8` (pre-deploy build, preserved) |
+| **Backup (Gate-1)** | `/opt/orchestra/backups/pre-phase3-batch-deploy-20260528-124439.sql` · **1.5 MB** · pg_dump exit 0 · structurally verified |
+| **`_prisma_migrations`** | 43 → **56** rows (+13) |
+| **Public health** | `GET https://localhost/api/health` → `{"status":"ok"}` ✅ |
+| **V5 row counts vs baseline** | leaves 137 / tasks 321 / project_members 121 / time_entries 15 / clients 7 / events 8 / subtasks 1030 — **UNCHANGED** (no data loss) |
+| **DAT-014 backfill** | leaves.type clean: CP 95 / RTT 28 / OTHER 11 / SICK_LEAVE 3 (137 total) — no NULLs |
+
+**Phase 1+2 baseline (pre-mini-arc) — ✅ déployé 2026-05-25 / 2026-05-26.**
+
+> **Correction de l'ancien baseline encodé dans la doc deploy seeded 2026-05-27.** Le doc disait « Expected last applied migration `20260524100100_dat005_convert_float_to_decimal` » (≡ état post-Phase-1). En réalité prod avait déjà Phase 2 (4 migrations) depuis 2026-05-26 alongside TOOL-DEPLOY-001 : `20260525190000_audit_logs_immutability_hash_chain_actor_snapshot`, `20260525200000_dat007_project_fk_restrict_preserve_history`, `20260525210000_obs012_deployments_table`, `20260526120000_dat021_audit_payload_schema_version_gin_index`. Prod git était à `3fd8986` (post-Phase-2). Le baseline stale était inoffensif — Prisma calcule la delta depuis `_prisma_migrations`, pas depuis le doc — mais la confusion est corrigée maintenant. **Gap d'audit-trail Cour des Comptes :** aucune doc `docs/deploy/2026-05-26-phase-2-*` n'a été authored à l'époque. Filé en **DOC-001** (voir §Filings).
+
+---
+
+## 🚨 Operational carry-forwards — NOW LIVE IN PROD (lecture obligatoire pour support / next-picker)
+
+Ces 4 invariants sont actifs sur prod depuis 2026-05-28. Une question support / un comportement « bizarre » côté UI doit être lu à travers ces lentilles AVANT d'être qualifié bug.
+
+1. **DAT-037 silent cascade.** Tout `UPDATE epics.projectId` ou `UPDATE milestones.projectId` réécrit silencieusement le `projectId` de toutes les tasks dépendantes (via les triggers AFTER UPDATE `epics_cascade_projectid_trg` / `milestones_cascade_projectid_trg`). C'est de la cohérence dérivée du système, **intentionnelle, AC#4 N/A** (la projectId de la task n'est pas dans la liste audit-sensitive). Message support si l'utilisateur signale « j'ai déplacé un epic et toutes mes tasks ont suivi » : « ce n'est pas un bug, c'est le comportement attendu — l'epic et ses tasks restent dans le même projet par construction ». **Edge case impossible aujourd'hui** : une task avec deux parents (epicId + milestoneId) dans des projets DIFFÉRENTS bloquerait le cascade (le BEFORE rejetterait sur l'autre côté). Le pre-deploy topology scan a confirmé 0 cas en prod (435 tasks bi-parentées, toutes même-projet).
+
+2. **DAT-038 — trigger SEUL en première ligne (pas de service-layer guard).** Contrairement à DAT-018 (qui est un DB floor au-dessus de `tasks.service.ts checkCircularDependency` retournant 400), `events.service.ts` n'a PAS d'équivalent. Un path API qui construit un `parentEventId` cyclique tombe sur le trigger P0001 → fuite en HTTP 500 brut. **Filé en COR-038** (mapping 409 + optionnel pre-check service-layer). Avant que COR-038 ne soit clos, support doit s'attendre à des 500 sur ce path précis et savoir que la cause-racine est documentée.
+
+3. **DAT-033 + COR-022 TOCTOU residual — toujours ouvert.** Le cap quotidien d'heures (par-`userId` ET par-`thirdPartyId` après DAT-034) est un read-then-write non-transactionnel : deux requêtes concurrentes même-jour peuvent toutes deux passer le check et toutes deux commit, dépassant 24h. Le per-row CHECK DAT-033 est structurellement incapable de fermer ça (CHECK per-row, pas cross-row aggregate). Fermeture sous concurrence nécessiterait une transaction sérialisable ou un trigger d'agrégat — décision séparée, plus lourde. Pour l'instant : la contrainte tient sous trafic normal ; pas de cas signalé en prod.
+
+4. **DAT-035 — whitespace-only role admis au DB par design.** Le CHECK `project_members_role_length_ck` est `char_length(role) BETWEEN 1 AND 100`. Un role `'   '` (whitespace pur) passe le CHECK. Le DTO `AddMemberDto` / `UpdateMemberDto` trim au boundary API via `@Transform`, donc aucun path applicatif légitime ne produit whitespace-only. Un futur reviewer qui voudrait durcir le CHECK à `length(btrim(role)) >= 1` doit savoir que c'est un design contract intentionnel — le test d'intégration `dat035-…int.spec.ts` a un test dédié qui pin ça pour qu'un changement non-coordonné échoue.
+
+---
+
+## Filings — 14 total (11 Phase-3-arc + 1 Phase-1-tooling + 2 deploy-surfaced 2026-05-28)
+
+Toutes closes sauf les 2 deploy-surfaced filings (COR-038 et DOC-001, TODO).
+
+| ID | Phase | Status | Origine | Closed_by |
 |---|---|---|---|---|
-| **DAT-032** | 3 | important | DAT-004 closeout (`62c2fc4`) | `Subtask.position >= 0` CHECK — named in Description, omitted from literal Suggested-fix |
-| **DAT-033** | 3 | important | COR-022 closeout (`760aa58`) | DB-level CHECK on `TimeEntry.hours` (single-entry bound) + per-day cap as DB invariant (COR-022 closed service-layer-only per Invariant 1) — captures the TOCTOU residual |
-| **DAT-034** | 3 | nit | COR-022 closeout (`760aa58`) | Per-day cap also applied to third-party declarations (COR-022 was keyed on `userId`, third-party rows have `userId=null`) |
-| **DAT-035** | 3 | important | DAT-012 pre-flight (`c8b618e`) | `ProjectMember.role` institutional values — bailed in DAT-012 because `SELECT DISTINCT role` returned free-form FR labels, not codes; aligns with `[[project_responsable_scope_perimeter]]` (institutional roles vary per collectivité, only templateKey is stable) |
-| **DAT-036** | 3 | important | DAT-016 closeout (`ce8877a`) | `Client.name` UNIQUE — named in DAT-016 Description ("Same for Client.name"), omitted from literal Suggested-fix |
-| **COR-034** | 3 | nit | DAT-016 closeout (`ce8877a`) | Department/Service create: map P2002 → 409 (race-window past pre-check) |
-| **DAT-037** | 3 | important | DAT-017 closeout (`f6ca325`) | Cross-table Task/Epic/Milestone `projectId` consistency trigger — the audit's discretionary "Consider trigger validating epic.projectId = task.projectId" (bidirectional) |
-| **COR-035** | 3 | nit | DAT-017 closeout (`f6ca325`) | DTO cross-field guard — orphan task combination (`epicId`/`milestoneId` without `projectId`) returns 400 *before* the CHECK fires (lead fix), service-side 23514→BadRequest fallback |
-| **DAT-038** | 3 | important | DAT-018 closeout (`fff93ce`) | `Event.parentEventId` cycle prevention — the audit's "Same for Event.parentEventId", named in Description AND Code evidence, omitted from literal Suggested-fix. Recipe = DAT-018's BEFORE-trigger + OLD-row exclusion (see Learnings #3) |
-| **COR-037** | 3 | nit | DAT-023 closeout (`c27862a`) | Leave approve/import: map 23P01 → 409 — `approve` does NOT re-check overlap and module has no Prisma error filter, so EXCLUDE leaks as 500 on the TOCTOU race |
-| **TOOL-DBSYNC-001** | 1 | important | DAT-003/004 bundle (`62c2fc4`) | Dev-DB `_dat005_backup_*` drift blocks `prisma migrate dev --create-only`; hand-author + `migrate deploy` is the workaround used throughout Phase 3 |
+| **DAT-032** | 3 | DONE | DAT-004 closeout (`62c2fc4`) | `7af1991` (bundled w/ DAT-033) |
+| **DAT-033** | 3 | DONE | COR-022 closeout (`760aa58`) | `7af1991` (bundled w/ DAT-032) |
+| **DAT-034** | 3 | DONE | COR-022 closeout (`760aa58`) | `6b17ec9` |
+| **DAT-035** | 3 | DONE | DAT-012 pre-flight (`c8b618e`) | `148b713` (Option (a)+dead-code, after HALT-for-decision) |
+| **DAT-036** | 3 | DONE | DAT-016 closeout (`ce8877a`) | `ce026d6` |
+| **COR-034** | 3 | DONE | DAT-016 closeout (`ce8877a`) — widened to include Client per DAT-036 | `08d04b1` |
+| **DAT-037** | 3 | DONE | DAT-017 closeout (`f6ca325`) | `128393e` (Option A REJECT+CASCADE, after BLOCKED-DESIGN-DECISION) |
+| **COR-035** | 3 | DONE | DAT-017 closeout (`f6ca325`) | `d5ac36a` |
+| **DAT-038** | 3 | DONE | DAT-018 closeout (`fff93ce`) | `a99dda5` |
+| **COR-037** | 3 | DONE | DAT-023 closeout (`c27862a`) | `abd6982` |
+| **TOOL-DBSYNC-001** | 1 | TODO | DAT-003/004 bundle (`62c2fc4`) | — (workaround used throughout; structural fix not yet picked) |
+| **COR-038** | 3 | **TODO (2026-05-28)** | Phase 3 prod deploy Gate-5 reminder | — *map event cycle P0001/23514 → 409 (+ optional service-layer pre-check, parallel to DAT-018)* |
+| **DOC-001** | 2 | **TODO (2026-05-28)** | Phase 3 prod deploy Gate-0 finding | — *backfill `docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md` for Cour-des-Comptes audit-trail completeness* |
 
 ### Deliberately NOT filed (don't-file-phantoms discipline — record as anti-evidence)
-- **COR-036** (would have been "trigger→500 leak on TaskDependency cycle") — service-layer `checkCircularDependency` returns 400 *before* any DB write, so the DAT-018 trigger only fires on direct-SQL bypass. No app-layer mapping needed. (See PROGRESS_LOG 2026-05-27 DAT-018 closeout.)
+- **COR-036** (would have been "trigger→500 leak on TaskDependency cycle") — `tasks.service.ts checkCircularDependency` returns 400 *before* any DB write, so the DAT-018 trigger only fires on direct-SQL bypass. No app-layer mapping needed. (See PROGRESS_LOG 2026-05-27 DAT-018 closeout.) **Note: COR-038 IS filed for the events analog precisely because `events.service.ts` has NO service-layer cycle guard — the symmetry breaks here.**
 - **DAT-039** (would have been "widen DAT-023 partial WHERE for half-day") — pre-flight showed `checkOverlap` ignores `halfDay`, so morning+afternoon-same-day is *already* a conflict in product semantics, not a feature. The audit's literal `'[]'` bounds stand.
 
 ---
 
-## Defense-in-depth sur `audit_logs` — 5 couches (inchangé)
+## Defense-in-depth sur `audit_logs` — 5 couches (inchangé, vérifié en prod 2026-05-28)
 1. **Immutability trigger** `audit_logs_no_update_delete` — `d6299cc`. UPDATE/DELETE → RAISE (SQLSTATE 23514).
 2. **Hash chain** (`computeRowHash` + `prevHash`) — `d6299cc`. Recompute via `audit/recompute-chain.ts` (jamais ré-implémenter le hash).
 3. **Actor snapshot** — `d6299cc`.
@@ -86,42 +122,13 @@ Pris hors séquence pendant l'arc audit (FK `Task.projectId` Cascade → Restric
 
 ---
 
-## Patterns infra récurrents établis (réutilisables Phase 3+)
+## Patterns infra récurrents établis (réutilisables Phase 4+)
 - **Coherence gate** : multi-segment-aware (`[A-Z]+(?:-[A-Z]+)*-\d+`) + **anchor-commit pattern** pour closures rétroactives (empty commit portant `[closes <id>]`). Toute édition de `Closed_by` DOIT lire le script avant de prescrire un SHA.
-- **Real-DB integration harness** (TST-DB-001) : DB éphémère + `prisma migrate deploy` + drop teardown. Cible `pnpm test:integration`, fichiers `*.int.spec.ts`. **Chemin de witness obligatoire pour CHECK/trigger/EXCLUDE.** Phase 3 a fait passer la suite intégration de 38 → **56** (DAT-017 +4, DAT-018 +7, DAT-023 +7).
+- **Real-DB integration harness** (TST-DB-001) : DB éphémère + `prisma migrate deploy` + drop teardown. Cible `pnpm test:integration`, fichiers `*.int.spec.ts`. **Chemin de witness obligatoire pour CHECK/trigger/EXCLUDE.** Le mini-arc a fait passer la suite intégration à **85 tests** sur 17 files (Phase 3 audit-prescribed + 5 nouveaux witnesses mini-arc : DAT-032/033 6 tests, DAT-036 3 tests, DAT-038 7 tests, DAT-037 7 tests, DAT-035 6 tests).
 - **Retroactive closure mechanism** : anchor commit `--allow-empty` nommant le SHA upstream.
 - **Defense-in-depth** : invariant en code (DTO/Zod) PLUS au niveau DB.
 - **Throwaway-DB witness pattern** : DB jetable créée+droppée dans la session.
-
----
-
-## Prod deploy — STATUS
-
-### Phase 1+2 baseline — ✅ DÉPLOYÉ (2026-05-26, vérifié terrain 2026-05-27)
-| Élément | État prod vérifié |
-|---|---|
-| prod git HEAD | `3fd8986` |
-| 4 migrations Prisma | `20260525190000_audit_logs_immutability…` (`d6299cc`), `20260525200000_dat007_project_fk…` (`0eae219`), `20260525210000_obs012_deployments…` (`189344f`), `20260526120000_dat021_audit_payload…` (`33f7a9c`) |
-| `app_user` role + REVOKE | rôle créé ; privilèges `audit_logs` = `INSERT, SELECT` seulement |
-| 2 scripts op | `normalize-action-codes` + `recompute-chain-on-schema-bump` exécutés, 0 legacy `PASSWORD_RESET_ADMIN`, schemaVersion 100% peuplé |
-| `.env.production` | mis à jour, `APP_DATABASE_USER`/`APP_DATABASE_PASSWORD` ajoutés |
-
-### Phase 3 batch — ⚠️ PENDING (NOT deployed)
-**Prod HEAD reste `3fd8986`.** Master a accumulé **8 migrations Prisma + 1 changement code-only (COR-022)** depuis la baseline, **NOT YET deployed**:
-
-| Migration | Task | SHA |
-|---|---|---|
-| `20260527120000_dat003_dat004_business_invariants` | DAT-003+004 | `62c2fc4` |
-| _(code-only — no migration)_ | COR-022 | `760aa58` |
-| `20260527130000_dat012_string_to_enum_promotions` | DAT-012 | `c8b618e` |
-| `20260527140000_dat013_time_of_day_format_check` | DAT-013 | `c0189c1` |
-| `20260527150000_dat014_leaves_type_autosync` | DAT-014 | `f8a5ce9` |
-| `20260527160000_dat016_dept_service_unique` | DAT-016 | `ce8877a` |
-| `20260527170000_dat017_task_parent_requires_project_check` | DAT-017 | `f6ca325` |
-| `20260527180000_dat018_task_dependency_cycle_prevention` | DAT-018 | `fff93ce` |
-| `20260527190000_dat023_leave_no_overlap_exclude` | DAT-023 | `c27862a` |
-
-Deploy doc **seeded but not finalized** : `docs/deploy/2026-05-2x-phase-3-defense-in-depth-deploy.md`. Le doc agrège les §pre-deploy probes / smoke / rollback de chaque task ; **TBD: markers** à remplir et **Migrations(8)/Scope counts à réconcilier** au moment du deploy (voir §Next).
+- **Bundle discipline** : tasks de même famille (même file, même mécanisme, même witness path) bundle dans une migration unique + dual-close avec `[closes A][closes B]` dans le commit fix. Précédent : DAT-003/004, DAT-032/033.
 
 ---
 
@@ -131,6 +138,7 @@ Deploy doc **seeded but not finalized** : `docs/deploy/2026-05-2x-phase-3-defens
 ## Known pre-existing dette
 - **ESLint 9.39.1 + ajv breakage** dans le job lint CI (conflit ajv/eslintrc). Rouge **avant** TOOL-COH-001 ; non touché, hors scope.
 - **BUILD-001** (Phase 13, TODO) : `rootDir` structurel non pinné (workaround `exclude scripts/**` + `vitest.int.*` déployé).
+- **TOOL-DBSYNC-001** (Phase 1, TODO) : `_dat005_backup_*` drift bloque `prisma migrate dev --create-only`. Workaround hand-author + `migrate deploy` utilisé pendant toute la Phase 3 + mini-arc. Décision structurelle à prendre (drop tables vs accepter le drift permanent vs autre).
 
 ---
 
@@ -140,40 +148,54 @@ Deploy doc **seeded but not finalized** : `docs/deploy/2026-05-2x-phase-3-defens
 - **Ground truth depuis serveur/code AVANT de prescrire un plan de deploy** : vérifier l'état réel.
 - **Anchor commit pattern pour closures rétroactives** : empty anchor commit, jamais pointer `Closed_by` sur un fix upstream nommant une autre task.
 
-## Process learnings — Phase 3 (nouveaux, 9)
+## Process learnings — Phase 3 (9, established in the audit-prescribed arc)
 1. **CHECK/regex = defense floor, not DTO equality.** La contrainte DB doit être un *superset* (jamais plus stricte) de la validation app-layer, sinon une entrée légitime côté app est rejetée par la DB (DAT-013 regex lenient ⊇ PredefinedTask DTO).
 2. **Auto-sync vs validate-and-reject triggers.** Quand une colonne est une projection dérivée (service mappe codes non-enum → OTHER), utiliser un trigger d'auto-sync qui en fait un *read-only mirror* ; un trigger validate-and-reject rejetterait à tort la divergence légitime (DAT-014). Plus : `enum_range(NULL::"Type")` comme guard contre futurs membres d'enum dans la coercion.
-3. **BEFORE INSERT/UPDATE self-traversal trigger sees the OLD row.** Une CTE récursive walking sa propre table doit exclure la ligne en cours d'UPDATE via `(TG_OP='INSERT' OR id <> OLD."id")` sur chaque branche de la CTE, sinon false-positive sur UPDATE-repoint. Détectable **uniquement** en intégration real-DB (pas unit/typecheck) — DAT-018. **Cette recette s'applique directement à DAT-037/DAT-038.**
-4. **Prisma error-shape asymmetry.** `$executeRawUnsafe` *drop le nom de l'index* du 23505 (unique_violation) mais *préserve le nom de la contrainte* du 23514 (check_violation). Asserter les witnesses UNIQUE sur le tuple `Key (<cols>)=`, les witnesses CHECK sur le nom de contrainte (DAT-016).
-5. **Hand-authored byte-equivalent migration.** Quand `migrate dev --create-only` est drift-blocked (TOOL-DBSYNC-001), hand-author la migration pour matcher exactement la sortie de migrate dev (convention Prisma index/constraint naming) et appliquer via `migrate deploy` (DAT-016 pour DSL-expressible ; DAT-003/004/013/014/017/018/023 étaient raw-SQL-only de toute façon).
+3. **BEFORE INSERT/UPDATE self-traversal trigger sees the OLD row.** Une CTE récursive walking sa propre table doit exclure la ligne en cours d'UPDATE via `(TG_OP='INSERT' OR id <> OLD."id")` sur chaque branche de la CTE, sinon false-positive sur UPDATE-repoint. Détectable **uniquement** en intégration real-DB (pas unit/typecheck) — DAT-018. **Cette recette s'est reproduite verbatim sur DAT-038 (events parent cycle) — UPDATE-positive test obligatoire confirmé sur prod.**
+4. **Prisma error-shape asymmetry.** `$executeRawUnsafe` *drop le nom de l'index* du 23505 (unique_violation) mais *préserve le nom de la contrainte* du 23514 (check_violation). Asserter les witnesses UNIQUE sur le tuple `Key (<cols>)=`, les witnesses CHECK sur le nom de contrainte (DAT-016). **Prisma a 0 code dédié pour 23P01 (exclusion_violation)** — détecter via `err.message.includes('<constraint_name>') && err.message.includes('23P01')` (COR-037).
+5. **Hand-authored byte-equivalent migration.** Quand `migrate dev --create-only` est drift-blocked (TOOL-DBSYNC-001), hand-author la migration pour matcher exactement la sortie de migrate dev (convention Prisma index/constraint naming) et appliquer via `migrate deploy` (DAT-016 / DAT-036 pour DSL-expressible ; DAT-003/004/013/014/017/018/023/032/033/035/037/038 étaient raw-SQL-only de toute façon).
 6. **DSL-expressibility split.** CHECK / triggers / EXCLUDE sont raw-SQL-only, `schema.prisma` *untouched* ; UNIQUE / FK / enum-promotion sont Prisma-DSL-expressible, `schema.prisma` *édité*. Détermine per-task si `schema.prisma` change.
-7. **Layer-of-rejection discipline.** Race-window-after-pre-check → catch P2002/23P01 → 409 (COR-034/037) ; pre-checkless plainly-invalid input → DTO-side 400 (COR-035). Chaque couche rejette ce qui est *sa* responsabilité.
+7. **Layer-of-rejection discipline.** Race-window-after-pre-check → catch P2002/23P01/P0001 → 409 (COR-034/037/038) ; pre-checkless plainly-invalid input → DTO-side 400 (COR-035). Chaque couche rejette ce qui est *sa* responsabilité.
 8. **Audit-literal validation.** Le pre-flight vérifie que le SQL littéral de l'audit est correct pour CE codebase (DAT-023 a confirmé que `'[]'` bounds, partial WHERE, no `::date` cast sont tous corrects en inspectant `checkOverlap` + le schema `@db.Date`) plutôt que blind-follow OU sur-interpréter. Ni l'un ni l'autre des extrêmes : vérifier.
-9. **Don't-file-phantoms (inverse du closeout-filing).** Quand le pre-flight prouve qu'une adjacency ne leak pas vraiment OU que le littéral couvre déjà le cas, NE PAS filer un follow-up (COR-036, DAT-039 non-filings).
+9. **Don't-file-phantoms (inverse du closeout-filing).** Quand le pre-flight prouve qu'une adjacency ne leak pas vraiment OU que le littéral couvre déjà le cas, NE PAS filer un follow-up (COR-036, DAT-039 non-filings). **L'inverse tient aussi** : quand le pre-flight prouve qu'une adjacency LEAK (DAT-038 sans service-layer guard), filer COR-038. Symétrie de la discipline.
+
+## Process learnings — mini-arc + prod-deploy (5, new)
+10. **Cross-table consistency under MUTABLE parents : REJECT-bidirectional deadlocks ; AFTER-UPDATE CASCADE résout.** Quand les deux parents d'une cross-table equality sont mutables (epic.projectId AND milestone.projectId), deux triggers BEFORE REJECT face-à-face bloquent les workflows légitimes (« déplacer un epic d'un projet à un autre » devient impossible : chaque côté refuse à cause de l'autre). La cascade AFTER UPDATE sur les parents propage NEW.projectId aux tasks dépendantes ; non-deadlocking par construction (AFTER fire post-row-update, le cascade UPDATE sur tasks satisfait le BEFORE re-check). **Prouvé non-deadlocking sur prod 2026-05-28** (Gate-5 smoke : UPDATE epic.projectId déplace 2 tasks). DAT-037 Option A est le pattern à réutiliser pour toute future invariant cross-table parent-enfant sous parents mutables.
+11. **Open-value-space resolution.** Un champ qui a bailé de l'enum-ification ET dont le pre-flight prouve l'espace de valeurs genuinely open (institutional per-collectivité) prend un length/bounds CHECK + DTO normalization comme son defense floor — PAS un enum, PAS un CHECK-against-list. Avec un design-contract test qui pin le gap intentionnel DB-laxer-than-DTO (ex: DAT-035 admet whitespace-only au DB parce que le DTO trim). Pattern : « le DB est le superset structurel, le DTO est la stricte canonicalisation ».
+12. **Mono-prompt + hard halt-gates valide.** 2 sessions autonomes du mini-arc (8 tasks fermées + 2 HALT-and-resume sur design decisions) ont validé le pattern : self-drive le happy path, halt clean sur les vrais judgment points (DAT-037 design REJECT vs CASCADE, DAT-035 enum vs free-form), résumer dans une session suivante après operator decision. **Detailed-but-factored prompt** (protocole partagé une fois en tête + blocs per-task compacts) bat N specs répétées en fidélité d'exécution.
+13. **Accumulate-then-re-finalize deploy-doc pattern.** Marche bien pour un arc multi-task (mini-arc 9/9), mais nécessite un **banner explicite à chaque transition d'état** (`accumulating` ↔ `finalized`) pour empêcher l'opérateur de déployer mid-arc. **Future arcs : START A NEW deploy doc** plutôt que d'appender à une doc finalisée et déployée. Le pattern est : seed → per-task append (accumulating banner) → finalize (cleanup, unified checklist) → DEPLOY → execution log appended. Reproduire pour Phase 4.
+14. **Deploy-time ground-truth : vérifier `_prisma_migrations` réel, ne pas faire confiance au baseline encodé dans la doc.** Gate-0 du deploy 2026-05-28 a catch un baseline stale dans la doc Phase-3 (le doc disait « expected last applied = `20260524100100_dat005` », réel = `20260526120000_dat021…` parce que Phase 2 avait été déployée out-of-band). Delta safe quand même (Prisma calcule depuis `_prisma_migrations`, pas depuis la doc) mais la confusion potentielle est réelle. **Process : Gate-0 toujours probe `SELECT migration_name FROM _prisma_migrations ORDER BY finished_at DESC LIMIT 5` avant de faire confiance au baseline du doc.**
 
 ---
 
-## Next session — META-WORK puis décision d'arc
+## Next session — meta cleanups d'abord, puis Phase 4 kickoff
 
-**Stop signal de la session DAT-023 : « DO NOT auto-continue to Phase 4. »** La phase 3 audit-prescribed est close ; les deux next-steps sont du *meta-work* avant tout pickup task.
+### Immediate cleanups (operator's call on sequencing — both quick, both filed)
+- **COR-038** — event-cycle P0001/23514 → 409 wrapper (+ optional service-layer pre-check). Similar mechanic to COR-037 ; reuse the `isLeaveOverlapViolation` shape pour un `isEventParentCycleViolation` helper. Layer-of-rejection partner discipline applies (pre-check 400 vs trigger 409 si on ajoute aussi le service-layer guard). **Estimated effort:** 1 short session.
+- **DOC-001** — Phase 2 deploy doc backfill (`docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md`). Retroactive ; mirror Phase 1 + Phase 3 structure with an explicit « retroactive » banner. Source: `_prisma_migrations` finished_at + PROGRESS_LOG entries from 2026-05-26. **Estimated effort:** 1 short session ; pure docs, no code, no migration.
 
-### Immediate meta (en séquence)
-1. **Deploy-doc finalize** (`docs/deploy/2026-05-2x-phase-3-defense-in-depth-deploy.md`) :
-   - Remplir les **TBD: markers**.
-   - Réconcilier les counts (header dit "Migrations(8)" — vérifier que toutes les sub-tables / IN-lists / Scope rows sont cohérentes à 8).
-   - Extraire un **checklist pre-deploy cumulatif ordonné** rassemblant les §pre-deploy disséminées : notamment **DAT-012 `SELECT DISTINCT`** (vérifier que les enum-promoted columns ne contiennent que des codes valides), **DAT-023 overlap-pair scan + btree_gist superuser** (l'extension nécessite superuser pour `CREATE EXTENSION` sur prod), et les **per-CHECK violator scans** (DAT-003/004/013).
-2. **Prod deploy effectif** des 8 migrations + 1 code-only — décision opérateur sur la fenêtre (alignée avec dispo + comm CPAM 92). Le doc finalisé pilote l'exécution.
+Both can clear before OR in parallel with Phase 4 prep (no dependency on Phase 4 picks ; COR-038 might bundle with the first Phase 4 task touching events.service.ts ; DOC-001 is independent).
 
-### Then — décision d'arc à SURFACER (ne pas trancher dans la doc)
-Deux trajectoires acceptables, à présenter à l'utilisateur :
+### Then — Phase 4 kickoff (RBAC complétude, 6 tasks)
+Phase 4 contient : **TST-001**, **COR-001**, **COR-002** + 3 autres (voir `## Phase 4 — RBAC complétude` ligne 2937 ish du BACKLOG, post-filings). **Ne pas pré-décider l'ordre de pickup ici** — c'est l'objet de la kickoff session : présenter les 6 tasks, identifier le cluster de root-cause (toutes touchent RBAC, mais à des couches différentes : permission matrix coverage / guard logic / scope checks), et choisir une ouverture (la plus grosse correspondance avec le pattern Phase-3 = TST-001 si elle est principalement DB+spec ; sinon COR-001/002).
 
-- **(A) "Phase 3 defense-in-depth completion" mini-arc** — clore d'abord les 10 follow-ups Phase-3-tagged (DAT-032/033/034/035/036/037/038, COR-034/035/037). **Tradeoff :** garde la phase cohérente pour la narration Cour des Comptes ("Phase 3 = invariants métier au niveau DB, fully closed") avant de bouger en Phase 4.
-- **(B) Phase 4 (RBAC complétude, 6 tasks)** per phase ordering — Phase 4 a priorité de séquence selon l'ordre des phases. **Tradeoff :** avance la breadth de l'audit, mais laisse 10 TODO Phase-3-tagged ouverts.
+**Implementation flags à carry-forward pour Phase 4 (en vrac, pour ne rien perdre):**
+- **CODE doit toujours résoudre les permissions via templateKey, JAMAIS hardcoder un role code** ([[feedback_no_hardcode_hotfix]] + RBAC V4 compile-time via templateKey [[project_rbac_seed_silent_skip]]).
+- **Les permissions API computed flags** doivent venir de l'API per resource (canEdit/canDelete), jamais calculées côté frontend ([[feedback_api_computed_flags]]).
+- **SEC-002 / SEC-003 ont établi le pattern hierarchy + self-protection** : Phase 4 RBAC mutations devront probablement étendre `AccessScopeService` ou son équivalent.
+- **DAT-037 silent cascade est live** — toute task RBAC qui touche projet ownership doit prendre en compte que `epic.projectId` UPDATE re-écrit les tasks (impact transitif sur scope).
 
-**Flags d'implémentation** quand l'arc est choisi :
-- DAT-037 et DAT-038 portent directement la recette du Learning #3 (BEFORE-trigger OLD-row exclusion). Le risque "false-positive UPDATE" se reproduit textuellement ; test UPDATE-positive obligatoire.
-- COR-034/035/037 partagent le pattern Learning #7 (race-window 409 vs plainly-invalid 400). Chacune a une variante différente : COR-034 pure P2002 (DAT-016 unique), COR-035 *DTO-side 400 lead* + service-side 23514 fallback (DAT-017), COR-037 pure 23P01 (DAT-023). Ne pas copier-coller un seul handler générique sans valider lequel s'applique.
-- DAT-033 contient explicitement le TOCTOU residual relevé en clôture de COR-022 (cf. commit `44b6a1f`) — pas une nouvelle question, déjà cadrée.
+---
+
+## Preserve / unchanged
+
+Les sections suivantes restent inchangées et toujours valides :
+- Phase 1 (audit-prescribed + tooling) tables et SHAs.
+- Phase 2 audit-log durcissement (20/21 DONE + PERF-001 deferred).
+- `audit_logs` 5-couche defense-in-depth.
+- Infra patterns récurrents (coherence gate, real-DB harness, throwaway-DB witness, anchor-commit retroactive closure).
+- Process learnings arc audit original (4 bullets).
+- Known dette pre-existing.
 
 ---
 
