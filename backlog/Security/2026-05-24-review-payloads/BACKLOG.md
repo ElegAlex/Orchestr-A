@@ -2546,7 +2546,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ---
 ### COR-034 — Department/Service create leaks a 500 on the unique-constraint race (should be 409)
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
