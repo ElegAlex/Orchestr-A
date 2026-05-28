@@ -525,7 +525,7 @@ model ProjectThirdPartyMember {
 
 model Client {
   id        String   @id @default(uuid())
-  name      String
+  name      String   @unique // DAT-036: globally unique, defense-in-depth on top of the service-layer pre-check
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -533,7 +533,6 @@ model Client {
   projects ProjectClient[]
 
   @@index([isActive])
-  @@index([name])
   @@map("clients")
 }
 
