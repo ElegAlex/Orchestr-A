@@ -3041,7 +3041,7 @@ pnpm test apps/api/src/epics/epics.service.spec.ts  # may need creation if missi
 ---
 ### COR-002 — Hardcoded role 'ADMIN' bypass in milestones
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
