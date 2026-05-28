@@ -2839,7 +2839,7 @@ pnpm test apps/api/src/leaves
 
 ### COR-038 — Event parent-cycle trigger error leaks as 500 (no service-layer guard, unlike DAT-018)
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2877,8 +2877,13 @@ Wrap the event create + update write sites in a try/catch mapping (a) P0001 mess
 pnpm test apps/api/src/events
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 24c6929 (2026-05-28) — `isEventParentCycleViolation` helper + try/catch around `create()` event.create and `update()` $transaction. Witness: 3 new tests in `events.service.spec.ts` covering P0001 + 23514 on create and P0001 on update.
+**Learnings:**
+- **Two-token detector (P0001 OR named 23514).** The trigger RAISE message carries `events_parent_no_cycle` (no SQLSTATE token required to match — it's unique enough on its own per the DAT-038 witness shape). The CHECK path surfaces a generic 23514 + the constraint name `events_parent_no_self_ck`, so we AND both tokens there to avoid matching unrelated 23514s. Slight asymmetry from COR-037 (which AND'd `leaves_no_overlap` + `23P01`), but justified: `events_parent_no_cycle` is a literal RAISE identifier with no chance of collision; `events_parent_no_self_ck` is a CHECK name and a stray 23514 elsewhere carrying the string in a SQL fragment is conceivable.
+- **AC#4 verified N/A despite the audit-sensitive look-alike.** Events create/update is not in the audit-sensitive list and the catch only TRANSLATES the propagating error — no mutation flow or audit emission is altered (mirror COR-037 verdict). Confirmed without re-litigation per operator pre-flight directive.
+- **`parentEventId` is not in CreateEventDto/UpdateEventDto today** (grep returns 0 hits in `dto/*.ts` and `events.controller.ts`). The controller-reachable cycle surface is currently narrow, but defense-in-depth still required: internal callers can pass it, the recurrence-generation path inside create() writes children with parentEventId, and a future DTO addition would silently re-open the 500 leak without this guard.
+- **Layer-of-rejection pattern, fourth instance.** COR-034 = race-window P2002 → 409. COR-035 = plainly-invalid DTO → 400. COR-037 = race-window 23P01 → 409. COR-038 = race-window/bypass P0001+named-23514 → 409. The 400 (pre-check) partner for events is intentionally deferred (operator pre-flight call); filed mentally as candidate follow-up but NOT a backlog item yet.
+- **FAIL-pre/PASS-post protocol applied non-vacuously.** Reordered `throw err` before the helper branch (3 sites; replace_all swap) → all 3 witnesses failed with raw Error propagating; restored byte-identical → all 3 passed.
 
 ---
 
