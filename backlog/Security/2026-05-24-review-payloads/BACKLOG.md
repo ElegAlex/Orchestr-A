@@ -2594,7 +2594,7 @@ pnpm test apps/api/src/departments apps/api/src/services
 ---
 ### DAT-037 — Task.projectId may disagree with its epic/milestone's project (no cross-table check)
 
-- **Status:** BLOCKED-DESIGN-DECISION
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
