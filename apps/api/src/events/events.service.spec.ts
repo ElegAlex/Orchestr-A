@@ -6,6 +6,7 @@ import { OwnershipService } from '../common/services/ownership.service';
 import {
   NotFoundException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -159,6 +160,47 @@ describe('EventsService', () => {
         NotFoundException,
       );
     });
+
+    // COR-038 — DAT-038's BEFORE INSERT trigger (P0001, message contains
+    // `events_parent_no_cycle`) and CHECK `events_parent_no_self_ck` (23514)
+    // are the sole barrier against a parent-chain cycle on insert. Pre-fix
+    // the raw error propagates as a 500; post-fix it maps to
+    // ConflictException(409). Pinned both variants so the helper covers both
+    // SQLSTATEs (mirrors the verbatim surface shape from
+    // dat038-event-parent-cycle.int.spec.ts).
+    it('maps DAT-038 events_parent_no_cycle (P0001) from event.create to ConflictException (COR-038)', async () => {
+      const dto: CreateEventDto = {
+        title: 'Cyclic event',
+        date: '2025-11-10',
+      };
+
+      mockPrismaService.event.create.mockRejectedValue(
+        new Error(
+          'Raw query failed. Code: P0001. Message: events_parent_no_cycle: parent chain creates a cycle',
+        ),
+      );
+
+      await expect(service.create(dto, 'user-1')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('maps DAT-038 events_parent_no_self_ck (23514) from event.create to ConflictException (COR-038)', async () => {
+      const dto: CreateEventDto = {
+        title: 'Self-loop event',
+        date: '2025-11-10',
+      };
+
+      mockPrismaService.event.create.mockRejectedValue(
+        new Error(
+          'Raw query failed. Code: 23514. Message: new row for relation "events" violates check constraint "events_parent_no_self_ck"',
+        ),
+      );
+
+      await expect(service.create(dto, 'user-1')).rejects.toThrow(
+        ConflictException,
+      );
+    });
   });
 
   describe('findAll', () => {
@@ -276,6 +318,27 @@ describe('EventsService', () => {
       await expect(
         service.update('invalid-id', updateEventDto),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    // COR-038 — same parent-cycle surface on the update path. The $transaction
+    // resolves tx.event.update, which fires DAT-038's trigger if the resulting
+    // chain cycles; pre-fix this surfaces as a 500, post-fix it maps to
+    // ConflictException(409). The outer try/catch sees the rejected $transaction.
+    it('maps DAT-038 events_parent_no_cycle (P0001) from tx.event.update to ConflictException (COR-038)', async () => {
+      const updateEventDto: UpdateEventDto = {
+        title: 'Cycling parent',
+      };
+
+      mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
+      mockPrismaService.$transaction.mockRejectedValue(
+        new Error(
+          'Raw query failed. Code: P0001. Message: events_parent_no_cycle: parent chain creates a cycle',
+        ),
+      );
+
+      await expect(service.update('1', updateEventDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -10,6 +11,31 @@ import { OwnershipService } from '../common/services/ownership.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Prisma } from 'database';
+
+/**
+ * COR-038 — detect a DAT-038 event parent-chain cycle violation, either the
+ * BEFORE INSERT/UPDATE trigger `events_parent_no_cycle_trg` (multi-hop cycle,
+ * RAISE P0001 with the literal `events_parent_no_cycle` identifier) or the
+ * CHECK constraint `events_parent_no_self_ck` (1-hop self-loop, SQLSTATE
+ * 23514). Mirrors `isLeaveOverlapViolation` from COR-037: Prisma assigns no
+ * dedicated code for P0001 (and the 23514 path here is a named CHECK, not
+ * Prisma's generic check handling), so we match on constraint name + the
+ * SQLSTATE token in `err.message` — both signals AND'd so an unrelated error
+ * carrying one token cannot accidentally trigger.
+ * Witness pinning the surface shape: dat038-event-parent-cycle.int.spec.ts.
+ */
+function isEventParentCycleViolation(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message ?? '';
+  if (msg.includes('events_parent_no_cycle')) return true;
+  if (msg.includes('events_parent_no_self_ck') && msg.includes('23514')) {
+    return true;
+  }
+  return false;
+}
+
+const EVENT_PARENT_CYCLE_MESSAGE =
+  'Cet événement créerait une boucle dans la chaîne de récurrence parente';
 
 @Injectable()
 export class EventsService {
@@ -104,59 +130,72 @@ export class EventsService {
     }
 
     // Créer l'événement
-    const event = await this.prisma.event.create({
-      data: {
-        ...eventData,
-        date: new Date(date),
-        projectId: projectId || null,
-        createdById,
-        isRecurring: isRecurring || false,
-        recurrenceWeekInterval: recurrenceWeekInterval ?? null,
-        recurrenceDay: recurrenceDay ?? null,
-        recurrenceEndDate: recurrenceEndDate
-          ? new Date(recurrenceEndDate)
-          : null,
-        // Créer les participations
-        ...(participantIds &&
-          participantIds.length > 0 && {
-            participants: {
-              create: participantIds.map((userId) => ({ userId })),
+    // COR-038 — DAT-038's BEFORE INSERT trigger `events_parent_no_cycle_trg`
+    // and CHECK `events_parent_no_self_ck` are the sole barrier against an
+    // event-parent cycle on insert. Without this catch the raw P0001 / 23514
+    // leaks as HTTP 500; map to ConflictException so the client receives a
+    // 409 with a proper FR message, mirroring COR-037's pattern for leaves.
+    let event;
+    try {
+      event = await this.prisma.event.create({
+        data: {
+          ...eventData,
+          date: new Date(date),
+          projectId: projectId || null,
+          createdById,
+          isRecurring: isRecurring || false,
+          recurrenceWeekInterval: recurrenceWeekInterval ?? null,
+          recurrenceDay: recurrenceDay ?? null,
+          recurrenceEndDate: recurrenceEndDate
+            ? new Date(recurrenceEndDate)
+            : null,
+          // Créer les participations
+          ...(participantIds &&
+            participantIds.length > 0 && {
+              participants: {
+                create: participantIds.map((userId) => ({ userId })),
+              },
+            }),
+        },
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
             },
-          }),
-      },
-      include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
           },
-        },
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            email: true,
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              email: true,
+            },
           },
-        },
-        participants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                avatarUrl: true,
-                avatarPreset: true,
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  avatarUrl: true,
+                  avatarPreset: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
+    } catch (err) {
+      if (isEventParentCycleViolation(err)) {
+        throw new ConflictException(EVENT_PARENT_CYCLE_MESSAGE);
+      }
+      throw err;
+    }
 
     // Générer les occurrences si l'événement est récurrent
     if (isRecurring) {
@@ -431,62 +470,76 @@ export class EventsService {
     }
 
     // Mise à jour avec transaction pour gérer les participants
-    const event = await this.prisma.$transaction(async (tx) => {
-      // Si participantIds est explicitement fourni, mettre à jour les participations
-      if (participantIds !== undefined) {
-        // Supprimer tous les participants existants
-        await tx.eventParticipant.deleteMany({
-          where: { eventId: id },
-        });
-
-        // Créer les nouvelles participations
-        if (participantIds.length > 0) {
-          await tx.eventParticipant.createMany({
-            data: participantIds.map((userId) => ({ eventId: id, userId })),
+    // COR-038 — same parent-cycle surface as create(): an UPDATE that mutates
+    // parentEventId hits DAT-038's trigger (P0001) or CHECK (23514) if the
+    // resulting chain cycles. Wrap the $transaction so the raw error is mapped
+    // to ConflictException(409) instead of leaking as 500. The tx aborts on
+    // throw → no participant write persists either (correct: no successful
+    // update = no participant rewrite).
+    let event;
+    try {
+      event = await this.prisma.$transaction(async (tx) => {
+        // Si participantIds est explicitement fourni, mettre à jour les participations
+        if (participantIds !== undefined) {
+          // Supprimer tous les participants existants
+          await tx.eventParticipant.deleteMany({
+            where: { eventId: id },
           });
-        }
-      }
 
-      // Mettre à jour l'événement
-      return tx.event.update({
-        where: { id },
-        data: {
-          ...eventData,
-          ...(date && { date: new Date(date) }),
-          ...(projectId !== undefined && { projectId: projectId || null }),
-        },
-        include: {
-          project: {
-            select: {
-              id: true,
-              name: true,
-            },
+          // Créer les nouvelles participations
+          if (participantIds.length > 0) {
+            await tx.eventParticipant.createMany({
+              data: participantIds.map((userId) => ({ eventId: id, userId })),
+            });
+          }
+        }
+
+        // Mettre à jour l'événement
+        return tx.event.update({
+          where: { id },
+          data: {
+            ...eventData,
+            ...(date && { date: new Date(date) }),
+            ...(projectId !== undefined && { projectId: projectId || null }),
           },
-          createdBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              avatarPreset: true,
+          include: {
+            project: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
-          },
-          participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  avatarUrl: true,
-                  avatarPreset: true,
+            createdBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+                avatarPreset: true,
+              },
+            },
+            participants: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    avatarUrl: true,
+                    avatarPreset: true,
+                  },
                 },
               },
             },
           },
-        },
+        });
       });
-    });
+    } catch (err) {
+      if (isEventParentCycleViolation(err)) {
+        throw new ConflictException(EVENT_PARENT_CYCLE_MESSAGE);
+      }
+      throw err;
+    }
 
     // Si recurrenceEndDate est mise à jour sur un événement parent récurrent,
     // supprimer les enfants dont la date dépasse la nouvelle date de fin
