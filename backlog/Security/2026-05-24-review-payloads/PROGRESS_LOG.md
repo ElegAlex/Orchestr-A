@@ -1063,3 +1063,20 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Gates:** `migrate deploy` clean; `pnpm test:integration` 65/65 (was 62 — +3 from the new spec); `pnpm test` 1658 unchanged; `pnpm test:e2e` turbo 4/4 green.
 - **Deploy-doc append:** scope row, migration sub-table row (9→10), pre-deploy duplicate scan grouped with DAT-016's, rollback block (DROP UNIQUE INDEX + restore the non-unique `clients_name_idx` if image-reverting since schema.prisma carries `@unique`).
 - **Continuing the arc** — DAT-038 next per the global execution protocol.
+
+
+## 2026-05-28 — DAT-038 closed (events parent-chain cycle prevention) — Phase 3 mini-arc 3/9
+
+- **Session ID:** 2026-05-28-mini-arc-tasks-2-9
+- **Tasks closed:** DAT-038.
+- **Commits:** `4a33414` (in_progress), `a99dda5` (fix), `<pending>` (closeout).
+- **Counter:** **45 → 46**.
+- **Pre-flight (dev):** 195 events, 0 self-loops, 0 multi-hop cycles, 0 of 195 parented. Both CHECK and trigger attach with nothing to reject.
+- **Bundle rationale:** none — direct DAT-018 analog on a self-FK column (not an edge table). Reused the trigger structure verbatim including the load-bearing OLD-row exclusion (learning #3).
+- **Structural differences from DAT-018 (recorded as Learnings):** (1) self-FK column, not an edge join table, so the walk goes node→node via parentEventId rather than via edge rows; (2) events.service.ts has NO service-side cycle guard — the trigger is the only line of defense, not a defense-in-depth floor; (3) NULL-parent short-circuit is the hot path (dev 0/195 parented); (4) CHECK uses `IS DISTINCT FROM` rather than `<>` for explicitness on the NULL hot path.
+- **AC#4 skipped** — schema migration, not audit-sensitive (DAT-014/017/018 precedent).
+- **Diff scope (AC#6 — fix commit `a99dda5`):** 2 files — migration `20260528140000_dat038_event_parent_cycle_prevention/migration.sql` + witness spec. `schema.prisma` untouched.
+- **Gates:** `migrate deploy` clean; `pnpm test:integration` 72/72 (was 65, +7 from new spec); `pnpm test` 1658 unchanged; `pnpm test:e2e` turbo 4/4 green.
+- **Deploy-doc append:** scope row, migration sub-table row (10→11), pre-deploy cycle/self-loop scans (mirrors DAT-018's), rollback (DROP TRIGGER + DROP FUNCTION + DROP CONSTRAINT, no image revert).
+- **Open question carried forward:** typed-exception wrapper around the trigger raise on the events controller path (currently P0001 → 500). Filed in this entry; not surfaced as a separate backlog item this session because it's symmetric with COR-037 (the leave equivalent), which IS in the mini-arc and will set the precedent.
+- **Continuing the arc** — DAT-037 next (the cross-table projectId trigger — CRITICAL pre-flight required to decide design).

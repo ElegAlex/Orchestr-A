@@ -2671,7 +2671,7 @@ pnpm test apps/api/src/tasks
 ---
 ### DAT-038 — Event.parentEventId has no cycle prevention (the audit's "Same for Event.parentEventId")
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2709,8 +2709,13 @@ Mirror DAT-018 (`fff93ce`, migration `20260527180000`) on `events`: (1) raw-SQL 
 pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** `a99dda5` (2026-05-28) — migration `20260528140000_dat038_event_parent_cycle_prevention` + witness `apps/api/src/schema-constraints/dat038-event-parent-cycle.int.spec.ts`.
+**Learnings:**
+- **No service-side cycle guard on events.** Unlike DAT-018 (which is a DB floor on top of tasks.service.ts `checkCircularDependency`), `apps/api/src/events/events.service.ts` has no event-parent cycle check. The trigger is the only line of defense — a controller path that raw-hits the trigger surfaces P0001 as a 500. A COR-style typed-exception wrapper is plausible follow-up (file separately if it comes up) but the trigger is the load-bearing guarantee, so this task closes the audit gap as filed.
+- **NULL-parent short-circuit is the hot path.** Dev shows 0 of 195 events have a parent; production is likely similar. The trigger `IF NEW.parentEventId IS NULL THEN RETURN NEW` makes the no-parent insert/update O(1) — important because every event mutation hits this trigger.
+- **CHECK uses `IS DISTINCT FROM`, not `<>`.** `<>` returns NULL when either side is NULL (three-valued logic), and a CHECK passes on NULL — so `<>` would have worked here, but `IS DISTINCT FROM` makes the intent explicit and survives any future tightening of CHECK semantics (`NOT VALID` or `NULL NOT DISTINCT` modes). Trivial choice but worth documenting.
+- **OLD-row exclusion verified on UPDATE-positive.** Re-pointing C from B to A on an A←B←C chain is legitimate (flattens to A←B, A←C). The witness UPDATE-positive locks this — without `(TG_OP = 'INSERT' OR e.id <> OLD."id")` the walk would still see C's stale parent B and false-reject. Carries DAT-018 learning #3 verbatim.
+- **Bundle discipline confirmed.** DAT-018's Description AND Code evidence both named Event.parentEventId as a second instance, but its Suggested-fix list named only TaskDependency literally; stayed out of DAT-018 by literal-scope discipline, closed here as the session-derived follow-up. Same pattern as DAT-004→DAT-032, DAT-016→DAT-036, DAT-017→DAT-037.
 
 ---
 
