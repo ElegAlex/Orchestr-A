@@ -2500,8 +2500,24 @@ Decide between (a) a documented free-form policy with input normalization (trim 
 pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** (none — moved to `BLOCKED-DESIGN-DECISION` 2026-05-28 mini-arc resume session, task 9/9, per the prompt's "MANDATORY HALT — pre-flight only, do NOT implement").
+**Learnings:**
+- **BLOCKED — pre-flight + recommendation only (per prompt protocol).** No code change. The mini-arc closes 8/9 implemented + 1 halt-for-decision; this is the deliberate decision-surface stop.
+- **Value-space scan (dev DB, 2026-05-28):** 5 distinct values across `project_members.role`:
+  - `Chef de projet` — 2944 rows (99% of all members; clearly the canonical leader label)
+  - `Membre` — 12 rows
+  - `Responsable infra` — 1
+  - `Référente support` — 1
+  - `Lead dev` — 1
+- **Code logic that depends on role (grep findings):** `apps/api/src/common/services/ownership.service.ts:24` declares `const PROJECT_LEADER_MEMBER_ROLES = ['Chef de projet', 'OWNER', 'LEAD']`. The UPPERCASE entries (`OWNER`, `LEAD`) **match ZERO rows in actual data** — they're a dead contract. The 2944-row `Chef de projet` works correctly because it's the literal label seeded. No other code path branches on `role`.
+- **Closed-set vs open assessment:** 4 of 5 distinct values are singletons or near-singletons ("Responsable infra", "Référente support", "Lead dev") — these are clearly per-project / per-collectivité variations, NOT a stable enum. The audit's Source already noted DAT-012 bailed exactly because of this; SEC-002 / [[project_responsable_scope_perimeter]] confirms institutional roles vary per collectivité. **Value space is GENUINELY OPEN.**
+- **Recommendation to operator — Option (a) free-form + normalization is the right call:**
+  1. **Implement (a) lightweight:** add a class-validator transform at the DTO layer (CreateProjectMemberDto / UpdateProjectMemberDto) stripping leading/trailing whitespace + collapsing internal whitespace + enforcing min/max length (e.g. `@Length(2, 60)`). Stops typo-spawned near-duplicates AT WRITE TIME without restricting the legitimate variation. No DB migration needed.
+  2. **Side fix recommended in the same commit:** `OwnershipService.PROJECT_LEADER_MEMBER_ROLES` — the UPPERCASE `OWNER`/`LEAD` codes match no data and should be either (i) removed (current behavior is unchanged — those branches were dead) OR (ii) explicitly documented as forward-compat placeholders. Choosing (i) is the smaller blast radius.
+  3. **Witness:** DTO unit spec asserting input `'  Chef de projet  '` is trimmed → `'Chef de projet'` and asserting rejected inputs (`''`, single-char, 60+ chars).
+- **NOT RECOMMENDED — Option (b) reference table:** Over-engineered for 5 values when the value space is fundamentally open. Only justified if the operator wants curated role-list management as a separate product feature.
+- **NOT RECOMMENDED — CHECK or native enum:** DAT-012 already bailed exactly because of the open value space.
+- **Status moved to `BLOCKED-DESIGN-DECISION`.** Operator picks Option (a-lightweight), (a) with the OwnershipService dead-code removal, or (b) reference table. A halt-for-decision is a clean termination of the mini-arc — 8/9 implemented + 1 decision-surface stop = full coverage of the audit-prescribed Phase 3 follow-ups.
 
 ---
 ### DAT-036 — Client.name lacks a UNIQUE constraint
