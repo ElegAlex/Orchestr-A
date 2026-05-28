@@ -2743,7 +2743,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 
 ### COR-037 — Leave approve/import leaks a 500 on the DAT-023 EXCLUDE (should be 409)
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2783,8 +2783,13 @@ Wrap the approve-path status mutation (and the import auto-approve write) in a t
 pnpm test apps/api/src/leaves
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** `abd6982` (2026-05-28) — `isLeaveOverlapViolation` helper + try/catch wrapping the approve `$transaction` + line-level substitute message in `importLeaves`. Witness in `leaves.service.spec.ts`.
+**Learnings:**
+- **Prisma has NO dedicated code for SQLSTATE 23P01.** Unlike `P2002` (unique 23505) and CHECK-violation handling via codes, exclusion_violation surfaces through Prisma as the raw SQLSTATE in the error message. The detector matches on `err.message.includes('leaves_no_overlap') && err.message.includes('23P01')` — both signals as an AND so an unrelated 23P01 elsewhere doesn't accidentally trigger the helper. DAT-023 witness spec independently confirmed the same surface shape (`/23P01/` + `leaves_no_overlap`).
+- **AC#4 verified N/A despite touching audit-sensitive code.** The approve mutation, its `$transaction`, and the `LEAVE_APPROVED` audit log live inside the tx and are byte-unchanged. The outer try/catch only TRANSLATES the propagating error — it doesn't alter the mutation flow. When the 23P01 surfaces from `tx.leave.update`, the tx aborts naturally → audit log doesn't fire (correct: no successful approve = no audit). Witness pins this: `mockAuditPersistence.log` is asserted NOT called.
+- **Import path was already swallowed-by-line-catch, not a 500.** The audit listed import auto-approve in scope, but `importLeaves` had a line-level try/catch pushing errors to `result.errorDetails`. The fix here is UX — substitute a friendly "Chevauchement détecté avec un congé approuvé existant" for the raw Prisma dump — not a 500-fix. The 500-fix is the approve path.
+- **Layer-of-rejection pattern, third instance (race-window 23P01 → 409).** COR-034 = race-window P2002 → 409 (Dept/Service/Client). COR-035 = plainly-invalid DTO input → 400 (orphan task). COR-037 = race-window 23P01 → 409 (leaves). Three distinct mappings for three distinct error classes — never blend.
+- **FAIL-pre/PASS-post protocol applied non-vacuously.** Temporarily neutralized the catch (`throw err`) → witness failed (Error propagates, expected ConflictException). Restored byte-identical → witness passed. Non-vacuous teeth confirmed.
 
 ---
 

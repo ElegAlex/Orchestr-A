@@ -1125,3 +1125,19 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Gates:** `pnpm test` 1674 (+10 — was 1664); `pnpm test:integration` 72/72; `pnpm test:e2e` turbo 4/4.
 - **Deploy-doc append:** Scope row noting "1 task, 0 migration" (code-only, COR-022/COR-034 precedent).
 - **Continuing the arc** — COR-037 next (the third layer-of-rejection partner: DAT-023 EXCLUDE 23P01 → 409 on leaves approve/import).
+
+
+## 2026-05-28 — COR-037 closed (23P01→409 on leaves approve + import UX) — Phase 3 mini-arc 6/9 (resume)
+
+- **Session ID:** 2026-05-28-mini-arc-resume
+- **Tasks closed:** COR-037.
+- **Commits:** `77fe664` (in_progress), `abd6982` (fix), `<pending>` (closeout).
+- **Counter:** **48 → 49**.
+- **Pre-flight:** confirmed `approve()` has NO checkOverlap (the audit gap); confirmed `importLeaves` line-level catch already swallows raw errors into `result.errorDetails` (not a 500 leak — UX-only fix); confirmed `validateLeavesImport` (line 2856) is a dry-run, no writes.
+- **AC#4 verification (audit-sensitive area, mandatory check):** approve IS in the audit-sensitive list ("leaves approve/reject"). The fix wraps the `$transaction` with a try/catch that ONLY translates the propagating error — the approve mutation, the tx, and the `LEAVE_APPROVED` audit emission inside the tx are byte-unchanged. When 23P01 surfaces, the tx aborts naturally → audit doesn't fire (correct: no successful approve = no audit). Witness asserts `mockAuditPersistence.log` NOT called on the conflict path. AC#4 N/A confirmed.
+- **Layer-of-rejection pattern third instance.** COR-034 (race-window P2002 → 409 on Dept/Service/Client). COR-035 (plainly-invalid DTO → 400 on orphan task). COR-037 (race-window 23P01 → 409 on leaves approve). Three distinct mappings for three distinct error classes — never blend.
+- **Diff scope (AC#6 — fix commit `abd6982`):** 2 files — `leaves.service.ts` (helper + approve catch + import line message), `leaves.service.spec.ts` (1 new test).
+- **Gates:** `pnpm test` 1675 (was 1674, +1); `pnpm test:integration` 72/72; `pnpm test:e2e` 2/2.
+- **FAIL-pre/PASS-post:** temporarily neutralized the catch (`throw err` only), witness failed (Error propagates, expected ConflictException); restored byte-identical, witness passed.
+- **Deploy-doc append:** Scope row noting "1 task, 0 migration" (code-only, COR-022/034/035 precedent).
+- **Continuing the arc** — DAT-037 (Option A: REJECT + CASCADE — operator-decided this session, resuming from BLOCKED-DESIGN-DECISION).
