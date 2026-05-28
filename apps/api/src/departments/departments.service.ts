@@ -4,9 +4,19 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
+
+// COR-034: collapses the TOCTOU race between findFirst pre-check and create/update.
+// The pre-check still catches the common case with a friendly message; this maps
+// the racing 23505 (DAT-016 departments_name_key) to the same 409.
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+  );
+}
 
 @Injectable()
 export class DepartmentsService {
@@ -27,34 +37,41 @@ export class DepartmentsService {
       throw new ConflictException('Ce nom de département est déjà utilisé');
     }
 
-    const department = await this.prisma.department.create({
-      data: {
-        name,
-        description,
-        managerId,
-      },
-      include: {
-        manager: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            role: true,
+    try {
+      const department = await this.prisma.department.create({
+        data: {
+          name,
+          description,
+          managerId,
+        },
+        include: {
+          manager: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              role: true,
+            },
+          },
+          _count: {
+            select: {
+              users: true,
+              services: true,
+            },
           },
         },
-        _count: {
-          select: {
-            users: true,
-            services: true,
-          },
-        },
-      },
-    });
+      });
 
-    return department;
+      return department;
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException('Ce nom de département est déjà utilisé');
+      }
+      throw err;
+    }
   }
 
   /**
@@ -189,35 +206,42 @@ export class DepartmentsService {
       }
     }
 
-    const department = await this.prisma.department.update({
-      where: { id },
-      data: {
-        ...(name && { name }),
-        ...(description !== undefined && { description }),
-        ...(managerId !== undefined && { managerId }),
-      },
-      include: {
-        manager: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            role: true,
+    try {
+      const department = await this.prisma.department.update({
+        where: { id },
+        data: {
+          ...(name && { name }),
+          ...(description !== undefined && { description }),
+          ...(managerId !== undefined && { managerId }),
+        },
+        include: {
+          manager: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              role: true,
+            },
+          },
+          _count: {
+            select: {
+              users: true,
+              services: true,
+            },
           },
         },
-        _count: {
-          select: {
-            users: true,
-            services: true,
-          },
-        },
-      },
-    });
+      });
 
-    return department;
+      return department;
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException('Ce nom de département est déjà utilisé');
+      }
+      throw err;
+    }
   }
 
   /**

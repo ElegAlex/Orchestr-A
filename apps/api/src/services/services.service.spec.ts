@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Prisma } from 'database';
 import { ServicesService } from './services.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotFoundException, ConflictException } from '@nestjs/common';
@@ -112,6 +113,31 @@ describe('ServicesService', () => {
         ConflictException,
       );
     });
+
+    // COR-034: TOCTOU race on Service create — findFirst saw nothing, but a
+    // concurrent peer wrote first; prisma.service.create() then hits the
+    // DAT-016 services_departmentId_name_key UNIQUE and surfaces P2002.
+    it('maps Prisma P2002 from create() to ConflictException (COR-034)', async () => {
+      mockPrismaService.department.findUnique.mockResolvedValue({
+        id: 'dept-1',
+        name: 'IT',
+      });
+      mockPrismaService.service.findFirst.mockResolvedValue(null);
+      mockPrismaService.service.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`departmentId`,`name`)',
+          {
+            code: 'P2002',
+            clientVersion: 'test',
+            meta: { target: ['departmentId', 'name'] },
+          },
+        ),
+      );
+
+      await expect(
+        service.create({ name: 'Race', departmentId: 'dept-1' } as any),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
   });
 
   describe('findAll', () => {
@@ -175,6 +201,28 @@ describe('ServicesService', () => {
       const result = await service.update('service-1', updateDto);
 
       expect(result.description).toBe('Updated description');
+    });
+
+    // COR-034: same TOCTOU race on update — rename collides with a concurrent peer.
+    it('maps Prisma P2002 from update() to ConflictException (COR-034)', async () => {
+      mockPrismaService.service.findUnique.mockResolvedValue({
+        ...mockService,
+      });
+      mockPrismaService.service.findFirst.mockResolvedValue(null);
+      mockPrismaService.service.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`departmentId`,`name`)',
+          {
+            code: 'P2002',
+            clientVersion: 'test',
+            meta: { target: ['departmentId', 'name'] },
+          },
+        ),
+      );
+
+      await expect(
+        service.update('service-1', { name: 'Race' }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('should throw error when service not found', async () => {

@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConflictException } from '@nestjs/common';
+import { Prisma } from 'database';
 import { DepartmentsService } from './departments.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -58,6 +60,24 @@ describe('DepartmentsService', () => {
       expect(result).toBeDefined();
       expect(result.name).toBe(createDto.name);
     });
+
+    // COR-034: TOCTOU race — findFirst saw nothing, but a concurrent peer
+    // wrote first; prisma.department.create() then hits the DAT-016
+    // departments_name_key UNIQUE and surfaces P2002. The wrapper must
+    // collapse this to a 409, not a 500.
+    it('maps Prisma P2002 from create() to ConflictException (COR-034)', async () => {
+      mockPrismaService.department.findFirst.mockResolvedValue(null);
+      mockPrismaService.department.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`name`)',
+          { code: 'P2002', clientVersion: 'test', meta: { target: ['name'] } },
+        ),
+      );
+
+      await expect(
+        service.create({ name: 'Race', description: '' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
   });
 
   describe('findAll', () => {
@@ -101,6 +121,26 @@ describe('DepartmentsService', () => {
       const result = await service.update('1', updateDto);
 
       expect(result.description).toBe('Updated description');
+    });
+
+    // COR-034: same TOCTOU race on update — rename collides with a concurrent
+    // peer that grabbed the new name first.
+    it('maps Prisma P2002 from update() to ConflictException (COR-034)', async () => {
+      mockPrismaService.department.findUnique.mockResolvedValue({
+        id: '1',
+        name: 'IT',
+      });
+      mockPrismaService.department.findFirst.mockResolvedValue(null);
+      mockPrismaService.department.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`name`)',
+          { code: 'P2002', clientVersion: 'test', meta: { target: ['name'] } },
+        ),
+      );
+
+      await expect(
+        service.update('1', { name: 'Race' }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 

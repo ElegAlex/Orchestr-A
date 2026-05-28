@@ -69,6 +69,23 @@ describe('ClientsService', () => {
         data: { name: 'Mairie de Lyon' },
       });
     });
+
+    // COR-034: ClientsService has no findFirst pre-check (unlike Dept/Service).
+    // The DAT-036 clients_name_key UNIQUE surfaces P2002 directly on the second
+    // create with an identical name — wrapper maps it to 409 instead of 500.
+    it('maps Prisma P2002 from create() to ConflictException (COR-034)', async () => {
+      mockPrismaService.client.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`name`)',
+          { code: 'P2002', clientVersion: 'test', meta: { target: ['name'] } },
+        ),
+      );
+
+      const { ConflictException } = await import('@nestjs/common');
+      await expect(
+        service.create({ name: 'Mairie de Lyon' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
   });
 
   // ─── findAll ───────────────────────────────────────────────────────────────
@@ -274,6 +291,25 @@ describe('ClientsService', () => {
       await expect(service.update('missing', { name: 'X' })).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    // COR-034: rename collides with a concurrent peer that grabbed the new name first.
+    it('maps Prisma P2002 from update() to ConflictException (COR-034)', async () => {
+      mockPrismaService.client.findUnique.mockResolvedValue({
+        id: 'c-1',
+        name: 'Old',
+      });
+      mockPrismaService.client.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`name`)',
+          { code: 'P2002', clientVersion: 'test', meta: { target: ['name'] } },
+        ),
+      );
+
+      const { ConflictException } = await import('@nestjs/common');
+      await expect(
+        service.update('c-1', { name: 'TakenName' }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 

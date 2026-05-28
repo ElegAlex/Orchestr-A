@@ -34,16 +34,34 @@ export interface ClientDeletionImpact {
   projectsCount: number;
 }
 
+// COR-034: maps Prisma P2002 (DAT-036 clients_name_key collision) to a 409
+// instead of leaking a generic 500. Clients.create() has no findFirst pre-check
+// today (unlike Department/Service) — the wrapper IS the only mapping.
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+  );
+}
+
 @Injectable()
 export class ClientsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateClientDto): Promise<Client> {
-    return this.prisma.client.create({
-      data: {
-        name: dto.name,
-      },
-    });
+    try {
+      return await this.prisma.client.create({
+        data: {
+          name: dto.name,
+        },
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException(
+          `Client name "${dto.name}" is already in use`,
+        );
+      }
+      throw err;
+    }
   }
 
   async findAll(query: QueryClientsDto) {
@@ -220,13 +238,22 @@ export class ClientsService {
       throw new NotFoundException(`Client ${id} not found`);
     }
 
-    return this.prisma.client.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        isActive: dto.isActive,
-      },
-    });
+    try {
+      return await this.prisma.client.update({
+        where: { id },
+        data: {
+          name: dto.name,
+          isActive: dto.isActive,
+        },
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException(
+          `Client name "${dto.name ?? existing.name}" is already in use`,
+        );
+      }
+      throw err;
+    }
   }
 
   async hardDelete(id: string): Promise<void> {

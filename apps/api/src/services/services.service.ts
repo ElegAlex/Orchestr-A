@@ -3,9 +3,18 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
+
+// COR-034: collapses the TOCTOU race between findFirst pre-check and create/update.
+// Maps the racing 23505 (DAT-016 services_departmentId_name_key) to the same 409.
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+  );
+}
 
 @Injectable()
 export class ServicesService {
@@ -41,41 +50,50 @@ export class ServicesService {
       );
     }
 
-    const service = await this.prisma.service.create({
-      data: {
-        name,
-        description,
-        departmentId,
-        managerId,
-        color,
-      },
-      include: {
-        department: {
-          select: {
-            id: true,
-            name: true,
+    try {
+      const service = await this.prisma.service.create({
+        data: {
+          name,
+          description,
+          departmentId,
+          managerId,
+          color,
+        },
+        include: {
+          department: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          manager: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              role: true,
+            },
+          },
+          _count: {
+            select: {
+              userServices: true,
+            },
           },
         },
-        manager: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            role: true,
-          },
-        },
-        _count: {
-          select: {
-            userServices: true,
-          },
-        },
-      },
-    });
+      });
 
-    return service;
+      return service;
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException(
+          'Ce nom de service est déjà utilisé dans ce département',
+        );
+      }
+      throw err;
+    }
   }
 
   /**
@@ -237,42 +255,51 @@ export class ServicesService {
       }
     }
 
-    const service = await this.prisma.service.update({
-      where: { id },
-      data: {
-        ...(name && { name }),
-        ...(description !== undefined && { description }),
-        ...(departmentId && { departmentId }),
-        ...(managerId !== undefined && { managerId }),
-        ...(color !== undefined && { color }),
-      },
-      include: {
-        department: {
-          select: {
-            id: true,
-            name: true,
+    try {
+      const service = await this.prisma.service.update({
+        where: { id },
+        data: {
+          ...(name && { name }),
+          ...(description !== undefined && { description }),
+          ...(departmentId && { departmentId }),
+          ...(managerId !== undefined && { managerId }),
+          ...(color !== undefined && { color }),
+        },
+        include: {
+          department: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          manager: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              role: true,
+            },
+          },
+          _count: {
+            select: {
+              userServices: true,
+            },
           },
         },
-        manager: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            role: true,
-          },
-        },
-        _count: {
-          select: {
-            userServices: true,
-          },
-        },
-      },
-    });
+      });
 
-    return service;
+      return service;
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException(
+          'Ce nom de service est déjà utilisé dans ce département',
+        );
+      }
+      throw err;
+    }
   }
 
   /**
