@@ -1175,3 +1175,22 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **FAIL-pre/PASS-post:** neutralized create-site to pre-fix `if (actor.kind === 'user')` shape, 2/3 new tests failed (the create-path tests); restored byte-identical, all 3 pass.
 - **Deploy-doc append:** Scope row noting "1 task, 0 migration" (code-only, COR-022/COR-034/COR-035/COR-037 precedent).
 - **Continuing the arc** — DAT-035 next (MANDATORY HALT — pre-flight only, decision surface).
+
+
+## 2026-05-28 — DAT-035 HALT-for-decision (value-space + recommendation) — Phase 3 mini-arc 9/9 CLOSED
+
+- **Session ID:** 2026-05-28-mini-arc-resume
+- **Tasks closed:** none (DAT-035 is a HALT-for-decision per the prompt's "MANDATORY HALT").
+- **Tasks moved to BLOCKED-DESIGN-DECISION:** DAT-035.
+- **Counter:** unchanged at **51** (no closure).
+- **Pre-flight findings (the deliverable for this halt):**
+  - **Value space:** 5 distinct values in `project_members.role` — `Chef de projet` (2944), `Membre` (12), `Responsable infra` (1), `Référente support` (1), `Lead dev` (1). One canonical leader label + 4 sparse institutional variants.
+  - **Code dependency:** `ownership.service.ts:24` declares `PROJECT_LEADER_MEMBER_ROLES = ['Chef de projet', 'OWNER', 'LEAD']`. The UPPERCASE entries match ZERO actual rows — dead-code branches that never fire on real data.
+  - **Closed-set assessment:** GENUINELY OPEN. 4 of 5 distinct values are singletons or near-singletons, per-collectivité variations. DAT-012 bailed for this reason; SEC-002 / [[project_responsable_scope_perimeter]] is the institutional-variation precedent.
+- **Recommendation surfaced to operator (in BACKLOG Learnings):**
+  1. **Option (a) lightweight (recommended):** DTO normalization (trim + collapse whitespace + length bounds) + witness test. No migration. Smallest blast radius.
+  2. **Optional companion:** prune `OwnershipService.PROJECT_LEADER_MEMBER_ROLES` of the dead UPPERCASE codes; current behavior is identical (those branches never fire).
+  3. **NOT recommended (b)** — reference table is over-engineering for 5 values; only if the operator wants curated role-list management as a separate feature.
+  4. **NOT recommended** — native enum or CHECK; DAT-012's bail rationale still applies (open value space).
+- **No code, no commit.** BACKLOG.md status moved TODO → `BLOCKED-DESIGN-DECISION`, Learnings carry the full analysis + 3 recommended options. Operator picks the path next session.
+- **Mini-arc summary: 9/9 — 8 closed + 1 HALT-for-decision.** Plus DAT-037 resumed from prior-session BLOCKED-DESIGN-DECISION via Option A. Coherence checked-set 43→51 (+8) across both mini-arc sessions.

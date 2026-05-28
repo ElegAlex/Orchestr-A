@@ -2462,7 +2462,7 @@ pnpm test apps/api/src/time-tracking/
 
 ### DAT-035 — ProjectMember.role is a free-string holding institutional labels, not codes
 
-- **Status:** TODO
+- **Status:** BLOCKED-DESIGN-DECISION
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
