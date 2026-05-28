@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EpicsService } from './epics.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
 describe('EpicsService', () => {
@@ -21,13 +22,28 @@ describe('EpicsService', () => {
     },
   };
 
+  const mockPermissionsService = {
+    getPermissionsForRole: vi.fn(),
+  };
+
   beforeEach(async () => {
+    // Default: only the ADMIN template grants the projects:manage_any bypass;
+    // every other role resolves to no bypass permission (mirror of the real
+    // template resolution in PermissionsService.getPermissionsForRole).
+    mockPermissionsService.getPermissionsForRole.mockImplementation((role) =>
+      Promise.resolve(role === 'ADMIN' ? ['projects:manage_any'] : []),
+    );
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EpicsService,
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: PermissionsService,
+          useValue: mockPermissionsService,
         },
       ],
     }).compile();
@@ -286,6 +302,64 @@ describe('EpicsService', () => {
       const result = await service.remove('1');
 
       expect(result).toEqual({ message: 'Epic supprimé avec succès' });
+    });
+  });
+
+  // COR-001 — the membership bypass must rest on the resolved
+  // `projects:manage_any` permission, never on the literal role code 'ADMIN'.
+  // The member-passes regression is covered by 'should allow member to update'
+  // above; the witness that matters here is the institutional-role bypass.
+  describe('assertProjectMembership permission bypass (COR-001)', () => {
+    const mockEpicWithProject = {
+      id: '1',
+      name: 'Epic',
+      tasks: [],
+      project: {
+        id: 'project-1',
+        members: [{ userId: 'user-1' }],
+      },
+    };
+
+    it('should bypass membership for a non-ADMIN role whose resolved permissions include projects:manage_any', async () => {
+      // Institutional role bound to the ADMIN template: its code is NOT the
+      // literal 'ADMIN', but its resolved permissions include the bypass.
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+      ]);
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+      mockPrismaService.epic.update.mockResolvedValue({
+        ...mockEpicWithProject,
+        name: 'Institutional Admin Updated',
+      });
+
+      // 'direction-si' is NOT in project.members — the ONLY thing letting the
+      // update through is the manage_any bypass. Pre-fix (role-code check) this
+      // falls through to the membership check and throws ForbiddenException.
+      const result = await service.update(
+        '1',
+        { name: 'Institutional Admin Updated' },
+        'direction-si',
+        'DIRECTION_SI',
+      );
+
+      expect(result.name).toBe('Institutional Admin Updated');
+      expect(
+        mockPermissionsService.getPermissionsForRole,
+      ).toHaveBeenCalledWith('DIRECTION_SI');
+    });
+
+    it('should throw ForbiddenException for a non-member role without projects:manage_any', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+
+      await expect(
+        service.update(
+          '1',
+          { name: 'Forbidden' },
+          'non-member',
+          'DIRECTION_SI',
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

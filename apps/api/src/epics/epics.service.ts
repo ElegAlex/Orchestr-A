@@ -4,12 +4,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { CreateEpicDto } from './dto/create-epic.dto';
 import { UpdateEpicDto } from './dto/update-epic.dto';
 
 @Injectable()
 export class EpicsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
 
   async create(createEpicDto: CreateEpicDto) {
     const project = await this.prisma.project.findUnique({
@@ -97,14 +101,16 @@ export class EpicsService {
 
   /**
    * Verify the current user is a member of the epic's parent project.
-   * Users with the ADMIN role bypass this check.
+   * Holders of the `projects:manage_any` bypass permission skip this check.
    */
   private async assertProjectMembership(
     epicId: string,
     userId: string,
     userRole?: string | null,
   ): Promise<void> {
-    if (userRole === 'ADMIN') return;
+    const permissions =
+      await this.permissionsService.getPermissionsForRole(userRole);
+    if (permissions.includes('projects:manage_any')) return;
 
     const epic = await this.prisma.epic.findUnique({
       where: { id: epicId },
