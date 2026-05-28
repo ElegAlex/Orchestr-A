@@ -230,7 +230,7 @@ export class LeavesController {
     description: 'Liste de mes demandes de congé',
   })
   getMyLeaves(@CurrentUser('id') userId: string) {
-    return this.leavesService.getUserLeaves(userId);
+    return this.leavesService.getOwnLeaves(userId);
   }
 
   @Get('me/balance')

@@ -1041,11 +1041,14 @@ export class LeavesService {
   }
 
   /**
-   * Récupérer les demandes de congé d'un utilisateur
+   * Récupérer les demandes de congé de l'utilisateur courant.
+   * Le seul paramètre est l'id du demandeur (caller) : la requête est verrouillée
+   * sur `userId === currentUserId`, donc canEdit/canDelete s'appliquent toujours
+   * à des leaves possédées (pas de confusion caller≠owner au sein de la méthode).
    */
-  async getUserLeaves(userId: string) {
+  async getOwnLeaves(currentUserId: string) {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: currentUserId },
     });
 
     if (!user) {
@@ -1053,7 +1056,7 @@ export class LeavesService {
     }
 
     const leaves = await this.prisma.leave.findMany({
-      where: { userId },
+      where: { userId: currentUserId },
       include: {
         user: {
           select: {

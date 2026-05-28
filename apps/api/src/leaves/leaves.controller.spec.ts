@@ -47,7 +47,7 @@ describe('LeavesController', () => {
     findOne: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
-    getUserLeaves: vi.fn(),
+    getOwnLeaves: vi.fn(),
     getLeaveBalance: vi.fn(),
     getPendingForValidator: vi.fn(),
     approve: vi.fn(),
@@ -279,12 +279,12 @@ describe('LeavesController', () => {
   describe('getMyLeaves', () => {
     it('should return leaves for current user', async () => {
       const userLeaves = [mockLeave];
-      mockLeavesService.getUserLeaves.mockResolvedValue(userLeaves);
+      mockLeavesService.getOwnLeaves.mockResolvedValue(userLeaves);
 
       const result = await controller.getMyLeaves('user-id-1');
 
       expect(result).toEqual(userLeaves);
-      expect(mockLeavesService.getUserLeaves).toHaveBeenCalledWith('user-id-1');
+      expect(mockLeavesService.getOwnLeaves).toHaveBeenCalledWith('user-id-1');
     });
   });
 

@@ -1516,20 +1516,55 @@ describe('LeavesService', () => {
   // ============================================
   // GET USER LEAVES
   // ============================================
-  describe('getUserLeaves', () => {
+  describe('getOwnLeaves', () => {
     it('should return user leaves', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
 
-      const result = await service.getUserLeaves('user-1');
+      const result = await service.getOwnLeaves('user-1');
 
       expect(result).toHaveLength(1);
+    });
+
+    it('should scope the leave query to the current user id only', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
+
+      await service.getOwnLeaves('user-1');
+
+      // COR-028: the only userId in scope is the caller — the query can never
+      // be steered to another user's leaves from inside this method.
+      expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: 'user-1' } }),
+      );
+    });
+
+    it('should compute canEdit/canDelete per leave status on owned leaves', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leave.findMany.mockResolvedValue([
+        { ...mockLeave, id: 'leave-pending', status: LeaveStatus.PENDING },
+        { ...mockLeave, id: 'leave-approved', status: LeaveStatus.APPROVED },
+        { ...mockLeave, id: 'leave-rejected', status: LeaveStatus.REJECTED },
+      ]);
+
+      const result = await service.getOwnLeaves('user-1');
+
+      const byId = Object.fromEntries(result.map((l) => [l.id, l]));
+      // PENDING: editable + deletable
+      expect(byId['leave-pending'].canEdit).toBe(true);
+      expect(byId['leave-pending'].canDelete).toBe(true);
+      // APPROVED: neither
+      expect(byId['leave-approved'].canEdit).toBe(false);
+      expect(byId['leave-approved'].canDelete).toBe(false);
+      // REJECTED: deletable but not editable
+      expect(byId['leave-rejected'].canEdit).toBe(false);
+      expect(byId['leave-rejected'].canDelete).toBe(true);
     });
 
     it('should throw NotFoundException when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getUserLeaves('nonexistent')).rejects.toThrow(
+      await expect(service.getOwnLeaves('nonexistent')).rejects.toThrow(
         NotFoundException,
       );
     });
