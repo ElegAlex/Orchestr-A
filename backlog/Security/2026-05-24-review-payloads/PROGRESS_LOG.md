@@ -1080,3 +1080,18 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Deploy-doc append:** scope row, migration sub-table row (10→11), pre-deploy cycle/self-loop scans (mirrors DAT-018's), rollback (DROP TRIGGER + DROP FUNCTION + DROP CONSTRAINT, no image revert).
 - **Open question carried forward:** typed-exception wrapper around the trigger raise on the events controller path (currently P0001 → 500). Filed in this entry; not surfaced as a separate backlog item this session because it's symmetric with COR-037 (the leave equivalent), which IS in the mini-arc and will set the precedent.
 - **Continuing the arc** — DAT-037 next (the cross-table projectId trigger — CRITICAL pre-flight required to decide design).
+
+
+## 2026-05-28 — DAT-037 HALTED (design decision required) — Phase 3 mini-arc 4/9 not-closed
+
+- **Session ID:** 2026-05-28-mini-arc-tasks-2-9
+- **Tasks closed:** none.
+- **Tasks moved to BLOCKED-DESIGN-DECISION:** DAT-037 (no IN_PROGRESS anchor, no fix commit).
+- **Counter:** unchanged at **46** (no closure).
+- **Pre-flight findings:**
+  - **Mutability:** BOTH `epics.projectId` and `milestones.projectId` ARE mutable (`UpdateEpicDto extends PartialType(CreateEpicDto)`, same for milestones).
+  - **Drift:** 0 / 0 (tasks JOIN epics with projectId disagreement; tasks JOIN milestones same) — invariant-tightening, not data-rescue.
+- **Why HALT (matches the task block's literal MANDATORY-HALT criterion):** the straightforward REJECT-bidirectional design (3 BEFORE row-level triggers) creates a **deadlock** — once an epic has any dependent task, neither `task.projectId` nor `epic.projectId` can be changed first because each side rejects the other's move. The "move an epic between projects, taking its tasks" workflow becomes impossible at the DB layer. Resolving the deadlock requires either (A) AFTER UPDATE cascade on epics/milestones propagating to tasks ("cascade re-validation" — literal halt trigger), (B) statement-level / deferrable triggers (literal halt trigger), or (C) a service-layer transactional helper that still hits the deadlock unless triggers are DEFERRABLE. The only one-sided path the prompt pre-authorizes is "(D) tasks-only trigger + document the limitation" — implementable, but leaves the bidirectional gap open.
+- **Three operator options surfaced in BACKLOG Learnings:** (1) Ship (D) — tasks-only trigger, document the gap (matches DAT-014 precedent, smallest blast radius); (2) Ship (A) — bidirectional REJECT + AFTER CASCADE (closes invariant under mutation, but silent multi-row writes have audit implications); (3) Defer entirely (drift was 0/0 dev, no active incident).
+- **No code change, no commit. BACKLOG.md updated:** status moved TODO → `BLOCKED-DESIGN-DECISION`, Learnings carry the full analysis + the three recommended options.
+- **Continuing the arc** — COR-034 next per the global execution protocol (the prompt's "★ HALT-AND-REPORT" rule says stop the ENTIRE session if a halt-gate fires, but the gate here is on DAT-037 specifically and the prompt also says "Because each task commits independently, a halt leaves a clean resumable state" — re-reading the global protocol: "★ HALT-AND-REPORT — stop the ENTIRE session immediately, do NOT continue to the next task". DAT-037 task block says "MANDATORY HALT: report the design options, do not improvise" — that's also literally a session halt. **STOPPING THE SESSION HERE.** Surfacing the design decision to the operator before continuing the rest of the arc — the design choice on DAT-037 may affect COR-035's surface (which also touches task projectId/epic/milestone consistency) and so should be made before COR-035 lands. Per-task ledger to be reported with the rest as not-started.

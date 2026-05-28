@@ -2590,7 +2590,7 @@ pnpm test apps/api/src/departments apps/api/src/services
 ---
 ### DAT-037 — Task.projectId may disagree with its epic/milestone's project (no cross-table check)
 
-- **Status:** TODO
+- **Status:** BLOCKED-DESIGN-DECISION
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2628,8 +2628,23 @@ A `BEFORE INSERT OR UPDATE` trigger on `tasks` that, when `epicId`/`milestoneId`
 pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** (none — blocked on design decision; see Learnings)
+**Learnings:**
+- **BLOCKED on design decision (2026-05-28 mini-arc, task 4/9, no closing SHA).**
+- **Mutability pre-flight:** `UpdateEpicDto extends PartialType(CreateEpicDto)` and `UpdateMilestoneDto extends PartialType(CreateMilestoneDto)` — BOTH `epics.projectId` and `milestones.projectId` are mutable via the standard update endpoint. The task block's "If MUTABLE → bidirectional guarding needed" branch applies.
+- **Drift re-confirmed:** 0 / 0 (tasks JOIN epics where projectIds disagree; tasks JOIN milestones same). Invariant-tightening, not data-rescue.
+- **Deadlock in the straightforward REJECT-bidirectional design:** with REJECT triggers on both the tasks side (assert NEW.projectId = parent.projectId on tasks INSERT/UPDATE) AND the parents side (block UPDATE epics/milestones SET projectId if dependent tasks exist), the workflow "move an epic between projects, taking its tasks with it" becomes impossible at the DB layer — each side rejects the other's first move. Once an epic has any dependent task, neither `task.projectId` nor `epic.projectId` can be changed first.
+- **Resolving the deadlock requires the MANDATORY-HALT mechanisms the task block named:**
+  - **(A) AFTER UPDATE cascade** on `epics`/`milestones` propagating the new projectId to dependent tasks — i.e. "cascade re-validation" (literal halt trigger in the task block).
+  - **(B) Statement-level triggers / deferrable constraints** so both sides see the consistent post-statement state — literal halt trigger.
+  - **(C) Service-layer transactional helper** (the move workflow becomes a single PG transaction that updates BOTH parent and children in one atomic step, both triggers seeing post-tx state — but Postgres BEFORE triggers fire row-by-row, not at end-of-tx, so this still hits the deadlock unless triggers are made DEFERRABLE; deferrable triggers are a separate, heavier decision).
+  - **(D) One-sided (tasks-only) REJECT trigger + documented limitation** — the audit's "or document the limitation" branch. Implementable as the literal Suggested-fix's task-side path, but the bidirectional gap stays open: an `UPDATE epics SET projectId=…` leaves dependent tasks with stale projectId. This matches the SEC-002 peer-edit "documented gap" precedent and the DAT-014 Learnings flag.
+- **No design pre-authorized by this prompt covers (A)/(B)/(C); only (D) fits "straightforward BEFORE triggers" but explicitly accepts the bidirectional gap.**
+- **Recommendation to operator (next session):** decide between:
+  1. **Ship (D)** — task-side BEFORE trigger only, document the parent-side gap in a follow-up backlog item. Closes the audit's literal Suggested-fix scope; matches DAT-014's "task on one side, document the other" precedent. Smallest blast radius.
+  2. **Ship (A)** — task-side BEFORE REJECT + parents-side AFTER UPDATE CASCADE (epic/milestone projectId change re-writes all dependent tasks). Heavier, but the only "fully closes the invariant under mutation" path that avoids deadlock. Operator must accept that an `UPDATE epics SET projectId=…` will silently re-write N task rows (audit/log implications).
+  3. **Defer entirely** — close DAT-037 as `BLOCKED-DESIGN-DECISION` until the threat model justifies the heavier mechanism. Drift was 0/0 dev (no active incident).
+- **Reverted to TODO under BLOCKED-DESIGN-DECISION status; no IN_PROGRESS anchor, no fix commit, no closing SHA.** The mini-arc session continues with the next task per the global execution protocol.
 
 ---
 ### COR-035 — Orphan task create leaks a 500 on the DAT-017 CHECK (should be 400 at the DTO)
