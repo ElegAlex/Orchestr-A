@@ -73,9 +73,18 @@ export class TimeTrackingService {
    * being updated, if any) and rejects if the running total + `newHours` would
    * exceed {@link MAX_HOURS_PER_DAY}. Scope is `userId` only — third-party
    * declarations (userId = null) are out of this finding's literal scope.
+   *
+   * DAT-034: extended to accept either dimension via the `actor` parameter.
+   * Behavior matches COR-022 verbatim for the user case; the thirdParty case
+   * sums entries WHERE thirdPartyId = X with the same isDismissal/date filters.
+   * Carries the same non-transactional TOCTOU residual COR-022 documented —
+   * the per-row CHECK (DAT-033) does not close the aggregate race in either
+   * dimension.
    */
   private async ensureDailyCapNotExceeded(
-    userId: string,
+    actor:
+      | { kind: 'user'; userId: string }
+      | { kind: 'thirdParty'; thirdPartyId: string },
     date: Date,
     newHours: number,
     excludeEntryId?: string,
@@ -86,10 +95,15 @@ export class TimeTrackingService {
     const endOfDay = new Date(startOfDay);
     endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
 
+    const actorWhere =
+      actor.kind === 'user'
+        ? { userId: actor.userId }
+        : { thirdPartyId: actor.thirdPartyId };
+
     const aggregate = await this.prisma.timeEntry.aggregate({
       _sum: { hours: true },
       where: {
-        userId,
+        ...actorWhere,
         isDismissal: false,
         date: { gte: startOfDay, lt: endOfDay },
         ...(excludeEntryId ? { id: { not: excludeEntryId } } : {}),
@@ -184,12 +198,12 @@ export class TimeTrackingService {
       projectId: effectiveProjectId ?? undefined,
     });
 
-    // Per-day hours cap (COR-022) — userId-scoped, so only the standard
-    // (own-account) write path is guarded; third-party declarations are out of
-    // this finding's literal scope.
-    if (actor.kind === 'user') {
-      await this.ensureDailyCapNotExceeded(actor.userId, new Date(date), hours);
-    }
+    // Per-day hours cap (COR-022 user path + DAT-034 third-party path) —
+    // guards both actor dimensions. The TOCTOU residual (non-transactional
+    // read-then-write race; concurrent same-day declarations can both pass
+    // the cap and both commit past 24h) remains unaddressed — same caveat as
+    // COR-022. DAT-033's per-row CHECK does not close aggregate races.
+    await this.ensureDailyCapNotExceeded(actor, new Date(date), hours);
 
     return this.prisma.timeEntry.create({
       data: {
@@ -546,15 +560,24 @@ export class TimeTrackingService {
       }
     }
 
-    // Per-day hours cap (COR-022) — re-check against the effective hours/date
-    // after the update, excluding this entry's own contribution. userId-scoped:
-    // third-party entries (userId = null) are out of this finding's scope.
+    // Per-day hours cap (COR-022 user path + DAT-034 third-party path) —
+    // re-check against the effective hours/date after the update, excluding
+    // this entry's own contribution. Selects the dimension from the existing
+    // row (the update path forbids cross-actor mutations elsewhere — see
+    // `'thirdPartyId' in updateTimeEntryDto` guard).
+    const effectiveHours =
+      hours !== undefined ? hours : Number(existing.hours);
+    const effectiveDate = date ? new Date(date) : existing.date;
     if (existing.userId) {
-      const effectiveHours =
-        hours !== undefined ? hours : Number(existing.hours);
-      const effectiveDate = date ? new Date(date) : existing.date;
       await this.ensureDailyCapNotExceeded(
-        existing.userId,
+        { kind: 'user', userId: existing.userId },
+        effectiveDate,
+        effectiveHours,
+        id,
+      );
+    } else if (existing.thirdPartyId) {
+      await this.ensureDailyCapNotExceeded(
+        { kind: 'thirdParty', thirdPartyId: existing.thirdPartyId },
         effectiveDate,
         effectiveHours,
         id,

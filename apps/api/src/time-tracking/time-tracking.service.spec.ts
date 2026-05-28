@@ -513,9 +513,16 @@ describe('TimeTrackingService', () => {
         userId: null,
         thirdPartyId: 'tp-1',
         declaredById: 'user-1',
+        // DAT-034: existing entry's date is now read for the third-party cap
+        // check; supply a value so the cap path doesn't crash on undefined.
+        date: new Date('2025-01-01T00:00:00.000Z'),
+        hours: 2,
       });
       // OwnershipService.isOwner accepts declaredById === userId
       mockOwnershipService.isOwner.mockResolvedValue(true);
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: 0 },
+      });
       mockPrismaService.timeEntry.update.mockResolvedValue({
         id: '1',
         hours: 3,
@@ -1001,6 +1008,98 @@ describe('TimeTrackingService', () => {
           }),
         }),
       );
+    });
+
+    // ── DAT-034 — extend the cap to the third-party (userId=null) dimension ──
+    // COR-022 left the third-party path out of scope; DAT-034 closes it with
+    // the same threshold and same BadRequestException, just keyed on
+    // `thirdPartyId` instead of `userId`. The TOCTOU residual carries over.
+    describe('per-day cap on third-party declarations (DAT-034)', () => {
+      const tpDto = {
+        date: '2025-01-01',
+        hours: 5,
+        activityType: 'DEVELOPMENT' as const,
+        taskId: 'task-1',
+        projectId: 'project-1',
+        thirdPartyId: 'tp-1',
+      };
+
+      beforeEach(() => {
+        // Permission + third-party gates pass; rest comes from the parent beforeEach.
+        mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+          'time_tracking:declare_for_third_party',
+        ]);
+        mockThirdPartiesService.assertExistsAndActive.mockResolvedValue(undefined);
+        mockThirdPartiesService.assertAssignedToTaskOrProject.mockResolvedValue(
+          undefined,
+        );
+      });
+
+      it('rejects a third-party create when same-day thirdPartyId hours + new exceed 24', async () => {
+        mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+          _sum: { hours: 20 },
+        });
+
+        await expect(service.create(currentUser, tpDto)).rejects.toThrow(
+          BadRequestException,
+        );
+        expect(mockPrismaService.timeEntry.create).not.toHaveBeenCalled();
+      });
+
+      it('keys the daily sum on thirdPartyId (NOT userId) for third-party entries', async () => {
+        mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+          _sum: { hours: 20 },
+        });
+
+        await service.create(currentUser, tpDto).catch(() => undefined);
+
+        expect(mockPrismaService.timeEntry.aggregate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            _sum: { hours: true },
+            where: expect.objectContaining({
+              thirdPartyId: 'tp-1',
+              isDismissal: false,
+              date: expect.objectContaining({
+                gte: new Date('2025-01-01T00:00:00.000Z'),
+                lt: new Date('2025-01-02T00:00:00.000Z'),
+              }),
+            }),
+          }),
+        );
+        // userId must NOT be in the where (would defeat the dimension switch).
+        const aggregateCall =
+          mockPrismaService.timeEntry.aggregate.mock.calls[0]?.[0];
+        expect(aggregateCall?.where).not.toHaveProperty('userId');
+      });
+
+      it('rejects an update on a third-party entry when the cap would be exceeded', async () => {
+        mockPrismaService.timeEntry.findUnique.mockResolvedValue({
+          id: 'tp-entry-1',
+          userId: null,
+          thirdPartyId: 'tp-1',
+          date: new Date('2025-01-01T00:00:00.000Z'),
+          hours: 3,
+        });
+        mockOwnershipService.isOwner.mockResolvedValue(true);
+        mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+          _sum: { hours: 22 },
+        });
+
+        await expect(
+          service.update('tp-entry-1', { hours: 5 }, currentUser),
+        ).rejects.toThrow(BadRequestException);
+        expect(mockPrismaService.timeEntry.update).not.toHaveBeenCalled();
+
+        // Aggregate must be keyed on thirdPartyId for a third-party entry.
+        expect(mockPrismaService.timeEntry.aggregate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              thirdPartyId: 'tp-1',
+              id: { not: 'tp-entry-1' },
+            }),
+          }),
+        );
+      });
     });
   });
 
