@@ -2653,7 +2653,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ---
 ### COR-035 — Orphan task create leaks a 500 on the DAT-017 CHECK (should be 400 at the DTO)
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
