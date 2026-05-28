@@ -2889,7 +2889,7 @@ pnpm test apps/api/src/events
 
 ### DOC-001 — Phase 2 deploy doc backfill (audit-trail completeness for Cour des Comptes)
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** claude-only
