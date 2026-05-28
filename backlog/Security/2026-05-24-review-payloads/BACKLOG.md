@@ -2671,7 +2671,7 @@ pnpm test apps/api/src/tasks
 ---
 ### DAT-038 — Event.parentEventId has no cycle prevention (the audit's "Same for Event.parentEventId")
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
