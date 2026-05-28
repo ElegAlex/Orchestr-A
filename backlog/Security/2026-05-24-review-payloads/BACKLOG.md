@@ -3141,7 +3141,7 @@ pnpm test apps/api/src/milestones/milestones.service.spec.ts  # may need creatio
 ---
 ### COR-028 — getUserLeaves does not enforce ownership — exposes any user's leaves to a request specifying that userId
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
