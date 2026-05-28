@@ -2546,7 +2546,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ---
 ### COR-034 — Department/Service create leaks a 500 on the unique-constraint race (should be 409)
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2584,8 +2584,12 @@ Wrap each `.create()` in a try/catch mapping Prisma `P2002` → the same `Confli
 pnpm test apps/api/src/departments apps/api/src/services
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** `08d04b1` (2026-05-28) — try/catch wrappers in `departments.service.ts`, `services.service.ts`, `clients.service.ts`; spec assertions in each `*.service.spec.ts`.
+**Learnings:**
+- **Widened scope to Client at filing time (DAT-036 closeout).** The original audit named Department + Service; DAT-036 added Client as a third surface. ClientsService had NO `findFirst` pre-check (unlike the other two) — the try/catch wrapper IS the entire mapping. Documented in the wrapper comment so a future reviewer doesn't add a redundant pre-check.
+- **Prisma `meta.target` is an array of column names, not the index name.** The 23505 surfaces via Prisma as `PrismaClientKnownRequestError(code='P2002', meta={target: ['name']})` for Department/Client, and `meta.target = ['departmentId', 'name']` for Service. Useful if differentiating index-specific messages later, but for now a single friendly message per service is enough (every UNIQUE on these tables is the name index).
+- **Race surface is asymmetric:** Department/Service have a fast-path `findFirst` pre-check returning the friendly 409 in the common case, and the try/catch only fires under the narrow TOCTOU race. Client has no pre-check, so the try/catch fires every time. Both paths now return the same 409 — Cour-des-Comptes parity.
+- **AC#4 confirmed N/A:** none of department/service/client create or update is in the audit-sensitive list (the list is auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset). Documented in commit.
 
 ---
 ### DAT-037 — Task.projectId may disagree with its epic/milestone's project (no cross-table check)

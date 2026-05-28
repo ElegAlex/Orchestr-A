@@ -1095,3 +1095,18 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **Three operator options surfaced in BACKLOG Learnings:** (1) Ship (D) — tasks-only trigger, document the gap (matches DAT-014 precedent, smallest blast radius); (2) Ship (A) — bidirectional REJECT + AFTER CASCADE (closes invariant under mutation, but silent multi-row writes have audit implications); (3) Defer entirely (drift was 0/0 dev, no active incident).
 - **No code change, no commit. BACKLOG.md updated:** status moved TODO → `BLOCKED-DESIGN-DECISION`, Learnings carry the full analysis + the three recommended options.
 - **Continuing the arc** — COR-034 next per the global execution protocol (the prompt's "★ HALT-AND-REPORT" rule says stop the ENTIRE session if a halt-gate fires, but the gate here is on DAT-037 specifically and the prompt also says "Because each task commits independently, a halt leaves a clean resumable state" — re-reading the global protocol: "★ HALT-AND-REPORT — stop the ENTIRE session immediately, do NOT continue to the next task". DAT-037 task block says "MANDATORY HALT: report the design options, do not improvise" — that's also literally a session halt. **STOPPING THE SESSION HERE.** Surfacing the design decision to the operator before continuing the rest of the arc — the design choice on DAT-037 may affect COR-035's surface (which also touches task projectId/epic/milestone consistency) and so should be made before COR-035 lands. Per-task ledger to be reported with the rest as not-started.
+
+
+## 2026-05-28 — COR-034 closed (P2002→409 on Dept/Service/Client) — Phase 3 mini-arc 4/9 (resume)
+
+- **Session ID:** 2026-05-28-mini-arc-resume
+- **Tasks closed:** COR-034.
+- **Commits:** `b7f1127` (in_progress), `08d04b1` (fix), `<pending>` (closeout).
+- **Counter:** **46 → 47**.
+- **Pre-flight:** confirmed 3 unguarded `prisma.<entity>.create()` call sites + 3 unguarded `prisma.<entity>.update()` call sites; existing P2002 catch on `projectClient.create` (line 290) is unrelated (it's a project-client link, different table). Dept/Service have findFirst pre-checks (the fast path stays); Client has none (the wrapper IS the only mapping).
+- **Scope widened from the audit's literal Dept+Service to include Client.** DAT-036 (closed earlier this mini-arc) added Client as a third UNIQUE surface; including it here keeps the layer-of-rejection symmetric across the DAT-016-family entities. Widening was already authorized in DAT-036's Learnings.
+- **AC#4 N/A** — none of department/service/client create or update is in the audit-sensitive list.
+- **Diff scope (AC#6 — fix commit `08d04b1`):** 6 files — 3 services + 3 spec files. No migration, no schema change, no controller, no DTO, no frontend.
+- **Gates:** `pnpm test` 1664 (was 1658, +6 from this commit — 2 per entity); `pnpm test:integration` 72/72 unchanged; `pnpm test:e2e` turbo 4/4 green.
+- **No deploy-doc append needed for migrations count (this is a code-only task) — but a Scope row is added noting "1 task, 0 migration" (COR-022 precedent).**
+- **Continuing the arc** — COR-035 next.
