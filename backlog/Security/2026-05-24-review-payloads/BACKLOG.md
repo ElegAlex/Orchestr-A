@@ -2413,7 +2413,7 @@ pnpm prisma migrate deploy && pnpm test:integration  # apply migration + real-DB
 ---
 ### DAT-034 — Per-day hours cap not enforced for third-party time declarations
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
