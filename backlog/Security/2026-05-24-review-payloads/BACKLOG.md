@@ -2743,7 +2743,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 
 ### COR-037 — Leave approve/import leaks a 500 on the DAT-023 EXCLUDE (should be 409)
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
