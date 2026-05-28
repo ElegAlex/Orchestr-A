@@ -2991,7 +2991,7 @@ TBD — derive test from finding description for e2e/fixtures/permission-matrix.
 ---
 ### COR-001 — Hardcoded role 'ADMIN' bypass violates RBAC V4
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
