@@ -2501,7 +2501,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ---
 ### DAT-036 — Client.name lacks a UNIQUE constraint
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2538,8 +2538,10 @@ Add `@unique` on `Client.name` (replacing or alongside the existing `@@index([na
 pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** `ce026d6` (2026-05-28) — migration `20260528130000_dat036_client_name_unique` + witness `apps/api/src/schema-constraints/dat036-client-name-unique.int.spec.ts`.
+**Learnings:**
+- Trivial DAT-016 follow-up: same mechanism, same byte-equivalence discipline (Prisma `<table>_<col>_key` naming, schema.prisma carries `@unique`), same Prisma 23505 error-shape (index name dropped → assert on `Key (name)=`). Dropped the redundant `@@index([name])` since the unique index already serves the lookup. Pre-flight 0 dups across 200 clients.
+- **Cross-arc dependency:** this adds Client as a third surface that [[COR-034]] must catch (P2002 → 409). Originally COR-034 was filed for Department + Service only; widened in the same arc to include Client to keep the layer-of-rejection coverage symmetric across all three DAT-016-family entities.
 
 ---
 ### COR-034 — Department/Service create leaks a 500 on the unique-constraint race (should be 409)
