@@ -2501,7 +2501,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ---
 ### DAT-036 — Client.name lacks a UNIQUE constraint
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
