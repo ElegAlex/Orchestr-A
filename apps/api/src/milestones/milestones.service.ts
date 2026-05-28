@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import {
   emitDataExported,
@@ -27,6 +28,7 @@ export class MilestonesService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly permissionsService: PermissionsService,
     private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
@@ -134,14 +136,16 @@ export class MilestonesService {
 
   /**
    * Verify the current user is a member of the milestone's parent project.
-   * Users with the ADMIN role bypass this check.
+   * Holders of the `projects:manage_any` bypass permission skip this check.
    */
   private async assertProjectMembership(
     milestoneId: string,
     userId: string,
     userRole?: string | null,
   ): Promise<void> {
-    if (userRole === 'ADMIN') return;
+    const permissions =
+      await this.permissionsService.getPermissionsForRole(userRole);
+    if (permissions.includes('projects:manage_any')) return;
 
     const milestone = await this.prisma.milestone.findUnique({
       where: { id: milestoneId },

@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MilestonesService } from './milestones.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PermissionsService } from '../rbac/permissions.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { MilestoneStatus } from 'database';
 
 describe('MilestonesService', () => {
@@ -27,13 +28,28 @@ describe('MilestonesService', () => {
   // OBS-026 — the CSV export emits a fire-and-forget DATA_EXPORTED audit row.
   const mockAuditPersistence = { log: vi.fn().mockResolvedValue(undefined) };
 
+  const mockPermissionsService = {
+    getPermissionsForRole: vi.fn(),
+  };
+
   beforeEach(async () => {
+    // Default: only the ADMIN template grants the projects:manage_any bypass;
+    // every other role resolves to no bypass permission (mirror of the real
+    // template resolution in PermissionsService.getPermissionsForRole).
+    mockPermissionsService.getPermissionsForRole.mockImplementation((role) =>
+      Promise.resolve(role === 'ADMIN' ? ['projects:manage_any'] : []),
+    );
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MilestonesService,
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: PermissionsService,
+          useValue: mockPermissionsService,
         },
         {
           provide: AuditPersistenceService,
@@ -640,6 +656,94 @@ describe('MilestonesService', () => {
       });
 
       expect(result.csv).toContain('name;description;dueDate');
+    });
+  });
+
+  // COR-002 — the membership bypass in assertProjectMembership must rest on the
+  // resolved `projects:manage_any` permission, never on the literal role code
+  // 'ADMIN' (sibling of COR-001 on EpicsService). Unlike epics' spec, the
+  // milestones `update`/`remove` tests above never pass a currentUserId, so they
+  // do NOT reach assertProjectMembership — the member-passes regression below is
+  // added here because (unlike epics) no existing test covers the gate.
+  describe('assertProjectMembership permission bypass (COR-002)', () => {
+    const mockMilestoneWithProject = {
+      id: '1',
+      name: 'Milestone',
+      tasks: [],
+      project: {
+        id: 'project-1',
+        members: [{ userId: 'user-1' }],
+      },
+    };
+
+    it('should bypass membership for a non-ADMIN role whose resolved permissions include projects:manage_any', async () => {
+      // Institutional role bound to the ADMIN template: its code is NOT the
+      // literal 'ADMIN', but its resolved permissions include the bypass.
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+      ]);
+      mockPrismaService.milestone.findUnique.mockResolvedValue(
+        mockMilestoneWithProject,
+      );
+      mockPrismaService.milestone.update.mockResolvedValue({
+        ...mockMilestoneWithProject,
+        name: 'Institutional Admin Updated',
+      });
+
+      // 'direction-si' is NOT in project.members — the ONLY thing letting the
+      // update through is the manage_any bypass. Pre-fix (role-code check) this
+      // falls through to the membership check and throws ForbiddenException.
+      const result = await service.update(
+        '1',
+        { name: 'Institutional Admin Updated' },
+        'direction-si',
+        'DIRECTION_SI',
+      );
+
+      expect(result.name).toBe('Institutional Admin Updated');
+      expect(
+        mockPermissionsService.getPermissionsForRole,
+      ).toHaveBeenCalledWith('DIRECTION_SI');
+    });
+
+    it('should throw ForbiddenException for a non-member role without projects:manage_any', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+      mockPrismaService.milestone.findUnique.mockResolvedValue(
+        mockMilestoneWithProject,
+      );
+
+      await expect(
+        service.update(
+          '1',
+          { name: 'Forbidden' },
+          'non-member',
+          'DIRECTION_SI',
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow a project member without projects:manage_any to update', async () => {
+      // Regression guard the epics spec got for free (its update test passed a
+      // userId); milestones' did not, so it is added explicitly here. Passes
+      // both pre- and post-fix — the member falls through the bypass to the
+      // membership check and is found in project.members.
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+      mockPrismaService.milestone.findUnique.mockResolvedValue(
+        mockMilestoneWithProject,
+      );
+      mockPrismaService.milestone.update.mockResolvedValue({
+        ...mockMilestoneWithProject,
+        name: 'Member Updated',
+      });
+
+      const result = await service.update(
+        '1',
+        { name: 'Member Updated' },
+        'user-1',
+        'CONTRIBUTEUR',
+      );
+
+      expect(result.name).toBe('Member Updated');
     });
   });
 });
