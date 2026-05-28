@@ -2594,7 +2594,7 @@ pnpm test apps/api/src/departments apps/api/src/services
 ---
 ### DAT-037 — Task.projectId may disagree with its epic/milestone's project (no cross-table check)
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 3
 - **Cluster:** F
 - **Confidence:** claude-only
@@ -2649,6 +2649,17 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
   2. **Ship (A)** — task-side BEFORE REJECT + parents-side AFTER UPDATE CASCADE (epic/milestone projectId change re-writes all dependent tasks). Heavier, but the only "fully closes the invariant under mutation" path that avoids deadlock. Operator must accept that an `UPDATE epics SET projectId=…` will silently re-write N task rows (audit/log implications).
   3. **Defer entirely** — close DAT-037 as `BLOCKED-DESIGN-DECISION` until the threat model justifies the heavier mechanism. Drift was 0/0 dev (no active incident).
 - **Reverted to TODO under BLOCKED-DESIGN-DECISION status; no IN_PROGRESS anchor, no fix commit, no closing SHA.** The mini-arc session continues with the next task per the global execution protocol.
+- **(2026-05-28, resume session) Closed via Option A — operator-decided.** `Closed_by: 128393e` — migration `20260528150000_dat037_task_project_consistency` + witness `apps/api/src/schema-constraints/dat037-task-project-consistency.int.spec.ts`.
+- **Sub-halt pre-flight cleared:** 435 tasks with BOTH epicId AND milestoneId set; **0** have epic.projectId differing from milestone.projectId. The "competing parents" sub-halt criterion did NOT fire on actual data — proceed authorized. Drift 0/0 (task vs epic, task vs milestone).
+- **Design (3 triggers, all hand-authored raw SQL):**
+  1. `tasks_project_consistency_trg` (BEFORE INSERT/UPDATE on tasks) — REJECT on mismatch; SKIP when NEW.projectId IS NULL (preserves DAT-017's CHECK ownership of the orphan case; layer-of-rejection contract).
+  2. `epics_cascade_projectid_trg` (AFTER UPDATE OF projectId on epics) — cascade NEW.projectId to dependent tasks; resolves the bidirectional deadlock from the prior BLOCKED analysis.
+  3. `milestones_cascade_projectid_trg` (AFTER UPDATE OF projectId on milestones) — mirror of #2.
+- **Layer-of-rejection contract (load-bearing).** The DAT-017 spec asserts 23514 + tasks_parent_requires_project_ck. My BEFORE trigger fires before CHECK constraints; if it intercepts the orphan case, the DAT-017 spec breaks. The `NEW.projectId IS NOT NULL` guard on both arms preserves DAT-017's invariant. Trigger fires ONLY on cross-table EQUALITY violations (drift), not on orphans (single-row CHECK). Caught only because the DAT-017 spec exists — without it, the layering would have been invisible.
+- **Edge case for Operational notes:** if a task has BOTH parents in different projects (impossible in current data, but newly preventable), the cascade on one parent forces task.projectId to disagree with the OTHER parent; the task-side BEFORE rejects the cascade UPDATE → cascade fails → parent UPDATE aborts. Operator workflow to legitimately move both: update milestone first (cascade), then epic (cascade re-aligns; accepted because milestone now also matches the new project). Documented in the deploy doc.
+- **Cascade audit semantics (Cour des Comptes anticipation):** parent-side cascades rewrite N task rows silently — no `audit_logs` entry per task. The change IS derivable from the parent's audit row (epic/milestone update). Adding per-task system-derived audit emission would be scope creep — OBS-002's trigger pipeline doesn't cover system writes; the existing app-mutation-only audit is the precedent. Operator should expect cascade to be silent at the audit_logs layer.
+- **AC#4 N/A** — schema migration, not audit-sensitive code (DAT-014/017/018/038 precedent).
+- **Witness includes the cascade-positive (7th test):** UPDATE epic.projectId from P1 to P2; dependent tasks auto-update to P2; post-cascade no-op title update succeeds (proves the BEFORE re-check finds the parent's NEW value). This pins the non-deadlock proof empirically.
 
 ---
 ### COR-035 — Orphan task create leaks a 500 on the DAT-017 CHECK (should be 400 at the DTO)

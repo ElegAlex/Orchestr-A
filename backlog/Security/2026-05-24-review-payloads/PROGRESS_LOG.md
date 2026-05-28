@@ -1141,3 +1141,21 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **FAIL-pre/PASS-post:** temporarily neutralized the catch (`throw err` only), witness failed (Error propagates, expected ConflictException); restored byte-identical, witness passed.
 - **Deploy-doc append:** Scope row noting "1 task, 0 migration" (code-only, COR-022/034/035 precedent).
 - **Continuing the arc** — DAT-037 (Option A: REJECT + CASCADE — operator-decided this session, resuming from BLOCKED-DESIGN-DECISION).
+
+
+## 2026-05-28 — DAT-037 closed (Option A: REJECT + AFTER CASCADE) — Phase 3 mini-arc 7/9 (resume)
+
+- **Session ID:** 2026-05-28-mini-arc-resume
+- **Tasks closed:** DAT-037 (resumed from BLOCKED-DESIGN-DECISION; operator chose Option A this session).
+- **Commits:** `fc06f54` (in_progress), `128393e` (fix), `<pending>` (closeout).
+- **Counter:** **49 → 50**.
+- **Sub-halt pre-flight CLEARED:** 435 tasks with both epicId+milestoneId set; 0 of those have parents in different projects → "competing parents" sub-halt criterion not met. Drift 0/0. Authorized to proceed with Option A.
+- **Design (3 triggers, raw SQL):** task-side BEFORE INSERT/UPDATE REJECT + 2 parent-side AFTER UPDATE OF projectId CASCADE on epics and milestones. The pair is non-deadlocking by construction: AFTER fires post parent-row update → cascade UPDATE on tasks satisfies the task-side BEFORE re-check.
+- **Layer-of-rejection load-bearing trap dodge:** my BEFORE trigger initially intercepted the orphan case (NEW.projectId IS NULL + parent set) with P0001, shadowing DAT-017's 23514 CHECK signature. DAT-017 spec broke (asserts 23514+tasks_parent_requires_project_ck). Fixed by adding `NEW.projectId IS NOT NULL` guard on both arms — trigger fires only on cross-table EQUALITY violations, orphan stays with DAT-017. Caught only because DAT-017 spec exists; without that spec the shadowing would have been silent.
+- **AC#4 N/A** — schema migration, not audit-sensitive code.
+- **Cascade audit semantics (documented for Cour des Comptes):** parent-side cascades rewrite N task rows silently with no audit_logs entries per task. Change is derivable from the parent's audit row. Adding per-task system-derived audit emission would exceed OBS-002's scope (app-mutation-only pipeline) — explicit deferral.
+- **Edge case for Operational notes:** a task with both parents in different projects (impossible in current data, newly preventable) would deadlock the cascade. Operator workflow: update milestone first, then epic.
+- **Diff scope (AC#6 — fix commit `128393e`):** 2 files — migration + witness. `schema.prisma` untouched.
+- **Gates:** `migrate deploy` clean; `pnpm test` 1675 unchanged (integration-only); `pnpm test:integration` 79/79 (was 72, +7); `pnpm test:e2e` turbo 4/4.
+- **Deploy-doc append:** Scope row, Migrations sub-table row (11→12), pre-deploy drift scan grouped with DAT-017's, rollback (DROP TRIGGER × 3 + DROP FUNCTION × 3 — schema.prisma unchanged, no image revert), Operational note for the both-parents-different-projects edge case.
+- **Continuing the arc** — DAT-034 next (third-party daily cap; pre-flight first).
