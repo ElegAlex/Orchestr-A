@@ -2991,7 +2991,7 @@ TBD — derive test from finding description for e2e/fixtures/permission-matrix.
 ---
 ### COR-001 — Hardcoded role 'ADMIN' bypass violates RBAC V4
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
@@ -3028,8 +3028,15 @@ Inject PermissionsService and check permissions.includes('projects:manage_any') 
 pnpm test apps/api/src/epics/epics.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** cb3b5e1 (2026-05-28) — injected PermissionsService into EpicsService, replaced `if (userRole === 'ADMIN') return;` with `permissions.includes('projects:manage_any')` (mirror of projects.service.ts:77), fixed stale docstring. Witness: 2 new tests in `epics.service.spec.ts` (non-ADMIN manage_any bypass + non-member negative). EpicsModule untouched (RbacModule is @Global()).
+**Learnings:**
+- **DAT-035 dead-code grep result: NO.** `assertProjectMembership` body contains no `'OWNER'`/`'LEAD'` literals against `project_members.role` — membership is matched purely on `m.userId === userId`. No adjacent dead-code surface to flag for follow-up.
+- **EpicsModule wiring was a no-op (anticipated step obviated).** The contract anticipated importing the module that exports `PermissionsService`. `RbacModule` is `@Global()` (see its docstring: "Annoté `@Global()` pour permettre injection depuis tous les modules sans import explicite"), so `PermissionsService` is injectable everywhere with zero module import — `leaves.module.ts` and `comments.module.ts` inject it with no RBAC import. `epics.module.ts` was therefore left untouched; adding a redundant import would be a no-op smell. File scope ended at 2 files (service + spec), not 3.
+- **Mirror is literal.** `permissions.includes('projects:manage_any')` matches `ProjectsService.assertProjectOwnershipOrBypass` (projects.service.ts:77) byte-for-byte on the bypass predicate. `getPermissionsForRole(roleCode)` returns `Promise<readonly PermissionCode[]>`; `.includes('projects:manage_any')` typechecks against it.
+- **Non-vacuous witness verified.** Pre-fix run: the new witness (non-ADMIN role `DIRECTION_SI` with resolved `projects:manage_any`, NOT in `project.members`) failed with `ForbiddenException('Not a member of this project')` at `epics.service.ts:117` — the membership fall-through, the correct failure reason (not a DI/instantiation error). Post-fix: passes. The existing `'should bypass membership check for ADMIN role'` test was kept and adapted (role-aware mock: `ADMIN → ['projects:manage_any']`, else `[]`) so its intent survives through the permission path. The member-passes regression remains covered by the existing `'should allow member to update'` test (no redundant duplicate added).
+- **AC#4 N/A (confirmed).** `assertProjectMembership` is a read-gate (assert, no mutation), not in the audit-sensitive list (auth / leaves approve-reject / RBAC mutations / document access / user delete / password reset). No `audit_logs` entry required.
+- **Stale docstring fixed in-scope.** Lines 99–101 said "Users with the ADMIN role bypass this check" — now "Holders of the `projects:manage_any` bypass permission skip this check." In-method, in-scope per the fix.
+- **Sibling COR-002 (milestones.service.ts) deliberately NOT touched** — same mechanism, different file + different witness path → bundle criteria not met → separate session/commit.
 
 ---
 ### COR-002 — Hardcoded role 'ADMIN' bypass in milestones
