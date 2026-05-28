@@ -2889,7 +2889,7 @@ pnpm test apps/api/src/events
 
 ### DOC-001 — Phase 2 deploy doc backfill (audit-trail completeness for Cour des Comptes)
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -2932,8 +2932,14 @@ ls docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md && \
 grep -c 'DROP\|REVOKE\|rollback' docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 006adb7 (2026-05-28) — new `docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md` (666 lines). Verification command green: 4 migrations cited, 37 DROP/REVOKE/rollback occurrences, `ls docs/deploy/` lists Phase 1 / 2 / 3.
+**Learnings:**
+- **5 source tasks across 4 migration files, not 4↔4.** Migration `20260525190000` bundles **OBS-002 + DAT-009** (its header explicitly names both; `d6299cc` carries `[closes OBS-002][closes DAT-009]`). The DOC-001 finding's enumerated task list (OBS-012 / DAT-009 / DAT-021 / DAT-007) silently dropped OBS-002. The doc records the full 5↔4 mapping table to keep the audit chain explicit.
+- **Largest evidentiary gap = no rollback anchor image was tagged.** Phase 1 set `orchestra-api:pre-phase1-remediation`, Phase 3 set `orchestra-api:pre-phase3-defense-in-depth`, Phase 2 has nothing. The next-best anchor is the *post*-Phase-2 image (Phase 3's anchor), so a post-2026-05-28 Phase-2-only rollback has no clean image path — would require a non-trivial cherry-pick + DDL reversal. Documented in the rollback section with the explicit guidance NOT to execute the DDL retroactively without a separate runbook.
+- **Inferred ≠ verified.** Built a 3-state DEPLOY EXECUTION LOG sub-table (Verified-post-hoc / Inferred / Gap) so an auditor can immediately see which prod-state assertions in the doc are evidence-backed (the `_prisma_migrations` cluster ~2026-05-26 21:09 UTC, the post-hoc 0 `PASSWORD_RESET_ADMIN` rows on prod, init-roles.sql REVOKE) vs reconstructed from operational logic (the `git pull` step, the `docker compose build api` step, the order of script runs). Never collapsed an "inferred" into "verified" — kept the distinction load-bearing.
+- **TOOL-DEPLOY-001 doc decision: NOT created in this commit, but named.** The finding optionally proposed a Phase-1-tooling doc covering the 0-migration code+config-only TOOL-DEPLOY-001 deploy. Surfaced as Process Learning #5 in the Phase 2 doc as a candidate follow-up, but kept out of this commit's scope (DOC-001's File: clause names only the Phase 2 doc). Operator's call whether to file as a follow-up backlog task.
+- **Verbatim SQL non-negotiable.** Every migration's SQL block in the doc is byte-identical to the committed `.sql` file (including header comments — those carry the original Suggested-fix rationale and shouldn't be paraphrased; an auditor cross-referencing against `git show <commit>:<migration>.sql` must see no drift). 4 large code blocks, ~250 lines of SQL — heavy but the contract.
+- **No nest build / pnpm test / migrate deploy / deploy gates ran (docs-only).** AC#2/3/4 were pre-decided N/A in the BACKLOG entry; no re-litigation. The repo coherence gate (`scripts/check-backlog-coherence.sh`) is the only gate this closure must pass — fix commit `006adb7` carries `[closes DOC-001]` verbatim, satisfying rule 3 directly (no anchor-commit pattern needed).
 
 ---
 
