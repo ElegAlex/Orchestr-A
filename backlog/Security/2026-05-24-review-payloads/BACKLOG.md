@@ -3041,7 +3041,7 @@ pnpm test apps/api/src/epics/epics.service.spec.ts  # may need creation if missi
 ---
 ### COR-002 — Hardcoded role 'ADMIN' bypass in milestones
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
@@ -3078,8 +3078,17 @@ Use PermissionsService.getPermissionsForRole(roleCode) and check projects:manage
 pnpm test apps/api/src/milestones/milestones.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 27c0424 (2026-05-28) — injected PermissionsService into MilestonesService, replaced `if (userRole === 'ADMIN') return;` with `permissions.includes('projects:manage_any')` (mirror of projects.service.ts:77), fixed stale docstring. Witness: 3 new tests in `milestones.service.spec.ts` (non-ADMIN manage_any bypass + non-member negative + member-passes regression). MilestonesModule untouched (RbacModule is @Global()). Verbatim sibling of COR-001 `cb3b5e1`.
+**Learnings:**
+- **Line reconciliation (133/144/139).** BACKLOG said `milestones.service.ts:133`, kickoff saw `:144`; actual on master = `assertProjectMembership` declared at **line 139**, the `if (userRole === 'ADMIN') return;` bypass at **line 144**, stale docstring at lines 135–137. The `:133`/`:144` figures both predate intervening edits; the method body itself is byte-identical to epics' `assertProjectMembership`.
+- **Shape match to COR-001 confirmed verbatim.** Same signature `(milestoneId, userId, userRole?: string | null)`, same role-code bypass, same fall-through to a membership check throwing `ForbiddenException('Not a member of this project')` (line 154), membership matched on `m.userId === userId`. No design divergence — no HALT warranted.
+- **DAT-035 dead-code grep result: NO.** Method body contains no `'OWNER'`/`'LEAD'` literals against `project_members.role`; membership is matched purely on `m.userId === userId` (line 152). Same NO as COR-001 on epics. No adjacent dead-code surface to flag.
+- **MilestonesModule wiring was a no-op (anticipated step obviated), same as COR-001.** `milestones.module.ts` imports neither `RbacModule` nor `AuditModule` yet already injects `AuditPersistenceService` — both modules are `@Global()`. `PermissionsService` (exported by the `@Global()` `RbacModule`) is therefore injectable with zero module change. Module left untouched; adding a redundant import would be a no-op smell. File scope ended at 2 files (service + spec), not 3.
+- **Member-passes regression had NO existing coverage here (DIVERGENCE from COR-001's learning — do not transcribe).** Epics' `'should allow member to update'` passed a `userId`, so it exercised `assertProjectMembership`. The milestones `update`/`remove` tests call `service.update('1', dto)` with **no** `currentUserId`, so they never enter the gate. COR-001's "member-passes stays covered by the existing test, no duplicate added" is therefore false for milestones. A dedicated member-passes test (member, no manage_any → update succeeds; green pre- and post-fix) was added explicitly — coverage AC#3 implies and the epics precedent silently relied on.
+- **Non-vacuous witness verified (AC#2).** Pre-fix run (spec edited, service unchanged): the bypass witness — non-ADMIN role `DIRECTION_SI` with resolved `projects:manage_any`, NOT in `project.members` — FAILED with `ForbiddenException('Not a member of this project')` at `milestones.service.ts:154:13`, the membership fall-through (the right reason, not a DI/instantiation error); 32/33 green. Post-fix: 33/33 green. The single thing letting `update` through is the manage_any bypass.
+- **Mirror is literal.** `permissions.includes('projects:manage_any')` matches `ProjectsService.assertProjectOwnershipOrBypass` (projects.service.ts:77) byte-for-byte on the bypass predicate. `getPermissionsForRole(userRole)` accepts `string | null | undefined` and returns `Promise<readonly PermissionCode[]>`; `.includes('projects:manage_any')` typechecks (confirmed via `nest build`, the real gate — `tsc --noEmit` is RED on master by design).
+- **AC#4 N/A — path-specific (do NOT transcribe COR-001's "no audit" wording).** Unlike epics, this file *does* import `AuditPersistenceService`/`emitDataExported` (OBS-026 emits `DATA_EXPORTED` on CSV export). The N/A still holds, but *because the changed method `assertProjectMembership` is a read-gate (assert, no mutation), not in the audit-sensitive list* — not because "milestones has no audit." The existing export-audit path is unaffected by this commit.
+- **INTERDIT DUAL-CLOSE (inverse) respected.** COR-001 (`cb3b5e1`) NOT re-touched — no retroactive `[closes COR-001]`, no retroactive shared-helper extraction from epics.service.ts. Sibling-set (epics + milestones) complete; no phantom COR-003 filed.
 
 ---
 ### COR-028 — getUserLeaves does not enforce ownership — exposes any user's leaves to a request specifying that userId
