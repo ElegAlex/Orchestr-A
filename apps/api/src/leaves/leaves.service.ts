@@ -37,6 +37,26 @@ const DELETE_LEAVES = 'leaves:delete';
 const MANAGE_DELEGATIONS = 'leaves:manage_delegations';
 
 /**
+ * COR-037 — detect Postgres exclusion_violation (SQLSTATE 23P01) on the
+ * DAT-023 `leaves_no_overlap` EXCLUDE. Surfaces when the approve transition
+ * races a sibling PENDING→APPROVED for the same user with overlapping dates;
+ * `checkOverlap` guards create/update but NOT approve, so the DB EXCLUDE was
+ * the only barrier and the raw error leaked as a generic 500.
+ *
+ * Prisma does NOT assign a dedicated `PrismaClientKnownRequestError.code` for
+ * SQLSTATE 23P01 (it has codes for 23505 unique, 23514 check, but not 23P01).
+ * The DAT-023 witness spec confirms the error surfaces with both the verbatim
+ * `23P01` SQLSTATE and the constraint name `leaves_no_overlap` in
+ * `err.message` — match on either. Constraint-name + SQLSTATE both present is
+ * the safe AND of two signals; either alone would already be diagnostic.
+ */
+function isLeaveOverlapViolation(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message ?? '';
+  return msg.includes('leaves_no_overlap') && msg.includes('23P01');
+}
+
+/**
  * OBS-003 — caller context threaded from the controller for the audit actor
  * snapshot. `roleCode` / `templateKey` come from the JWT-loaded `req.user.role`
  * (no DB hit); `ip` / `ua` from `extractMeta(req)`. All optional so legacy
@@ -1658,7 +1678,18 @@ export class LeavesService {
     // sans aucune trace persistée. Pattern aligné sur create()/update()
     // (Wave 3) : ReadCommitted + re-lecture explicite avant l'écriture pour
     // se protéger d'une transition concurrente PENDING → APPROVED/REJECTED.
-    const updatedLeave = await this.prisma.$transaction(async (tx) => {
+    //
+    // COR-037 — DAT-023's leaves_no_overlap EXCLUDE fires here if a sibling
+    // PENDING→APPROVED race lands first on overlapping dates (the audit's exact
+    // TOCTOU race: both passed checkOverlap at create time, now both try to
+    // become APPROVED). The 23P01 surfaces from tx.leave.update; the tx aborts
+    // so the LEAVE_APPROVED audit log doesn't fire (correct — no successful
+    // approve means no audit). The outer try/catch maps the raw error to
+    // ConflictException with the same message the create/update overlap path
+    // returns, collapsing the race to the identical 409.
+    let updatedLeave: Awaited<ReturnType<typeof this.prisma.$transaction>>;
+    try {
+      updatedLeave = await this.prisma.$transaction(async (tx) => {
       const current = await tx.leave.findUnique({ where: { id } });
       if (!current) {
         throw new NotFoundException('Demande de congé introuvable');
@@ -1742,6 +1773,17 @@ export class LeavesService {
 
       return updated;
     });
+    } catch (err) {
+      if (isLeaveOverlapViolation(err)) {
+        // Same message shape as checkOverlap() (used by create/update) so the
+        // PENDING→APPROVED race collapses to the identical 409 the happy path
+        // would have returned had the conflict surfaced one step earlier.
+        throw new ConflictException(
+          'Cette demande chevauche un congé déjà approuvé pour cet utilisateur',
+        );
+      }
+      throw err;
+    }
 
     return updatedLeave;
   }
@@ -3295,9 +3337,15 @@ export class LeavesService {
         result.created++;
       } catch (error) {
         result.errors++;
-        result.errorDetails.push(
-          `Ligne ${lineNum}: ${error.message || 'Erreur inconnue'}`,
-        );
+        // COR-037 — same DAT-023 leaves_no_overlap path the import's own
+        // overlap pre-scan above doesn't catch (the pre-scan dedupes within
+        // the file; the DB EXCLUDE catches the cross-file race against
+        // already-APPROVED leaves landing between scan-time and write-time).
+        // Surface a clean message instead of the raw Prisma 23P01 dump.
+        const message = isLeaveOverlapViolation(error)
+          ? 'Chevauchement détecté avec un congé approuvé existant'
+          : error.message || 'Erreur inconnue';
+        result.errorDetails.push(`Ligne ${lineNum}: ${message}`);
       }
     }
 

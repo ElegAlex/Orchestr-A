@@ -2357,6 +2357,38 @@ describe('LeavesService', () => {
       // No status write either — the tx callback aborts before update.
       expect(mockPrismaService.leave.update).not.toHaveBeenCalled();
     });
+
+    // COR-037 — the approve path does NOT re-check overlap; the DAT-023
+    // EXCLUDE `leaves_no_overlap` is the only barrier. When a sibling race
+    // makes the second PENDING→APPROVED transition collide with an already-
+    // APPROVED overlapping leave, Postgres surfaces 23P01. Pre-fix this leaks
+    // as a generic 500; post-fix the wrapper maps it to ConflictException
+    // (the same 409 the create/update overlap path returns), and no audit
+    // write fires (the tx aborts before the LEAVE_APPROVED log).
+    it('maps DAT-023 leaves_no_overlap 23P01 from tx.leave.update to ConflictException (COR-037)', async () => {
+      const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING };
+      // Outer findUnique + inner tx findUnique both return PENDING (the gate
+      // passes); the update is the surface that throws.
+      mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
+      mockPrismaService.leave.update.mockRejectedValue(
+        new Error(
+          'Raw query failed. Code: 23P01. Message: conflicting key value violates exclusion constraint "leaves_no_overlap"',
+        ),
+      );
+
+      await expect(service.approve('leave-1', 'admin-1')).rejects.toThrow(
+        ConflictException,
+      );
+
+      // The LEAVE_APPROVED audit must NOT fire on the conflict path — the tx
+      // aborted before reaching the auditPersistence.log call, and the outer
+      // catch only maps the error.
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
   });
 
   // ============================================
