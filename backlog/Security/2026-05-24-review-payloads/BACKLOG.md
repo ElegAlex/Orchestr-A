@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 195 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018) + 1 session-derived follow-up (COR-037, 2026-05-27, from DAT-023) + 2 deploy-surfaced follow-ups (COR-038, DOC-001, 2026-05-28, from Phase 3 prod deploy)
+> **Total tasks:** 196 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018) + 1 session-derived follow-up (COR-037, 2026-05-27, from DAT-023) + 2 deploy-surfaced follow-ups (COR-038, DOC-001, 2026-05-28, from Phase 3 prod deploy) + 1 session-derived follow-up (TOOL-COH-003, 2026-05-28, from COR-038/COR-001/COR-002 closeouts)
 
 ## Schema legend
 
@@ -516,6 +516,54 @@ backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh <
 
 **Closed_by:** e6b836c
 **Learnings:** Chose **option (a)** (documentation), not (b) (no `Closure_anchor:` field). Rationale: the gate **already accepts** anchor commits — rule 3 matches `[closes <id>]` whether the commit is a material fix or an empty anchor, so no matching-logic change was needed; the anchor commit *is* the attestation. Consequence for AC#2: its "must FAIL with the current script behavior if no anchor support exists" predicate presupposed option (b). Under (a) anchor support already exists implicitly, so the anchor witness is **positive-only** (the fixture's OBS-008 entry @ anchor `2188b3d` passes the gate); the genuine FAIL-pre→PASS-post belongs to the [[TOOL-COH-001]] regex change, with which this task was bundled (one script). Documented the anchor-commit pattern in (1) the script's header comment block and (2) `CLAUDE_SESSION_CONTRACT.md` § "Retroactive closures". Worked example: **OBS-008** (anchor `2188b3d` carrying `[closes OBS-008]`; material fix `1ff6c9a`/OBS-001); **OBS-020** (anchor `bfc7a78`) cited as second precedent. Process rule added: any task touching `Closed_by` must read the gate script first (pointing `Closed_by` at an upstream material fix that names a *different* task is schema-naive — the 2026-05-25 hygiene-pass mistake that triggered this filing). No BACKLOG schema change.
+
+---
+
+### TOOL-COH-003 — Pre-existing Closed_by-format violations flag coherence-gate noise
+
+- **Status:** TODO
+- **Phase:** 1
+- **Cluster:** —
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** nit / suggestion (non-blocking)
+- **Category:** tooling · backlog_hygiene
+- **File:** `BACKLOG.md` (internal formatting of existing entries — no gate-code change)
+- **Source:** Session-derived from the COR-038 / COR-001 / COR-002 closeouts (2026-05-28 → next-session HANDOVER refresh). The coherence gate `scripts/check-backlog-coherence.sh` reports 10 `Closed_by`-format violations on **pre-existing** DONE entries, unrelated to any specific closure but latent as recurring gate noise — observed constant across the last several closures without cleanup. The gate is **not** blocked (the concerned closures pass), but the recurring noise degrades the gate's signal-to-noise.
+
+**Description:**
+`bash backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh` currently reports **10** `Status=DONE but Closed_by is missing/invalid` violations on entries closed during the Phase 3 mini-arc (pre-existing to the recent Phase-4 closures). The gate does **not** fail — these entries are substantively closed with valid SHAs in git — but the gate's `Closed_by` parser cannot extract those SHAs, so they surface as noise on every run. **Re-extracted at filing time (2026-05-28), the 10 split into two distinct sub-causes that need different fixes:**
+
+- **(a) Backtick-wrapped SHA — 8 entries:** DAT-032, DAT-033, DAT-034, DAT-036, COR-034, COR-035, DAT-038, COR-037. Their `**Closed_by:**` line reads `` `<sha>` (date) — … `` (SHA wrapped in backticks). The parser takes the first whitespace token (`closed_by_raw.split()[0]`), which is `` `7af1991` `` *including the backticks*, and the SHA regex `^[0-9a-f]{7,40}$` rejects it. The SHA is real and in git — only the backtick wrapping defeats extraction. (Contrast: the recently-closed COR-038/COR-001/COR-002 use a bare leading SHA `24c6929 (date) — …`, whose first token is the clean SHA and passes.)
+- **(b) Stale leading `(none — …)` Closed_by line — 2 entries:** DAT-035, DAT-037. These went BLOCKED-DESIGN-DECISION → DONE. The original `**Closed_by:** (none — moved to BLOCKED-DESIGN-DECISION …)` line was left in place, and the real closure SHA (`148b713` / `128393e`) is recorded **later** in the block inside a resume Learnings sub-bullet (`` `Closed_by: 148b713` ``). The parser matches the **first** `**Closed_by:**`, so it sees `(none` and flags the entry — even though the task is genuinely closed.
+
+**Root cause:**
+Not "fenced code blocks" or mis-escaped backticks in prose — the gate's `Closed_by` extractor (`re.search(r'\*\*Closed_by:\*\*\s*(.+?)', block)` → `.split()[0]` → `^[0-9a-f]{7,40}$`) is intolerant of two formatting conventions used by older entries: (a) backtick-wrapping the SHA, and (b) a residual `(none — …)` leading `Closed_by` line preceding the real SHA recorded elsewhere in the block. Both are entry-formatting issues in `BACKLOG.md`, not gate-logic bugs.
+
+**Code evidence:**
+```
+bash backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh
+# → "❌ 10 coherence violation(s)" then "Checked 57 DONE/VERIFIED task(s)"
+#   8 of form: [DAT-032] … Closed_by is missing/invalid: '`7af1991` (2026-05-28) — …'
+#   2 of form: [DAT-035] … Closed_by is missing/invalid: '(none — moved to `BLOCKED-DESIGN-DECISION` …)'
+```
+
+**Suggested fix:**
+`BACKLOG.md` formatting only — do NOT change the gate script. (1) For the 8 backtick-wrapped entries, unwrap the leading SHA in the `**Closed_by:**` line to a bare token (`` `7af1991` (date) — `` → `7af1991 (date) — `), matching the COR-038/COR-001/COR-002 convention. (2) For DAT-035 / DAT-037, replace the stale `**Closed_by:** (none — …)` line with the real closure SHA already recorded in their resume Learnings (`148b713` / `128393e`); preserve the design-decision history in the Learnings body. (3) Re-run the gate: expect **0** `Closed_by`-format violations.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented, addressing the exact failure mode described in **Description** (both sub-causes (a) and (b)).
+2. N/A — formatting-only, no failure mode to FAIL-pre against.
+3. N/A — doc-only, no test suite to regress.
+4. N/A — doc-only, no audit-sensitive code path touched.
+5. Commit message includes `[closes TOOL-COH-003]`.
+6. Do not modify code paths or files unrelated to `BACKLOG.md` formatting within this commit (the gate script is explicitly out of scope).
+
+**Verification command:**
+```
+bash backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh
+# → 0 Closed_by-format violations (or any residual must be a newly-closed entry, not one of the 10 listed here)
+```
 
 ---
 
