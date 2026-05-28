@@ -36,6 +36,9 @@ describe('UsersService', () => {
   let service: UsersService;
   const mockAuditPersistence = { log: vi.fn().mockResolvedValue(undefined) };
   const mockAuditService = { log: vi.fn() };
+  // Drives the real AccessScopeService's permission resolution. Default = no
+  // permissions (plain directory caller); SEC-030 tests override per-case.
+  const mockGetPermissionsForRole = vi.fn().mockResolvedValue([]);
 
   const mockPrismaService = {
     user: {
@@ -108,6 +111,8 @@ describe('UsersService', () => {
   };
 
   beforeEach(async () => {
+    mockGetPermissionsForRole.mockReset();
+    mockGetPermissionsForRole.mockResolvedValue([]);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
@@ -131,7 +136,7 @@ describe('UsersService', () => {
           provide: AccessScopeService,
           useFactory: (prisma: PrismaService) =>
             new AccessScopeService(prisma, {
-              getPermissionsForRole: vi.fn().mockResolvedValue([]),
+              getPermissionsForRole: mockGetPermissionsForRole,
             } as never),
           inject: [PrismaService],
         },
@@ -476,36 +481,108 @@ describe('UsersService', () => {
   });
 
   describe('findOne', () => {
-    it('should return a user by id', async () => {
+    // Management-tier caller (`users:manage`): MANAGER / ADMIN_DELEGATED /
+    // ADMIN. Directory-tier caller: a plain `users:read` holder.
+    const managementCaller = {
+      id: 'mgr-1',
+      role: { code: 'ADMIN', templateKey: 'ADMIN' },
+    };
+    const directoryCaller = {
+      id: 'caller-1',
+      role: { code: 'CONTRIBUTEUR', templateKey: 'PROJECT_CONTRIBUTOR' },
+    };
+
+    it('should return the full admin payload for a management caller', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:manage']);
       const mockUser = {
         id: '1',
         email: 'user@example.com',
         login: 'user',
         firstName: 'User',
         lastName: 'Test',
-        role: 'USER',
+        role: { id: 'r1', code: 'USER', label: 'User' },
         isActive: true,
         departmentId: null,
         avatarUrl: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
+      mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-
-      const result = await service.findOne('1');
+      const result = await service.findOne('1', managementCaller);
 
       expect(result).toBeDefined();
       expect(result.id).toBe('1');
-      expect(result.email).toBe('user@example.com');
+      // Management caller resolves to an empty scope where (every user).
+      const args = mockPrismaService.user.findFirst.mock.calls[0][0];
+      expect(args.where).toEqual({ id: '1' });
+      // Full payload exposes the sensitive fields.
+      expect(args.select.email).toBe(true);
+      expect(args.select.login).toBe(true);
+      expect(args.select.skills).toBeDefined();
+      expect(args.select.projectMembers).toBeDefined();
     });
 
-    it('should throw error when user not found', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+    it('SEC-030: a directory caller gets the scoped where and the reduced payload (no email/login/skills/memberships)', async () => {
+      // Plain `users:read` directory caller — no users:manage.
+      mockGetPermissionsForRole.mockResolvedValue(['users:read']);
+      mockPrismaService.user.findFirst.mockResolvedValue({
+        id: 'in-scope',
+        firstName: 'In',
+        lastName: 'Scope',
+      });
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow(
-        'Utilisateur introuvable',
-      );
+      await service.findOne('in-scope', directoryCaller);
+
+      const args = mockPrismaService.user.findFirst.mock.calls[0][0];
+      // Horizontal scope applied: not just { id }, an OR of scope buckets.
+      expect(args.where.id).toBe('in-scope');
+      expect(args.where.OR).toBeDefined();
+      expect(args.where.OR).toContainEqual({ id: 'caller-1' });
+      // Reduced payload: the SEC-030 sensitive fields are stripped.
+      expect(args.select.email).toBeUndefined();
+      expect(args.select.login).toBeUndefined();
+      expect(args.select.skills).toBeUndefined();
+      expect(args.select.projectMembers).toBeUndefined();
+      // Directory fields are still present.
+      expect(args.select.firstName).toBe(true);
+      expect(args.select.role).toBeDefined();
+    });
+
+    it('SEC-030: an out-of-scope user is a 404 for a directory caller', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:read']);
+      // The scope where filters the row out → findFirst returns null.
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.findOne('out-of-scope', directoryCaller),
+      ).rejects.toThrow('Utilisateur introuvable');
+    });
+
+    it('SEC-030: a directory caller reading their own profile is in scope (self bucket)', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:read']);
+      mockPrismaService.user.findFirst.mockResolvedValue({
+        id: 'caller-1',
+        firstName: 'Self',
+        lastName: 'Read',
+      });
+
+      const result = await service.findOne('caller-1', directoryCaller);
+
+      expect(result.id).toBe('caller-1');
+      const args = mockPrismaService.user.findFirst.mock.calls[0][0];
+      expect(args.where.OR).toContainEqual({ id: 'caller-1' });
+      // Self still gets the reduced payload via this admin endpoint.
+      expect(args.select.email).toBeUndefined();
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:manage']);
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.findOne('nonexistent', managementCaller),
+      ).rejects.toThrow('Utilisateur introuvable');
     });
   });
 

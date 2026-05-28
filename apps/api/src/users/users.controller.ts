@@ -225,8 +225,15 @@ export class UsersController {
     status: 404,
     description: 'Utilisateur introuvable',
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser()
+    caller: {
+      id: string;
+      role?: { code: string; templateKey?: string | null } | null;
+    },
+  ) {
+    return this.usersService.findOne(id, caller);
   }
 
   @Post('me/avatar')

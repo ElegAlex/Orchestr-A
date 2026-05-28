@@ -193,6 +193,45 @@ export class AccessScopeService {
   }
 
   /**
+   * Horizontal read scope for a single user resource (GET /users/:id).
+   * Holders of `users:manage` (USERS_PAGE_ACCESS — the admin-page tier:
+   * MANAGER, ADMIN_DELEGATED, ADMIN) see every user (returns `{}`). Any other
+   * caller — i.e. a plain `users:read` directory holder — is limited to:
+   *   - self,
+   *   - users sharing at least one service with the caller,
+   *   - users in a service the caller manages (Service.managerId),
+   *   - users in a department the caller manages (Department.managerId).
+   *
+   * The last bucket (managed-department) is not in the SEC-030 audit's literal
+   * three (self / same-service / managed-service); it is added to keep read
+   * scope a superset of the write scope enforced by `canManageUser` — a caller
+   * who may manage a target must also be able to read it ("read ⊇ write").
+   * Bypass is permission-driven (`users:manage`), never role-code, unlike
+   * `canManageUser` whose ADMIN-template bypass predates the permission split.
+   */
+  async userReadWhere(
+    user: AccessUser | undefined,
+  ): Promise<Prisma.UserWhereInput> {
+    if (!user?.id) return { id: '__no_access__' };
+    if (await this.hasAny(user, ['users:manage'])) return {};
+
+    return {
+      OR: [
+        { id: user.id },
+        {
+          userServices: {
+            some: {
+              service: { userServices: { some: { userId: user.id } } },
+            },
+          },
+        },
+        { userServices: { some: { service: { managerId: user.id } } } },
+        { department: { managerId: user.id } },
+      ],
+    };
+  }
+
+  /**
    * Horizontal scope check for admin operations targeting a user (update,
    * deactivate). ADMIN template bypasses; any other caller must be either the
    * manager of the target's department, OR share at least one service with

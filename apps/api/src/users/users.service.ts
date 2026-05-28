@@ -270,76 +270,128 @@ export class UsersService {
     };
   }
 
-  async findOne(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
+  // Full admin profile — exposed only to management-tier callers
+  // (`users:manage`). Includes the SEC-030 sensitive fields: email, login,
+  // the full skills list and project memberships with project status.
+  private static readonly FULL_USER_SELECT = {
+    id: true,
+    email: true,
+    login: true,
+    firstName: true,
+    lastName: true,
+    avatarUrl: true,
+    avatarPreset: true,
+    roleId: true,
+    role: {
       select: {
         id: true,
-        email: true,
-        login: true,
-        firstName: true,
-        lastName: true,
-        avatarUrl: true,
-        avatarPreset: true,
-        roleId: true,
-        role: {
-          select: {
-            id: true,
-            code: true,
-            label: true,
-            templateKey: true,
-            isSystem: true,
-          },
-        },
-        departmentId: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        department: {
+        code: true,
+        label: true,
+        templateKey: true,
+        isSystem: true,
+      },
+    },
+    departmentId: true,
+    isActive: true,
+    createdAt: true,
+    updatedAt: true,
+    department: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+    },
+    userServices: {
+      select: {
+        service: {
           select: {
             id: true,
             name: true,
             description: true,
           },
         },
-        userServices: {
-          select: {
-            service: {
-              select: {
-                id: true,
-                name: true,
-                description: true,
-              },
-            },
-          },
-        },
-        skills: {
-          select: {
-            level: true,
-            skill: {
-              select: {
-                id: true,
-                name: true,
-                category: true,
-              },
-            },
-          },
-        },
-        projectMembers: {
+      },
+    },
+    skills: {
+      select: {
+        level: true,
+        skill: {
           select: {
             id: true,
-            role: true,
-            allocation: true,
-            project: {
-              select: {
-                id: true,
-                name: true,
-                status: true,
-              },
-            },
+            name: true,
+            category: true,
           },
         },
       },
+    },
+    projectMembers: {
+      select: {
+        id: true,
+        role: true,
+        allocation: true,
+        project: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
+        },
+      },
+    },
+  } as const;
+
+  // Directory projection — what a plain `users:read` (ANNUAIRE_READ) caller
+  // sees for an in-scope user. Serves the "qui est qui à quel service" need
+  // while stripping the SEC-030 sensitive fields (email, login, skills,
+  // project memberships) and audit metadata (createdAt/updatedAt, roleId,
+  // role.templateKey/isSystem).
+  private static readonly DIRECTORY_USER_SELECT = {
+    id: true,
+    firstName: true,
+    lastName: true,
+    avatarUrl: true,
+    avatarPreset: true,
+    role: {
+      select: {
+        id: true,
+        code: true,
+        label: true,
+      },
+    },
+    departmentId: true,
+    isActive: true,
+    department: {
+      select: {
+        id: true,
+        name: true,
+      },
+    },
+    userServices: {
+      select: {
+        service: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    },
+  } as const;
+
+  async findOne(id: string, caller?: AccessUser) {
+    // Horizontal scope (SEC-030): management-tier callers (`users:manage`)
+    // resolve to an empty where (every user); a plain directory caller is
+    // restricted to self / same-service / managed-service/department. An
+    // out-of-scope id therefore collapses to a 404 (non-disclosing).
+    const scopeWhere = await this.accessScope.userReadWhere(caller);
+    const isManagement = await this.accessScope.hasAny(caller, ['users:manage']);
+
+    const user = await this.prisma.user.findFirst({
+      where: { id, ...scopeWhere },
+      select: isManagement
+        ? UsersService.FULL_USER_SELECT
+        : UsersService.DIRECTORY_USER_SELECT,
     });
 
     if (!user) {

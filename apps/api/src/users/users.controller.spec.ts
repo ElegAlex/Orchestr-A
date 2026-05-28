@@ -204,13 +204,20 @@ describe('UsersController', () => {
   });
 
   describe('findOne', () => {
-    it('should return a user by id', async () => {
+    const caller = {
+      id: 'caller-1',
+      role: { code: 'ADMIN', templateKey: 'ADMIN' },
+    };
+
+    it('should return a user by id and thread the caller through for scoping', async () => {
       mockUsersService.findOne.mockResolvedValue(mockUser);
 
-      const result = await controller.findOne('user-id-1');
+      const result = await controller.findOne('user-id-1', caller);
 
       expect(result).toEqual(mockUser);
-      expect(mockUsersService.findOne).toHaveBeenCalledWith('user-id-1');
+      // SEC-030: the caller is forwarded so the service can apply horizontal
+      // scope + payload restriction.
+      expect(mockUsersService.findOne).toHaveBeenCalledWith('user-id-1', caller);
     });
 
     it('should throw NotFoundException when user not found', async () => {
@@ -218,7 +225,7 @@ describe('UsersController', () => {
         new NotFoundException('Utilisateur introuvable'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+      await expect(controller.findOne('nonexistent', caller)).rejects.toThrow(
         NotFoundException,
       );
     });
