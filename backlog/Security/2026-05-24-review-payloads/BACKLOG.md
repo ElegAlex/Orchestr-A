@@ -3050,6 +3050,50 @@ TBD — derive test from finding description for e2e/fixtures/permission-matrix.
   3. `auth.controller.ts` is the sole controller using perm-first decorator ordering (`@RequirePermissions` above `@Post`) — `users:reset_password`'s real route is `POST /api/auth/reset-password-token`. The 94 codes are otherwise clean: no duplicates, no mal-named codes, consistent naming.
 
 ---
+### TST-CI-001 — Wire permission-matrix-coverage gate in CI (TST-001 follow-up)
+
+- **Status:** TODO
+- **Phase:** 4
+- **Cluster:** B
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** ci · tooling · test-infrastructure
+- **File:** `.github/workflows/permission-matrix-coverage.yml`
+- **Source:** Session-derived from TST-001 closeout `652c336`. The gate `check-permission-matrix-coverage.sh` created by TST-001 is runnable but unwired; a future PR adding a new `@RequirePermissions` code without a matrix backfill passes by omission. Mirror precedent = `backlog-coherence.yml` wiring `check-backlog-coherence.sh`.
+
+**Description:**
+The permission-matrix coverage gate created by TST-001 is runnable but unwired. TST-CI-001 files the GitHub Actions workflow that invokes the gate on PR to make it effective.
+
+**Root cause:**
+TST-001's file scope (matrix + script) excluded `.github/workflows`; CI wiring was not done in TST-001 out of strict scope respect + learning #17 (operator-control invariant).
+
+**Code evidence:**
+```
+ls .github/workflows/ does not contain permission-matrix-coverage.yml.
+cat .github/workflows/backlog-coherence.yml shows the precedent pattern.
+```
+
+**Suggested fix:**
+Literal mirror of `.github/workflows/backlog-coherence.yml` to `.github/workflows/permission-matrix-coverage.yml`, with minimal adaptations: (a) job/workflow name, (b) script path = `backlog/Security/2026-05-24-review-payloads/scripts/check-permission-matrix-coverage.sh`, (c) `pull_request` trigger mirrored, (d) runtime environment identical (ubuntu-latest, checkout@v4, setup-python@v5 / 3.11). No other invented change.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. The workflow file is syntactically valid YAML (parser-verified). The gate itself is already witnessed by TST-001 closure (exit 0 on master); this task wires the invocation.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. N/A — CI infrastructure addition, no production code path, no audit-sensitive surface.
+5. Commit message includes `[closes TST-CI-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+python3 -c 'import yaml,sys; yaml.safe_load(open(".github/workflows/permission-matrix-coverage.yml")); print("YAML OK")'
+```
+
+**Closed_by:**
+**Learnings:**
+
+---
 ### COR-001 — Hardcoded role 'ADMIN' bypass violates RBAC V4
 
 - **Status:** DONE
