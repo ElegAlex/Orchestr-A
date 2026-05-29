@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 196 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018) + 1 session-derived follow-up (COR-037, 2026-05-27, from DAT-023) + 2 deploy-surfaced follow-ups (COR-038, DOC-001, 2026-05-28, from Phase 3 prod deploy) + 1 session-derived follow-up (TOOL-COH-003, 2026-05-28, from COR-038/COR-001/COR-002 closeouts)
+> **Total tasks:** 197 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018) + 1 session-derived follow-up (COR-037, 2026-05-27, from DAT-023) + 2 deploy-surfaced follow-ups (COR-038, DOC-001, 2026-05-28, from Phase 3 prod deploy) + 1 session-derived follow-up (TOOL-COH-003, 2026-05-28, from COR-038/COR-001/COR-002 closeouts) + 1 deploy-surfaced follow-up (SEC-031, 2026-05-29, from SEC-030 closeout)
 
 ## Schema legend
 
@@ -9238,5 +9238,56 @@ pnpm --filter database db:seed && \
 **Learnings:**
 - Not blocking Phase 1: prod holidays cover through **2027-12-31** (~24-month runway from 2026-05), so COR-003 was returned to TODO without this. This task closes the structural gap before the runway expires.
 - The TZ off-by-one in `importFrenchHolidays` was fixed in `0dc640e` (UTC date construction + regression test); the durable mechanism must keep using that fixed path.
+
+---
+### SEC-031 — GET /users list + getUsersBy* helpers have no horizontal scope filter — any users:read holder enumerates the full directory
+
+- **Status:** TODO
+- **Phase:** 4
+- **Cluster:** B
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** security · horizontal-scope · directory-enumeration
+- **File:** `apps/api/src/users/users.controller.ts` (GET /users + variants) + `apps/api/src/users/users.service.ts` (`findAll`, `getUsersByDepartment`, `getUsersByService`, `getUsersByRole`)
+- **Source:** Session-derived from SEC-030 closeout `d6ed06f` (2026-05-29). Adjacency observed during SEC-030 pre-flight and documented in that task's Learnings + trade-off section ("directory visibility now rides on the still-unscoped list endpoints"). Held back at the time under the don't-file-phantoms discipline; SEC-030 closure + prod deploy make this a clean, material filing to lay now.
+
+**Description:**
+SEC-030 scoped the single-resource `GET /users/:id` path via `AccessScopeService.userReadWhere`. The list-side routes (`GET /users` → `findAll`) and the `getUsersBy*` helpers remain unscoped: a non-admin holding `users:read` (= `ANNUAIRE_READ`, the broad org-directory permission held by every non-EXTERNAL template) pages the full directory (≤1000/page) with no horizontal-scope filter and a full select. Consequence: full-profile enumeration is still possible through the list surface even after SEC-030. The trade-off was made operator-visible in the SEC-030 fix; this filing is the commitment to close it.
+
+**Root cause:**
+No `userReadWhere` method existed before SEC-030, and the list-side routes were never scoped. SEC-030 created `userReadWhere` (4 buckets: self / same-service / managed-service / managed-department), which is now directly consumable for the list paths.
+
+**Code evidence:**
+```
+grep -rn "this\.usersService\.findAll\|getUsersBy" apps/api/src
+# users.controller.ts:147  return this.usersService.findAll(page, limit, role);
+# users.service.ts:1057    async getUsersByDepartment(departmentId: string) { ... }
+# users.service.ts:1087    async getUsersByService(serviceId: string) { ... }
+# users.service.ts:1111    async getUsersByRole(roleCode: string) { ... }
+# (all unscoped — confirm where-clause + select in pre-flight of execution)
+```
+
+**Suggested fix:**
+Apply `AccessScopeService.userReadWhere` (created by SEC-030) at the `users.service.ts` layer — `findAll` + the `getUsersBy*` helpers — merging the scope `WhereInput` with the existing filters. Apply the same payload restriction (reduced select for non-management) consistent with SEC-030's `FULL_USER_SELECT` vs `DIRECTORY_USER_SELECT`. Literal mirror of the SEC-030 single-resource fix, on the list routes.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after — multi-scenario witness (4 buckets × admin/non-admin), as SEC-030. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. **N/A — read-path (users-list), not an audit-sensitive mutation.** Per HANDOVER learning #16 the reason is path-specific, not inherited from a sibling: the list/`getUsersBy*` routes are reads, with no delete / RBAC mutation / password reset, so no `audit_logs` entry is created.
+5. Commit message includes `[closes SEC-031]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+npx vitest run src/users   # in apps/api (turbo treats the path as a task name — see COR-028/SEC-030 NB)
+# + behavioral smoke: a non-management caller listing GET /users must see no out-of-scope user.
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:**
+- Filed 2026-05-29 in the post-Phase-4-Cluster-B / post-microdeploy refresh session. Deploy-surfaced adjacency: the SEC-030 fix narrowed `GET /users/:id` but explicitly left the list surface open; `userReadWhere` now exists as a reusable building block, so this is the list-side completion of the same mechanism.
+- Cluster: `B` follows the BACKLOG convention (all six Phase-4 tasks carry `Cluster: B`); the analytic overlay places it under horizontal-scope-missing-list-side. Note the long-standing A/B/C-overlay vs field-`B` collision documented in HANDOVER §Filings.
 
 ---
