@@ -658,6 +658,560 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     description:
       "Détacher un client d'un projet — Admin, Responsable, Manager (clients:assign_to_project). 404 = autorisé mais rattachement absent",
   },
+
+  // ═══════════════════════════════════════════════════════════
+  // TST-001 — backfill : couverture 100% des codes @RequirePermissions
+  // Rôles dérivés par construction de ROLE_TEMPLATES (rbac) via le
+  // binding test-user→template du seed (admin=ADMIN, responsable=
+  // ADMIN_DELEGATED, manager=MANAGER, referent=TECHNICAL_LEAD,
+  // contributeur=BASIC_USER, observateur=OBSERVER_FULL). allowedRoles =
+  // rôles dont le set de permissions contient le code ; deniedRoles = les
+  // autres — identique à la décision du PermissionsGuardV2.
+  // ═══════════════════════════════════════════════════════════
+
+  // ───────────────────────────────────────────────────────────
+  // COMMENTS
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "comments:create",
+    resource: "comments",
+    method: "POST",
+    apiEndpoint: "/api/comments",
+    allowedRoles: ["admin", "responsable", "manager", "referent"],
+    deniedRoles: ["contributeur", "observateur"],
+  },
+  {
+    action: "comments:read",
+    resource: "comments",
+    method: "GET",
+    apiEndpoint: "/api/comments",
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    deniedRoles: [],
+  },
+  {
+    action: "comments:update",
+    resource: "comments",
+    method: "PATCH",
+    apiEndpoint: `/api/comments/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager", "referent"],
+    deniedRoles: ["contributeur", "observateur"],
+  },
+  {
+    action: "comments:delete",
+    resource: "comments",
+    method: "DELETE",
+    apiEndpoint: `/api/comments/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager", "referent"],
+    deniedRoles: ["contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // DOCUMENTS
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "documents:create",
+    resource: "documents",
+    method: "POST",
+    apiEndpoint: "/api/documents",
+    allowedRoles: ["admin", "responsable", "manager", "referent"],
+    deniedRoles: ["contributeur", "observateur"],
+  },
+  {
+    action: "documents:read",
+    resource: "documents",
+    method: "GET",
+    apiEndpoint: "/api/documents",
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    deniedRoles: [],
+  },
+  {
+    action: "documents:update",
+    resource: "documents",
+    method: "PATCH",
+    apiEndpoint: `/api/documents/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager", "referent"],
+    deniedRoles: ["contributeur", "observateur"],
+  },
+  {
+    action: "documents:delete",
+    resource: "documents",
+    method: "DELETE",
+    apiEndpoint: `/api/documents/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager", "referent"],
+    deniedRoles: ["contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // EPICS
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "epics:create",
+    resource: "epics",
+    method: "POST",
+    apiEndpoint: "/api/epics",
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+  {
+    action: "epics:read",
+    resource: "epics",
+    method: "GET",
+    apiEndpoint: "/api/epics",
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    deniedRoles: [],
+  },
+  {
+    action: "epics:update",
+    resource: "epics",
+    method: "PATCH",
+    apiEndpoint: `/api/epics/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+  {
+    action: "epics:delete",
+    resource: "epics",
+    method: "DELETE",
+    apiEndpoint: `/api/epics/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // MILESTONES
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "milestones:create",
+    resource: "milestones",
+    method: "POST",
+    apiEndpoint: "/api/milestones",
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+  {
+    action: "milestones:read",
+    resource: "milestones",
+    method: "GET",
+    apiEndpoint: "/api/milestones",
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    deniedRoles: [],
+  },
+  {
+    action: "milestones:update",
+    resource: "milestones",
+    method: "PATCH",
+    apiEndpoint: `/api/milestones/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+  {
+    action: "milestones:delete",
+    resource: "milestones",
+    method: "DELETE",
+    apiEndpoint: `/api/milestones/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // HOLIDAYS
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "holidays:create",
+    resource: "holidays",
+    method: "POST",
+    apiEndpoint: "/api/holidays",
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+  {
+    action: "holidays:read",
+    resource: "holidays",
+    method: "GET",
+    apiEndpoint: "/api/holidays",
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    deniedRoles: [],
+  },
+  {
+    action: "holidays:update",
+    resource: "holidays",
+    method: "PATCH",
+    apiEndpoint: `/api/holidays/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+  {
+    action: "holidays:delete",
+    resource: "holidays",
+    method: "DELETE",
+    apiEndpoint: `/api/holidays/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // SCHOOL VACATIONS
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "school_vacations:create",
+    resource: "school-vacations",
+    method: "POST",
+    apiEndpoint: "/api/school-vacations",
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+  {
+    action: "school_vacations:read",
+    resource: "school-vacations",
+    method: "GET",
+    apiEndpoint: "/api/school-vacations",
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    deniedRoles: [],
+  },
+  {
+    action: "school_vacations:update",
+    resource: "school-vacations",
+    method: "PATCH",
+    apiEndpoint: `/api/school-vacations/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+  {
+    action: "school_vacations:delete",
+    resource: "school-vacations",
+    method: "DELETE",
+    apiEndpoint: `/api/school-vacations/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // SETTINGS
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "settings:read",
+    resource: "settings",
+    method: "GET",
+    apiEndpoint: "/api/settings",
+    allowedRoles: ["admin", "responsable", "manager", "observateur"],
+    deniedRoles: ["referent", "contributeur"],
+  },
+  {
+    action: "settings:update",
+    resource: "settings",
+    method: "POST",
+    apiEndpoint: "/api/settings/bulk",
+    allowedRoles: ["admin"],
+    deniedRoles: ["responsable", "manager", "referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // TIME TRACKING
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "time_tracking:create",
+    resource: "time-tracking",
+    method: "POST",
+    apiEndpoint: "/api/time-tracking",
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    deniedRoles: ["observateur"],
+  },
+  {
+    action: "time_tracking:update",
+    resource: "time-tracking",
+    method: "PATCH",
+    apiEndpoint: `/api/time-tracking/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager", "referent"],
+    deniedRoles: ["contributeur", "observateur"],
+  },
+  {
+    action: "time_tracking:delete",
+    resource: "time-tracking",
+    method: "DELETE",
+    apiEndpoint: `/api/time-tracking/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager", "referent"],
+    deniedRoles: ["contributeur", "observateur"],
+  },
+  {
+    action: "time_tracking:read_reports",
+    resource: "time-tracking",
+    method: "GET",
+    apiEndpoint: `/api/time-tracking/user/${PLACEHOLDER_UUID_V4}/report`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // SERVICES
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "services:create",
+    resource: "services",
+    method: "POST",
+    apiEndpoint: "/api/services",
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+  {
+    action: "services:read",
+    resource: "services",
+    method: "GET",
+    apiEndpoint: "/api/services",
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    deniedRoles: [],
+  },
+  {
+    action: "services:update",
+    resource: "services",
+    method: "PATCH",
+    apiEndpoint: `/api/services/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+  {
+    action: "services:delete",
+    resource: "services",
+    method: "DELETE",
+    apiEndpoint: `/api/services/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // DEPARTMENTS (compléments)
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "departments:update",
+    resource: "departments",
+    method: "PATCH",
+    apiEndpoint: `/api/departments/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+  {
+    action: "departments:delete",
+    resource: "departments",
+    method: "DELETE",
+    apiEndpoint: `/api/departments/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // TASKS (compléments)
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "tasks:create",
+    resource: "tasks",
+    method: "POST",
+    apiEndpoint: "/api/tasks",
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+  {
+    action: "tasks:update",
+    resource: "tasks",
+    method: "PATCH",
+    apiEndpoint: `/api/tasks/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    deniedRoles: ["observateur"],
+  },
+  {
+    action: "tasks:delete",
+    resource: "tasks",
+    method: "DELETE",
+    apiEndpoint: `/api/tasks/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // TELEWORK (compléments)
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "telework:update",
+    resource: "telework",
+    method: "PATCH",
+    apiEndpoint: `/api/telework/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    deniedRoles: ["observateur"],
+  },
+  {
+    action: "telework:delete",
+    resource: "telework",
+    method: "DELETE",
+    apiEndpoint: `/api/telework/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    deniedRoles: ["observateur"],
+  },
+  {
+    action: "telework:read_team",
+    resource: "telework",
+    method: "GET",
+    apiEndpoint: `/api/telework/team/2027-01-01`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // LEAVES (compléments)
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "leaves:update",
+    resource: "leaves",
+    method: "PATCH",
+    apiEndpoint: `/api/leaves/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+  {
+    action: "leaves:delete",
+    resource: "leaves",
+    method: "DELETE",
+    apiEndpoint: `/api/leaves/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+  {
+    action: "leaves:manage_delegations",
+    resource: "leaves",
+    method: "POST",
+    apiEndpoint: "/api/leaves/delegations",
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // PROJECTS (compléments)
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "projects:archive",
+    resource: "projects",
+    method: "POST",
+    apiEndpoint: `/api/projects/${PLACEHOLDER_UUID_V4}/archive`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+  {
+    action: "projects:manage_members",
+    resource: "projects",
+    method: "POST",
+    apiEndpoint: `/api/projects/${PLACEHOLDER_UUID_V4}/members`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // SKILLS (compléments)
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "skills:update",
+    resource: "skills",
+    method: "PATCH",
+    apiEndpoint: `/api/skills/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "referent"],
+    deniedRoles: ["manager", "contributeur", "observateur"],
+  },
+  {
+    action: "skills:delete",
+    resource: "skills",
+    method: "DELETE",
+    apiEndpoint: `/api/skills/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "referent"],
+    deniedRoles: ["manager", "contributeur", "observateur"],
+  },
+  {
+    action: "skills:manage_matrix",
+    resource: "skills",
+    method: "GET",
+    apiEndpoint: "/api/skills/matrix",
+    allowedRoles: ["admin", "responsable", "referent"],
+    deniedRoles: ["manager", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // PREDEFINED TASKS (compléments)
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "predefined_tasks:edit",
+    resource: "predefined-tasks",
+    method: "PATCH",
+    apiEndpoint: `/api/predefined-tasks/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+  {
+    action: "predefined_tasks:delete",
+    resource: "predefined-tasks",
+    method: "DELETE",
+    apiEndpoint: `/api/predefined-tasks/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager"],
+    deniedRoles: ["referent", "contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // EVENTS (compléments)
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "events:create",
+    resource: "events",
+    method: "POST",
+    apiEndpoint: "/api/events",
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    deniedRoles: ["observateur"],
+  },
+  {
+    action: "events:update",
+    resource: "events",
+    method: "PATCH",
+    apiEndpoint: `/api/events/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    deniedRoles: ["observateur"],
+  },
+  {
+    action: "events:delete",
+    resource: "events",
+    method: "DELETE",
+    apiEndpoint: `/api/events/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable", "manager", "referent"],
+    deniedRoles: ["contributeur", "observateur"],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // USERS (compléments)
+  // ───────────────────────────────────────────────────────────
+  {
+    action: "users:delete",
+    resource: "users",
+    method: "DELETE",
+    apiEndpoint: `/api/users/${PLACEHOLDER_UUID_V4}`,
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+  {
+    action: "users:import",
+    resource: "users",
+    method: "POST",
+    apiEndpoint: "/api/users/import",
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
+  {
+    action: "users:manage_roles",
+    resource: "users",
+    method: "GET",
+    apiEndpoint: "/api/roles",
+    allowedRoles: ["admin"],
+    deniedRoles: ["responsable", "manager", "referent", "contributeur", "observateur"],
+  },
+  {
+    action: "users:reset_password",
+    resource: "users",
+    method: "POST",
+    apiEndpoint: "/api/auth/reset-password-token",
+    allowedRoles: ["admin", "responsable"],
+    deniedRoles: ["manager", "referent", "contributeur", "observateur"],
+  },
 ];
 
 /**
