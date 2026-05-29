@@ -3052,7 +3052,7 @@ TBD — derive test from finding description for e2e/fixtures/permission-matrix.
 ---
 ### TST-CI-001 — Wire permission-matrix-coverage gate in CI (TST-001 follow-up)
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
@@ -3090,8 +3090,16 @@ Literal mirror of `.github/workflows/backlog-coherence.yml` to `.github/workflow
 python3 -c 'import yaml,sys; yaml.safe_load(open(".github/workflows/permission-matrix-coverage.yml")); print("YAML OK")'
 ```
 
-**Closed_by:**
+**Closed_by:** eb53031
 **Learnings:**
+- **Naming — sibling-of-parent, compound chosen (TST-CI-001).** TST-002 is already taken (service-spec gap, line 6713), so the bare `TST-002` slot was unavailable. Compound `TST-CI-001` mirrors the existing `TST-DB-001` precedent in this same backlog (a TST-* compound) and the `ci · tooling` category — chosen pragmatically per the operator-control invariant's naming clause (choose + document, don't block on operator). Phase 4, `Cluster: B` (BACKLOG field shared by all Phase-4; the kickoff A/B/C is an analytic overlay — this one's overlay = test-coverage-gap-CI-enforcement).
+- **Precedent path re-confirmed.** Template = `.github/workflows/backlog-coherence.yml` (wires `check-backlog-coherence.sh`). Gate script confirmed at `backlog/Security/2026-05-24-review-payloads/scripts/check-permission-matrix-coverage.sh` (created by TST-001 `652c336`, byte-stable, NOT modified this session).
+- **HALT-and-surfaced: trigger `paths` (learning #17 applied, operator decided).** The kickoff Suggested-fix said "(c) triggers identiques", but a byte-literal copy of `backlog-coherence.yml`'s `paths:` filter watches `backlog/Security/**/BACKLOG.md` + `check-backlog-coherence.sh` — files this gate has nothing to do with. That would leave the gate **dormant for its entire purpose**: a PR adding a new `@RequirePermissions` code without touching BACKLOG.md would never fire it. The operator-control invariant names this exact case ("triggers paths-filter qui exclurait permission-matrix changes — réel bug bloquant → HALT et surface"), so it was NOT silently substituted. Surfaced via `AskUserQuestion`; **operator decided** to adapt `paths:` to this gate's real inputs: `e2e/fixtures/permission-matrix.ts`, `apps/api/src/**`, and the gate script (exact path). This is the faithful *semantic* mirror — backlog-coherence watches its own inputs; this watches its own inputs.
+- **Forced (non-optional) divergence: discovery step collapses.** `backlog-coherence.yml` has a "find all BACKLOG.md → loop over each" step because multiple BACKLOG.md files can exist. There is exactly one matrix + one gate script here, so that step collapses to a single invocation regardless of any other decision — not an "improvement", a structural consequence. Everything else mirrored faithfully: `pull_request` trigger (PR-only — no `push` trigger added; that would be an unauthorized improvement), `ubuntu-latest`, `checkout@v4` `fetch-depth: 0`, `setup-python@v5` / `3.11`, `chmod +x`, `::group::` logging. No node/pnpm install — the gate is pure bash + python3 (matrix parsed as text), same dependency footprint as the precedent.
+- **Witness (AC#2).** YAML parser-validated (`yaml.safe_load` OK; single `check-coverage` job; triggers = the 3 operator-decided paths). Gate invocation run exactly as the workflow runs it (`chmod +x "$SCRIPT"` + `"$SCRIPT"`) → **exit 0, 94/94 coverage, diff empty**. `act` not installed in this environment → no full-runner dry-run; YAML validity + the real gate-command execution cover AC#2. The gate's RED/GREEN self-witness was already established at TST-001 closure; this task wires only the invocation.
+- **First real CI run timing.** The workflow is `pull_request`-only (faithful mirror of the precedent). It will NOT run on a push to master — it fires on the next PR that touches `apps/api/src/**`, the matrix, or the gate script. (Master CI's separate E2E job remains `skipped` behind the pre-existing ESLint-9/ajv lint breakage; that is unrelated to this gate, which is a standalone static check needing only python3.)
+- **AC#4 — N/A automatic (learning #16).** CI workflow file addition; no production code path, no audit-sensitive surface. No mutation, no audit emission possible.
+- **AC#3.** `pnpm test` 6/6 turbo tasks green (api 1710, rbac 110, web 579 — CI-config-only change cannot affect the test runners; identical to TST-001's run). `pnpm test:e2e` not executed this session (stack down, as at TST-001 closure); definitionally unaffected by a `.github/workflows` YAML addition.
 
 ---
 ### COR-001 — Hardcoded role 'ADMIN' bypass violates RBAC V4
