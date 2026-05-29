@@ -1489,3 +1489,27 @@ Append a new entry at the bottom after each Claude Code session that touched the
 - **INTERDIT respected:** AccessScopeService consumed/mirrored, NOT modified (carry-forward #3 = extension); `users.service.findOne` untouched (SEC-030 closed); no leaves/milestones/epics; no Cluster-C bundle.
 - **Out of scope (next session):** Cluster C (TST-001 then TST-018, test-coverage-gap). **HANDOVER refresh now due** (Cluster B finish-line closed via SEC-031; 1 undeployed runtime delta) — separate session. Optional: deploy `198160f`. Optional: file the `getUsersPresence` list-scope adjacency.
 - **Frontend field-level regression check (post-closeout, advisor-flagged — AC#3 dimension backend `select`-object asserts can't catch):** grepped ~15 `getAll()` consumers for reads of the fields `DIRECTORY_LIST_SELECT` strips. Only `UserMultiSelect.tsx:50` + `users/[id]/suivi/page.tsx:282` read `.email`, both null-safe (`?.`) → no crash. `UserMultiSelect` keeps name search (`fullName.includes(q) || email.includes(q)`); only email-substring search goes inert for non-management — intended effect of the operator-approved payload reduction. No crash regression.
+
+## 2026-05-30 — TST-001 closed (permission-matrix backfill + coverage gate; Cluster C opened)
+
+- **Session ID:** 2026-05-30-tst-001-cluster-c-open
+- **Tasks closed:** TST-001
+- **Tasks moved to BLOCKED:** none
+- **Tasks filed:** none (3 adjacencies observed, deliberately NOT filed this session — see below)
+- **Commits:** `690644d` (IN_PROGRESS anchor), `652c336` (fix — backfill 59 entries + gate script, `[closes TST-001]`), `<pending>` (closeout).
+- **Duration:** ~1 session.
+- **What shipped:** (a) 59 backfill `PermissionEntry` rows in `e2e/fixtures/permission-matrix.ts` → distinct `action:` set now covers 100% of the 94 `@RequirePermissions` controller codes (was 35/94). (b) `scripts/check-permission-matrix-coverage.sh` (CI gate, beside `check-backlog-coherence.sh`): extracts controller codes (excludes the decorator def + `main.ts`, handles multi-arg decorators), diffs against matrix `action:` set, fails on any uncovered code. No production code touched.
+- **Witness (self-witnessing meta-test, AC#2):** gate RED pre-backfill (exit 1, 59 gaps enumerated) → GREEN post-backfill (exit 0, 94/94, diff empty). The gate IS the witness — no spec test invented (inverse of Cluster A/B siblings).
+- **Mechanism decision:** default standalone CI script confirmed; no HALT-gate fired (grep extraction stable, no Reflect/AST; gate is a static coverage diff, not a runtime check, so the existing e2e fixtures runner does not make it the natural home).
+- **Role mappings correct-by-construction:** derived from `ROLE_TEMPLATES` (rbac) via the seed test-user→template binding (admin=ADMIN, responsable=ADMIN_DELEGATED, manager=MANAGER, referent=TECHNICAL_LEAD, **contributeur=BASIC_USER**, observateur=OBSERVER_FULL) — same authority `PermissionsService`/`PermissionsGuardV2` resolves. allowed = roles whose set contains the code; denied = the rest. NOT derived from the (stale) matrix comments.
+- **AC#4:** N/A automatic — meta-test + fixture backfill, no production code path, no audit-sensitive surface.
+- **Verification:** gate exit 0; `pnpm test` 6/6 tasks green (api 1710, rbac 110, web 579 — matrix consumed only by Playwright `api-permissions.spec.ts`, so vitest unaffected); `nest build` exit 0; matrix typechecks standalone. **E2E not run in-session** (app stack down) — the 59 assertions are CI-verified and correct by construction.
+- **Precedent referenced:** TOOL-COH-001/002 (standalone `.sh` CI-gate pattern + script location).
+- **Adjacencies observed, NOT fixed, NOT filed (scope-lock + don't-file-phantoms):**
+  1. Existing matrix comment claims `contributeur → PROJECT_CONTRIBUTOR`, but seed binds contributeur-test → `BASIC_USER` (no `clients:read`) → the *existing* `clients:read` entry's `contributeur`-allowed assertion is likely wrong vs the guard. Pre-existing existing-entry issue, out of backfill-only scope.
+  2. Inherited "8 entirely-absent resources" is actually **9** — `services` also entirely absent (4 codes, 0 entries); kickoff list omitted it. Doesn't change the 59.
+  3. `auth.controller.ts` is the sole perm-first-ordering controller → `users:reset_password` real route = `POST /api/auth/reset-password-token`. The 94 codes are otherwise clean (no dups, no mal-naming).
+- **Coherence gate:** TST-001 direct closure — `652c336` carries `[closes TST-001]`, `Closed_by = 652c336`, resolves cleanly (not among the gate's reported violations). Did NOT touch the 10 pre-existing `Closed_by`-format violations (TOOL-COH-003).
+- **Deploy posture:** code/spec + CI-gate only, no migration, no runtime API change. Undeployed runtime delta unchanged at 1 (SEC-031 `198160f`); TST-001 adds no runtime delta.
+- **Out of scope (next session):** TST-018 (Cluster C sibling — localise the real role-change path first, audit-presupposition `roleId`-in-body is moot). HANDOVER refresh (post-Cluster-C) due — separate session. Did NOT touch HANDOVER.
+- **Open questions for next session:** none blocking.

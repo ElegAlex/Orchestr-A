@@ -2996,7 +2996,7 @@ grep -c 'DROP\|REVOKE\|rollback' docs/deploy/2026-05-26-phase-2-audit-hardening-
 
 ### TST-001 — Permission matrix covers only 35 of 91 permissions declared in API controllers
 
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
@@ -3033,8 +3033,18 @@ Add a unit test that diffs grep -oP "@RequirePermissions\('[^']+'" apps/api/src 
 TBD — derive test from finding description for e2e/fixtures/permission-matrix.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 652c336
+**Learnings:**
+- **Mechanism — default standalone CI script confirmed (no HALT-gate fired).** `scripts/check-permission-matrix-coverage.sh` lives beside `check-backlog-coherence.sh` and mirrors its bash+embedded-python3 shape (BASH_SOURCE/`git rev-parse` root resolution, `set -euo pipefail`). None of the three HALT triggers materialised: (a) the grep extraction is stable — every `@RequirePermissions(...)` is single-line, multi-arg decorators (`'a', 'b'`) are handled by pulling each quoted code, no Reflect/AST/snapshot needed; (b) no concrete coupling argued for a Vitest-in-apps/api import of the e2e fixture; (c) although an e2e fixtures runner exists (`api-permissions.spec.ts`), the gate is a *static coverage diff*, not a runtime assertion — a standalone script is the natural home. The e2e coupling is real but is not a gate-mechanism question.
+- **Self-witnessing fail-pre/pass-post observed (the gate IS the witness — AC#2).** Pre-backfill: gate exits 1, lists exactly 59 uncovered codes (94 controller / 35 matrix). Post-backfill: exits 0, 94/94, diff empty. Non-vacuous structurally — the RED output enumerates the 59 gaps, the GREEN proves them closed. No additional spec test invented; this is the inverse of the Cluster-A/B siblings whose witnesses were production-code specs.
+- **Pre-flight re-confirmed structural facts.** 94 unique `@RequirePermissions` codes (the gate replicates the manual extraction exactly), 35 distinct matrix actions, 59 missing, 0 stale, authoritative key = `action`. `@RequireAnyPermission` is never used on a controller (guard-comment only) → scope is cleanly `@RequirePermissions`.
+- **Convention mirrored literally.** Each backfill row is a `PermissionEntry {action, resource, method, apiEndpoint, allowedRoles, deniedRoles}`. Optional `testBody`/`description` omitted: the guard runs before body-validation pipes, so an empty body yields ≠403 for allowed roles / 403 for denied — the only thing `api-permissions.spec.ts` asserts. `:id`/param routes use `PLACEHOLDER_UUID_V4` (valid v4 → passes ParseUUIDPipe where present, 404-not-403 for allowed). No invented fields, no coverage tiers.
+- **Role mappings derived correct-by-construction from `ROLE_TEMPLATES` (rbac), NOT from matrix comments.** Ground-truthed the 6 test-user→template binding from `packages/database/prisma/seed.ts`: admin=ADMIN, responsable=ADMIN_DELEGATED, manager=MANAGER, referent=TECHNICAL_LEAD, **contributeur=BASIC_USER**, observateur=OBSERVER_FULL. Resolved each template's permission set via the same authority `PermissionsService.getPermissionsForUser` uses (`ROLE_TEMPLATES[templateKey].permissions`); allowed = roles whose set contains the code, denied = the rest — identical to `PermissionsGuardV2`'s decision. E2E not run in-session (app stack down) but the assertions are CI-verified and correct by construction.
+- **AC#4 — N/A automatic.** Meta-test + fixture backfill, no production code path touched, no audit-sensitive surface; no mutation, no audit emission possible.
+- **Adjacencies observed (NOT fixed, NOT filed — don't-file-phantoms / scope-lock):**
+  1. The matrix's clients-section comment claims `contributeur → PROJECT_CONTRIBUTOR`, but the seed binds contributeur-test → `BASIC_USER`, which lacks `clients:read` (that code lives in `PROJECT_STRUCTURE_READ`, not `COMMON_BASE`). So the *existing* `clients:read` entry's `contributeur`-allowed assertion is likely wrong vs the real guard — pre-existing, in an existing entry, out of TST-001 scope (backfill-only, no existing-entry edits).
+  2. The inherited "8 entirely-absent resources" is actually **9** — `services` is also entirely absent (all 4 codes missing, 0 existing entries); the kickoff list omitted it. Does not change the 59.
+  3. `auth.controller.ts` is the sole controller using perm-first decorator ordering (`@RequirePermissions` above `@Post`) — `users:reset_password`'s real route is `POST /api/auth/reset-password-token`. The 94 codes are otherwise clean: no duplicates, no mal-named codes, consistent naming.
 
 ---
 ### COR-001 — Hardcoded role 'ADMIN' bypass violates RBAC V4
