@@ -1,0 +1,29 @@
+name: Permission Matrix Coverage
+
+on:
+  pull_request:
+    paths:
+      - 'e2e/fixtures/permission-matrix.ts'
+      - 'apps/api/src/**'
+      - 'backlog/Security/2026-05-24-review-payloads/scripts/check-permission-matrix-coverage.sh'
+
+jobs:
+  check-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run permission-matrix coverage gate
+        run: |
+          SCRIPT="backlog/Security/2026-05-24-review-payloads/scripts/check-permission-matrix-coverage.sh"
+          chmod +x "$SCRIPT"
+          echo "::group::Checking permission-matrix coverage"
+          "$SCRIPT"
+          echo "::endgroup::"
