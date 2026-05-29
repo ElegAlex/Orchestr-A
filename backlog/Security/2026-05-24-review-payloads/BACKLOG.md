@@ -3052,7 +3052,7 @@ TBD — derive test from finding description for e2e/fixtures/permission-matrix.
 ---
 ### TST-CI-001 — Wire permission-matrix-coverage gate in CI (TST-001 follow-up)
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
