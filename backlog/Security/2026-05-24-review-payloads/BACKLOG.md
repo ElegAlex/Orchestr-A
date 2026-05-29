@@ -9439,3 +9439,54 @@ For each of the 7 stale entries, derive the correct role coverage by constructio
 **Learnings:** (empty — Claude Code fills if surprises encountered)
 
 ---
+### TST-E2E-001 — Repair semi-vacuous legacy E2E at rbac-escalation.spec.ts:186 (TST-018 follow-up)
+
+- **Status:** TODO
+- **Phase:** 4
+- **Cluster:** B
+- **Confidence:** claude-only
+- **Blocked_by:** (none — but note: the E2E job is currently `skipped` in CI behind the pre-existing ESLint-9/ajv lint breakage, so this test is not exercised in CI today; see TST-001/TST-CI-001 closeouts)
+- **Severity:** moderate
+- **Category:** test-quality · e2e · rbac
+- **File:** `e2e/tests/multi-role/rbac-escalation.spec.ts:186`
+- **Source:** Session-derived from TST-018 closeout `97ec4f7` (adjacency documented in that task's Learnings). **Naming choice:** `TST-*` family is natural (E2E test quality); compound `TST-E2E-001` avoids the `TST-001..TST-025` audit-original collision and tags the e2e sub-domain — same compound rationale as `TST-CI-001` / `TST-DB-001`. `Cluster: B` per BACKLOG field convention; analytic overlay = test-quality (e2e).
+
+**Description:**
+The legacy E2E test at `rbac-escalation.spec.ts:186` (`"CONTRIBUTEUR : PATCH /api/users/:id/role retourne 403 (escalade de rôle)"`) is **semi-vacuous** — it passes for the wrong reasons and would not detect the role-escalation failure mode it claims to guard. Three independent defects (primary-source verified this filing session at L186-204):
+1. **Wrong target.** It PATCHes `/api/users/${FAKE_PROJECT_ID}` — a non-existent UUID — so the request collapses to a **404 (existence)** before any RBAC role-escalation logic is reached. The title even says `/api/users/:id/role`, but the code hits `/api/users/:id` (no `/role` suffix), using a *project* UUID constant as a user id.
+2. **Wrong field.** It sends `data: { role: "ADMIN" }` — the `role` field, which the whitelist DTO strips; the real role-change field is `roleCode` (`PartialType(CreateUserDto)`, per TST-018). So even against a real user the payload would be a no-op stripped by validation, not a role-escalation attempt the guard rejects.
+3. **Weak assertion.** It asserts `expect([401, 403, 404]).toContain(status)` and only excludes 200 — so the 404 from defect (1) satisfies it. "Passes" ≠ "RBAC rejected the escalation".
+
+TST-018 added 2 rigorous service-level negatives + a multi-role E2E (admin re-fetch proving `role.code` unchanged) as the proper replacement; this legacy test was left untouched under scope-lock.
+
+**Root cause:**
+Test authored against the pre-V4 surface (the `role` field + a `/role` route shape) and never regrown; the assertion was written permissively (`[401,403,404]`) so existence-collapse masks the absence of a real RBAC witness.
+
+**Code evidence:**
+```
+e2e/tests/multi-role/rbac-escalation.spec.ts:186-204
+  patch(`/api/users/${FAKE_PROJECT_ID}`, { data: { role: "ADMIN" }, failOnStatusCode: false })
+  expect([401, 403, 404]).toContain(response.status())   # 404 from fake UUID passes vacuously
+```
+
+**Suggested fix:**
+One of: (a) **refactor** so it exercises the real role-escalation path — patch a *real* target user with the *real* field (`roleCode`) as a non-ADMIN caller, and assert 403 specifically (plus an admin re-fetch proving `role.code` unchanged), OR (b) **remove** it if fully redundant with the TST-018 multi-role E2E (which already witnesses the same property rigorously), OR (c) **skip with a note** if a proper repair needs substantial seed/fixture work. Decide at execution per primary-source.
+
+**Acceptance criteria:**
+1. The fix is implemented at `e2e/tests/multi-role/rbac-escalation.spec.ts:186` (refactor, remove, or annotated skip), addressing the semi-vacuity described.
+2. If repaired (not removed): proof-of-non-vacuity — stash/neutralize the role-escalation guard on the real path and confirm the test goes RED (it currently stays GREEN against a real escalation because it never reaches the guard); restore → GREEN. If removed: justify redundancy against the TST-018 multi-role E2E.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green — subject to the CI E2E job being unskipped; see Blocked_by note).
+4. N/A — e2e test-quality change, no production code path, no audit-sensitive surface.
+5. Commit message includes `[closes TST-E2E-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+npx playwright test e2e/tests/multi-role/rbac-escalation.spec.ts --project=contributeur
+# (requires full dev stack + e2e seed; see TST-018 closeout on stack-down honest posture)
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
