@@ -2996,7 +2996,7 @@ grep -c 'DROP\|REVOKE\|rollback' docs/deploy/2026-05-26-phase-2-audit-hardening-
 
 ### TST-001 — Permission matrix covers only 35 of 91 permissions declared in API controllers
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
