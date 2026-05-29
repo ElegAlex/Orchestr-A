@@ -3318,7 +3318,7 @@ pnpm test apps/api/src/users/users.controller.spec.ts  # may need creation if mi
 ---
 ### TST-018 — No spec asserts users:manage_roles flow — role changes can grant ADMIN silently
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
