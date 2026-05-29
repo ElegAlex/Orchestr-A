@@ -262,4 +262,105 @@ test.describe("RBAC — Protection contre l'escalade de privilèges", () => {
       },
     );
   });
+
+  // ─── TST-018 : escalade de rôle via le VRAI champ DTO `roleCode` ────────────
+  // L'ancien test "PATCH .../:id { role: 'ADMIN' }" (plus haut) envoyait `role`,
+  // un champ que le whitelist DTO ignore, contre un id fictif → 404 sans valeur
+  // probante. Ces tests utilisent le champ réel `roleCode`, une cible RÉELLE
+  // (seed), et re-fetchent en admin pour prouver que le rôle n'a PAS changé —
+  // c'est le re-fetch qui est le témoin, le code de statut est secondaire.
+  test.describe("RBAC — escalade de rôle via PATCH /users/:id roleCode (TST-018)", () => {
+    test(
+      "RESPONSABLE ne peut pas élever une cible à ADMIN via roleCode (rôle inchangé)",
+      { tag: "@smoke" },
+      async ({ asRole }) => {
+        const adminPage = await asRole("admin");
+
+        // 1. Localiser une cible réelle (contributeur de test) + son rôle actuel.
+        const listResp = await adminPage.request.get("/api/users?limit=1000", {
+          failOnStatusCode: false,
+        });
+        expect(listResp.status()).toBe(200);
+        const body = await listResp.json();
+        const users = Array.isArray(body) ? body : (body.data ?? []);
+        const target = users.find(
+          (u: { email?: string }) =>
+            u.email === "contributeur-test@orchestr-a.test",
+        );
+        expect(target, "seed user contributeur-test introuvable").toBeTruthy();
+        const originalRoleCode = target.role?.code;
+        expect(originalRoleCode).toBeTruthy();
+        expect(originalRoleCode).not.toBe("ADMIN");
+
+        // 2. RESPONSABLE (a users:update mais template ADMIN_DELEGATED < ADMIN)
+        //    tente l'escalade via le champ DTO réel `roleCode`.
+        const responsablePage = await asRole("responsable");
+        const escalation = await responsablePage.request.patch(
+          `/api/users/${target.id}`,
+          {
+            data: { roleCode: "ADMIN" },
+            headers: { "Content-Type": "application/json" },
+            failOnStatusCode: false,
+          },
+        );
+
+        // Refus attendu : 403 (assertCanAssignRole rejette ADMIN pour un
+        // non-ADMIN) ou 404 (cible hors périmètre → collapse non-divulguant de
+        // assertCanManageUser). JAMAIS un succès.
+        expect([401, 403, 404]).toContain(escalation.status());
+        expect(escalation.status()).not.toBe(200);
+
+        // 3. Témoin réel : re-fetch admin → le rôle de la cible est INCHANGÉ.
+        const refetch = await adminPage.request.get(
+          `/api/users/${target.id}`,
+          { failOnStatusCode: false },
+        );
+        expect(refetch.status()).toBe(200);
+        const refetched = await refetch.json();
+        expect(refetched.role?.code).toBe(originalRoleCode);
+        expect(refetched.role?.code).not.toBe("ADMIN");
+      },
+    );
+
+    test("CONTRIBUTEUR ne peut pas élever via roleCode (bloqué au guard users:update ; rôle inchangé)", async ({
+      asRole,
+    }) => {
+      const adminPage = await asRole("admin");
+
+      const listResp = await adminPage.request.get("/api/users?limit=1000", {
+        failOnStatusCode: false,
+      });
+      expect(listResp.status()).toBe(200);
+      const body = await listResp.json();
+      const users = Array.isArray(body) ? body : (body.data ?? []);
+      const target = users.find(
+        (u: { email?: string }) =>
+          u.email === "observateur-test@orchestr-a.test",
+      );
+      expect(target, "seed user observateur-test introuvable").toBeTruthy();
+      const originalRoleCode = target.role?.code;
+      expect(originalRoleCode).toBeTruthy();
+
+      const contributeurPage = await asRole("contributeur");
+      const escalation = await contributeurPage.request.patch(
+        `/api/users/${target.id}`,
+        {
+          data: { roleCode: "ADMIN" },
+          headers: { "Content-Type": "application/json" },
+          failOnStatusCode: false,
+        },
+      );
+      // CONTRIBUTEUR n'a pas users:update → refus au guard de permission.
+      expect([401, 403]).toContain(escalation.status());
+      expect(escalation.status()).not.toBe(200);
+
+      const refetch = await adminPage.request.get(`/api/users/${target.id}`, {
+        failOnStatusCode: false,
+      });
+      expect(refetch.status()).toBe(200);
+      const refetched = await refetch.json();
+      expect(refetched.role?.code).toBe(originalRoleCode);
+      expect(refetched.role?.code).not.toBe("ADMIN");
+    });
+  });
 });

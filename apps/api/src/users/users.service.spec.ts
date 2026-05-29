@@ -987,6 +987,134 @@ describe('UsersService', () => {
     });
   });
 
+  // TST-018 — negative pendant of the L845 ROLE_CHANGE happy-path. The
+  // hierarchy guard `roleHierarchy.assertCanAssignRole(callerRoleCode, roleCode)`
+  // already exists at update() (users.service.ts:500-502) and is live on the
+  // HTTP path (controller threads `caller?.role?.code` as the 3rd arg). No spec
+  // pinned the REJECTION: a non-ADMIN caller attempting a `roleCode` escalation
+  // must be refused BEFORE `prisma.user.update` runs and BEFORE any ROLE_CHANGE
+  // audit is emitted. Both services are real (RoleHierarchyService +
+  // AccessScopeService against the mock prisma — see beforeEach rationale), so
+  // these exercise the genuine guard, not a flat stub. `assertCanManageUser` is
+  // set up to PASS (caller is dept-manager of the target) so the rejection is
+  // attributable to `assertCanAssignRole`, not the perimeter gate — the
+  // proof-of-non-vacuity (stash L500-502 → these FAIL: user.update called +
+  // ROLE_CHANGE emitted) depends on that.
+  describe('role-escalation rejection (TST-018)', () => {
+    // Caller in the target's perimeter (dept-manager) so the L476
+    // assertCanManageUser gate passes; the only thing that can reject is the
+    // hierarchy guard.
+    function arrangeManageableTarget() {
+      // assertCanManageUser → user.count (exists) === 1.
+      mockPrismaService.user.count.mockResolvedValue(1);
+      // Both read sites get one object: canManageUser reads
+      // departmentId/userServices; update() reads roleId/role.code/isActive.
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'target-1',
+        roleId: 'role-old',
+        isActive: true,
+        role: { code: 'CONTRIBUTEUR' },
+        departmentId: 'dept-1',
+        userServices: [],
+      });
+      // canManageUser → caller is the manager of the target's department.
+      mockPrismaService.department.count.mockResolvedValue(1);
+      // If the guard were (wrongly) bypassed, update() would call user.update;
+      // mocking it lets the stashed-guard non-vacuity run reach ROLE_CHANGE
+      // cleanly rather than throwing a TypeError on an undefined return.
+      mockPrismaService.user.update.mockResolvedValue({
+        id: 'target-1',
+        isActive: true,
+        role: { code: 'ADMIN' },
+      });
+    }
+
+    // role.findUnique serves three sites: resolveTemplateKey (select
+    // templateKey), canAssignRole→resolveTemplateKey, and
+    // resolveAssignableRoleIdByCode (select id+isSystem). A superset object per
+    // code satisfies all. ADMIN is isSystem:false here ONLY so the stashed-guard
+    // non-vacuity run gets past resolveAssignableRoleIdByCode to user.update
+    // (real ADMIN is a system role; irrelevant when the guard rejects first).
+    function arrangeRoleLookup() {
+      mockPrismaService.role.findUnique.mockImplementation((args: any) => {
+        const code = args?.where?.code;
+        if (code === 'ADMIN')
+          return Promise.resolve({
+            id: 'role-admin',
+            isSystem: false,
+            templateKey: 'ADMIN',
+          });
+        if (code === 'RESPONSABLE')
+          return Promise.resolve({
+            id: 'role-resp',
+            isSystem: false,
+            templateKey: 'ADMIN_DELEGATED',
+          });
+        if (code === 'MANAGER')
+          return Promise.resolve({
+            id: 'role-manager',
+            isSystem: false,
+            templateKey: 'MANAGER',
+          });
+        if (code === 'CONTRIBUTEUR')
+          return Promise.resolve({
+            id: 'role-contrib',
+            isSystem: false,
+            templateKey: 'BASIC_USER',
+          });
+        return Promise.resolve(null);
+      });
+    }
+
+    it('rejects a RESPONSABLE caller escalating a target to ADMIN, with no user.update and no ROLE_CHANGE', async () => {
+      arrangeManageableTarget();
+      arrangeRoleLookup();
+
+      const callerResponsable = {
+        id: 'caller-resp-1',
+        role: { code: 'RESPONSABLE', templateKey: 'ADMIN_DELEGATED' },
+      };
+
+      await expect(
+        service.update(
+          'target-1',
+          { roleCode: 'ADMIN' },
+          'RESPONSABLE',
+          callerResponsable,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      // Invariant: rejected BEFORE the mutation and BEFORE the audit emit.
+      expect(mockPrismaService.user.update).not.toHaveBeenCalled();
+      expect(mockAuditPersistence.log).not.toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'ROLE_CHANGE' }),
+      );
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+
+    it('rejects a CONTRIBUTEUR caller escalating a target to MANAGER (generic-rank branch), with no user.update and no ROLE_CHANGE', async () => {
+      arrangeManageableTarget();
+      arrangeRoleLookup();
+
+      const callerContributeur = {
+        id: 'caller-contrib-1',
+        role: { code: 'CONTRIBUTEUR', templateKey: 'BASIC_USER' },
+      };
+
+      await expect(
+        service.update(
+          'target-1',
+          { roleCode: 'MANAGER' },
+          'CONTRIBUTEUR',
+          callerContributeur,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(mockPrismaService.user.update).not.toHaveBeenCalled();
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
+  });
+
   // OBS-004 — extends AUD-EMIT-001's emitter coverage to the remaining
   // role/admin user mutations. USER_REACTIVATED / DEPARTMENT_CHANGED /
   // SERVICE_MEMBERSHIP_CHANGED land in update(); PASSWORD_RESET_BY_ADMIN is
