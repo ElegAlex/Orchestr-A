@@ -153,10 +153,17 @@ describe('UsersController', () => {
 
       mockUsersService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10);
+      const result = await controller.findAll(ADMIN_CALLER, 1, 10);
 
       expect(result).toEqual(paginatedResult);
-      expect(mockUsersService.findAll).toHaveBeenCalledWith(1, 10, undefined);
+      // SEC-031: the caller is threaded through so the service can pick the
+      // payload projection (full vs reduced) by management tier.
+      expect(mockUsersService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        ADMIN_CALLER,
+      );
     });
 
     it('should filter users by role', async () => {
@@ -179,10 +186,15 @@ describe('UsersController', () => {
 
       mockUsersService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10, 'ADMIN');
+      const result = await controller.findAll(ADMIN_CALLER, 1, 10, 'ADMIN');
 
       expect(result.data[0].role?.code).toBe('ADMIN');
-      expect(mockUsersService.findAll).toHaveBeenCalledWith(1, 10, 'ADMIN');
+      expect(mockUsersService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        'ADMIN',
+        ADMIN_CALLER,
+      );
     });
 
     it('should use default pagination values', async () => {
@@ -193,12 +205,13 @@ describe('UsersController', () => {
 
       mockUsersService.findAll.mockResolvedValue(paginatedResult);
 
-      await controller.findAll(undefined, undefined);
+      await controller.findAll(ADMIN_CALLER, undefined, undefined);
 
       expect(mockUsersService.findAll).toHaveBeenCalledWith(
         undefined,
         undefined,
         undefined,
+        ADMIN_CALLER,
       );
     });
   });
@@ -236,11 +249,13 @@ describe('UsersController', () => {
       const departmentUsers = [mockUser];
       mockUsersService.getUsersByDepartment.mockResolvedValue(departmentUsers);
 
-      const result = await controller.getUsersByDepartment('dept-1');
+      const result = await controller.getUsersByDepartment('dept-1', ADMIN_CALLER);
 
       expect(result).toEqual(departmentUsers);
+      // SEC-031: caller threaded for horizontal scope + payload restriction.
       expect(mockUsersService.getUsersByDepartment).toHaveBeenCalledWith(
         'dept-1',
+        ADMIN_CALLER,
       );
     });
   });
@@ -250,11 +265,12 @@ describe('UsersController', () => {
       const serviceUsers = [mockUser];
       mockUsersService.getUsersByService.mockResolvedValue(serviceUsers);
 
-      const result = await controller.getUsersByService('service-1');
+      const result = await controller.getUsersByService('service-1', ADMIN_CALLER);
 
       expect(result).toEqual(serviceUsers);
       expect(mockUsersService.getUsersByService).toHaveBeenCalledWith(
         'service-1',
+        ADMIN_CALLER,
       );
     });
   });
@@ -275,10 +291,13 @@ describe('UsersController', () => {
       ];
       mockUsersService.getUsersByRole.mockResolvedValue(adminUsers);
 
-      const result = await controller.getUsersByRole('ADMIN');
+      const result = await controller.getUsersByRole('ADMIN', ADMIN_CALLER);
 
       expect(result).toEqual(adminUsers);
-      expect(mockUsersService.getUsersByRole).toHaveBeenCalledWith('ADMIN');
+      expect(mockUsersService.getUsersByRole).toHaveBeenCalledWith(
+        'ADMIN',
+        ADMIN_CALLER,
+      );
     });
   });
 

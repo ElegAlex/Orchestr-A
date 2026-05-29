@@ -140,11 +140,16 @@ export class UsersController {
     description: 'Liste des utilisateurs',
   })
   findAll(
+    @CurrentUser()
+    caller: {
+      id: string;
+      role?: { code: string; templateKey?: string | null } | null;
+    },
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('role') role?: string,
   ) {
-    return this.usersService.findAll(page, limit, role);
+    return this.usersService.findAll(page, limit, role, caller);
   }
 
   @Get('import/template')
@@ -188,8 +193,13 @@ export class UsersController {
   })
   getUsersByDepartment(
     @Param('departmentId', ParseUUIDPipe) departmentId: string,
+    @CurrentUser()
+    caller: {
+      id: string;
+      role?: { code: string; templateKey?: string | null } | null;
+    },
   ) {
-    return this.usersService.getUsersByDepartment(departmentId);
+    return this.usersService.getUsersByDepartment(departmentId, caller);
   }
 
   @Get('service/:serviceId')
@@ -199,8 +209,15 @@ export class UsersController {
     status: 200,
     description: 'Liste des utilisateurs du service',
   })
-  getUsersByService(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
-    return this.usersService.getUsersByService(serviceId);
+  getUsersByService(
+    @Param('serviceId', ParseUUIDPipe) serviceId: string,
+    @CurrentUser()
+    caller: {
+      id: string;
+      role?: { code: string; templateKey?: string | null } | null;
+    },
+  ) {
+    return this.usersService.getUsersByService(serviceId, caller);
   }
 
   @Get('role/:role')
@@ -210,8 +227,15 @@ export class UsersController {
     status: 200,
     description: 'Liste des utilisateurs avec ce rôle',
   })
-  getUsersByRole(@Param('role') role: string) {
-    return this.usersService.getUsersByRole(role);
+  getUsersByRole(
+    @Param('role') role: string,
+    @CurrentUser()
+    caller: {
+      id: string;
+      role?: { code: string; templateKey?: string | null } | null;
+    },
+  ) {
+    return this.usersService.getUsersByRole(role, caller);
   }
 
   @Get(':id')

@@ -196,62 +196,31 @@ export class UsersService {
     return user;
   }
 
-  async findAll(page: number = 1, limit: number = 20, roleCode?: string) {
+  async findAll(
+    page: number = 1,
+    limit: number = 20,
+    roleCode?: string,
+    caller?: AccessUser,
+  ) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
 
     const where = roleCode ? { role: { code: roleCode } } : {};
+
+    // SEC-031: payload restriction only — the directory list is intentionally
+    // NOT where-scoped (see FULL_LIST_SELECT comment). Management-tier callers
+    // see the sensitive fields; a plain directory caller gets the reduced
+    // projection.
+    const isManagement = await this.accessScope.hasAny(caller, ['users:manage']);
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
         skip,
         take: safeLimit,
-        select: {
-          id: true,
-          email: true,
-          login: true,
-          firstName: true,
-          lastName: true,
-          roleId: true,
-          role: {
-            select: {
-              id: true,
-              code: true,
-              label: true,
-              templateKey: true,
-              isSystem: true,
-            },
-          },
-          departmentId: true,
-          avatarUrl: true,
-          avatarPreset: true,
-          isActive: true,
-          createdAt: true,
-          department: {
-            select: {
-              id: true,
-              name: true,
-              managerId: true,
-            },
-          },
-          userServices: {
-            select: {
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
-          managedServices: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
+        select: isManagement
+          ? UsersService.FULL_LIST_SELECT
+          : UsersService.DIRECTORY_LIST_SELECT,
         orderBy: {
           lastName: 'asc',
         },
@@ -375,6 +344,98 @@ export class UsersService {
             name: true,
           },
         },
+      },
+    },
+  } as const;
+
+  // SEC-031: list (GET /users) projections. Unlike findOne, the list is NOT
+  // horizontally where-scoped — directory visibility ("qui est qui à quel
+  // service") is preserved per SEC-030's design intent (operator decision
+  // 2026-05-29). Only the payload is restricted: management-tier callers
+  // (`users:manage`) get the full list select; a plain directory caller gets
+  // the reduced one (email/login + audit metadata stripped, same fields
+  // DIRECTORY_USER_SELECT drops). The returned user *set* is identical.
+  private static readonly FULL_LIST_SELECT = {
+    id: true,
+    email: true,
+    login: true,
+    firstName: true,
+    lastName: true,
+    roleId: true,
+    role: {
+      select: {
+        id: true,
+        code: true,
+        label: true,
+        templateKey: true,
+        isSystem: true,
+      },
+    },
+    departmentId: true,
+    avatarUrl: true,
+    avatarPreset: true,
+    isActive: true,
+    createdAt: true,
+    department: {
+      select: {
+        id: true,
+        name: true,
+        managerId: true,
+      },
+    },
+    userServices: {
+      select: {
+        service: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    },
+    managedServices: {
+      select: {
+        id: true,
+        name: true,
+      },
+    },
+  } as const;
+
+  private static readonly DIRECTORY_LIST_SELECT = {
+    id: true,
+    firstName: true,
+    lastName: true,
+    role: {
+      select: {
+        id: true,
+        code: true,
+        label: true,
+      },
+    },
+    departmentId: true,
+    avatarUrl: true,
+    avatarPreset: true,
+    isActive: true,
+    department: {
+      select: {
+        id: true,
+        name: true,
+      },
+    },
+    userServices: {
+      select: {
+        service: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    },
+    managedServices: {
+      select: {
+        id: true,
+        name: true,
       },
     },
   } as const;
@@ -1054,11 +1115,21 @@ export class UsersService {
     return { message: 'Mot de passe réinitialisé avec succès' };
   }
 
-  async getUsersByDepartment(departmentId: string) {
+  // SEC-031: the getUsersBy* helpers get the full treatment (horizontal
+  // where-scope via userReadWhere + payload reduction). Unlike findAll they
+  // have no live frontend consumer (service-layer + unit tests only), so
+  // scoping them carries no app-wide-dropdown blast radius. Management-tier
+  // callers (`users:manage`) resolve to an empty scope (every user) + full
+  // payload (incl. email); a directory caller gets the OR-bucketed scope and
+  // the reduced payload (email + role.templateKey stripped).
+  async getUsersByDepartment(departmentId: string, caller?: AccessUser) {
+    const scopeWhere = await this.accessScope.userReadWhere(caller);
+    const isManagement = await this.accessScope.hasAny(caller, ['users:manage']);
     return this.prisma.user.findMany({
       where: {
         departmentId,
         isActive: true,
+        ...scopeWhere,
       },
       select: {
         id: true,
@@ -1066,9 +1137,14 @@ export class UsersService {
         lastName: true,
         avatarUrl: true,
         avatarPreset: true,
-        email: true,
+        ...(isManagement ? { email: true } : {}),
         role: {
-          select: { id: true, code: true, label: true, templateKey: true },
+          select: {
+            id: true,
+            code: true,
+            label: true,
+            ...(isManagement ? { templateKey: true } : {}),
+          },
         },
         userServices: {
           select: {
@@ -1084,7 +1160,9 @@ export class UsersService {
     });
   }
 
-  async getUsersByService(serviceId: string) {
+  async getUsersByService(serviceId: string, caller?: AccessUser) {
+    const scopeWhere = await this.accessScope.userReadWhere(caller);
+    const isManagement = await this.accessScope.hasAny(caller, ['users:manage']);
     return this.prisma.user.findMany({
       where: {
         userServices: {
@@ -1093,6 +1171,7 @@ export class UsersService {
           },
         },
         isActive: true,
+        ...scopeWhere,
       },
       select: {
         id: true,
@@ -1100,19 +1179,27 @@ export class UsersService {
         lastName: true,
         avatarUrl: true,
         avatarPreset: true,
-        email: true,
+        ...(isManagement ? { email: true } : {}),
         role: {
-          select: { id: true, code: true, label: true, templateKey: true },
+          select: {
+            id: true,
+            code: true,
+            label: true,
+            ...(isManagement ? { templateKey: true } : {}),
+          },
         },
       },
     });
   }
 
-  async getUsersByRole(roleCode: string) {
+  async getUsersByRole(roleCode: string, caller?: AccessUser) {
+    const scopeWhere = await this.accessScope.userReadWhere(caller);
+    const isManagement = await this.accessScope.hasAny(caller, ['users:manage']);
     return this.prisma.user.findMany({
       where: {
         role: { code: roleCode },
         isActive: true,
+        ...scopeWhere,
       },
       select: {
         id: true,
@@ -1120,7 +1207,7 @@ export class UsersService {
         lastName: true,
         avatarUrl: true,
         avatarPreset: true,
-        email: true,
+        ...(isManagement ? { email: true } : {}),
         departmentId: true,
       },
     });

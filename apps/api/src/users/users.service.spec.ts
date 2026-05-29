@@ -478,6 +478,57 @@ describe('UsersService', () => {
         }),
       );
     });
+
+    // SEC-031: findAll is payload-only — directory visibility (the returned
+    // user SET) is preserved per SEC-030's design intent; only the per-row
+    // payload is restricted for non-management callers.
+    const managementCaller = {
+      id: 'mgr-1',
+      role: { code: 'ADMIN', templateKey: 'ADMIN' },
+    };
+    const directoryCaller = {
+      id: 'caller-1',
+      role: { code: 'CONTRIBUTEUR', templateKey: 'PROJECT_CONTRIBUTOR' },
+    };
+
+    it('SEC-031: a management caller gets the full list payload (email/login), set NOT scoped', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:manage']);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.user.count.mockResolvedValue(0);
+
+      await service.findAll(1, 50, undefined, managementCaller);
+
+      const args = mockPrismaService.user.findMany.mock.calls[0][0];
+      // Full payload: sensitive fields exposed to management.
+      expect(args.select.email).toBe(true);
+      expect(args.select.login).toBe(true);
+      // Set NOT horizontally scoped — no OR buckets merged.
+      expect(args.where).toEqual({});
+      expect(args.where.OR).toBeUndefined();
+    });
+
+    it('SEC-031: a directory caller gets the reduced list payload (no email/login) but the SAME set (no where-scope)', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:read']);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.user.count.mockResolvedValue(0);
+
+      await service.findAll(1, 50, undefined, directoryCaller);
+
+      const args = mockPrismaService.user.findMany.mock.calls[0][0];
+      // Proof-of-defect: pre-fix the list exposed email/login to a directory
+      // caller; post-fix they are stripped.
+      expect(args.select.email).toBeUndefined();
+      expect(args.select.login).toBeUndefined();
+      // Directory fields still present.
+      expect(args.select.firstName).toBe(true);
+      expect(args.select.role).toBeDefined();
+      // Set unchanged: no horizontal scope — same users as management would see.
+      expect(args.where).toEqual({});
+      expect(args.where.OR).toBeUndefined();
+      // count uses the same unscoped where (totals reflect the full directory).
+      const countArgs = mockPrismaService.user.count.mock.calls[0][0];
+      expect(countArgs.where).toEqual({});
+    });
   });
 
   describe('findOne', () => {
@@ -1685,15 +1736,27 @@ describe('UsersService', () => {
     });
   });
 
+  // SEC-031: the getUsersBy* helpers get the FULL treatment (horizontal
+  // where-scope via userReadWhere + payload reduction) — they have no live
+  // frontend consumer so scoping carries no app-wide-dropdown blast radius.
+  const sec031ManagementCaller = {
+    id: 'mgr-1',
+    role: { code: 'ADMIN', templateKey: 'ADMIN' },
+  };
+  const sec031DirectoryCaller = {
+    id: 'caller-1',
+    role: { code: 'CONTRIBUTEUR', templateKey: 'PROJECT_CONTRIBUTOR' },
+  };
+
   describe('getUsersByDepartment', () => {
-    it('should return users for a department', async () => {
+    it('management caller: full payload (email) and an unscoped where', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:manage']);
       const mockUsers = [
         {
           id: 'user-1',
           firstName: 'Jean',
           lastName: 'Dupont',
           email: 'jean.dupont@example.com',
-          role: 'CONTRIBUTEUR',
           userServices: [],
         },
         {
@@ -1701,64 +1764,95 @@ describe('UsersService', () => {
           firstName: 'Marie',
           lastName: 'Martin',
           email: 'marie.martin@example.com',
-          role: 'MANAGER',
           userServices: [],
         },
       ];
 
       mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
 
-      const result = await service.getUsersByDepartment('dept-1');
+      const result = await service.getUsersByDepartment(
+        'dept-1',
+        sec031ManagementCaller,
+      );
 
       expect(result).toHaveLength(2);
       expect(result[0].firstName).toBe('Jean');
-      expect(result[1].firstName).toBe('Marie');
-      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            departmentId: 'dept-1',
-            isActive: true,
-          },
-        }),
-      );
+      const args = mockPrismaService.user.findMany.mock.calls[0][0];
+      // users:manage → empty scope → where unchanged.
+      expect(args.where).toEqual({ departmentId: 'dept-1', isActive: true });
+      expect(args.select.email).toBe(true);
+      expect(args.select.role.select.templateKey).toBe(true);
+    });
+
+    it('SEC-031: directory caller gets the scoped where (OR buckets) and the reduced payload (no email/templateKey)', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:read']);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+
+      await service.getUsersByDepartment('dept-1', sec031DirectoryCaller);
+
+      const args = mockPrismaService.user.findMany.mock.calls[0][0];
+      // Horizontal scope merged with the base filter.
+      expect(args.where.departmentId).toBe('dept-1');
+      expect(args.where.isActive).toBe(true);
+      expect(args.where.OR).toBeDefined();
+      expect(args.where.OR).toContainEqual({ id: 'caller-1' });
+      // Reduced payload.
+      expect(args.select.email).toBeUndefined();
+      expect(args.select.role.select.templateKey).toBeUndefined();
+      expect(args.select.firstName).toBe(true);
     });
   });
 
   describe('getUsersByService', () => {
-    it('should return users for a service', async () => {
+    it('management caller: full payload (email) and an unscoped where', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:manage']);
       const mockUsers = [
         {
           id: 'user-1',
           firstName: 'Jean',
           lastName: 'Dupont',
           email: 'jean.dupont@example.com',
-          role: 'CONTRIBUTEUR',
         },
       ];
 
       mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
 
-      const result = await service.getUsersByService('service-1');
+      const result = await service.getUsersByService(
+        'service-1',
+        sec031ManagementCaller,
+      );
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('user-1');
-      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            userServices: {
-              some: {
-                serviceId: 'service-1',
-              },
-            },
-            isActive: true,
-          },
-        }),
-      );
+      const args = mockPrismaService.user.findMany.mock.calls[0][0];
+      expect(args.where).toEqual({
+        userServices: { some: { serviceId: 'service-1' } },
+        isActive: true,
+      });
+      expect(args.select.email).toBe(true);
+    });
+
+    it('SEC-031: directory caller gets the scoped where (OR buckets) and the reduced payload (no email)', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:read']);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+
+      await service.getUsersByService('service-1', sec031DirectoryCaller);
+
+      const args = mockPrismaService.user.findMany.mock.calls[0][0];
+      expect(args.where.userServices).toEqual({
+        some: { serviceId: 'service-1' },
+      });
+      expect(args.where.isActive).toBe(true);
+      expect(args.where.OR).toBeDefined();
+      expect(args.where.OR).toContainEqual({ id: 'caller-1' });
+      expect(args.select.email).toBeUndefined();
+      expect(args.select.role.select.templateKey).toBeUndefined();
     });
   });
 
   describe('getUsersByRole', () => {
-    it('should return users for a role', async () => {
+    it('management caller: full payload (email) and an unscoped where', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:manage']);
       const mockUsers = [
         {
           id: 'user-1',
@@ -1771,18 +1865,31 @@ describe('UsersService', () => {
 
       mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
 
-      const result = await service.getUsersByRole('ADMIN');
+      const result = await service.getUsersByRole(
+        'ADMIN',
+        sec031ManagementCaller,
+      );
 
       expect(result).toHaveLength(1);
       expect(result[0].email).toBe('admin@example.com');
-      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            role: { code: 'ADMIN' },
-            isActive: true,
-          },
-        }),
-      );
+      const args = mockPrismaService.user.findMany.mock.calls[0][0];
+      expect(args.where).toEqual({ role: { code: 'ADMIN' }, isActive: true });
+      expect(args.select.email).toBe(true);
+    });
+
+    it('SEC-031: directory caller gets the scoped where (OR buckets) and the reduced payload (no email)', async () => {
+      mockGetPermissionsForRole.mockResolvedValue(['users:read']);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+
+      await service.getUsersByRole('ADMIN', sec031DirectoryCaller);
+
+      const args = mockPrismaService.user.findMany.mock.calls[0][0];
+      expect(args.where.role).toEqual({ code: 'ADMIN' });
+      expect(args.where.isActive).toBe(true);
+      expect(args.where.OR).toBeDefined();
+      expect(args.where.OR).toContainEqual({ id: 'caller-1' });
+      expect(args.select.email).toBeUndefined();
+      expect(args.select.departmentId).toBe(true);
     });
   });
 
