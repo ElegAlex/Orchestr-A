@@ -9386,3 +9386,56 @@ npx vitest run src/users   # in apps/api (turbo treats the path as a task name �
 - **Frontend field-level regression check (AC#3 dimension the backend `select`-object asserts can't catch — advisor-flagged, verified):** `DIRECTORY_LIST_SELECT` strips `email/login/roleId/role.templateKey/role.isSystem/createdAt/department.managerId` from the non-management `findAll` payload. Grepped every `getAll()` consumer (~15 components) for field-level reads of the stripped fields. Only two read `.email`: `UserMultiSelect.tsx:50` (`user.email?.toLowerCase() || ""`) and `users/[id]/suivi/page.tsx:282` (`u.email?.toLowerCase().includes(q)`) — **both null-safe (optional chaining)** → no crash. `UserMultiSelect` filters `fullName.includes(q) || email.includes(q)`, so name search stays fully functional; only email-substring search silently returns no matches for non-management — the intended, operator-approved effect of stripping email. No other stripped field is read in a crash-prone way. Prod already tolerates email-absence for non-management via SEC-030's `findOne`. **No crash regression; minor email-search degradation is by design.**
 
 ---
+### TST-MTX-001 — Correct 7 stale RBAC matrix entries vs ROLE_TEMPLATES V4 (TST-001 follow-up)
+
+- **Status:** TODO
+- **Phase:** 4
+- **Cluster:** B
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** moderate
+- **Category:** test-fixtures · rbac · correctness
+- **File:** `e2e/fixtures/permission-matrix.ts`
+- **Source:** Session-derived from TST-001 closeout `652c336` (oracle-verification Learnings). **Naming choice:** `TST-*` family is natural (the matrix is a test fixture); the bare `TST-NNN` slots collide with the audit-original `TST-001..TST-025` range, so a compound `TST-MTX-001` is used — mirrors the existing `TST-CI-001` / `TST-DB-001` compound precedent in this backlog and tags the matrix sub-domain. (COR-* was the alternative — correctness of existing entries — but the artifact is a fixture, so the TST sub-family is the better home. Documented per the operator-control invariant's naming clause: choose + document, don't block.) `Cluster: B` follows the BACKLOG field convention (all Phase-4 tasks carry `Cluster: B`); the analytic overlay places this under test-fixtures-correctness.
+
+**Description:**
+TST-001's oracle verification (re-deriving role coverage by construction from `ROLE_TEMPLATES` via the E2E_SEED test-user→template binding, then diffing against the 35 pre-existing matrix entries) found **28/35 reproduce exactly; 7 diverge**. The 7 divergences are pre-existing *stale existing entries* whose `allowedRoles`/`deniedRoles` contradict the current V4 `ROLE_TEMPLATES` for the E2E-seed roles (referent / contributeur / observateur cells). They were NOT fixed in TST-001 (backfill-only scope; existing entries out of scope). The exact 7 (primary-source re-verified this filing session):
+- `users:read`, `departments:read`, `predefined_tasks:view` — all in `COMMON_BASE` → universal to every template, but the matrix still **denies** referent + contributeur.
+- `projects:read`, `clients:read`, `third_parties:read` — in `PROJECT_STRUCTURE_READ`, **not** `COMMON_BASE` → absent from BASIC_USER, but the matrix still **allows** contributeur (spot-verified: `permission-matrix.ts` `projects:read` `allowedRoles` includes `"contributeur"`).
+- `reports:view` — OBSERVER_FULL has it, but the matrix **denies** observateur.
+
+**Root cause:**
+Fossils of the pre-V4 RBAC migration. The matrix's role-mapping comment header (`permission-matrix.ts:18` — actual text `contributeur → CONTRIBUTEUR (tâches orphelines + gestion personnelle)`) is stale: contributeur was remapped to BASIC_USER (project-scoped → self-service) and the role-assertions in these 7 entries were never regrown. The matrix file was never re-baselined after `ROLE_TEMPLATES` V4 landed. (NB: TST-001's committed Learnings + this contract's Source template both describe the fossil comment as `contributeur → PROJECT_CONTRIBUTOR`; the literal `PROJECT_CONTRIBUTOR` string appears nowhere in the file — the actual comment is `→ CONTRIBUTEUR`. Substance unchanged: the staleness is in the role-coverage cells, count still 7. Imprecision noted, not retro-edited — see HANDOVER §contradictions.)
+
+**Code evidence:**
+```
+# TST-001 oracle method (reproducible): derive each ROLE_TEMPLATES[templateKey].permissions set
+# via the same authority PermissionsService.getPermissionsForUser uses, over the 6 E2E_SEED
+# test-user→template bindings (admin=ADMIN, responsable=ADMIN_DELEGATED, manager=MANAGER,
+# referent=TECHNICAL_LEAD, contributeur=BASIC_USER, observateur=OBSERVER_FULL), then diff
+# allowedRoles/deniedRoles against the 35 existing distinct matrix codes → 28 reproduce, 7 diverge.
+# Spot-check this session: permission-matrix.ts:55-67 — projects:read allowedRoles includes "contributeur"
+#   (contradicts BASIC_USER, which lacks PROJECT_STRUCTURE_READ).
+```
+
+**Suggested fix:**
+For each of the 7 stale entries, derive the correct role coverage by construction from `ROLE_TEMPLATES` via the E2E_SEED binding (TST-001 methodology), and replace the stale `allowedRoles`/`deniedRoles`. Drop the fossil role-mapping comment so it no longer implies `contributeur → CONTRIBUTEUR/PROJECT_CONTRIBUTOR`. **NO production-code modification** — fixture-only. NB: the TST-001 gate `check-permission-matrix-coverage.sh` does NOT detect these (it checks coverage = every controller code has a matrix row, NOT correctness vs templates). Whether a second gate "matrix-correctness vs ROLE_TEMPLATES" deserves a separate filing is left as a don't-pre-file observation for the execution session.
+
+**Acceptance criteria:**
+1. The fix is implemented in `e2e/fixtures/permission-matrix.ts`, addressing the exact 7 stale entries described.
+2. The TST-001 oracle method, re-run post-fix over all 35 (now-corrected) entries, reproduces **35/35, 0 divergent** (was 28/35). This is the non-vacuity witness: the diff that currently flags 7 must flag 0 after.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green; matrix is consumed only by Playwright).
+4. N/A — test fixture, no production code path, no audit-sensitive surface.
+5. Commit message includes `[closes TST-MTX-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+# Re-run the TST-001 oracle derivation over the corrected matrix → expect 35/35 reproduce, 0 divergent.
+# (Methodology: ROLE_TEMPLATES + E2E_SEED binding, per TST-001 Learnings.)
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
