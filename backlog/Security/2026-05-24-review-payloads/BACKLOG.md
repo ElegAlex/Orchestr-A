@@ -9242,7 +9242,7 @@ pnpm --filter database db:seed && \
 ---
 ### SEC-031 — GET /users list + getUsersBy* helpers have no horizontal scope filter — any users:read holder enumerates the full directory
 
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** claude-only
@@ -9271,9 +9271,14 @@ grep -rn "this\.usersService\.findAll\|getUsersBy" apps/api/src
 **Suggested fix:**
 Apply `AccessScopeService.userReadWhere` (created by SEC-030) at the `users.service.ts` layer — `findAll` + the `getUsersBy*` helpers — merging the scope `WhereInput` with the existing filters. Apply the same payload restriction (reduced select for non-management) consistent with SEC-030's `FULL_USER_SELECT` vs `DIRECTORY_USER_SELECT`. Literal mirror of the SEC-030 single-resource fix, on the list routes.
 
+**Operator decision — 2026-05-29 (HALT-and-resume at execution pre-flight; mirror DAT-037/DAT-035 Phase-3 design-decision pattern):**
+Execution-time primary-source evidence revised the `findAll` half of the suggested fix. (1) **SEC-030's own Learnings explicitly preserve directory visibility on the list endpoints** ("tout agent a besoin de voir qui est qui à quel service" — `users:read` = `ANNUAIRE_READ`; the closeout states "broad directory visibility now rides on the still-unscoped list endpoints"). (2) **New frontend evidence** (per-helper grep, not available to the doc-only filing session): `usersService.getAll()` (→ `findAll`) feeds ~15 app-wide dropdowns (task assignee, project members, event attendees, planning), so where-scoping it would narrow every dropdown to same-service for non-management roles — reversing the SEC-030 design intent. Where-scoping `findAll` and "out-of-scope users must not appear" (original AC#2) are mutually exclusive with that legitimate visibility.
+- **`findAll` → payload-only.** Strip the SEC-030 sensitive fields (email, login + the metadata `DIRECTORY_USER_SELECT` already drops) for non-management callers; **do NOT where-scope** `findAll`. Directory visibility (same user set) preserved per SEC-030 design intent.
+- **`getUsersByDepartment` / `getUsersByService` / `getUsersByRole` → full treatment** (where-scope via `userReadWhere` + payload reduction). Per-helper frontend grep confirmed **none has a live consumer** (service-layer + unit tests only) → none feeds an app-wide dropdown → all three stay CAS A. (If any had, the same per-helper option-2 carve-out would apply — decision is per-helper, not blanket.)
+
 **Acceptance criteria:**
-1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
-2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after — multi-scenario witness (4 buckets × admin/non-admin), as SEC-030. Do not commit if this property cannot be demonstrated.
+1. The fix described in **Suggested fix** (as revised by the Operator decision above) is implemented in code, addressing the exact failure mode described in **Description**.
+2. **(AMENDED 2026-05-29 per Operator decision.)** A test exists that exercises the original failure mode: it FAILS before the fix, PASSES after — multi-scenario witness (management vs non-management). For `findAll` the proof-of-defect is the **payload diff** (non-management pre-fix sees email/login in the list; post-fix does not), with the **returned user set unchanged** (no where-scope). For `getUsersBy*` the witness is both **scope diff** (non-management gets `userReadWhere` OR-buckets merged into the where) **and** payload diff. Do not commit if this property cannot be demonstrated.
 3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
 4. **N/A — read-path (users-list), not an audit-sensitive mutation.** Per HANDOVER learning #16 the reason is path-specific, not inherited from a sibling: the list/`getUsersBy*` routes are reads, with no delete / RBAC mutation / password reset, so no `audit_logs` entry is created.
 5. Commit message includes `[closes SEC-031]`.
