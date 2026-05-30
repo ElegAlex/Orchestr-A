@@ -12,7 +12,7 @@
 ### Verdict global
 Le code est **fonctionnellement riche mais structurellement fragile**. Trois familles de risques bloquent la mise en production en l'état :
 
-1. **Le journal d'audit est théâtral.** Les évènements RGPD/Cour des Comptes (login, approbation de congés, changement de rôle, accès aux documents) partent en `console.log` JSON et **ne sont pas persistés**. Deux implémentations d'audit coexistent (`AuditService` console-only vs `AuditPersistenceService` DB), aucune n'est reliée aux flux sensibles. Append-only « par convention ». Aucune retention. **Un auditeur ne peut pas reconstituer qui a approuvé quel congé à quelle date avec quelles permissions effectives au moment T.**
+1. **Le journal d'audit est théâtral.** Les évènements RGPD (login, approbation de congés, changement de rôle, accès aux documents) partent en `console.log` JSON et **ne sont pas persistés**. Deux implémentations d'audit coexistent (`AuditService` console-only vs `AuditPersistenceService` DB), aucune n'est reliée aux flux sensibles. Append-only « par convention ». Aucune retention. **Un auditeur ne peut pas reconstituer qui a approuvé quel congé à quelle date avec quelles permissions effectives au moment T.**
 
 2. **Le RBAC V4 a un fond ouvert.** Le guard global `PermissionsGuardV2` est en mode `permissive` par défaut (variable d'env non documentée dans `.env.production.example`) — toute route qui oublie `@RequirePermissions` est ouverte à tout authentifié. Les checks de périmètre horizontal manquent sur `PATCH /users/:id`, `GET /users/:id`, `POST /users/:id/reset-password` (qui bypass la hiérarchie de rôles). Du code de bypass `if (userRole === 'ADMIN')` subsiste dans `epics` et `milestones` malgré la règle « no hardcoded roles ». Et la matrice de permissions E2E couvre **35 / 91** permissions déclarées par les contrôleurs.
 
@@ -37,7 +37,7 @@ Le code est **fonctionnellement riche mais structurellement fragile**. Trois fam
 
 - **JWT access tokens non révoqués** lors d'un reset de mot de passe (fenêtre d'attaque ≤ 15 min)
 - **0 trigger DB** sur audit_logs malgré le commentaire « append-only »
-- **0 retention policy** sur audit_logs (Cour des Comptes attend 5-10 ans)
+- **0 retention policy** sur audit_logs (rétention longue attendue, 5-10 ans)
 - **112 `console.*`** côté frontend sans logger ni scrubbing PII
 - **0 Sentry / 0 métriques Prometheus / 0 request-id propagé**
 - **18 `test.skip(!projectId, …)`** dans la suite IDOR (silencieusement verte si beforeAll échoue)
@@ -48,7 +48,7 @@ Le code est **fonctionnellement riche mais structurellement fragile**. Trois fam
 
 ## Cluster analysis — causes racines partagées
 
-### Cluster A — « L'audit est théâtral » (Cour des Comptes blocker)
+### Cluster A — « L'audit est théâtral » (blocker)
 **Findings :** OBS-001/002/003/004/005/006/007/012/018/020/021/024, DAT-001/002/009/021, TST-011 (17 findings).
 **Cause racine :** Deux implémentations d'audit (`AuditService` Logger vs `AuditPersistenceService` Prisma) coexistent depuis un refactor inachevé. Aucun flux sensible (auth, congés, RBAC, documents, exports, backfills) n'est branché sur la version persistante. L'immutabilité est une convention en commentaire. Aucune politique de conservation, aucun hash chain, aucun snapshot du rôle/template au moment de la décision, aucun request-id propagé, aucune métrique.
 **Remédiation transversale :** unifier les deux services en un seul écrivant en DB, ajouter un trigger Postgres BEFORE UPDATE/DELETE qui RAISE EXCEPTION, ajouter `(prevHash, rowHash)` pour l'intégrité chaînée, snapshot `{actor.roleCode, templateKey, permissions[]}` à chaque évènement, partitionnement mensuel + archivage WORM, propagation request-id Nginx → Fastify → audit_logs.
@@ -80,7 +80,7 @@ Le code est **fonctionnellement riche mais structurellement fragile**. Trois fam
 
 ### Cluster G — « Cascade destructive vs obligations de conservation »
 **Findings :** DAT-007/008/022/025/026 (5 findings).
-**Cause racine :** Cascade `ON DELETE` choisi pour la commodité du nettoyage en dev, en conflit avec le Code du Travail (conservation 5 ans des congés) et avec le besoin de reconstitution Cour des Comptes. Hard-delete d'un projet purge snapshots/tasks/documents/events. Hard-delete d'un user purge leave/timeentry history. Department delete null-ifie silencieusement le rattachement RBAC. Document.uploadedBy n'a pas de FK. User n'a pas de `deletedAt`.
+**Cause racine :** Cascade `ON DELETE` choisi pour la commodité du nettoyage en dev, en conflit avec le Code du Travail (conservation 5 ans des congés) et avec le besoin de reconstitution historique. Hard-delete d'un projet purge snapshots/tasks/documents/events. Hard-delete d'un user purge leave/timeentry history. Department delete null-ifie silencieusement le rattachement RBAC. Document.uploadedBy n'a pas de FK. User n'a pas de `deletedAt`.
 **Remédiation transversale :** remplacer hard-delete par soft-delete + anonymisation RGPD pour User ; passer `Leave.user` → `SetNull` avec snapshot des nom/prénom au moment de la suppression ; ajouter audit row sur department delete (trigger) ; ajouter FK + index sur `Document.uploadedBy`.
 
 ### Cluster H — « Suite de tests théâtralement verte »
@@ -237,7 +237,7 @@ Concaténation rapide : `jq -s 'add' docs/security/2026-05-24-review-payloads/*.
 ## Prochaines étapes recommandées
 
 1. **Stop the bleed** : SEC-001 (guard enforce), SEC-002/003 (scope users), DAT-001 (tx audit), DAT-005 (Decimal migration plan), COR-003 (holidays in leave calc).
-2. **Audit Cour des Comptes ready** : Cluster A complet — unification AuditService, trigger immutabilité, snapshot rôle/template, request-id propagation, retention policy.
+2. **Audit log ready** : Cluster A complet — unification AuditService, trigger immutabilité, snapshot rôle/template, request-id propagation, retention policy.
 3. **Defense in depth schema** : Cluster F — CHECK constraints, EXCLUDE GIST sur Leave, drop `leaves.type` legacy, indexes manquants (DAT-010/011, PER-010..013).
 4. **RBAC complétude** : régénérer la matrice E2E depuis `grep @RequirePermissions`, supprimer hardcoded ADMIN, intégrer scope dans users/leaves reads.
 5. **Tests sérieux** : remplacer skip-on-failure par assertions, ajouter négatifs systématiques, ajouter spec d'intégration Postgres pour tx serializable, supprimer E2E legacy.

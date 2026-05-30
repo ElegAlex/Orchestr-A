@@ -1,4 +1,4 @@
-# ORCHESTRA — Security Audit Remediation Backlog
+# ORCHESTRA — Security Remediation Backlog
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
@@ -31,7 +31,7 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
-These findings were independently flagged by both Claude Code's adversarial review and OpenAI Codex's cross-review. Defensible to an auditor as not-an-hallucination.
+These findings were independently flagged by both Claude Code's adversarial review and OpenAI Codex's cross-review.
 
 | ID | Title |
 | --- | --- |
@@ -58,7 +58,7 @@ See `CLAUDE_SESSION_CONTRACT.md` in this directory for the exact session protoco
 ---
 
 
-## Phase 1 — Stop the bleed (audit-prescribed blockers)
+## Phase 1 — Stop the bleed (prescribed blockers)
 *12 tasks in this phase.*
 
 ### COR-003 — Leave day calculation never subtracts public holidays
@@ -226,8 +226,8 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
   - Postgres storage (Decimal columns): exact ✓
   - SQL aggregation via `prisma.groupBy({ _sum })` / `aggregate`: exact (Postgres sums in Decimal) ✓
   - JS-side aggregation via `array.reduce((sum, e) => sum + Number(e.hours), 0)`: re-exposed to IEEE-754 drift ⚠️
-  Why this is acceptable for the Cour des Comptes audit posture: what an auditor can recompute is the SQL-side ledger, and that is exact. JS-side drifts are display-layer artefacts that do not falsify the grand livre. The compromise holds for now.
-  - **DAT-005-followup (not yet ticketed):** for audit-grade end-to-end precision, eliminate the `Number()` coercions in the JS-side aggregation paths in favour of `Prisma.Decimal` arithmetic (`Decimal.add`/`.mul`/etc.), converting to `number` only at the final presentation boundary. Touch points are the same files listed in the `number + Decimal` Learning above; the highest-value targets are the HR balance paths in `leaves.service.ts` (`getLeaveBalance`, `getAvailableDays`, `getPendingDays`) since those are the legally observable totals.
+  Why this is acceptable: what can be recomputed is the SQL-side ledger, and that is exact. JS-side drifts are display-layer artefacts that do not falsify the grand livre. The compromise holds for now.
+  - **DAT-005-followup (not yet ticketed):** for end-to-end precision, eliminate the `Number()` coercions in the JS-side aggregation paths in favour of `Prisma.Decimal` arithmetic (`Decimal.add`/`.mul`/etc.), converting to `number` only at the final presentation boundary. Touch points are the same files listed in the `number + Decimal` Learning above; the highest-value targets are the HR balance paths in `leaves.service.ts` (`getLeaveBalance`, `getAvailableDays`, `getPendingDays`) since those are the legally observable totals.
 
 ---
 ### SEC-001 — RBAC guard defaults to permissive mode — uncovered routes silently allow access
@@ -691,7 +691,7 @@ pnpm --filter database exec prisma migrate dev --create-only --name _probe  # su
 
 ---
 
-## Phase 2 — Cour des Comptes ready — Audit log durcissement
+## Phase 2 — Audit log durcissement
 *19 tasks in this phase.*
 
 ### DAT-002 — AuditService is logger-only — security events not persisted
@@ -758,7 +758,7 @@ pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missi
 - **Source:** `audits/agents/05-observability.json#OBS-001`
 
 **Description:**
-AuditService.log() writes LOGIN_SUCCESS/FAILURE, ROLE_CHANGE, LEAVE_APPROVED/REJECTED, USER_DEACTIVATED, PASSWORD_CHANGED, ACCESS_DENIED only through NestJS Logger (stdout). There is NO database persistence. If the container is recreated, logs scrape rotates, or stdout is not centralized, all auth/leave decisions are unrecoverable. An auditor asking 'who approved leave X on date Y' cannot get a guaranteed answer.
+AuditService.log() writes LOGIN_SUCCESS/FAILURE, ROLE_CHANGE, LEAVE_APPROVED/REJECTED, USER_DEACTIVATED, PASSWORD_CHANGED, ACCESS_DENIED only through NestJS Logger (stdout). There is NO database persistence. If the container is recreated, logs scrape rotates, or stdout is not centralized, all auth/leave decisions are unrecoverable.
 
 **Root cause:**
 Two parallel audit services exist (AuditService = console, AuditPersistenceService = DB) with no convergence; sensitive paths chose the volatile one.
@@ -884,7 +884,7 @@ pnpm test apps/api/src/audit/audit-persistence.service.spec.ts  # may need creat
 - **Source:** Session-derived. Convergent from three artefacts: (a) PROGRESS_LOG 2026-05-25 OBS-001 deferred-emitter note; (b) PROGRESS_LOG 2026-05-24 SEC-002 closeout open question ("users:update to audit_logs"); (c) CLAUDE_SESSION_CONTRACT.md AC#4 (audit-sensitive paths include "user delete", and ROLE_CHANGE/USER_DEACTIVATED are enum values defined but never emitted).
 
 **Description:**
-UsersService.update() mutates roleId, isActive, departmentId, serviceIds with zero call to AuditService or AuditPersistenceService. UsersService.remove() deactivates a user with no audit emission. The AuditAction enum defines ROLE_CHANGE and USER_DEACTIVATED, OBS-001 enriched the payload to carry structured before/after for exactly these actions, and DAT-002 made AuditService durable — yet no business code calls them. An auditor (Cour des Comptes) asking "when did user X become MANAGER, who promoted them" or "when was user Y deactivated, by whom, why" gets no answer despite the trail being technically ready to receive these rows.
+UsersService.update() mutates roleId, isActive, departmentId, serviceIds with zero call to AuditService or AuditPersistenceService. UsersService.remove() deactivates a user with no audit emission. The AuditAction enum defines ROLE_CHANGE and USER_DEACTIVATED, OBS-001 enriched the payload to carry structured before/after for exactly these actions, and DAT-002 made AuditService durable — yet no business code calls them.
 
 **Root cause:**
 DAT-002 made AuditService dual-write. OBS-001 enriched the payload schema (before/after, ua, reason, per-action entityType). Both shipped without retro-fitting the live call sites in UsersService because each task's scope was the audit infrastructure, not the emitter coverage. The capability is live; the call sites are missing.
@@ -984,7 +984,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 - **Source:** `audits/agents/05-observability.json#OBS-004`
 
 **Description:**
-UsersService.update() mutates roleId, passwordHash, isActive, departmentId, serviceIds with zero call to AuditService/AuditPersistenceService. ROLE_CHANGE is defined as an enum value but is never emitted anywhere. An auditor asking 'when did user X become MANAGER, who promoted them' cannot get an answer.
+UsersService.update() mutates roleId, passwordHash, isActive, departmentId, serviceIds with zero call to AuditService/AuditPersistenceService. ROLE_CHANGE is defined as an enum value but is never emitted anywhere.
 
 **Root cause:**
 AuditAction.ROLE_CHANGE enum exists but no caller. UsersService never injected AuditService.
@@ -1036,7 +1036,7 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 - **Source:** `audits/agents/05-observability.json#OBS-005`
 
 **Description:**
-RolesService manages creation/update/deletion of institutional roles bound to templates (V4 RBAC). No AuditService injection, no audit emission. An auditor cannot reconstruct 'which role existed on 2024-03-15 with what templateKey'. Combined with templateKey being compile-time, the only audit trail is git history.
+RolesService manages creation/update/deletion of institutional roles bound to templates (V4 RBAC). No AuditService injection, no audit emission. Combined with templateKey being compile-time, the only audit trail is git history.
 
 **Root cause:**
 RBAC module never wired into AuditModule.
@@ -1090,7 +1090,7 @@ pnpm test apps/api/src/rbac/roles.service.spec.ts  # may need creation if missin
 - **Source:** `audits/agents/05-observability.json#OBS-006`
 
 **Description:**
-DocumentsController exposes documents:read endpoints. There is no audit emission on document read or download. For a French collectivité, document downloads (especially personnel files, leave justifications, project deliverables) must be traceable. RGPD Art. 30 + Cour des Comptes expect 'who read what when'.
+DocumentsController exposes documents:read endpoints. There is no audit emission on document read or download. For a French collectivité, document downloads (especially personnel files, leave justifications, project deliverables) must be traceable. RGPD Art. 30 expects 'who read what when'.
 
 **Root cause:**
 Documents module not wired to audit.
@@ -1175,13 +1175,12 @@ TBD — manual verification (config change, no automated test)
 - **Remove-the-theater chosen over wiring real SSH.** Evidence was decisive: HANDOVER.md ("Deploy workflow est 'fake' → manual ssh + docker compose sur VPS"), the `DEPLOY_HOST/USER/KEY` secrets were never configured (commented-out in deploy.yml), and `docker-publish.yml` already builds+pushes real images on tags. Wiring `appleboy/ssh-action` would have faked an automation nobody uses against secrets that don't exist. `deploy.yml` deleted; `scripts/deploy-prod.sh` is its honest operator-run replacement (pull → pin RELEASE_SHA into .env.production → build/migrate/up with `--env-file`).
 - **Durability = `deployments` table (source of truth) + dual-write to `audit_logs`.** Columns: `id, releaseSha, deployedAt, deployedBy, environment, nodeVersion, dbMigrationsApplied (JSONB)`. **No FK to users** — `deployedBy` is a frozen string (operator email / 'ci'), surviving user deletion, mirroring `audit_logs.actorEmail` RGPD snapshot. It is an infra event, so deliberately NOT under the `audit_logs` immutability trigger (d6299cc). Migration `20260525210000_obs012_deployments_table`, virgin table = **0 rows** at ship time.
 - **Version pinning = env-injected SHA + boot hook.** `DeploymentsService` (`OnApplicationBootstrap`) records one row per boot in a deploy context (`NODE_ENV=production` OR `RELEASE_SHA` set). `dbMigrationsApplied` read from `_prisma_migrations` (`migration_name WHERE finished_at IS NOT NULL`), best-effort → `[]` so a future **TOOL-DEPLOY-001** restricted DB role can't crash boot. Production-without-RELEASE_SHA records `releaseSha='unknown'` + warns (not a hard fail). Boot hook is fire-and-forget (caught into logger) — a ledger hiccup never blocks API startup, so the OBS-006-style resilience is built into the first commit (no 4th commit).
-- **Cross-emission YES.** `AuditAction.RELEASE_DEPLOYED` (entityType `'Deployment'`, exhaustive `Record` widened) emits one informational `audit_logs` row per boot so deploys sit inline with user actions for the Cour-des-Comptes narrative. AC#4 satisfied via dual-write.
+- **Cross-emission YES.** `AuditAction.RELEASE_DEPLOYED` (entityType `'Deployment'`, exhaustive `Record` widened) emits one informational `audit_logs` row per boot so deploys sit inline with user actions. AC#4 satisfied via dual-write.
 - **Compose env passthrough was the load-bearing first-use gap (4th commit, `[refines OBS-012]`).** The api service in `docker-compose.prod.yml` uses an explicit `environment:` block, NOT `env_file:` — `docker compose --env-file` only feeds compose's own `${...}` interpolation, it does NOT auto-propagate keys into the container process env. So `RELEASE_SHA`/`DEPLOYED_BY`/`DEPLOY_ENVIRONMENT` had to be added to that `environment:` list (interpolated `${RELEASE_SHA:-unknown}` etc.) or the boot hook would have recorded `releaseSha='unknown'` on EVERY prod boot and the ledger could never pin the live release. Same "unavoidable infra wiring, AC#6 'or equivalent'" class as the app.module.ts registration.
 - **[[TOOL-DEPLOY-001]] surface untouched** — no `directUrl`/role split added; only the migration-probe was made degradation-tolerant of it.
 - **[[TST-011]] incidental:** +6 DeploymentsService witnesses + 1 `RELEASE_DEPLOYED→'Deployment'` entityType pair in audit.service.spec.
 - **[[TST-DB-001]] still applies** — vitest mocks `database`; the deployments row-write + migration introspection are asserted at the mocked `prisma` boundary, not against a real `deployments` table. Migration itself hand-written to mirror the `audit_logs` DDL conventions (TEXT/JSONB/TIMESTAMP(3)/pkey/idx) — no Orchestra dev DB was up to `migrate dev` against (only an unrelated `opstracker` postgres on :5432); `prisma validate` + `prisma generate` confirm schema/client coherence.
 - **Dangling doc refs (out of confined scope, NOT edited):** `KNOWLEDGE-BASE.md:824` and `docs/AUDIT-DOCKER-DEPLOY.md` reference the now-removed `deploy.yml` (the latter already calls it "un stub"). Left for a docs-hygiene pass — editing `docs/`/KB was outside AC#6 scope.
-- **Cour-des-Comptes answerable now:** `SELECT "releaseSha","deployedAt","deployedBy" FROM deployments WHERE "deployedAt" <= '<leave-approval-ts>' ORDER BY "deployedAt" DESC LIMIT 1;` returns the live release at any timestamp — once the first real deploy via `deploy-prod.sh` writes a row.
 
 ---
 ### DAT-009 — AuditLog has no append-only enforcement and no integrity hash chain
@@ -1444,7 +1443,7 @@ pnpm test apps/api/src/scripts/backfill-snapshots.spec.ts  # may need creation i
 - **Source:** `audits/agents/05-observability.json#OBS-020`
 
 **Description:**
-Cour des Comptes typically expects 5-10 year retention of decision trails. No retention policy documented; no archival pipeline (S3, Glacier, French sovereign); no DB size capacity plan; no migration to time-partitioned tables. The table will grow unbounded and queries (no createdAt index alone) will degrade.
+No retention policy documented; no archival pipeline (S3, Glacier, French sovereign); no DB size capacity plan; no migration to time-partitioned tables. The table will grow unbounded and queries (no createdAt index alone) will degrade.
 
 **Root cause:**
 Retention/archival never specified.
@@ -1471,7 +1470,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** bfc7a78
-**Learnings:** Policy decision: no application-level retention or purge for audit_logs. Storage and backup management is delegated to the infrastructure/DBA layer. The application does not implement a TTL, does not run a purge job, does not maintain an archival pipeline, and does not add cleanup-specific indexes. The original finding's assumption (5-10 year application-managed retention for Cour des Comptes compliance) was an auditor extrapolation that does not match this project's actual obligations. Audit_logs row growth is unbounded by application policy; operational concerns (DB size, query performance over large tables, restore-from-backup procedures) are handled at the admin/infra layer outside the scope of the application codebase.
+**Learnings:** Policy decision: no application-level retention or purge for audit_logs. Storage and backup management is delegated to the infrastructure/DBA layer. The application does not implement a TTL, does not run a purge job, does not maintain an archival pipeline, and does not add cleanup-specific indexes. The original finding's assumption (5-10 year application-managed retention) was an extrapolation that does not match this project's actual obligations. Audit_logs row growth is unbounded by application policy; operational concerns (DB size, query performance over large tables, restore-from-backup procedures) are handled at the admin/infra layer outside the scope of the application codebase.
 
 Closed_by repointed from orphan SHA 8beb389 (pre-amend, never pushed) to anchor commit bfc7a78. Material closeout remains de9da22. This pattern formalization is TOOL-COH-002 territory.
 
@@ -1489,7 +1488,7 @@ Closed_by repointed from orphan SHA 8beb389 (pre-amend, never pushed) to anchor 
 - **Source:** `audits/agents/05-observability.json#OBS-021`
 
 **Description:**
-Only LEAVE_APPROVED (incl. self-approve) and LEAVE_REJECTED emit audit events. CANCELLATION_REQUESTED, APPROVE_CANCELLATION, leave UPDATE (date range change), leave DELETE, and admin force-edit have no audit emission. An auditor cannot reconstruct 'leave was approved on T1 then its dates were silently changed on T2'.
+Only LEAVE_APPROVED (incl. self-approve) and LEAVE_REJECTED emit audit events. CANCELLATION_REQUESTED, APPROVE_CANCELLATION, leave UPDATE (date range change), leave DELETE, and admin force-edit have no audit emission.
 
 **Root cause:**
 Audit emit added only to two transitions during initial implementation.
@@ -1541,7 +1540,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 - **Source:** `audits/agents/05-observability.json#OBS-024`
 
 **Description:**
-AuditService uses an enum (AuditAction.LEAVE_APPROVED) while AuditPersistenceService accepts an arbitrary string ('PROJECT_ARCHIVED'). There is no central registry, no compile-time guarantee that action codes used across modules are coherent. An auditor querying by action will hit two namespaces.
+AuditService uses an enum (AuditAction.LEAVE_APPROVED) while AuditPersistenceService accepts an arbitrary string ('PROJECT_ARCHIVED'). There is no central registry, no compile-time guarantee that action codes used across modules are coherent.
 
 **Root cause:**
 Two parallel implementations evolved without merger.
@@ -1592,7 +1591,7 @@ pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missi
 - **Source:** `audits/agents/06-tests.json#TST-011`
 
 **Description:**
-AuditService.log is called from auth.service (5 sites), leaves.service (3+ sites), but the only assertion across all 65 spec files that spies the actual auditService instance is leaves.service.spec.ts L971. AuditPersistenceService.log is called from projects.service (2 sites) but its own spec only validates the Prisma create call shape, not that the service is called at the right business moments. RBAC role changes emit nothing? — no spec asserts emission for role mutations. This is a Cour-des-Comptes risk.
+AuditService.log is called from auth.service (5 sites), leaves.service (3+ sites), but the only assertion across all 65 spec files that spies the actual auditService instance is leaves.service.spec.ts L971. AuditPersistenceService.log is called from projects.service (2 sites) but its own spec only validates the Prisma create call shape, not that the service is called at the right business moments. RBAC role changes emit nothing? — no spec asserts emission for role mutations.
 
 **Root cause:**
 Services receive AuditService as injected dep mocked with log: vi.fn() but tests never assert it was called.
@@ -1672,7 +1671,7 @@ pnpm test apps/api/src/users/users.service.spec.ts
 
 **Closed_by:** 950068f
 **Learnings:**
-- **AC#4 policy decision: (a) — emit USER_DELETED.** Chose the DAT-007-symmetric path over (b) trail-less-by-construction. hardDelete now writes a `USER_DELETED` audit row with a column `payload.snapshot` BEFORE erasing the user, symmetric with PROJECT_DELETED (0eae219) and ROLE_DELETED (OBS-005). Rationale: lets a Cour-des-Comptes auditor see the deletion event inline in the immutable trail. (b) was defensible (the pre-check guarantees zero prior audit rows, so the account is trail-less anyway) but leaves the *act of deletion* itself unrecorded — (a) closes that gap at the cost of one net-new enum member. Net effect: a user is provably unremovable without a trace.
+- **AC#4 policy decision: (a) — emit USER_DELETED.** Chose the DAT-007-symmetric path over (b) trail-less-by-construction. hardDelete now writes a `USER_DELETED` audit row with a column `payload.snapshot` BEFORE erasing the user, symmetric with PROJECT_DELETED (0eae219) and ROLE_DELETED (OBS-005). Rationale: keeps the deletion event inline in the immutable trail. (b) was defensible (the pre-check guarantees zero prior audit rows, so the account is trail-less anyway) but leaves the *act of deletion* itself unrecorded — (a) closes that gap at the cost of one net-new enum member. Net effect: a user is provably unremovable without a trace.
 - **checkDependencies() is the single source of truth** (no new helper — the function already existed and is grep-symmetric with `checkProjectDependencies()`). It now pre-checks **TASKS / PROJECTS / LEAVES / LEAVES_VALIDATION / DEPARTMENTS / SERVICES / AUDIT_LOGS**. The audit count is `prisma.auditLog.count({ where: { actorId: userId } })` — one extra read-only roundtrip, no transaction. A non-zero count surfaces as a typed `ConflictException` instead of the raw P2003 the `audit_logs.actor_id` ON DELETE NO ACTION FK (d6299cc) would otherwise raise.
 - **ConflictException shape mirrored from projects.service.ts hardDelete** — `throw new ConflictException({ message, dependencies })`. The generic top-level message is unchanged (it covers all dependency types); the audit count + soft-deactivation recommendation live in the `AUDIT_LOGS` dependency `description`, matching how every other user dependency carries its count/wording.
 - **Cross-ref [[DAT-007]]** (pattern source): inherited the pre-check shape, the `ConflictException({message, dependencies})` convention, and the final-snapshot-before-delete emission (plain await, non-transactional — AuditPersistenceService takes no tx client, archive()/unarchive() precedent). DAT-007's closeout pre-answered AC#4 affirmatively for projects; this task confirms it for users.
@@ -1695,10 +1694,10 @@ pnpm test apps/api/src/users/users.service.spec.ts
 - **Severity:** important
 - **Category:** observability
 - **File:** `apps/api/src/scripts/normalize-action-codes.ts` (one-shot operational normalization script — re-scoped from the originally-assumed `apps/api/src/audit/` read pipeline, which does not exist; see Learnings 2026-05-26 re-scoping note)
-- **Source:** Session-derived. OBS-024 closeout (7393b5d, 2026-05-25) flagged this gap explicitly under "Flagged, not actioned": legacy production rows under action='PASSWORD_RESET_ADMIN' (the free-string emitted by SEC-003 / 2763552, before OBS-004's rename to AuditAction.PASSWORD_RESET_BY_ADMIN at 330a8eb) cannot be backfilled because the audit_logs immutability trigger (d6299cc) blocks UPDATE. A read-side alias is the only path to a coherent audit narrative.
+- **Source:** Session-derived. OBS-024 closeout (7393b5d, 2026-05-25) flagged this gap explicitly under "Flagged, not actioned": legacy production rows under action='PASSWORD_RESET_ADMIN' (the free-string emitted by SEC-003 / 2763552, before OBS-004's rename to AuditAction.PASSWORD_RESET_BY_ADMIN at 330a8eb) cannot be backfilled because the audit_logs immutability trigger (d6299cc) blocks UPDATE. A read-side alias is the only path to a coherent read view of the history.
 
 **Description:**
-Production audit_logs may contain rows with `action = 'PASSWORD_RESET_ADMIN'` (free-string, emitted by SEC-003 before OBS-004 renamed the emit site to `AuditAction.PASSWORD_RESET_BY_ADMIN`). The OBS-002+DAT-009 immutability trigger prevents UPDATE on audit_logs, so these rows cannot be normalized in place. An auditor (Cour des Comptes) querying `WHERE action = 'PASSWORD_RESET_BY_ADMIN'` to enumerate admin-initiated password resets will miss every row emitted before commit 330a8eb. The audit narrative is silently incomplete for that time window.
+Production audit_logs may contain rows with `action = 'PASSWORD_RESET_ADMIN'` (free-string, emitted by SEC-003 before OBS-004 renamed the emit site to `AuditAction.PASSWORD_RESET_BY_ADMIN`). The OBS-002+DAT-009 immutability trigger prevents UPDATE on audit_logs, so these rows cannot be normalized in place. A query of `WHERE action = 'PASSWORD_RESET_BY_ADMIN'` to enumerate admin-initiated password resets misses every row emitted before commit 330a8eb. The history is silently incomplete for that time window.
 
 **Root cause:**
 String value evolution across three commits (SEC-003 → OBS-004 → OBS-024) without an alias-table or read-side normalization mechanism. The immutability trigger — a correct and desired property — makes the legacy data permanent. No prior session anticipated the read-side reconciliation when introducing the enum rename.
@@ -1756,12 +1755,12 @@ pnpm test apps/api/src/audit/
 - **BLOCKED on audit-revision-required (2026-05-26): the audit read pipeline this task assumed did not exist.** The Suggested fix (option a — expand the WHERE clause in the read pipeline) has nothing to attach to, and AC#2's witness ("query the audit read API filtering by `PASSWORD_RESET_BY_ADMIN`, assert the legacy row is returned") is unsatisfiable because there is no audit read API.
 - **Exhaustive search (5 angles) found zero read surface for `audit_logs`:** no `audit.controller.ts` (no controller mentions audit beyond write-side `emitDataExported`); no `auditLog.findMany / findFirst / findUnique / groupBy / aggregate` anywhere in `apps/api/src`; no `@Get`/`@Controller` audit endpoint; no `AuditLog`-typed read DTO/resolver; no web-side service consumes audit logs. The audit module (`audit.module.ts`) exports only `AuditService` + `AuditPersistenceService` (both write-side).
 - **The only two reads of `audit_logs`** are internal/incidental: `audit-persistence.service.ts:111` (hash-chain tail `SELECT "rowHash" … LIMIT 1`, write-side integrity) and `users.service.ts:743` (`auditLog.count({ where: { actorId } })`, USR-DEL-001 dependency pre-check — filters by `actorId`, never by `action`).
-- **The legacy-data risk is real but unreachable in this layer.** An auditor enumerating admin password resets today can only do so via direct SQL on the prod DB (`WHERE action = 'PASSWORD_RESET_BY_ADMIN'`), which a TypeScript alias map cannot intercept. Option (a) is moot; option (b) a SQL VIEW would cover direct-psql access but is a different design+scope; option (c) Prisma middleware needs a Prisma read query to intercept (none exists).
+- **The legacy-data risk is real but unreachable in this layer.** Enumerating admin password resets today is only possible via direct SQL on the prod DB (`WHERE action = 'PASSWORD_RESET_BY_ADMIN'`), which a TypeScript alias map cannot intercept. Option (a) is moot; option (b) a SQL VIEW would cover direct-psql access but is a different design+scope; option (c) Prisma middleware needs a Prisma read query to intercept (none exists).
 - **Shipping a standalone `legacy-action-aliases.ts` + pure `expandActionFilter()` with no consumer was rejected** as decorative dead code (over-design): future renames would discover an uncalled file the same way they'd discover a comment. Per contract §"When the audit is wrong or outdated" + design-question #4 (server-side filtering assumed but absent), flagged for human review rather than improvised.
-- **Three forks for the human (see PROGRESS_LOG):** (1) **defer** until a read API is actually built — most likely, no auditor has a TS query path today; (2) **pivot to option (b) SQL VIEW** to cover direct-psql auditor access — rewrites the task's layer; (3) **scope-extend** into a new `GET /audit/logs?action=…` read endpoint + alias map + wiring as one feature — substantial scope explosion. **Future-rename guidance still stands for whichever fork lands:** when an enum value replaces a prior string, add the legacy string to the alias map in the SAME commit as the rename — but the alias map must have a live read consumer first.
+- **Three forks for the human (see PROGRESS_LOG):** (1) **defer** until a read API is actually built — most likely, no read path exists today; (2) **pivot to option (b) SQL VIEW** to cover direct-psql access — rewrites the task's layer; (3) **scope-extend** into a new `GET /audit/logs?action=…` read endpoint + alias map + wiring as one feature — substantial scope explosion. **Future-rename guidance still stands for whichever fork lands:** when an enum value replaces a prior string, add the legacy string to the alias map in the SAME commit as the rename — but the alias map must have a live read consumer first.
 
 - **RE-SCOPED 2026-05-26 (BLOCKED → IN_PROGRESS): a fourth fork, superior to all three above, normalizes the DATA not a read layer.** The BLOCKED escalation (a4617db) was correct that the *query-time alias* approach had nothing to attach to — but it framed the problem as "which read layer do we patch?" The right question is "why is the data non-canonical at all?" The answer: a string value evolved (SEC-003 free-string → OBS-004 enum rename) and the immutability trigger froze the legacy spelling. **Normalizing the legacy `action` string in place — with a full hash-chain recompute — makes EVERY consumer (direct psql, a future read API, a CSV export) see the canonical code, with zero alias maps to maintain.** It dominates fork (1) (no deferral — the gap is closed now), fork (2) (no VIEW to maintain — the base table is correct), and fork (3) (no endpoint to build).
-  - **Philosophical correction — normalization ≠ history rewriting.** The immutability trigger exists to stop tampering with audit FACTS: who did what, when, with which actor snapshot. None of those change here. We change one derived label (`'PASSWORD_RESET_ADMIN'` → `'PASSWORD_RESET_BY_ADMIN'`, the SAME event, renamed in code at 330a8eb) and recompute the integrity hashes that depend on it. This is a **schema/vocabulary migration of historical rows**, the same class as the OBS-002 backfill that *created* the hash chain over pre-existing rows — not a falsification. To keep the act itself honest and auditable, the normalization writes its own `SYSTEM_BACKFILL` rows into the very trail it touches, and runs inside one bracketed transaction with the operator identity captured. The trigger is the guardrail against *casual/uncontrolled* mutation; a controlled, audited, operator-invoked, fully-recomputed normalization is the legitimate exception — exactly why the trigger is `DISABLE`-able by the table owner rather than enforced by a read-only role (that defence-in-depth layer is the separate TOOL-DEPLOY-001).
+  - **Philosophical correction — normalization ≠ history rewriting.** The immutability trigger exists to stop tampering with audit FACTS: who did what, when, with which actor snapshot. None of those change here. We change one derived label (`'PASSWORD_RESET_ADMIN'` → `'PASSWORD_RESET_BY_ADMIN'`, the SAME event, renamed in code at 330a8eb) and recompute the integrity hashes that depend on it. This is a **schema/vocabulary migration of historical rows**, the same class as the OBS-002 backfill that *created* the hash chain over pre-existing rows — not a falsification. To keep the act itself honest, the normalization writes its own `SYSTEM_BACKFILL` rows into the very trail it touches, and runs inside one bracketed transaction with the operator identity captured. The trigger is the guardrail against *casual/uncontrolled* mutation; a controlled, audited, operator-invoked, fully-recomputed normalization is the legitimate exception — exactly why the trigger is `DISABLE`-able by the table owner rather than enforced by a read-only role (that defence-in-depth layer is the separate TOOL-DEPLOY-001).
   - **Why a TS script and not SQL:** the recompute MUST use the write path's `computeRowHash` (imported), or write-time and migration-time hashing diverge and the chain silently desyncs. A pl/pgsql reimplementation of sha256-over-`stableStringify` is exactly that divergence. See Suggested fix for the full mechanism + runbook.
   - **Runbook reference:** operator invocation, env vars, dry-run flag, and the privilege requirement are documented in the fix commit body (PHASE 5) and the Suggested fix above.
 
@@ -2525,7 +2524,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
   3. **Witness:** DTO unit spec asserting input `'  Chef de projet  '` is trimmed → `'Chef de projet'` and asserting rejected inputs (`''`, single-char, 60+ chars).
 - **NOT RECOMMENDED — Option (b) reference table:** Over-engineered for 5 values when the value space is fundamentally open. Only justified if the operator wants curated role-list management as a separate product feature.
 - **NOT RECOMMENDED — CHECK or native enum:** DAT-012 already bailed exactly because of the open value space.
-- **Status moved to `BLOCKED-DESIGN-DECISION`.** Operator picks Option (a-lightweight), (a) with the OwnershipService dead-code removal, or (b) reference table. A halt-for-decision is a clean termination of the mini-arc — 8/9 implemented + 1 decision-surface stop = full coverage of the audit-prescribed Phase 3 follow-ups.
+- **Status moved to `BLOCKED-DESIGN-DECISION`.** Operator picks Option (a-lightweight), (a) with the OwnershipService dead-code removal, or (b) reference table. A halt-for-decision is a clean termination of the mini-arc — 8/9 implemented + 1 decision-surface stop = full coverage of the prescribed Phase 3 follow-ups.
 - **(2026-05-28, mini-arc closer session) RESUMED + CLOSED via Option (a)+dead-code — operator-decided.** `Closed_by: 148b713` — migration `20260528160000_dat035_project_member_role_length` + DTO edits to `add-member.dto.ts` and `update-member.dto.ts` + dead-code removal in `ownership.service.ts` + witnesses `dat035-project-member-role-length.int.spec.ts` and `projects/dto/member.dto.spec.ts`.
 - **Pre-flight pinned the design choices:**
   - role NOT NULL at schema level → CHECK doesn't need an `IS NULL` arm.
@@ -2537,7 +2536,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 - **Dead-code removal motivation (in-scope per the decided (a)+dead-code):** the UPPERCASE codes were the artifact of the exact closed-set / enum idea this task declines. Keeping them would have left a misleading list that suggests a future seed will introduce code-style labels — but the audit's resolution is precisely that the value space stays open and free-form. Removing them states the design intent in the code.
 - **AC#4 N/A** — schema CHECK migration is not audit-sensitive (DAT-005/012/013/014/016/017/018/023/032/033/036/037/038 precedent); the DTO normalization + dead-code removal touch no audit-emission paths (project membership is not in the audit-sensitive list).
 - **FAIL-pre/PASS-post protocol applied non-vacuously:** commented out the migration's `ADD CONSTRAINT`, ran int suite → 2 negatives failed (empty + 101 accepted); restored byte-identical → all 6 pass. DTO + dead-code removal verified by absence-of-breakage (zero live refs grep + green nest build + full suite pass post — honest AC#2 note: 2 of 3 changes have explicit FAIL-pre/PASS-post; the third is verified by absence-of-breakage, as the prompt allowed).
-- **This closes the Phase 3 mini-arc — 9/9 done.** Mini-arc total: 6 migrations + 5 code-only changes (COR-022 from Phase 3 audit-prescribed counts separately). Coherence 43→52 across both mini-arc sessions. Deploy-doc stays accumulating; re-finalize is the next (separate) session.
+- **This closes the Phase 3 mini-arc — 9/9 done.** Mini-arc total: 6 migrations + 5 code-only changes (COR-022 from Phase 3 prescribed counts separately). Coherence 43→52 across both mini-arc sessions. Deploy-doc stays accumulating; re-finalize is the next (separate) session.
 
 ---
 ### DAT-036 — Client.name lacks a UNIQUE constraint
@@ -2629,7 +2628,7 @@ pnpm test apps/api/src/departments apps/api/src/services
 **Learnings:**
 - **Widened scope to Client at filing time (DAT-036 closeout).** The original audit named Department + Service; DAT-036 added Client as a third surface. ClientsService had NO `findFirst` pre-check (unlike the other two) — the try/catch wrapper IS the entire mapping. Documented in the wrapper comment so a future reviewer doesn't add a redundant pre-check.
 - **Prisma `meta.target` is an array of column names, not the index name.** The 23505 surfaces via Prisma as `PrismaClientKnownRequestError(code='P2002', meta={target: ['name']})` for Department/Client, and `meta.target = ['departmentId', 'name']` for Service. Useful if differentiating index-specific messages later, but for now a single friendly message per service is enough (every UNIQUE on these tables is the name index).
-- **Race surface is asymmetric:** Department/Service have a fast-path `findFirst` pre-check returning the friendly 409 in the common case, and the try/catch only fires under the narrow TOCTOU race. Client has no pre-check, so the try/catch fires every time. Both paths now return the same 409 — Cour-des-Comptes parity.
+- **Race surface is asymmetric:** Department/Service have a fast-path `findFirst` pre-check returning the friendly 409 in the common case, and the try/catch only fires under the narrow TOCTOU race. Client has no pre-check, so the try/catch fires every time. Both paths now return the same 409.
 - **AC#4 confirmed N/A:** none of department/service/client create or update is in the audit-sensitive list (the list is auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset). Documented in commit.
 
 ---
@@ -2698,7 +2697,7 @@ pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
   3. `milestones_cascade_projectid_trg` (AFTER UPDATE OF projectId on milestones) — mirror of #2.
 - **Layer-of-rejection contract (load-bearing).** The DAT-017 spec asserts 23514 + tasks_parent_requires_project_ck. My BEFORE trigger fires before CHECK constraints; if it intercepts the orphan case, the DAT-017 spec breaks. The `NEW.projectId IS NOT NULL` guard on both arms preserves DAT-017's invariant. Trigger fires ONLY on cross-table EQUALITY violations (drift), not on orphans (single-row CHECK). Caught only because the DAT-017 spec exists — without it, the layering would have been invisible.
 - **Edge case for Operational notes:** if a task has BOTH parents in different projects (impossible in current data, but newly preventable), the cascade on one parent forces task.projectId to disagree with the OTHER parent; the task-side BEFORE rejects the cascade UPDATE → cascade fails → parent UPDATE aborts. Operator workflow to legitimately move both: update milestone first (cascade), then epic (cascade re-aligns; accepted because milestone now also matches the new project). Documented in the deploy doc.
-- **Cascade audit semantics (Cour des Comptes anticipation):** parent-side cascades rewrite N task rows silently — no `audit_logs` entry per task. The change IS derivable from the parent's audit row (epic/milestone update). Adding per-task system-derived audit emission would be scope creep — OBS-002's trigger pipeline doesn't cover system writes; the existing app-mutation-only audit is the precedent. Operator should expect cascade to be silent at the audit_logs layer.
+- **Cascade audit semantics:** parent-side cascades rewrite N task rows silently — no `audit_logs` entry per task. The change IS derivable from the parent's audit row (epic/milestone update). Adding per-task system-derived audit emission would be scope creep — OBS-002's trigger pipeline doesn't cover system writes; the existing app-mutation-only audit is the precedent. Operator should expect cascade to be silent at the audit_logs layer.
 - **AC#4 N/A** — schema migration, not audit-sensitive code (DAT-014/017/018/038 precedent).
 - **Witness includes the cascade-positive (7th test):** UPDATE epic.projectId from P1 to P2; dependent tasks auto-update to P2; post-cascade no-op title update succeeds (proves the BEFORE re-check finds the parent's NEW value). This pins the non-deadlock proof empirically.
 
@@ -2895,7 +2894,7 @@ pnpm test apps/api/src/events
 
 ---
 
-### DOC-001 — Phase 2 deploy doc backfill (audit-trail completeness for Cour des Comptes)
+### DOC-001 — Phase 2 deploy doc backfill (deploy-doc completeness)
 
 - **Status:** DONE
 - **Phase:** 2
@@ -2905,10 +2904,10 @@ pnpm test apps/api/src/events
 - **Severity:** important
 - **Category:** documentation · audit_trail
 - **File:** `docs/deploy/` (new file: `docs/deploy/2026-05-26-phase-2-audit-hardening-deploy.md`)
-- **Source:** Session-derived from the 2026-05-28 Phase 3 prod deploy (Gate-0 finding). The 4 Phase 2 migrations (`20260525190000_audit_logs_immutability_hash_chain_actor_snapshot`, `20260525200000_dat007_project_fk_restrict_preserve_history`, `20260525210000_obs012_deployments_table`, `20260526120000_dat021_audit_payload_schema_version_gin_index`) were applied to prod on 2026-05-26 alongside the TOOL-DEPLOY-001 closeout, but WITHOUT a dedicated `docs/deploy/` runbook. The HANDOVER's deploy section recorded them in summary, but there is no Cour-des-Comptes-grade deploy doc capturing the per-migration probes, smokes, rollback paths, and operator decisions for that batch. Surfaced when the Phase 3 deploy doc's "Expected last applied migration" baseline turned out to be stale (it expected `20260524100100`, prod actually had through `20260526120000` — confirming Phase 2 was deployed out-of-band).
+- **Source:** Session-derived from the 2026-05-28 Phase 3 prod deploy (Gate-0 finding). The 4 Phase 2 migrations (`20260525190000_audit_logs_immutability_hash_chain_actor_snapshot`, `20260525200000_dat007_project_fk_restrict_preserve_history`, `20260525210000_obs012_deployments_table`, `20260526120000_dat021_audit_payload_schema_version_gin_index`) were applied to prod on 2026-05-26 alongside the TOOL-DEPLOY-001 closeout, but WITHOUT a dedicated `docs/deploy/` runbook. The HANDOVER's deploy section recorded them in summary, but there is no dedicated deploy doc capturing the per-migration probes, smokes, rollback paths, and operator decisions for that batch. Surfaced when the Phase 3 deploy doc's "Expected last applied migration" baseline turned out to be stale (it expected `20260524100100`, prod actually had through `20260526120000` — confirming Phase 2 was deployed out-of-band).
 
 **Description:**
-The audit trail under `docs/deploy/` is incomplete. Phase 1 has `2026-05-25-phase-1-remediation-deploy.md`. Phase 3 has `2026-05-2x-phase-3-defense-in-depth-deploy.md`. Phase 2 has nothing. Anyone reconstructing the prod deployment history (auditor, ops, future Claude session) cannot trace what was done on 2026-05-26 — they have to dig through PROGRESS_LOG entries, the HANDOVER summary, and `_prisma_migrations` finished_at timestamps.
+The deploy-doc history under `docs/deploy/` is incomplete. Phase 1 has `2026-05-25-phase-1-remediation-deploy.md`. Phase 3 has `2026-05-2x-phase-3-defense-in-depth-deploy.md`. Phase 2 has nothing. Anyone reconstructing the prod deployment history (ops, future Claude session) cannot trace what was done on 2026-05-26 — they have to dig through PROGRESS_LOG entries, the HANDOVER summary, and `_prisma_migrations` finished_at timestamps.
 
 **Root cause:**
 The Phase 2 deploy happened in the TOOL-DEPLOY-001 closeout session, which was framed as a tooling task (DB role split + init-roles) — the 4 audit-log migrations rode along as a logistically-coupled deploy without surfacing as their own "deploy this batch" doc. No process rule required a deploy doc for non-Phase-1, non-Phase-3 batches; Phase 1 + Phase 3 happened to author docs because their session prompts demanded them.
@@ -2944,9 +2943,9 @@ grep -c 'DROP\|REVOKE\|rollback' docs/deploy/2026-05-26-phase-2-audit-hardening-
 **Learnings:**
 - **5 source tasks across 4 migration files, not 4↔4.** Migration `20260525190000` bundles **OBS-002 + DAT-009** (its header explicitly names both; `d6299cc` carries `[closes OBS-002][closes DAT-009]`). The DOC-001 finding's enumerated task list (OBS-012 / DAT-009 / DAT-021 / DAT-007) silently dropped OBS-002. The doc records the full 5↔4 mapping table to keep the audit chain explicit.
 - **Largest evidentiary gap = no rollback anchor image was tagged.** Phase 1 set `orchestra-api:pre-phase1-remediation`, Phase 3 set `orchestra-api:pre-phase3-defense-in-depth`, Phase 2 has nothing. The next-best anchor is the *post*-Phase-2 image (Phase 3's anchor), so a post-2026-05-28 Phase-2-only rollback has no clean image path — would require a non-trivial cherry-pick + DDL reversal. Documented in the rollback section with the explicit guidance NOT to execute the DDL retroactively without a separate runbook.
-- **Inferred ≠ verified.** Built a 3-state DEPLOY EXECUTION LOG sub-table (Verified-post-hoc / Inferred / Gap) so an auditor can immediately see which prod-state assertions in the doc are evidence-backed (the `_prisma_migrations` cluster ~2026-05-26 21:09 UTC, the post-hoc 0 `PASSWORD_RESET_ADMIN` rows on prod, init-roles.sql REVOKE) vs reconstructed from operational logic (the `git pull` step, the `docker compose build api` step, the order of script runs). Never collapsed an "inferred" into "verified" — kept the distinction load-bearing.
+- **Inferred ≠ verified.** Built a 3-state DEPLOY EXECUTION LOG sub-table (Verified-post-hoc / Inferred / Gap) so the reader can immediately see which prod-state assertions in the doc are evidence-backed (the `_prisma_migrations` cluster ~2026-05-26 21:09 UTC, the post-hoc 0 `PASSWORD_RESET_ADMIN` rows on prod, init-roles.sql REVOKE) vs reconstructed from operational logic (the `git pull` step, the `docker compose build api` step, the order of script runs). Never collapsed an "inferred" into "verified" — kept the distinction load-bearing.
 - **TOOL-DEPLOY-001 doc decision: NOT created in this commit, but named.** The finding optionally proposed a Phase-1-tooling doc covering the 0-migration code+config-only TOOL-DEPLOY-001 deploy. Surfaced as Process Learning #5 in the Phase 2 doc as a candidate follow-up, but kept out of this commit's scope (DOC-001's File: clause names only the Phase 2 doc). Operator's call whether to file as a follow-up backlog task.
-- **Verbatim SQL non-negotiable.** Every migration's SQL block in the doc is byte-identical to the committed `.sql` file (including header comments — those carry the original Suggested-fix rationale and shouldn't be paraphrased; an auditor cross-referencing against `git show <commit>:<migration>.sql` must see no drift). 4 large code blocks, ~250 lines of SQL — heavy but the contract.
+- **Verbatim SQL non-negotiable.** Every migration's SQL block in the doc is byte-identical to the committed `.sql` file (including header comments — those carry the original Suggested-fix rationale and shouldn't be paraphrased; anyone cross-referencing against `git show <commit>:<migration>.sql` must see no drift). 4 large code blocks, ~250 lines of SQL — heavy but the contract.
 - **No nest build / pnpm test / migrate deploy / deploy gates ran (docs-only).** AC#2/3/4 were pre-decided N/A in the BACKLOG entry; no re-litigation. The repo coherence gate (`scripts/check-backlog-coherence.sh`) is the only gate this closure must pass — fix commit `006adb7` carries `[closes DOC-001]` verbatim, satisfying rule 3 directly (no anchor-commit pattern needed).
 
 ---
@@ -3263,7 +3262,7 @@ pnpm test apps/api/src/users/users.controller.spec.ts  # may need creation if mi
 - **CAS A — self-drive (first genuine HALT-gate of Phase 4 resolved to A, advisor-confirmed).** All three CAS-B triggers false: mirrors exist, SEC-002/003 skeleton (`canManageUser`) exists, and the only shape-mismatch candidate (`findUnique` can't take an OR `WhereInput`) dissolves into a consumer-side `findUnique→findFirst` switch inside `findOne` — exactly how `assertCanReadTask` consumes `taskReadWhere` via `count`, not an AccessScopeService refactor.
 - **Primary-source path divergence:** AccessScopeService lives at `apps/api/src/common/services/access-scope.service.ts`, NOT the kickoff-guessed `apps/api/src/access-scope/`.
 - **Methods confirmed (signatures, primary-source):** `taskReadWhere(user?) → Promise<Prisma.TaskWhereInput>` ✓, `documentReadWhere(user?) → Promise<Prisma.DocumentWhereInput>` ✓ (both pure relational OR-bucket builders, bypass on `*:readAll`/`*:manage_any` → `{}`, no-caller → `{ id: '__no_access__' }`), `projectAccessWhere(user) → Prisma.ProjectWhereInput` (sync) ✓, `canManageUser(targetId, caller) → Promise<boolean>` ✓, `assertCanManageUser → Promise<void>` ✓. `userReadWhere` confirmed **absent** pre-fix (kickoff claim held).
-- **Divergence #2 from kickoff/audit narrative — `users:manage_any` does NOT exist.** The users permission family has no `*:manage_any`/`*:readAll` member at all (catalog: `users:create/delete/import/manage/manage_roles/read/reset_password/update`). The mirrors bypass on `*:manage_any`; users can't. Bypass permission chosen = **`users:manage`** (`USERS_PAGE_ACCESS` — "Accès à la page d'administration ... consulter les détails admin", held by MANAGER/ADMIN_DELEGATED/ADMIN), permission-driven (no role-code, per [[feedback_no_hardcode_hotfix]]) unlike `canManageUser`'s own `templateKey==='ADMIN'` bypass (left untouched — carry-forward #3, extend-not-refactor). Verified no CRUD-capable role holds `users:update` without `users:manage` (ADMIN = full catalog; ADMIN_DELEGATED = catalog minus 3 non-CRUD perms; both have both) — so full-payload tracks write capability.
+- **Divergence #2 from kickoff narrative — `users:manage_any` does NOT exist.** The users permission family has no `*:manage_any`/`*:readAll` member at all (catalog: `users:create/delete/import/manage/manage_roles/read/reset_password/update`). The mirrors bypass on `*:manage_any`; users can't. Bypass permission chosen = **`users:manage`** (`USERS_PAGE_ACCESS` — "Accès à la page d'administration ... consulter les détails admin", held by MANAGER/ADMIN_DELEGATED/ADMIN), permission-driven (no role-code, per [[feedback_no_hardcode_hotfix]]) unlike `canManageUser`'s own `templateKey==='ADMIN'` bypass (left untouched — carry-forward #3, extend-not-refactor). Verified no CRUD-capable role holds `users:update` without `users:manage` (ADMIN = full catalog; ADMIN_DELEGATED = catalog minus 3 non-CRUD perms; both have both) — so full-payload tracks write capability.
 - **Divergence #3 — `users:read` is the broad org-directory permission (`ANNUAIRE_READ`)**, held by every non-EXTERNAL template ("tout agent a besoin de voir qui est qui à quel service"). The audit's harm is *full sensitive-profile* enumeration, not directory visibility. Resolution: contract invariant (a) is honoured literally (query-scoped: out-of-scope id → 404 for a directory caller), and the reduced directory payload preserves the legitimate "qui à quel service" need for in-scope reads. Trade-off made operator-visible: broad directory visibility now rides on the still-unscoped list endpoints (see GET /users adjacency below); GET /users/:id by-UUID is now perimeter-scoped for non-management. No unit test previously guarded cross-service profile reads and e2e is build-cached — this is a real, previously-test-unguarded behavior change, now pinned by new specs.
 - **Method name = `userReadWhere`** (matches kickoff/audit + the `*ReadWhere` convention of the two mirrors). Return shape = `Prisma.UserWhereInput` (mirrors). Buckets = **self / same-service / managed-service / managed-department**. The audit's literal three were self/same-service/managed-**service**; managed-**department** added so read scope ⊇ `canManageUser`'s write scope (a caller who may manage a target must read it). Did NOT import task/document's `project.members` collaboration bucket — user scope is organizational (service/dept) per the audit, not project-based.
 - **Mechanism applied at `findOne` layer:** scope always via `userReadWhere(caller)` (management → `{}` → unrestricted); payload via a separate `hasAny(caller, ['users:manage'])` → `FULL_USER_SELECT` vs `DIRECTORY_USER_SELECT`. `findUnique → findFirst` so the OR scope merges with `{ id }`; out-of-scope row → `null` → existing `NotFoundException` (404, non-disclosing — chosen over the mirrors' 403, which requires a separate existence pre-count `findFirst` doesn't need). Controller threads `@CurrentUser() caller` (same shape as `update`/`remove`, SEC-002/003 precedent).
@@ -3325,7 +3324,7 @@ pnpm test apps/api/src/users/users.service.spec.ts
 - **AC#4 — N/A: test-only addition, no production code path modified, no audit-sensitive surface** (learning #16: path-specific, not inherited).
 - **Adjacency observed, NOT fixed (scope-lock):** the pre-existing E2E test `rbac-escalation.spec.ts:186` ("CONTRIBUTEUR : PATCH /api/users/:id/role retourne 403") is **semi-vacuous** — it sends `data: { role: 'ADMIN' }` (the `role` field, which the whitelist DTO strips; the real field is `roleCode`) against a *fake* UUID (so a 404 from existence-collapse "passes" for the wrong reason). Left untouched (not my task to fix); the 2 new tests are the rigorous replacement. Filing candidate: tighten/remove the legacy weak test (separate session).
 - **Adjacency observed, NOT covered (per INTERDIT):** `role-hierarchy.service.ts` has **no dedicated spec** (kickoff note) — its rejection branches are exercised here transitively via `users.service.update`, but a direct `assertCanAssignRole`/`canAssignRole` unit spec (all template-rank pairs, the no-op `!callerRoleCode||!targetRoleCode` branch) is a separate-session candidate. `AuthService.login`/`JwtStrategy` reset-password path (the audit's L379 `@RequirePermissions('users:manage_roles')` mention) is a *different* surface (password reset, not role assignment) — also not covered here.
-- **Phase 4 audit-original COMPLETE (6/6) with this closure.** Cluster A (COR-001 `cb3b5e1` + COR-002 `27c0424`) + Cluster B (COR-028 `d1c420d` + SEC-030 `d6ed06f`) + Cluster C (TST-001 `652c336` + TST-018 `97ec4f7`) all closed by analytic overlay. (BACKLOG `Cluster:` field = B for all 6; A/B/C is the kickoff overlay.)
+- **Phase 4 original COMPLETE (6/6) with this closure.** Cluster A (COR-001 `cb3b5e1` + COR-002 `27c0424`) + Cluster B (COR-028 `d1c420d` + SEC-030 `d6ed06f`) + Cluster C (TST-001 `652c336` + TST-018 `97ec4f7`) all closed by analytic overlay. (BACKLOG `Cluster:` field = B for all 6; A/B/C is the kickoff overlay.)
 - **Gates:** users suite `npx vitest run src/users` 116→**118** (+2 service negatives); full `pnpm test` 6/6 turbo tasks green, api 1710→**1712**; `nest build` exit 0 (typecheck gate — `tsc --noEmit` RED on master by design, [[project_nest_build_is_typecheck_gate]]). `pnpm test:e2e` NOT executed (stack down; `--list` parse-verified, see above). NB the BACKLOG verification command `pnpm test apps/api/src/...` fails as a turbo task-name (COR-028/SEC-030 NB) → ran `npx vitest run src/users` inside `apps/api`.
 - **Deploy posture:** test-only (2 spec files), no production code, no migration, no runtime API change. Undeployed runtime delta unchanged at 1 (SEC-031 `198160f`); TST-018 adds no runtime delta. Prod stays `ce0c729`.
 - **Coherence gate:** direct closure — `97ec4f7` carries `[closes TST-018]`, `Closed_by = 97ec4f7`. No anchor needed. Did NOT touch the 10 pre-existing `Closed_by`-format violations (TOOL-COH-003).
@@ -7349,7 +7348,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 - **Source:** `audits/agents/05-observability.json#OBS-009`
 
 **Description:**
-No middleware or Fastify hook sets x-request-id; no propagation to logs; no tracing context. An auditor or SRE cannot stitch 'request → DB query → cache → error log → audit log' for one transaction. grep for 'requestId|correlationId|x-request-id|reqId' in apps/api/src returns 0 matches.
+No middleware or Fastify hook sets x-request-id; no propagation to logs; no tracing context. An SRE cannot stitch 'request → DB query → cache → error log → audit log' for one transaction. grep for 'requestId|correlationId|x-request-id|reqId' in apps/api/src returns 0 matches.
 
 **Root cause:**
 Not implemented.

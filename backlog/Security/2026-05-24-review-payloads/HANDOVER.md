@@ -1,7 +1,7 @@
-# ORCHESTRA Audit Remediation — Session Handover
+# ORCHESTRA Remediation — Session Handover
 
 ## Context
-Repo: /home/alex/Documents/REPO/ORCHESTRA (NestJS + Prisma + Next.js monorepo). User: Alexandre, DSI CPAM 92 (communicates in French; code/docs in English). Audit Cour des Comptes window S1 2026. Read `CLAUDE_SESSION_CONTRACT.md` first. Master-only (no PRs). Prod = VPS (see memory `project_prod_server_access`).
+Repo: /home/alex/Documents/REPO/ORCHESTRA (NestJS + Prisma + Next.js monorepo). User: Alexandre, DSI CPAM 92 (communicates in French; code/docs in English). Read `CLAUDE_SESSION_CONTRACT.md` first. Master-only (no PRs). Prod = VPS (see memory `project_prod_server_access`).
 
 ## Current state
 - **Prod deployed HEAD: `aae2768`** (SEC-031 users-list scope/payload deployed 2026-05-30). DB at 56 migrations, health OK.

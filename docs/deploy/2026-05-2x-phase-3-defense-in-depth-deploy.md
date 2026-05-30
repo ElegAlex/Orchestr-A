@@ -1,6 +1,6 @@
 # Phase 3 Defense-in-Depth — Production Deploy Execution Log
 
-**Audit-trail artifact for Cour des Comptes.** This document is the durable record of the
+This document is the durable record of the
 operational deploy of the *Phase 3* defense-in-depth schema bundle to production. It is **seeded
 ahead of execution**: the known scope, migrations, pre-deploy checks, verification plan and
 rollback templates are pre-filled now; every command and its output are captured at deploy time,
@@ -10,12 +10,12 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 >
 > **Canonical counts (state once, every reference below matches):**
 > - **20 tasks closed** across **19 scope rows** in §"Scope & metadata" (the DAT-003+DAT-004 bundle = 1 row for 2 tasks; every other row = 1 task).
-> - **13 migrations** in §"Migrations applied" (8 audit-prescribed — DAT-003/004 bundle counts as 1 — + 5 mini-arc — DAT-032/033 bundle counts as 1).
-> - **5 code-only tasks** with no migration: COR-022 (audit-prescribed), COR-034, COR-035, COR-037, DAT-034 (mini-arc).
+> - **13 migrations** in §"Migrations applied" (8 prescribed — DAT-003/004 bundle counts as 1 — + 5 mini-arc — DAT-032/033 bundle counts as 1).
+> - **5 code-only tasks** with no migration: COR-022 (prescribed), COR-034, COR-035, COR-037, DAT-034 (mini-arc).
 > - **18 rollback steps** in §"Rollback sequence": 13 migration-DROPs (reverse deploy order) + 5 code-only `git revert`s.
 >
 > **Authoring timeline (audit trail):**
-> - **2026-05-27** — original seed alongside Phase 3 (audit-prescribed) closure: 8 migrations + COR-022 + per-task probes/smokes/rollbacks landed in each closure's commit.
+> - **2026-05-27** — original seed alongside Phase 3 (prescribed) closure: 8 migrations + COR-022 + per-task probes/smokes/rollbacks landed in each closure's commit.
 > - **2026-05-28** (commit `43ed9a8`) — first finalize: TBD-DEPLOY convention applied, ordered pre-deploy checklist extracted, consolidated reverse-order rollback table extracted.
 > - **2026-05-28** (mini-arc, 2 sessions) — reverted to *accumulating* while 9/9 mini-arc tasks landed; 5 new migrations + 4 new code-only tasks appended per-task.
 > - **2026-05-28** (this commit) — **re-finalize**: count reconciliation (above), unified pre-deploy checklist re-extracted with all 13 migrations' scans in one operator-SSOT, new smokes for the 5 mini-arc DDL migrations, rollback table extended with the 4 mini-arc code-only `git revert`s, mini-arc banner removed.
@@ -107,7 +107,7 @@ in execution order, with timestamps (UTC — prod host runs `Etc/UTC`).
 ## Deploy plan (phases, 2 human gates)
 
 1. **Pre-deploy baseline (read-only).** git/containers/images/`_prisma_migrations` HEAD/row counts.
-   Confirm the **13 batch migrations** (8 audit-prescribed + 5 mini-arc) are exactly the pending
+   Confirm the **13 batch migrations** (8 prescribed + 5 mini-arc) are exactly the pending
    delta `HEAD → origin/master` under `packages/database/prisma/migrations/`. STOP if any surprise
    migration appears.
 2. **Pre-deploy data probes (read-only) — the unified §"Pre-deploy checklist" below.** Step 0 gates
@@ -1303,7 +1303,7 @@ TBD-DEPLOY: GATE 2 decision (passed / rollback).
 | 15 | COR-037 — `git revert abd6982`, rebuild + redeploy api image (reverts the 23P01→409 mapping on leaves approve + the import friendlier message). | (no migration) / `abd6982` | rebuild required. Forward+backward compatible: if DAT-023 is also rolled back, 23P01 stops firing and the catch is harmless dead code; if DAT-023 stays live, reverting COR-037 re-introduces the 500-on-race. | [COR-037 rollback](#cor-037-abd6982--code-only) |
 | 16 | COR-035 — `git revert d5ac36a`, rebuild + redeploy api image (reverts the DTO orphan-task 400 guard). | (no migration) / `d5ac36a` | rebuild required. Forward+backward compatible: with DAT-017 still live, an orphan POST falls through to 500 (the regression COR-035 closed); with DAT-017 also rolled back, no rejection at any layer. | [COR-035 rollback](#cor-035-d5ac36a--code-only) |
 | 17 | COR-034 — `git revert 08d04b1`, rebuild + redeploy api image (reverts the P2002→409 mapping on Dept/Service/Client). | (no migration) / `08d04b1` | rebuild required. Forward+backward compatible: with DAT-016/036 still live, a TOCTOU race surfaces 500; with those also rolled back, no UNIQUE to race against. | [COR-034 rollback](#cor-034-08d04b1--code-only) |
-| 18 | COR-022 — `git revert 760aa58`, rebuild + redeploy api image | (no migration) / `760aa58` | rebuild required (DTO + service constants); the original audit-prescribed code-only change. Cheapest rollback in the batch. | [COR-022 rollback](#cor-022-760aa58--code-only) |
+| 18 | COR-022 — `git revert 760aa58`, rebuild + redeploy api image | (no migration) / `760aa58` | rebuild required (DTO + service constants); the original prescribed code-only change. Cheapest rollback in the batch. | [COR-022 rollback](#cor-022-760aa58--code-only) |
 
 TBD-DEPLOY: rollback execution log — operator-filled only if GATE 2 fails. Capture per-row:
 timestamp, DDL output (`DROP …` + `DELETE FROM _prisma_migrations`), and the post-rollback state
@@ -1586,7 +1586,7 @@ DROP EXTENSION IF EXISTS btree_gist;
   write side (`AuditAction` enum + `ENTITY_TYPE_BY_ACTION` + payload-registry witness) and the
   TOOL-DEPLOY-001 REVOKE + immutability trigger block any untyped write. **Companion artifact:**
   [`docs/audit/canonical-action-codes.md`](../audit/canonical-action-codes.md) (DAT-012 closeout).
-  No migration; cross-linked here so the auditor sees why these two columns are intentionally free.
+  No migration; cross-linked here so the reader sees why these two columns are intentionally free.
 - **DAT-033 / COR-022 TOCTOU residual — STILL OPEN.** The DAT-033 per-row CHECK `time_entries_hours_ck`
   closes the single-row bound, but **not** the per-(userId, date) aggregate cap. COR-022 reads the
   daily sum then writes non-transactionally; two concurrent same-day requests can each see the pre-state
@@ -1627,7 +1627,7 @@ DROP EXTENSION IF EXISTS btree_gist;
   a cyclic parentEventId — surfaces as HTTP 500 in the current Prisma error path (Prisma has no
   dedicated code for P0001 from a trigger). A COR-style typed-exception wrapper is a plausible
   follow-up for a later arc; the trigger is the load-bearing guarantee.
-- **Mini-arc cross-arc widenings (Cour des Comptes audit-trail).** Three mini-arc tasks widened
+- **Mini-arc cross-arc widenings.** Three mini-arc tasks widened
   their literal audit scope at closure time, motivated and accepted: (a) **DAT-036** added Client as
   the third UNIQUE-name surface (DAT-016's omitted instance); (b) **COR-034** widened from the
   literal Dept+Service to Dept+Service+**Client** to keep layer-of-rejection symmetric with DAT-036;
@@ -1646,7 +1646,7 @@ DROP EXTENSION IF EXISTS btree_gist;
 ## Future closures — append here, do not restructure
 
 **Phase 3 + completion mini-arc — 20 tasks / 19 scope rows / 13 migrations / 5 code-only changes /
-18 rollback steps. DEPLOY-READY pending operator scheduling.** The audit-prescribed Phase 3 set
+18 rollback steps. DEPLOY-READY pending operator scheduling.** The prescribed Phase 3 set
 (10/10 — `c27862a` closed DAT-023, the last) AND the session-derived mini-arc (9/9, covering
 DAT-032/033/034/035/036/037/038 + COR-034/035/037) are both fully closed on `origin/master`.
 

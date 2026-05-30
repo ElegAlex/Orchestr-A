@@ -1,6 +1,6 @@
 # Phase 1 Remediation — Production Deploy Execution Log
 
-**Audit-trail artifact for Cour des Comptes.** This document is the durable record of the
+This document is the durable record of the
 operational deploy of the *Phase 1* security/data remediation bundle to production. Every
 command and its output are captured below, in execution order, with timestamps (UTC — prod
 host runs `Etc/UTC`).
@@ -482,4 +482,4 @@ checks (Phase 4.5), the Phase 1 remediation bundle is **verified live on product
    the spec's auto-rollback (migration was verified-safe). New finding **BUILD-001** filed.
 5. Smoke witness corrected to **Apr 27→May 1** (the spec's Apr 28→May 2 would yield 3, not 4).
 
-**Deploy log complete — committed to the repo as the Cour des Comptes audit trail.**
+**Deploy log complete.**

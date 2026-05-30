@@ -22,7 +22,7 @@
 > cross-verified against the post-hoc state on prod. No detail in this document is invented to
 > fill a gap.
 >
-> **Why backfill at all?** Cour-des-Comptes audit-trail completeness. The `docs/deploy/` directory
+> **Why backfill at all?** Deploy-doc completeness. The `docs/deploy/` directory
 > is the durable institutional record of every schema mutation reaching production; missing the
 > Phase 2 batch breaks that promise. The gap was surfaced at Gate 0 of the Phase 3 deploy (the
 > doc's "Expected last applied = `20260524100100_dat005`" baseline turned out to be stale — prod
@@ -277,7 +277,7 @@ ALTER TABLE "time_entries" DROP CONSTRAINT "time_entries_projectId_fkey",
 -- truth for "which version was running at time T". DeploymentsService writes one
 -- row per container boot in a deploy context (OnApplicationBootstrap), pinning
 -- the env-injected RELEASE_SHA. audit_logs additionally gets an informational
--- RELEASE_DEPLOYED row for the Cour-des-Comptes narrative (deployments is the
+-- RELEASE_DEPLOYED row (deployments is the
 -- operational source of truth; audit_logs is the cross-reference).
 --
 -- No FK: deployedBy is a frozen string (operator email / 'ci'), surviving user
@@ -479,7 +479,7 @@ they pin the contract that prod must satisfy.
 
 > ⚠️ **Rollback was never executed for this batch and no anchor image was tagged
 > (`orchestra-api:pre-phase-2-…` does not exist in `docker images`).** The DDL below is
-> derived per-migration from the forward SQL and is presented for *audit-trail completeness
+> derived per-migration from the forward SQL and is presented for *deploy-doc completeness
 > only* — to demonstrate that each migration has a theoretical reverse. Executing any of it
 > retroactively, more than two days after the fact and with downstream Phase 3 migrations
 > stacked on top, would be a destructive action requiring a separate runbook and explicit
@@ -552,7 +552,7 @@ DROP TABLE IF EXISTS "deployments";
 -- immutability trigger created in Migration 1 forbids DELETE). They remain as an
 -- inert historical trail of past boots. If Migration 1 was rolled back FIRST (see
 -- above), then standard DELETE would work — but rolling back the immutability trigger
--- is itself an audit-grade action.
+-- is itself a logged action.
 ```
 
 ### Rollback of Migration 4 (DAT-021)
@@ -614,7 +614,7 @@ because they cannot be honestly reconstructed:
 6. **No post-deploy frontend smoke checklist** — see V5 above.
 
 These deviations are the structural reason DOC-001 was filed: the audit trail under
-`docs/deploy/` requires a uniform format precisely so an auditor can rely on the *presence*
+`docs/deploy/` requires a uniform format precisely so a reader can rely on the *presence*
 of these sections, not have to read the surrounding code/PROGRESS_LOG to know what was
 verified. This document closes the *existence* gap; it cannot close the *evidentiary* gap
 retroactively.

@@ -1,4 +1,4 @@
-# ORCHESTRA Security Audit Remediation Bundle
+# ORCHESTRA Security Remediation Bundle
 
 This directory contains a complete remediation backlog for the 2026-05-24 ORCHESTRA security audit.
 
@@ -44,8 +44,8 @@ Apply the protocol in `CLAUDE_SESSION_CONTRACT.md`. One task per session, never 
 
 | Phase | Cluster | Title | Tasks |
 | --- | --- | --- | ---: |
-| 1 | mixed | Stop the bleed (audit-prescribed blockers) | 7 |
-| 2 | A | Cour des Comptes — Audit log durcissement | 16 |
+| 1 | mixed | Stop the bleed (prescribed blockers) | 7 |
+| 2 | A | Audit log durcissement | 16 |
 | 3 | F | Defense-in-depth schema — Invariants métier en SQL | 10 |
 | 4 | B | RBAC complétude | 6 |
 | 5 | K | Auth defense-in-depth | 12 |
@@ -61,7 +61,7 @@ Apply the protocol in `CLAUDE_SESSION_CONTRACT.md`. One task per session, never 
 
 ## Cross-validated subset (highest confidence)
 
-The following 7 findings were independently flagged by both Claude Code's adversarial review and OpenAI Codex's cross-review. Defensible to a Cour des Comptes auditor as not-an-hallucination. Within their phase, prioritize these first.
+The following 7 findings were independently flagged by both Claude Code's adversarial review and OpenAI Codex's cross-review. Within their phase, prioritize these first.
 
 - `SEC-001` — RBAC guard defaults to permissive mode
 - `OBS-001` — Security audit events go to console only

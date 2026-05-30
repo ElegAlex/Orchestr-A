@@ -1,6 +1,6 @@
 # Code-Only Micro-Deploy — COR-038 + Phase-4 Cluster A/B (5 deltas)
 
-**Audit-trail artifact for Cour des Comptes.** Durable record of the operational production deploy
+Durable record of the operational production deploy
 of **5 code-only runtime deltas** accumulated on `master` since the 2026-05-28 Phase-3 + mini-arc
 deploy. **No DB migration, no `schema.prisma` change** — image rebuild + container swap + smokes only.
 Prod host runs `Etc/UTC`; SSH key auth, no password exposed in transcripts.

@@ -1,6 +1,6 @@
 # Code-Only Micro-Deploy — SEC-031 (single runtime delta)
 
-**Audit-trail artifact for Cour des Comptes.** Durable record of the operational production deploy of
+Durable record of the operational production deploy of
 the **single code-only runtime delta SEC-031** (`GET /users` list-scope adjacency), accumulated on
 `master` since the 2026-05-29 micro-deploy. **No DB migration, no `schema.prisma` change** — image
 rebuild + container swap + smokes only. Prod host runs `Etc/UTC`; SSH key auth.
@@ -225,4 +225,4 @@ No DB rollback needed (no migration applied). The Gate-1 `pg_dump` is a belt-and
 
 - 4 new filings: TST-MTX-001, TST-E2E-001, TST-RH-001 (+ TST-001 oracle-correction follow-ups).
 - 2 pre-existing: TOOL-COH-003, TOOL-DBSYNC-001.
-- **No undeployed runtime delta remains** — Phase 4 audit-original 6/6 is now fully in prod.
+- **No undeployed runtime delta remains** — Phase 4 original 6/6 is now fully in prod.

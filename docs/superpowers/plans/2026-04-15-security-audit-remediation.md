@@ -1,4 +1,4 @@
-# Security Audit Remediation — Implementation Plan
+# Security Remediation — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` to execute this plan task-by-task via Opus subagents dispatched in waves. Each wave is a parallel `Agent` fan-out; review checkpoints between waves. Commit on master (no feature branches, per user memory). Push + VPS deploy after each wave.
 
