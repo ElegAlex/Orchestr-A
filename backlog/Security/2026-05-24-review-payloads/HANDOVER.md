@@ -1,4 +1,19 @@
-# ORCHESTRA Audit Remediation — Session Handover (post-Phase-4 Cluster-B closure; Phase 3 + mini-arc + 5-delta micro-deploy LIVE in prod)
+# ORCHESTRA Audit Remediation — Session Handover (Phase 4 audit-original COMPLETE 6/6 + 2/2 session-derived; Phase 3 + mini-arc + 5-delta micro-deploy LIVE in prod; 1 undeployed runtime delta = SEC-031)
+
+> **🏁 MILESTONE — Phase 4 audit-original COMPLETE (6/6), 2026-05-30.** All six audit-prescribed Phase-4 RBAC-completeness tasks are closed, plus both session-derived companions. The two analytic clusters (A guard-hardcoding, B horizontal-scope) and the test-coverage cluster (C) are all discharged.
+>
+> | Task | Closed_by | Overlay cluster |
+> |---|---|---|
+> | COR-001 | `cb3b5e1` | A — guard-hardcoding (epics) |
+> | COR-002 | `27c0424` | A — guard-hardcoding (milestones) |
+> | COR-028 | `d1c420d` | B — horizontal-scope (leaves ownership) |
+> | SEC-030 | `d6ed06f` | B — horizontal-scope (users:id) |
+> | TST-001 | `652c336` | C — test-coverage (permission-matrix completeness + gate) |
+> | TST-018 | `97ec4f7` | C — test-coverage (role-mutation flow witness) |
+>
+> **Session-derived companions (2/2 DONE):** SEC-031 `198160f` (users-list scope, Cluster-B finish-line) + TST-CI-001 `eb53031` (wire the TST-001 coverage gate in CI, Cluster-C). (BACKLOG `Cluster:` field = `B` for all eight; A/B/C is the kickoff analytic overlay — see the collision note in §Phase-4.)
+>
+> **3 new TODO filings laid this session (2026-05-30, doc-only, not executed):** TST-MTX-001 (7 stale matrix entries), TST-E2E-001 (semi-vacuous legacy E2E:186), TST-RH-001 (no dedicated role-hierarchy spec). See §Filings.
 
 ## Contexte projet
 Repo: /home/alex/Documents/REPO/ORCHESTRA (NestJS + Prisma + Next.js monorepo)
@@ -10,11 +25,11 @@ Discipline obligatoire: lire `CLAUDE_SESSION_CONTRACT.md` EN PREMIER. Pattern pa
 
 ---
 
-## Current state (master HEAD `ab19009`; coherence script = 59 DONE entries; running checked-set = 58)
+## Current state (master HEAD `c82d2e4`; coherence script = 63 DONE entries; running checked-set = 62; 204 total BACKLOG entries)
 
-**Compte cohérence — convention.** Le script `bash backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh` reporte **59 entries DONE** (re-run live ce refresh : « Checked 59 DONE/VERIFIED task(s) »). Notre compteur interne "checked-set" est à **58** parce que le bundle DAT-003+DAT-004 a été compté comme 1 unité (1 migration, 1 SHA partagé). Le gap de +1 persiste, structurel. Les deux nombres sont corrects sous leurs rubriques respectives. Pour les rapports Cour des Comptes, le compte par task (59) est l'autorité ; pour le suivi de progression, le compte checked-set (58) est la métrique. Depuis le précédent refresh (script 57 / checked-set 56) : +2 closures (COR-028, SEC-030), chacune +1 sur les deux compteurs.
+**Compte cohérence — convention.** Le script `bash backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh` reporte **63 entries DONE** (re-run live ce refresh : « Checked 63 DONE/VERIFIED task(s) »). Notre compteur interne "checked-set" est à **62** parce que le bundle DAT-003+DAT-004 a été compté comme 1 unité (1 migration, 1 SHA partagé). Le gap de +1 persiste, structurel. Les deux nombres sont corrects sous leurs rubriques respectives. Pour les rapports Cour des Comptes, le compte par task (63) est l'autorité ; pour le suivi de progression, le compte checked-set (62) est la métrique. Depuis le précédent refresh (script 59 / checked-set 58) : **+4 closures** (SEC-031, TST-001, TST-CI-001, TST-018), chacune +1 sur les deux compteurs. **Total BACKLOG = 204 entries** (201 → 204 ce refresh : +3 nouvelles filings TODO TST-MTX-001 / TST-E2E-001 / TST-RH-001).
 
-> **Note gate — bruit pré-existant (TOOL-COH-003, filed 2026-05-28).** Le script affiche actuellement **10 violations `Closed_by`-format** (`Status=DONE but Closed_by is missing/invalid`) sur des entries Phase-3 mini-arc : 8 SHAs wrappés en backticks (DAT-032/033/034/036, COR-034/035, DAT-038, COR-037) + 2 lignes `Closed_by: (none — …)` stale (DAT-035, DAT-037, dont le vrai SHA est plus bas dans un bullet Learnings). **Le gate ne FAIL PAS** — ces tasks sont substantiellement closes avec SHA valides en git ; seul l'extracteur `.split()[0]` du script bute sur le format. Filé comme TOOL-COH-003 (BACKLOG-formatting-only, à cleaner en session séparée — ne PAS corriger ici).
+> **Note gate — bruit pré-existant (TOOL-COH-003, filed 2026-05-28).** Le script affiche toujours **10 violations `Closed_by`-format** (re-confirmé live ce refresh, inchangé : `Status=DONE but Closed_by is missing/invalid`) sur des entries Phase-3 mini-arc : 8 SHAs wrappés en backticks (DAT-032/033/034/036, COR-034/035, DAT-038, COR-037) + 2 lignes `Closed_by: (none — …)` stale (DAT-035, DAT-037, dont le vrai SHA est plus bas dans un bullet Learnings). **Les 4 closures du arc TST + SEC-031 sont toutes des closures directes propres** (`Closed_by:` = SHA nu portant `[closes <id>]`) — elles n'ajoutent AUCUNE nouvelle violation ; le compteur reste à 10. Filé comme TOOL-COH-003 (BACKLOG-formatting-only, à cleaner en session séparée — ne PAS corriger ici).
 
 ### Phase 3 + completion mini-arc — ✅ 20 TASKS DONE ET LIVE EN PROD (2026-05-28)
 
@@ -53,9 +68,9 @@ Discipline obligatoire: lire `CLAUDE_SESSION_CONTRACT.md` EN PREMIER. Pattern pa
 ### DAT-007 (Phase 10) — DONE `0eae219`, pickup hors-phase
 Pris hors séquence pendant l'arc audit (FK `Task.projectId` Cascade → Restrict, préserve l'historique). Sert de pattern-mirror direct pour USR-DEL-001. **Le reste de Phase 10 (DAT-008/022/025/026) est TODO** — ne pas y toucher avant les décisions de séquence (voir §Next).
 
-### Phase 4 — RBAC complétude — ✅ OUVERTE, 4/6 DONE (Cluster A + Cluster B closed, 2026-05-29)
+### Phase 4 — RBAC complétude — ✅ **COMPLETE, 6/6 audit-original DONE + 2/2 session-derived DONE** (Cluster A + B + C closed, 2026-05-30)
 
-Les 2 cleanups pré-Phase-4 (COR-038 + DOC-001) sont vidés. Phase 4 est ouverte ; **4 des 6 tasks sont closes** (Cluster A overlay + Cluster B overlay fermés). Restant : Cluster C (TST-001 + TST-018).
+Les 2 cleanups pré-Phase-4 (COR-038 + DOC-001) sont vidés. Phase 4 est **complète** ; **les 6 tasks audit-original sont closes** (Cluster A + B + C overlays fermés) + **2 companions session-derived** (SEC-031 finish-line Cluster-B, TST-CI-001 Cluster-C). Cluster C (TST-001 `652c336` + TST-018 `97ec4f7`) fermé le 2026-05-30 ; TST-018 est la closure qui scelle le 6/6 audit-original.
 
 | Task | Closed_by | Nature |
 |---|---|---|
@@ -63,11 +78,15 @@ Les 2 cleanups pré-Phase-4 (COR-038 + DOC-001) sont vidés. Phase 4 est ouverte
 | **COR-002** | `27c0424` | milestones : même fix verbatim. PermissionsService injecté ; MilestonesModule untouched. `pnpm test` 1694→1697 (+3, dont member-passes regression net-new — pas d'existante côté milestones). |
 | **COR-028** | `d1c420d` | leaves : rename `getUserLeaves → getOwnLeaves` + lock du where-clause à `currentUserId`. Mono-caller (`getMyLeaves` JWT-scoped) → Option B (rename) sur A (assert-equality). Defense-in-depth, PAS exploit fix (pas exploitable aujourd'hui). `pnpm test` 1697→1699 (+2). |
 | **SEC-030** | `d6ed06f` | users : net-new `AccessScopeService.userReadWhere` (4 buckets self/same-service/managed-service/managed-department) + `users.findOne` scope + payload restriction (`FULL_USER_SELECT` vs `DIRECTORY_USER_SELECT`, out-of-scope → 404). Miroir `taskReadWhere`/`documentReadWhere`. `pnpm test` 1699→1705 (+6). |
+| **TST-001** | `652c336` | Cluster C — permission-matrix completeness : backfill 59 codes manquants (94 controller / 35 → 94/94) + gate `check-permission-matrix-coverage.sh` (RED→GREEN self-witness). Role mappings dérivés correct-by-construction depuis `ROLE_TEMPLATES` via E2E_SEED. Oracle a isolé **7 stale existing entries** (→ filing TST-MTX-001). `pnpm test` 6/6 vitest inchangé (matrix = Playwright-only). |
+| **TST-018** | `97ec4f7` | Cluster C — role-mutation flow witness : 2 negatives service-level (`users.service.spec.ts`, RESPONSABLE→ADMIN + CONTRIBUTEUR→MANAGER) prouvant `assertCanAssignRole` rejette, + multi-role E2E. Audit-presupposition (`roleId` in body) confirmée moot ; vrai champ = `roleCode`. Non-vacuity prouvée par stash-restore du guard. **Scelle Phase 4 audit-original 6/6.** `pnpm test` api 1710→1712 (+2). |
+| *SEC-031* (session-derived) | `198160f` | Cluster-B finish-line : users-list + `getUsersBy*` scope/payload via `userReadWhere`. `findAll` = payload-only (directory visibility préservée, operator decision) ; `getUsersBy*` = full treatment. **1 undeployed runtime delta.** `pnpm test` 1705→1710 (+5). |
+| *TST-CI-001* (session-derived) | `eb53031` | Cluster-C : wire le gate TST-001 en CI (`.github/workflows/permission-matrix-coverage.yml`), `paths:` adaptés aux vrais inputs (operator decision, learning #17). Runnable-but-unwired → wired. |
 
 **⚠️ Convention "cluster" — collision de lettre à désamorcer.** Le champ `Cluster:` du BACKLOG marque **les 6 tasks Phase 4 en `Cluster: B`** (la maille audit d'origine, grossière). Le kickoff Phase-4 a introduit une **sur-grille thématique A/B/C par root-cause** qui ne correspond PAS au champ BACKLOG :
 - **Cluster A (thématique) — guard-hardcoding templateKey-only :** COR-001 (`cb3b5e1`) + COR-002 (`27c0424`) → **CLOSED.** Mécanisme uniforme : injection `PermissionsService` + `permissions.includes('projects:manage_any')` miroir littéral `projects.service.ts:77`. Carry-forward : discharge templateKey-only pour epics + milestones.
 - **Cluster B (thématique) — horizontal-scope-missing :** COR-028 (leaves ownership, `d1c420d`) + SEC-030 (users:id scope, `d6ed06f`) → **CLOSED (2026-05-29).** Carry-forward #3 (hierarchy + self-protection via `AccessScopeService`) discharged. **Note nouvelle : `userReadWhere` est désormais réutilisable pour le list-side fix flagué en filing — voir §Filings (SEC-031).**
-- **Cluster C (thématique) — test-coverage-gap :** TST-001 (permission matrix completeness) + TST-018 (role-mutation flow witness) → restant, kickoff prochaine session.
+- **Cluster C (thématique) — test-coverage-gap :** TST-001 (permission matrix completeness, `652c336`) + TST-018 (role-mutation flow witness, `97ec4f7`) → **CLOSED (2026-05-30).** Companion CI-wiring TST-CI-001 (`eb53031`) wire le gate TST-001. TST-001 a livré le gate `check-permission-matrix-coverage.sh` (coverage RED→GREEN) ; TST-018 a pinné le rejet de role-escalation par stash-restore non-vacuity proof + attribution proof (le guard `assertCanAssignRole` est load-bearing, pas un upstream check générique). 3 adjacencies observées non-fixées → filées ce refresh (TST-MTX-001 / TST-E2E-001 / TST-RH-001, voir §Filings).
 
 Le champ `Cluster: B` du BACKLOG/PROGRESS_LOG reste l'autorité de schéma (un greppeur verra COR-001 = `Cluster: B`, PAS "A") ; A/B/C ici est l'overlay de kickoff par root-cause, à ne pas confondre avec la valeur de champ. La lettre "B" est volontairement réutilisée par l'overlay — ne pas lire "Cluster B thématique (horizontal-scope)" comme égal au champ `Cluster: B` (qui tague les 6).
 
@@ -75,12 +94,12 @@ Le champ `Cluster: B` du BACKLOG/PROGRESS_LOG reste l'autorité de schéma (un g
 
 ## ✅ PROD DEPLOY — Phase 3 + mini-arc + 5-delta code-only micro-deploy DEPLOYÉ (2026-05-28 → 2026-05-29)
 
-**Prod runs `ce0c729`, 0 undeployed runtime delta.** Last deploy 2026-05-29 — 5-delta code-only micro-deploy (COR-038 + COR-001 + COR-002 + COR-028 + SEC-030), no migration, all gates pass. See `docs/deploy/2026-05-29-code-only-microdeploy-cor038-and-phase4-cluster-ab.md`.
+**Prod runs `ce0c729`; 1 undeployed runtime delta = SEC-031 `198160f`.** Last deploy 2026-05-29 — 5-delta code-only micro-deploy (COR-038 + COR-001 + COR-002 + COR-028 + SEC-030), no migration, all gates pass. See `docs/deploy/2026-05-29-code-only-microdeploy-cor038-and-phase4-cluster-ab.md`. **Range-verified this refresh** (`git diff --name-only ce0c729..c82d2e4` filtered to non-spec/non-CI/non-docs): the only runtime files changed since prod are `apps/api/src/users/users.controller.ts` + `users.service.ts` — both from SEC-031 `198160f`. TST-001/TST-CI-001/TST-018 added only fixtures, CI YAML, and specs → **zero additional runtime delta**.
 
 | Élément | État prod vérifié |
 |---|---|
 | **Prod git HEAD (déployé)** | **`ce0c729`** (5-delta micro-deploy 2026-05-29; SEC-030 closeout commit) |
-| **Master HEAD (current)** | **`ab19009`** — 2 commits ahead of prod (`ce0c729..ab19009`), **both docs-only** : deploy-doc seed `6c8e754` + finalize `ab19009`. **No undeployed runtime delta** — prod runs the code at `ce0c729`. |
+| **Master HEAD (current)** | **`c82d2e4`** — ahead of prod by 1 runtime delta (SEC-031 `198160f`, users-list scope) + test/CI/docs commits (SEC-031 backlog, TST-001/TST-CI-001/TST-018 arc, this refresh). The SEC-031 fix is the sole *runtime* change since `ce0c729`; everything else is fixture/CI/spec/docs. |
 | **api image (running)** | `sha256:603f07331516e2ce…` (built 2026-05-29 ~20:06 UTC at `ce0c729`) |
 | **Rollback anchor image** | `orchestra-api:pre-cor038-phase4-ab-microdeploy = 3c264f51b813` (the pre-micro-deploy `latest`, == the Phase-3 deploy image, preserved) |
 | **Backup (Gate-1, micro-deploy)** | `/opt/orchestra/backups/pre-cor038-phase4-ab-microdeploy-20260529-200458.sql.gz` · **426 KB** · pg_dump + gzip exit 0 (belt-and-suspenders; no DB change in this deploy) |
@@ -114,15 +133,16 @@ Le champ `Cluster: B` du BACKLOG/PROGRESS_LOG reste l'autorité de schéma (un g
 **Phase-4 Cluster-A — guard-hardcoding.** Le principe forward-looking porté par la prep Phase-4 — **CODE résout les permissions via `templateKey`, JAMAIS de role-code hardcodé** ([[feedback_no_hardcode_hotfix]] / [[project_rbac_seed_silent_skip]]) — a été **discharge sur 2 défauts** :
 - **epics (COR-001 `cb3b5e1`)** et **milestones (COR-002 `27c0424`)** : le `if (userRole === 'ADMIN') return;` dans `assertProjectMembership` est remplacé par `permissions.includes('projects:manage_any')`. Un rôle institutionnel bound au template ADMIN (dont le `role.code` n'est PAS le littéral `'ADMIN'`) passe désormais le bypass.
 - **Cluster-B scope-side discharge (2026-05-29).** COR-028 (`d1c420d`) + SEC-030 (`d6ed06f`) ont résolu l'autorisation via permissions/scope, jamais via role-code : COR-028 lock le where-clause à `currentUserId` (rename `getOwnLeaves`), SEC-030 bypass sur `users:manage` (pas le littéral role-code) et scope via `userReadWhere`. Carry-forward #3 (hierarchy + self-protection via `AccessScopeService`) discharged — `userReadWhere` net-new, miroir `taskReadWhere`/`documentReadWhere`.
-- **Le principe DEMEURE forward-looking pour le RESTE de Phase 4 (Cluster C)** : toute task test-coverage (TST-001, TST-018) doit vérifier le path permission-based, pas une présomption role-code. **Ne PAS re-découvrir le pattern à la prochaine session** — il est établi, miroir `projects.service.ts:77`.
+- **Cluster-C discharge (2026-05-30).** TST-001 (`652c336`) dérive le role coverage de la matrice **par construction depuis `ROLE_TEMPLATES`** (via E2E_SEED), jamais par présomption role-code ; TST-018 (`97ec4f7`) pin le rejet via `assertCanAssignRole` (template-rank, pas role-code littéral). Le principe est donc appliqué sur les 3 clusters.
+- **Le principe DEMEURE forward-looking pour TOUTE task RBAC future** (incl. les 3 filings TST-MTX-001 / TST-E2E-001 / TST-RH-001 — la correction des 7 stale matrix entries se dérive template-based, pas par hardcode ; le spec role-hierarchy assert sur templateKey). **Ne PAS re-découvrir le pattern** — il est établi, miroir `projects.service.ts:77`.
 
 ---
 
-## Filings — 15 total (10 Phase-3-arc + 1 Phase-1-tooling + 2 deploy-surfaced 2026-05-28 + 1 session-derived TOOL-COH-003 + 1 deploy-surfaced SEC-031 2026-05-29) — 12 DONE + 3 TODO
+## Filings — 19 total (10 Phase-3-arc + 1 Phase-1-tooling + 2 deploy-surfaced 2026-05-28 + 1 session-derived TOOL-COH-003 + 1 deploy-surfaced SEC-031 + 1 session-derived TST-CI-001 + 3 session-derived 2026-05-30) — 14 DONE + 5 TODO
 
-Toutes closes sauf **3 TODO** : **TOOL-DBSYNC-001** (Phase 1, dette structurelle), **TOOL-COH-003** (Phase 1, bruit de gate, filed 2026-05-28) et **SEC-031** (Phase 4, list-scope adjacency, filed 2026-05-29). Les 2 deploy-surfaced filings du 2026-05-28 (COR-038 + DOC-001) sont closes.
+Toutes closes sauf **5 TODO** : **TOOL-DBSYNC-001** (Phase 1, dette structurelle), **TOOL-COH-003** (Phase 1, bruit de gate, filed 2026-05-28), et les **3 nouvelles filings 2026-05-30** : **TST-MTX-001** (7 stale matrix entries, TST-001-derived), **TST-E2E-001** (semi-vacuous legacy E2E:186, TST-018-derived), **TST-RH-001** (no dedicated role-hierarchy spec, TST-018-derived). SEC-031 et TST-CI-001 sont désormais closes.
 
-> *Comptage re-dérivé ce refresh par comptage physique des ROWS (pas transcription du header) : la table a **15 lignes** après ajout de SEC-031 (14 → 15), statuts **12 DONE + 3 TODO**. La correction off-by-one du refresh précédent (annonce "14/11" sur une table de 13 lignes, 10 Phase-3-arc) reste tracée dans l'historique PROGRESS_LOG.*
+> *Comptage re-dérivé ce refresh par comptage physique des ROWS (pas transcription du header) : la table a **19 lignes**, statuts **14 DONE + 5 TODO**. Deux corrections vs le refresh précédent : (1) **TST-CI-001 manquait entièrement** de la table — c'est une filing session-derived (`backlog: file TST-CI-001` `560712a`, Source « session-derived from TST-001 closeout »), ajoutée DONE (`eb53031`) ; (2) SEC-031 passe TODO → DONE (`198160f`). TST-001 et TST-018 ne figurent PAS ici (audit-original, pas filings). Recompte physique post-édition : 14 DONE + 5 TODO = 19. La correction off-by-one du refresh précédent (annonce "14/11" sur une table de 13 lignes) reste tracée dans l'historique PROGRESS_LOG.*
 
 | ID | Phase | Status | Origine | Closed_by |
 |---|---|---|---|---|
@@ -140,7 +160,11 @@ Toutes closes sauf **3 TODO** : **TOOL-DBSYNC-001** (Phase 1, dette structurelle
 | **COR-038** | 3 | DONE | Phase 3 prod deploy Gate-5 reminder | `24c6929` (event cycle P0001/23514 → 409; service-layer pre-check deferred) |
 | **DOC-001** | 2 | DONE | Phase 3 prod deploy Gate-0 finding | `006adb7` (Phase 2 deploy doc backfill, retroactive) |
 | **TOOL-COH-003** | 1 | **TODO (2026-05-28)** | COR-038/COR-001/COR-002 closeouts | — *10 pre-existing `Closed_by`-format gate violations (8 backtick-wrapped SHAs + 2 stale `(none)` lines); BACKLOG-formatting-only cleanup* |
-| **SEC-031** | 4 | **TODO (2026-05-29)** | SEC-030 closeout (`d6ed06f`) | — *GET /users list + getUsersBy* still unscoped; mirror the SEC-030 single-resource fix on the list routes with the now-reusable `userReadWhere`. **Cluster: `B`** (BACKLOG field convention; overlay = horizontal-scope-missing-list-side — the A/B/C-overlay vs field-`B` collision applies)* |
+| **SEC-031** | 4 | **DONE (2026-05-29)** | SEC-030 closeout (`d6ed06f`) | `198160f` — list + `getUsersBy*` scope/payload via `userReadWhere`; `findAll` payload-only (operator decision), `getUsersBy*` full treatment. **1 undeployed runtime delta.** |
+| **TST-CI-001** | 4 | **DONE (2026-05-30)** | TST-001 closeout (`652c336`) | `eb53031` — wire the TST-001 coverage gate in CI (`permission-matrix-coverage.yml`); `paths:` adapted to real inputs per operator (learning #17). Compound naming mirrors `TST-DB-001` (TST-002 taken). |
+| **TST-MTX-001** | 4 | **TODO (2026-05-30)** | TST-001 closeout (`652c336`) | — *7 stale matrix entries (`users:read`/`departments:read`/`predefined_tasks:view`/`projects:read`/`clients:read`/`third_parties:read`/`reports:view`) contradict ROLE_TEMPLATES V4. Fixture-only; oracle re-run AC = 35/35 reproduce.* |
+| **TST-E2E-001** | 4 | **TODO (2026-05-30)** | TST-018 closeout (`97ec4f7`) | — *`rbac-escalation.spec.ts:186` semi-vacuous: fake UUID → 404 collapse, `role` field stripped (real = `roleCode`), assertion accepts 404. Refactor/remove/skip.* |
+| **TST-RH-001** | 4 | **TODO (2026-05-30)** | TST-018 closeout (`97ec4f7`) | — *No dedicated `role-hierarchy.service.spec.ts`; `assertCanAssignRole` covered only transitively (2 pairs) via TST-018. Add parametric spec over the rank matrix + 4 branches.* |
 
 ### Deliberately NOT filed (don't-file-phantoms discipline — record as anti-evidence)
 - **COR-036** (would have been "trigger→500 leak on TaskDependency cycle") — `tasks.service.ts checkCircularDependency` returns 400 *before* any DB write, so the DAT-018 trigger only fires on direct-SQL bypass. No app-layer mapping needed. (See PROGRESS_LOG 2026-05-27 DAT-018 closeout.) **Note: COR-038 IS filed for the events analog precisely because `events.service.ts` has NO service-layer cycle guard — the symmetry breaks here.**
@@ -211,33 +235,36 @@ Toutes closes sauf **3 TODO** : **TOOL-DBSYNC-001** (Phase 1, dette structurelle
    - **Implication :** les prompts pour future session deploy (et toute session avec option-menu opérateur) doivent verrouiller explicitement « operator pick holds ; HALT si tu juges meilleur, ne substitue pas ». Élimine la classe d'incidents où la bonne intention écrase le contrôle opérateur.
    - **Conséquence audit-trail :** la self-disclosure de la méthode d'auth des smokes (forged JWTs, impersonation `admin`+`agoumallah`, `jti` omis, TTL 10 min, read-only) **est déjà documentée proprement** dans le deploy doc (§"Smoke authentication method" + Gate 3) — aucun edit du deploy doc nécessaire ce refresh (voir PROGRESS_LOG entry pour le détail + les 2 inaccuracies de prompt relevées).
 
+## Process learnings — Phase 4 Cluster C (4, new)
+18. **File+close dans la même session = pattern exceptionnel légitime, PAS le défaut.** Pour une task mécaniquement triviale (single-file, mirror d'un pattern existant, zéro design surface), filing ET closure peuvent occurer dans la même session — à condition de matérialiser chaque étape contractuelle comme un commit distinct (la shape 4-commits : `file X` → `X in progress` → `X [closes X]` → `backlog: X done`). C'est ce que TST-CI-001 a fait (mirror littéral de `backlog-coherence.yml`, le seul judgment point — `paths:` — résolu par HALT-and-surface operator). **L'exception ne se généralise pas :** une closure avec design surface (DAT-037 REJECT-vs-CASCADE, DAT-035 enum-vs-free-form) ou un besoin de vérification primary-source non-triviale (TST-018) mérite une session séparée — sinon le filing devient un rubber-stamp de l'intention au lieu d'un point de contrôle. Réflexe : « est-ce que je pourrais me tromper sur le scope/le mécanisme entre filing et fix ? » Si oui → sessions séparées. Cross-ref : TST-CI-001 `560712a`/`0ad3ff5`/`eb53031`/`fde8ae4`.
+19. **Non-vacuity par stash-restore : convertit "le test passe" en preuve qu'il détecte le failure mode.** Pour une coverage-gap closure où le comportement asserté EXISTE DÉJÀ en production, un test vert ne prouve rien (il pourrait passer pour la mauvaise raison — mock qui court-circuite, assertion trop faible, path jamais atteint). Preuve : casse temporairement le comportement (stash / comment-out du guard), re-run → le test doit passer **RED** ; restore (vérifie `git diff` vide, byte-identique) → **GREEN**. TST-018 l'a fait sur les 2 negatives (`users.service.ts:500-502` commenté → ForbiddenException non levée, `prisma.user.update` appelé, `ROLE_CHANGE` émis → RED ; restauré → GREEN). **Pièges à fermer pour que la preuve soit vraie :** (1) un `findUnique` lu à plusieurs sites → utiliser un `mockResolvedValue` superset, PAS un `mockResolvedValueOnce` chaîné (ordering break) ; (2) le run stashé doit atteindre le site asserté *pour la bonne raison* (mocker les dépendances downstream pour qu'un early-throw ne masque pas l'absence du guard). Cross-ref : TST-018 `97ec4f7`.
+20. **Attribution-proof = bonus gratuit du stash-restore quand plusieurs defense layers coexistent.** Quand un comportement est gardé par >1 couche (perimeter gate `assertCanManageUser` + service guard `assertCanAssignRole`), stasher LE guard spécifique prouve simultanément que *ce* guard est load-bearing — pas un upstream check générique qui rejetterait de toute façon. TST-018 a arrangé `assertCanManageUser` pour PASSER (caller dept-manager) afin que la rejection soit attribuable à `assertCanAssignRole` seul. **Pour un contexte audit (Cour des Comptes), attribution-proof > behavioral-proof seul :** « le système rejette » est plus faible que « CETTE ligne rejette, et la voici neutralisée → la défense tombe ». Cross-ref : TST-018 `97ec4f7`.
+21. **E2E honest posture quand le stack est down : documenter le gap, ne pas fabriquer le vert.** Quand une verification surface ne peut pas être assertée pour raison environnementale (stack down : pas d'API + web:4001 + Postgres e2e-seedé), faire le minimum mesurable (`playwright test --list` → parse + typecheck les nouveaux cas) ET documenter explicitement la non-exécution (« --list parse-verified but NOT executed ; AC#3-e2e-green NOT asserted ») plutôt que d'affirmer un statut vert non-mesuré. L'escape « definitionally unaffected » NE s'applique PAS quand le deliverable EST un test E2E (vs un changement CI/YAML qui ne peut pas affecter les runners). Le rigor est porté par les surfaces effectivement mesurables (le service spec dans TST-018), pas par une assertion E2E fabriquée. Cross-ref : TST-018 closure narrative (`97ec4f7`).
+
 ---
 
-## Next session — Phase 4 Cluster A + B done (4/6), micro-deploy executed, Cluster C remaining
+## Next session — Phase 4 audit-original COMPLETE (6/6 + 2/2 session-derived), 1 undeployed runtime delta, options ouvertes
 
-**Phase 4 Cluster A + B closed (4/6 done).** Phase-4 micro-deploy executed 2026-05-29 (**5 deltas live, 0 undeployed runtime delta** — prod runs `ce0c729`, master `ab19009` ahead by 2 docs-only commits). **Restant Phase 4 : Cluster C — TST-001 + TST-018 (test-coverage-gap)** (rappel : champ BACKLOG `Cluster:` = B pour les 6 ; A/B/C = overlay kickoff).
+**Phase 4 est terminée** (6 audit-original + 2 session-derived, voir milestone en tête + §Phase-4). **État actuel :**
+- **Prod = `ce0c729` ; 1 undeployed runtime delta = SEC-031 `198160f`** (users-list scope/payload, code-only, no migration). C'est le seul changement runtime sur master depuis le micro-deploy 2026-05-29 (range-verified).
+- **3 nouvelles filings TODO (laid 2026-05-30)** : TST-MTX-001, TST-E2E-001, TST-RH-001 — toutes Phase 4, `Cluster: B`, test-only/fixture-only, claude-only, exécution = session(s) séparée(s).
+- **2 TODO filings pré-existantes** : TOOL-COH-003 (Phase 1, bruit de gate `Closed_by`-format, BACKLOG-formatting-only) + TOOL-DBSYNC-001 (Phase 1, dette structurelle `migrate dev --create-only` drift).
+- **Phases non-entamées** : Phase 5 (Auth defense-in-depth, 12 tasks TODO — SEC-004/005… visibles en queue), Phase 10 reste (DAT-008/022/025/026), Phase 13 (BUILD-001) — voir BACKLOG par phase.
 
-### 2 judgment points GRAVÉS pour Cluster C (NE PAS re-découvrir au prochain pick)
-
-Ces nuances ont été établies à la prep Phase-4 ; elles persistent pour que la session de pick Cluster-C n'ait pas à les ré-investiguer. (Les 2 graved points COR-028/SEC-030 sont consommés — les deux tasks sont closes ; conservés pour mémoire en §Current-state.)
-
-- **TST-001 — matrix-completeness shape.** Le witness = la complétude de la matrice de permissions (un backfill structural des permissions manquantes, ex. `users:manage_roles`), utilisable comme **CI-gate**. Faire ce backfill APRÈS que les fixes scope-side (COR-028/SEC-030, faits) aient stabilisé la matrice — ce qui est désormais le cas.
-- **TST-018 — audit-presupposition à corriger (toujours valide).** Ni `UpdateUserDto` ni `CreateUserDto` n'ont de champ `roleId` — la suggested test de l'audit (« PATCH avec `roleId` in body, assert stripped ») est **moot**. Le vrai role-change path doit être **localisé d'abord** (probablement `rbac/roles.controller updateRole`). Witness target = le path réel, PAS la presupposition audit. Cette localisation est le premier pas pre-flight, AVANT tout witness.
-
-### Reco séquence Cluster C (arguments, PAS pré-décision)
-- **TST-001 first** : matrix backfill structural, utilisable comme CI-gate ; la matrice est maintenant stable (scope-side fixes faits), donc le diff n'est plus contre une cible mouvante.
-- **TST-018 first** : role-mutation flow witness, avec l'audit-presupposition correction (localiser le vrai role-change path) comme premier pas pre-flight. Argument non tranché ici — surface, ne pré-décide pas.
+### Options pour la prochaine session (évidence-based, NON pré-décidées — operator tranche)
+- **(a) Deploy SEC-031 standalone.** 1 delta runtime, code-only, no migration. Plus petit deploy possible ; ferme l'écart prod↔master sur le runtime. Operator-control invariant (learning #17) s'applique à la méthode d'auth des smokes. Réutiliser le pattern "START A NEW deploy doc" (learning #13).
+- **(b) Bundle deploy SEC-031 + un cleanup.** Ex. exécuter TOOL-COH-003 (formatting-only, zéro runtime) ou une des 3 nouvelles filings test-only d'abord, puis deploy SEC-031 — mais les cleanups test/fixture/format n'ont AUCUN runtime impact, donc le bundle n'ajoute rien au deploy lui-même (SEC-031 reste le seul delta runtime). Bundler n'a de sens que pour grouper le travail, pas le deploy.
+- **(c) Exécuter une des 3 nouvelles filings** (TST-MTX-001 / TST-E2E-001 / TST-RH-001). Toutes test/fixture-only, aucune dépendance prod, aucun runtime delta. TST-MTX-001 a un witness clair (oracle re-run 35/35). TST-E2E-001 dépend du stack e2e (actuellement down + CI E2E job skipped). TST-RH-001 est purement unit (vitest), le plus self-contained.
+- **(d) Discussion roadmap post-Phase-4.** Phase 4 close → décider la séquence des phases restantes (Phase 5 Auth a des `blocking` ; Phase 10 reste ; dette TOOL-DBSYNC-001/BUILD-001). Pas de prescription ici.
 
 ### Deploy posture (next session)
-**0 undeployed runtime delta.** Le micro-deploy 2026-05-29 a shippé les 5 deltas accumulés. Prod = master sur le code (`ce0c729`, les 2 commits d'avance sont docs-only). Cluster C est tout code/spec — pas de dépendance sur l'état prod ; ce sera le premier kickoff post-deploy avec prod aligné sur le code de master.
+**1 undeployed runtime delta = SEC-031 `198160f`.** Contrairement au refresh précédent (0 delta), il y a maintenant un changement runtime non-déployé. Tout le reste sur master depuis `ce0c729` est fixture/CI/spec/docs (zéro runtime). **Future deploy — operator-control invariant (learning #17) :** l'opérateur tranche d'abord la méthode d'auth pour les smokes ; **pas de substitution silencieuse de l'option pickée** — operator pick holds, HALT si tu juges meilleur.
 
-**Future deploy sessions — operator-control invariant (learning #17).** L'opérateur tranche d'abord la méthode d'auth pour les smokes ; **pas de substitution silencieuse de l'option pickée** — operator pick holds, HALT si tu juges meilleur.
-
-**Implementation flags carry-forward (Cluster C) :**
-- **CODE résout les permissions via templateKey, JAMAIS de role-code hardcodé** ([[feedback_no_hardcode_hotfix]] + [[project_rbac_seed_silent_skip]]). Discharge sur epics+milestones (Cluster A) + leaves/users (Cluster B) ; demeure pour les test tasks (vérifier le path permission-based, pas une présomption role-code).
+**Implementation flags carry-forward (toute task RBAC future) :**
+- **CODE résout les permissions via templateKey, JAMAIS de role-code hardcodé** ([[feedback_no_hardcode_hotfix]] + [[project_rbac_seed_silent_skip]]). Discharge sur epics+milestones (Cluster A) + leaves/users (Cluster B) + test tasks (Cluster C : la matrice TST-001 dérive les rôles par construction depuis `ROLE_TEMPLATES`, jamais par présomption role-code). Le principe demeure pour TST-MTX-001 (les 7 stale entries se corrigent par dérivation template-based, pas par hardcode).
 - **API computed flags** per resource (canEdit/canDelete), jamais calculé côté frontend ([[feedback_api_computed_flags]]).
-- **SEC-002 / SEC-003 + SEC-030 ont établi le pattern hierarchy + self-protection + `userReadWhere`** ; le list-side complément est filé en **SEC-031** (TODO, `userReadWhere` réutilisable).
-- **DAT-037 silent cascade est live** — toute task RBAC touchant projet ownership doit prendre en compte que `epic.projectId` UPDATE re-écrit les tasks (impact transitif sur scope).
+- **`userReadWhere` (SEC-030/SEC-031) est le building block horizontal-scope réutilisable** (4 buckets self/same-service/managed-service/managed-department) ; `getUsersPresence` reste un read `users:read` list-shaped non-scopé observé mais non-filé (don't-file-phantoms).
+- **DAT-037 silent cascade est live** — toute task RBAC touchant projet ownership doit prendre en compte que `epic.projectId` UPDATE ré-écrit les tasks (impact transitif sur scope).
 
 ---
 
@@ -247,13 +274,14 @@ Les sections suivantes restent inchangées et toujours valides :
 - Phase 1 (audit-prescribed + tooling) tables et SHAs.
 - Phase 2 audit-log durcissement (20/21 DONE + PERF-001 deferred).
 - Phase 3 + completion mini-arc (20 tasks DONE, LIVE en prod) — tables et SHAs.
-- Phase 4 Cluster A (COR-001 `cb3b5e1` + COR-002 `27c0424`, guard-hardcoding) — clos, parties préservées.
+- Phase 4 audit-original COMPLETE (6/6 : COR-001 `cb3b5e1` + COR-002 `27c0424` Cluster A ; COR-028 `d1c420d` + SEC-030 `d6ed06f` Cluster B ; TST-001 `652c336` + TST-018 `97ec4f7` Cluster C) + 2 session-derived (SEC-031 `198160f` + TST-CI-001 `eb53031`) — clos, parties préservées.
 - `audit_logs` 5-couche defense-in-depth.
 - Infra patterns récurrents (coherence gate, real-DB harness, throwaway-DB witness, anchor-commit retroactive closure).
-- Process learnings : arc audit original (4 bullets), Phase-3 #1–#9, mini-arc + prod-deploy #10–#14, Phase-4 Cluster A #15–#16, Phase-4 Cluster B + micro-deploy #17.
-- Known dette pre-existing (ESLint/ajv, BUILD-001, TOOL-DBSYNC-001 ; **+TOOL-COH-003** comme membre filed — bruit de gate `Closed_by`-format, BACKLOG-formatting-only).
+- Process learnings : arc audit original (4 bullets), Phase-3 #1–#9, mini-arc + prod-deploy #10–#14, Phase-4 Cluster A #15–#16, Phase-4 Cluster B + micro-deploy #17, **Phase-4 Cluster C #18–#21 (new ce refresh)**.
+- Known dette pre-existing (ESLint/ajv, BUILD-001, TOOL-DBSYNC-001 ; **+TOOL-COH-003** comme membre filed — bruit de gate `Closed_by`-format, BACKLOG-formatting-only ; re-confirmé 10 violations inchangé ce refresh).
+- **Carry-forwards re-confirmés ce refresh :** #1 (DAT-037 silent cascade, live), #3 (DAT-033/COR-022 TOCTOU residual, **toujours open** — aucune task ne le ferme, c'est un résidu de design délibérément non-clos), #4 (DAT-035 whitespace-role design contract pin). #2 (DAT-038) reste RESOLVED (historical record).
 
-**Arcs récents préservés (clos cette période) :** Phase-4 Cluster A (COR-001/COR-002, guard-hardcoding) + Cluster B (COR-028 `d1c420d` + SEC-030 `d6ed06f`, horizontal-scope) closed + micro-deploy 2026-05-29 (5 deltas live, prod `ce0c729`).
+**Arcs récents préservés (clos cette période) :** Phase-4 Cluster C (TST-001 `652c336` + TST-018 `97ec4f7`, test-coverage-gap) closed + TST-CI-001 `eb53031` (CI-wiring) + SEC-031 `198160f` (Cluster-B finish-line) — **Phase 4 audit-original 6/6 COMPLETE**. (Cluster A/B + micro-deploy 2026-05-29 préservés des refreshes antérieurs.)
 
 ---
 
