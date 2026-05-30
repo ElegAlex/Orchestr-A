@@ -523,7 +523,7 @@ backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh <
 **Status:** DONE
 File: `BACKLOG.md` (formatting of existing DONE entries — gate script unchanged)
 Fix: Make `check-backlog-coherence.sh` report 0 Closed_by-format violations. (a) Unwrap the backtick-wrapped leading SHA on 8 entries (DAT-032/033/034/036, COR-034/035, DAT-038, COR-037) to a bare token. (b) Replace the stale `(none — …)` leading Closed_by line on DAT-035/DAT-037 with their real closure SHA (148b713 / 128393e), keeping the design-decision note in Learnings. Witness: gate re-run → 0 Closed_by-format violations.
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** bb89f40
 
 ---
 
