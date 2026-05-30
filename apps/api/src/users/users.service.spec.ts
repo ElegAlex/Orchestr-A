@@ -1392,6 +1392,7 @@ describe('UsersService', () => {
         isActive: true,
         departmentId: null,
         avatarUrl: null,
+        forcePasswordChange: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -1411,6 +1412,58 @@ describe('UsersService', () => {
 
       expect(result).toHaveProperty('message');
       expect(mockPrismaService.user.update).toHaveBeenCalled();
+    });
+
+    // SEC-004 (AC#2 + AC#4) — a forced password change clears the flag in the
+    // same update and emits a durable PASSWORD_CHANGED audit row with the flag
+    // before/after transition. FAILS pre-fix (no flag clear, no audit emit).
+    it('clears forcePasswordChange and emits a PASSWORD_CHANGED audit on a forced change', async () => {
+      const mockUser = {
+        id: 'flagged-1',
+        email: 'flagged@example.com',
+        login: 'flagged',
+        passwordHash: await bcrypt.hash('oldpassword', 12),
+        firstName: 'Flagged',
+        lastName: 'User',
+        role: 'USER',
+        isActive: true,
+        departmentId: null,
+        avatarUrl: null,
+        forcePasswordChange: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.user.update.mockResolvedValue(mockUser);
+
+      await service.changePassword('flagged-1', {
+        currentPassword: 'oldpassword',
+        newPassword: 'newpassword123',
+      });
+
+      // Flag cleared atomically with the new hash.
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'flagged-1' },
+          data: expect.objectContaining({ forcePasswordChange: false }),
+        }),
+      );
+
+      // Durable audit row with the before/after flag transition.
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'PASSWORD_CHANGED',
+          entityType: 'User',
+          entityId: 'flagged-1',
+          actorId: 'flagged-1',
+          payload: expect.objectContaining({
+            success: true,
+            before: { forcePasswordChange: true },
+            after: { forcePasswordChange: false },
+          }),
+        }),
+      );
     });
 
     it('should throw error when current password is incorrect', async () => {

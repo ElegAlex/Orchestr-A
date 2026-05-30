@@ -212,6 +212,45 @@ describe('AuthService', () => {
       );
     });
 
+    // SEC-004 — a forcePasswordChange-flagged user's session must be stamped
+    // with the mustChangePassword claim so the token carries restricted
+    // authority. FAILS pre-fix (claim not threaded into signAccessToken).
+    it('stamps mustChangePassword into the token for a flagged user (SEC-004)', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        passwordHash: 'hash',
+        forcePasswordChange: true,
+        role: { code: 'CONTRIBUTEUR' },
+      });
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+      mockJwtService.sign.mockReturnValue('mock-jwt-token');
+
+      await service.login({ login: 'testuser', password: 'password123' });
+
+      expect(mockJwtService.sign).toHaveBeenCalledWith(
+        expect.objectContaining({ mustChangePassword: true }),
+        expect.anything(),
+      );
+    });
+
+    it('does NOT stamp mustChangePassword for an unflagged user (SEC-004)', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        passwordHash: 'hash',
+        forcePasswordChange: false,
+        role: { code: 'CONTRIBUTEUR' },
+      });
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+      mockJwtService.sign.mockReturnValue('mock-jwt-token');
+
+      await service.login({ login: 'testuser', password: 'password123' });
+
+      const signArgs = mockJwtService.sign.mock.calls[0][0] as {
+        mustChangePassword?: boolean;
+      };
+      expect(signArgs.mustChangePassword).toBeUndefined();
+    });
+
     it('should throw UnauthorizedException for invalid credentials', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 

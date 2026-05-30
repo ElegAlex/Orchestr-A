@@ -9,6 +9,10 @@ export interface JwtPayload {
   sub: string;
   login: string;
   role: string;
+  // SEC-004 — set when the session was issued to a user flagged
+  // `forcePasswordChange`. Marks the token as carrying restricted authority;
+  // the live DB flag (re-read in validate below) is what the guard enforces on.
+  mustChangePassword?: boolean;
   jti?: string;
   exp?: number;
   iat?: number;
@@ -61,6 +65,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         isActive: true,
         avatarUrl: true,
         avatarPreset: true,
+        // SEC-004 — DB-authoritative source for ForcePasswordChangeGuard. Read
+        // live on every request so a just-completed password change unblocks
+        // immediately, instead of waiting out the stale token claim's TTL.
+        forcePasswordChange: true,
         createdAt: true,
         updatedAt: true,
       },

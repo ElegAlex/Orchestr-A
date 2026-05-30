@@ -1009,12 +1009,34 @@ export class UsersService {
       12,
     );
 
+    // SEC-004 — clear `forcePasswordChange` atomically with the new hash. The
+    // single update IS the success operation: the flag can never linger set
+    // after the password landed. JwtStrategy.validate re-reads this on the next
+    // request, so the user is unblocked immediately (no re-login needed).
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash: newPasswordHash },
+      data: { passwordHash: newPasswordHash, forcePasswordChange: false },
     });
 
     await this.refreshTokenService.revokeAllForUser(userId);
+
+    // SEC-004 / AC#4 — durable, hash-chained audit_logs entry. Every
+    // self-service password change is audit-sensitive; before/after track the
+    // flag transition (true→false on a forced change, false→false otherwise).
+    // The secret itself is never recorded.
+    await this.auditPersistence.log({
+      action: AuditAction.PASSWORD_CHANGED,
+      entityType: 'User',
+      entityId: userId,
+      actorId: userId,
+      payload: {
+        success: true,
+        timestamp: new Date().toISOString(),
+        details: 'Self-service password change',
+        before: { forcePasswordChange: user.forcePasswordChange },
+        after: { forcePasswordChange: false },
+      },
+    });
 
     return { message: 'Mot de passe modifié avec succès' };
   }

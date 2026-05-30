@@ -7,6 +7,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ForcePasswordChangeGuard } from './guards/force-password-change.guard';
 import { ThrottlerBehindProxyGuard } from './guards/throttler-behind-proxy.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { RefreshTokenService } from './refresh-token.service';
@@ -45,6 +46,13 @@ import { JwtBlacklistService } from './jwt-blacklist.service';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    // SEC-004 — MUST stay directly after JwtAuthGuard: it reads request.user
+    // (populated by JwtAuthGuard) and short-circuits flagged sessions before
+    // any business route runs. Intra-module APP_GUARD order is preserved.
+    {
+      provide: APP_GUARD,
+      useClass: ForcePasswordChangeGuard,
     },
   ],
   exports: [AuthService, RefreshTokenService, JwtBlacklistService],

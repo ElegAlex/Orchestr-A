@@ -51,6 +51,10 @@ export class AuthService {
     sub: string;
     login: string;
     role: string | null;
+    // SEC-004 — stamped true when the user is flagged `forcePasswordChange`, so
+    // the issued session is marked as carrying restricted authority. Omitted
+    // (rather than `false`) for the common case to keep tokens minimal.
+    mustChangePassword?: boolean;
   }): string {
     const jti = crypto.randomUUID();
     return this.jwtService.sign(
@@ -131,6 +135,8 @@ export class AuthService {
         avatarUrl: true,
         avatarPreset: true,
         isActive: true,
+        // SEC-004 — drives the mustChangePassword token claim below.
+        forcePasswordChange: true,
         createdAt: true,
         updatedAt: true,
         department: {
@@ -162,6 +168,7 @@ export class AuthService {
       sub: user.id,
       login: user.login,
       role: fullUser?.role?.code ?? null,
+      mustChangePassword: fullUser?.forcePasswordChange ? true : undefined,
     };
 
     this.auditService.log({
@@ -278,6 +285,9 @@ export class AuthService {
         id: true,
         login: true,
         isActive: true,
+        // SEC-004 — re-read on refresh so a still-flagged user's refreshed
+        // token keeps the restricted-authority claim rather than escaping it.
+        forcePasswordChange: true,
         role: { select: { code: true } },
       },
     });
@@ -288,6 +298,7 @@ export class AuthService {
       sub: user.id,
       login: user.login,
       role: user.role?.code ?? null,
+      mustChangePassword: user.forcePasswordChange ? true : undefined,
     });
   }
 

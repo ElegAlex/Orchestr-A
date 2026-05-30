@@ -35,6 +35,7 @@ import {
 import { AvatarPresetDto } from './dto/avatar-preset.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
+import { AllowPasswordChange } from '../auth/decorators/allow-password-change.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('users')
@@ -303,6 +304,8 @@ export class UsersController {
 
   @Patch('me/change-password')
   @AllowSelfService()
+  // SEC-004 — the sole route a forcePasswordChange-flagged session may reach.
+  @AllowPasswordChange()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Changer son propre mot de passe' })
   @ApiResponse({

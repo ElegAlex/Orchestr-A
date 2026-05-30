@@ -3336,7 +3336,7 @@ pnpm test apps/api/src/users/users.service.spec.ts
 
 ### SEC-004 — forcePasswordChange flag is set by seeder but never enforced anywhere in the API
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** claude-only
@@ -3373,7 +3373,7 @@ In AuthService.login or JwtStrategy.validate, if user.forcePasswordChange is tru
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** PENDING_SHA
 **Learnings:** (empty — Claude Code fills if surprises encountered)
 
 ---
