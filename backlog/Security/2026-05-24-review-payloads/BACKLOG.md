@@ -3373,7 +3373,7 @@ In AuthService.login or JwtStrategy.validate, if user.forcePasswordChange is tru
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** PENDING_SHA
+**Closed_by:** 8483c34 (2026-05-31) — `ForcePasswordChangeGuard` (APP_GUARD after JwtAuthGuard) + `@AllowPasswordChange()` on `PATCH /users/me/change-password`; DB-authoritative flag re-read in `JwtStrategy.validate`; `mustChangePassword` token claim; flag cleared + hash-chained `PASSWORD_CHANGED` audit in `changePassword`. Witnesses: `force-password-change.guard.spec.ts`, `auth.service.spec.ts`, `users.service.spec.ts`, e2e `force-password-change.spec.ts`.
 **Learnings:** (empty — Claude Code fills if surprises encountered)
 
 ---
