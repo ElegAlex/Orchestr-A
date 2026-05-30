@@ -15,5 +15,5 @@ Read this file first. It defines how a session consumes `BACKLOG.md`.
 ## Closing a task
 
 - One commit carries the fix and `[closes <task-id>]` in its message, and sets the entry's `Status: DONE`.
-- A follow-up sets `Closed_by:` to that commit's SHA (a commit cannot contain its own SHA).
+- A follow-up sets `Closed_by:` to that commit's SHA (a commit cannot contain its own SHA). This same follow-up also updates `HANDOVER.md` §Next to reflect the new DONE state (and what, if anything, is now in flight) — folded into the closure, never a separate refresh session.
 - The CI gate `scripts/check-backlog-coherence.sh` enforces: every `DONE`/`VERIFIED` entry has a `Closed_by` SHA that exists in git and whose commit message contains `[closes <task-id>]`.

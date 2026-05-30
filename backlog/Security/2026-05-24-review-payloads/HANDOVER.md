@@ -13,4 +13,4 @@ Repo: /home/alex/Documents/REPO/ORCHESTRA (NestJS + Prisma + Next.js monorepo). 
 - **#17 — Operator-control invariant: no silent substitution, no auth forgery as a default.** When the operator picks an option from a surfaced menu, execution follows that pick. If mid-execution you judge another option better for a concrete reason, HALT and re-surface — do not substitute silently, even with good intent. (Origin: smoke-auth method on the 2026-05-29 micro-deploy.)
 
 ## Next
-Phase 4 complete (6/6 audit-original + 2/2 session-derived); open work = deploy SEC-031 standalone, or pick from the remaining TODO filings / later phases (operator decides).
+TST-MTX-001 (`81da4c9`) and TOOL-COH-003 (`bb89f40`) closed — both test-fixture/docs-only, zero runtime delta. Nothing in flight. Open work = deploy SEC-031 standalone (`198160f`, the one undeployed runtime delta since prod `ce0c729`), or pick from the remaining TODO filings / later phases (operator decides).
