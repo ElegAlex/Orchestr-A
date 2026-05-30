@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 197 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018) + 1 session-derived follow-up (COR-037, 2026-05-27, from DAT-023) + 2 deploy-surfaced follow-ups (COR-038, DOC-001, 2026-05-28, from Phase 3 prod deploy) + 1 session-derived follow-up (TOOL-COH-003, 2026-05-28, from COR-038/COR-001/COR-002 closeouts) + 1 deploy-surfaced follow-up (SEC-031, 2026-05-29, from SEC-030 closeout)
+> **Total tasks:** 198 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018) + 1 session-derived follow-up (COR-037, 2026-05-27, from DAT-023) + 2 deploy-surfaced follow-ups (COR-038, DOC-001, 2026-05-28, from Phase 3 prod deploy) + 1 session-derived follow-up (TOOL-COH-003, 2026-05-28, from COR-038/COR-001/COR-002 closeouts) + 1 deploy-surfaced follow-up (SEC-031, 2026-05-29, from SEC-030 closeout) + 1 deploy-surfaced follow-up (SEC-FE-001, 2026-05-31, from SEC-004 closeout)
 
 ## Schema legend
 
@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 125 important · 25 nit · 6 suggestion
-- **By category:** 38 correctness · 37 data_integrity · 27 observability · 30 performance · 30 security · 26 tests · 6 tooling
+- **By severity:** 32 blocking · 126 important · 25 nit · 6 suggestion
+- **By category:** 38 correctness · 37 data_integrity · 27 observability · 30 performance · 31 security · 26 tests · 6 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -6337,7 +6337,7 @@ pnpm test apps/api/src/auth/auth.controller.spec.ts
 ---
 
 ## Phase 12 — Frontend : couche données partagée
-*7 tasks in this phase.*
+*8 tasks in this phase.*
 
 ### OBS-016 — 112 console.* calls in frontend with no client logger or scrubbing
 
@@ -6634,6 +6634,53 @@ Wrap heavy chart/grid/Gantt components in dynamic(() => import(...), { ssr: fals
 **Verification command:**
 ```
 pnpm --filter web test  # no targeted spec inferred from apps/web/app/[locale]/projects/[id]/page.tsx
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### SEC-FE-001 — Web app has no handler for the PASSWORD_CHANGE_REQUIRED 403 (SEC-004 counterpart)
+
+- **Status:** TODO
+- **Phase:** 12
+- **Cluster:** K
+- **Confidence:** claude-only (deploy-surfaced 2026-05-31, from SEC-004 closeout)
+- **Blocked_by:** (none — SEC-004 DONE)
+- **Severity:** important
+- **Category:** security · frontend-auth-routing
+- **File:** web auth/routing layer (global API-error interceptor / route guard — locate it)
+- **Source:** Session-derived from SEC-004 closeout `8483c34` (2026-05-31). Frontend counterpart surfaced at SEC-004 close: the backend guard now emits a code the web app does not route on.
+
+**Description:**
+`ForcePasswordChangeGuard` (SEC-004) returns `403 {code: PASSWORD_CHANGE_REQUIRED}` on every route except `PATCH /users/me/change-password` for a `forcePasswordChange`-flagged session. The web app does not route on this code → a flagged user is stuck (API-only password change, no UI). Harmless today (0 prod users flagged); must ship before any real user is flagged (e.g. a future admin "force reset").
+
+**Root cause:**
+SEC-004 added the backend enforcement (guard + `PASSWORD_CHANGE_REQUIRED` code) but no corresponding frontend handling: the web auth/routing layer has no interceptor/guard that recognizes the code and redirects to a change-password screen.
+
+**Code evidence:**
+```
+# Backend (SEC-004, 8483c34): ForcePasswordChangeGuard → 403 {code: PASSWORD_CHANGE_REQUIRED}
+#   on every route except PATCH /users/me/change-password for a flagged session.
+# Frontend: locate the global API-error interceptor / route guard and confirm no branch on
+#   PASSWORD_CHANGE_REQUIRED exists, e.g.
+grep -rn 'PASSWORD_CHANGE_REQUIRED' apps/web/src apps/web/app   # → expected: no handler
+```
+
+**Suggested fix:**
+In the web app's global API-error interceptor (or route guard), branch on a `403` carrying `code: PASSWORD_CHANGE_REQUIRED`: redirect the session to a change-password screen, and on successful `PATCH /users/me/change-password` resume normal navigation.
+
+**Acceptance criteria:**
+1. A `403` carrying `PASSWORD_CHANGE_REQUIRED` redirects the session to a change-password screen; on success the session proceeds normally. This addresses the exact failure mode described in **Description**.
+2. A Playwright E2E witness exists: it drives a `forcePasswordChange`-flagged login to the change-password screen and through it to normal navigation. It FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot.
+5. Commit message includes `[closes SEC-FE-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm --filter web test  # + Playwright E2E driving a flagged login through the change-password screen
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
