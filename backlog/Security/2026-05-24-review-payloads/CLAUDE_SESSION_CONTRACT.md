@@ -17,3 +17,16 @@ Read this file first. It defines how a session consumes `BACKLOG.md`.
 - One commit carries the fix and `[closes <task-id>]` in its message, and sets the entry's `Status: DONE`.
 - A follow-up sets `Closed_by:` to that commit's SHA (a commit cannot contain its own SHA). This same follow-up also updates `HANDOVER.md` §Next to reflect the new DONE state (and what, if anything, is now in flight) — folded into the closure, never a separate refresh session.
 - The CI gate `scripts/check-backlog-coherence.sh` enforces: every `DONE`/`VERIFIED` entry has a `Closed_by` SHA that exists in git and whose commit message contains `[closes <task-id>]`.
+
+## Picking next task
+
+When starting a fresh session:
+- If HANDOVER.md §Next contains a directive
+  ("Next: <task-id> — <one-line>"), execute it: write the Claude Code
+  prompt for that task.
+- Otherwise (Pause state or state-only info), auto-pick the next TODO
+  from BACKLOG.md by priority: lowest Phase first, then Blocked_by
+  empty/satisfied, then Confidence (cross-validated > claude-only
+  > codex-only), then Severity (blocking > important > nit > suggestion).
+- Generate the Claude Code prompt directly (~10-30 lines). No menu of
+  options, no halt-and-ask, no reconciliation preamble.
