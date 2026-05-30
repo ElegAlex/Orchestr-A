@@ -10,13 +10,15 @@
  * Rôles disponibles dans les tests (6 rôles principaux) :
  *   admin > responsable > manager > referent > contributeur > observateur
  *
- * Mapping rôles → codes RBAC :
- *   admin        → ADMIN           (toutes les permissions)
- *   responsable  → RESPONSABLE     (tout sauf users:manage_roles, settings:update)
- *   manager      → MANAGER         (gestion projets/tâches/congés équipe)
- *   referent     → REFERENT_TECHNIQUE (tâches dans projets, skills, télétravail)
- *   contributeur → CONTRIBUTEUR    (tâches orphelines + gestion personnelle)
- *   observateur  → OBSERVATEUR     (lecture seule — actions read/view)
+ * Mapping rôle de test → templateKey V4 (E2E_SEED, packages/database/prisma/seed.ts).
+ * Les allowedRoles/deniedRoles sont dérivés par construction de
+ * ROLE_TEMPLATES[templateKey].permissions — jamais d'un libellé de rôle :
+ *   admin        → ADMIN
+ *   responsable  → ADMIN_DELEGATED
+ *   manager      → MANAGER
+ *   referent     → TECHNICAL_LEAD
+ *   contributeur → BASIC_USER       (self-service ; PAS de PROJECT_STRUCTURE_READ)
+ *   observateur  → OBSERVER_FULL
  */
 
 export interface PermissionEntry {
@@ -61,11 +63,11 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
       "responsable",
       "manager",
       "referent",
-      "contributeur",
       "observateur",
     ],
-    deniedRoles: [],
-    description: "Lister les projets — accessible à tous les rôles",
+    deniedRoles: ["contributeur"],
+    description:
+      "Lister les projets — PROJECT_STRUCTURE_READ (tous sauf BASIC_USER/contributeur)",
   },
   {
     action: "projects:create",
@@ -153,10 +155,17 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "users",
     method: "GET",
     apiEndpoint: "/api/users",
-    allowedRoles: ["admin", "responsable", "manager", "observateur"],
-    deniedRoles: ["referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
+    deniedRoles: [],
     description:
-      "Lister les utilisateurs — Admin, Responsable, Manager, Observateur",
+      "Lister les utilisateurs — COMMON_BASE (users:read universel à tous les templates)",
   },
   {
     action: "users:create",
@@ -196,10 +205,17 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "departments",
     method: "GET",
     apiEndpoint: "/api/departments",
-    allowedRoles: ["admin", "responsable", "manager", "observateur"],
-    deniedRoles: ["referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
+    deniedRoles: [],
     description:
-      "Lister les départements — Admin, Responsable, Manager, Observateur",
+      "Lister les départements — COMMON_BASE (departments:read universel à tous les templates)",
   },
   {
     action: "departments:create",
@@ -360,9 +376,10 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "analytics",
     method: "GET",
     apiEndpoint: "/api/analytics",
-    allowedRoles: ["admin", "responsable", "manager"],
-    deniedRoles: ["referent", "contributeur", "observateur"],
-    description: "Accéder aux analytics — Admin, Responsable, Manager",
+    allowedRoles: ["admin", "responsable", "manager", "observateur"],
+    deniedRoles: ["referent", "contributeur"],
+    description:
+      "Accéder aux analytics — Admin, Responsable, Manager, Observateur (OBSERVER_FULL a reports:view)",
   },
   {
     action: "reports:export",
@@ -382,10 +399,17 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "predefined-tasks",
     method: "GET",
     apiEndpoint: "/api/predefined-tasks",
-    allowedRoles: ["admin", "responsable", "manager", "observateur"],
-    deniedRoles: ["referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
+    deniedRoles: [],
     description:
-      "Lister les tâches prédéfinies — Admin, Responsable, Manager, Observateur (action=view → inclus dans OBSERVATEUR)",
+      "Lister les tâches prédéfinies — COMMON_BASE (predefined_tasks:view universel à tous les templates)",
   },
   {
     action: "predefined_tasks:create",
@@ -428,10 +452,16 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "third-parties",
     method: "GET",
     apiEndpoint: "/api/third-parties",
-    allowedRoles: ["admin", "responsable", "manager", "observateur"],
-    deniedRoles: ["referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "observateur",
+    ],
+    deniedRoles: ["contributeur"],
     description:
-      "Lister les tiers — Admin, Responsable, Manager, Observateur (hérite :read via action=read pattern)",
+      "Lister les tiers — PROJECT_STRUCTURE_READ (tous sauf BASIC_USER/contributeur)",
   },
   {
     action: "third_parties:create",
@@ -508,18 +538,10 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
   // CLIENTS (Commanditaires) — Module Clients V1 (W5)
   // ═══════════════════════════════════════════════════════════
   //
-  // Mapping rôles de test → templates V4 (confirmé par lecture de
-  // packages/rbac/templates.ts + atomic-permissions.ts) :
-  //   admin        → ADMIN           (CATALOG_PERMISSIONS — toutes les perms)
-  //   responsable  → ADMIN_DELEGATED (catalog minus 3 perms non-clients)
-  //   manager      → MANAGER         (clients:assign_to_project explicite ; pas CLIENTS_CRUD)
-  //   referent     → TECHNICAL_LEAD  (PROJECT_STRUCTURE_READ → clients:read seulement)
-  //   contributeur → PROJECT_CONTRIBUTOR (PROJECT_CONTRIB_CAPACITIES → PROJECT_STRUCTURE_READ → clients:read)
-  //   observateur  → OBSERVER_FULL   (PROJECT_STRUCTURE_READ → clients:read)
-  //
   // clients:create/update/delete  → ADMIN, ADMIN_DELEGATED uniquement (CLIENTS_CRUD)
   // clients:assign_to_project     → ADMIN, ADMIN_DELEGATED, MANAGER (+ PROJECT_LEAD hors scope 6 rôles)
-  // clients:read                  → tous les 6 rôles via PROJECT_STRUCTURE_READ
+  // clients:read                  → PROJECT_STRUCTURE_READ : admin, responsable, manager,
+  //                                 referent, observateur — PAS contributeur (BASIC_USER ne l'a pas)
 
   {
     action: "clients:create",
@@ -544,12 +566,11 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
       "responsable",
       "manager",
       "referent",
-      "contributeur",
       "observateur",
     ],
-    deniedRoles: [],
+    deniedRoles: ["contributeur"],
     description:
-      "Lister les clients — tous les rôles (clients:read via PROJECT_STRUCTURE_READ quasi-universel)",
+      "Lister les clients — PROJECT_STRUCTURE_READ (tous sauf BASIC_USER/contributeur)",
   },
   {
     action: "clients:read",
@@ -561,12 +582,11 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
       "responsable",
       "manager",
       "referent",
-      "contributeur",
       "observateur",
     ],
-    deniedRoles: [],
+    deniedRoles: ["contributeur"],
     description:
-      "Détail d'un client — tous les rôles (clients:read). 404 = autorisé mais ressource absente",
+      "Détail d'un client — PROJECT_STRUCTURE_READ (tous sauf contributeur). 404 = autorisé mais ressource absente",
   },
   {
     action: "clients:read",
@@ -578,12 +598,11 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
       "responsable",
       "manager",
       "referent",
-      "contributeur",
       "observateur",
     ],
-    deniedRoles: [],
+    deniedRoles: ["contributeur"],
     description:
-      "Projets d'un client — tous les rôles (clients:read AND projects:read, les deux présents dans PROJECT_STRUCTURE_READ)",
+      "Projets d'un client — PROJECT_STRUCTURE_READ (clients:read AND projects:read, tous sauf contributeur)",
   },
   {
     action: "clients:delete",
@@ -628,12 +647,11 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
       "responsable",
       "manager",
       "referent",
-      "contributeur",
       "observateur",
     ],
-    deniedRoles: [],
+    deniedRoles: ["contributeur"],
     description:
-      "Lister les clients d'un projet — tous les rôles (clients:read). 404 projet inexistant = autorisé",
+      "Lister les clients d'un projet — PROJECT_STRUCTURE_READ (tous sauf contributeur). 404 projet inexistant = autorisé",
   },
   {
     action: "clients:assign_to_project",
@@ -685,7 +703,14 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "comments",
     method: "GET",
     apiEndpoint: "/api/comments",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
     deniedRoles: [],
   },
   {
@@ -721,7 +746,14 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "documents",
     method: "GET",
     apiEndpoint: "/api/documents",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
     deniedRoles: [],
   },
   {
@@ -757,7 +789,14 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "epics",
     method: "GET",
     apiEndpoint: "/api/epics",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
     deniedRoles: [],
   },
   {
@@ -793,7 +832,14 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "milestones",
     method: "GET",
     apiEndpoint: "/api/milestones",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
     deniedRoles: [],
   },
   {
@@ -829,7 +875,14 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "holidays",
     method: "GET",
     apiEndpoint: "/api/holidays",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
     deniedRoles: [],
   },
   {
@@ -865,7 +918,14 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "school-vacations",
     method: "GET",
     apiEndpoint: "/api/school-vacations",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
     deniedRoles: [],
   },
   {
@@ -902,7 +962,13 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     method: "POST",
     apiEndpoint: "/api/settings/bulk",
     allowedRoles: ["admin"],
-    deniedRoles: ["responsable", "manager", "referent", "contributeur", "observateur"],
+    deniedRoles: [
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
   },
 
   // ───────────────────────────────────────────────────────────
@@ -913,7 +979,13 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "time-tracking",
     method: "POST",
     apiEndpoint: "/api/time-tracking",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+    ],
     deniedRoles: ["observateur"],
   },
   {
@@ -957,7 +1029,14 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "services",
     method: "GET",
     apiEndpoint: "/api/services",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur", "observateur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
     deniedRoles: [],
   },
   {
@@ -1013,7 +1092,13 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "tasks",
     method: "PATCH",
     apiEndpoint: `/api/tasks/${PLACEHOLDER_UUID_V4}`,
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+    ],
     deniedRoles: ["observateur"],
   },
   {
@@ -1033,7 +1118,13 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "telework",
     method: "PATCH",
     apiEndpoint: `/api/telework/${PLACEHOLDER_UUID_V4}`,
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+    ],
     deniedRoles: ["observateur"],
   },
   {
@@ -1041,7 +1132,13 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "telework",
     method: "DELETE",
     apiEndpoint: `/api/telework/${PLACEHOLDER_UUID_V4}`,
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+    ],
     deniedRoles: ["observateur"],
   },
   {
@@ -1157,7 +1254,13 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "events",
     method: "POST",
     apiEndpoint: "/api/events",
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+    ],
     deniedRoles: ["observateur"],
   },
   {
@@ -1165,7 +1268,13 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     resource: "events",
     method: "PATCH",
     apiEndpoint: `/api/events/${PLACEHOLDER_UUID_V4}`,
-    allowedRoles: ["admin", "responsable", "manager", "referent", "contributeur"],
+    allowedRoles: [
+      "admin",
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+    ],
     deniedRoles: ["observateur"],
   },
   {
@@ -1202,7 +1311,13 @@ export const PERMISSION_MATRIX: PermissionEntry[] = [
     method: "GET",
     apiEndpoint: "/api/roles",
     allowedRoles: ["admin"],
-    deniedRoles: ["responsable", "manager", "referent", "contributeur", "observateur"],
+    deniedRoles: [
+      "responsable",
+      "manager",
+      "referent",
+      "contributeur",
+      "observateur",
+    ],
   },
   {
     action: "users:reset_password",
