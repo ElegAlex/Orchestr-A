@@ -9490,3 +9490,58 @@ npx playwright test e2e/tests/multi-role/rbac-escalation.spec.ts --project=contr
 **Learnings:** (empty — Claude Code fills if surprises encountered)
 
 ---
+### TST-RH-001 — Add dedicated spec for role-hierarchy.service.ts (TST-018 adjacency)
+
+- **Status:** TODO
+- **Phase:** 4
+- **Cluster:** B
+- **Confidence:** claude-only
+- **Blocked_by:** (none)
+- **Severity:** low
+- **Category:** test-coverage · rbac
+- **File:** `apps/api/src/common/services/role-hierarchy.service.spec.ts` (new file; service lives at `apps/api/src/common/services/role-hierarchy.service.ts`)
+- **Source:** Adjacency observed during Cluster-C kickoff and confirmed in TST-018 closeout `97ec4f7` Learnings. **Naming choice:** `TST-*` family is natural (test coverage); compound `TST-RH-001` avoids the `TST-001..TST-025` audit-original collision and tags the role-hierarchy sub-domain — same compound rationale as `TST-CI-001` / `TST-DB-001`. `Cluster: B` per BACKLOG field convention; analytic overlay = test-coverage (rbac).
+
+**Description:**
+`RoleHierarchyService` has **no dedicated spec** (`find . -name 'role-hierarchy.service.spec.ts'` → empty, verified this session). TST-018 exercises `assertCanAssignRole` transitively via `users.service.spec.ts` — but only **2 caller→target template pairs** (RESPONSABLE=ADMIN_DELEGATED rank 5 → ADMIN rank 6, hitting the ADMIN-protection branch; CONTRIBUTEUR=BASIC_USER rank 1 → MANAGER rank 4, hitting the generic-rank branch). The service's public methods are otherwise untested in isolation. The covered surface is implicit (via one caller), not explicit (per-method, parametric over the hierarchy).
+
+**Root cause:**
+Historical coverage gap — the service never had a dedicated spec; its rejection branches were assumed covered by the consuming services.
+
+**Code evidence:**
+```
+find apps/api/src -name 'role-hierarchy.service.spec.ts'   # → empty
+# Service surface (role-hierarchy.service.ts):
+#   - resolveTemplateKey(code)          : DB lookup, null-safe (no code → null; unknown code → null)
+#   - canAssignRole(caller, target)     : boolean, callerRank > targetRank (unknown template → rank 0)
+#   - assertCanAssignRole(caller,target): void/throws — 4 branches:
+#       (a) no-op when either code is null/undefined (L87)
+#       (b) ADMIN-protection: target=ADMIN & caller!=ADMIN → Forbidden (L92-95)
+#       (c) caller=ADMIN → return/allow (incl. ADMIN→ADMIN) (L97)
+#       (d) generic rank: !canAssignRole → Forbidden (L98-101)
+#   TEMPLATE_HIERARCHY = 6 distinct ranks (1..6) across 26 templates + rank-0 fallback for unknown.
+```
+
+**Suggested fix:**
+Create `role-hierarchy.service.spec.ts` with parametric coverage (mock `PrismaService.role.findUnique` to map test codes → templateKeys):
+- `canAssignRole` rank matrix: caller-rank vs target-rank across the 6 distinct ranks (below / equal / above) — including equal-rank false (strict `>`), and the rank-0 unknown-template fallback (both as caller and target).
+- `assertCanAssignRole` all 4 branches: (a) no-op on null caller and on null target; (b) ADMIN-protection — non-ADMIN caller (sample across several ranks incl. ADMIN_DELEGATED rank 5) targeting ADMIN → Forbidden; (c) caller=ADMIN allowed against every target incl. another ADMIN; (d) generic rank — equal-rank reject + lower-rank reject + higher-rank-non-ADMIN accept.
+- Edge cases: unknown caller template (rank 0) cannot assign anything; institutional non-`'ADMIN'` role codes resolve via templateKey (the V4 point — caller `role.code='ADMIN_DSI'` with `templateKey='ADMIN'` still gets the ADMIN bypass).
+
+**Acceptance criteria:**
+1. A new `role-hierarchy.service.spec.ts` is created covering the public methods per **Suggested fix**.
+2. Parametric coverage of **≥ ~20 cases**, derived from the matrix: 6 distinct ranks × {below, equal, above} ordering relations (≈18) + the 4 named `assertCanAssignRole` branches + the ADMIN-target protection row + the rank-0 fallback. (Exact N is the executor's derivation from the realized matrix; ≥20 is the floor.) Each branch in the code (a/b/c/d) must have at least one asserting test.
+3. No regression in existing test suite (`pnpm test` green; new spec runs under vitest `apps/api`).
+4. N/A — test-only addition, no production code path, no audit-sensitive surface.
+5. Commit message includes `[closes TST-RH-001]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit (the service itself stays byte-identical — spec-only).
+
+**Verification command:**
+```
+npx vitest run src/common/services/role-hierarchy.service.spec.ts   # in apps/api
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
