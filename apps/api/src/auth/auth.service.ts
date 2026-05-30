@@ -85,8 +85,14 @@ export class AuthService {
       return null;
     }
 
+    // SEC-005 — a disabled account with otherwise-valid credentials must be
+    // indistinguishable from a wrong password / unknown user: same generic 401,
+    // same timing (the disabled check runs AFTER bcrypt.compare, so the two
+    // failure modes cost the same). Returning null — rather than a distinct
+    // `UnauthorizedException('Compte désactivé')` — collapses the differential
+    // that let an attacker confirm both account existence AND password validity.
     if (!user.isActive) {
-      throw new UnauthorizedException('Compte désactivé');
+      return null;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -106,7 +112,13 @@ export class AuthService {
         ip: meta?.ip,
         ua: meta?.userAgent,
         reason: 'invalid_credentials',
-        details: `Failed login attempt for login: ${loginDto.login}`,
+        // SEC-005 — do NOT interpolate the attacker-controlled login into the
+        // free-text `details` (persisted in the JSONB payload): that was a log-
+        // poisoning / plaintext-disclosure vector. The "who was targeted" subject
+        // is still captured — sanitized (lowercased, length-capped, bcrypt-shape
+        // refused) — via `attemptedEmail`→`entityId` per OBS-001, which is the
+        // right place for it. So `details` carries no identifier at all.
+        details: 'Failed login attempt',
         success: false,
       });
       throw new UnauthorizedException('Login ou mot de passe incorrect');

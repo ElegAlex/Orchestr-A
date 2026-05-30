@@ -167,6 +167,22 @@ describe('AuthService', () => {
 
       expect(result).toBeNull();
     });
+
+    // SEC-005 — a disabled account with otherwise-valid credentials must be
+    // indistinguishable from a bad password: both return null. FAILS pre-fix
+    // (validateUser threw UnauthorizedException('Compte désactivé')), PASSES
+    // post-fix (the disabled branch folds into the same null return).
+    it('returns null for a disabled account with valid credentials (SEC-005)', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        isActive: false,
+      });
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+      const result = await service.validateUser('testuser', 'password123');
+
+      expect(result).toBeNull();
+    });
   });
 
   describe('login', () => {
@@ -282,6 +298,57 @@ describe('AuthService', () => {
           success: false,
         }),
       );
+    });
+
+    // SEC-005 — username/password enumeration via differential error semantics.
+    // A disabled account with VALID credentials must fail exactly like a bad
+    // password: same generic 401 message — no oracle distinguishing
+    // "wrong/unknown" from "valid password, disabled". FAILS pre-fix (the
+    // disabled case threw UnauthorizedException('Compte désactivé') from inside
+    // validateUser → distinct message), PASSES post-fix.
+    it('disabled-valid-creds and bad-password yield the same generic 401 (SEC-005)', async () => {
+      // (a) bad password — baseline generic message.
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
+      const badPassword = (await service
+        .login({ login: 'testuser', password: 'wrong' })
+        .catch((e: unknown) => e)) as UnauthorizedException;
+
+      // (b) disabled account, otherwise-valid credentials.
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        isActive: false,
+      });
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+      const disabled = (await service
+        .login({ login: 'testuser', password: 'password123' })
+        .catch((e: unknown) => e)) as UnauthorizedException;
+
+      expect(badPassword).toBeInstanceOf(UnauthorizedException);
+      expect(disabled).toBeInstanceOf(UnauthorizedException);
+      expect(disabled.message).toBe('Login ou mot de passe incorrect');
+      expect(disabled.message).toBe(badPassword.message);
+    });
+
+    // SEC-005 (AC#4) — the LOGIN_FAILURE audit row is KEPT, but the attacker-
+    // controlled login must NOT appear in the persisted free-text `details`
+    // (the log-poisoning / plaintext-disclosure vector). The sanitized subject
+    // still rides on `attemptedEmail`→entityId (OBS-001). FAILS pre-fix (details
+    // was `Failed login attempt for login: ${login}`), PASSES post-fix.
+    it('keeps the LOGIN_FAILURE row but redacts the login from details (SEC-005)', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.login({ login: 'victim.account', password: 'guess' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      const failureCall = mockAuditService.log.mock.calls.find(
+        (call: [{ action: AuditAction }]) =>
+          call[0].action === AuditAction.LOGIN_FAILURE,
+      );
+      expect(failureCall).toBeDefined();
+      const event = failureCall![0] as { details?: string };
+      expect(event.details).not.toContain('victim.account');
     });
   });
 
