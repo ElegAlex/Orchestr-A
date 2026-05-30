@@ -520,7 +520,7 @@ backlog/Security/2026-05-24-review-payloads/scripts/check-backlog-coherence.sh <
 ---
 
 ### TOOL-COH-003 — Strip pre-existing Closed_by-format gate noise
-**Status:** TODO
+**Status:** DONE
 File: `BACKLOG.md` (formatting of existing DONE entries — gate script unchanged)
 Fix: Make `check-backlog-coherence.sh` report 0 Closed_by-format violations. (a) Unwrap the backtick-wrapped leading SHA on 8 entries (DAT-032/033/034/036, COR-034/035, DAT-038, COR-037) to a bare token. (b) Replace the stale `(none — …)` leading Closed_by line on DAT-035/DAT-037 with their real closure SHA (148b713 / 128393e), keeping the design-decision note in Learnings. Witness: gate re-run → 0 Closed_by-format violations.
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
@@ -2362,7 +2362,7 @@ grep -n 'subtasks_position_ck' packages/database/prisma/migrations/  # expect 0 
 pnpm prisma migrate deploy && pnpm test:integration  # apply migration + real-DB witness (migrate dev --create-only blocked by _dat005_backup_* drift — see TOOL-DBSYNC-001)
 ```
 
-**Closed_by:** `7af1991` (2026-05-28) — bundled with [[DAT-033]] in migration `20260528120000_dat032_dat033_position_and_hours_bounds` + witness `apps/api/src/schema-constraints/dat032-dat033-position-and-hours-bounds.int.spec.ts`.
+**Closed_by:** 7af1991 (2026-05-28) — bundled with [[DAT-033]] in migration `20260528120000_dat032_dat033_position_and_hours_bounds` + witness `apps/api/src/schema-constraints/dat032-dat033-position-and-hours-bounds.int.spec.ts`.
 **Learnings:**
 - Bundle rationale: same source file (schema.prisma), same SQL mechanism (single-column CHECK), same witness path. Tighter than DAT-003/004 jurisprudence (one family, not two) — literally the two columns DAT-004 should have covered. Dual-close per TOOL-COH-001/002 + DAT-003/004 precedent.
 - DAT-004's Description listed 8 numeric columns but its Suggested-fix block listed only 7 CHECKs; bundle discipline (stay literal) kept Subtask.position out. The session-derived backfill is the right escape hatch — file the gap, don't silently widen scope mid-bundle. See [[DAT-033]] for the COR-022 analogue.
@@ -2411,7 +2411,7 @@ grep -n 'time_entries_hours_ck' packages/database/prisma/migrations/  # expect 0
 pnpm prisma migrate deploy && pnpm test:integration  # apply migration + real-DB witness (migrate dev --create-only blocked by _dat005_backup_* drift — see TOOL-DBSYNC-001)
 ```
 
-**Closed_by:** `7af1991` (2026-05-28) — bundled with [[DAT-032]] in migration `20260528120000_dat032_dat033_position_and_hours_bounds` + witness `apps/api/src/schema-constraints/dat032-dat033-position-and-hours-bounds.int.spec.ts`.
+**Closed_by:** 7af1991 (2026-05-28) — bundled with [[DAT-032]] in migration `20260528120000_dat032_dat033_position_and_hours_bounds` + witness `apps/api/src/schema-constraints/dat032-dat033-position-and-hours-bounds.int.spec.ts`.
 **Learnings:**
 - **CHECK-floor over-constraint trap (load-bearing).** `CreateTimeEntryDto.hours` carries `@Min(0.25) @Max(24)` BUT gated by `@ValidateIf((dto) => !dto.isDismissal)`; `TimeTrackingService` writes dismissal rows with `hours: 0` (lines 308, time-tracking.service.ts). The legitimate persisted range is therefore `{0} ∪ [0.25, 24]`, NOT `[0.25, 24]`. A CHECK `hours >= 0.25` would have rejected 101 legitimate dismissal rows on dev today (pre-flight scan). The correct DB floor is the superset `hours >= 0 AND hours <= 24`, leaving the `(0, 0.25)` exclusion to the DTO where it belongs. Witness includes a load-bearing positive `hours = 0` test that would fail under the over-constraint — keep it.
 - **TOCTOU residual (carried forward from COR-022 closeout — implementer note).** This per-row CHECK does NOT close the COR-022 per-(userId, date) aggregate-cap race: the cap is `aggregate` then `create` / `update` non-transactional, so two concurrent same-day requests can each read the pre-state and both commit past 24h. Closing the aggregate invariant under concurrency requires a serializable transaction around read+write or a DB trigger — heavier, separate decision; deliberately not folded in. **The same residual applies to DAT-034's third-party path** — when DAT-034 lands the service-level cap, the residual will still apply to both actor dimensions.
@@ -2458,7 +2458,7 @@ Generalize `ensureDailyCapNotExceeded` to accept the actor dimension — sum `WH
 pnpm test apps/api/src/time-tracking/
 ```
 
-**Closed_by:** `6b17ec9` (2026-05-28) — generalized `ensureDailyCapNotExceeded` to accept an actor discriminator, dropped the user-only guards in `create()` and `update()`, added `else if (existing.thirdPartyId)` branch on update. Witness: 3 new tests in `time-tracking.service.spec.ts`.
+**Closed_by:** 6b17ec9 (2026-05-28) — generalized `ensureDailyCapNotExceeded` to accept an actor discriminator, dropped the user-only guards in `create()` and `update()`, added `else if (existing.thirdPartyId)` branch on update. Witness: 3 new tests in `time-tracking.service.spec.ts`.
 **Learnings:**
 - **Cap-key semantics pre-flight CLEAR.** `resolveActor` (lines 240-262) already produces a clean discriminated union `{kind:'user',userId}|{kind:'thirdParty',thirdPartyId}`; passing the union through to the cap helper makes the dimension switch one `where` clause. No ambiguity → no halt.
 - **TOCTOU residual carries verbatim from COR-022.** The cap is still a non-transactional `aggregate`-then-`create/update`; both the user dimension AND the new third-party dimension race in the same way. Closing it would need a serializable transaction or a DB trigger — heavier, separate decision; DAT-033's per-row CHECK structurally can't close cross-row aggregate races.
@@ -2508,7 +2508,7 @@ Decide between (a) a documented free-form policy with input normalization (trim 
 pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ```
 
-**Closed_by:** (none — moved to `BLOCKED-DESIGN-DECISION` 2026-05-28 mini-arc resume session, task 9/9, per the prompt's "MANDATORY HALT — pre-flight only, do NOT implement").
+**Closed_by:** 148b713 (2026-05-28) — Option (a)+dead-code, resumed from BLOCKED-DESIGN-DECISION (history in Learnings).
 **Learnings:**
 - **BLOCKED — pre-flight + recommendation only (per prompt protocol).** No code change. The mini-arc closes 8/9 implemented + 1 halt-for-decision; this is the deliberate decision-surface stop.
 - **Value-space scan (dev DB, 2026-05-28):** 5 distinct values across `project_members.role`:
@@ -2579,7 +2579,7 @@ Add `@unique` on `Client.name` (replacing or alongside the existing `@@index([na
 pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ```
 
-**Closed_by:** `ce026d6` (2026-05-28) — migration `20260528130000_dat036_client_name_unique` + witness `apps/api/src/schema-constraints/dat036-client-name-unique.int.spec.ts`.
+**Closed_by:** ce026d6 (2026-05-28) — migration `20260528130000_dat036_client_name_unique` + witness `apps/api/src/schema-constraints/dat036-client-name-unique.int.spec.ts`.
 **Learnings:**
 - Trivial DAT-016 follow-up: same mechanism, same byte-equivalence discipline (Prisma `<table>_<col>_key` naming, schema.prisma carries `@unique`), same Prisma 23505 error-shape (index name dropped → assert on `Key (name)=`). Dropped the redundant `@@index([name])` since the unique index already serves the lookup. Pre-flight 0 dups across 200 clients.
 - **Cross-arc dependency:** this adds Client as a third surface that [[COR-034]] must catch (P2002 → 409). Originally COR-034 was filed for Department + Service only; widened in the same arc to include Client to keep the layer-of-rejection coverage symmetric across all three DAT-016-family entities.
@@ -2625,7 +2625,7 @@ Wrap each `.create()` in a try/catch mapping Prisma `P2002` → the same `Confli
 pnpm test apps/api/src/departments apps/api/src/services
 ```
 
-**Closed_by:** `08d04b1` (2026-05-28) — try/catch wrappers in `departments.service.ts`, `services.service.ts`, `clients.service.ts`; spec assertions in each `*.service.spec.ts`.
+**Closed_by:** 08d04b1 (2026-05-28) — try/catch wrappers in `departments.service.ts`, `services.service.ts`, `clients.service.ts`; spec assertions in each `*.service.spec.ts`.
 **Learnings:**
 - **Widened scope to Client at filing time (DAT-036 closeout).** The original audit named Department + Service; DAT-036 added Client as a third surface. ClientsService had NO `findFirst` pre-check (unlike the other two) — the try/catch wrapper IS the entire mapping. Documented in the wrapper comment so a future reviewer doesn't add a redundant pre-check.
 - **Prisma `meta.target` is an array of column names, not the index name.** The 23505 surfaces via Prisma as `PrismaClientKnownRequestError(code='P2002', meta={target: ['name']})` for Department/Client, and `meta.target = ['departmentId', 'name']` for Service. Useful if differentiating index-specific messages later, but for now a single friendly message per service is enough (every UNIQUE on these tables is the name index).
@@ -2673,7 +2673,7 @@ A `BEFORE INSERT OR UPDATE` trigger on `tasks` that, when `epicId`/`milestoneId`
 pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ```
 
-**Closed_by:** (none — blocked on design decision; see Learnings)
+**Closed_by:** 128393e (2026-05-28) — Option A REJECT+CASCADE, resumed from BLOCKED-DESIGN-DECISION (history in Learnings).
 **Learnings:**
 - **BLOCKED on design decision (2026-05-28 mini-arc, task 4/9, no closing SHA).**
 - **Mutability pre-flight:** `UpdateEpicDto extends PartialType(CreateEpicDto)` and `UpdateMilestoneDto extends PartialType(CreateMilestoneDto)` — BOTH `epics.projectId` and `milestones.projectId` are mutable via the standard update endpoint. The task block's "If MUTABLE → bidirectional guarding needed" branch applies.
@@ -2736,7 +2736,7 @@ The DTO never expressed the cross-field invariant "epicId/milestoneId imply proj
 pnpm test apps/api/src/tasks
 ```
 
-**Closed_by:** `d5ac36a` (2026-05-28) — `ProjectRequiredWhenParentedConstraint` in `create-task.dto.ts`, `UpdateTaskDto` overrides in `update-task.dto.ts`, witness `create-task.dto.spec.ts` (10 tests).
+**Closed_by:** d5ac36a (2026-05-28) — `ProjectRequiredWhenParentedConstraint` in `create-task.dto.ts`, `UpdateTaskDto` overrides in `update-task.dto.ts`, witness `create-task.dto.spec.ts` (10 tests).
 **Learnings:**
 - **@ValidateIf short-circuit trap (load-bearing).** The audit's natural read suggests attaching the cross-field check to `projectId`. But `projectId` already carries `@ValidateIf((o) => o.projectId !== null && undefined && '')` which short-circuits ALL property validators on that field when projectId is empty — exactly the failure mode the check needs to catch. The fix: attach `@Validate(ProjectRequiredWhenParentedConstraint)` to `epicId` AND `milestoneId` instead; those fields don't have a competing `@ValidateIf` and the validator reads the full DTO via `ValidationArguments.object`. Witness has a "projectId explicitly empty" test that would have silently passed under the wrong attachment point.
 - **UpdateTaskDto inheritance trap.** Default `PartialType(CreateTaskDto)` inherits ALL property decorators, including the new `@Validate`. On a partial update with `{ epicId: X }` alone, the DTO would 400 even though the DB row already holds `projectId` — a false positive. Fixed via `OmitType` + redeclaration without the constraint. The DB CHECK + DAT-037 still cover the update path; the trade-off is a (rare) post-update 500 if a service path constructs an orphan via update, which the audit's "fallback only for non-DTO write paths" sentence anticipates.
@@ -2783,7 +2783,7 @@ Mirror DAT-018 (`fff93ce`, migration `20260527180000`) on `events`: (1) raw-SQL 
 pnpm prisma migrate deploy && pnpm test apps/api/src/ && pnpm test:integration
 ```
 
-**Closed_by:** `a99dda5` (2026-05-28) — migration `20260528140000_dat038_event_parent_cycle_prevention` + witness `apps/api/src/schema-constraints/dat038-event-parent-cycle.int.spec.ts`.
+**Closed_by:** a99dda5 (2026-05-28) — migration `20260528140000_dat038_event_parent_cycle_prevention` + witness `apps/api/src/schema-constraints/dat038-event-parent-cycle.int.spec.ts`.
 **Learnings:**
 - **No service-side cycle guard on events.** Unlike DAT-018 (which is a DB floor on top of tasks.service.ts `checkCircularDependency`), `apps/api/src/events/events.service.ts` has no event-parent cycle check. The trigger is the only line of defense — a controller path that raw-hits the trigger surfaces P0001 as a 500. A COR-style typed-exception wrapper is plausible follow-up (file separately if it comes up) but the trigger is the load-bearing guarantee, so this task closes the audit gap as filed.
 - **NULL-parent short-circuit is the hot path.** Dev shows 0 of 195 events have a parent; production is likely similar. The trigger `IF NEW.parentEventId IS NULL THEN RETURN NEW` makes the no-parent insert/update O(1) — important because every event mutation hits this trigger.
@@ -2835,7 +2835,7 @@ Wrap the approve-path status mutation (and the import auto-approve write) in a t
 pnpm test apps/api/src/leaves
 ```
 
-**Closed_by:** `abd6982` (2026-05-28) — `isLeaveOverlapViolation` helper + try/catch wrapping the approve `$transaction` + line-level substitute message in `importLeaves`. Witness in `leaves.service.spec.ts`.
+**Closed_by:** abd6982 (2026-05-28) — `isLeaveOverlapViolation` helper + try/catch wrapping the approve `$transaction` + line-level substitute message in `importLeaves`. Witness in `leaves.service.spec.ts`.
 **Learnings:**
 - **Prisma has NO dedicated code for SQLSTATE 23P01.** Unlike `P2002` (unique 23505) and CHECK-violation handling via codes, exclusion_violation surfaces through Prisma as the raw SQLSTATE in the error message. The detector matches on `err.message.includes('leaves_no_overlap') && err.message.includes('23P01')` — both signals as an AND so an unrelated 23P01 elsewhere doesn't accidentally trigger the helper. DAT-023 witness spec independently confirmed the same surface shape (`/23P01/` + `leaves_no_overlap`).
 - **AC#4 verified N/A despite touching audit-sensitive code.** The approve mutation, its `$transaction`, and the `LEAVE_APPROVED` audit log live inside the tx and are byte-unchanged. The outer try/catch only TRANSLATES the propagating error — it doesn't alter the mutation flow. When the 23P01 surfaces from `tx.leave.update`, the tx aborts naturally → audit log doesn't fire (correct: no successful approve = no audit). Witness pins this: `mockAuditPersistence.log` is asserted NOT called.
