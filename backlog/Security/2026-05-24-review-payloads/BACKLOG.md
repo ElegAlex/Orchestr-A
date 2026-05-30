@@ -9350,6 +9350,6 @@ npx vitest run src/users   # in apps/api (turbo treats the path as a task name �
 **Status:** DONE
 File: `e2e/fixtures/permission-matrix.ts`
 Fix: Re-derive allowedRoles/deniedRoles for the 7 entries that contradict ROLE_TEMPLATES V4, by construction from the E2E_SEED test-user→template binding (admin=ADMIN, responsable=ADMIN_DELEGATED, manager=MANAGER, referent=TECHNICAL_LEAD, contributeur=BASIC_USER, observateur=OBSERVER_FULL). `users:read`/`departments:read`/`predefined_tasks:view` (COMMON_BASE → all 6); `projects:read`/`clients:read`/`third_parties:read` (PROJECT_STRUCTURE_READ → deny contributeur); `reports:view` (OBSERVER_FULL → allow observateur). Drop the fossil role-mapping comments. Witness: oracle (ROLE_TEMPLATES × E2E_SEED diff) goes 7 divergent → 0.
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 81da4c9
 
 ---
