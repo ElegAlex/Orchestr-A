@@ -1,10 +1,6 @@
-import { IsString, MinLength, Matches } from 'class-validator';
+import { IsStrongPassword } from '../../common/validators/password-policy';
 
 export class AdminResetPasswordDto {
-  @IsString()
-  @MinLength(8)
-  @Matches(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{}|;:,.<>?])/, {
-    message: 'Password must contain uppercase, digit, and special character',
-  })
+  @IsStrongPassword()
   newPassword: string;
 }

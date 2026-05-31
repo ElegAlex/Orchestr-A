@@ -3571,7 +3571,7 @@ pnpm test apps/api/src/auth/auth.controller.spec.ts  # may need creation if miss
 ---
 ### SEC-007 — LoginDto allows 6-character passwords while RegisterDto enforces 8+ with complexity
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** claude-only
@@ -3609,7 +3609,11 @@ pnpm test apps/api/src/auth/dto/login.dto.spec.ts  # may need creation if missin
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+- **Audit premise was STALE for the HTTP path.** Re-derived against source: the `/users/import` and `/import/validate` endpoints take `@Body() ImportUsersDto` with `@ValidateNested({each:true}) @Type(() => ImportUserDto)`, and `main.ts` runs a global `ValidationPipe({whitelist, forbidNonWhitelisted, transform})`. Empirically probed (`plainToInstance(ImportUsersDto, {users:[{password:'a',...}]})` → `validate()`): the nested password row yields `matches` + `minLength` errors — so the HTTP import path **already rejects** `password:'a'`. The "admins can import a user with 'a'" hole was closed by ImportUserDto's existing decorators. What this commit actually delivers: (a) one shared `PasswordPolicy` (`common/validators/password-policy.ts`: `IsStrongPassword()` decorator + `validatePasswordStrength`/`assertStrongPassword`) replacing 7 duplicated `@MinLength(8)+@Matches` literals (DRY); (b) **service-level defense-in-depth** — `UsersService.importUsers` bcrypts `userData.password` directly with no check (audit's code-evidence target, `importUsers` line ~918), so a non-HTTP caller bypasses the policy; the imperative guard closes that and is the demonstrable witness; (c) seed enforcement of operator-supplied `SEED_ADMIN_PASSWORD`; (d) `validateImport` dry-run now uses the shared policy (was `length<8` only → would mark complexity-weak passwords "valid", inconsistent with the real import). Witness placed at the **service** level (HTTP path already green pre-fix, so a controller/e2e test couldn't demonstrate RED): `importUsers([{password:'a'}])` with no callerRoleCode (hierarchy short-circuits) → pre-fix `created:1`, post-fix `created:0, errors:1` (RED→GREEN demonstrated by removing only the guard).
+- **LoginDto deliberately UNTOUCHED** (the trap): login validates an existing credential; tightening it would lock out users (incl. seeded admin) holding older/weaker passwords. The asymmetry is at CREATION time only.
+- **Seed: only the operator-supplied branch is policy-checked.** The auto-generated branch (`crypto.randomBytes(18).base64url`, dev) is exempt — high-entropy but not guaranteed to contain every required char class, so checking it would make seeding fail intermittently. The regex is duplicated inline in `seed.ts` with a keep-in-sync comment (packages/database cannot import apps/api; cross-package wiring rejected as infra risk for one regex). **Operational bite:** a weak `SEED_ADMIN_PASSWORD` now makes `pnpm db:seed` THROW. Verified nothing wired triggers it — `.env.example` empty, local `.env` unset (dev uses the exempt random branch), e2e/CI seeds test users with `Test1234!` (passes policy). Follow-up candidates (not done): CLAUDE.md's documented dev login `admin / admin123` is stale (`admin123` fails the policy AND the hardcoded default was already removed by SEC-02) — should be refreshed; existing already-weak passwords are NOT retroactively remediated (SEC-004 `forcePasswordChange` rotation is the follow-up).
+- **AC#4 N/A:** validation only, no new/modified audit emit (`importUsers` emits no audit row). **AdminResetPasswordDto** message changed EN→FR (now the shared French message); behavior-identical, no test asserts the old text. **E2E:** not run — behavior-preserving for strong passwords, no password-strength e2e exists, and the seed-throw is config-gated (nothing wired triggers it; demo seed uses policy-compliant `Test1234!`). Gate green: `pnpm test` (1746) + `nest build` + seed-package `tsc --noEmit`.
 
 ---
 ### SEC-013 — Fastify trustProxy not enabled — rate-limit and refresh-token IP tracking broken behind nginx

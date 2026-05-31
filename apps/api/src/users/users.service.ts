@@ -30,6 +30,7 @@ import { join } from 'path';
 import type { MultipartFile } from '@fastify/multipart';
 import { assertMagicBytes } from '../common/upload/magic-bytes.validator';
 import { RefreshTokenService } from '../auth/refresh-token.service';
+import { validatePasswordStrength } from '../common/validators/password-policy';
 
 /** Type de dépendance utilisateur */
 export interface UserDependency {
@@ -1290,6 +1291,18 @@ export class UsersService {
           continue;
         }
 
+        // SEC-007: the global ValidationPipe already rejects weak passwords on
+        // the HTTP /import path, but importUsers bcrypts userData.password
+        // directly — so any non-HTTP caller would bypass the policy. Enforce it
+        // imperatively here too (defense-in-depth), surfacing the violation as a
+        // per-row error rather than a hard 400 that fails the whole batch.
+        const passwordError = validatePasswordStrength(userData.password);
+        if (passwordError) {
+          result.errors++;
+          result.errorDetails.push(`Ligne ${rowNum}: ${passwordError}`);
+          continue;
+        }
+
         let departmentId: string | undefined;
         if (userData.departmentName) {
           departmentId = departmentMap.get(
@@ -1486,11 +1499,13 @@ export class UsersService {
         continue;
       }
 
-      if (!userData.password || userData.password.length < 8) {
+      // SEC-007: use the shared policy so the dry-run preview matches what the
+      // real import (and the ValidationPipe) will accept — the old check only
+      // verified length >= 8 and would mark a complexity-weak password "valid".
+      const passwordError = validatePasswordStrength(userData.password);
+      if (passwordError) {
         previewItem.status = 'error';
-        previewItem.messages.push(
-          'Le mot de passe doit contenir au moins 8 caractères, avec une majuscule, un chiffre et un caractère spécial',
-        );
+        previewItem.messages.push(passwordError);
         result.errors.push(previewItem);
         result.summary.errors++;
         continue;

@@ -259,6 +259,26 @@ async function main() {
     let forcePasswordChange: boolean;
 
     if (envAdminPassword) {
+      // SEC-007: an operator-supplied admin secret is a credential being
+      // CREATED, so it must satisfy the same password policy as registration.
+      // Keep this rule in sync with the single source of truth in
+      // apps/api/src/common/validators/password-policy.ts (this package cannot
+      // import from apps/api). The auto-generated branch below is exempt: 18
+      // random bytes are high-entropy by construction and are not guaranteed to
+      // contain every required character class, so policy-checking them would
+      // make seeding fail intermittently.
+      const meetsPolicy =
+        envAdminPassword.length >= 8 &&
+        /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{}|;:,.<>?])/.test(
+          envAdminPassword,
+        );
+      if (!meetsPolicy) {
+        throw new Error(
+          "[SEED] SEED_ADMIN_PASSWORD does not meet the password policy " +
+            "(min 8 characters, with at least one uppercase letter, one digit " +
+            "and one special character). Choose a stronger value and re-run.",
+        );
+      }
       plaintextPassword = envAdminPassword;
       forcePasswordChange = false;
     } else {

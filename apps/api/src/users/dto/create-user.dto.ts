@@ -3,11 +3,11 @@ import {
   IsString,
   IsEmail,
   MinLength,
-  Matches,
   IsOptional,
   IsBoolean,
   IsArray,
 } from 'class-validator';
+import { IsStrongPassword } from '../../common/validators/password-policy';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -30,12 +30,7 @@ export class CreateUserDto {
       'Mot de passe (minimum 8 caractères, avec majuscule, chiffre et caractère spécial)',
     example: 'P@ssword1',
   })
-  @IsString()
-  @MinLength(8)
-  @Matches(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{}|;:,.<>?])/, {
-    message:
-      'Le mot de passe doit contenir au moins une majuscule, un chiffre et un caractère spécial',
-  })
+  @IsStrongPassword()
   password: string;
 
   @ApiProperty({

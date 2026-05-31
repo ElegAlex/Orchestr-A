@@ -2123,6 +2123,36 @@ describe('UsersService', () => {
       expect(result.createdUsers).toHaveLength(1);
     });
 
+    // SEC-007 witness: the import service path bcrypts userData.password
+    // directly. Before the fix a row with password 'a' was created with zero
+    // checks; after the fix it is rejected as a per-row error and no user is
+    // persisted. Drives importUsers with no callerRoleCode so the hierarchy
+    // gate short-circuits and the password check is the only thing under test.
+    it('rejects a row whose password violates the policy (no user created)', async () => {
+      const importData = [
+        {
+          email: 'weak@example.com',
+          login: 'weak.user',
+          password: 'a',
+          firstName: 'Weak',
+          lastName: 'User',
+          roleCode: 'CONTRIBUTEUR',
+        },
+      ];
+
+      mockPrismaService.department.findMany.mockResolvedValue([]);
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.role.findMany.mockResolvedValue(mockRoles);
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
+
+      const result = await service.importUsers(importData);
+
+      expect(result.created).toBe(0);
+      expect(result.errors).toBe(1);
+      expect(result.createdUsers).toHaveLength(0);
+      expect(mockPrismaService.user.create).not.toHaveBeenCalled();
+    });
+
     it('should skip existing users', async () => {
       const importData = [
         {
