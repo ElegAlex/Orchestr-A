@@ -3553,7 +3553,7 @@ Add per-account failure counter (Redis) with progressive lockout (5 failures →
 pnpm test apps/api/src/auth/auth.controller.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 9e5a57765f924c395a1b69307611c517e662efc2
 **Learnings:**
 - **Mechanism:** new `LoginLockoutService` (Redis) — per-(account, IP) failure counter, threshold 5 → 15min lock, ×2 escalation per repeat (cap 24h), counter+lock+level cleared on a successful login. Wired into `AuthService.login`: `isLocked` checked BEFORE `validateUser` (locked → 429), `recordFailure` on each bad attempt, `clear` on success. IP burst on `/auth/login` cut 30→5/min (`@Throttle short`); longer window left at 120/15min (non-binding by design, the sane sustained cap).
 - **DoS mitigation decision (the AC#3 subtlety):** keyed the lock on **(account, IP)**, not bare account. A bare-account lock is itself a DoS — anyone can lock a victim out of their own account by spamming their username. Account+IP means an attacker only locks their own pair; the victim from a different IP is untouched. The per-IP throttle is the outer bound.
