@@ -3730,6 +3730,44 @@ pnpm test apps/api/src/auth/auth.controller.spec.ts  # may need creation if miss
   emits live in the services (untouched).
 
 ---
+### SEC-014-CLEANUP — Remove the legacy refresh-cookie name fallback (SEC-014 transition shim)
+
+- **Status:** TODO
+- **Phase:** 5
+- **Cluster:** K
+- **Confidence:** claude-only (deploy-surfaced 2026-05-31, from SEC-014)
+- **Blocked_by:** TIME-GATE — earliest 2026-06-07 (one `JWT_REFRESH_TTL` = 7d after the SEC-014 prod deploy on 2026-05-31). DO NOT pick before then.
+- **Severity:** nit (security hygiene — completes the `__Host-` guarantee; ~zero risk delta on single-domain prod)
+- **Category:** security · auth
+- **File:** `apps/api/src/auth/auth.controller.ts` (`readRefreshCookie`)
+- **Source:** SEC-014 deploy follow-up (no audit row — derived obligation)
+
+**Description:**
+SEC-014 shipped a dual-name read (production `__Host-orchestr_a_refresh_token` first, legacy `orchestr_a_refresh_token` fallback) to avoid forcing every active session to re-login on the cookie rename. After one refresh-TTL window all live sessions have rotated to the `__Host-` name or expired, so the legacy branch is dead weight and keeps the unprefixed name accepted (a residual, if minor, foothold on a hypothetical shared domain). Remove the fallback so `__Host-` is fully applied.
+
+**Root cause:**
+Deliberate transition shim from SEC-014; bounded to one `JWT_REFRESH_TTL` window post-deploy.
+
+**Suggested fix:**
+In `readRefreshCookie`, drop the `?? cookieValue(req, REFRESH_COOKIE_LEGACY)` branch so production resolves ONLY `REFRESH_COOKIE_HOST`. Keep dev/test behavior intact (dev still uses the non-prefixed name — confirm the env split, don't break local/e2e refresh). Update the SEC-014 transition comments.
+
+**Acceptance criteria:**
+1. `readRefreshCookie` resolves ONLY `__Host-orchestr_a_refresh_token` in production; the legacy name is no longer accepted.
+2. A test proves the legacy production name is rejected (FAILS pre-cleanup while the fallback exists, PASSES after). The existing SEC-014 "still resolves the legacy cookie name during the rename transition window" test is removed/inverted in the same commit.
+3. No regression (`pnpm test` + `pnpm test:e2e` green). No forced re-login expected — legacy cookies have expired/rotated by the gate date.
+4. AC#4 N/A (cookie read only; no audit emit touched).
+5. Commit message includes `[closes SEC-014-CLEANUP]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm test apps/api/src/auth/auth.controller.spec.ts
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
 ### SEC-019 — Password reset tokens do not invalidate active access JWTs — only refresh tokens are revoked
 
 - **Status:** TODO
