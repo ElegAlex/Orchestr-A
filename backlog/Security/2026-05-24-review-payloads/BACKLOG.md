@@ -4009,7 +4009,7 @@ The frontend HTML served by Next.js (`web:3000`) behind nginx carries a single C
 
 ### SEC-009 — Document URL field accepts arbitrary strings — stored XSS via javascript: scheme
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 6
 - **Cluster:** J
 - **Confidence:** claude-only

@@ -4,9 +4,40 @@ import {
   IsNotEmpty,
   IsOptional,
   IsUUID,
+  IsUrl,
+  IsIn,
   MaxLength,
   MinLength,
 } from 'class-validator';
+
+/**
+ * SEC-009 — pragmatic allowlist for the client-supplied `mimeType`. There is no
+ * canonical mime source in the app (no upload pipeline, no frontend allowlist),
+ * so this set covers the office/image/text document types this project handles,
+ * anchored on `application/pdf` (the DTO example + existing spec value).
+ * `image/svg+xml` is deliberately excluded: SVG can carry inline script, so it
+ * is never accepted as a stored document type.
+ */
+export const ALLOWED_DOCUMENT_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.oasis.opendocument.presentation',
+  'application/zip',
+  'text/plain',
+  'text/csv',
+  'text/markdown',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+] as const;
 
 export class CreateDocumentDto {
   @ApiProperty({
@@ -29,18 +60,24 @@ export class CreateDocumentDto {
   description?: string;
 
   @ApiProperty({
-    description: 'URL du fichier',
+    description: 'URL du fichier (schéma http/https uniquement)',
     example: 'https://storage.cloud.com/file.pdf',
   })
-  @IsString()
+  // SEC-009: scheme-allowlist the URL to block stored XSS via javascript:/data:/
+  // file: schemes rendered as <a href={doc.url}>. require_tld rejects scheme-less
+  // and dotless-host forms; all existing/legit values are external https URLs.
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true, require_tld: true })
+  @MaxLength(2048)
   @IsNotEmpty()
   url: string;
 
   @ApiProperty({
     description: 'Type MIME du fichier',
     example: 'application/pdf',
+    enum: ALLOWED_DOCUMENT_MIME_TYPES,
   })
-  @IsString()
+  // SEC-009: client-set mimeType must be one of the allowed document types.
+  @IsIn(ALLOWED_DOCUMENT_MIME_TYPES)
   @IsNotEmpty()
   mimeType: string;
 
