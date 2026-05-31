@@ -353,5 +353,52 @@ describe('AuditService', () => {
       expect(serialized).not.toMatch(/\$2[aby]\$/);
       expect(persistedArg.entityId).not.toMatch(/\$2[aby]\$/);
     });
+
+    // OBS-013 — the stdout warn line for a LOGIN_FAILURE must NOT carry the raw
+    // attempted login (email PII / attacker free-text). The persisted entityId
+    // keeps the readable-sanitized subject (OBS-001) inside the controlled
+    // audit_logs table; stdout gets only a non-reversible 8-char digest.
+    // FAILS before the fix (raw `attemptedEmail` was spread into the warn JSON),
+    // PASSES after.
+    it('should not leak the raw login to the stdout warn line (hash only)', () => {
+      const warnSpy = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => {});
+
+      const rawLogin = 'Victim.User@Example.COM';
+      service.log({
+        action: AuditAction.LOGIN_FAILURE,
+        attemptedEmail: rawLogin,
+        details: 'Failed login attempt',
+        success: false,
+      });
+
+      const auditCall = warnSpy.mock.calls.find((call) => {
+        try {
+          return (
+            JSON.parse(call[0] as string).action === AuditAction.LOGIN_FAILURE
+          );
+        } catch {
+          return false;
+        }
+      });
+      expect(auditCall).toBeDefined();
+      const logged = auditCall![0] as string;
+
+      // No raw identifier (in any case) reaches stdout.
+      expect(logged).not.toContain(rawLogin);
+      expect(logged.toLowerCase()).not.toContain(rawLogin.toLowerCase());
+
+      // A short, non-reversible digest IS present so operators can still
+      // correlate repeated attempts on the same target.
+      const entry = JSON.parse(logged);
+      expect(entry.attemptedEmail).toBeUndefined();
+      expect(entry.attemptedEmailHash).toMatch(/^[0-9a-f]{8}$/);
+
+      // The persisted row is unchanged: entityId stays the sanitized subject.
+      expect(persistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({ entityId: 'victim.user@example.com' }),
+      );
+    });
   });
 });

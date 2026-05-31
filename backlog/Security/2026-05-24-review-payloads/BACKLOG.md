@@ -3473,7 +3473,7 @@ Closed_by points to anchor commit 2188b3d (empty, gate-compliant). Material code
 ---
 ### OBS-013 — Failed login details log raw user-supplied 'login' value to stdout
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** claude-only
@@ -3510,8 +3510,15 @@ Hash or partially mask login in failure events (login: hash(login).slice(0,8)), 
 pnpm test apps/api/src/auth/auth.service.spec.ts  # may need creation if missing
 ```
 
+- **Scope correction (adjacent file, documented per contract rule 1):** the `File:` pointer `auth.service.ts:99` is **stale** post-SEC-005. SEC-005 (a) replaced the `details: 'Failed login attempt for login: ${loginDto.login}'` interpolation with a constant `'Failed login attempt'` and (b) routed the attempted identifier through `attemptedEmail`→sanitized `entityId` (OBS-001). `auth.service.ts` has **no** direct logger call — its only sink is `auditService.log(...)`. The residual stdout leak is in the **shared** sink `apps/api/src/audit/audit.service.ts`: `entry = { timestamp, ...event }` spread the raw `attemptedEmail` (the attacker-controlled login passed by OBS-001) into `this.logger.warn(JSON.stringify(entry))` — stdout, unmasked. So SEC-005 fixed the persisted row but OBS-001 reintroduced the same leak class via a structured field into the stdout sink. Fix necessarily lives in `audit.service.ts`, not the (stale) `File:` path.
+- **Fix:** in `audit.service.ts`, the stdout `entry` now strips raw `attemptedEmail` and substitutes `attemptedEmailHash = sha256(attemptedEmail).slice(0,8)` (new `hashAttemptedLogin` helper). The persistence path is untouched: it still receives the full `event`, so `entityId` keeps the OBS-001 sanitized-but-readable subject inside the RGPD-controlled `audit_logs` table. Two sinks, two policies: controlled DB = readable subject; broadly-shipped stdout = non-reversible digest. `JSON.stringify` already neutralized classic line-split log-injection; this removes the residual PII/identifier exposure.
+- **AC#4:** N/A — log-only delta, no new audit emit; the persisted LOGIN_FAILURE row is byte-identical (verified: witness asserts `entityId: 'victim.user@example.com'` unchanged).
+- **Witness (AC#2):** `audit.service.spec.ts` › "should not leak the raw login to the stdout warn line (hash only)" — sends a LOGIN_FAILURE with `attemptedEmail: 'Victim.User@Example.COM'`, asserts the warn JSON contains no raw login (any case), `attemptedEmail` absent, `attemptedEmailHash` matches `/^[0-9a-f]{8}$/`, and the persisted `entityId` stays the sanitized subject. **Demonstrated FAIL-before** (stashed the service fix → witness red) **/ PASS-after.**
+- **Gates:** `pnpm test` **1751** green (78 files / 6 turbo tasks; +1 OBS-013). `npx nest build` clean exit 0 (the real typecheck gate — `tsc --noEmit` RED on master by design). Lint NOT run (known pre-existing ajv/eslintrc env breakage — per task directive). **E2e — not run; provably orthogonal:** the delta changes only the stdout warn string, not any HTTP status / response body / persisted audit row, and no auth e2e assertion inspects stdout. Auth e2e is independently pre-existing-red on the local harness (TST-E2E-001 sub-failures #1/#3/#4, none log-related).
+- **Deploy:** log-only delta (changes what LOGIN_FAILURE prints to stdout: hash instead of raw login). No schema/behavior change. Ships with the next grouped deploy; no standalone deploy warranted. Operator HOLD per directive.
+
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:** SEC-005 closed the originally-described `details` interpolation; OBS-001 then reintroduced the same leak *class* by passing the raw login as a structured `attemptedEmail` field that the shared audit sink spreads verbatim into stdout. Lesson: a `{ ...event }` spread into a log sink re-exposes every field a later task adds — the sink, not just each call site, needs the redaction policy. The `...event`/`...before`/`...after`/`...details` spread is a general future-leak surface (a PII-bearing `before`/`after` snapshot would land in stdout the same way); left out of OBS-013 scope (attemptedEmail only) but worth a dedicated audit-sink-redaction pass.
 
 ---
 ### SEC-006 — Login rate-limit too permissive: 30 attempts/min per IP enables brute force

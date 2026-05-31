@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { AuditPersistenceService } from './audit-persistence.service';
 import { AuditAction } from './audit-action.enum';
 
@@ -92,6 +93,18 @@ const BCRYPT_SHAPE = /\$2[aby]\$/;
 
 const MAX_ENTITY_ID_LENGTH = 254;
 
+/**
+ * OBS-013 — `attemptedEmail` (the raw, attacker-controlled login of a
+ * LOGIN_FAILURE / ACCOUNT_LOCKED) must never reach the stdout log sink: it can
+ * be email PII or arbitrary free-text. The persisted `entityId` keeps the
+ * readable-but-sanitized subject (OBS-001) inside the RGPD-controlled
+ * `audit_logs` table; stdout — broadly shipped and far less controlled — gets
+ * only a short, non-reversible digest, enough to correlate repeated attempts on
+ * the same target without exposing the identifier.
+ */
+const hashAttemptedLogin = (value: string): string =>
+  createHash('sha256').update(value).digest('hex').slice(0, 8);
+
 @Injectable()
 export class AuditService {
   private readonly logger = new Logger('SecurityAudit');
@@ -119,9 +132,17 @@ export class AuditService {
     after?: unknown;
     success: boolean;
   }) {
+    // OBS-013 — keep the raw `attemptedEmail` out of the stdout sink. The
+    // persistence path below still receives the full `event` (its `entityId`
+    // stays the sanitized-but-readable subject, OBS-001); only this broadly
+    // shipped logger line is downgraded to a non-reversible 8-char digest.
+    const { attemptedEmail, ...loggable } = event;
     const entry = {
       timestamp: new Date().toISOString(),
-      ...event,
+      ...loggable,
+      ...(attemptedEmail !== undefined
+        ? { attemptedEmailHash: hashAttemptedLogin(attemptedEmail) }
+        : {}),
     };
 
     if (event.success) {
