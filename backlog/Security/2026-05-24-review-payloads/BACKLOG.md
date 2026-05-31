@@ -3857,7 +3857,7 @@ On Redis failure during blacklist(), bubble the error so /auth/logout returns 50
 pnpm test apps/api/src/auth/jwt-blacklist.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** d4f3815e67e26699098ccd6cf04ddc21ca8e9c51
 **Learnings:**
 - **Fix:** `blacklist()` now logs AND throws `ServiceUnavailableException` (HTTP 503) on Redis write failure instead of swallowing — NestJS maps it straight to 503 (a plain `throw` would give 500). Pointer `jwt-blacklist.service.ts:28` was accurate this time (the OBS-013/SEC-019 drift did not recur here). Only caller is `auth.controller.ts logout()`; `blacklist()` reused the existing per-service ioredis client (no new dep, no migration — Postgres durable-fallback declined as out-of-scope, noted as candidate follow-up).
 - **Deliberate asymmetry (record):** this is the INVERSE of SEC-006 lockout / SEC-019 nbf, which fail-OPEN on Redis read for availability. Here the logout WRITE fails-CLOSED: a full Redis outage makes `/auth/logout` return 503 for everyone. That is the correct posture — an honest 503 (client retries) beats a false 204 that left a stolen-after-logout token usable for the access TTL (~15min). Reads fail-open (availability) / this revocation write fails-closed (the logout must be durable or the client must know it wasn't). `isBlacklisted()` already fails-closed on read (returns `true`); the fix restores symmetry on the write side.
