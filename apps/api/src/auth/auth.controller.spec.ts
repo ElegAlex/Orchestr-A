@@ -134,6 +134,136 @@ describe('AuthController', () => {
     });
   });
 
+  // SEC-014 — refresh-token cookie hardening (__Host- + Path=/ + Secure +
+  // SameSite=Strict in production; non-__Host- workable cookie in dev/test).
+  describe('refresh cookie (SEC-014)', () => {
+    const captureSetCookie = () => {
+      const headers: Record<string, string> = {};
+      const reply = {
+        header: vi.fn((name: string, value: string) => {
+          headers[name.toLowerCase()] = value;
+        }),
+      };
+      return { reply, getSetCookie: () => headers['set-cookie'] };
+    };
+
+    const withNodeEnv = async (value: string, fn: () => Promise<void>) => {
+      const prev = process.env.NODE_ENV;
+      process.env.NODE_ENV = value;
+      try {
+        await fn();
+      } finally {
+        process.env.NODE_ENV = prev;
+      }
+    };
+
+    it('emits a __Host- prefixed, Secure, Path=/, SameSite=Strict cookie in production (set path)', async () => {
+      await withNodeEnv('production', async () => {
+        mockAuthService.login.mockResolvedValue({
+          access_token: 'at',
+          user: mockUser,
+        });
+        const { reply, getSetCookie } = captureSetCookie();
+
+        await controller.login(
+          { login: 'testuser', password: 'pw' },
+          mockReq as any,
+          reply as any,
+        );
+
+        const cookie = getSetCookie();
+        expect(cookie).toBeDefined();
+        expect(cookie).toMatch(/^__Host-orchestr_a_refresh_token=/);
+        expect(cookie).toContain('Path=/;');
+        expect(cookie).toContain('Secure');
+        expect(cookie).toContain('HttpOnly');
+        expect(cookie).toContain('SameSite=Strict');
+        // __Host- cookies MUST NOT carry a Domain attribute (browser drops them
+        // silently otherwise) and must not be scoped to /api/auth.
+        expect(cookie).not.toMatch(/Domain=/i);
+        expect(cookie).not.toContain('Path=/api/auth');
+        expect(cookie).not.toContain('SameSite=Lax');
+      });
+    });
+
+    it('resolves the production __Host- cookie name on the read path (refresh)', async () => {
+      await withNodeEnv('production', async () => {
+        mockRefreshTokenService.rotate.mockResolvedValue({
+          userId: 'user-id-1',
+          newRefreshToken: 'rotated',
+        });
+        mockAuthService.issueAccessTokenForUser = vi
+          .fn()
+          .mockResolvedValue('new-at');
+        const { reply } = captureSetCookie();
+        const req = {
+          headers: {
+            cookie: '__Host-orchestr_a_refresh_token=the-cookie-token',
+          },
+          ip: '127.0.0.1',
+          ips: [],
+        };
+
+        await controller.refresh({} as any, req as any, reply as any);
+
+        expect(mockRefreshTokenService.rotate).toHaveBeenCalledWith(
+          'the-cookie-token',
+          expect.any(Object),
+        );
+      });
+    });
+
+    it('still resolves the legacy cookie name during the rename transition window', async () => {
+      await withNodeEnv('production', async () => {
+        mockRefreshTokenService.rotate.mockResolvedValue({
+          userId: 'user-id-1',
+          newRefreshToken: 'rotated',
+        });
+        mockAuthService.issueAccessTokenForUser = vi
+          .fn()
+          .mockResolvedValue('new-at');
+        const { reply } = captureSetCookie();
+        const req = {
+          headers: { cookie: 'orchestr_a_refresh_token=legacy-token' },
+          ip: '127.0.0.1',
+          ips: [],
+        };
+
+        await controller.refresh({} as any, req as any, reply as any);
+
+        expect(mockRefreshTokenService.rotate).toHaveBeenCalledWith(
+          'legacy-token',
+          expect.any(Object),
+        );
+      });
+    });
+
+    it('emits a workable non-__Host-, non-Secure cookie in dev/test (http localhost)', async () => {
+      await withNodeEnv('development', async () => {
+        mockAuthService.login.mockResolvedValue({
+          access_token: 'at',
+          user: mockUser,
+        });
+        const { reply, getSetCookie } = captureSetCookie();
+
+        await controller.login(
+          { login: 'testuser', password: 'pw' },
+          mockReq as any,
+          reply as any,
+        );
+
+        const cookie = getSetCookie();
+        expect(cookie).toBeDefined();
+        expect(cookie).toMatch(/^orchestr_a_refresh_token=/);
+        // No __Host- prefix and no Secure in dev — http://localhost can't carry
+        // Secure cookies, which would break local dev + e2e refresh.
+        expect(cookie).not.toContain('__Host-');
+        expect(cookie).not.toContain('Secure');
+        expect(cookie).toContain('HttpOnly');
+      });
+    });
+  });
+
   describe('register', () => {
     const registerDto = {
       email: 'newuser@example.com',

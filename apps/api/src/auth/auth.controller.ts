@@ -32,7 +32,24 @@ import type { AuthenticatedUser } from './decorators/current-user.decorator';
 import { clientIp } from '../common/fastify/trust-proxy.config';
 
 type RequestMeta = { userAgent?: string; ip?: string };
-const REFRESH_COOKIE = 'orchestr_a_refresh_token';
+// SEC-014 — refresh-token cookie hardening.
+// Production uses the __Host- prefix, which the browser only accepts with
+// Secure + Path=/ + no Domain — closing the shared-domain / sibling-subdomain
+// plant-or-read vector and (via SameSite=Strict) top-level-nav CSRF.
+// http://localhost (dev + e2e) cannot carry Secure cookies, so dev/test fall
+// back to the non-prefixed name. The read path resolves BOTH names so existing
+// production sessions (legacy name, Path=/api/auth) survive the rename until
+// their refresh cookie next rotates — see deploy note / SEC-014 transition.
+const REFRESH_COOKIE_LEGACY = 'orchestr_a_refresh_token';
+const REFRESH_COOKIE_HOST = `__Host-${REFRESH_COOKIE_LEGACY}`;
+
+function isProdCookie(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
+
+function refreshCookieName(): string {
+  return isProdCookie() ? REFRESH_COOKIE_HOST : REFRESH_COOKIE_LEGACY;
+}
 
 function extractMeta(req: {
   headers?: Record<string, unknown>;
@@ -59,23 +76,47 @@ function cookieValue(req: { headers?: Record<string, unknown> }, name: string) {
     ?.slice(prefix.length);
 }
 
+// @fastify/cookie is NOT registered in this app, so the fix keeps the raw
+// Set-Cookie construction (registering it would touch main.ts + package.json
+// for no security gain); a correctly-built header is standards-compliant.
+function buildRefreshCookie(value: string, maxAge: number): string {
+  const prod = isProdCookie();
+  const attrs = [
+    `${refreshCookieName()}=${value}`,
+    `Max-Age=${maxAge}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Strict',
+  ];
+  if (prod) attrs.push('Secure');
+  return attrs.join('; ');
+}
+
 function setRefreshCookie(
   reply: FastifyReply | undefined,
   refreshToken: string,
   maxAge: number,
 ) {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   reply?.header(
     'Set-Cookie',
-    `${REFRESH_COOKIE}=${encodeURIComponent(refreshToken)}; Max-Age=${maxAge}; Path=/api/auth; HttpOnly; SameSite=Lax${secure}`,
+    buildRefreshCookie(encodeURIComponent(refreshToken), maxAge),
   );
 }
 
 function clearRefreshCookie(reply: FastifyReply | undefined) {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-  reply?.header(
-    'Set-Cookie',
-    `${REFRESH_COOKIE}=; Max-Age=0; Path=/api/auth; HttpOnly; SameSite=Lax${secure}`,
+  reply?.header('Set-Cookie', buildRefreshCookie('', 0));
+}
+
+// Dual-name read for the SEC-014 rename transition: prefer the production
+// __Host- name, fall back to the legacy/dev name. Safe in every env — the
+// __Host- name simply won't be present in dev. Remove the legacy fallback once
+// one JWT_REFRESH_TTL window (7d default) has elapsed post-deploy.
+function readRefreshCookie(req: {
+  headers?: Record<string, unknown>;
+}): string | undefined {
+  return (
+    cookieValue(req, REFRESH_COOKIE_HOST) ??
+    cookieValue(req, REFRESH_COOKIE_LEGACY)
   );
 }
 
@@ -152,8 +193,7 @@ export class AuthController {
     @Req() req: any,
     @Res({ passthrough: true }) reply?: FastifyReply,
   ) {
-    const refreshToken =
-      body.refreshToken ?? cookieValue(req, REFRESH_COOKIE) ?? '';
+    const refreshToken = body.refreshToken ?? readRefreshCookie(req) ?? '';
     const { userId, newRefreshToken } = await this.refreshTokenService.rotate(
       refreshToken,
       extractMeta(req),
@@ -189,7 +229,7 @@ export class AuthController {
       }
     }
     const refreshToken =
-      body?.refreshToken ?? cookieValue(req, REFRESH_COOKIE) ?? undefined;
+      body?.refreshToken ?? readRefreshCookie(req) ?? undefined;
     if (refreshToken) {
       await this.refreshTokenService.revoke(refreshToken);
     }

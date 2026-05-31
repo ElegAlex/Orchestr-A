@@ -3667,7 +3667,7 @@ pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ---
 ### SEC-014 — Refresh token cookie not marked __Host- and Path scoped only to /api/auth — vulnerable to subdomain attacks
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** claude-only
@@ -3705,7 +3705,29 @@ pnpm test apps/api/src/auth/auth.controller.spec.ts  # may need creation if miss
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+- `@fastify/cookie` is NOT registered (nor a dependency). The audit's "use
+  reply.setCookie()" rested on it being registered; it isn't. Kept the raw
+  `reply.header('Set-Cookie', ...)` construction with corrected attributes —
+  registering the plugin would widen scope to `main.ts` + `package.json` for
+  zero security gain. A correctly-built header is standards-compliant.
+- Cookie attrs are conditional on `NODE_ENV`. Prod: `__Host-orchestr_a_refresh_token`
+  + `Path=/` + `Secure` + `HttpOnly` + `SameSite=Strict` (no `Domain` — `__Host-`
+  is dropped silently if `Domain` present). Dev/e2e (http://localhost can't carry
+  Secure cookies): non-prefixed `orchestr_a_refresh_token`, same attrs minus Secure.
+- TRANSITION (rename trap): chose **dual-name read** over forced re-login.
+  `readRefreshCookie()` resolves the `__Host-` name first, falls back to the
+  legacy name. On single-domain prod this reading of the legacy name is exactly
+  today's behavior → zero new risk now; it only delays full `__Host-` benefit by
+  one refresh-token window. Existing prod sessions are NOT force-logged-out.
+  FOLLOW-UP: remove the legacy fallback after one `JWT_REFRESH_TTL` window
+  (7d default) post-deploy → ~2026-06-07.
+- SameSite=Strict does not break the dev/e2e refresh: SameSite never gates
+  same-origin requests, and Playwright's request context resends by domain/path.
+  Verified live against the running dev API: login→cookie, cookie-backed
+  refresh+rotate, logout clear all work under the dev cookie config.
+- AC#4 N/A: only controller cookie attributes changed; the refresh/logout audit
+  emits live in the services (untouched).
 
 ---
 ### SEC-019 — Password reset tokens do not invalidate active access JWTs — only refresh tokens are revoked
