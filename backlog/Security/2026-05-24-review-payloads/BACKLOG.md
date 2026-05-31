@@ -2,7 +2,7 @@
 
 > **Source audit:** `audits/2026-05-24-adversarial-review/` (this directory)
 > **Generated:** 2026-05-24
-> **Total tasks:** 198 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018) + 1 session-derived follow-up (COR-037, 2026-05-27, from DAT-023) + 2 deploy-surfaced follow-ups (COR-038, DOC-001, 2026-05-28, from Phase 3 prod deploy) + 1 session-derived follow-up (TOOL-COH-003, 2026-05-28, from COR-038/COR-001/COR-002 closeouts) + 1 deploy-surfaced follow-up (SEC-031, 2026-05-29, from SEC-030 closeout) + 1 deploy-surfaced follow-up (SEC-FE-001, 2026-05-31, from SEC-004 closeout)
+> **Total tasks:** 199 — 173 from adversarial review (6 sub-agents) + 1 from Codex cross-review + 1 operational follow-up (DAT-031, "#175") + 1 deploy-discovered (BUILD-001, 2026-05-25) + 2 session-hygiene (TOOL-COH-001, TOOL-COH-002, 2026-05-25) + 1 verdict-B descope (TOOL-DEPLOY-001, 2026-05-25) + 3 session-derived follow-ups (USR-DEL-001, TST-DB-001, AUD-READ-001, 2026-05-25) + 2 session-derived follow-ups (DAT-032, TOOL-DBSYNC-001, 2026-05-27) + 2 session-derived follow-ups (DAT-033, DAT-034, 2026-05-27, from COR-022) + 1 session-derived follow-up (DAT-035, 2026-05-27, from DAT-012) + 2 session-derived follow-ups (DAT-036, COR-034, 2026-05-27, from DAT-016) + 2 session-derived follow-ups (DAT-037, COR-035, 2026-05-27, from DAT-017) + 1 session-derived follow-up (DAT-038, 2026-05-27, from DAT-018) + 1 session-derived follow-up (COR-037, 2026-05-27, from DAT-023) + 2 deploy-surfaced follow-ups (COR-038, DOC-001, 2026-05-28, from Phase 3 prod deploy) + 1 session-derived follow-up (TOOL-COH-003, 2026-05-28, from COR-038/COR-001/COR-002 closeouts) + 1 deploy-surfaced follow-up (SEC-031, 2026-05-29, from SEC-030 closeout) + 1 deploy-surfaced follow-up (SEC-FE-001, 2026-05-31, from SEC-004 closeout) + 1 session-derived follow-up (TST-E2E-001, 2026-05-31, from SEC-005 e2e triage)
 
 ## Schema legend
 
@@ -26,8 +26,8 @@ Each task carries these fields. Claude Code must not invent new ones, and must n
 
 ## Totals
 
-- **By severity:** 32 blocking · 126 important · 25 nit · 6 suggestion
-- **By category:** 38 correctness · 37 data_integrity · 27 observability · 30 performance · 31 security · 26 tests · 6 tooling
+- **By severity:** 32 blocking · 127 important · 25 nit · 6 suggestion
+- **By category:** 38 correctness · 37 data_integrity · 27 observability · 30 performance · 31 security · 27 tests · 6 tooling
 
 ## Cross-validated subset (max-confidence — close first within each phase)
 
@@ -5823,7 +5823,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 
 ## Phase 11 — Tests : suppression du théâtre
-*12 tasks in this phase.*
+*13 tasks in this phase.*
 
 ### TST-003 — Security E2E for telework cross-user IDOR is entirely skipped
 
@@ -6335,6 +6335,82 @@ For each controller, either remove these specs or repurpose them to test DTO val
 **Verification command:**
 ```
 pnpm test apps/api/src/auth/auth.controller.spec.ts
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:** (empty — Claude Code fills if surprises encountered)
+
+---
+### TST-E2E-001 — Auth e2e suite cannot go green: 4 sub-failures block it from being a real CI gate
+
+- **Status:** TODO
+- **Phase:** 11
+- **Cluster:** H
+- **Confidence:** claude-only (session-derived 2026-05-31, from SEC-005 e2e triage)
+- **Blocked_by:** SEC-006 (partial — throttle sub-failure only; see body)
+- **Severity:** important
+- **Category:** tests · e2e-harness
+- **File:** `e2e/tests/security/auth-hardening.spec.ts`, `e2e/auth.spec.ts`, `e2e/tests/workflows/auth.spec.ts`
+- **Source:** Session-derived from SEC-005 closeout e2e triage (2026-05-31). All failures confirmed against source files this session.
+
+**Description:**
+The auth e2e suite (`e2e/tests/security/auth-hardening.spec.ts`, `e2e/auth.spec.ts`, `e2e/tests/workflows/auth.spec.ts`) has at least 4 categories of failure that prevent it from running green on the CI harness (seeded `orchestr_a_v2_e2e` database + compiled `api start` + Next.js frontend). Until resolved the suite is useless as a CI gate: any auth regression can land on master undetected.
+
+**Root cause (per sub-failure):**
+
+**1 — SEC-03: `user.role` comes back as a Role object, not the string "CONTRIBUTEUR" (genuine drift)**
+`auth-hardening.spec.ts:73` asserts `expect(user.role).toBe("CONTRIBUTEUR")`. The `loginAs()` helper types the return as `{ …, user: { id: string; role: string } }`. But `auth.controller.ts:125` returns `{ access_token: result.access_token, user: result.user }` where `result.user` is the Prisma `fullUser` object — its `role` field is `{ id, code, label, templateKey, isSystem }` (an object, not a string), as defined in `auth/decorators/current-user.decorator.ts:10-18`. Additionally, `seed.ts:1702` assigns `contributeur-test` to role `BASIC_USER`, not `CONTRIBUTEUR`, so the seed role-code is also wrong for the expected assertion. Two independent drift points: (a) the user shape mismatch (object vs string), (b) the seed role-code mismatch (`BASIC_USER` vs `CONTRIBUTEUR`). Both must be fixed. This failure is independent of SEC-006.
+
+**2 — SEC-05 throttle: login returns 401 where test expects 429 on the 6th attempt (blocked_by SEC-006)**
+`auth-hardening.spec.ts:149-153` sends 6 rapid login requests and asserts the 6th returns 429. The test expects a burst limit of 5 (first 5 → 401, 6th → 429). But `auth.controller.ts:90-93` has `@Throttle({ short: { limit: 30, ttl: 60_000 } })` — the current limit is 30, not 5, so all 6 attempts return 401 (unknown login) and the 429 never fires. The `auth.setup.ts:35` comment already says "5 req/60s, 15 req/15min" — that comment was written for the SEC-006 post-fix world. **This failure is blocked_by SEC-006** (which prescribes reducing the burst limit to 5/min). It is NOT independent drift; it resolves automatically when SEC-006 lands. Do not fix this sub-failure here — fix it as part of SEC-006.
+
+**3 — SEC-04 refresh: `refresh_token` is undefined in the test flow (genuine drift)**
+`auth-hardening.spec.ts:160` destructures `{ access_token, refresh_token }` from `loginAs()`. But `auth.controller.ts:125` returns only `{ access_token, user }` in the JSON body — the `refresh_token` is placed in an `HttpOnly` cookie (`orchestr_a_refresh_token`) by `setRefreshCookie()` at line 120-123. The `loginAs()` helper reads `.json()` from a plain `APIRequestContext` (no cookie jar for `HttpOnly` cookies accessible via JS), so `refresh_token` is always `undefined`. The logout test at line 179 passes `refreshToken: refresh_token` (= undefined) to `/auth/logout`, and the refresh-rotation test at line 201 passes `undefined` to `/auth/refresh`. Both tests will fail or produce unexpected 4xx. Fix: `loginAs()` must extract the `Set-Cookie` header from the login response and re-inject it on subsequent requests, or use a `browser.newContext()` (which has a real cookie jar). This failure is independent of SEC-006.
+
+**4 — 6× web-UI locator timeouts (genuine drift)**
+`e2e/auth.spec.ts` contains 3 tests using Playwright UI locators (`h1`, `input[id="login"]`, `input[id="password"]`, `[data-testid="login-submit"]`). `e2e/tests/workflows/auth.spec.ts` contains 3 tests using locators (`[data-testid="login-username"]`, `[data-testid="login-password"]`, `[role="status"]`, `button[name="Déconnexion"]`). Total 6 UI tests. These require the Next.js frontend to be reachable at `baseURL`. If the frontend is not running in the harness (or if the locators do not match the current UI component structure), all 6 time out. This is a harness configuration gap: the e2e CI job must ensure the frontend is running, and the locators must be reconciled with the actual rendered DOM.
+
+**Code evidence:**
+```
+# Sub-failure 1 (role object vs string + seed role-code):
+auth.controller.ts:125  → return { access_token: result.access_token, user: result.user }
+auth.service.ts:137-145 → fullUser select includes role: { id, code, label, templateKey, isSystem }
+current-user.decorator.ts:10-18 → AuthenticatedUser.role = { id, code, label, templateKey, isSystem } | null
+seed.ts:1702            → contributeur-test roleId: requireRoleId("BASIC_USER")  # not CONTRIBUTEUR
+auth-hardening.spec.ts:73 → expect(user.role).toBe("CONTRIBUTEUR")
+
+# Sub-failure 2 (throttle — blocked_by SEC-006):
+auth.controller.ts:90-93 → @Throttle({ short: { limit: 30, ttl: 60_000 } })
+auth-hardening.spec.ts:149-153 → expects limit 5 (5×401 then 429)
+auth.setup.ts:35         → comment already says "5 req/60s" (written for SEC-006 post-fix)
+SEC-006 → "Reduce login burst to 5/min"
+
+# Sub-failure 3 (refresh_token in cookie, not body):
+auth.controller.ts:120-125 → setRefreshCookie(reply, result.refresh_token, …); return { access_token, user }
+auth-hardening.spec.ts:160 → const { access_token, refresh_token } = await loginAs(…)
+auth-hardening.spec.ts:52-57 → loginAs() types return as { refresh_token: string } but JSON body has no such field
+
+# Sub-failure 4 (UI locator timeouts):
+e2e/auth.spec.ts:8-36    → 3 UI tests with locators (h1, input[id="login"], etc.)
+e2e/tests/workflows/auth.spec.ts:17-77 → 3 UI tests with locators (login-username, login-password, etc.)
+```
+
+**Suggested fix:**
+1. **(SEC-03 shape fix)** In `loginAs()`, replace the typed return with one that reads `user.role` correctly — either have the API return `role` as a string (`.code`) at the login endpoint, or update the helper and assertion to navigate `user.role.code`. Separately, fix the seed to assign `contributeur-test` to the `CONTRIBUTEUR` role (or whichever role the E2E contract requires).
+2. **(SEC-05 throttle)** No fix here — **resolve via SEC-006** (tighten `@Throttle` limit to 5). The test is already correct for the post-fix world.
+3. **(SEC-04 refresh)** Rewrite `loginAs()` to capture the `Set-Cookie: orchestr_a_refresh_token=…` header from the login response and re-inject it as a `Cookie` header on subsequent `/auth/refresh` and `/auth/logout` calls (or use a Playwright `BrowserContext` which manages cookies automatically).
+4. **(UI timeouts)** Ensure the CI e2e job starts the Next.js frontend before running these specs, and verify `data-testid` selectors match the current login page component.
+
+**Acceptance criteria:**
+1. `npx playwright test e2e/tests/security/auth-hardening.spec.ts` reports 0 failures on the CI harness (seeded `orchestr_a_v2_e2e` database + compiled `api start` + Next.js frontend running at `baseURL`), with the understanding that the SEC-05 throttle test passes only after SEC-006 lands.
+2. `npx playwright test e2e/auth.spec.ts e2e/tests/workflows/auth.spec.ts` reports 0 locator timeouts.
+3. Each sub-failure has a FAIL-before / PASS-after witness demonstrable independently (except SEC-05 which is gated on SEC-006).
+4. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+5. Commit message includes `[closes TST-E2E-001]`.
+
+**Verification command:**
+```
+npx playwright test e2e/tests/security/auth-hardening.spec.ts e2e/auth.spec.ts e2e/tests/workflows/auth.spec.ts --project=admin
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
