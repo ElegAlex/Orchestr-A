@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JwtBlacklistService } from '../jwt-blacklist.service';
+import { JwtNotBeforeService } from '../jwt-not-before.service';
 
 export interface JwtPayload {
   sub: string;
@@ -24,6 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly blacklist: JwtBlacklistService,
+    private readonly notBefore: JwtNotBeforeService,
   ) {
     const secret = configService.get<string>('JWT_SECRET');
     if (!secret) {
@@ -39,6 +41,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     if (payload.jti && (await this.blacklist.isBlacklisted(payload.jti))) {
       throw new UnauthorizedException('Token révoqué');
+    }
+
+    // SEC-019 — per-user not-valid-before gate. A password reset bumps
+    // jwt:nbf:<userId> to the reset instant (seconds); any access token minted
+    // before that (iat < nbf) is rejected, closing the ≤15-min window where a
+    // stolen access token outlived the reset. iat and nbf are BOTH seconds; the
+    // strict `<` plus the +1 baked into the stored nbf reject same-second
+    // pre-existing tokens (see JwtNotBeforeService). Cheap Redis read keyed off
+    // payload.sub — placed before the Prisma fetch; fails open on Redis error.
+    if (typeof payload.iat === 'number') {
+      const nbf = await this.notBefore.getNotBefore(payload.sub);
+      if (nbf !== null && payload.iat < nbf) {
+        throw new UnauthorizedException('Token révoqué');
+      }
     }
 
     const user = await this.prisma.user.findUnique({

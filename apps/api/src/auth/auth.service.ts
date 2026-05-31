@@ -18,6 +18,7 @@ import { AuditService, AuditAction } from '../audit/audit.service';
 import { RefreshTokenService, RefreshTokenMeta } from './refresh-token.service';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
 import { LoginLockoutService } from './login-lockout.service';
+import { JwtNotBeforeService } from './jwt-not-before.service';
 
 export interface ResetTokenResponse {
   ok: true;
@@ -38,6 +39,7 @@ export class AuthService {
     private readonly refreshTokenService: RefreshTokenService,
     private readonly roleHierarchy: RoleHierarchyService,
     private readonly loginLockout: LoginLockoutService,
+    private readonly jwtNotBefore: JwtNotBeforeService,
   ) {}
 
   private getAccessTtl(): string {
@@ -527,10 +529,18 @@ export class AuthService {
     // Revoke all refresh tokens so existing sessions are invalidated after password reset
     await this.refreshTokenService.revokeAllForUser(resetToken.userId);
 
+    // SEC-019 — also invalidate already-issued ACCESS tokens. revokeAllForUser
+    // only touches refresh tokens; without this bump a stolen access token stays
+    // valid until it expires (≤15 min) after the victim resets. Bumping the
+    // per-user nbf makes JwtStrategy.validate reject every access token minted
+    // before this instant on its next request.
+    await this.jwtNotBefore.bumpUser(resetToken.userId);
+
     this.auditService.log({
       action: AuditAction.PASSWORD_CHANGED,
       userId: resetToken.userId,
-      details: 'Password reset via token',
+      details:
+        'Password reset via token; all active sessions invalidated (refresh tokens revoked, access tokens invalidated via nbf bump)',
       success: true,
     });
   }

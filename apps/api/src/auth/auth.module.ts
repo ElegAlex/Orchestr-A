@@ -12,6 +12,7 @@ import { ThrottlerBehindProxyGuard } from './guards/throttler-behind-proxy.guard
 import { APP_GUARD } from '@nestjs/core';
 import { RefreshTokenService } from './refresh-token.service';
 import { JwtBlacklistService } from './jwt-blacklist.service';
+import { JwtNotBeforeService } from './jwt-not-before.service';
 import { LoginLockoutService } from './login-lockout.service';
 
 @Module({
@@ -38,6 +39,7 @@ import { LoginLockoutService } from './login-lockout.service';
     AuthService,
     RefreshTokenService,
     JwtBlacklistService,
+    JwtNotBeforeService,
     LoginLockoutService,
     JwtStrategy,
     LocalStrategy,
@@ -61,6 +63,7 @@ import { LoginLockoutService } from './login-lockout.service';
     AuthService,
     RefreshTokenService,
     JwtBlacklistService,
+    JwtNotBeforeService,
     LoginLockoutService,
   ],
 })

@@ -17,6 +17,7 @@ import { RefreshTokenService } from './refresh-token.service';
 import { ConfigService } from '@nestjs/config';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
 import { LoginLockoutService } from './login-lockout.service';
+import { JwtNotBeforeService } from './jwt-not-before.service';
 
 vi.mock('bcrypt');
 
@@ -133,6 +134,11 @@ describe('AuthService', () => {
     assertCanAssignRole: vi.fn().mockResolvedValue(undefined),
   };
 
+  const mockJwtNotBefore = {
+    bumpUser: vi.fn().mockResolvedValue(undefined),
+    getNotBefore: vi.fn().mockResolvedValue(null),
+  };
+
   beforeEach(async () => {
     fakeLockout = makeFakeLockout();
     const module: TestingModule = await Test.createTestingModule({
@@ -169,6 +175,10 @@ describe('AuthService', () => {
         {
           provide: RoleHierarchyService,
           useValue: mockRoleHierarchy,
+        },
+        {
+          provide: JwtNotBeforeService,
+          useValue: mockJwtNotBefore,
         },
       ],
     }).compile();
@@ -813,16 +823,20 @@ describe('AuthService', () => {
           data: expect.objectContaining({ usedAt: expect.any(Date) }),
         }),
       );
-      // TST-011 — PASSWORD_CHANGED audit emission at auth.service.ts:460
-      // (reset via token). Subject is the token's owner.
+      // TST-011 — PASSWORD_CHANGED audit emission (reset via token). Subject is
+      // the token's owner. SEC-019 — details now reflects that active sessions
+      // (refresh + access tokens) were invalidated.
       expect(mockAuditService.log).toHaveBeenCalledWith(
         expect.objectContaining({
           action: AuditAction.PASSWORD_CHANGED,
           userId: validToken.userId,
-          details: 'Password reset via token',
+          details:
+            'Password reset via token; all active sessions invalidated (refresh tokens revoked, access tokens invalidated via nbf bump)',
           success: true,
         }),
       );
+      // SEC-019 — access tokens invalidated by bumping the per-user nbf.
+      expect(mockJwtNotBefore.bumpUser).toHaveBeenCalledWith(validToken.userId);
     });
 
     it('should throw UnauthorizedException for an unknown token', async () => {

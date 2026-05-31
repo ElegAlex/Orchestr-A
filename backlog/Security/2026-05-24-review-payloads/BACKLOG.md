@@ -3777,7 +3777,7 @@ pnpm test apps/api/src/auth/auth.controller.spec.ts
 ---
 ### SEC-019 — Password reset tokens do not invalidate active access JWTs — only refresh tokens are revoked
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** claude-only
