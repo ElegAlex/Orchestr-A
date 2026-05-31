@@ -3976,7 +3976,7 @@ pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** cross-validated (empirically witnessed against live prod 2026-05-31, supersedes SEC-023)
-- **Blocked_by:** (none)
+- **Blocked_by:** TST-E2E-001 — a white-screen-risk frontend CSP migration can't be safely QA'd without a working browser e2e harness, which is currently drifted (TST-E2E-001). Guards the fresh-session auto-picker from selecting this before the operator opts into the web/nginx work.
 - **Severity:** important
 - **Category:** security · other
 - **File:** `nginx/nginx.conf:100` (+ `:160`) and `apps/web/middleware.ts` (NOT `apps/api/src/main.ts` — see SEC-023 Learnings)
