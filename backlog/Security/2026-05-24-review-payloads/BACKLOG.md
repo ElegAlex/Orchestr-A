@@ -4046,8 +4046,8 @@ Add @IsUrl({ protocols: ['http','https'], require_protocol: true, require_tld: t
 pnpm test apps/api/src/documents/dto/create-document.dto.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 6ffc405e64955567ff5458109b7b1bc8850e204c
+**Learnings:** mimeType had no canonical app source (no upload pipeline, no frontend allowlist), so the @IsIn set is a pragmatic office/image/text list anchored on application/pdf; image/svg+xml excluded (inline-script). UpdateDocumentDto extends PartialType(CreateDocumentDto) → the same validators gate the PATCH path with no extra edit; no non-DTO ingest exists. require_tld:true ships safe — all existing document URLs are external https with a TLD. Note SEC-010 (avatarUrl) below is the same class of stored-XSS sink. Not deployed (validation tightening on a write path — HOLD per task).
 
 ---
 ### SEC-010 — avatarUrl accepts arbitrary string — stored XSS sink
