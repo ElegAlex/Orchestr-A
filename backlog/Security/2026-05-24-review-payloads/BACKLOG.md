@@ -3704,7 +3704,7 @@ Rename cookie to __Host-orchestr_a_refresh_token, drop any Domain attribute, use
 pnpm test apps/api/src/auth/auth.controller.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 9ed92b7 (`[closes SEC-014]`)
 **Learnings:**
 - `@fastify/cookie` is NOT registered (nor a dependency). The audit's "use
   reply.setCookie()" rested on it being registered; it isn't. Kept the raw
