@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
+import { promises as fs } from 'fs';
+import { join, resolve, sep } from 'path';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -2641,6 +2644,56 @@ describe('UsersService', () => {
 
       expect(mockPrismaService.user.update).toHaveBeenCalled();
       expect(result.avatarUrl).toBeNull();
+    });
+
+    it('SEC-015: never unlinks outside the uploads dir, even if stored avatarUrl traverses', async () => {
+      // Inject a malicious stored value directly, bypassing SEC-010's write
+      // validation — the whole point is that deleteAvatar must stay safe even
+      // if a traversing value somehow reaches the DB.
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        avatarUrl: '/api/../../../../../../etc/passwd',
+      });
+      mockPrismaService.user.update.mockResolvedValue({
+        avatarUrl: null,
+        avatarPreset: null,
+      });
+      (fs.readdir as unknown as Mock).mockResolvedValueOnce([]);
+
+      await service.deleteAvatar('user-1');
+
+      const uploadsDir = resolve(process.cwd(), 'uploads', 'avatars');
+      const unlinkMock = fs.unlink as unknown as Mock;
+      for (const call of unlinkMock.mock.calls) {
+        expect(resolve(String(call[0])).startsWith(uploadsDir + sep)).toBe(
+          true,
+        );
+      }
+      expect(unlinkMock).not.toHaveBeenCalledWith(
+        expect.stringContaining('etc'),
+      );
+    });
+
+    it('SEC-015: deletes the reconstructed in-dir avatar file by userId stem', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        avatarUrl: '/api/uploads/avatars/user-1.png',
+      });
+      mockPrismaService.user.update.mockResolvedValue({
+        avatarUrl: null,
+        avatarPreset: null,
+      });
+      (fs.readdir as unknown as Mock).mockResolvedValueOnce([
+        'user-1.png',
+        'user-2.png',
+      ]);
+
+      await service.deleteAvatar('user-1');
+
+      const uploadsDir = resolve(process.cwd(), 'uploads', 'avatars');
+      const unlinkMock = fs.unlink as unknown as Mock;
+      expect(unlinkMock).toHaveBeenCalledWith(join(uploadsDir, 'user-1.png'));
+      expect(unlinkMock).not.toHaveBeenCalledWith(
+        join(uploadsDir, 'user-2.png'),
+      );
     });
   });
 });

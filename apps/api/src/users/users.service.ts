@@ -26,7 +26,7 @@ import {
 import { VALID_PRESETS } from './dto/avatar-preset.dto';
 import * as bcrypt from 'bcrypt';
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import { join, resolve, sep } from 'path';
 import type { MultipartFile } from '@fastify/multipart';
 import { assertMagicBytes } from '../common/upload/magic-bytes.validator';
 import { RefreshTokenService } from '../auth/refresh-token.service';
@@ -1868,15 +1868,28 @@ export class UsersService {
   }
 
   async deleteAvatar(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { avatarUrl: true },
-    });
+    // SEC-015: never derive the filesystem path from the stored avatarUrl — a
+    // DB-held string could traverse (e.g. "/api/../../../etc/passwd") and lead
+    // to arbitrary file deletion. Reconstruct strictly from server-controlled
+    // components: the fixed uploads dir + the userId stem, mirroring
+    // uploadAvatar's own cleanup. readdir entries are bare basenames (cannot
+    // traverse); the resolve() boundary check is a belt-and-suspenders guard so
+    // even a logic slip (or a malformed userId) cannot escape the uploads dir.
+    const uploadsDir = join(process.cwd(), 'uploads', 'avatars');
+    const resolvedUploadsDir = resolve(uploadsDir);
 
-    if (user?.avatarUrl) {
-      const relativePath = user.avatarUrl.replace(/^\/api\//, '');
-      const filePath = join(process.cwd(), relativePath);
-      await fs.unlink(filePath).catch(() => null);
+    try {
+      const existing = await fs.readdir(uploadsDir);
+      for (const f of existing) {
+        if (f.startsWith(userId + '.') || f.startsWith(userId + '_')) {
+          const candidate = resolve(uploadsDir, f);
+          if (candidate.startsWith(resolvedUploadsDir + sep)) {
+            await fs.unlink(candidate).catch(() => null);
+          }
+        }
+      }
+    } catch {
+      // uploads dir may not exist yet — nothing to delete
     }
 
     return this.prisma.user.update({
