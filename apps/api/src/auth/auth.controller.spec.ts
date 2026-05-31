@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  UnauthorizedException,
+  ConflictException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { User } from '@prisma/client';
 import { RefreshTokenService } from './refresh-token.service';
 import { JwtBlacklistService } from './jwt-blacklist.service';
@@ -261,6 +265,69 @@ describe('AuthController', () => {
         expect(cookie).not.toContain('Secure');
         expect(cookie).toContain('HttpOnly');
       });
+    });
+  });
+
+  describe('logout (SEC-021 fail-closed)', () => {
+    const captureReply = () => {
+      const headers: Record<string, string> = {};
+      const reply = {
+        header: vi.fn((name: string, value: string) => {
+          headers[name.toLowerCase()] = value;
+        }),
+      };
+      return { reply, getSetCookie: () => headers['set-cookie'] };
+    };
+    const logoutUser = {
+      ...mockUser,
+      jti: 'jti-logout',
+      exp: Math.floor(Date.now() / 1000) + 600,
+    };
+
+    it('blacklists the access token and revokes the refresh token (204 path) when Redis is up', async () => {
+      mockBlacklist.blacklist.mockResolvedValue(undefined);
+      mockRefreshTokenService.revoke.mockResolvedValue(undefined);
+      const { reply } = captureReply();
+
+      await expect(
+        controller.logout(
+          { refreshToken: 'rt' } as any,
+          logoutUser as any,
+          mockReq as any,
+          reply as any,
+        ),
+      ).resolves.toBeUndefined();
+
+      expect(mockRefreshTokenService.revoke).toHaveBeenCalledWith('rt');
+      expect(mockBlacklist.blacklist).toHaveBeenCalledWith(
+        'jti-logout',
+        expect.any(Number),
+      );
+    });
+
+    // The witness: with the Redis write forced to throw, /auth/logout must propagate the 503
+    // and NOT silently treat the token as revoked. Pre-fix the service swallowed the error,
+    // so logout resolved (false 204). Post-fix it rejects with ServiceUnavailableException.
+    it('propagates 503 when the blacklist write fails, instead of a false 204', async () => {
+      mockBlacklist.blacklist.mockRejectedValue(
+        new ServiceUnavailableException('Token revocation unavailable'),
+      );
+      mockRefreshTokenService.revoke.mockResolvedValue(undefined);
+      const { reply } = captureReply();
+
+      await expect(
+        controller.logout(
+          { refreshToken: 'rt' } as any,
+          logoutUser as any,
+          mockReq as any,
+          reply as any,
+        ),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+      // Durable, Redis-independent revocations must still have run before the throw —
+      // a Redis outage must not leave the refresh token alive or the cookie uncleared.
+      expect(mockRefreshTokenService.revoke).toHaveBeenCalledWith('rt');
+      expect(reply.header).toHaveBeenCalled();
     });
   });
 

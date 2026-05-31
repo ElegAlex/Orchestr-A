@@ -13,6 +13,7 @@ vi.mock('ioredis', () => {
 });
 
 import { JwtBlacklistService } from './jwt-blacklist.service';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 describe('JwtBlacklistService', () => {
@@ -55,6 +56,15 @@ describe('JwtBlacklistService', () => {
   it('isBlacklisted short-circuits on empty jti', async () => {
     await expect(service.isBlacklisted('')).resolves.toBe(false);
     expect(redisInstance.exists).not.toHaveBeenCalled();
+  });
+
+  // SEC-021: fail-CLOSED on write. Pre-fix this swallowed the error and resolved (false 204);
+  // post-fix it must throw 503 so /auth/logout reports the revocation failure.
+  it('blacklist throws ServiceUnavailableException when Redis write fails', async () => {
+    redisInstance.set.mockRejectedValue(new Error('ECONNREFUSED'));
+    await expect(service.blacklist('jti-down', 600)).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
   });
 
   it('blacklist clamps TTL to >= 1 second', async () => {

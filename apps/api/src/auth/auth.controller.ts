@@ -222,18 +222,23 @@ export class AuthController {
     @Req() req: any,
     @Res({ passthrough: true }) reply?: FastifyReply,
   ): Promise<void> {
-    if (user.jti && user.exp) {
-      const remaining = user.exp - Math.floor(Date.now() / 1000);
-      if (remaining > 0) {
-        await this.blacklist.blacklist(user.jti, remaining);
-      }
-    }
+    // Durable, Redis-independent revocations first (Postgres + response cookie) so a Redis
+    // outage cannot skip them. The jti blacklist runs last because it is the only
+    // Redis-dependent step: on Redis failure it throws 503 (SEC-021, fail-closed), after
+    // the refresh token is already revoked, so the client retries an idempotent op rather
+    // than receiving a false 204.
     const refreshToken =
       body?.refreshToken ?? readRefreshCookie(req) ?? undefined;
     if (refreshToken) {
       await this.refreshTokenService.revoke(refreshToken);
     }
     clearRefreshCookie(reply);
+    if (user.jti && user.exp) {
+      const remaining = user.exp - Math.floor(Date.now() / 1000);
+      if (remaining > 0) {
+        await this.blacklist.blacklist(user.jti, remaining);
+      }
+    }
   }
 
   @Public()

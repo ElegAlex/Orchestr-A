@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
@@ -36,7 +40,12 @@ export class JwtBlacklistService {
         ttl,
       );
     } catch (err) {
+      // Fail-CLOSED on write: if Redis is unreachable we cannot guarantee the token was
+      // revoked. Bubble a 503 so /auth/logout reports the failure (client retries) instead
+      // of a false 204 that leaves a stolen-after-logout token usable until the access TTL.
+      // Symmetric with isBlacklisted()'s fail-closed read; see SEC-021.
       this.logger.error(`Failed to blacklist jti=${jti}: ${String(err)}`);
+      throw new ServiceUnavailableException('Token revocation unavailable');
     }
   }
 

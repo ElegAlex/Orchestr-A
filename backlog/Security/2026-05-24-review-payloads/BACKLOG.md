@@ -3820,7 +3820,7 @@ pnpm test apps/api/src/auth/auth.service.spec.ts  # may need creation if missing
 ---
 ### SEC-021 — JWT blacklist is silently best-effort on Redis write failure
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** claude-only
@@ -3858,7 +3858,12 @@ pnpm test apps/api/src/auth/jwt-blacklist.service.spec.ts  # may need creation i
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+- **Fix:** `blacklist()` now logs AND throws `ServiceUnavailableException` (HTTP 503) on Redis write failure instead of swallowing — NestJS maps it straight to 503 (a plain `throw` would give 500). Pointer `jwt-blacklist.service.ts:28` was accurate this time (the OBS-013/SEC-019 drift did not recur here). Only caller is `auth.controller.ts logout()`; `blacklist()` reused the existing per-service ioredis client (no new dep, no migration — Postgres durable-fallback declined as out-of-scope, noted as candidate follow-up).
+- **Deliberate asymmetry (record):** this is the INVERSE of SEC-006 lockout / SEC-019 nbf, which fail-OPEN on Redis read for availability. Here the logout WRITE fails-CLOSED: a full Redis outage makes `/auth/logout` return 503 for everyone. That is the correct posture — an honest 503 (client retries) beats a false 204 that left a stolen-after-logout token usable for the access TTL (~15min). Reads fail-open (availability) / this revocation write fails-closed (the logout must be durable or the client must know it wasn't). `isBlacklisted()` already fails-closed on read (returns `true`); the fix restores symmetry on the write side.
+- **Ordering regression caught & fixed (in-scope, "logout response path"):** `logout()` reordered so the Redis-INDEPENDENT durable ops run FIRST — refresh-token revoke (Postgres) + `clearRefreshCookie()` — then the jti blacklist runs LAST. Had the blacklist throw been added while it was still called first (its original position), a Redis outage would have ALSO skipped the refresh-token revoke + cookie clear, leaving the refresh token alive through the whole outage — strictly worse than before. Now only the response code depends on Redis; the retry is idempotent.
+- **AC#4 (audit) — confirmed N/A by absence:** `/auth/logout` emits NO audit row today (no call in the controller, no global audit interceptor, and `refreshTokenService.revoke()` is a bare Prisma `updateMany` with no audit write). So there is no path that could record a misleading "logged out / token revoked" success on a failed revocation. The backlog's literal AC#4 ("create an `audit_logs` entry") is superseded by the operator's task-prompt reframing (the audit must not record a *false success*); satisfied vacuously. If a logout audit row is ever added, it must be written AFTER the blacklist succeeds, never before.
+- **Witnesses:** unit (AC#2) `jwt-blacklist.service.spec.ts` "blacklist throws ServiceUnavailableException when Redis write fails" — verified FAILS pre-fix (swallowed → resolved), PASSES post-fix. Controller propagation guard `auth.controller.spec.ts` "propagates 503 … instead of a false 204" + asserts durable ops (revoke + cookie clear) still ran before the throw — guards the regression and against future re-swallowing in the controller. Gate: `pnpm test` (1768 green) + `npx nest build` green + e2e SEC-04 "logout blacklists access token; subsequent /auth/me returns 401" green (204-when-Redis-up). The one e2e failure observed (SEC-04 "replaying old refresh", `rotated.refresh_token` undefined) is PRE-EXISTING SEC-014 cookie-migration drift (refresh token moved to `__Host-` cookie, no longer in `/auth/refresh` body) — reproduced identically on the pre-change tree; unrelated to SEC-021, out of scope.
 
 ---
 ### SEC-022 — credentials:true CORS combined with JWT-in-localStorage AND refresh-token-in-cookie creates dual-mode CSRF surface
