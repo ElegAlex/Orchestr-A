@@ -3,6 +3,8 @@ import {
   UnauthorizedException,
   ConflictException,
   NotFoundException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +17,7 @@ import { PermissionsService } from '../rbac/permissions.service';
 import { AuditService, AuditAction } from '../audit/audit.service';
 import { RefreshTokenService, RefreshTokenMeta } from './refresh-token.service';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
+import { LoginLockoutService } from './login-lockout.service';
 
 export interface ResetTokenResponse {
   ok: true;
@@ -34,6 +37,7 @@ export class AuthService {
     private readonly auditService: AuditService,
     private readonly refreshTokenService: RefreshTokenService,
     private readonly roleHierarchy: RoleHierarchyService,
+    private readonly loginLockout: LoginLockoutService,
   ) {}
 
   private getAccessTtl(): string {
@@ -101,9 +105,48 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto, meta?: RefreshTokenMeta) {
+    const ip = meta?.ip;
+
+    // SEC-006 — per-(account, IP) progressive lockout, checked BEFORE credential
+    // validation so a locked pair can't keep burning bcrypt comparisons. Only
+    // pairs that already crossed the failure threshold land here; the crossing
+    // attempt itself still returns the normal 401 below (see recordFailure).
+    const lock = await this.loginLockout.isLocked(loginDto.login, ip);
+    if (lock.locked) {
+      throw new HttpException(
+        'Trop de tentatives de connexion. Réessayez plus tard.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     const user = await this.validateUser(loginDto.login, loginDto.password);
 
     if (!user) {
+      // SEC-006 — count this failure; crossing the threshold arms a lock. The
+      // CROSSING attempt still returns the generic 401 (the credentials were
+      // genuinely wrong); only SUBSEQUENT attempts hit the isLocked guard above
+      // and get 429. This keeps the per-IP throttle's "Nth attempt → 429"
+      // contract decoupled from the slower cross-window account lockout.
+      const failure = await this.loginLockout.recordFailure(loginDto.login, ip);
+      if (failure.locked) {
+        // AC#4 — auth is audit-sensitive: record the lock with before/after.
+        this.auditService.log({
+          action: AuditAction.ACCOUNT_LOCKED,
+          attemptedEmail: loginDto.login,
+          ip,
+          ua: meta?.userAgent,
+          reason: 'account_locked',
+          details: 'Account locked after repeated failed logins',
+          before: { locked: false },
+          after: {
+            locked: true,
+            lockSeconds: failure.lockSeconds,
+            level: failure.level,
+          },
+          success: false,
+        });
+      }
+
       this.auditService.log({
         action: AuditAction.LOGIN_FAILURE,
         // OBS-001 — the attempted identifier becomes the event subject so an
@@ -123,6 +166,10 @@ export class AuthService {
       });
       throw new UnauthorizedException('Login ou mot de passe incorrect');
     }
+
+    // SEC-006 — a valid authentication clears all lockout state for this
+    // (account, IP) pair: failure counter, any active lock, escalation level.
+    await this.loginLockout.clear(loginDto.login, ip);
 
     // Récupérer les informations complètes de l'utilisateur avec ses services
     const fullUser = await this.prisma.user.findUnique({

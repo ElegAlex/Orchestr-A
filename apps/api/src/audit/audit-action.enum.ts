@@ -18,6 +18,11 @@
 export enum AuditAction {
   LOGIN_SUCCESS = 'LOGIN_SUCCESS',
   LOGIN_FAILURE = 'LOGIN_FAILURE',
+  // SEC-006 — a per-(account, IP) progressive lockout was armed after repeated
+  // failed logins (LoginLockoutService). Subject = the targeted account
+  // identifier (sanitized, like LOGIN_FAILURE); payload carries the lock's
+  // before/after and the escalation level.
+  ACCOUNT_LOCKED = 'ACCOUNT_LOCKED',
   REGISTER = 'REGISTER',
   ACCESS_DENIED = 'ACCESS_DENIED',
   ROLE_CHANGE = 'ROLE_CHANGE',

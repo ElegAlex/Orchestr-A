@@ -12,6 +12,7 @@ import { ThrottlerBehindProxyGuard } from './guards/throttler-behind-proxy.guard
 import { APP_GUARD } from '@nestjs/core';
 import { RefreshTokenService } from './refresh-token.service';
 import { JwtBlacklistService } from './jwt-blacklist.service';
+import { LoginLockoutService } from './login-lockout.service';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { JwtBlacklistService } from './jwt-blacklist.service';
     AuthService,
     RefreshTokenService,
     JwtBlacklistService,
+    LoginLockoutService,
     JwtStrategy,
     LocalStrategy,
     {
@@ -55,6 +57,11 @@ import { JwtBlacklistService } from './jwt-blacklist.service';
       useClass: ForcePasswordChangeGuard,
     },
   ],
-  exports: [AuthService, RefreshTokenService, JwtBlacklistService],
+  exports: [
+    AuthService,
+    RefreshTokenService,
+    JwtBlacklistService,
+    LoginLockoutService,
+  ],
 })
 export class AuthModule {}

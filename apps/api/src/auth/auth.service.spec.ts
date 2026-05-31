@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
   ConflictException,
   ForbiddenException,
+  HttpStatus,
 } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
@@ -15,11 +16,47 @@ import { AuditService, AuditAction } from '../audit/audit.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { ConfigService } from '@nestjs/config';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
+import { LoginLockoutService } from './login-lockout.service';
 
 vi.mock('bcrypt');
 
+/**
+ * SEC-006 — a stateful in-memory stand-in for LoginLockoutService. It implements
+ * the real port contract (count failures per (account, IP); lock once the
+ * threshold is crossed; clear on success) so the AuthService.login integration
+ * can be exercised without Redis. The Redis adapter mechanics are covered
+ * separately in login-lockout.service.spec.ts.
+ */
+function makeFakeLockout(threshold = 5) {
+  const fails = new Map<string, number>();
+  const locked = new Set<string>();
+  const key = (id: string, ip?: string) => `${id.toLowerCase()}|${ip ?? ''}`;
+  return {
+    isLocked: vi.fn(async (id: string, ip?: string) => ({
+      locked: locked.has(key(id, ip)),
+    })),
+    recordFailure: vi.fn(async (id: string, ip?: string) => {
+      const k = key(id, ip);
+      const n = (fails.get(k) ?? 0) + 1;
+      fails.set(k, n);
+      if (n >= threshold) {
+        locked.add(k);
+        fails.delete(k);
+        return { locked: true, lockSeconds: 900, level: 1 };
+      }
+      return { locked: false, failureCount: n };
+    }),
+    clear: vi.fn(async (id: string, ip?: string) => {
+      const k = key(id, ip);
+      fails.delete(k);
+      locked.delete(k);
+    }),
+  };
+}
+
 describe('AuthService', () => {
   let service: AuthService;
+  let fakeLockout: ReturnType<typeof makeFakeLockout>;
 
   const mockUser = {
     id: 'user-id-1',
@@ -97,9 +134,14 @@ describe('AuthService', () => {
   };
 
   beforeEach(async () => {
+    fakeLockout = makeFakeLockout();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
+        {
+          provide: LoginLockoutService,
+          useValue: fakeLockout,
+        },
         {
           provide: PrismaService,
           useValue: mockPrismaService,
@@ -349,6 +391,76 @@ describe('AuthService', () => {
       expect(failureCall).toBeDefined();
       const event = failureCall![0] as { details?: string };
       expect(event.details).not.toContain('victim.account');
+    });
+
+    // SEC-006 (AC#2) — WITNESS. Drive failed logins past the per-(account, IP)
+    // threshold; the SUBSEQUENT attempt must be rejected with 429 (locked), not
+    // another 401. FAILS pre-fix (login() ignored the lockout, so every attempt
+    // returned 401), PASSES post-fix.
+    it('locks an (account, IP) pair after repeated failed logins (SEC-006)', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      const creds = { login: 'spray.target', password: 'wrong' };
+      const meta = { ip: '203.0.113.7' };
+
+      // 5 failures: each returns the generic 401; the 5th silently arms the lock.
+      for (let i = 0; i < 5; i++) {
+        await expect(service.login(creds, meta)).rejects.toThrow(
+          UnauthorizedException,
+        );
+      }
+
+      // 6th attempt: blocked by the lockout BEFORE credential validation → 429.
+      await expect(service.login(creds, meta)).rejects.toMatchObject({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+      });
+
+      // AC#4 — an ACCOUNT_LOCKED audit row was emitted with before/after.
+      const lockCall = mockAuditService.log.mock.calls.find(
+        (call: [{ action: AuditAction }]) =>
+          call[0].action === AuditAction.ACCOUNT_LOCKED,
+      );
+      expect(lockCall).toBeDefined();
+      const event = lockCall![0] as {
+        attemptedEmail?: string;
+        before?: unknown;
+        after?: unknown;
+      };
+      expect(event.attemptedEmail).toBe('spray.target');
+      expect(event.before).toEqual({ locked: false });
+      expect(event.after).toMatchObject({ locked: true });
+    });
+
+    // SEC-006 — a successful login clears the lockout counter for the pair, so
+    // post-success failures start counting from zero again.
+    it('resets the failure counter on a successful login (SEC-006)', async () => {
+      const creds = { login: 'comes.back', password: 'wrong' };
+      const meta = { ip: '203.0.113.8' };
+
+      // 4 failures (below threshold).
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      for (let i = 0; i < 4; i++) {
+        await expect(service.login(creds, meta)).rejects.toThrow(
+          UnauthorizedException,
+        );
+      }
+
+      // A successful login clears all lockout state for the pair.
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+      await service.login({ login: 'comes.back', password: 'right' }, meta);
+      expect(fakeLockout.clear).toHaveBeenCalledWith(
+        'comes.back',
+        '203.0.113.8',
+      );
+
+      // 4 fresh failures stay under threshold → still 401, never 429.
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
+      for (let i = 0; i < 4; i++) {
+        await expect(service.login(creds, meta)).rejects.toThrow(
+          UnauthorizedException,
+        );
+      }
     });
   });
 

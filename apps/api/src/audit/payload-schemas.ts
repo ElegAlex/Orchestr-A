@@ -152,6 +152,9 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
   // Auth flows — AuditService security envelope only.
   [AuditAction.LOGIN_SUCCESS]: securityEnvelope,
   [AuditAction.LOGIN_FAILURE]: securityEnvelope,
+  // SEC-006 — lockout-armed event; emitted via the AuditService envelope with
+  // before/after = { locked: … } snapshots.
+  [AuditAction.ACCOUNT_LOCKED]: securityEnvelope,
   [AuditAction.REGISTER]: securityEnvelope,
   [AuditAction.ACCESS_DENIED]: securityEnvelope,
   [AuditAction.PASSWORD_CHANGED]: securityEnvelope,

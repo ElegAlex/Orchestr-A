@@ -51,6 +51,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
+  [AuditAction.ACCOUNT_LOCKED]: 'Auth',
   [AuditAction.ACCESS_DENIED]: 'Auth',
   [AuditAction.REGISTER]: 'User',
   [AuditAction.ROLE_CHANGE]: 'User',
@@ -184,7 +185,11 @@ export class AuditService {
     targetId?: string;
     attemptedEmail?: string;
   }): string {
-    if (event.action === AuditAction.LOGIN_FAILURE && event.attemptedEmail) {
+    if (
+      (event.action === AuditAction.LOGIN_FAILURE ||
+        event.action === AuditAction.ACCOUNT_LOCKED) &&
+      event.attemptedEmail
+    ) {
       if (BCRYPT_SHAPE.test(event.attemptedEmail)) {
         return 'unknown';
       }

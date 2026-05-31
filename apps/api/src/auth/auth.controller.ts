@@ -87,8 +87,14 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  // SEC-006 — IP burst cut 30→5/min so a single IP can't brute-force at speed;
+  // the longer-window cap (120/15min) stays as a sane sustained bound. This is
+  // the outer, per-IP bound; the per-(account, IP) progressive lockout
+  // (LoginLockoutService) is the precision layer behind it. Shared-NAT note:
+  // 5/min is per source IP, so a busy office behind one NAT shares the bucket —
+  // an accepted operator tradeoff (see SEC-006 Learnings).
   @Throttle({
-    short: { limit: 30, ttl: 60_000 },
+    short: { limit: 5, ttl: 60_000 },
     medium: { limit: 120, ttl: 900_000 },
   })
   @HttpCode(HttpStatus.OK)
