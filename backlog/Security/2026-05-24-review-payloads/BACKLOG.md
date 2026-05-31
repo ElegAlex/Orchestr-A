@@ -3918,7 +3918,7 @@ pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ---
 ### SEC-023 — Helmet CSP allows style-src 'unsafe-inline' and CSP is set both at Helmet and at Nginx with different policies
 
-- **Status:** TODO
+- **Status:** SUPERSEDED — re-scoped to SEC-CSP-001 (audit premise empirically falsified 2026-05-31; no code shipped; see **Learnings**)
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** claude-only
@@ -3954,6 +3954,50 @@ Pick ONE layer (recommend helmet, scriptSrc 'self' only — remove 'unsafe-inlin
 ```
 pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
+
+**Closed_by:** (none — no fix shipped; superseded by SEC-CSP-001)
+**Learnings:** Re-derived empirically against live prod 2026-05-31 (operator chose "reframe & correct audit only"; **no code changed this session**). The audit's threat model is **wrong**, and its prescribed fix is a **security regression**:
+
+- **Trap #1 — "browsers intersect the two CSPs but the weakest survives" is FALSE.** Per the CSP spec, when a response carries multiple `Content-Security-Policy` headers the browser enforces **every** policy independently → a resource must satisfy **all** of them → the **strictest** wins, not the weakest. Empirical witness via the prod proxy:
+  - `curl -kI https://orchestr-a.com/api/health` → **two** CSP headers: Helmet's (`script-src 'self'`, strict) **and** nginx's (`script-src 'self' 'unsafe-inline'`). Browser intersects → inline script **blocked** on `/api`. (API responses are JSON anyway — not an XSS surface.)
+  - `curl -kIL https://orchestr-a.com/` (the frontend, the real XSS surface) → **one** CSP header, **nginx's only** (`script-src 'self' 'unsafe-inline'`). **Helmet never appears.**
+- **Why the prescribed fix regresses:** Helmet runs only on the API container (`api:4000`); the **Next.js frontend** (`web:3000`) is fronted **solely by nginx** (`nginx/nginx.conf` `location /` inherits the server-level CSP at line 100; Next.js sets security headers in `next.config.ts` but **no CSP**). The audit's "remove nginx CSP, leave Helmet as sole CSP" would leave the **frontend with NO CSP at all** — strictly worse. The real XSS exposure lives in **nginx**, not `apps/api/src/main.ts` (whose Helmet `scriptSrc` is already `'self'`-only, line 71; only `styleSrc` carries `'unsafe-inline'`, which is low-risk per trap #2).
+- **Trap #3 — strict `script-src` white-screens the app.** The served frontend HTML carries **6 inline `<script>` tags (no `src`, no `nonce`)** — App Router RSC/hydration. Removing `'unsafe-inline'` from the frontend `script-src` without a nonce blocks them → blank page. Stock nginx (`nginx:1.27-alpine`, no njs/lua) cannot generate per-request nonces; the nonce must originate in **`apps/web/middleware.ts`** (currently a bare next-intl passthrough) so Next.js auto-applies it to its inline scripts.
+- **Audit miss:** a **third** identical weak CSP exists at `nginx/nginx.conf:160` (`location /_next/static`). Any "single coherent policy" claim is false unless that block is reconciled too. (`_next/static` chunks are `src=`'d, so `'self'` covers them without a nonce.)
+- **AC#4:** N/A (security headers, no audit-log emit) — confirmed; moot anyway since no code changed.
+
+**Correct fix surface (deferred to SEC-CSP-001):** nginx becomes the single CSP source for the SPA; `script-src` goes **nonce-based** via Next.js middleware (compose, do not replace, next-intl); reconcile all **three** nginx CSP blocks (lines 100, 160, and the API path); drop the redundant Helmet CSP on `/api`. Spans `nginx/nginx.conf` + `apps/web/middleware.ts` (two deploy surfaces: nginx reload + web image), white-screen risk → **mandatory real-browser Playwright smoke** (renders + console clean) before deploy. The drifted UI e2e (TST-E2E-001) will **not** catch a CSP white-screen.
+
+---
+
+### SEC-CSP-001 — Single nonce-based CSP for the SPA (re-scope of SEC-023; correct file surface = nginx + web middleware)
+
+- **Status:** TODO
+- **Phase:** 5
+- **Cluster:** K
+- **Confidence:** cross-validated (empirically witnessed against live prod 2026-05-31, supersedes SEC-023)
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** security · other
+- **File:** `nginx/nginx.conf:100` (+ `:160`) and `apps/web/middleware.ts` (NOT `apps/api/src/main.ts` — see SEC-023 Learnings)
+- **Source:** re-derivation of `audits/agents/01-security.json#SEC-023` (original premise falsified; this entry carries the corrected scope)
+
+**Description:**
+The frontend HTML served by Next.js (`web:3000`) behind nginx carries a single CSP — nginx's `location /`-inherited server-level policy (`nginx/nginx.conf:100`) — with `script-src 'self' 'unsafe-inline'`, so any reflected/stored XSS can execute inline. Helmet (API-only) never reaches the frontend, so the fix cannot live in `main.ts`. nginx is the only layer fronting the SPA and must own a single coherent CSP, but `script-src` cannot drop `'unsafe-inline'` without breaking the 6 inline Next.js hydration scripts unless they are nonced.
+
+**Suggested fix:**
+1. Generate a per-request nonce in `apps/web/middleware.ts` (compose with the existing next-intl middleware, do not replace it), set it on the document CSP so Next 16 + `output: standalone` injects it into its inline scripts — **verify by loading the page and inspecting that the 6 inline scripts carry the nonce** (do not assume).
+2. Make nginx the single CSP source: tighten `script-src` to `'self'` + the nonce mechanism, reconcile all three CSP blocks (`:100`, `:160`, API path), and drop the now-redundant Helmet `contentSecurityPolicy` on `/api`.
+3. Keep `style-src 'unsafe-inline'` (or nonce it in a separate scoped pass) — lower risk, removing it commonly breaks framework-injected inline styles (trap #2).
+
+**Acceptance criteria:**
+1. Frontend response CSP no longer allows inline script execution (`script-src` has no `'unsafe-inline'`; nonce-based), reconciled across all nginx CSP blocks.
+2. Witness reflecting the OBSERVED header: a test asserting the served `/` CSP blocks unnonced inline script — FAILS pre-fix (inline allowed), PASSES post-fix.
+3. **Real-browser smoke (mandatory):** the app renders with zero CSP-violation console errors AND the served `/` CSP is a single strict policy. e2e green is NOT sufficient (TST-E2E-001 drift won't catch a white-screen).
+4. AC#4: N/A (security headers, no audit emit).
+5. Commit message includes `[closes SEC-CSP-001]`.
+
+**Deploy note:** two surfaces — nginx reload/recreate (not just `up -d api`) **and** the web image rebuild. HOLD; surface the full deploy call after close, do not auto-deploy.
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
 **Learnings:** (empty — Claude Code fills if surprises encountered)
