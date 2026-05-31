@@ -3868,7 +3868,7 @@ pnpm test apps/api/src/auth/jwt-blacklist.service.spec.ts  # may need creation i
 ---
 ### SEC-022 — credentials:true CORS combined with JWT-in-localStorage AND refresh-token-in-cookie creates dual-mode CSRF surface
 
-- **Status:** TODO
+- **Status:** DONE — mitigated by SEC-014 (guard test added)
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** claude-only
@@ -3906,7 +3906,14 @@ pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+- **Premise was STALE — closed as mitigated-by-SEC-014, not a code fix.** The audit's exact vector (a cross-origin credentialed request to `/auth/refresh` attaches the victim's refresh cookie because `credentials:true`) is structurally dead: SEC-014 set the refresh cookie to `SameSite=Strict` UNCONDITIONALLY in `buildRefreshCookie` (`auth.controller.ts:89` — only `Secure` is prod-gated). A `SameSite=Strict` cookie is never attached on ANY cross-site request regardless of CORS, so the browser sends no cookie to an attacker origin. The body path (`/auth/refresh` reads `body.refreshToken ?? cookie`) requires knowing the token, which is HttpOnly and unreadable by JS. SameSite=Strict is therefore sufficient for the documented attack.
+- **Rejected Suggested-fix option (a) (body-only refresh):** the refresh token lives in an HttpOnly cookie BY DESIGN (XSS protection, hardened by SEC-014). Frontend JS cannot read it, so requiring it from the body would break the refresh flow. Rejected outright.
+- **No anti-CSRF header added (defense-in-depth not warranted):** the `X-CSRF-Token` option would be belt-and-suspenders over an already-closed vector and would force the frontend to attach a header on every refresh — complexity for zero residual on the documented threat. Not implemented.
+- **Fix = GUARD TEST only, no behavior change.** Added `SameSite=Strict` / not-`Lax` assertions to the dev/test cookie case in `auth.controller.spec.ts` (the prod path already guarded it at lines 184/189; the DEV path asserted nothing about SameSite, and `SameSite=Lax` is exactly the audit's premise — so a dev regression to Lax would have slipped through). Witness verified: temporarily flipping line 89 to `SameSite=Lax` turns BOTH prod and the new dev assertion RED; reverting → 23/23 green.
+- **File-scope divergence (documented, intentional):** entry `File:` is `main.ts:56` and verification names `main.spec.ts`, but the refresh-cookie construction and CSRF mitigation live in `auth/auth.controller.ts` (set/read paths), so the witness was added in `auth/auth.controller.spec.ts`. `main.ts` only holds the `credentials:true` CORS line, which is correct and unchanged. Not silent widening — the cookie is where the SameSite attribute is emitted.
+- **AC#4 = N/A (confirmed):** no behavior change, no new code path, no auth mutation → no `audit_logs` emit required.
+- **Follow-up (NOT scoped here):** harden `ALLOWED_ORIGINS` parsing in `main.ts` (reject wildcards / require `https` in prod) so a config typo can't admit a hostile origin. Defense-in-depth against the "if a malicious origin is ever added" framing; lower priority since SameSite=Strict already neutralizes the cookie vector.
 
 ---
 ### SEC-023 — Helmet CSP allows style-src 'unsafe-inline' and CSP is set both at Helmet and at Nginx with different policies

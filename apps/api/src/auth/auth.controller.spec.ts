@@ -264,6 +264,13 @@ describe('AuthController', () => {
         expect(cookie).not.toContain('__Host-');
         expect(cookie).not.toContain('Secure');
         expect(cookie).toContain('HttpOnly');
+        // SEC-022 — refresh-cookie CSRF surface is mitigated by SEC-014's
+        // SameSite=Strict, which the browser never attaches cross-site
+        // regardless of credentials:true CORS. The prod path already guards
+        // this (see above); dev must too, since the audit's premise was a
+        // SameSite=Lax cookie — guard here so a dev regression to Lax is caught.
+        expect(cookie).toContain('SameSite=Strict');
+        expect(cookie).not.toContain('SameSite=Lax');
       });
     });
   });
