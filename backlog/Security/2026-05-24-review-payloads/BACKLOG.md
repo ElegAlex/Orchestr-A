@@ -3517,7 +3517,7 @@ pnpm test apps/api/src/auth/auth.service.spec.ts  # may need creation if missing
 - **Gates:** `pnpm test` **1751** green (78 files / 6 turbo tasks; +1 OBS-013). `npx nest build` clean exit 0 (the real typecheck gate — `tsc --noEmit` RED on master by design). Lint NOT run (known pre-existing ajv/eslintrc env breakage — per task directive). **E2e — not run; provably orthogonal:** the delta changes only the stdout warn string, not any HTTP status / response body / persisted audit row, and no auth e2e assertion inspects stdout. Auth e2e is independently pre-existing-red on the local harness (TST-E2E-001 sub-failures #1/#3/#4, none log-related).
 - **Deploy:** log-only delta (changes what LOGIN_FAILURE prints to stdout: hash instead of raw login). No schema/behavior change. Ships with the next grouped deploy; no standalone deploy warranted. Operator HOLD per directive.
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** fbb74d11fd75960cdbdaf06df1cf4f563955d2aa
 **Learnings:** SEC-005 closed the originally-described `details` interpolation; OBS-001 then reintroduced the same leak *class* by passing the raw login as a structured `attemptedEmail` field that the shared audit sink spreads verbatim into stdout. Lesson: a `{ ...event }` spread into a log sink re-exposes every field a later task adds — the sink, not just each call site, needs the redaction policy. The `...event`/`...before`/`...after`/`...details` spread is a general future-leak surface (a PII-bearing `before`/`after` snapshot would land in stdout the same way); left out of OBS-013 scope (attemptedEmail only) but worth a dedicated audit-sink-redaction pass.
 
 ---
