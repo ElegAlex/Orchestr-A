@@ -45,7 +45,7 @@ import { clientIp } from '../common/fastify/trust-proxy.config';
 /**
  * OBS-003 — extract request IP / User-Agent for the leave-decision audit
  * trail. Mirrors the documents.controller (OBS-006) precedent: UA capped at
- * 512 chars, IP preferring the proxy-forwarded chain head.
+ * 512 chars, real client IP via clientIp() (req.ip — leftmost untrusted hop).
  */
 function extractMeta(req?: {
   headers?: Record<string, unknown>;
