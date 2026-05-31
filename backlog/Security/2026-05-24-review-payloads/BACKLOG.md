@@ -3905,7 +3905,7 @@ Either make /auth/refresh require the refresh token only from the BODY (not cook
 pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** ef9f0b60ba3184572c067ec3d40f8c33b64f7f36
 **Learnings:**
 - **Premise was STALE — closed as mitigated-by-SEC-014, not a code fix.** The audit's exact vector (a cross-origin credentialed request to `/auth/refresh` attaches the victim's refresh cookie because `credentials:true`) is structurally dead: SEC-014 set the refresh cookie to `SameSite=Strict` UNCONDITIONALLY in `buildRefreshCookie` (`auth.controller.ts:89` — only `Secure` is prod-gated). A `SameSite=Strict` cookie is never attached on ANY cross-site request regardless of CORS, so the browser sends no cookie to an attacker origin. The body path (`/auth/refresh` reads `body.refreshToken ?? cookie`) requires knowing the token, which is HttpOnly and unreadable by JS. SameSite=Strict is therefore sufficient for the documented attack.
 - **Rejected Suggested-fix option (a) (body-only refresh):** the refresh token lives in an HttpOnly cookie BY DESIGN (XSS protection, hardened by SEC-014). Frontend JS cannot read it, so requiring it from the body would break the refresh flow. Rejected outright.
