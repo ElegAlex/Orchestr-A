@@ -3814,8 +3814,8 @@ Add a per-user 'token-not-valid-before' timestamp in Redis (e.g. jwt:nbf:<userId
 pnpm test apps/api/src/auth/auth.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 63cf2b9
+**Learnings:** nbf gate placed in JwtStrategy.validate right after the fail-CLOSED jti blacklist check (before the Prisma fetch) — keyed off payload.sub, no extra DB round-trip. iat and nbf BOTH UNIX seconds; stored nbf = floor(now)+1 with strict `iat < nbf` closes the same-second slip. nbf read fails OPEN (matches SEC-006); safe because the prior blacklist check fails CLOSED and every access token carries a jti, so a full Redis outage already 401s everything. Out-of-scope sinks (role-change / forced-logout / isActive flip — see line ~8184) reuse the SAME `jwtNotBefore.bumpUser` when implemented.
 
 ---
 ### SEC-021 — JWT blacklist is silently best-effort on Redis write failure
