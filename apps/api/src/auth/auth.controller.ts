@@ -29,6 +29,7 @@ import { RequirePermissions } from '../rbac/decorators/require-permissions.decor
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { AuthenticatedUser } from './decorators/current-user.decorator';
+import { clientIp } from '../common/fastify/trust-proxy.config';
 
 type RequestMeta = { userAgent?: string; ip?: string };
 const REFRESH_COOKIE = 'orchestr_a_refresh_token';
@@ -36,12 +37,14 @@ const REFRESH_COOKIE = 'orchestr_a_refresh_token';
 function extractMeta(req: {
   headers?: Record<string, unknown>;
   ip?: string;
-  ips?: string[];
 }): RequestMeta {
   const userAgentRaw = req.headers?.['user-agent'];
   const userAgent =
     typeof userAgentRaw === 'string' ? userAgentRaw.slice(0, 512) : undefined;
-  const ip = req.ips?.length ? req.ips[0] : (req.ip ?? undefined);
+  // SEC-013: real client IP (req.ip = leftmost untrusted hop under
+  // Fastify+trustProxy), not req.ips[0] (the nginx socket). Drives the SEC-006
+  // (account, IP) lockout key and the refresh-token audit IP.
+  const ip = clientIp(req);
   return { userAgent, ip };
 }
 

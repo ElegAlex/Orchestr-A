@@ -11,6 +11,7 @@ import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import { join } from 'path';
 import { fastifyLoggerOptions } from './common/fastify/redact.config';
+import { TRUST_PROXY } from './common/fastify/trust-proxy.config';
 import { timingSafeEqual } from 'crypto';
 
 function safeEqual(a: string, b: string): boolean {
@@ -41,7 +42,12 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: fastifyLoggerOptions }),
+    // SEC-013: trust the nginx hop on the internal docker network so req.ip is
+    // the real client behind the proxy (drives per-client throttle/lockout/audit).
+    new FastifyAdapter({
+      logger: fastifyLoggerOptions,
+      trustProxy: [...TRUST_PROXY],
+    }),
   );
 
   // Multipart (file uploads)

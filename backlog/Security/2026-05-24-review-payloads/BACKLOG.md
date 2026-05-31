@@ -3614,7 +3614,7 @@ pnpm test apps/api/src/auth/dto/login.dto.spec.ts  # may need creation if missin
 ---
 ### SEC-013 — Fastify trustProxy not enabled — rate-limit and refresh-token IP tracking broken behind nginx
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** claude-only
@@ -3652,7 +3652,13 @@ pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+- **The Suggested fix (trustProxy alone) is INSUFFICIENT — the audit's `req.ips[0]` premise is wrong for Fastify.** Traced 3 layers of source (`fastify@5.8.5` request.js → `@fastify/proxy-addr@5.1.0` → `@fastify/forwarded@3.0.1`): Fastify's `req.ips` is `[socketAddr, ...XFF right-to-left]`, and `proxyAddr.all` trims trusted hops from index 0, so **`req.ips[0]` is ALWAYS the proxy socket (nginx) in every trustProxy config — never the client.** The real client is `req.ip` (= `addrs[addrs.length-1]`, leftmost untrusted). The `req.ips[0]`-is-client assumption is Express semantics (Express strips the socket); it does not hold under Fastify. Witnessed empirically: pre-fix the guard resolved `127.0.0.1` (socket), not the forwarded `203.0.113.7`.
+- **Scope: 4 files, not 1 (main.ts only).** Both broken consumers named in the Description carried the same Express-semantics bug and BOTH had to be fixed for the failure mode (AC#2) to actually clear: `throttler-behind-proxy.guard.ts` (throttle/lockout key) and `auth.controller.ts` `extractMeta` (refresh-token audit IP + SEC-006 lockout key). Root-cause fix centralised in new `apps/api/src/common/fastify/trust-proxy.config.ts` (`clientIp(req) = req.ip` + the `TRUST_PROXY` constant) so the bug cannot reappear in a third place. These are the exact paths the Description flags, not unrelated scope (AC#6).
+- **trustProxy value = `['loopback', 'uniquelocal']`, NOT bare `true`.** Topology evidence (`docker-compose.prod.yml`): API is `expose: 4000` only (no published host port), on the single `orchestr-a-network` bridge; nginx is the sole ingress (`ports: 80/443`). `uniquelocal` covers the docker bridge private ranges (10/8·172.16/12·192.168/16), so the real client is resolved while X-Forwarded-For from any PUBLIC source is rejected — safe even if the API is ever published directly, where bare `true` would let a public client spoof its IP (throttle/lockout bypass + audit poisoning). Pinning nginx's static bridge IP would be stricter but is a compose/infra change out of scope — follow-up if desired.
+- **AC#4: N/A.** No new audit emit added. The `extractMeta` change alters which IP an EXISTING refresh/login audit emit records (now the real client) — a downstream effect, not a new audit-emitting path.
+- **Witness:** `apps/api/src/auth/guards/throttler-behind-proxy.guard.spec.ts` boots a real Fastify instance with the production `TRUST_PROXY` and `app.inject()` with an `x-forwarded-for` header, asserting the guard's real `getTracker` resolves the forwarded client. RED pre-fix (`127.0.0.1`), GREEN post-fix (`203.0.113.7`); a third case asserts trustProxy-off falls back to the socket, proving the main.ts change is load-bearing.
+- **Deploy:** ships JOINTLY with SEC-006 (separate commits, one grouped deploy). Without SEC-013 the SEC-006 5/min IP throttle + (account, IP) lockout key collapse to the nginx IP across all users.
 
 ---
 ### SEC-014 — Refresh token cookie not marked __Host- and Path scoped only to /api/auth — vulnerable to subdomain attacks

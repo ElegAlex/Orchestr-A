@@ -1,13 +1,13 @@
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { Injectable, ExecutionContext } from '@nestjs/common';
+import { clientIp } from '../../common/fastify/trust-proxy.config';
 
 @Injectable()
 export class ThrottlerBehindProxyGuard extends ThrottlerGuard {
   protected getTracker(req: Record<string, any>): Promise<string> {
-    // Fastify: use x-forwarded-for if behind proxy, otherwise use IP
-    return Promise.resolve(
-      req.ips?.length ? req.ips[0] : (req.ip ?? 'unknown'),
-    );
+    // SEC-013: the throttle key is the real client IP. Under Fastify+trustProxy
+    // that is req.ip (leftmost untrusted hop), NOT req.ips[0] (the nginx socket).
+    return Promise.resolve(clientIp(req) ?? 'unknown');
   }
 
   override getRequestResponse(context: ExecutionContext) {
