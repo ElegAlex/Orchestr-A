@@ -28,6 +28,6 @@ export const TRUST_PROXY: readonly string[] = ['loopback', 'uniquelocal'];
  * `req.ip` is the socket address. Either way, `req.ip` is the correct key for
  * per-client throttling, lockout, and audit.
  */
-export function clientIp(req: { ip?: string }): string | undefined {
-  return req.ip;
+export function clientIp(req?: { ip?: string }): string | undefined {
+  return req?.ip;
 }

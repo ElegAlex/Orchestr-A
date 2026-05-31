@@ -41,6 +41,7 @@ import {
   type AuthenticatedUser,
 } from '../auth/decorators/current-user.decorator';
 import { TaskStatus, RACIRole } from 'database';
+import { clientIp } from '../common/fastify/trust-proxy.config';
 
 /**
  * OBS-026 — extract request IP / User-Agent for the data-export audit trail.
@@ -50,11 +51,12 @@ import { TaskStatus, RACIRole } from 'database';
 function extractMeta(req?: {
   headers?: Record<string, unknown>;
   ip?: string;
-  ips?: string[];
 }): { ip?: string; ua?: string } {
   const uaRaw = req?.headers?.['user-agent'];
   const ua = typeof uaRaw === 'string' ? uaRaw.slice(0, 512) : undefined;
-  const ip = req?.ips?.length ? req.ips[0] : (req?.ip ?? undefined);
+  // SEC-013: real client IP (req.ip = leftmost untrusted hop under
+  // Fastify+trustProxy), not req.ips[0] (the nginx socket).
+  const ip = clientIp(req);
   return { ip, ua };
 }
 
