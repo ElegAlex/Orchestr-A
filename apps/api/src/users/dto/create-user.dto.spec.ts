@@ -1,3 +1,4 @@
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { describe, expect, it } from 'vitest';
@@ -76,6 +77,58 @@ describe('CreateUserDto — SEC-010 avatarUrl scheme/host restriction', () => {
   it('accepts an omitted avatarUrl (@IsOptional)', async () => {
     const dto = plainToInstance(CreateUserDto, { ...base });
     expect(await avatarErr(dto)).toBeUndefined();
+  });
+});
+
+describe('SEC-011 — caller cannot set isActive on create; UPDATE path preserved', () => {
+  // Mirrors the global pipe in main.ts (whitelist + forbidNonWhitelisted +
+  // transform). This is the exact gate a create request hits in prod, so it is
+  // the faithful witness for "the caller cannot control isActive on create".
+  const pipe = new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  });
+  const asBody = (metatype: new () => object) =>
+    ({ type: 'body' as const, metatype });
+
+  // Witness (AC#2): FAILS pre-fix (isActive was a whitelisted create field, so
+  // the caller-supplied value was honored → user created), PASSES post-fix (the
+  // field is gone from CreateUserDto, so forbidNonWhitelisted rejects it 400).
+  it('rejects a caller-supplied isActive on create (forbidNonWhitelisted → 400)', async () => {
+    await expect(
+      pipe.transform({ ...base, isActive: false }, asBody(CreateUserDto)),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      pipe.transform({ ...base, isActive: true }, asBody(CreateUserDto)),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('accepts a create payload without isActive (server controls the default)', async () => {
+    const out = (await pipe.transform(
+      { ...base },
+      asBody(CreateUserDto),
+    )) as Record<string, unknown>;
+    expect(out).not.toHaveProperty('isActive');
+  });
+
+  // The UPDATE path must keep isActive (deactivation/reactivation flow that the
+  // USER_DEACTIVATED / USER_REACTIVATED audit depends on). Proves the PartialType
+  // cascade did not silently drop it.
+  it('accepts isActive:false on the UPDATE path (deactivation preserved)', async () => {
+    const out = (await pipe.transform(
+      { isActive: false },
+      asBody(UpdateUserDto),
+    )) as { isActive?: boolean };
+    expect(out.isActive).toBe(false);
+  });
+
+  it('accepts isActive:true on the UPDATE path (reactivation preserved)', async () => {
+    const out = (await pipe.transform(
+      { isActive: true },
+      asBody(UpdateUserDto),
+    )) as { isActive?: boolean };
+    expect(out.isActive).toBe(true);
   });
 });
 

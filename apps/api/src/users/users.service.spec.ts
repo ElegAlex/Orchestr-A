@@ -205,6 +205,37 @@ describe('UsersService', () => {
       expect(result.login).toBe(createUserDto.login);
     });
 
+    // SEC-011 — defense-in-depth below the ValidationPipe: even if a caller
+    // smuggles isActive:false past the DTO, create() forces it server-side. The
+    // user is always created active (Model A); state changes go via the UPDATE
+    // path. FAILS pre-fix (create spread `createUserDto.isActive ?? true`,
+    // honoring the caller), PASSES post-fix (hardcoded true).
+    it('SEC-011: create() forces isActive:true, ignoring any caller-supplied value', async () => {
+      const mockDepartment = { id: 'dept-1', name: 'IT' };
+      const mockServices = [{ id: 'service-1', name: 'Development' }];
+
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
+      mockPrismaService.department.findUnique.mockResolvedValue(mockDepartment);
+      mockPrismaService.service.findMany.mockResolvedValue(mockServices);
+      mockPrismaService.role.findUnique.mockResolvedValue({ id: 'role-contrib' });
+      mockPrismaService.user.create.mockResolvedValue({
+        id: '1',
+        ...createUserDto,
+        isActive: true,
+        role: { code: 'CONTRIBUTEUR' },
+        userServices: [],
+      });
+      mockPrismaService.userService.createMany.mockResolvedValue({ count: 1 });
+
+      await service.create({ ...createUserDto, isActive: false } as never);
+
+      expect(mockPrismaService.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ isActive: true }),
+        }),
+      );
+    });
+
     it('should throw error when email already exists', async () => {
       const existingUser = {
         id: '1',

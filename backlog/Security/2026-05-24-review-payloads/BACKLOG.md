@@ -4095,7 +4095,7 @@ pnpm test apps/api/src/users/dto/create-user.dto.spec.ts  # may need creation if
 ---
 ### SEC-011 — CreateUserDto exposes isActive boolean — caller can create pre-activated accounts
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 6
 - **Cluster:** J
 - **Confidence:** claude-only
@@ -4131,6 +4131,49 @@ Move isActive out of CreateUserDto. Always default to false on create; require a
 ```
 pnpm test apps/api/src/users/dto/create-user.dto.spec.ts  # may need creation if missing
 ```
+
+**Resolution (2026-05-31):**
+Implemented per **operator Model A override** (not the entry's original "Suggested fix"). Operator
+decision: admins create active users directly — we do NOT add a `users:activate` permission or a
+`POST /users/:id/activate` route, and create defaults to *active* (true), not false. The narrow fix:
+the caller can no longer set `isActive` on create; the server controls it.
+
+- `isActive` removed from `CreateUserDto` (was at `create-user.dto.ts:116`, not the stale `:91`
+  pointer). Removed the now-unused `IsBoolean` import.
+- `UpdateUserDto` re-declares `isActive` **directly** (with `@IsBoolean()`), so removing it from
+  `CreateUserDto` does NOT drop it from `PartialType(CreateUserDto)` — the admin deactivation /
+  reactivation PATCH (audited as `USER_DEACTIVATED` / `USER_REACTIVATED`) is fully preserved.
+- `users.service.create()` now hardcodes `isActive: true` (was `createUserDto.isActive ?? true`);
+  the value is server-controlled, never caller-supplied.
+- Import flow (`ImportUserDto`) was already safe: it is a *separate* DTO with no `isActive` field and
+  sets `isActive: true` server-side in `importUsers()`. Out of scope, no caller control there.
+
+**`forbidNonWhitelisted` interaction (witness deviates from the literal AC#2 wording):** the global
+`ValidationPipe` runs with `whitelist:true, forbidNonWhitelisted:true` (main.ts:96). So once `isActive`
+leaves `CreateUserDto`, a create payload carrying `isActive` is **rejected with 400** ("property
+isActive should not exist"), not silently stripped/ignored. This is a *stronger* guarantee than
+"ignored → server default" and still satisfies AC#2's purpose (caller-supplied `isActive` is never
+honored on create). The deploy smoke is written for 400, not for "created-but-ignored".
+
+**Witness (AC#2):**
+- `create-user.dto.spec.ts` (SEC-011 block) drives the *exact* global pipe config: create payload with
+  `isActive:false`/`true` → `BadRequestException` (400); create payload without `isActive` → passes and
+  carries no `isActive`; UPDATE payloads with `isActive:false`/`true` validate. FAILS pre-fix (isActive
+  was a whitelisted create field → honored), PASSES post-fix.
+- `users.service.spec.ts` adds a defense-in-depth witness: `create()` forces `isActive:true` even when a
+  caller smuggles `isActive:false` past the type. FAILS pre-fix (the spread honored the caller).
+- The pre-existing `USER_DEACTIVATED` (true→false) and `USER_REACTIVATED` (false→true) service tests
+  continue to pass — proof the UPDATE path survived the PartialType cascade fix.
+
+**AC#4:** N/A for create — Model A emits no `isActive` state-change audit on creation (account is born
+active). The existing UPDATE-path emits are untouched.
+
+**AC#3 / e2e note:** `pnpm test` green (1787 passed) + `nest build` green. Lint = known env breakage
+(skipped per session contract). The users e2e (`users-create-hierarchy.spec.ts`, API-only, creates
+*without* isActive → still 201 post-fix) was NOT run live — the e2e stack (api/web on :4001) is not up
+this session and booting it is disproportionate for a DTO-scope change whose HTTP-validation behavior is
+faithfully exercised by the DTO-pipe witness (same global pipe config) + controller/service specs.
+Post-deploy smoke exercises the real HTTP path.
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
 **Learnings:** (empty — Claude Code fills if surprises encountered)

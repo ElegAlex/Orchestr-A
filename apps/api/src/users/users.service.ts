@@ -143,7 +143,11 @@ export class UsersService {
         roleId,
         departmentId: createUserDto.departmentId,
         avatarUrl: createUserDto.avatarUrl,
-        isActive: createUserDto.isActive ?? true,
+        // SEC-011 — isActive is server-controlled on create (Model A: admins
+        // create active users). The CreateUserDto no longer carries this field,
+        // so the value is never caller-supplied. State changes go through the
+        // UPDATE path, which audits USER_DEACTIVATED / USER_REACTIVATED.
+        isActive: true,
       },
       select: {
         id: true,

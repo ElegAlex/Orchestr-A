@@ -4,7 +4,6 @@ import {
   IsEmail,
   MinLength,
   IsOptional,
-  IsBoolean,
   IsArray,
   Matches,
   MaxLength,
@@ -113,11 +112,13 @@ export class CreateUserDto {
   })
   avatarUrl?: string;
 
-  @ApiProperty({
-    description: 'Compte actif',
-    default: true,
-  })
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
+  // SEC-011 — isActive is intentionally NOT a create field. Admins create active
+  // users (Model A: no activate route/permission); the server forces isActive
+  // server-side in users.service.create(). The global ValidationPipe runs with
+  // forbidNonWhitelisted:true, so a caller-supplied isActive on create is
+  // rejected (400) rather than silently honored. State changes happen only on
+  // the UPDATE path (PATCH), where isActive stays settable — see UpdateUserDto,
+  // which re-declares it explicitly so removing it here does not break the
+  // PartialType(CreateUserDto) inheritance that the USER_DEACTIVATED /
+  // USER_REACTIVATED audit flow depends on.
 }
