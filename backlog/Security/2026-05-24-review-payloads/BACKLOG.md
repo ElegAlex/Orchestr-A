@@ -4175,8 +4175,12 @@ this session and booting it is disproportionate for a DTO-scope change whose HTT
 faithfully exercised by the DTO-pipe witness (same global pipe config) + controller/service specs.
 Post-deploy smoke exercises the real HTTP path.
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** 07afdebc921bac81392fd809ce6833931d20e81b
+**Learnings:** The `File:` pointer (`:91`) was stale — isActive lived at `:116`. The real trap was
+the `PartialType(CreateUserDto)` cascade (removing from create silently drops from update) AND the
+global `forbidNonWhitelisted:true`, which turns the AC's "ignored → default" into a hard 400. The
+witness was written against the *exact* global pipe rather than a bare `validate()` so it reflects
+real request behavior.
 
 ---
 ### SEC-015 — deleteAvatar performs path traversal via user-controlled avatarUrl prefix removal
