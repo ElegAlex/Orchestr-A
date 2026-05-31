@@ -4052,7 +4052,7 @@ pnpm test apps/api/src/documents/dto/create-document.dto.spec.ts  # may need cre
 ---
 ### SEC-010 — avatarUrl accepts arbitrary string — stored XSS sink
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 6
 - **Cluster:** J
 - **Confidence:** claude-only
@@ -4090,7 +4090,7 @@ pnpm test apps/api/src/users/dto/create-user.dto.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:** Fix diverges from SEC-009 (no `@IsUrl`): every avatar is server-issued by `uploadAvatar` as `/api/uploads/avatars/<id>.<ext>` — there is NO external-avatar flow. Stored-value sweep (dev=1, prod=7, seed=0) found only that shape, so locked to relative-only via `@Matches(AVATAR_URL_PATTERN)` + `@MaxLength(256)` — strongest fix: zero external hosts (kills tracking-pixel/SSRF) and the anchored regex (no `/` after prefix, single literal dot) also denies the `../` traversal feeding SEC-015. Deploy-safety: frontend create/update payloads (users/page.tsx) NEVER include avatarUrl — avatars go through dedicated `/users/me/avatar` upload/preset/delete endpoints that bypass the DTO — so no empty-string/round-trip PATCH can 400. UpdateUserDto extends PartialType(CreateUserDto) → PATCH path covered free (witnessed). AC#4 N/A: avatarUrl validation emits no new audit row. No e2e sends avatarUrl through the DTO (avatar e2e uses upload/preset, which produce regex-matching values), so the change can't regress e2e. Gate: nest build green, full API vitest 1782 green; lint skipped (known env breakage). Not deployed (write-path validation tightening — HOLD per task).
 
 ---
 ### SEC-011 — CreateUserDto exposes isActive boolean — caller can create pre-activated accounts
