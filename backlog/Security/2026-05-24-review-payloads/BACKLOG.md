@@ -3651,7 +3651,7 @@ FastifyAdapter({ logger: ..., trustProxy: true }) (or pass a CIDR matching the n
 pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** e3e37e2
 **Learnings:**
 - **The Suggested fix (trustProxy alone) is INSUFFICIENT — the audit's `req.ips[0]` premise is wrong for Fastify.** Traced 3 layers of source (`fastify@5.8.5` request.js → `@fastify/proxy-addr@5.1.0` → `@fastify/forwarded@3.0.1`): Fastify's `req.ips` is `[socketAddr, ...XFF right-to-left]`, and `proxyAddr.all` trims trusted hops from index 0, so **`req.ips[0]` is ALWAYS the proxy socket (nginx) in every trustProxy config — never the client.** The real client is `req.ip` (= `addrs[addrs.length-1]`, leftmost untrusted). The `req.ips[0]`-is-client assumption is Express semantics (Express strips the socket); it does not hold under Fastify. Witnessed empirically: pre-fix the guard resolved `127.0.0.1` (socket), not the forwarded `203.0.113.7`.
 - **Scope: 4 files, not 1 (main.ts only).** Both broken consumers named in the Description carried the same Express-semantics bug and BOTH had to be fixed for the failure mode (AC#2) to actually clear: `throttler-behind-proxy.guard.ts` (throttle/lockout key) and `auth.controller.ts` `extractMeta` (refresh-token audit IP + SEC-006 lockout key). Root-cause fix centralised in new `apps/api/src/common/fastify/trust-proxy.config.ts` (`clientIp(req) = req.ip` + the `TRUST_PROXY` constant) so the bug cannot reappear in a third place. These are the exact paths the Description flags, not unrelated scope (AC#6).
