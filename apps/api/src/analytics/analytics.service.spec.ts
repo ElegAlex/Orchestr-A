@@ -15,6 +15,7 @@ describe('AnalyticsService', () => {
     },
     task: {
       findMany: vi.fn(),
+      groupBy: vi.fn(),
     },
     user: {
       findMany: vi.fn(),
@@ -78,6 +79,9 @@ describe('AnalyticsService', () => {
     }).compile();
 
     service = module.get<AnalyticsService>(AnalyticsService);
+
+    // Default: task.groupBy returns empty array (progress groupBy used after PER-001 fix)
+    mockPrismaService.task.groupBy.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -85,11 +89,47 @@ describe('AnalyticsService', () => {
   });
 
   describe('getAnalytics', () => {
+    // PER-001 regression guard: task.findMany call count must NOT scale with project count.
+    // Before fix: N projects → N+1 findMany (1 getTasks + N calculateProjectProgress).
+    // After fix:  N projects → 1 findMany (getTasks only) + 1 groupBy (progress batch).
+    it('PER-001: task.findMany call count is constant regardless of project count (no N+1)', async () => {
+      const makeProject = (id: string) => ({
+        ...mockProject,
+        id,
+        _count: { tasks: 2 },
+      });
+
+      // Single project: record findMany call count
+      mockPrismaService.project.findMany.mockResolvedValue([makeProject('p-1')]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.task.groupBy.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+      await service.getAnalytics({});
+      const callsWith1Project = mockPrismaService.task.findMany.mock.calls.length;
+
+      mockPrismaService.task.findMany.mockClear();
+
+      // Three projects: call count must be identical (constant, not N+1)
+      mockPrismaService.project.findMany.mockResolvedValue([
+        makeProject('p-1'),
+        makeProject('p-2'),
+        makeProject('p-3'),
+      ]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.task.groupBy.mockResolvedValue([]);
+      await service.getAnalytics({});
+      const callsWith3Projects = mockPrismaService.task.findMany.mock.calls.length;
+
+      expect(callsWith1Project).toBe(callsWith3Projects);
+    });
+
     it('should return analytics data with default date range (MONTH)', async () => {
       mockPrismaService.project.findMany.mockResolvedValue([mockProject]);
-      mockPrismaService.task.findMany
-        .mockResolvedValueOnce([mockTask]) // getTasks
-        .mockResolvedValueOnce([mockTask]); // calculateProjectProgress
+      mockPrismaService.task.findMany.mockResolvedValue([mockTask]); // getTasks only (no per-project findMany after PER-001)
+      mockPrismaService.task.groupBy.mockResolvedValue([
+        { projectId: 'project-1', status: 'DONE', _count: { _all: 1 } },
+      ]); // progress batch groupBy
       mockPrismaService.user.findMany.mockResolvedValue([mockUser]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([
         { projectId: 'project-1', _sum: { hours: 50 } },
@@ -286,7 +326,9 @@ describe('AnalyticsService', () => {
       expect(blockedStatus?.value).toBe(1);
     });
 
-    it('should calculate project progress based on task hours', async () => {
+    it('should calculate project progress based on task count (PER-001: progress via groupBy)', async () => {
+      // After PER-001 fix, progress is computed from task.groupBy, not per-project task.findMany.
+      // Set up getTasks tasks for metrics/details + groupBy for progress calculation.
       const tasksWithHours = [
         { ...mockTask, status: 'DONE', estimatedHours: 10 },
         { ...mockTask, id: 'task-2', status: 'TODO', estimatedHours: 10 },
@@ -294,6 +336,10 @@ describe('AnalyticsService', () => {
 
       mockPrismaService.project.findMany.mockResolvedValue([mockProject]);
       mockPrismaService.task.findMany.mockResolvedValue(tasksWithHours);
+      mockPrismaService.task.groupBy.mockResolvedValue([
+        { projectId: 'project-1', status: 'DONE', _count: { _all: 1 } },
+        { projectId: 'project-1', status: 'TODO', _count: { _all: 1 } },
+      ]); // 1 DONE out of 2 = 50%
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
 
@@ -302,7 +348,9 @@ describe('AnalyticsService', () => {
       expect(result.projectProgressData[0].progress).toBe(50);
     });
 
-    it('should handle tasks without estimated hours', async () => {
+    it('should handle tasks without estimated hours (PER-001: progress via groupBy)', async () => {
+      // After PER-001 fix, progress is computed from task.groupBy.
+      // estimatedHours is not used for progress computation — simple done-count ratio.
       const tasksWithoutHours = [
         { ...mockTask, status: 'DONE', estimatedHours: null },
         { ...mockTask, id: 'task-2', status: 'TODO', estimatedHours: null },
@@ -310,12 +358,16 @@ describe('AnalyticsService', () => {
 
       mockPrismaService.project.findMany.mockResolvedValue([mockProject]);
       mockPrismaService.task.findMany.mockResolvedValue(tasksWithoutHours);
+      mockPrismaService.task.groupBy.mockResolvedValue([
+        { projectId: 'project-1', status: 'DONE', _count: { _all: 1 } },
+        { projectId: 'project-1', status: 'TODO', _count: { _all: 1 } },
+      ]); // 1 DONE out of 2 = 50%
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
 
       const result = await service.getAnalytics({});
 
-      expect(result.projectProgressData[0].progress).toBe(50); // Default 1 hour per task
+      expect(result.projectProgressData[0].progress).toBe(50);
     });
 
     it('should return 0 progress for projects with no tasks', async () => {

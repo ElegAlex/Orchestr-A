@@ -141,31 +141,38 @@ export class AnalyticsService {
       },
     });
 
-    // Recalculate progress for each project
-    return Promise.all(
-      projects.map(async (project) => {
-        const progress = await this.calculateProjectProgress(project.id);
-        return {
-          ...project,
-          progress,
-          projectManager: project.manager
-            ? `${project.manager.firstName} ${project.manager.lastName}`
-            : null,
-        };
-      }),
-    );
-  }
-
-  private async calculateProjectProgress(projectId: string): Promise<number> {
-    const tasks = await this.prisma.task.findMany({
-      where: { projectId },
-      select: { status: true },
+    // Batch-compute progress for all projects in a single groupBy query (PER-001 fix).
+    // Replaces the N per-project task.findMany calls with one SQL groupBy.
+    const projectIds = projects.map((p) => p.id);
+    const statusCounts = await this.prisma.task.groupBy({
+      by: ['projectId', 'status'],
+      where: { projectId: { in: projectIds } },
+      _count: { _all: true },
     });
 
-    if (tasks.length === 0) return 0;
+    // Build a per-project progress map from the grouped counts
+    const progressMap: Record<string, number> = {};
+    const totalMap: Record<string, number> = {};
+    const doneMap: Record<string, number> = {};
+    for (const row of statusCounts) {
+      if (!row.projectId) continue;
+      totalMap[row.projectId] = (totalMap[row.projectId] ?? 0) + row._count._all;
+      if (row.status === 'DONE') {
+        doneMap[row.projectId] = (doneMap[row.projectId] ?? 0) + row._count._all;
+      }
+    }
+    for (const id of projectIds) {
+      const total = totalMap[id] ?? 0;
+      progressMap[id] = total === 0 ? 0 : Math.round(((doneMap[id] ?? 0) / total) * 100);
+    }
 
-    const doneCount = tasks.filter((t) => t.status === 'DONE').length;
-    return Math.round((doneCount / tasks.length) * 100);
+    return projects.map((project) => ({
+      ...project,
+      progress: progressMap[project.id] ?? 0,
+      projectManager: project.manager
+        ? `${project.manager.firstName} ${project.manager.lastName}`
+        : null,
+    }));
   }
 
   private async getTasks(
