@@ -5523,7 +5523,7 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ---
 ### PER-006 — Leaves findAll: 1000 default + unbounded when date filter present
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5561,7 +5561,15 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Fix: (1) lowered safeLimit cap from Math.min(limit||1000,1000) to Math.min(limit||500,500) in findAll; (2) removed early `return enrichedLeaves` block (lines 826-829) that was returning a raw array when date filters were present. Both date-filtered and non-date-filtered queries now always return {data,meta} paginated shape.
+
+Scope notes:
+- planning.service.ts:132-136 already had a shape guard for both array and {data,meta} (the COR-011 early landing), so the API consumer is unaffected.
+- Frontend leavesService.getByDateRange (apps/web/src/services/leaves.service.ts:134) is DEAD CODE — not called from any production page/hook. It still carries a stale comment saying the API returns a raw array. This should be updated as a follow-up (outside this task scope).
+- COR-011 (same batch) targets the identical early-return pattern. Since PER-006 fixes it first, COR-011 will find the return already gone and should dedup cleanly.
+
+Fail-pre witness: 4 tests RED — AssertionError: expected [...array] to have property data (3×) + expected take:1000 to be 500 (1×). All 178 tests GREEN after fix.
 
 ---
 ### PER-009 — Leave import preview loads ALL active users + ALL pending/approved leaves

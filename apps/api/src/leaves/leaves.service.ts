@@ -747,7 +747,7 @@ export class LeavesService {
         userId = currentUserId;
       }
     }
-    const safeLimit = Math.min(limit || 1000, 1000);
+    const safeLimit = Math.min(limit || 500, 500);
     const skip = (page - 1) * safeLimit;
 
     const where: Prisma.LeaveWhereInput = {};
@@ -822,11 +822,6 @@ export class LeavesService {
       currentUserId,
       currentUserRole,
     );
-
-    // Si on filtre par dates, retourner directement un tableau pour la compatibilité avec le planning
-    if (startDate || endDate) {
-      return enrichedLeaves;
-    }
 
     return {
       data: enrichedLeaves,

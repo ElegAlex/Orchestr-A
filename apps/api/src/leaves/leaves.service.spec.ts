@@ -1441,8 +1441,10 @@ describe('LeavesService', () => {
         'ADMIN',
       );
 
-      // Returns array directly when filtering by dates
-      expect(Array.isArray(result)).toBe(true);
+      // Date-filtered results MUST return paginated {data, meta} — not a raw array
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('meta');
+      expect(Array.isArray((result as { data: unknown[] }).data)).toBe(true);
     });
 
     it('should filter by startDate only', async () => {
@@ -1461,7 +1463,8 @@ describe('LeavesService', () => {
         'ADMIN',
       );
 
-      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('meta');
     });
 
     it('should filter by endDate only', async () => {
@@ -1480,7 +1483,30 @@ describe('LeavesService', () => {
         'ADMIN',
       );
 
-      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('meta');
+    });
+
+    it('should cap limit at 500 (hard ceiling for date-windowed queries)', async () => {
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      mockPrismaService.leave.count.mockResolvedValue(0);
+
+      await service.findAll(
+        1,
+        1000,
+        undefined,
+        undefined,
+        undefined,
+        '2025-06-01',
+        '2025-06-30',
+        'admin-user-id',
+        'ADMIN',
+      );
+
+      // The hard cap must be 500, not 1000
+      expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 500 }),
+      );
     });
 
     it('should return leaveType with name, color and icon in each leave', async () => {
