@@ -6777,7 +6777,7 @@ e2e/tests/workflows/auth.spec.ts:17-77 → 3 UI tests with locators (login-usern
 npx playwright test e2e/tests/security/auth-hardening.spec.ts e2e/auth.spec.ts e2e/tests/workflows/auth.spec.ts --project=admin
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** c05212c
 **Learnings:**
 Fixed auth-hardening.spec.ts test-side drift (sub-failures #1 and #3, #2 already resolved by SEC-006).
 #1 (SEC-03 role shape): loginAs() typed role as string but API returns role object {id,code,label,templateKey,isSystem}; updated type and changed assertions from user.role=="CONTRIBUTEUR" to user.role?.code=="BASIC_USER" (seed.ts:1722 assigns contributeur-test to role BASIC_USER not CONTRIBUTEUR) and meBody.role?.code (auth/me returns same AuthenticatedUser shape).
