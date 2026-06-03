@@ -6269,7 +6269,7 @@ For each forbidden role in the matrix, POST /api/leaves and assert 403. For appr
 pnpm test:e2e -- e2e/tests/workflows/leaves.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 2e871dd
 **Learnings:**
 CORRECTED PREMISE: The spec states REFERENT gets 403 on POST /api/leaves — this is WRONG. The permission-matrix (allowedRoles) includes referent for leaves:create. No false REFERENT-deny test was added.
 
