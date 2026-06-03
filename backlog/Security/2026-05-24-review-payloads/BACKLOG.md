@@ -4522,7 +4522,7 @@ Fail-pre witness: 2 new tests RED on unfixed code - requestCancel threw TypeErro
 ---
 ### COR-014 — captureSnapshots is N+1 with no uniqueness guarantee; document race ≠ correctness
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 7
 - **Cluster:** D
 - **Confidence:** claude-only
@@ -4560,7 +4560,8 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Replaced findFirst→create with upsert keyed on projectId_date (normalized to midnight startOfDay). Added @@unique([projectId,date]) in schema.prisma + hand-written migration (20260603130000) since prisma migrate dev refuses non-interactive. Prisma client generated ok; projectId_date compound key confirmed in index.d.ts. Fail-pre witness: primary test RED with "expected vi.fn() to be called 1 times, but got 0 times" (code used create not upsert). Unit mock cannot enforce the DB constraint — the @@unique index is the structural race guard. Existing tests updated from create→upsert assertions (same intent, different implementation); two legacy W1.F tests replaced by upsert-aware equivalents.
 
 ---
 ### COR-019 — reorderSubtasks Promise.all updates can produce duplicate position values

@@ -204,7 +204,7 @@ model ProjectSnapshot {
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Restrict) // DAT-007: Restrict (was Cascade) — progress history must not be erased by a Project hard-delete
 
-  @@index([projectId, date])
+  @@unique([projectId, date]) // COR-014: DB-level race guard; date stored as startOfDay (midnight UTC)
   @@index([date])
   @@map("project_snapshots")
 }

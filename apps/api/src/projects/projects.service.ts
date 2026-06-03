@@ -1100,8 +1100,8 @@ export class ProjectsService {
 
   /**
    * Capture un snapshot de progression pour tous les projets actifs.
-   * Idempotent à la journée : un projet déjà snapshotté aujourd'hui est skippé.
-   * Pas de contrainte DB (race conditions tolérées en V1, pas de 500).
+   * Idempotent à la journée : upsert keyed on (projectId, startOfDay).
+   * The @@unique([projectId, date]) index (COR-014) is the DB-level race guard.
    */
   async captureSnapshots() {
     const projects = await this.prisma.project.findMany({
@@ -1118,13 +1118,6 @@ export class ProjectsService {
 
     const results = await Promise.all(
       projects.map(async (project) => {
-        const existing = await this.prisma.projectSnapshot.findFirst({
-          where: { projectId: project.id, date: { gte: startOfDay } },
-        });
-        if (existing) {
-          return { created: false };
-        }
-
         const tasksTotal = project.tasks.length;
         const tasksDone = project.tasks.filter(
           (t) => t.status === 'DONE',
@@ -1148,9 +1141,13 @@ export class ProjectsService {
           (m) => m.status !== 'COMPLETED' && m.dueDate >= now,
         ).length;
 
-        await this.prisma.projectSnapshot.create({
-          data: {
+        await this.prisma.projectSnapshot.upsert({
+          where: {
+            projectId_date: { projectId: project.id, date: startOfDay },
+          },
+          create: {
             projectId: project.id,
+            date: startOfDay,
             progress,
             tasksDone,
             tasksTotal,
@@ -1160,6 +1157,7 @@ export class ProjectsService {
             milestonesOverdue,
             milestonesUpcoming,
           },
+          update: {},
         });
         return { created: true };
       }),
