@@ -6585,7 +6585,7 @@ Provision the data the test needs in beforeAll via API; fail the test (not skip)
 pnpm test:e2e -- e2e/tests/gantt/gantt-project.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 1bb5497
 **Learnings:**
 Fix: replaced ~24 data-dependent test.skip guards (isGanttVisible, taskCount, headerCount, rowCount, hasGroupBy) with real expect() assertions in both gantt-project.spec.ts and gantt-portfolio.spec.ts.
 
