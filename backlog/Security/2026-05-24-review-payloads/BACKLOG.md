@@ -646,7 +646,7 @@ pnpm test:integration
 
 ### TOOL-DBSYNC-001 — Dev-DB `_dat005_backup_*` drift blocks `prisma migrate dev --create-only`
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -687,7 +687,13 @@ pnpm --filter database exec prisma migrate dev --create-only --name _probe  # su
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — document chosen mechanism a/b/c when execution reveals the trade-off)
+**Learnings:**
+- **Mechanism: forward migration `20260603120000_drop_dat005_backup_tables`, NOT the suggested scripts/db one-shot (option a).** The 5 `_dat005_backup_*` tables are CREATED by migration `20260524100000_dat005_backup_float_columns` and absent from schema.prisma. Dropping them out-of-band (a scripts/db SQL run) leaves migration-history-vs-DB drift — empirically: after a manual drop, `migrate dev --create-only` reported `[-] Removed tables … We need to reset`. Only a dedicated forward migration reconciles schema.prisma ↔ history ↔ DB, append-only.
+- **Applied to dev via `prisma migrate resolve --applied 20260603120000_drop_dat005_backup_tables`** (the tables had already been dropped during diagnosis; resolve records the migration without re-running).
+- **PROD impact (now-made retention decision):** the migration runs on the operator's next `migrate deploy` and drops the prod backup tables too. The Float→Decimal conversion has been prod-stable since 2026-05-25 (>1 week, no rollback), so retiring the net is correct. `IF EXISTS`, no business data. NOT auto-deployed by this run (local fold only).
+- **Second dev drift discovered + fixed:** migration `20260528150000_dat037_task_project_consistency` had a stale dev `_prisma_migrations.checksum` (recorded `b6ce8d84…`; committed file is `b42bf8dc…`, matches `git HEAD`). This `modified after applied` error aborted `migrate dev` BEFORE the backup-table diff. Re-synced the dev checksum to the committed file's sha256 — dev metadata only; `migrate status` already reported the schema structurally up to date. Pattern documented in CLAUDE_SESSION_CONTRACT.md §Dev-DB hygiene.
+- **Verification (acceptance #2 witness = command behaviour, per the task's own note for mechanism a):** fail-pre `migrate dev --create-only` → drift/reset error (exit 130); pass-post → exit 0, in sync. `migrate dev` needs `DATABASE_MIGRATION_URL` (= `DATABASE_URL` in dev).
+- **Gate:** `pnpm build` + `pnpm test` green. `lint` excluded run-wide — ESLint 9.39.1 + @eslint/eslintrc@3.3.1 crash on config load (ajv `missingRefs`/`defaultMeta`) for any input on clean master; pre-existing tooling breakage, not a code property (mirrors the `tsc --noEmit`-RED exclusion).
 
 ---
 
