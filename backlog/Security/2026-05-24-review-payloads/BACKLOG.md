@@ -6934,7 +6934,7 @@ Audit each useEffect for true side-effect vs derived state. Convert all data-loa
 pnpm --filter web test  # no targeted spec inferred from apps/web/app/[locale]/projects/page.tsx
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 0145924
 **Learnings:**
 Converted useEffect filter (line 158) to useMemo — eliminates extra render commit on every filter interaction (2→1 commit). Consolidated parallel data-loading effects (133+138) into a single effect; clients fetch remains mount-only by keeping it inside the fetchProjects-dep effect without re-declaring the dep. Removed filteredProjects useState (now const derived by useMemo). Fail-pre: React Profiler on real ProjectsPage showed commits.length===2 after fireEvent.change on the status <select> (ACTIVE filter on mixed-status list guarantees a new array → no React bail-out). After fix: commits.length===1.
 
