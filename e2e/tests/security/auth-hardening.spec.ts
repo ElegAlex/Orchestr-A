@@ -49,11 +49,39 @@ async function loginAs(
   if (!res.ok()) {
     throw new Error(`login failed: ${res.status()} ${await res.text()}`);
   }
-  return res.json() as Promise<{
+  const body = (await res.json()) as {
     access_token: string;
-    refresh_token: string;
-    user: { id: string; role: string };
-  }>;
+    user: {
+      id: string;
+      role: {
+        id: string;
+        code: string;
+        label: string;
+        templateKey: string;
+        isSystem: boolean;
+      } | null;
+    };
+  };
+
+  // refresh_token is placed in an HttpOnly Set-Cookie header (not the JSON body).
+  // Extract it here so callers can pass it to /auth/refresh and /auth/logout.
+  // The server encodeURIComponent-encodes the value; decode it on the way out.
+  // Match both the legacy name (orchestr_a_refresh_token) and the __Host- variant
+  // (used in production) so the helper works in dev and prod environments.
+  let refresh_token: string | undefined;
+  const setCookieHeaders = res
+    .headersArray()
+    .filter((h) => h.name.toLowerCase() === "set-cookie")
+    .map((h) => h.value);
+  for (const header of setCookieHeaders) {
+    const match = header.match(/(?:__Host-)?orchestr_a_refresh_token=([^;]+)/);
+    if (match) {
+      refresh_token = decodeURIComponent(match[1]);
+      break;
+    }
+  }
+
+  return { ...body, refresh_token };
 }
 
 test.describe("Security — auth hardening (SEC-03/04/05)", () => {
@@ -70,7 +98,9 @@ test.describe("Security — auth hardening (SEC-03/04/05)", () => {
       ROLE_LOGINS.contributeur,
       ROLE_PASSWORD,
     );
-    expect(user.role).toBe("CONTRIBUTEUR");
+    // role is an object {id, code, label, templateKey, isSystem} — assert the code.
+    // The seeded user contributeur-test has role code BASIC_USER (see seed.ts:1722).
+    expect(user.role?.code).toBe("BASIC_USER");
 
     // 2. Inject tampered auth_user_display claiming ADMIN role into localStorage
     await page.goto(baseURL ?? "http://localhost:4001", {
@@ -122,7 +152,8 @@ test.describe("Security — auth hardening (SEC-03/04/05)", () => {
     });
     expect(me.status()).toBe(200);
     const meBody = await me.json();
-    expect(meBody.role).toBe("CONTRIBUTEUR");
+    // /auth/me returns AuthenticatedUser where role is the same object shape.
+    expect(meBody.role?.code).toBe("BASIC_USER");
 
     await ctx.close();
   });
@@ -201,17 +232,28 @@ test.describe("Security — auth hardening (SEC-03/04/05)", () => {
     );
 
     // 1. Legitimate rotation: exchange old refresh for a new pair.
+    //    The API returns { access_token } in the body and a new refresh token
+    //    in the Set-Cookie header (same pattern as /auth/login).
     const rotate1 = await request.post(apiUrl(baseURL, "/auth/refresh"), {
       data: { refreshToken: first.refresh_token },
       headers: { "Content-Type": "application/json" },
     });
     expect(rotate1.status()).toBe(200);
-    const rotated = (await rotate1.json()) as {
-      access_token: string;
-      refresh_token: string;
-    };
-    expect(rotated.refresh_token).toBeTruthy();
-    expect(rotated.refresh_token).not.toBe(first.refresh_token);
+
+    // Extract the new refresh token from the Set-Cookie header.
+    let rotatedRefreshToken: string | undefined;
+    for (const header of rotate1
+      .headersArray()
+      .filter((h) => h.name.toLowerCase() === "set-cookie")
+      .map((h) => h.value)) {
+      const match = header.match(/(?:__Host-)?orchestr_a_refresh_token=([^;]+)/);
+      if (match) {
+        rotatedRefreshToken = decodeURIComponent(match[1]);
+        break;
+      }
+    }
+    expect(rotatedRefreshToken).toBeTruthy();
+    expect(rotatedRefreshToken).not.toBe(first.refresh_token);
 
     // 2. Replay of the OLD (already-consumed) refresh → 401.
     const replay = await request.post(apiUrl(baseURL, "/auth/refresh"), {
@@ -223,7 +265,7 @@ test.describe("Security — auth hardening (SEC-03/04/05)", () => {
     // 3. Reuse detection must revoke ALL tokens for that user —
     //    even the freshly issued refresh must now be 401.
     const afterReuse = await request.post(apiUrl(baseURL, "/auth/refresh"), {
-      data: { refreshToken: rotated.refresh_token },
+      data: { refreshToken: rotatedRefreshToken },
       headers: { "Content-Type": "application/json" },
     });
     expect(afterReuse.status()).toBe(401);
