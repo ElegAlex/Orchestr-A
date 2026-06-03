@@ -6613,7 +6613,7 @@ Either wrap each E2E spec in a savepoint via a dedicated test endpoint, or run p
 TBD — manual verification (config change, no automated test)
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 28dc49a
 **Learnings:**
 Implemented guarded test-only POST /api/testing/reset endpoint.
 
