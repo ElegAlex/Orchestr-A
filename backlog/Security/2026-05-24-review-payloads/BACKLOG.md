@@ -4013,7 +4013,7 @@ The frontend HTML served by Next.js (`web:3000`) behind nginx carries a single C
 
 **Deploy note:** two surfaces — nginx reload/recreate (not just `up -d api`) **and** the web image rebuild. HOLD; surface the full deploy call after close, do not auto-deploy.
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 785e661
 **Learnings:**
 Implemented nonce-based CSP for the SPA via Next.js middleware. Architecture: (1) apps/web/src/lib/csp.ts exports buildCsp(nonce) — all directives from the old nginx CSP, script-src uses nonce instead of unsafe-inline, style-src keeps unsafe-inline; (2) apps/web/middleware.ts composes with next-intl: in production, generates a per-request crypto.randomUUID() nonce, sets content-security-policy on downstream REQUEST headers (Next.js app-render reads headers["content-security-policy"] at app-render.js:166 to auto-nonce ~6 inline hydration scripts) and Content-Security-Policy on the RESPONSE; dev mode skips the strict CSP (HMR needs unsafe-eval); (3) nginx/nginx.conf: removed unsafe-inline Content-Security-Policy from server-level (L100) and /_next/static block (L160) — two CSP headers are enforced as intersection which silently destroys nonce support; (4) layout.tsx: no change needed — ThemeProvider is pure client-side with no inline scripts; nonce auto-injection is fully handled by Next.js when CSP is on the request headers. Fail-pre witness: test RED because @/lib/csp module did not exist. BROWSER white-screen QA REQUIRED before any deploy — LOCAL run did not render the SPA under the new CSP. The strict CSP is production-only (NODE_ENV=production); dev mode is unaffected.
 
