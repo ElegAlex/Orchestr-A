@@ -2424,6 +2424,65 @@ describe('LeavesService', () => {
       // catch only maps the error.
       expect(mockAuditPersistence.log).not.toHaveBeenCalled();
     });
+
+    // COR-008 — approve() must re-validate the balance inside the tx before
+    // writing APPROVED. Pre-fix: no balance check at all → no throw → RED.
+    // Post-fix: yearBuckets gate (with excludeLeaveId) is run; when
+    // totalDays has been reduced below the requested days since PENDING was
+    // created, ConflictException is thrown (signal: stale state, not bad
+    // user input). Audit must NOT fire since the tx aborts.
+    it('COR-008 — rejects with ConflictException when the balance became insufficient between creation and approval', async () => {
+      // mockLeave: 5 days requested (2025-06-02 → 2025-06-06), leaveTypeId='leave-type-1'
+      const pendingLeave = {
+        ...mockLeave,
+        status: LeaveStatus.PENDING,
+        days: 5,
+        validatedById: null,
+        validatedAt: null,
+        validationComment: null,
+        selfApproved: false,
+        validatorId: 'manager-1',
+      };
+
+      // Three leave.findUnique calls on the approve() path:
+      //   1) outer pre-tx gate
+      //   2) inside canValidate()
+      //   3) inside the $transaction callback (re-read)
+      // All three return PENDING — the race-condition guard passes; the
+      // failure must come from the balance check.
+      mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+      });
+
+      // leaveBalance.findUnique mock sequence (consumed in order):
+      //   1st call  → hasConfiguredBalance: returns an id row → configured=true
+      //   2nd call  → resolveAllocatedDays (inside getAvailableDays): totalDays=3
+      //   (note: the leave itself is excluded via excludeLeaveId so findMany=[])
+      mockPrismaService.leaveBalance.findUnique
+        .mockResolvedValueOnce({ id: 'bal-2025' })       // hasConfiguredBalance
+        .mockResolvedValueOnce({                          // resolveAllocatedDays
+          id: 'bal-2025',
+          userId: 'user-1',
+          leaveTypeId: 'leave-type-1',
+          year: 2025,
+          totalDays: 3,                                  // reduced: was 5, now 3
+        });
+
+      // No consumed leaves besides the leave being approved (it is excluded
+      // via excludeLeaveId so getAvailableDays does not double-count it).
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+
+      // 3 available < 5 requested → ConflictException
+      await expect(service.approve('leave-1', 'admin-1')).rejects.toThrow(
+        ConflictException,
+      );
+
+      // No status write and no audit on the conflict path.
+      expect(mockPrismaService.leave.update).not.toHaveBeenCalled();
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
   });
 
   // ============================================

@@ -1675,6 +1675,21 @@ export class LeavesService {
     // not sit inside the Postgres tx holding the leave row lock).
     const actorSnapshot = await this.buildActorSnapshot(validatorId, actor);
 
+    // COR-008 — holiday keys fetched outside the tx (static referential, same
+    // rationale as create()/update()). Used to compute yearBuckets for the
+    // balance gate inside the tx.
+    const approveHolidayKeys = await this.getHolidayKeySet(
+      leave.startDate,
+      leave.endDate,
+    );
+    const approveYearBuckets = splitLeaveByYear(
+      leave.startDate,
+      leave.endDate,
+      leave.halfDay ?? null,
+      null,
+      approveHolidayKeys,
+    );
+
     // DAT-001 — état + écriture d'audit doivent partager une seule
     // transaction. Pré-fix : leave.update puis auditService.log (logger-only)
     // hors $transaction ; un crash entre les deux laissait un congé APPROVED
@@ -1701,6 +1716,35 @@ export class LeavesService {
         throw new ConflictException(
           'La demande de congé a été modifiée pendant le traitement. Veuillez réessayer.',
         );
+      }
+
+      // COR-008 — Re-validate the allocation inside the tx so that a balance
+      // reduction between PENDING creation and validator approval is caught
+      // before APPROVED is written. Uses excludeLeaveId (mirror of update())
+      // so the PENDING leave being approved does not count against itself in
+      // usedThisYear (getAvailableDays counts PENDING leaves).
+      for (const bucket of approveYearBuckets) {
+        const hasBalance = await this.hasConfiguredBalance(
+          current.userId,
+          current.leaveTypeId,
+          bucket.year,
+          tx,
+        );
+        if (!hasBalance) continue;
+        const available = await this.getAvailableDays(
+          current.userId,
+          current.leaveTypeId,
+          bucket.year,
+          { excludeLeaveId: id },
+          tx,
+        );
+        if (available < bucket.workDays) {
+          throw new ConflictException(
+            `Solde devenu insuffisant pour approuver cette demande en ${bucket.year} : ` +
+              `${bucket.workDays} jours demandés, ${available} jours disponibles. ` +
+              `Veuillez ajuster le solde et réessayer.`,
+          );
+        }
       }
 
       const beforeSnapshot = {

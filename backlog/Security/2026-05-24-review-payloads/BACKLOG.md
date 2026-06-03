@@ -4428,7 +4428,7 @@ AbortController + 10s timeout wrapped around the external fetch at service.ts:17
 
 ### COR-008 — approve() does not re-validate balance against snapshots
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 7
 - **Cluster:** D
 - **Confidence:** claude-only
@@ -4466,7 +4466,8 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Inserted a yearBuckets/hasConfiguredBalance/getAvailableDays gate inside the approve() $transaction block, after the PENDING re-check and before tx.leave.update(). Key design choices: (1) holidayKeys and yearBuckets computed OUTSIDE the tx (static referential, mirrors create()/update() pattern); (2) getAvailableDays called with {excludeLeaveId: id} (mirrors update(), not create()) so the PENDING leave being approved does not double-count itself; (3) throws ConflictException on shortfall (not BadRequestException), signalling stale state / race-condition rather than bad user input — per spec and design_decision; (4) skipped the snapshot re-read loop (present in create/update) to keep scope minimal — the availability gate alone covers the described failure mode. Fail-pre: test RED on unfixed code with TypeError (leave.update returned undefined because no balance check means no early throw, update runs with no mock, updated.status throws); post-fix: ConflictException thrown before update. All 169 unit tests pass, build+test gates both 0.
 
 ---
 ### COR-009 — Double-approve race: two validators can both pass PENDING check
