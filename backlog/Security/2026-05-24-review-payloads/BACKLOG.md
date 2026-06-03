@@ -6303,7 +6303,7 @@ Fix the label-input associations (semantic <label htmlFor>) and re-enable; for j
 pnpm test apps/web/app/[locale]/tasks/__tests__/page.test.tsx
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 6953e68
 **Learnings:**
 14 skipped tests (8 tasks page, 3 users page, 3 export) fixed across 3 files.
 
