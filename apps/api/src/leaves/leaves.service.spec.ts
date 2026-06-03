@@ -4122,5 +4122,43 @@ describe('LeavesService', () => {
       expect(result.errors).toBe(0);
       expect(result.errorDetails).toHaveLength(0);
     });
+
+    // COR-024 — atomicity: a mid-import failure must abort the whole batch.
+    // Pre-fix: the loop uses bare prisma.leave.create with no $transaction, so
+    // rows created before the failure are persisted (no rollback).
+    // Post-fix: the loop runs inside $transaction; a failure propagates and
+    // the whole transaction is rolled back, leaving result.created === 0.
+    it('COR-024: rolls back all created rows when a mid-import create fails', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(activeUser);
+
+      // First create succeeds, second throws — simulates partial failure.
+      mockPrismaService.leave.create
+        .mockResolvedValueOnce({ id: 'leave-1' })
+        .mockRejectedValueOnce(new Error('mid-import DB error'));
+
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-03',
+            endDate: '2026-03-05',
+          },
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-04-07',
+            endDate: '2026-04-09',
+          },
+        ],
+        'admin-1',
+      );
+
+      // The whole import must be wrapped in $transaction.
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+      // The whole import must be rejected on mid-import failure — 0 created.
+      expect(result.created).toBe(0);
+      expect(result.errors).toBeGreaterThan(0);
+    });
   });
 });

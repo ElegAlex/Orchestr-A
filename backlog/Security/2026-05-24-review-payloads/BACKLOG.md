@@ -4608,7 +4608,7 @@ pnpm test apps/api/src/tasks/tasks.service.spec.ts  # may need creation if missi
 ---
 ### COR-024 — Bulk import does no transactional overlap-check, races with itself and with live API
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 7
 - **Cluster:** D
 - **Confidence:** claude-only
@@ -4646,7 +4646,8 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Wrapped the importLeaves loop in this.prisma.$transaction(async tx => { ... }): moved leave.findMany inside the callback (uses tx) for a consistent snapshot, used tx.leave.create for all writes. After each successful create, append the new row to existingLeaves in-memory so subsequent rows in the same batch see it. Validation skips (user not found, bad dates, overlap) continue without aborting the tx. Any tx.leave.create failure propagates out of the callback, the catch at outer level zeroes result.created and records a single error. leavesInFile check is placed BEFORE existingLeaves check to preserve the /fichier/ message for intra-file duplicates (since created rows are now also in existingLeaves). COR-037 overlap-violation translation is kept in the outer catch. Audit #4: importLeaves is a create path not in the audit-sensitive list; no audit entry added (deliberate). Acceptance #2: COR-024 test was RED (created=1 instead of 0) before fix, GREEN after.
 
 ---
 ### DAT-006 — Project.archive/unarchive: update + audit not atomic

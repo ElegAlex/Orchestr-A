@@ -3263,167 +3263,187 @@ export class LeavesService {
       leaveTypes.map((lt) => [lt.name.toLowerCase(), lt]),
     );
 
-    // Récupérer les congés existants (PENDING/APPROVED) pour détection chevauchement
-    const existingLeaves = await this.prisma.leave.findMany({
-      where: {
-        status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
-      },
-      select: {
-        userId: true,
-        startDate: true,
-        endDate: true,
-      },
-    });
-
-    // Map pour détecter les doublons dans le fichier
-    const leavesInFile = new Map<string, Array<{ start: Date; end: Date }>>();
-
-    for (let i = 0; i < leaves.length; i++) {
-      const leaveData = leaves[i];
-      const lineNum = i + 2;
-
-      try {
-        // Résoudre l'utilisateur
-        const user = usersByEmail.get(leaveData.userEmail.toLowerCase());
-        if (!user) {
-          result.skipped++;
-          result.errorDetails.push(
-            `Ligne ${lineNum}: Utilisateur "${leaveData.userEmail}" introuvable`,
-          );
-          continue;
-        }
-
-        // Résoudre le type de congé
-        const leaveType = leaveTypesByName.get(
-          leaveData.leaveTypeName.toLowerCase(),
-        );
-        if (!leaveType) {
-          result.skipped++;
-          result.errorDetails.push(
-            `Ligne ${lineNum}: Type de congé "${leaveData.leaveTypeName}" introuvable`,
-          );
-          continue;
-        }
-
-        // Valider les dates
-        const startDate = new Date(leaveData.startDate);
-        const endDate = new Date(leaveData.endDate);
-
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-          result.skipped++;
-          result.errorDetails.push(`Ligne ${lineNum}: Dates invalides`);
-          continue;
-        }
-
-        if (endDate < startDate) {
-          result.skipped++;
-          result.errorDetails.push(
-            `Ligne ${lineNum}: Date de fin antérieure à la date de début`,
-          );
-          continue;
-        }
-
-        // Vérifier les chevauchements avec les congés existants
-        const hasOverlap = existingLeaves.some(
-          (existing) =>
-            existing.userId === user.id &&
-            existing.startDate <= endDate &&
-            existing.endDate >= startDate,
-        );
-
-        if (hasOverlap) {
-          result.skipped++;
-          result.errorDetails.push(
-            `Ligne ${lineNum}: Chevauchement avec un congé existant`,
-          );
-          continue;
-        }
-
-        // Vérifier les chevauchements dans le fichier
-        const userLeavesInFile = leavesInFile.get(user.id) || [];
-        const hasOverlapInFile = userLeavesInFile.some(
-          (leave) => leave.start <= endDate && leave.end >= startDate,
-        );
-
-        if (hasOverlapInFile) {
-          result.skipped++;
-          result.errorDetails.push(
-            `Ligne ${lineNum}: Chevauchement avec un autre congé dans le fichier`,
-          );
-          continue;
-        }
-
-        // Calculer le nombre de jours
-        const halfDay =
-          leaveData.halfDay &&
-          startDate.getTime() === endDate.getTime() &&
-          (leaveData.halfDay === 'MORNING' || leaveData.halfDay === 'AFTERNOON')
-            ? leaveData.halfDay
-            : null;
-
-        // COR-003 — soustraire les jours fériés non travaillés, comme la
-        // création standard. Lecture par ligne (volume d'import modéré).
-        const importHolidayKeys = await this.getHolidayKeySet(
-          startDate,
-          endDate,
-        );
-        const days = calculateLeaveDays(
-          startDate,
-          endDate,
-          halfDay,
-          undefined,
-          importHolidayKeys,
-        );
-
-        // Trouver le validateur approprié
-        const validatorId = leaveType.requiresApproval
-          ? await this.findValidatorForUser(user.id)
-          : null;
-
-        // Déterminer le statut initial
-        const initialStatus = leaveType.requiresApproval
-          ? LeaveStatus.PENDING
-          : LeaveStatus.APPROVED;
-
-        // Déterminer le type enum (pour rétrocompatibilité)
-        const validEnumTypes = Object.values(LeaveType);
-        const enumType = validEnumTypes.includes(leaveType.code as LeaveType)
-          ? (leaveType.code as LeaveType)
-          : LeaveType.OTHER;
-
-        // Créer le congé
-        await this.prisma.leave.create({
-          data: {
-            userId: user.id,
-            leaveTypeId: leaveType.id,
-            type: enumType,
-            startDate,
-            endDate,
-            halfDay: halfDay || undefined,
-            days,
-            comment: leaveData.comment || undefined,
-            status: initialStatus,
-            validatorId,
+    // COR-024 — wrap the full iteration (findMany + create loop) in a single
+    // $transaction so that:
+    //   (a) the existingLeaves snapshot is taken at transaction-start, making
+    //       concurrent API leaves visible (they're committed before the tx opens);
+    //   (b) any leave.create failure aborts the whole batch atomically —
+    //       no partial import is persisted.
+    // Validation skips (user/type not found, bad dates, overlap) are NOT errors
+    // and do not abort the transaction.
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // Re-read existingLeaves inside the transaction for a consistent snapshot.
+        const existingLeaves = await tx.leave.findMany({
+          where: {
+            status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
+          },
+          select: {
+            userId: true,
+            startDate: true,
+            endDate: true,
           },
         });
 
-        // Ajouter à la map pour détection de doublons
-        userLeavesInFile.push({ start: startDate, end: endDate });
-        leavesInFile.set(user.id, userLeavesInFile);
+        // Map pour détecter les doublons dans le fichier
+        const leavesInFile = new Map<string, Array<{ start: Date; end: Date }>>();
 
-        result.created++;
-      } catch (error) {
-        result.errors++;
-        // COR-037 — same DAT-023 leaves_no_overlap path the import's own
-        // overlap pre-scan above doesn't catch (the pre-scan dedupes within
-        // the file; the DB EXCLUDE catches the cross-file race against
-        // already-APPROVED leaves landing between scan-time and write-time).
-        // Surface a clean message instead of the raw Prisma 23P01 dump.
-        const message = isLeaveOverlapViolation(error)
-          ? 'Chevauchement détecté avec un congé approuvé existant'
-          : error.message || 'Erreur inconnue';
-        result.errorDetails.push(`Ligne ${lineNum}: ${message}`);
-      }
+        for (let i = 0; i < leaves.length; i++) {
+          const leaveData = leaves[i];
+          const lineNum = i + 2;
+
+          // Résoudre l'utilisateur
+          const user = usersByEmail.get(leaveData.userEmail.toLowerCase());
+          if (!user) {
+            result.skipped++;
+            result.errorDetails.push(
+              `Ligne ${lineNum}: Utilisateur "${leaveData.userEmail}" introuvable`,
+            );
+            continue;
+          }
+
+          // Résoudre le type de congé
+          const leaveType = leaveTypesByName.get(
+            leaveData.leaveTypeName.toLowerCase(),
+          );
+          if (!leaveType) {
+            result.skipped++;
+            result.errorDetails.push(
+              `Ligne ${lineNum}: Type de congé "${leaveData.leaveTypeName}" introuvable`,
+            );
+            continue;
+          }
+
+          // Valider les dates
+          const startDate = new Date(leaveData.startDate);
+          const endDate = new Date(leaveData.endDate);
+
+          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            result.skipped++;
+            result.errorDetails.push(`Ligne ${lineNum}: Dates invalides`);
+            continue;
+          }
+
+          if (endDate < startDate) {
+            result.skipped++;
+            result.errorDetails.push(
+              `Ligne ${lineNum}: Date de fin antérieure à la date de début`,
+            );
+            continue;
+          }
+
+          // Vérifier les chevauchements dans le fichier (priorité sur existingLeaves
+          // car les rangées créées dans ce batch sont aussi dans existingLeaves —
+          // le message /fichier/ doit s'afficher pour les doublons intra-fichier).
+          const userLeavesInFile = leavesInFile.get(user.id) || [];
+          const hasOverlapInFile = userLeavesInFile.some(
+            (leave) => leave.start <= endDate && leave.end >= startDate,
+          );
+
+          if (hasOverlapInFile) {
+            result.skipped++;
+            result.errorDetails.push(
+              `Ligne ${lineNum}: Chevauchement avec un autre congé dans le fichier`,
+            );
+            continue;
+          }
+
+          // Vérifier les chevauchements avec les congés existants en DB
+          // (inclut aussi les congés créés plus tôt dans ce batch pour la
+          // détection de chevauchement concurrents avec l'API normale).
+          const hasOverlap = existingLeaves.some(
+            (existing) =>
+              existing.userId === user.id &&
+              existing.startDate <= endDate &&
+              existing.endDate >= startDate,
+          );
+
+          if (hasOverlap) {
+            result.skipped++;
+            result.errorDetails.push(
+              `Ligne ${lineNum}: Chevauchement avec un congé existant`,
+            );
+            continue;
+          }
+
+          // Calculer le nombre de jours
+          const halfDay =
+            leaveData.halfDay &&
+            startDate.getTime() === endDate.getTime() &&
+            (leaveData.halfDay === 'MORNING' || leaveData.halfDay === 'AFTERNOON')
+              ? leaveData.halfDay
+              : null;
+
+          // COR-003 — soustraire les jours fériés non travaillés, comme la
+          // création standard. Lecture par ligne (volume d'import modéré).
+          const importHolidayKeys = await this.getHolidayKeySet(
+            startDate,
+            endDate,
+          );
+          const days = calculateLeaveDays(
+            startDate,
+            endDate,
+            halfDay,
+            undefined,
+            importHolidayKeys,
+          );
+
+          // Trouver le validateur approprié
+          const validatorId = leaveType.requiresApproval
+            ? await this.findValidatorForUser(user.id)
+            : null;
+
+          // Déterminer le statut initial
+          const initialStatus = leaveType.requiresApproval
+            ? LeaveStatus.PENDING
+            : LeaveStatus.APPROVED;
+
+          // Déterminer le type enum (pour rétrocompatibilité)
+          const validEnumTypes = Object.values(LeaveType);
+          const enumType = validEnumTypes.includes(leaveType.code as LeaveType)
+            ? (leaveType.code as LeaveType)
+            : LeaveType.OTHER;
+
+          // Créer le congé via le client transactionnel — toute erreur ici
+          // propage hors du callback et Prisma annule la transaction entière.
+          // COR-037 — le violateur de contrainte leaves_no_overlap (23P01)
+          // est capturé ici et converti en message lisible; il est re-lancé
+          // pour déclencher le rollback atomique de toute l'import.
+          await tx.leave.create({
+            data: {
+              userId: user.id,
+              leaveTypeId: leaveType.id,
+              type: enumType,
+              startDate,
+              endDate,
+              halfDay: halfDay || undefined,
+              days,
+              comment: leaveData.comment || undefined,
+              status: initialStatus,
+              validatorId,
+            },
+          });
+
+          // Mettre à jour existingLeaves en mémoire pour les rangées suivantes.
+          existingLeaves.push({ userId: user.id, startDate, endDate });
+
+          // Ajouter à la map pour détection de doublons dans le fichier
+          userLeavesInFile.push({ start: startDate, end: endDate });
+          leavesInFile.set(user.id, userLeavesInFile);
+
+          result.created++;
+        }
+      });
+    } catch (error) {
+      // A leave.create failure (or any unrecoverable DB error) aborts the
+      // entire $transaction. Record a single error for the whole batch.
+      result.created = 0;
+      result.errors++;
+      // COR-037 — translate the DB exclusion-constraint violation to a clean message.
+      const message = isLeaveOverlapViolation(error)
+        ? 'Chevauchement détecté avec un congé approuvé existant'
+        : (error as Error).message || 'Erreur inconnue';
+      result.errorDetails.push(`Import annulé: ${message}`);
     }
 
     return result;
