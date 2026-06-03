@@ -4880,7 +4880,7 @@ Normalise the cursor as a day-key string (YYYY-MM-DD) in Europe/Paris and comput
 pnpm test apps/api/src/telework/telework.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 2947cba
 **Learnings:**
 Both DST-unsafe loops in telework.service.ts (expandRecurringRulesForRange l.315 and generateSchedulesFromRules l.880) replaced with day-key iteration. Added 4 module-level helpers (teleworkDayKey via formatInTimeZone, nextTeleworkDayKey via UTC arithmetic, dayKeyToUTCDate, modelDayOfWeekFromKey) inlined in telework.service.ts to stay within strict 2-file scope (no new shared util file, no coupling to leaves/ module). DST fail-pre: under process.env.TZ=Europe/Paris, spring-forward 2025-03-30 caused stored UTC day = 29 (off-by-one); test asserts getUTCDate()===30 and was RED. After fix: all 54 tests GREEN. Acceptance #4 (audit_logs) does not apply: telework schedule generation is not in the audit-sensitive list (auth/leaves-approve/RBAC/doc-access/user-delete/password-reset). Read-write symmetry: getTeamSchedule reads by full UTC-midnight Date; UTC-midnight from dayKeyToUTCDate is consistent with that pattern.
 
