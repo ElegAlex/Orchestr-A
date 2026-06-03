@@ -4745,7 +4745,7 @@ Mock note: Prisma.PrismaClientKnownRequestError imported from database mock (vit
 ---
 ### COR-018 — update() clients sync runs outside the project-update transaction
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 7
 - **Cluster:** D
 - **Confidence:** claude-only
@@ -4783,7 +4783,12 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Wrapped project.update + projectClient.deleteMany/createMany in a single $transaction when clientIds !== undefined (service lines 588-614). When clientIds is undefined the original plain update path is preserved to avoid regressions.
+
+Fail-pre witness (structural, consistent with DAT-006 atomicity tests): before fix, $transaction was never called on the clientIds path → AssertionError: expected "vi.fn()" to be called at least once. Live rollback cannot be demonstrated in unit tests (mocked Prisma); real DB atomicity is tested by the integration harness (pnpm test:integration).
+
+Added projectClient:{deleteMany,createMany} and client:{findMany} to mockPrismaService so the clientIds validation + sync path can execute in the test. No audit entry added (project update is not in the AC#4 audit-sensitive list).
 
 ---
 

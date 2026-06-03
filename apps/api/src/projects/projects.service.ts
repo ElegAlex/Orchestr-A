@@ -585,6 +585,39 @@ export class ProjectsService {
       }
     }
 
+    // COR-018 — wrap project.update + projectClient sync in a single
+    // $transaction when clientIds is provided so a createMany failure cannot
+    // leave the project with no clients while the response signals success.
+    // When clientIds is undefined (no client change requested) the plain update
+    // path is preserved to avoid any regression on the unrelated code paths.
+    if (clientIds !== undefined) {
+      const project = await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.project.update({
+          where: { id },
+          data: {
+            ...projectData,
+            ...(startDate && { startDate: new Date(startDate) }),
+            ...(endDate && { endDate: new Date(endDate) }),
+            ...(hiddenStatuses !== undefined && { hiddenStatuses }),
+            ...(visibleStatuses !== undefined && { visibleStatuses }),
+          },
+        });
+
+        // Sync clients: full replace. `[]` = detach all.
+        await tx.projectClient.deleteMany({ where: { projectId: id } });
+        if (clientIds.length > 0) {
+          await tx.projectClient.createMany({
+            data: clientIds.map((clientId) => ({ projectId: id, clientId })),
+            skipDuplicates: true,
+          });
+        }
+
+        return updated;
+      });
+
+      return project;
+    }
+
     const project = await this.prisma.project.update({
       where: { id },
       data: {
@@ -596,21 +629,6 @@ export class ProjectsService {
       },
     });
 
-    // Sync clients hors transaction : on remplace complètement l'ensemble si
-    // clientIds est fourni. `undefined` = pas touché. `[]` = tout détaché.
-    if (clientIds !== undefined) {
-      await this.prisma.projectClient.deleteMany({ where: { projectId: id } });
-      if (clientIds.length > 0) {
-        await this.prisma.projectClient.createMany({
-          data: clientIds.map((clientId) => ({ projectId: id, clientId })),
-          skipDuplicates: true,
-        });
-      }
-    }
-
-    // Le sync clients est en DB ; le client récupérera la liste mise à jour
-    // via GET /projects/:id. Le retour reste identique au comportement
-    // antérieur pour éviter toute régression sur les consumers.
     return project;
   }
 

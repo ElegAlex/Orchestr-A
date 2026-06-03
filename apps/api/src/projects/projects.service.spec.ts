@@ -55,6 +55,13 @@ describe('ProjectsService', () => {
       findMany: vi.fn(),
       count: vi.fn(),
     },
+    projectClient: {
+      deleteMany: vi.fn(),
+      createMany: vi.fn(),
+    },
+    client: {
+      findMany: vi.fn(),
+    },
     $transaction: vi.fn(),
   };
 
@@ -754,6 +761,26 @@ describe('ProjectsService', () => {
           }) as object,
         }),
       );
+    });
+
+    // COR-018 — update() clientIds sync must be wrapped in $transaction
+    it('COR-018: project update + client sync (deleteMany+createMany) run inside $transaction when clientIds is provided', async () => {
+      const updatedProject = { ...mockProject, name: 'Updated' };
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.client.findMany.mockResolvedValue([{ id: 'client-1' }]);
+      mockPrismaService.$transaction.mockImplementation(
+        async (callback: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          callback(mockPrismaService),
+      );
+      mockPrismaService.project.update.mockResolvedValue(updatedProject);
+      mockPrismaService.projectClient.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.projectClient.createMany.mockResolvedValue({ count: 1 });
+
+      await service.update('project-1', { clientIds: ['client-1'] } as any);
+
+      // The project update AND the client sync must run inside a single $transaction.
+      // Before the fix, $transaction is never called on the clientIds path → RED.
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
     });
   });
 
