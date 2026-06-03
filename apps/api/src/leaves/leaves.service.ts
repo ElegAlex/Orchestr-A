@@ -2103,6 +2103,19 @@ export class LeavesService {
     });
 
     const updatedLeave = await this.prisma.$transaction(async (tx) => {
+      // COR-009 - re-read inside tx to prevent TOCTOU race: a concurrent actor
+      // (e.g. a manager cancelling the leave) may have already moved the row
+      // out of APPROVED between the outer read and this tx write.
+      const current = await tx.leave.findUnique({ where: { id } });
+      if (!current) {
+        throw new NotFoundException('Demande de congé introuvable');
+      }
+      if (current.status !== LeaveStatus.APPROVED) {
+        throw new ConflictException(
+          'La demande de congé a été modifiée pendant le traitement. Veuillez réessayer.',
+        );
+      }
+
       const updated = await tx.leave.update({
         where: { id },
         data: { status: LeaveStatus.CANCELLATION_REQUESTED },
@@ -2179,22 +2192,39 @@ export class LeavesService {
       );
     }
 
-    return this.prisma.leave.update({
-      where: { id },
-      data: { status: LeaveStatus.APPROVED },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-            email: true,
+    // COR-009 - wrap in $transaction with inner re-read to prevent TOCTOU race:
+    // two validators acting simultaneously can each pass the
+    // CANCELLATION_REQUESTED check; without this guard both then issue UPDATE
+    // (last-write-wins). The inner re-read detects a concurrent state change
+    // and throws ConflictException. Pattern matches approve()/reject()/cancel().
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.leave.findUnique({ where: { id } });
+      if (!current) {
+        throw new NotFoundException('Demande de congé introuvable');
+      }
+      if (current.status !== LeaveStatus.CANCELLATION_REQUESTED) {
+        throw new ConflictException(
+          'La demande de congé a été modifiée pendant le traitement. Veuillez réessayer.',
+        );
+      }
+
+      return tx.leave.update({
+        where: { id },
+        data: { status: LeaveStatus.APPROVED },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              email: true,
+            },
           },
+          leaveType: true,
         },
-        leaveType: true,
-      },
+      });
     });
   }
 

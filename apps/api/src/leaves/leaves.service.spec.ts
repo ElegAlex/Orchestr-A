@@ -2796,6 +2796,40 @@ describe('LeavesService', () => {
       expect(mockAuditPersistence.log).not.toHaveBeenCalled();
       expect(mockPrismaService.leave.update).not.toHaveBeenCalled();
     });
+
+    // COR-009 - TOCTOU: requestCancel() reads APPROVED outside tx but by the
+    // time the tx.leave.update fires a concurrent actor may have already moved
+    // the row out of APPROVED. Without the inner re-read+guard the update
+    // proceeds silently (last-write-wins). Post-fix: the inner re-read inside
+    // $transaction detects the stale status and throws ConflictException.
+    it('COR-009 - rejects with ConflictException when status changed to non-APPROVED inside the transaction', async () => {
+      const approvedOutside = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        userId: 'user-1',
+      };
+      // Concurrent actor already moved the row to CANCELLATION_REQUESTED
+      // between the outer read and the inner tx re-read.
+      const alreadyRequestedInsideTx = {
+        ...mockLeave,
+        status: LeaveStatus.CANCELLATION_REQUESTED,
+        userId: 'user-1',
+      };
+      // Two findUnique calls on this path:
+      //   1) outer pre-tx gate in requestCancel()
+      //   2) inner re-read inside $transaction (only exists after the fix)
+      mockPrismaService.leave.findUnique
+        .mockResolvedValueOnce(approvedOutside)
+        .mockResolvedValueOnce(alreadyRequestedInsideTx);
+
+      await expect(
+        service.requestCancel('leave-1', 'user-1'),
+      ).rejects.toThrow(ConflictException);
+
+      // No status mutation and no audit on the conflict path.
+      expect(mockPrismaService.leave.update).not.toHaveBeenCalled();
+      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+    });
   });
 
   describe('rejectCancellation', () => {
@@ -2832,6 +2866,35 @@ describe('LeavesService', () => {
         'ADMIN',
       );
       expect(result.status).toBe(LeaveStatus.APPROVED);
+    });
+
+    // COR-009 - TOCTOU: rejectCancellation() has no $transaction - bare
+    // prisma.leave.update with no status guard. Two admins acting simultaneously
+    // can each pass the CANCELLATION_REQUESTED check; both then issue UPDATE
+    // last-write-wins. Post-fix: wrap in $transaction with inner re-read+guard.
+    it('COR-009 - rejects with ConflictException when status changed to non-CANCELLATION_REQUESTED inside the transaction', async () => {
+      const cancellationRequestedOutside = {
+        ...mockLeave,
+        status: LeaveStatus.CANCELLATION_REQUESTED,
+      };
+      // Concurrent actor already moved the row between outer read and tx.
+      const approvedInsideTx = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+      };
+      // Two findUnique calls on this path:
+      //   1) outer pre-tx gate in rejectCancellation()
+      //   2) inner re-read inside $transaction (only exists after the fix)
+      mockPrismaService.leave.findUnique
+        .mockResolvedValueOnce(cancellationRequestedOutside)
+        .mockResolvedValueOnce(approvedInsideTx);
+
+      await expect(
+        service.rejectCancellation('leave-1', 'admin-1', 'ADMIN'),
+      ).rejects.toThrow(ConflictException);
+
+      // No status mutation on the conflict path.
+      expect(mockPrismaService.leave.update).not.toHaveBeenCalled();
     });
   });
 

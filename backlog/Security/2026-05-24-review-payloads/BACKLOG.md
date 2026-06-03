@@ -4472,7 +4472,7 @@ Inserted a yearBuckets/hasConfiguredBalance/getAvailableDays gate inside the app
 ---
 ### COR-009 — Double-approve race: two validators can both pass PENDING check
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 7
 - **Cluster:** D
 - **Confidence:** claude-only
@@ -4510,7 +4510,14 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+requestCancel() had $transaction but skipped the inner findUnique re-read before tx.leave.update (TOCTOU). rejectCancellation() had no $transaction at all - bare prisma.leave.update with no status guard. Fix: added inner tx.leave.findUnique re-read + ConflictException guard to both methods, matching the approve()/reject()/cancel() pattern already in the file.
+
+Design: used re-read-inside-$transaction pattern (same as siblings) rather than updateMany+count==1 suggested in spec; this is the established in-file precedent.
+
+rejectCancellation had no audit log before this fix; adding it would widen the scope. Logged as follow-up out of COR-009 scope (acceptance #6 discipline).
+
+Fail-pre witness: 2 new tests RED on unfixed code - requestCancel threw TypeError (no inner read, update hit undefined), rejectCancellation resolved instead of rejecting (no transaction, no guard).
 
 ---
 ### COR-014 — captureSnapshots is N+1 with no uniqueness guarantee; document race ≠ correctness
