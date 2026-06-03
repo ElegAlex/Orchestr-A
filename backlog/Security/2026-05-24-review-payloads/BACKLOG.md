@@ -4984,7 +4984,7 @@ Files touched: apps/api/src/leaves/leave-year-window.ts (fix), apps/api/src/leav
 ---
 ### DAT-015 — User.email/login have no length cap and no citext / case-insensitive uniqueness
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 8
 - **Cluster:** C
 - **Confidence:** claude-only
@@ -5021,8 +5021,9 @@ Either (a) convert email to CITEXT, or (b) add a functional unique index: CREATE
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Closed_by:** e9dc695
+**Learnings:**
+Applied functional LOWER() unique indexes on email and login via hand-crafted migration SQL (Prisma PSL cannot express functional indexes). Kept @unique PSL declarations to preserve findUnique compatibility in auth.service.ts. Added @db.VarChar(254) to email in schema + @MaxLength(254) in create-user.dto.ts and import-users.dto.ts. Fixed case-sensitive === comparisons (lines 93,96/525,528 users.service; 263,266 auth.service register) to use .toLowerCase(). Fixed findFirst WHERE queries to use mode:insensitive so 500 P2002 cannot surface before 409. DB pre-flight: no case-collision rows, max email 46 chars. Audit note: this normalizes existing uniqueness checks, not a new mutating action, so no new audit_log entry required. login-by-email case-fold in validateUser (findUnique) is out of scope (different concern). migrate dev --create-only blocked in non-interactive shell; migration authored manually with correct timestamp.
 
 ---
 ### COR-023 — Half-day validation in import uses getTime() comparison on YYYY-MM-DD parsing
