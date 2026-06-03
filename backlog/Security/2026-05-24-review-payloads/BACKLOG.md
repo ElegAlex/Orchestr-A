@@ -7070,7 +7070,7 @@ pnpm --filter web test  # no targeted spec inferred from apps/web/src/components
 ---
 ### PER-021 — Only GanttChart is code-split — analytics dashboards loaded eagerly
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 12
 - **Cluster:** I
 - **Confidence:** claude-only
@@ -7108,7 +7108,8 @@ pnpm --filter web test  # no targeted spec inferred from apps/web/app/[locale]/p
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Wrapped PortfolioGantt, AdvancedAnalyticsTab (reports/page.tsx) and PlanningView (planning/page.tsx, dashboard/page.tsx) in next/dynamic({ssr:false}). Named export PlanningView required .then(m=>m.PlanningView) pattern; default exports (PortfolioGantt, AdvancedAnalyticsTab) use the standard pattern. Structural witness: pre-fix grep showed only 1 dynamic() call (projects/[id]/page.tsx:49); post-fix grep shows 5 calls across 4 files. Behavioural jest test not attempted - jest/jsdom has no bundle chunking; code-split is only observable via bundle analyzer or build output, not unit assertions. Build+test gate green.
 
 ---
 ### SEC-FE-001 — Web app has no handler for the PASSWORD_CHANGE_REQUIRED 403 (SEC-004 counterpart)

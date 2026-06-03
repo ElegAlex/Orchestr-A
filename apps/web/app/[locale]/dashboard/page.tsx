@@ -4,9 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { MainLayout } from "@/components/MainLayout";
-import { PlanningView } from "@/components/planning/PlanningView";
 import { useAuthStore } from "@/stores/auth.store";
+
+const PlanningView = dynamic(
+  () =>
+    import("@/components/planning/PlanningView").then((m) => m.PlanningView),
+  { ssr: false }
+);
 import { usePermissions } from "@/hooks/usePermissions";
 import { projectsService } from "@/services/projects.service";
 import { tasksService } from "@/services/tasks.service";

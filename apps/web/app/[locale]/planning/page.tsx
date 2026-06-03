@@ -1,7 +1,13 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { MainLayout } from "@/components/MainLayout";
-import { PlanningView } from "@/components/planning/PlanningView";
+
+const PlanningView = dynamic(
+  () =>
+    import("@/components/planning/PlanningView").then((m) => m.PlanningView),
+  { ssr: false }
+);
 
 export default function PlanningPage() {
   return (

@@ -6,8 +6,15 @@ import { MetricCard } from "./components/MetricCard";
 import { ProjectProgressChart } from "./components/ProjectProgressChart";
 import { TaskStatusCards } from "./components/TaskStatusCards";
 import { ProjectsDetailTable } from "./components/ProjectsDetailTable";
-import PortfolioGantt from "./components/PortfolioGantt";
-import AdvancedAnalyticsTab from "./components/advanced/AdvancedAnalyticsTab";
+import dynamic from "next/dynamic";
+
+const PortfolioGantt = dynamic(() => import("./components/PortfolioGantt"), {
+  ssr: false,
+});
+const AdvancedAnalyticsTab = dynamic(
+  () => import("./components/advanced/AdvancedAnalyticsTab"),
+  { ssr: false }
+);
 import { AnalyticsData, DateRange } from "./types";
 import { format } from "date-fns";
 import { ExportService } from "@/services/export.service";
