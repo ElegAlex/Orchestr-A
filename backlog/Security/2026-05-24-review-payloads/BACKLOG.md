@@ -4971,7 +4971,7 @@ Credit the floor to the year that contains the START date only when the leave ne
 pnpm test apps/api/src/leaves/leave-year-window.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 1932c33
 **Learnings:**
 Fix: replaced the unconditional `buckets.set(startYear, ...)` shortfall credit (line 159) with proportional distribution across calendar years.
 Design: for single-year leaves (startYear===endYear) the prior behaviour is preserved; for cross-year leaves the 0.5 floor is distributed proportionally to each year\u2019s calendar-day count (one pass over the day-key range). The sym Sat 2022-12-31 → Sun 2023-01-01 case (1 day each year) now yields [{2022, 0.25},{2023, 0.25}] instead of [{2022, 0.5}].
