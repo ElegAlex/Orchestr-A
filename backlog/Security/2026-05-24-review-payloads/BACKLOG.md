@@ -4732,7 +4732,7 @@ Either (a) wrap in $transaction with isolationLevel: Serializable and add one-sh
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 7490705
 **Learnings:**
 Implemented Serializable isolation + one-shot P2034 retry for create() transaction at line 528.
 Design: chose option (a) Serializable + retry vs advisory lock because (a) is testable with mocked $transaction and matches Prisma first-class isolationLevel support.
