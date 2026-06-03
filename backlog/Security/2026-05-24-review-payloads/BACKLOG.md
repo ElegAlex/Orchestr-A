@@ -6082,7 +6082,7 @@ Add uploadedBy User @relation(fields:[uploadedBy], references:[id], onDelete: Se
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** a87006f
 **Learnings:**
 Added uploadedBy String?->String? FK @relation(DocumentUploader) onDelete:SetNull + named back-relation User.uploadedDocuments. Added contentSha256 String? (integrity hash, nullable — no upload pipeline) and deletedAt DateTime? for soft-delete. Migration dat025_document_fk_softdelete. Service: remove() now sets deletedAt instead of hard-delete; findAll uses deletedAt:null filter; findOne guards deletedAt check. @@index([uploadedBy]) already existed (DAT-011) — not duplicated. Zero orphaned uploadedBy rows in local DB (confirmed before migrate). Audit emission on remove() not wired (no currentUser in remove() — out of scope per criterion #6, deliberate deferral). url/mimeType DB-level caps deferred (DTO already validates). Fail-pre: 3 RED tests on unfixed code; all GREEN after fix.
 
