@@ -2570,6 +2570,12 @@ export class LeavesService {
       orderBy: { sortOrder: 'asc' },
     });
 
+    // COR-007 — use Paris year window (UTC-accurate) and split cross-year
+    // leaves by year so only days falling inside currentYear are counted.
+    const { start: yearStart, endExclusive: yearEnd } =
+      parisYearWindow(currentYear);
+    const holidayKeys = await this.getHolidayKeySet(yearStart, yearEnd);
+
     // Pour chaque type, calculer le solde
     const balancesByType = await Promise.all(
       leaveTypes.map(async (lt) => {
@@ -2579,9 +2585,6 @@ export class LeavesService {
           currentYear,
         );
 
-        const yearStart = new Date(currentYear, 0, 1);
-        const yearEnd = new Date(currentYear, 11, 31);
-
         const approvedLeaves = await this.prisma.leave.findMany({
           where: {
             userId,
@@ -2589,26 +2592,44 @@ export class LeavesService {
             status: {
               in: [LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED],
             },
-            startDate: { gte: yearStart, lte: yearEnd },
+            startDate: { lt: yearEnd },
+            endDate: { gte: yearStart },
           },
+          select: { startDate: true, endDate: true, halfDay: true },
         });
-        const usedDays = approvedLeaves.reduce(
-          (sum, l) => sum + Number(l.days),
-          0,
-        );
+        const usedDays = approvedLeaves.reduce((sum, l) => {
+          const buckets = splitLeaveByYear(
+            l.startDate,
+            l.endDate,
+            l.halfDay ?? null,
+            null,
+            holidayKeys,
+          );
+          const bucket = buckets.find((b) => b.year === currentYear);
+          return sum + (bucket?.workDays ?? 0);
+        }, 0);
 
         const pendingLeaves = await this.prisma.leave.findMany({
           where: {
             userId,
             leaveTypeId: lt.id,
             status: LeaveStatus.PENDING,
-            startDate: { gte: yearStart, lte: yearEnd },
+            startDate: { lt: yearEnd },
+            endDate: { gte: yearStart },
           },
+          select: { startDate: true, endDate: true, halfDay: true },
         });
-        const pendingDays = pendingLeaves.reduce(
-          (sum, l) => sum + Number(l.days),
-          0,
-        );
+        const pendingDays = pendingLeaves.reduce((sum, l) => {
+          const buckets = splitLeaveByYear(
+            l.startDate,
+            l.endDate,
+            l.halfDay ?? null,
+            null,
+            holidayKeys,
+          );
+          const bucket = buckets.find((b) => b.year === currentYear);
+          return sum + (bucket?.workDays ?? 0);
+        }, 0);
 
         return {
           leaveTypeId: lt.id,

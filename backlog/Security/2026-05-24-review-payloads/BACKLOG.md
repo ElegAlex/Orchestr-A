@@ -4799,7 +4799,7 @@ Added projectClient:{deleteMany,createMany} and client:{findMany} to mockPrismaS
 
 ### COR-007 — getLeaveBalance uses local-TZ year window inconsistent with parisYearWindow
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 8
 - **Cluster:** C
 - **Confidence:** claude-only
@@ -4837,7 +4837,8 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Fixed getLeaveBalance() to use parisYearWindow(currentYear) instead of local-TZ new Date(currentYear, 0/11, 1/31) boundaries, and replaced Number(l.days) reduction with splitLeaveByYear() bucketing — same pattern as getAvailableDays(). Also hoisted holiday key-set fetch outside the per-type Promise.all map (one DB call vs N). Changed WHERE clause from gte/lte to intersecting lt/gte semantics to catch leaves that start before currentYear but extend into it. Migrated 3 existing getLeaveBalance fixtures from dateless {days:N} mocks to real-date objects using year-agnostic firstMondayOfYear()+addWorkdays() helpers. FAIL-PRE: AssertionError: expected 10 to be less than 10 (unfixed code returned full l.days=10 for cross-year leave).
 
 ---
 ### COR-012 — expandRecurringRulesForRange uses local-TZ getDay across DST → can skip or duplicate a day

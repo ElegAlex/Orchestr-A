@@ -3301,7 +3301,33 @@ describe('LeavesService', () => {
   // GET LEAVE BALANCE
   // ============================================
   describe('getLeaveBalance', () => {
+    // COR-007 helper: returns the end date such that [start..end] inclusive
+    // contains exactly n workdays (Mon–Fri UTC). start MUST be a Monday.
+    function addWorkdays(start: Date, n: number): Date {
+      let count = 1; // start is workday #1
+      const cursor = new Date(start);
+      while (count < n) {
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+        const dow = cursor.getUTCDay();
+        if (dow !== 0 && dow !== 6) count++;
+      }
+      return cursor;
+    }
+
+    // Find next Monday at or after d (UTC)
+    function nextMonday(d: Date): Date {
+      const m = new Date(d);
+      while (m.getUTCDay() !== 1) m.setUTCDate(m.getUTCDate() + 1);
+      return m;
+    }
+
+    // Find first Monday of the year (UTC)
+    function firstMondayOfYear(year: number): Date {
+      return nextMonday(new Date(Date.UTC(year, 0, 1)));
+    }
+
     it('should return leave balance for user', async () => {
+      const cy = new Date().getFullYear();
       const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       // leaveTypeConfig.findMany returns [CP type]
@@ -3312,9 +3338,27 @@ describe('LeavesService', () => {
       mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
         totalDays: 25,
       });
-      // Approved leaves: 10 + 5 = 15 days used
+      // COR-007 fixture: leaves need real dates for splitLeaveByYear.
+      // Leave A starts on first Monday of cy, spans 10 workdays.
+      // Leave B starts the week after, spans 5 workdays. Total used = 15.
+      const mon1 = firstMondayOfYear(cy);
+      const endA = addWorkdays(mon1, 10); // [mon1..endA] = 10 workdays inclusive
+      const mon2 = nextMonday(new Date(endA.getTime() + 86400000)); // Mon after endA
+      const endB = addWorkdays(mon2, 5); // 5 workdays
+      const leaveA = {
+        days: 10,
+        startDate: mon1,
+        endDate: endA,
+        halfDay: null,
+      };
+      const leaveB = {
+        days: 5,
+        startDate: mon2,
+        endDate: endB,
+        halfDay: null,
+      };
       mockPrismaService.leave.findMany
-        .mockResolvedValueOnce([{ days: 10 }, { days: 5 }]) // Approved leaves
+        .mockResolvedValueOnce([leaveA, leaveB]) // Approved leaves
         .mockResolvedValueOnce([]); // Pending leaves
 
       const result = await service.getLeaveBalance('user-1');
@@ -3334,6 +3378,7 @@ describe('LeavesService', () => {
     });
 
     it('should return 0 available when all days used', async () => {
+      const cy = new Date().getFullYear();
       const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       // leaveTypeConfig.findMany returns [CP type]
@@ -3344,8 +3389,18 @@ describe('LeavesService', () => {
       mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
         totalDays: 25,
       });
+      // COR-007 fixture: 30 workdays from first Monday of cy (6 weeks).
+      // Exceeds total=25 so available clamps to 0.
+      const mon1 = firstMondayOfYear(cy);
+      const endBig = addWorkdays(mon1, 30);
+      const bigLeave = {
+        days: 30,
+        startDate: mon1,
+        endDate: endBig,
+        halfDay: null,
+      };
       mockPrismaService.leave.findMany
-        .mockResolvedValueOnce([{ days: 30 }]) // Approved: 30 days used (exceeds total)
+        .mockResolvedValueOnce([bigLeave]) // Approved: 30 days used (exceeds total)
         .mockResolvedValueOnce([]); // Pending leaves
 
       const result = await service.getLeaveBalance('user-1');
@@ -3355,6 +3410,7 @@ describe('LeavesService', () => {
 
     it('should include pending days', async () => {
       const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
+      const cy = new Date().getFullYear();
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       // leaveTypeConfig.findMany returns [CP type]
       mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
@@ -3364,14 +3420,64 @@ describe('LeavesService', () => {
       mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
         totalDays: 25,
       });
+      // COR-007 fixture: 5 workdays from first Monday of cy → pending=5
+      const mon1 = firstMondayOfYear(cy);
+      const pEnd = addWorkdays(mon1, 5);
       mockPrismaService.leave.findMany
-        .mockResolvedValueOnce([{ days: 10 }]) // Approved leaves: 10 used
-        .mockResolvedValueOnce([{ days: 3 }, { days: 2 }]); // Pending leaves: 5 pending
+        .mockResolvedValueOnce([]) // Approved leaves: 0 used
+        .mockResolvedValueOnce([
+          {
+            days: 5,
+            startDate: mon1,
+            endDate: pEnd,
+            halfDay: null,
+          },
+        ]); // Pending leaves: 5 pending
 
       const result = await service.getLeaveBalance('user-1');
 
       expect(result.pending).toBe(5);
     });
+
+    it(
+      'COR-007 — cross-year leave sums only in-year days (parisYearWindow + splitLeaveByYear)',
+      async () => {
+        const cy = new Date().getFullYear();
+        const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
+        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+          cpLeaveType,
+        ]);
+        // resolveAllocatedDays: 25 days
+        mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+          totalDays: 25,
+        });
+        // APPROVED leave spanning Dec 28 cy → Jan 8 cy+1.
+        // Stores days=10 (full span). In-year (cy) workdays = Mon 29, Tue 30
+        // = 2 days (Dec 28 = Sun, Dec 31 = Wed + Jan 1 fall in cy+1).
+        // Exact count varies by year; we only assert 0 < used < 10.
+        const crossStart = new Date(Date.UTC(cy, 11, 28, 12, 0, 0));
+        const crossEnd = new Date(Date.UTC(cy + 1, 0, 8, 12, 0, 0));
+        mockPrismaService.leave.findMany
+          .mockResolvedValueOnce([
+            {
+              days: 10,
+              startDate: crossStart,
+              endDate: crossEnd,
+              halfDay: null,
+            },
+          ]) // Approved: cross-year leave
+          .mockResolvedValueOnce([]); // Pending: none
+
+        const result = await service.getLeaveBalance('user-1');
+        const used = result.byType[0].used;
+
+        // Before fix: Number(l.days) = 10 → fails toBeGreaterThan(0) + toBeLessThan(10)
+        // After fix: splitLeaveByYear in-year workdays only → 1–4 depending on year
+        expect(used).toBeGreaterThan(0);
+        expect(used).toBeLessThan(10);
+      },
+    );
   });
 
   // ============================================
