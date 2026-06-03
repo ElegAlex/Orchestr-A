@@ -6,6 +6,11 @@
  * Le Gantt Portfolio affiche tous les projets sur une timeline.
  * Accessible aux roles ADMIN, RESPONSABLE, MANAGER (reports:view).
  *
+ * Le seed cree plusieurs projets avec startDate/endDate dans la section
+ * "Projets supplementaires pour le Gantt Portfolio" — le Gantt doit toujours
+ * etre visible pour les roles autorises. Les skip-guards data-dependants ont ete
+ * remplaces par de vraies assertions.
+ *
  * Exécuté par les projets par role (admin, responsable, etc.).
  * Chaque test filtre les roles autorisés via test.skip().
  */
@@ -18,7 +23,6 @@ const ROLES_WITH_REPORTS_ACCESS = ["admin", "responsable", "manager"];
 
 /**
  * Navigate to /reports and click the Gantt Portfolio tab (3rd tab).
- * Returns the Gantt container locator.
  */
 async function navigateToGanttPortfolio(page: import("@playwright/test").Page) {
   await page.goto("/fr/reports");
@@ -29,7 +33,7 @@ async function navigateToGanttPortfolio(page: import("@playwright/test").Page) {
   await expect(ganttTab).toBeVisible({ timeout: 10000 });
   await ganttTab.click();
 
-  // Wait for the Gantt container or the empty state to appear
+  // Wait for the Gantt container to appear
   await page.waitForTimeout(1000);
 }
 
@@ -46,19 +50,14 @@ test.describe("Gantt Portfolio", () => {
 
     await navigateToGanttPortfolio(page);
 
-    // Le conteneur Gantt doit etre visible (role="grid" avec aria-label)
+    // Le seed cree des projets avec dates → le Gantt doit etre visible
     const ganttContainer = page.locator(
       '[role="grid"][aria-label="Diagramme de Gantt"]',
     );
-    // Si pas de projets, on aura un empty state a la place
-    const emptyState = page.getByText("Aucun élément à afficher");
-    const hasGantt = await ganttContainer.isVisible().catch(() => false);
-    const hasEmpty = await emptyState.isVisible().catch(() => false);
-
-    expect(
-      hasGantt || hasEmpty,
-      "Le Gantt ou l'etat vide devrait etre affiche",
-    ).toBeTruthy();
+    await expect(
+      ganttContainer,
+      "Le Gantt Portfolio doit etre visible (projets avec dates existants dans le seed)",
+    ).toBeVisible({ timeout: 10000 });
   });
 
   // ─── NAVIGATION ──────────────────────────────────────────────────────────────
@@ -76,8 +75,7 @@ test.describe("Gantt Portfolio", () => {
     const ganttContainer = page.locator(
       '[role="grid"][aria-label="Diagramme de Gantt"]',
     );
-    const isGanttVisible = await ganttContainer.isVisible().catch(() => false);
-    test.skip(!isGanttVisible, "Pas de Gantt visible (aucun projet)");
+    await expect(ganttContainer).toBeVisible({ timeout: 10000 });
 
     // Capture the initial header bucket text
     const headerBuckets = ganttContainer.locator(
@@ -124,8 +122,7 @@ test.describe("Gantt Portfolio", () => {
     const ganttContainer = page.locator(
       '[role="grid"][aria-label="Diagramme de Gantt"]',
     );
-    const isGanttVisible = await ganttContainer.isVisible().catch(() => false);
-    test.skip(!isGanttVisible, "Pas de Gantt visible (aucun projet)");
+    await expect(ganttContainer).toBeVisible({ timeout: 10000 });
 
     // The view buttons are: Jour, Semaine, Mois, Trimestre
     const semaineButton = ganttContainer.getByRole("button", {
@@ -171,8 +168,7 @@ test.describe("Gantt Portfolio", () => {
     const ganttContainer = page.locator(
       '[role="grid"][aria-label="Diagramme de Gantt"]',
     );
-    const isGanttVisible = await ganttContainer.isVisible().catch(() => false);
-    test.skip(!isGanttVisible, "Pas de Gantt visible (aucun projet)");
+    await expect(ganttContainer).toBeVisible({ timeout: 10000 });
 
     // Start at Mois (default for portfolio)
     const moisButton = ganttContainer.getByRole("button", {
@@ -214,13 +210,11 @@ test.describe("Gantt Portfolio", () => {
     const ganttContainer = page.locator(
       '[role="grid"][aria-label="Diagramme de Gantt"]',
     );
-    const isGanttVisible = await ganttContainer.isVisible().catch(() => false);
-    test.skip(!isGanttVisible, "Pas de Gantt visible (aucun projet)");
+    await expect(ganttContainer).toBeVisible({ timeout: 10000 });
 
-    // Click the first project row in the left column
+    // At least one project row must exist (seed ensures this)
     const projectRows = ganttContainer.locator('[role="row"]');
-    const rowCount = await projectRows.count();
-    test.skip(rowCount === 0, "Aucune ligne projet dans le Gantt");
+    await expect(projectRows).not.toHaveCount(0);
 
     await projectRows.first().click();
 
@@ -244,8 +238,7 @@ test.describe("Gantt Portfolio", () => {
     const ganttContainer = page.locator(
       '[role="grid"][aria-label="Diagramme de Gantt"]',
     );
-    const isGanttVisible = await ganttContainer.isVisible().catch(() => false);
-    test.skip(!isGanttVisible, "Pas de Gantt visible (aucun projet)");
+    await expect(ganttContainer).toBeVisible({ timeout: 10000 });
 
     // The legend should show 5 health statuses
     const legendLabels = [

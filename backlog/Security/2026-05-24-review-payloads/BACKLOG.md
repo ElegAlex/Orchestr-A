@@ -6548,7 +6548,7 @@ Deleted e2e/permissions.spec.ts (contained test.skip() at L96/114/152, UI passwo
 ---
 ### TST-015 — Gantt suites pass via cascading test.skip — seed-shape dependent
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 11
 - **Cluster:** H
 - **Confidence:** claude-only
@@ -6586,7 +6586,18 @@ pnpm test:e2e -- e2e/tests/gantt/gantt-project.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Fix: replaced ~24 data-dependent test.skip guards (isGanttVisible, taskCount, headerCount, rowCount, hasGroupBy) with real expect() assertions in both gantt-project.spec.ts and gantt-portfolio.spec.ts.
+
+For gantt-project: added a test.beforeAll that (1) reads admin token from storage state, (2) GETs /api/projects to find Projet E2E by name, (3) PATCHes each task with startDate/endDate = today+7days via /api/tasks/:id, (4) stores the projectId so navigateToProjectGantt navigates directly to /fr/projects/:id instead of clicking the first link. Always uses admin token regardless of test role to avoid 403 on provision.
+
+For gantt-portfolio: removed data-dependent skips; seed already creates 5 projects with startDate/endDate in the main seed block (lines 822-913), so the Gantt is guaranteed to render.
+
+Role-based test.skip guards (ROLES_WITH_PROJECT_ACCESS, admin-only) are preserved unchanged.
+
+Fail-pre witness (structural): before fix, grep shows 24 data-dependent skip guards in two spec files; after fix, grep count = 0 for both files. npx playwright test --list confirms both specs collect 48 tests each without parse errors (TypeScript compiles).
+
+Acceptance 2 RED->GREEN at browser runtime requires the CI lane (no browsers installed locally per E2E-GATE constraint) — documented as expected structural witness as instructed in the discover report.
 
 ---
 ### TST-017 — E2E DB is not reset between runs and is seeded once — test data leaks across spec files
