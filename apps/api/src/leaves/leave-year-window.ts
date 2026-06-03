@@ -145,8 +145,12 @@ export function splitLeaveByYear(
   // so a leave that lands entirely on weekends still records 0.5 in the
   // database `days` column. If we returned an empty bucket array, the gate
   // would skip the check while storage records non-zero consumption — the
-  // exact "balance gate bypass" regression Wave 1 must not introduce. We
-  // credit the shortfall to start.year so the gate sees what storage sees.
+  // exact "balance gate bypass" regression Wave 1 must not introduce.
+  //
+  // COR-026: when the leave spans multiple calendar years, crediting the
+  // entire shortfall to startYear is incorrect — the other year also holds
+  // calendar days. Distribute proportionally to each year's calendar-day
+  // count; for a single-year leave the prior behaviour is preserved.
   const expected = calculateLeaveDays(
     start,
     end,
@@ -156,7 +160,39 @@ export function splitLeaveByYear(
   );
   const sum = Array.from(buckets.values()).reduce((a, b) => a + b, 0);
   if (expected > sum) {
-    buckets.set(startYear, (buckets.get(startYear) ?? 0) + (expected - sum));
+    const shortfall = expected - sum;
+    if (startYear === endYear) {
+      // Single-year: attribute the entire shortfall to the only year.
+      buckets.set(startYear, (buckets.get(startYear) ?? 0) + shortfall);
+    } else {
+      // Cross-year: count total and per-year calendar days in one pass so
+      // we can apportion the shortfall proportionally.
+      const calDays = new Map<number, number>();
+      let totalCalDays = 0;
+      let spanCursor = parisDayKey(start);
+      const spanEnd = parisDayKey(end);
+      while (spanCursor <= spanEnd) {
+        const y = dayKeyToYear(spanCursor);
+        calDays.set(y, (calDays.get(y) ?? 0) + 1);
+        totalCalDays++;
+        spanCursor = nextDayKey(spanCursor);
+      }
+      // Assign each year its proportional share; the last year absorbs any
+      // rounding remainder so that sum(buckets) stays float-exact.
+      const years = Array.from(calDays.keys()).sort((a, b) => a - b);
+      let distributed = 0;
+      for (let i = 0; i < years.length; i++) {
+        const y = years[i];
+        const isLast = i === years.length - 1;
+        const share = isLast
+          ? shortfall - distributed
+          : Math.round(
+              (shortfall * (calDays.get(y) ?? 0) * 1e10) / totalCalDays,
+            ) / 1e10;
+        buckets.set(y, (buckets.get(y) ?? 0) + share);
+        distributed += share;
+      }
+    }
   }
 
   return Array.from(buckets.entries())

@@ -111,6 +111,22 @@ describe('leave-year-window', () => {
       ]);
     });
 
+    it('distributes the 0.5 floor proportionally across years for cross-year all-weekend leaves (COR-026)', () => {
+      // 2022-12-31 (Sat) → 2023-01-01 (Sun): both days are weekend, both
+      // years contribute exactly one calendar day. The 0.5 floor produced by
+      // calculateLeaveDays must be split proportionally (0.25 + 0.25) instead
+      // of being credited entirely to startYear.
+      // Current (buggy) output: [{year: 2022, workDays: 0.5}]  ← start-year only
+      // Expected (fixed) output: [{year: 2022, workDays: 0.25}, {year: 2023, workDays: 0.25}]
+      const start = new Date('2022-12-31T00:00:00Z'); // Sat
+      const end = new Date('2023-01-01T00:00:00Z'); // Sun
+      expect(calculateLeaveDays(start, end)).toBe(0.5);
+      expect(splitLeaveByYear(start, end)).toEqual([
+        { year: 2022, workDays: 0.25 },
+        { year: 2023, workDays: 0.25 },
+      ]);
+    });
+
     it('charges startHalfDay to start.year, endHalfDay to end.year on cross-year leave', () => {
       // Cross-year Dec 31 2026 (Thu) → Jan 2 2027 (Sat)
       //   2026 weekdays: Thu Dec 31 = 1

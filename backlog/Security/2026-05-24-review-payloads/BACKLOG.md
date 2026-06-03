@@ -4934,7 +4934,7 @@ Scope: only holidays.service.ts + holidays.service.spec.ts touched. No audit_log
 ---
 ### COR-026 — splitLeaveByYear reconciles weekend-only floor to startYear even when startYear has 0 weekdays
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 8
 - **Cluster:** C
 - **Confidence:** claude-only
@@ -4972,7 +4972,12 @@ pnpm test apps/api/src/leaves/leave-year-window.spec.ts  # may need creation if 
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Fix: replaced the unconditional `buckets.set(startYear, ...)` shortfall credit (line 159) with proportional distribution across calendar years.
+Design: for single-year leaves (startYear===endYear) the prior behaviour is preserved; for cross-year leaves the 0.5 floor is distributed proportionally to each year\u2019s calendar-day count (one pass over the day-key range). The sym Sat 2022-12-31 → Sun 2023-01-01 case (1 day each year) now yields [{2022, 0.25},{2023, 0.25}] instead of [{2022, 0.5}].
+Fail-pre witness: vitest run leave-year-window RED — received [{year:2022,workDays:0.5}], expected [{year:2022,workDays:0.25},{year:2023,workDays:0.25}].
+Scope: pure math helper (no DB mutation, no auth path), so acceptance #4 (audit_logs) is N/A.
+Files touched: apps/api/src/leaves/leave-year-window.ts (fix), apps/api/src/leaves/leave-year-window.spec.ts (regression test).
 
 ---
 ### DAT-015 — User.email/login have no length cap and no citext / case-insensitive uniqueness
