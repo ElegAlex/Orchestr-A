@@ -5809,7 +5809,7 @@ Cache the user's managedUserIds set on the request (REQUEST-scoped provider) or 
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 4020635
 **Learnings:**
 Consolidated 5 inline copies of the service-perimeter waterfall (managedServices + userServices) into a single private `getServiceIds(userId, memo?)` helper. Added memoization via an optional `Map<string, string[]>` parameter so callers sharing the same Map pay 2 DB queries once per userId instead of N times. Sites updated: getManagedUserIds, createLeave, getPendingForValidator, getSubordinates, canValidate. Also parallelised the 2 inner queries with Promise.all (minor bonus). Fail-pre: test calling getServiceIds twice with shared memo asserting service.findMany called 1 time — RED on unfixed code (got 2), GREEN after memoization restored.
 
