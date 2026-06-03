@@ -5359,7 +5359,7 @@ Add: @@index([userId, startDate]), @@index([validatorId, status]), @@index([stat
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 499143c
 **Learnings:**
 Added 3 missing Leave indexes to schema.prisma: [userId,startDate], [status,startDate], [userId,leaveTypeId,startDate]. DAT-010 already covered [validatorId,status] and [startDate,endDate]. Migration 20260603120451_per010_leave_missing_indexes created and applied. Exact Prisma-convention names: leaves_userId_startDate_idx, leaves_status_startDate_idx, leaves_userId_leave_type_id_startDate_idx. Fail-pre witness: docker exec confirmed all 3 absent before migration. Post witness: all 3 present after migrate deploy. Int spec per010-leave-indexes.int.spec.ts follows DAT-010 pattern (SCHEMA INDEX EXCEPTION — pg_indexes structural witness). Gate: build+test both green.
 
