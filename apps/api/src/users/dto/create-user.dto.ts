@@ -35,7 +35,9 @@ export class CreateUserDto {
     description: "Email de l'utilisateur",
     example: 'marie.martin@orchestr-a.internal',
   })
+  // DAT-015: RFC 5321 maximum email length
   @IsEmail()
+  @MaxLength(254)
   email: string;
 
   @ApiProperty({

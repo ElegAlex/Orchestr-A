@@ -255,15 +255,20 @@ export class AuthService {
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await this.prisma.user.findFirst({
       where: {
-        OR: [{ email: registerDto.email }, { login: registerDto.login }],
+        // DAT-015: case-insensitive lookup matches the LOWER() unique index
+        OR: [
+          { email: { equals: registerDto.email, mode: 'insensitive' } },
+          { login: { equals: registerDto.login, mode: 'insensitive' } },
+        ],
       },
     });
 
     if (existingUser) {
-      if (existingUser.email === registerDto.email) {
+      // DAT-015: case-fold before comparing
+      if (existingUser.email.toLowerCase() === registerDto.email.toLowerCase()) {
         throw new ConflictException('Cet email est déjà utilisé');
       }
-      if (existingUser.login === registerDto.login) {
+      if (existingUser.login.toLowerCase() === registerDto.login.toLowerCase()) {
         throw new ConflictException('Ce login est déjà utilisé');
       }
     }

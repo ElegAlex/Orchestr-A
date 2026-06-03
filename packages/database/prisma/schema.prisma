@@ -24,7 +24,10 @@ datasource db {
 
 model User {
   id                  String   @id @default(uuid())
-  email               String   @unique
+  // DAT-015: VarChar(254) caps email per RFC 5321; @unique kept for Prisma
+  // findUnique compatibility. A LOWER() functional unique index is added via
+  // raw SQL in the migration (Prisma PSL cannot express functional indexes).
+  email               String   @unique @db.VarChar(254)
   login               String   @unique
   passwordHash        String
   firstName           String

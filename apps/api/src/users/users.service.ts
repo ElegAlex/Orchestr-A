@@ -85,15 +85,20 @@ export class UsersService {
 
     const existingUser = await this.prisma.user.findFirst({
       where: {
-        OR: [{ email: createUserDto.email }, { login: createUserDto.login }],
+        // DAT-015: case-insensitive search (matches the LOWER() unique index)
+        OR: [
+          { email: { equals: createUserDto.email, mode: 'insensitive' } },
+          { login: { equals: createUserDto.login, mode: 'insensitive' } },
+        ],
       },
     });
 
     if (existingUser) {
-      if (existingUser.email === createUserDto.email) {
+      // DAT-015: case-fold before comparing so 'Admin@Foo.com' === 'admin@foo.com'
+      if (existingUser.email.toLowerCase() === createUserDto.email.toLowerCase()) {
         throw new ConflictException('Cet email est déjà utilisé');
       }
-      if (existingUser.login === createUserDto.login) {
+      if (existingUser.login.toLowerCase() === createUserDto.login.toLowerCase()) {
         throw new ConflictException('Ce login est déjà utilisé');
       }
     }
@@ -513,8 +518,13 @@ export class UsersService {
             { id: { not: id } },
             {
               OR: [
-                updateUserDto.email ? { email: updateUserDto.email } : {},
-                updateUserDto.login ? { login: updateUserDto.login } : {},
+                // DAT-015: case-insensitive lookup matches the LOWER() unique index
+                updateUserDto.email
+                  ? { email: { equals: updateUserDto.email, mode: 'insensitive' } }
+                  : {},
+                updateUserDto.login
+                  ? { login: { equals: updateUserDto.login, mode: 'insensitive' } }
+                  : {},
               ],
             },
           ],
@@ -522,10 +532,11 @@ export class UsersService {
       });
 
       if (duplicate) {
-        if (duplicate.email === updateUserDto.email) {
+        // DAT-015: case-fold before comparing
+        if (updateUserDto.email && duplicate.email.toLowerCase() === updateUserDto.email.toLowerCase()) {
           throw new ConflictException('Cet email est déjà utilisé');
         }
-        if (duplicate.login === updateUserDto.login) {
+        if (updateUserDto.login && duplicate.login.toLowerCase() === updateUserDto.login.toLowerCase()) {
           throw new ConflictException('Ce login est déjà utilisé');
         }
       }
@@ -1283,7 +1294,11 @@ export class UsersService {
       try {
         const existingUser = await this.prisma.user.findFirst({
           where: {
-            OR: [{ email: userData.email }, { login: userData.login }],
+            // DAT-015: case-insensitive lookup
+            OR: [
+              { email: { equals: userData.email, mode: 'insensitive' } },
+              { login: { equals: userData.login, mode: 'insensitive' } },
+            ],
           },
         });
 

@@ -265,6 +265,36 @@ describe('UsersService', () => {
       );
     });
 
+    // DAT-015 — case-insensitive uniqueness: 'Admin@Foo.com' and 'admin@foo.com'
+    // must be treated as duplicates. Pre-fix the service-layer === comparison
+    // is case-sensitive, so the conflict is missed when the DB returns a user
+    // whose email differs only in case. FAILS before fix (no throw), PASSES after.
+    it('DAT-015: should throw conflict when email already exists with different case', async () => {
+      const existingUser = {
+        id: '1',
+        email: 'NEWUSER@EXAMPLE.COM', // stored with uppercase
+        login: 'otheruser',
+      };
+      mockPrismaService.user.findFirst.mockResolvedValue(existingUser);
+      // dto email is lowercase — without toLowerCase(), === comparison misses the dup
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        'Cet email est déjà utilisé',
+      );
+    });
+
+    it('DAT-015: should throw conflict when login already exists with different case', async () => {
+      const existingUser = {
+        id: '1',
+        email: 'other@example.com',
+        login: 'NEWUSER', // stored with uppercase
+      };
+      mockPrismaService.user.findFirst.mockResolvedValue(existingUser);
+      // dto login is lowercase 'newuser' — without toLowerCase(), === comparison misses
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        'Ce login est déjà utilisé',
+      );
+    });
+
     it('should throw error when department does not exist', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
       mockPrismaService.department.findUnique.mockResolvedValue(null);
