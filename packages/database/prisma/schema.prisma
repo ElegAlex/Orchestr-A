@@ -1193,6 +1193,10 @@ model AuditLog {
   @@index([actorId, createdAt])
   /// DAT-021 — supporte le futur dispatch de lecture v1/v2 par version de schéma.
   @@index([schemaVersion])
+  /// DAT-021 — GIN index (jsonb_path_ops) for JSONB containment queries on payload.
+  /// Declared in PSL so `prisma migrate dev --create-only` does not see the raw-SQL
+  /// index (migration 20260526120000) as drift and emit a spurious DROP.
+  @@index([payload(ops: JsonbPathOps)], type: Gin, map: "audit_logs_payload_gin")
   @@map("audit_logs")
 }
 
