@@ -4782,7 +4782,7 @@ Wrap project update + projectClient operations in a single $transaction block.
 pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** ee53662
 **Learnings:**
 Wrapped project.update + projectClient.deleteMany/createMany in a single $transaction when clientIds !== undefined (service lines 588-614). When clientIds is undefined the original plain update path is preserved to avoid regressions.
 
