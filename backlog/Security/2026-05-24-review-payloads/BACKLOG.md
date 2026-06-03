@@ -5108,7 +5108,7 @@ Normalise via formatInTimeZone + fromZonedTime. Long-term: migrate the column to
 pnpm test apps/api/src/telework/telework.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** a571322
 **Learnings:**
 Fixed in create() line 106 and update() lines 537-557. Normalise DTO date via dayKeyToUTCDate(teleworkDayKey(new Date(date))) — reuses existing helpers already used in the recurring-rules expanders (consistent UTC-midnight storage). fromZonedTime was NOT used (spec suggestion): it yields Paris midnight = 2026-03-09T23:00:00Z, landing on the WRONG calendar day under @db.Date (Prisma UTC-truncates). The existing helpers are the correct path.
 
