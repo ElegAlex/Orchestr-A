@@ -4689,7 +4689,7 @@ prisma.$transaction(async tx => { await tx.project.update(...); await tx.auditLo
 pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** ccf084f
 **Learnings:**
 archive() and unarchive() in projects.service.ts wrapped in prisma.$transaction; project.update and auditPersistence.log(event, tx) share same atomic scope. AuditPersistenceService.log() gained optional outerTx: Prisma.TransactionClient param — when supplied, executes write (advisory lock + prevHash + auditLog.create) directly on the callers tx; when absent, opens its own $transaction as before (zero regression for existing callers). FAIL-PRE: two new atomicity tests were RED on unfixed code (mockPrismaService.$transaction.toHaveBeenCalled() assertion failed with AssertionError: expected vi.fn() to be called at least once). Existing tests updated to expect tx as 2nd arg to log() via expect.anything(). No schema migration — pure TS change.
 
