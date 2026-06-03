@@ -292,6 +292,8 @@ describe('AnalyticsService', () => {
     });
 
     it('should return task status data', async () => {
+      // PER-025: status counts now come from task.groupBy, not findMany filtering.
+      // findMany is still called (feeds metrics/details), but status counts use groupBy.
       const tasks = [
         { ...mockTask, status: 'TODO' },
         { ...mockTask, id: 'task-2', status: 'IN_PROGRESS' },
@@ -303,6 +305,13 @@ describe('AnalyticsService', () => {
       mockPrismaService.task.findMany.mockResolvedValue(tasks);
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+      // Status counts sourced from groupBy (not findMany)
+      mockPrismaService.task.groupBy.mockResolvedValue([
+        { projectId: null, status: 'TODO', _count: { _all: 1 } },
+        { projectId: null, status: 'IN_PROGRESS', _count: { _all: 1 } },
+        { projectId: null, status: 'DONE', _count: { _all: 1 } },
+        { projectId: null, status: 'BLOCKED', _count: { _all: 1 } },
+      ]);
 
       const result = await service.getAnalytics({});
 
@@ -650,6 +659,38 @@ describe('AnalyticsService', () => {
         where: Record<string, unknown>;
       }).where;
       expect(JSON.stringify(projectWhere)).not.toContain('archivedAt');
+    });
+
+    // PER-025: taskStatusData and projectProgressData.tasks must be sourced from
+    // task.groupBy, not from in-memory filtering of the findMany array.
+    // Proof: findMany returns 0 tasks, groupBy returns counts > 0.
+    // Before fix: old code reads findMany → all zeros → test FAILS.
+    // After fix:  reads groupBy → correct counts → test PASSES.
+    it('PER-025: taskStatusData and projectProgressData.tasks are sourced from task.groupBy (not findMany)', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([mockProject]);
+      // findMany returns EMPTY — old code would see 0 tasks for all counts
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+      // groupBy returns real counts — new code must read these
+      mockPrismaService.task.groupBy.mockResolvedValue([
+        { projectId: 'project-1', status: 'TODO', _count: { _all: 3 } },
+        { projectId: 'project-1', status: 'DONE', _count: { _all: 2 } },
+        { projectId: 'project-1', status: 'IN_PROGRESS', _count: { _all: 1 } },
+      ]);
+
+      const result = await service.getAnalytics({});
+
+      // taskStatusData must reflect groupBy counts, not the empty findMany
+      const todoStatus = result.taskStatusData.find((s) => s.name === 'À faire');
+      const doneStatus = result.taskStatusData.find((s) => s.name === 'Terminé');
+      const inProgressStatus = result.taskStatusData.find((s) => s.name === 'En cours');
+      expect(todoStatus?.value).toBe(3);
+      expect(doneStatus?.value).toBe(2);
+      expect(inProgressStatus?.value).toBe(1);
+
+      // projectProgressData.tasks must reflect total from groupBy (3+2+1=6)
+      expect(result.projectProgressData[0].tasks).toBe(6);
     });
 
     it('should filter dismissed time entries from both user and third-party groupBy (D3)', async () => {

@@ -82,10 +82,21 @@ export class AnalyticsService {
       this.getActiveUsers(projectWhere),
     ]);
 
+    // PER-025: single groupBy replacing O(P×T) JS filters in getProjectProgressData
+    // and 5 separate filter passes in getTaskStatusData. Scoped to the same
+    // project set already resolved above — equivalent to the getTasks relation
+    // filter (orphan tasks excluded since they belong to no project in scope).
+    const projectIds = projects.map((p) => p.id);
+    const taskStatusGroupBy = await this.prisma.task.groupBy({
+      by: ['projectId', 'status'],
+      where: { projectId: { in: projectIds } },
+      _count: { _all: true },
+    });
+
     // Calculate metrics
     const metrics = this.calculateMetrics(projects, tasks, users);
-    const projectProgressData = this.getProjectProgressData(projects, tasks);
-    const taskStatusData = this.getTaskStatusData(tasks);
+    const projectProgressData = this.getProjectProgressData(projects, taskStatusGroupBy);
+    const taskStatusData = this.getTaskStatusData(taskStatusGroupBy);
     const projectDetails = await this.getProjectDetails(projects, tasks);
 
     return {
@@ -279,25 +290,39 @@ export class AnalyticsService {
 
   private getProjectProgressData(
     projects: ProjectWithDetails[],
-    tasks: Task[],
+    taskStatusGroupBy: Array<{ projectId: string | null; status: string; _count: { _all: number } }>,
   ): ProjectProgressDataDto[] {
+    // PER-025: build a per-project task count from the groupBy result instead
+    // of filtering the full in-memory task array (was O(P×T)).
+    const taskCountMap: Record<string, number> = {};
+    for (const row of taskStatusGroupBy) {
+      if (!row.projectId) continue;
+      taskCountMap[row.projectId] = (taskCountMap[row.projectId] ?? 0) + row._count._all;
+    }
     return projects.map((project) => ({
       name: project.name,
       progress: project.progress || 0,
       status: project.status,
-      tasks: tasks.filter((t) => t.projectId === project.id).length,
+      tasks: taskCountMap[project.id] ?? 0,
       endDate: project.endDate ? project.endDate.toISOString() : undefined,
     }));
   }
 
-  private getTaskStatusData(tasks: Task[]): TaskStatusDataDto[] {
-    // All tasks (no subtask concept in schema)
+  private getTaskStatusData(
+    taskStatusGroupBy: Array<{ projectId: string | null; status: string; _count: { _all: number } }>,
+  ): TaskStatusDataDto[] {
+    // PER-025: aggregate counts from the shared groupBy instead of running
+    // 5 separate filter passes over the full in-memory task array.
+    const countByStatus: Record<string, number> = {};
+    for (const row of taskStatusGroupBy) {
+      countByStatus[row.status] = (countByStatus[row.status] ?? 0) + row._count._all;
+    }
     const statusCounts = {
-      'À faire': tasks.filter((t) => t.status === 'TODO').length,
-      'En cours': tasks.filter((t) => t.status === 'IN_PROGRESS').length,
-      'En revue': tasks.filter((t) => t.status === 'IN_REVIEW').length,
-      Terminé: tasks.filter((t) => t.status === 'DONE').length,
-      Bloqué: tasks.filter((t) => t.status === 'BLOCKED').length,
+      'À faire': countByStatus['TODO'] ?? 0,
+      'En cours': countByStatus['IN_PROGRESS'] ?? 0,
+      'En revue': countByStatus['IN_REVIEW'] ?? 0,
+      Terminé: countByStatus['DONE'] ?? 0,
+      Bloqué: countByStatus['BLOCKED'] ?? 0,
     };
 
     return Object.entries(statusCounts).map(([name, value]) => ({

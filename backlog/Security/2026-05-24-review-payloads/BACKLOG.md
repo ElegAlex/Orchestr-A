@@ -5817,7 +5817,7 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ---
 ### PER-025 — Analytics projectProgressData / taskStatusData filter in JS over full task array
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5855,7 +5855,8 @@ pnpm test apps/api/src/analytics/analytics.service.spec.ts  # may need creation 
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Replaced O(P×T) in-memory task.filter in getProjectProgressData and 5 separate filter passes in getTaskStatusData with a single task.groupBy(projectId+status) scoped to resolved project IDs. getTasks (findMany) is intentionally kept — calculateMetrics (needs endDate for overdue) and getProjectDetails still consume the full task array. Two groupBy queries now exist in the service: the PER-001 progress groupBy inside getProjects (left untouched to avoid disturbing PER-001 tests) and the new PER-025 groupBy in getAnalytics feeding getProjectProgressData+getTaskStatusData. Orphan tasks (null projectId) are excluded from taskStatusData — consistent with previous behavior where getTasks used a relation filter scoped to projectWhere. Updated existing task status data test to source counts from groupBy mock rather than findMany.
 
 ---
 
