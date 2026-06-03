@@ -5063,7 +5063,7 @@ Compare parisDayKey(startDate) === parisDayKey(endDate) (or the date-only ISO pa
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 576f428
 **Learnings:**
 Fixed getTime() instant comparison in validateLeavesImport by replacing with parisDayKey() calendar-day comparison at two sites: (1) line 3208 warning branch (preview), (2) line 3414 halfDay resolution (actual import). parisDayKey is already imported at module level (line 24). Added RED test: same Paris calendar day with different UTC instants (T00:00Z vs T12:00Z) now correctly counts as single-day, halfDay respected. Existing multi-day warning test at line 3940 still passes (different parisDayKeys). Acceptance #4 (audit_logs) does not apply: import validation/preview, not approve/reject/RBAC/delete.
 
