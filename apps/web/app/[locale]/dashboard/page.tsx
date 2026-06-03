@@ -245,74 +245,62 @@ export default function DashboardPage() {
       try {
         setLoading(true);
 
-        // Fetch user's projects (requires projects:read)
+        // PER-017: fire all 3 independent fetches in parallel via Promise.all.
+        // Each promise has its own .catch() so a single failure cannot tank the
+        // whole dashboard (preserves the original isolated-error-handling intent).
         if (user?.id) {
-          let projects: Project[] = [];
-          let tasks: Task[] = [];
+          const [projects, tasks, undeclared] = await Promise.all([
+            // projects:read gated — skip and return [] when permission absent
+            hasPermission("projects:read")
+              ? projectsService.getByUser(user.id).catch((err) => {
+                  const axiosError = err as { response?: { status?: number } };
+                  if (axiosError.response?.status !== 404) {
+                    console.error("Error fetching projects:", err);
+                  }
+                  return [] as Project[];
+                })
+              : Promise.resolve([] as Project[]),
 
-          if (hasPermission("projects:read")) {
-            try {
-              projects = await projectsService.getByUser(user.id);
-              setMyProjects(Array.isArray(projects) ? projects : []);
-            } catch (err) {
-              setMyProjects([]);
+            // tasks — always fetched when user is present
+            tasksService.getByAssignee(user.id).catch((err) => {
               const axiosError = err as { response?: { status?: number } };
               if (axiosError.response?.status !== 404) {
-                console.error("Error fetching projects:", err);
+                console.error("Error fetching tasks:", err);
               }
-            }
-          } else {
-            setMyProjects([]);
-          }
+              return [] as Task[];
+            }),
 
-          // Fetch user's tasks
-          try {
-            tasks = await tasksService.getByAssignee(user.id);
+            // Fetch DONE tasks awaiting declaration (D8 — gated by time_tracking:create).
+            hasPermission("time_tracking:create")
+              ? tasksService.getMyDoneUndeclared().catch((err) => {
+                  const axiosError = err as { response?: { status?: number } };
+                  if (
+                    axiosError.response?.status !== 404 &&
+                    axiosError.response?.status !== 403
+                  ) {
+                    console.error("Error fetching undeclared tasks:", err);
+                  }
+                  return [] as Task[];
+                })
+              : Promise.resolve([] as Task[]),
+          ]);
 
-            const filteredTasks = Array.isArray(tasks)
-              ? tasks
-                  .filter((task) => task.status !== "DONE")
-                  .sort((a, b) => {
-                    if (!a.endDate) return 1;
-                    if (!b.endDate) return -1;
-                    return (
-                      new Date(a.endDate).getTime() -
-                      new Date(b.endDate).getTime()
-                    );
-                  })
-              : [];
+          setMyProjects(Array.isArray(projects) ? projects : []);
 
-            setMyTasks(filteredTasks);
-          } catch (err) {
-            // Si 404 ou autre erreur, on met un tableau vide
-            setMyTasks([]);
-            const axiosError = err as { response?: { status?: number } };
-            if (axiosError.response?.status !== 404) {
-              console.error("Error fetching tasks:", err);
-            }
-          }
+          const filteredTasks = Array.isArray(tasks)
+            ? tasks
+                .filter((task) => task.status !== "DONE")
+                .sort((a, b) => {
+                  if (!a.endDate) return 1;
+                  if (!b.endDate) return -1;
+                  return (
+                    new Date(a.endDate).getTime() - new Date(b.endDate).getTime()
+                  );
+                })
+            : [];
+          setMyTasks(filteredTasks);
 
-          // Fetch DONE tasks awaiting declaration (D8 — gated by time_tracking:create).
-          // Isolated try/catch so a 403/404 never tanks the whole dashboard.
-          if (hasPermission("time_tracking:create")) {
-            try {
-              const undeclared = await tasksService.getMyDoneUndeclared();
-              setDoneUndeclaredTasks(
-                Array.isArray(undeclared) ? undeclared : [],
-              );
-            } catch (err) {
-              setDoneUndeclaredTasks([]);
-              const axiosError = err as { response?: { status?: number } };
-              if (
-                axiosError.response?.status !== 404 &&
-                axiosError.response?.status !== 403
-              ) {
-                console.error("Error fetching undeclared tasks:", err);
-              }
-            }
-          } else {
-            setDoneUndeclaredTasks([]);
-          }
+          setDoneUndeclaredTasks(Array.isArray(undeclared) ? undeclared : []);
 
           // Calculate stats
           setStats({
