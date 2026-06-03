@@ -6138,7 +6138,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 
 ### TST-003 — Security E2E for telework cross-user IDOR is entirely skipped
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 11
 - **Cluster:** H
 - **Confidence:** claude-only
@@ -6176,7 +6176,8 @@ pnpm test:e2e -- e2e/tests/security/telework-ownership.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Deleted empty placeholder e2e/tests/security/telework-ownership.spec.ts that contained a single test.skip stub. Real cross-user telework IDOR coverage (PATCH/DELETE non-owner→403, ADMIN→2xx) lives in e2e/tests/security/ownership-idor.spec.ts (Ownership IDOR — telework (BUG-01) describe block, lines 292+). Fail-pre witness: grep -c test.skip telework-ownership.spec.ts=1 before fix; file absent after fix. No unit test fabricated — structural witness per discover-report instructions.
 
 ---
 ### TST-004 — Leave lifecycle E2E does not verify balance debit — final assertion is a tautology
