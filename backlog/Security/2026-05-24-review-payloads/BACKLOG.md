@@ -5721,7 +5721,7 @@ model Event { ... date DateTime ... projectId String? ... createdById String ...
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** f23310e
 **Learnings:**
 Added @@index([date]) and @@index([createdById, date]) to Event, and @@index([userId]) to EventParticipant. DAT-011 had already added single-column projectId and createdById indexes so those were NOT re-added (additive only). Migration 20260603121745_per012_event_missing_indexes. SCHEMA INDEX EXCEPTION: fail-pre witness = pg_indexes showed events_date_idx, events_createdById_date_idx, event_participants_userId_idx ABSENT before migration; PRESENT after migrate deploy. Int spec (per012-event-indexes.int.spec.ts) was RED (4 failures) before migration file existed, GREEN after.
 
