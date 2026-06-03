@@ -4843,7 +4843,7 @@ Fixed getLeaveBalance() to use parisYearWindow(currentYear) instead of local-TZ 
 ---
 ### COR-012 — expandRecurringRulesForRange uses local-TZ getDay across DST → can skip or duplicate a day
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 8
 - **Cluster:** C
 - **Confidence:** claude-only
@@ -4881,7 +4881,8 @@ pnpm test apps/api/src/telework/telework.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Both DST-unsafe loops in telework.service.ts (expandRecurringRulesForRange l.315 and generateSchedulesFromRules l.880) replaced with day-key iteration. Added 4 module-level helpers (teleworkDayKey via formatInTimeZone, nextTeleworkDayKey via UTC arithmetic, dayKeyToUTCDate, modelDayOfWeekFromKey) inlined in telework.service.ts to stay within strict 2-file scope (no new shared util file, no coupling to leaves/ module). DST fail-pre: under process.env.TZ=Europe/Paris, spring-forward 2025-03-30 caused stored UTC day = 29 (off-by-one); test asserts getUTCDate()===30 and was RED. After fix: all 54 tests GREEN. Acceptance #4 (audit_logs) does not apply: telework schedule generation is not in the audit-sensitive list (auth/leaves-approve/RBAC/doc-access/user-delete/password-reset). Read-write symmetry: getTeamSchedule reads by full UTC-midnight Date; UTC-midnight from dayKeyToUTCDate is consistent with that pattern.
 
 ---
 ### COR-013 — findByYear uses local-TZ year window; isNonWorkingHoliday relies on exact-instant key

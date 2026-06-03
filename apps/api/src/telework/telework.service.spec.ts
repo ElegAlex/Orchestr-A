@@ -972,6 +972,68 @@ describe('TeleworkService', () => {
   });
 
   describe('generateSchedulesFromRules', () => {
+    // COR-012 — DST-boundary test: under Europe/Paris, spring-forward 2025-03-30
+    // (23-hour day). Unfixed code stores local-midnight which is 2025-03-29 in UTC
+    // (off by one). Fixed code must store UTC-midnight 2025-03-30.
+    describe('DST boundary — spring-forward 2025-03-30 (Europe/Paris)', () => {
+      const origTZ = process.env.TZ;
+
+      beforeAll(() => {
+        process.env.TZ = 'Europe/Paris';
+      });
+
+      afterAll(() => {
+        if (origTZ === undefined) {
+          delete process.env.TZ;
+        } else {
+          process.env.TZ = origTZ;
+        }
+      });
+
+      it('should store the correct UTC calendar day on the DST spring-forward boundary', async () => {
+        // 2025-03-30 is the spring-forward day in Europe/Paris (clocks go 2h→3h).
+        // Rule: dayOfWeek = 6 (Sunday in model: 0=Mon … 6=Sun), no end date.
+        // Range: startDate = endDate = '2025-03-30' (the Sunday that is also DST+1).
+        const sundayRule = {
+          ...mockRule,
+          dayOfWeek: 6, // Sunday in model
+          startDate: new Date('2025-03-01'),
+          endDate: null,
+        };
+
+        mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+          'telework:create',
+          'telework:manage_any',
+        ]);
+        mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([
+          sundayRule,
+        ]);
+        mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
+        mockPrismaService.teleworkSchedule.create.mockResolvedValue({});
+
+        const result = await service.generateSchedulesFromRules(
+          'admin-1',
+          'ADMIN',
+          {
+            startDate: '2025-03-30', // Sunday, DST spring-forward day
+            endDate: '2025-03-30',
+          },
+        );
+
+        // Must create exactly one schedule (the Sunday)
+        expect(result.created).toBe(1);
+
+        // The date passed to Prisma create must have UTC parts 2025-03-30,
+        // NOT 2025-03-29 (which is what local-midnight produces under Paris TZ).
+        const createCall =
+          mockPrismaService.teleworkSchedule.create.mock.calls[0][0];
+        const storedDate: Date = createCall.data.date;
+        expect(storedDate.getUTCFullYear()).toBe(2025);
+        expect(storedDate.getUTCMonth()).toBe(2); // March = 2 (0-indexed)
+        expect(storedDate.getUTCDate()).toBe(30); // Must be 30, not 29
+      });
+    });
+
     it('should generate telework schedules from active recurring rules', async () => {
       // Tuesday (dayOfWeek=1 in our model) rules for user-1
       // Week of 2026-04-06 (Mon) - 2026-04-07 is Tuesday

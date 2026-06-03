@@ -4,6 +4,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
+import { formatInTimeZone } from 'date-fns-tz';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { CreateTeleworkDto } from './dto/create-telework.dto';
@@ -12,6 +13,50 @@ import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
 import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
 import { GenerateSchedulesDto } from './dto/generate-schedules.dto';
 import { Prisma } from 'database';
+
+/** Timezone anchor for all telework day arithmetic — must match Europe/Paris. */
+const TELEWORK_TZ = 'Europe/Paris';
+
+/**
+ * Return the Paris calendar day as a `yyyy-MM-dd` key for a given instant.
+ * Safe across DST transitions: uses formatInTimeZone, not local getters.
+ */
+function teleworkDayKey(d: Date): string {
+  return formatInTimeZone(d, TELEWORK_TZ, 'yyyy-MM-dd');
+}
+
+/**
+ * Advance a `yyyy-MM-dd` key by exactly one calendar day using UTC arithmetic
+ * (no local-TZ involvement, no DST skew).
+ */
+function nextTeleworkDayKey(key: string): string {
+  const [y, m, d] = key.split('-').map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + 1));
+  const yy = next.getUTCFullYear();
+  const mm = String(next.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(next.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+/**
+ * Convert a `yyyy-MM-dd` day key to a UTC-midnight Date (suitable for Prisma
+ * @db.Date fields). Avoids local-TZ midnight which may land on the wrong UTC
+ * calendar day during DST transitions.
+ */
+function dayKeyToUTCDate(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+/**
+ * Return the model weekday (0=Mon … 6=Sun) for a `yyyy-MM-dd` key.
+ * Uses UTC arithmetic so it is immune to local-TZ getDay() DST hazards.
+ */
+function modelDayOfWeekFromKey(key: string): number {
+  const [y, m, d] = key.split('-').map(Number);
+  const jsDay = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=Sun … 6=Sat
+  return jsDay === 0 ? 6 : jsDay - 1; // model: 0=Mon … 6=Sun
+}
 
 @Injectable()
 export class TeleworkService {
@@ -266,45 +311,50 @@ export class TeleworkService {
       where: ruleWhere,
     });
 
+    // COR-012: iterate in day-key space (Europe/Paris) to avoid DST skew.
+    // Local getDay()/setDate() mix with UTC-anchored Dates causes off-by-one
+    // on spring-forward days (23-hour day → cursor lands on wrong UTC date).
     for (const rule of rules) {
-      const cursor = new Date(start);
-      while (cursor <= end) {
-        const jsDay = cursor.getDay();
-        const modelDay = jsDay === 0 ? 6 : jsDay - 1;
+      const ruleStartKey = teleworkDayKey(new Date(rule.startDate));
+      const ruleEndKey = rule.endDate
+        ? teleworkDayKey(new Date(rule.endDate))
+        : null;
 
-        if (modelDay === rule.dayOfWeek) {
-          const ruleStart = new Date(rule.startDate);
-          ruleStart.setHours(0, 0, 0, 0);
-          const ruleEnd = rule.endDate ? new Date(rule.endDate) : null;
-          if (ruleEnd) ruleEnd.setHours(23, 59, 59, 999);
+      let cursorKey = teleworkDayKey(start);
+      const endKey = teleworkDayKey(end);
 
-          if (cursor >= ruleStart && (!ruleEnd || cursor <= ruleEnd)) {
-            const dateOnly = new Date(cursor);
-            dateOnly.setHours(0, 0, 0, 0);
+      while (cursorKey <= endKey) {
+        const modelDay = modelDayOfWeekFromKey(cursorKey);
 
-            const existing = await this.prisma.teleworkSchedule.findUnique({
-              where: {
-                userId_date: {
-                  userId: rule.userId,
-                  date: dateOnly,
-                },
+        if (
+          modelDay === rule.dayOfWeek &&
+          cursorKey >= ruleStartKey &&
+          (!ruleEndKey || cursorKey <= ruleEndKey)
+        ) {
+          const dateOnly = dayKeyToUTCDate(cursorKey);
+
+          const existing = await this.prisma.teleworkSchedule.findUnique({
+            where: {
+              userId_date: {
+                userId: rule.userId,
+                date: dateOnly,
+              },
+            },
+          });
+
+          if (!existing) {
+            await this.prisma.teleworkSchedule.create({
+              data: {
+                userId: rule.userId,
+                date: dateOnly,
+                isTelework: true,
+                isException: false,
               },
             });
-
-            if (!existing) {
-              await this.prisma.teleworkSchedule.create({
-                data: {
-                  userId: rule.userId,
-                  date: dateOnly,
-                  isTelework: true,
-                  isException: false,
-                },
-              });
-            }
           }
         }
 
-        cursor.setDate(cursor.getDate() + 1);
+        cursorKey = nextTeleworkDayKey(cursorKey);
       }
     }
   }
@@ -825,54 +875,53 @@ export class TeleworkService {
     let created = 0;
     let skipped = 0;
 
+    // COR-012: iterate in day-key space (Europe/Paris) to avoid DST skew.
+    // See expandRecurringRulesForRange for the same fix and rationale.
     for (const rule of rules) {
-      // Parcourir chaque jour de la plage
-      const cursor = new Date(start);
-      while (cursor <= end) {
-        // day 0=Lundi ... 6=Dimanche dans notre modèle
-        // JS: getDay() → 0=Dimanche, 1=Lundi, ..., 6=Samedi
-        // Conversion: Lundi=1 → model 0, ..., Dimanche=0 → model 6
-        const jsDay = cursor.getDay();
-        const modelDay = jsDay === 0 ? 6 : jsDay - 1;
+      const ruleStartKey = teleworkDayKey(new Date(rule.startDate));
+      const ruleEndKey = rule.endDate
+        ? teleworkDayKey(new Date(rule.endDate))
+        : null;
 
-        if (modelDay === rule.dayOfWeek) {
-          // Vérifier que le jour est dans la plage de la règle
-          const ruleStart = new Date(rule.startDate);
-          ruleStart.setHours(0, 0, 0, 0);
-          const ruleEnd = rule.endDate ? new Date(rule.endDate) : null;
-          if (ruleEnd) ruleEnd.setHours(23, 59, 59, 999);
+      let cursorKey = teleworkDayKey(start);
+      const endKey = teleworkDayKey(end);
 
-          if (cursor >= ruleStart && (!ruleEnd || cursor <= ruleEnd)) {
-            const dateOnly = new Date(cursor);
-            dateOnly.setHours(0, 0, 0, 0);
+      while (cursorKey <= endKey) {
+        const modelDay = modelDayOfWeekFromKey(cursorKey);
 
-            // Skip si déjà existant
-            const existing = await this.prisma.teleworkSchedule.findUnique({
-              where: {
-                userId_date: {
-                  userId: rule.userId,
-                  date: dateOnly,
-                },
+        if (
+          modelDay === rule.dayOfWeek &&
+          cursorKey >= ruleStartKey &&
+          (!ruleEndKey || cursorKey <= ruleEndKey)
+        ) {
+          const dateOnly = dayKeyToUTCDate(cursorKey);
+
+          // Skip si déjà existant
+          const existing = await this.prisma.teleworkSchedule.findUnique({
+            where: {
+              userId_date: {
+                userId: rule.userId,
+                date: dateOnly,
+              },
+            },
+          });
+
+          if (!existing) {
+            await this.prisma.teleworkSchedule.create({
+              data: {
+                userId: rule.userId,
+                date: dateOnly,
+                isTelework: true,
+                isException: false,
               },
             });
-
-            if (!existing) {
-              await this.prisma.teleworkSchedule.create({
-                data: {
-                  userId: rule.userId,
-                  date: dateOnly,
-                  isTelework: true,
-                  isException: false,
-                },
-              });
-              created++;
-            } else {
-              skipped++;
-            }
+            created++;
+          } else {
+            skipped++;
           }
         }
 
-        cursor.setDate(cursor.getDate() + 1);
+        cursorKey = nextTeleworkDayKey(cursorKey);
       }
     }
 
