@@ -6890,7 +6890,7 @@ Promise.all the three independent fetches. Better: convert to a server component
 pnpm --filter web test  # no targeted spec inferred from apps/web/app/[locale]/dashboard/page.tsx
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 4732c93
 **Learnings:**
 Replaced 3 sequential awaits in fetchData (lines ~255/270/299) with Promise.all. Each of the 3 promises keeps its own .catch() to preserve the isolated-error-handling intent (a 403 on getMyDoneUndeclared cannot tank the whole dashboard). Permission gates (projects:read, time_tracking:create) are now inline ternaries resolving to Promise.resolve([]) when absent, so the gated calls are genuinely skipped. RED witness: with never-resolving getByUser mock, getByAssignee call count was 0 (sequential code blocked on first await). GREEN after fix: all 3 calls fired before any resolved.
 
