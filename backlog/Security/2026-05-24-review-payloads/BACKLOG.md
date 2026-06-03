@@ -823,7 +823,7 @@ Durability (DAT-002) was prioritized over backpressure; the write path is unbatc
 1. Decision documented (keep synchronous fire-and-forget, or adopt a queue/batched-write sink) with rationale tied to observed or projected audit-event volume.
 2. If a queue/batched implementation is chosen, a benchmark run is included comparing sustained INSERT throughput and request-path latency under load before/after.
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 64f5c90
 **Learnings:**
 DECISION: KEEP synchronous fire-and-forget.
 
