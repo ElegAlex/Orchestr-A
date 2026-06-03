@@ -337,11 +337,6 @@ export class ProjectsService {
               },
             },
           },
-          tasks: {
-            select: {
-              status: true,
-            },
-          },
           _count: {
             select: {
               members: true,
@@ -358,21 +353,46 @@ export class ProjectsService {
       this.prisma.project.count({ where }),
     ]);
 
+    // PER-005: single groupBy fan-out for all projects on the page — avoids N×tasks rows
+    const projectIds = projects.map((p) => p.id);
+    const taskGroups =
+      projectIds.length > 0
+        ? await this.prisma.task.groupBy({
+            by: ['projectId', 'status'],
+            where: { projectId: { in: projectIds } },
+            _count: { _all: true },
+          })
+        : [];
+
+    // Build projectId → { done, total } map
+    const progressMap = new Map<string, { done: number; total: number }>();
+    for (const group of taskGroups) {
+      // projectId is nullable in schema but we filtered by projectId:{in:[...]} so it is always set
+      const pid = group.projectId;
+      if (!pid) continue;
+      const entry = progressMap.get(pid) ?? { done: 0, total: 0 };
+      entry.total += group._count._all;
+      if (group.status === 'DONE') {
+        entry.done += group._count._all;
+      }
+      progressMap.set(pid, entry);
+    }
+
     const projectsWithProgress = projects.map(
-      ({ tasks, clients: projectClients, ...project }) => ({
-        ...project,
-        clients: projectClients.map((pc) => pc.client),
-        progress:
-          tasks.length > 0
-            ? Math.round(
-                (tasks.filter((t) => t.status === 'DONE').length /
-                  tasks.length) *
-                  100,
-              )
-            : 0,
-        canArchive: hasArchivePerm && project.archivedAt == null,
-        canUnarchive: hasArchivePerm && project.archivedAt != null,
-      }),
+      ({ clients: projectClients, ...project }) => {
+        const counts = progressMap.get(project.id);
+        const progress =
+          counts && counts.total > 0
+            ? Math.round((counts.done / counts.total) * 100)
+            : 0;
+        return {
+          ...project,
+          clients: projectClients.map((pc) => pc.client),
+          progress,
+          canArchive: hasArchivePerm && project.archivedAt == null,
+          canUnarchive: hasArchivePerm && project.archivedAt != null,
+        };
+      },
     );
 
     return {

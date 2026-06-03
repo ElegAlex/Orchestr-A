@@ -41,6 +41,7 @@ describe('ProjectsService', () => {
     },
     task: {
       count: vi.fn(),
+      groupBy: vi.fn(),
     },
     document: {
       count: vi.fn(),
@@ -248,6 +249,12 @@ describe('ProjectsService', () => {
   // FIND ALL
   // ============================================
   describe('findAll', () => {
+    beforeEach(() => {
+      // After PER-005 fix: progress is computed via task.groupBy, not per-row tasks include.
+      // Default to empty array so existing tests don't throw on undefined.
+      mockPrismaService.task.groupBy.mockResolvedValue([]);
+    });
+
     it('should return paginated projects', async () => {
       const mockProjects = [mockProject];
       mockPrismaService.project.findMany.mockResolvedValue(mockProjects);
@@ -604,6 +611,60 @@ describe('ProjectsService', () => {
           where: Record<string, unknown>;
         };
         expect(JSON.stringify(callArgs.where)).not.toContain('archivedAt');
+      });
+    });
+
+    // ------------------------------------------
+    // PER-005 — N+1 regression: tasks must be fetched via groupBy, not per-row include
+    // ------------------------------------------
+    describe('PER-005 — progress via groupBy (no per-row tasks include)', () => {
+      it('findMany include must NOT contain tasks (avoids O(n*tasks) data pull)', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([]);
+        mockPrismaService.project.count.mockResolvedValue(0);
+
+        await service.findAll(1, 10);
+
+        const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+          include: Record<string, unknown>;
+        };
+        expect(callArgs.include).not.toHaveProperty('tasks');
+      });
+
+      it('task.groupBy is called with all project IDs on the page (single fan-out)', async () => {
+        const project1 = { ...mockProject, id: 'p-1' };
+        const project2 = { ...mockProject, id: 'p-2' };
+        mockPrismaService.project.findMany.mockResolvedValue([project1, project2]);
+        mockPrismaService.project.count.mockResolvedValue(2);
+        mockPrismaService.task.groupBy.mockResolvedValue([
+          { projectId: 'p-1', status: 'DONE', _count: { _all: 3 } },
+          { projectId: 'p-1', status: 'IN_PROGRESS', _count: { _all: 1 } },
+          { projectId: 'p-2', status: 'TODO', _count: { _all: 5 } },
+        ]);
+
+        const result = await service.findAll(1, 10);
+
+        expect(mockPrismaService.task.groupBy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            by: expect.arrayContaining(['projectId', 'status']),
+            where: { projectId: { in: ['p-1', 'p-2'] } },
+          }),
+        );
+        // p-1: 3 DONE / 4 total = 75%
+        const p1 = result.data.find((p) => p.id === 'p-1');
+        expect(p1?.progress).toBe(75);
+        // p-2: 0 DONE / 5 total = 0%
+        const p2 = result.data.find((p) => p.id === 'p-2');
+        expect(p2?.progress).toBe(0);
+      });
+
+      it('progress is 0 when project has no tasks (groupBy returns no rows)', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([{ ...mockProject, id: 'p-empty' }]);
+        mockPrismaService.project.count.mockResolvedValue(1);
+        mockPrismaService.task.groupBy.mockResolvedValue([]);
+
+        const result = await service.findAll(1, 10);
+
+        expect(result.data[0].progress).toBe(0);
       });
     });
   });

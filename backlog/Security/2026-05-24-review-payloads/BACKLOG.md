@@ -5493,7 +5493,7 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ---
 ### PER-005 — Projects findAll default limit 1000 + N tasks per row
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5531,7 +5531,8 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Replaced tasks:{select:{status:true}} include in findAll with a single prisma.task.groupBy fan-out after the main query. Design: one groupBy call for all project IDs on the page (projectId+status), builds a Map<projectId,{done,total}>, computes Math.round(done/total*100). _count shape is {_all:number} (Prisma 6 groupBy). Added groupBy:vi.fn() to mockPrismaService.task and a findAll beforeEach resetting it to []. FAIL-PRE: 2 tests RED on unfixed code (include had tasks, groupBy never called). Scope: findAll only; other methods using tasks include (captureSnapshot, findOne detail) are out of scope per spec.
 
 ---
 ### PER-006 — Leaves findAll: 1000 default + unbounded when date filter present
