@@ -5365,7 +5365,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-010 — Leave table missing indexes on hot query paths (userId+status+startDate, validatorId, status)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5403,7 +5403,8 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added 4 composite indexes to the Leave model in schema.prisma: [userId,status], [validatorId,status], [startDate,endDate], [leaveTypeId,status]. Migration 20260603114945_dat010_leave_indexes contains exactly 4 CREATE INDEX statements (no DROP/ALTER). Prisma mixes field names and mapped column names in index names — lifted exact names verbatim from generated SQL. Structural witness: before=leaves_no_overlap+leaves_pkey only; after=all 4 indexes present (confirmed via pg_indexes). Int spec follows dat016 pattern, asserting exact index names via pg_indexes. Acceptance #4 (audit entry) is N/A — pure index addition touches no audit-sensitive code path.
 
 ---
 ### DAT-011 — Missing indexes on FK columns: Department.managerId, Service.{departmentId,managerId}, ProjectMember.userId, Comment.{taskId,authorId}, etc.

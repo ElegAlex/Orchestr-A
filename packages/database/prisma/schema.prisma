@@ -608,6 +608,10 @@ model Leave {
   validator   User?           @relation("LeaveValidator", fields: [validatorId], references: [id], onDelete: SetNull)
   validatedBy User?           @relation("LeaveValidatedBy", fields: [validatedById], references: [id], onDelete: SetNull)
 
+  @@index([userId, status])
+  @@index([validatorId, status])
+  @@index([startDate, endDate])
+  @@index([leaveTypeId, status])
   @@map("leaves")
 }
 
