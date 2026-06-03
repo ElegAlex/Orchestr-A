@@ -3205,7 +3205,7 @@ export class LeavesService {
 
       // Valider halfDay uniquement sur une seule journée
       if (leaveData.halfDay) {
-        if (startDate.getTime() !== endDate.getTime()) {
+        if (parisDayKey(startDate) !== parisDayKey(endDate)) {
           previewItem.status = 'warning';
           previewItem.messages.push(
             'halfDay est ignoré pour les congés de plusieurs jours',
@@ -3411,7 +3411,7 @@ export class LeavesService {
           // Calculer le nombre de jours
           const halfDay =
             leaveData.halfDay &&
-            startDate.getTime() === endDate.getTime() &&
+            parisDayKey(startDate) === parisDayKey(endDate) &&
             (leaveData.halfDay === 'MORNING' || leaveData.halfDay === 'AFTERNOON')
               ? leaveData.halfDay
               : null;

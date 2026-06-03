@@ -3952,6 +3952,25 @@ describe('LeavesService', () => {
       expect(result.warnings[0].messages[0]).toMatch(/ignoré/i);
     });
 
+    it('should NOT warn about halfDay when startDate and endDate are the same Paris calendar day but different UTC instants (COR-023)', async () => {
+      // Same Paris calendar day (2026-03-01, UTC+1 in March),
+      // but different UTC instants → getTime() differs.
+      // The bug: getTime() comparison wrongly triggers the "multi-day" warning.
+      // The fix: parisDayKey comparison correctly sees them as the same day.
+      const result = await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01T00:00:00.000Z',
+          endDate: '2026-03-01T12:00:00.000Z',
+          halfDay: 'MORNING',
+        },
+      ]);
+
+      expect(result.summary.warnings).toBe(0);
+      expect(result.summary.valid).toBe(1);
+    });
+
     it('should return duplicate when overlap with existing leave', async () => {
       // Existing leave overlaps with the request range
       mockPrismaService.leave.findMany.mockResolvedValue([
