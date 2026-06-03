@@ -6897,7 +6897,7 @@ Replaced 3 sequential awaits in fetchData (lines ~255/270/299) with Promise.all.
 ---
 ### PER-018 — Projects page has 4 stacked useEffect with overlapping data fetches
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 12
 - **Cluster:** I
 - **Confidence:** claude-only
@@ -6935,7 +6935,8 @@ pnpm --filter web test  # no targeted spec inferred from apps/web/app/[locale]/p
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Converted useEffect filter (line 158) to useMemo — eliminates extra render commit on every filter interaction (2→1 commit). Consolidated parallel data-loading effects (133+138) into a single effect; clients fetch remains mount-only by keeping it inside the fetchProjects-dep effect without re-declaring the dep. Removed filteredProjects useState (now const derived by useMemo). Fail-pre: React Profiler on real ProjectsPage showed commits.length===2 after fireEvent.change on the status <select> (ACTIVE filter on mixed-status list guarantees a new array → no React bail-out). After fix: commits.length===1.
 
 ---
 ### PER-019 — TanStack Query barely used (3 components total) — no client-side cache

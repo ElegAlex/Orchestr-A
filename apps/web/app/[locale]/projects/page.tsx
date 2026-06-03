@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { MainLayout } from "@/components/MainLayout";
@@ -34,7 +34,7 @@ export default function ProjectsPage() {
   const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  // filteredProjects is now derived via useMemo (see below) — no state needed.
   const [showCreateModal, setShowCreateModal] = useState(false);
   const initialStatusParam = searchParams.get("status");
   const isValidProjectStatus = (v: string | null): v is ProjectStatus =>
@@ -119,10 +119,8 @@ export default function ProjectsPage() {
       }
 
       setProjects(projectsData);
-      setFilteredProjects(projectsData);
     } catch (err) {
       setProjects([]);
-      setFilteredProjects([]);
       toast.error(t("messages.loadError"));
       console.error(err);
     } finally {
@@ -130,17 +128,18 @@ export default function ProjectsPage() {
     }
   }, [user, memberMeFilter, showArchived]);
 
+  // Single mount + dependency effect: load projects and clients in parallel.
+  // Clients are mount-only (dep []) so they don't refetch on showArchived toggle.
   useEffect(() => {
     fetchProjects();
-  }, [fetchProjects]);
-
-  // Load available clients for filter
-  useEffect(() => {
     clientsService
       .getAll({ isActive: true, limit: 500 })
       .then((res) => setAllClients(res.data))
       .catch(() => setAllClients([]));
-  }, []);
+    // fetchProjects changes when user/memberMeFilter/showArchived change;
+    // clientsService.getAll is intentionally not re-triggered by those deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchProjects]);
 
   // Sync clientsFilter to URL
   useEffect(() => {
@@ -154,8 +153,10 @@ export default function ProjectsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientsFilter]);
 
-  // Filtrage des projets
-  useEffect(() => {
+  // Derived state: compute filteredProjects synchronously in the same render.
+  // Using useMemo eliminates the extra re-render that useEffect caused
+  // (useEffect fires after paint, then setFilteredProjects triggers a 2nd commit).
+  const filteredProjects = useMemo(() => {
     let filtered = projects;
 
     // Filtre par statut
@@ -185,7 +186,7 @@ export default function ProjectsPage() {
       );
     }
 
-    setFilteredProjects(filtered);
+    return filtered;
   }, [projects, statusFilter, priorityFilter, searchQuery, clientsFilter]);
 
   const handleCreate = async (e: React.FormEvent) => {
