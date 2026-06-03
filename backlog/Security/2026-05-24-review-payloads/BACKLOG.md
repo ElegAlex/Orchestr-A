@@ -4922,7 +4922,7 @@ Migrate Holiday.date to Postgres DATE (Prisma @db.Date), or normalise every read
 pnpm test apps/api/src/holidays/holidays.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** a3e37b1
 **Learnings:**
 findByYear lines 53-54 fixed: replaced new Date(year, 0, 1)/new Date(year, 11, 31) with Date.UTC variants so the @db.Date boundary is timezone-safe.
 isNonWorkingHoliday line 317 fixed: added private toLocalDayUtcMidnight() helper that re-builds the Date from local calendar components via Date.UTC; caller input may be local-midnight on a +UTC host (Paris +01 = 2024-12-31T23:00Z) which truncates to the wrong day.
