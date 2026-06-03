@@ -45,7 +45,7 @@ model User {
   updatedAt           DateTime @updatedAt
 
   // Relations
-  department                       Department?                   @relation("DepartmentUsers", fields: [departmentId], references: [id], onDelete: SetNull)
+  department                       Department?                   @relation("DepartmentUsers", fields: [departmentId], references: [id], onDelete: Restrict)
   userServices                     UserService[]
   managedDepartments               Department[]                  @relation("DepartmentManager")
   managedServices                  Service[]                     @relation("ServiceManager")

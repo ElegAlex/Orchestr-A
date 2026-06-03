@@ -6002,7 +6002,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-022 — User.departmentId nullable + onDelete:SetNull conflicts with RBAC scope checks
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 10
 - **Cluster:** G
 - **Confidence:** claude-only
@@ -6040,7 +6040,8 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Changed User.department onDelete from SetNull to Restrict (schema.prisma line 48). Created migration 20260603215133_dat022_department_fk_restrict (drop+re-add users_departmentId_fkey with ON DELETE RESTRICT). App-layer guard in DepartmentsService.remove() already blocks deletes when _count.users>0 — Restrict is the coherent DB-level backstop that prevents silent RBAC scope loss if any bypass path is ever introduced. Fail-pre witness: int test RED on unfixed code (delete succeeded, message empty, /P2003|23001|23503/ did not match). Pass-post: DB emits 23001 restrict_violation, both int tests GREEN. Acceptance #4 (audit_logs): Restrict means the delete is rejected at the DB, so there is no mutation to snapshot — no audit row needed. Postgres RESTRICT uses code 23001 (restrict_violation), not 23503 (foreign_key_violation used by NoAction).
 
 ---
 ### DAT-025 — Document model: no integrity hash, no soft-delete, no FK on uploadedBy
