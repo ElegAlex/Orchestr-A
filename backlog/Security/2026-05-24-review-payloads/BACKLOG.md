@@ -4559,7 +4559,7 @@ Add a unique partial index (projectId, date_trunc('day', date)) and convert the 
 pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 6338797
 **Learnings:**
 Replaced findFirst→create with upsert keyed on projectId_date (normalized to midnight startOfDay). Added @@unique([projectId,date]) in schema.prisma + hand-written migration (20260603130000) since prisma migrate dev refuses non-interactive. Prisma client generated ok; projectId_date compound key confirmed in index.d.ts. Fail-pre witness: primary test RED with "expected vi.fn() to be called 1 times, but got 0 times" (code used create not upsert). Unit mock cannot enforce the DB constraint — the @@unique index is the structural race guard. Existing tests updated from create→upsert assertions (same intent, different implementation); two legacy W1.F tests replaced by upsert-aware equivalents.
 
