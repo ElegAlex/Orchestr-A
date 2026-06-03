@@ -4129,6 +4129,44 @@ describe('LeavesService', () => {
       expect(result.summary.valid).toBe(1);
       expect(result.summary.errors).toBe(1);
     });
+
+    // PER-009 — projection + date-span filter
+    it('PER-009: user.findMany should use select projection (no passwordHash leak)', async () => {
+      await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      const userFindManyCall = mockPrismaService.user.findMany.mock.calls[0][0];
+      // Must have a select clause projecting only safe fields
+      expect(userFindManyCall).toHaveProperty('select');
+      expect(userFindManyCall.select).toHaveProperty('id', true);
+      expect(userFindManyCall.select).toHaveProperty('email', true);
+      expect(userFindManyCall.select).toHaveProperty('firstName', true);
+      expect(userFindManyCall.select).toHaveProperty('lastName', true);
+      // Must NOT expose passwordHash
+      expect(userFindManyCall.select).not.toHaveProperty('passwordHash');
+    });
+
+    it('PER-009: leave.findMany should include date-span filter matching CSV rows', async () => {
+      await service.validateLeavesImport([
+        {
+          userEmail: 'user@example.com',
+          leaveTypeName: 'Congé Payé',
+          startDate: '2026-03-01',
+          endDate: '2026-03-05',
+        },
+      ]);
+
+      const leaveFindManyCall = mockPrismaService.leave.findMany.mock.calls[0][0];
+      // Must restrict to the date span of the uploaded CSV rows
+      expect(leaveFindManyCall.where).toHaveProperty('startDate');
+      expect(leaveFindManyCall.where).toHaveProperty('endDate');
+    });
   });
 
   // ============================================

@@ -5574,7 +5574,7 @@ Fail-pre witness: 4 tests RED — AssertionError: expected [...array] to have pr
 ---
 ### PER-009 — Leave import preview loads ALL active users + ALL pending/approved leaves
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5612,7 +5612,11 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+validateLeavesImport: added select:{id,email,firstName,lastName} to user.findMany (was leaking passwordHash) + date-span filter (lte maxEnd / gte minStart) to leave.findMany so only leaves overlapping the CSV window are loaded.
+importLeaves: same user select projection (only id+email needed); date-span filter pre-computed before $transaction and spread into tx.leave.findMany where clause.
+Asymmetry noted: importLeaves only uses user.id (never firstName/lastName), so its select is id+email only.
+Fail-pre: 2 tests asserted select presence and startDate/endDate in where; both were RED on unfixed code (select undefined, startDate absent). Empty/all-invalid CSV: spanFilter falls back to {} so no Invalid Date in query.
 
 ---
 ### PER-011 — User table missing indexes on isActive, departmentId, roleId

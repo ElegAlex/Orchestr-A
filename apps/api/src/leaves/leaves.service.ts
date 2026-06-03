@@ -3061,9 +3061,10 @@ export class LeavesService {
       },
     };
 
-    // Récupérer tous les utilisateurs actifs
+    // PER-009 — project only safe fields; no passwordHash in memory
     const users = await this.prisma.user.findMany({
       where: { isActive: true },
+      select: { id: true, email: true, firstName: true, lastName: true },
     });
     const usersByEmail = new Map(
       users.map((u) => [
@@ -3083,10 +3084,26 @@ export class LeavesService {
       ]),
     );
 
+    // PER-009 — compute the date span covered by the CSV so the DB query
+    // returns only the relevant overlap window (not the full history).
+    const csvDates = leaves.flatMap((l) => {
+      const s = new Date(l.startDate);
+      const e = new Date(l.endDate);
+      return [s, e].filter((d) => !isNaN(d.getTime()));
+    });
+    const spanFilter =
+      csvDates.length > 0
+        ? {
+            startDate: { lte: new Date(Math.max(...csvDates.map((d) => d.getTime()))) },
+            endDate: { gte: new Date(Math.min(...csvDates.map((d) => d.getTime()))) },
+          }
+        : {};
+
     // Récupérer les congés existants (PENDING/APPROVED) pour détection chevauchement
     const existingLeaves = await this.prisma.leave.findMany({
       where: {
         status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
+        ...spanFilter,
       },
       select: {
         userId: true,
@@ -3302,9 +3319,11 @@ export class LeavesService {
       errorDetails: [],
     };
 
-    // Récupérer tous les utilisateurs actifs
+    // PER-009 — project only the fields actually needed (id used for matching;
+    // email used as map key). No passwordHash enters Node memory.
     const users = await this.prisma.user.findMany({
       where: { isActive: true },
+      select: { id: true, email: true },
     });
     const usersByEmail = new Map(users.map((u) => [u.email.toLowerCase(), u]));
 
@@ -3315,6 +3334,21 @@ export class LeavesService {
     const leaveTypesByName = new Map(
       leaveTypes.map((lt) => [lt.name.toLowerCase(), lt]),
     );
+
+    // PER-009 — pre-compute date span from the uploaded CSV rows so the
+    // transaction's existingLeaves query is restricted to the overlap window.
+    const importDates = leaves.flatMap((l) => {
+      const s = new Date(l.startDate);
+      const e = new Date(l.endDate);
+      return [s, e].filter((d) => !isNaN(d.getTime()));
+    });
+    const importSpanFilter =
+      importDates.length > 0
+        ? {
+            startDate: { lte: new Date(Math.max(...importDates.map((d) => d.getTime()))) },
+            endDate: { gte: new Date(Math.min(...importDates.map((d) => d.getTime()))) },
+          }
+        : {};
 
     // COR-024 — wrap the full iteration (findMany + create loop) in a single
     // $transaction so that:
@@ -3327,9 +3361,11 @@ export class LeavesService {
     try {
       await this.prisma.$transaction(async (tx) => {
         // Re-read existingLeaves inside the transaction for a consistent snapshot.
+        // PER-009 — restrict to the CSV date span to avoid loading full history.
         const existingLeaves = await tx.leave.findMany({
           where: {
             status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
+            ...importSpanFilter,
           },
           select: {
             userId: true,
