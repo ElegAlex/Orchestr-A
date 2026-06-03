@@ -5302,7 +5302,7 @@ Introduce a dedicated /planning/overview SQL view or Prisma raw query returning 
 pnpm test apps/api/src/planning/planning.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 40eae79
 **Learnings:**
 Fixed the unbounded task query in planning overview.
 
