@@ -4509,7 +4509,7 @@ Wrap each transition in prisma.leave.updateMany({ where: { id, status: <required
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 387b1df
 **Learnings:**
 requestCancel() had $transaction but skipped the inner findUnique re-read before tx.leave.update (TOCTOU). rejectCancellation() had no $transaction at all - bare prisma.leave.update with no status guard. Fix: added inner tx.leave.findUnique re-read + ConflictException guard to both methods, matching the approve()/reject()/cancel() pattern already in the file.
 
