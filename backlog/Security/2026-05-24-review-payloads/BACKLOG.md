@@ -5560,7 +5560,7 @@ Force pagination even on date queries (cap 500 rows/page), expose ?format=stream
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 4b2fd00
 **Learnings:**
 Fix: (1) lowered safeLimit cap from Math.min(limit||1000,1000) to Math.min(limit||500,500) in findAll; (2) removed early `return enrichedLeaves` block (lines 826-829) that was returning a raw array when date filters were present. Both date-filtered and non-date-filtered queries now always return {data,meta} paginated shape.
 
