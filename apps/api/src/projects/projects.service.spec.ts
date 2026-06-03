@@ -1477,6 +1477,11 @@ describe('ProjectsService', () => {
         ...mockProject,
         ...data,
       }));
+      // Wire $transaction so the callback executes with mockPrismaService as tx,
+      // making both existing assertions and the new atomicity assertions work.
+      mockPrismaService.$transaction.mockImplementation(
+        async (cb: (tx: unknown) => Promise<unknown>) => cb(mockPrismaService),
+      );
     });
 
     it('archives a project: sets archivedAt + archivedById and writes audit log', async () => {
@@ -1497,6 +1502,7 @@ describe('ProjectsService', () => {
           actorId: 'user-1',
           payload: expect.objectContaining({ archivedAt: expect.any(Date) }),
         }),
+        expect.anything(), // tx client (DAT-006: audit is inside the same $transaction)
       );
     });
 
@@ -1529,6 +1535,7 @@ describe('ProjectsService', () => {
           actorId: 'user-1',
           payload: expect.objectContaining({ previousArchivedAt: expect.any(Date) }),
         }),
+        expect.anything(), // tx client (DAT-006: audit is inside the same $transaction)
       );
     });
 
@@ -1549,6 +1556,47 @@ describe('ProjectsService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
       await expect(service.unarchive('missing', userCtx)).rejects.toThrow(
         /introuvable|not found/i,
+      );
+    });
+
+    // DAT-006 — atomicity: update + audit must run in the same $transaction
+    it('archive: project.update and auditPersistence.log run inside the same $transaction (atomicity)', async () => {
+      await service.archive('project-1', userCtx);
+
+      // The outer $transaction must have been called (wraps both operations).
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+
+      // log() must be called with the tx client (mockPrismaService) as 2nd arg,
+      // proving update + audit share the same atomic scope.
+      expect(mockAuditPersistenceService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'PROJECT_ARCHIVED',
+          entityType: 'Project',
+          entityId: 'project-1',
+          actorId: 'user-1',
+        }),
+        mockPrismaService,
+      );
+    });
+
+    it('unarchive: project.update and auditPersistence.log run inside the same $transaction (atomicity)', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        archivedAt: new Date(),
+        archivedById: 'user-1',
+      });
+      await service.unarchive('project-1', userCtx);
+
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+
+      expect(mockAuditPersistenceService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'PROJECT_UNARCHIVED',
+          entityType: 'Project',
+          entityId: 'project-1',
+          actorId: 'user-1',
+        }),
+        mockPrismaService,
       );
     });
   });

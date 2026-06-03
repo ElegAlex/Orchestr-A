@@ -97,17 +97,32 @@ export function computeRowHash(input: {
 export class AuditPersistenceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async log(event: {
-    // OBS-024 — AuditAction enum ONLY. The compile-time witness
-    // (`audit-action.compile-witness.ts`) guards against regressing this to
-    // `string`. The enum's string value is what lands in `audit_logs.action`,
-    // so the persisted codes are unchanged.
-    action: AuditAction;
-    entityType: string;
-    entityId: string;
-    actorId?: string | null;
-    payload?: Record<string, unknown> | null;
-  }): Promise<void> {
+  /**
+   * DAT-006 — tx-aware overload contract:
+   *   - No `tx` supplied (default): opens its own `prisma.$transaction`, acquires
+   *     the advisory lock inside it, and commits independently.
+   *   - Caller-supplied `tx` (Prisma.TransactionClient): the advisory lock is
+   *     acquired on that transaction, so it stays held until the outer transaction
+   *     commits, making the project mutation and the audit insert fully atomic.
+   *
+   * Important: when `tx` is supplied the advisory lock is acquired on the caller's
+   * transaction, ensuring the lock holds until the outer COMMIT.  The caller MUST
+   * NOT commit the outer transaction before this method returns.
+   */
+  async log(
+    event: {
+      // OBS-024 — AuditAction enum ONLY. The compile-time witness
+      // (`audit-action.compile-witness.ts`) guards against regressing this to
+      // `string`. The enum's string value is what lands in `audit_logs.action`,
+      // so the persisted codes are unchanged.
+      action: AuditAction;
+      entityType: string;
+      entityId: string;
+      actorId?: string | null;
+      payload?: Record<string, unknown> | null;
+    },
+    outerTx?: Prisma.TransactionClient,
+  ): Promise<void> {
     const actorId = event.actorId ?? null;
     const payload = event.payload ?? null;
 
@@ -123,7 +138,7 @@ export class AuditPersistenceService {
     // is exactly the value stored — the chain must be recomputable from the row.
     const createdAt = new Date();
 
-    await this.prisma.$transaction(async (tx) => {
+    const write = async (tx: Prisma.TransactionClient) => {
       // Totally order all audit inserts on a single transaction-scoped advisory
       // lock. The contract's "SELECT … FOR UPDATE on the prior row" option forks
       // the chain under READ COMMITTED: lock release re-checks the locked row via
@@ -186,6 +201,16 @@ export class AuditPersistenceService {
           createdAt,
         },
       });
-    });
+    };
+
+    // DAT-006 — if the caller supplied an outer transaction client, execute the
+    // write directly on it (advisory lock is acquired inside the caller's tx, so
+    // it holds until the outer COMMIT, making the whole operation atomic).
+    // Otherwise open a self-contained transaction as before.
+    if (outerTx) {
+      await write(outerTx);
+    } else {
+      await this.prisma.$transaction(write);
+    }
   }
 }

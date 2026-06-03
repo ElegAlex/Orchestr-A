@@ -653,17 +653,24 @@ export class ProjectsService {
       throw new ConflictException('Projet déjà archivé');
     }
 
-    const updated = await this.prisma.project.update({
-      where: { id },
-      data: { archivedAt: new Date(), archivedById: user.id },
-    });
-
-    await this.auditPersistence.log({
-      action: AuditAction.PROJECT_ARCHIVED,
-      entityType: 'Project',
-      entityId: id,
-      actorId: user.id,
-      payload: { archivedAt: updated.archivedAt },
+    // DAT-006 — wrap update + audit in a single transaction so an audit failure
+    // rolls back the project mutation (atomicity guarantee).
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.project.update({
+        where: { id },
+        data: { archivedAt: new Date(), archivedById: user.id },
+      });
+      await this.auditPersistence.log(
+        {
+          action: AuditAction.PROJECT_ARCHIVED,
+          entityType: 'Project',
+          entityId: id,
+          actorId: user.id,
+          payload: { archivedAt: result.archivedAt },
+        },
+        tx,
+      );
+      return result;
     });
 
     return updated;
@@ -683,17 +690,25 @@ export class ProjectsService {
       throw new ConflictException("Projet n'est pas archivé");
     }
 
-    const updated = await this.prisma.project.update({
-      where: { id },
-      data: { archivedAt: null, archivedById: null },
-    });
-
-    await this.auditPersistence.log({
-      action: AuditAction.PROJECT_UNARCHIVED,
-      entityType: 'Project',
-      entityId: id,
-      actorId: user.id,
-      payload: { previousArchivedAt: project.archivedAt },
+    // DAT-006 — wrap update + audit in a single transaction so an audit failure
+    // rolls back the project mutation (atomicity guarantee).
+    const previousArchivedAt = project.archivedAt;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.project.update({
+        where: { id },
+        data: { archivedAt: null, archivedById: null },
+      });
+      await this.auditPersistence.log(
+        {
+          action: AuditAction.PROJECT_UNARCHIVED,
+          entityType: 'Project',
+          entityId: id,
+          actorId: user.id,
+          payload: { previousArchivedAt },
+        },
+        tx,
+      );
+      return result;
     });
 
     return updated;

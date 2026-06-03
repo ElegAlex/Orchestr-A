@@ -4652,7 +4652,7 @@ Wrapped the importLeaves loop in this.prisma.$transaction(async tx => { ... }): 
 ---
 ### DAT-006 — Project.archive/unarchive: update + audit not atomic
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 7
 - **Cluster:** D
 - **Confidence:** claude-only
@@ -4690,7 +4690,8 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+archive() and unarchive() in projects.service.ts wrapped in prisma.$transaction; project.update and auditPersistence.log(event, tx) share same atomic scope. AuditPersistenceService.log() gained optional outerTx: Prisma.TransactionClient param — when supplied, executes write (advisory lock + prevHash + auditLog.create) directly on the callers tx; when absent, opens its own $transaction as before (zero regression for existing callers). FAIL-PRE: two new atomicity tests were RED on unfixed code (mockPrismaService.$transaction.toHaveBeenCalled() assertion failed with AssertionError: expected vi.fn() to be called at least once). Existing tests updated to expect tx as 2nd arg to log() via expect.anything(). No schema migration — pure TS change.
 
 ---
 ### DAT-024 — Create leave: $transaction lacks Serializable isolation despite race-window comment
