@@ -7107,7 +7107,7 @@ Wrap heavy chart/grid/Gantt components in dynamic(() => import(...), { ssr: fals
 pnpm --filter web test  # no targeted spec inferred from apps/web/app/[locale]/projects/[id]/page.tsx
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 4d5206a
 **Learnings:**
 Wrapped PortfolioGantt, AdvancedAnalyticsTab (reports/page.tsx) and PlanningView (planning/page.tsx, dashboard/page.tsx) in next/dynamic({ssr:false}). Named export PlanningView required .then(m=>m.PlanningView) pattern; default exports (PortfolioGantt, AdvancedAnalyticsTab) use the standard pattern. Structural witness: pre-fix grep showed only 1 dynamic() call (projects/[id]/page.tsx:49); post-fix grep shows 5 calls across 4 files. Behavioural jest test not attempted - jest/jsdom has no bundle chunking; code-split is only observable via bundle analyzer or build output, not unit assertions. Build+test gate green.
 
