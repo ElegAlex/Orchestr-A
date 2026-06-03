@@ -5172,7 +5172,7 @@ Scope: analytics.service.ts + analytics.service.spec.ts only. No auth-sensitive 
 ---
 ### PER-002 — N+1 on leave balance: 2 queries per leave type
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5210,7 +5210,14 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Single findMany replacing 2xN per-type queries.
+
+The spec suggested groupBy({_sum:{days:true}}) but that is incompatible with the COR-007 invariant: raw days column cannot be summed because splitLeaveByYear() must run per-record to count only in-year holiday-aware workdays (cross-year leave stored as days=10 must yield 1-4 in-year days). groupBy would break the COR-007 test. Deviation from spec noted; the fix still eliminates the N+1 failure mode.
+
+Fix: one leave.findMany(status IN [APPROVED,CANCELLATION_REQUESTED,PENDING], yearWindow, +leaveTypeId+status in select) then in-memory filter per type. Reduces 2xN queries to 1 regardless of active leave type count.
+
+Existing getLeaveBalance tests migrated: removed two-call mockResolvedValueOnce pattern; each leave fixture now carries status+leaveTypeId for in-memory filtering. Fail-pre: 2 types x 2 queries = 4 calls, test expected 1, RED confirmed. Post-fix: 177/177 pass.
 
 ---
 ### PER-003 — Daily snapshot cron N+1: findFirst per project then create

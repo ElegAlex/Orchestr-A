@@ -3345,21 +3345,25 @@ describe('LeavesService', () => {
       const endA = addWorkdays(mon1, 10); // [mon1..endA] = 10 workdays inclusive
       const mon2 = nextMonday(new Date(endA.getTime() + 86400000)); // Mon after endA
       const endB = addWorkdays(mon2, 5); // 5 workdays
+      // PER-002: single bulk query; each fixture carries status+leaveTypeId
+      // so the in-memory filter can partition them correctly.
       const leaveA = {
         days: 10,
         startDate: mon1,
         endDate: endA,
         halfDay: null,
+        status: 'APPROVED',
+        leaveTypeId: mockLeaveTypeConfig.id,
       };
       const leaveB = {
         days: 5,
         startDate: mon2,
         endDate: endB,
         halfDay: null,
+        status: 'APPROVED',
+        leaveTypeId: mockLeaveTypeConfig.id,
       };
-      mockPrismaService.leave.findMany
-        .mockResolvedValueOnce([leaveA, leaveB]) // Approved leaves
-        .mockResolvedValueOnce([]); // Pending leaves
+      mockPrismaService.leave.findMany.mockResolvedValue([leaveA, leaveB]);
 
       const result = await service.getLeaveBalance('user-1');
 
@@ -3393,15 +3397,16 @@ describe('LeavesService', () => {
       // Exceeds total=25 so available clamps to 0.
       const mon1 = firstMondayOfYear(cy);
       const endBig = addWorkdays(mon1, 30);
+      // PER-002: single bulk query with status+leaveTypeId
       const bigLeave = {
         days: 30,
         startDate: mon1,
         endDate: endBig,
         halfDay: null,
+        status: 'APPROVED',
+        leaveTypeId: mockLeaveTypeConfig.id,
       };
-      mockPrismaService.leave.findMany
-        .mockResolvedValueOnce([bigLeave]) // Approved: 30 days used (exceeds total)
-        .mockResolvedValueOnce([]); // Pending leaves
+      mockPrismaService.leave.findMany.mockResolvedValue([bigLeave]);
 
       const result = await service.getLeaveBalance('user-1');
 
@@ -3423,16 +3428,17 @@ describe('LeavesService', () => {
       // COR-007 fixture: 5 workdays from first Monday of cy → pending=5
       const mon1 = firstMondayOfYear(cy);
       const pEnd = addWorkdays(mon1, 5);
-      mockPrismaService.leave.findMany
-        .mockResolvedValueOnce([]) // Approved leaves: 0 used
-        .mockResolvedValueOnce([
-          {
-            days: 5,
-            startDate: mon1,
-            endDate: pEnd,
-            halfDay: null,
-          },
-        ]); // Pending leaves: 5 pending
+      // PER-002: single bulk query; pending leave carries status+leaveTypeId
+      mockPrismaService.leave.findMany.mockResolvedValue([
+        {
+          days: 5,
+          startDate: mon1,
+          endDate: pEnd,
+          halfDay: null,
+          status: 'PENDING',
+          leaveTypeId: mockLeaveTypeConfig.id,
+        },
+      ]);
 
       const result = await service.getLeaveBalance('user-1');
 
@@ -3458,16 +3464,17 @@ describe('LeavesService', () => {
         // Exact count varies by year; we only assert 0 < used < 10.
         const crossStart = new Date(Date.UTC(cy, 11, 28, 12, 0, 0));
         const crossEnd = new Date(Date.UTC(cy + 1, 0, 8, 12, 0, 0));
-        mockPrismaService.leave.findMany
-          .mockResolvedValueOnce([
-            {
-              days: 10,
-              startDate: crossStart,
-              endDate: crossEnd,
-              halfDay: null,
-            },
-          ]) // Approved: cross-year leave
-          .mockResolvedValueOnce([]); // Pending: none
+        // PER-002: single bulk query; cross-year leave carries status+leaveTypeId
+        mockPrismaService.leave.findMany.mockResolvedValue([
+          {
+            days: 10,
+            startDate: crossStart,
+            endDate: crossEnd,
+            halfDay: null,
+            status: 'APPROVED',
+            leaveTypeId: mockLeaveTypeConfig.id,
+          },
+        ]);
 
         const result = await service.getLeaveBalance('user-1');
         const used = result.byType[0].used;
@@ -3476,6 +3483,50 @@ describe('LeavesService', () => {
         // After fix: splitLeaveByYear in-year workdays only → 1–4 depending on year
         expect(used).toBeGreaterThan(0);
         expect(used).toBeLessThan(10);
+      },
+    );
+
+    it(
+      'PER-002 — N leave types fire exactly 1 leave.findMany (not 2N)',
+      async () => {
+        // Fail-pre witness: with 2 active leave types, unfixed code calls
+        // leave.findMany 4 times (2 per type). Fixed code: exactly 1 call.
+        const cy = new Date().getFullYear();
+        const cpType = { ...mockLeaveTypeConfig, id: 'lt-cp', code: 'CP' };
+        const rttType = {
+          ...mockLeaveTypeConfig,
+          id: 'lt-rtt',
+          code: 'RTT',
+          name: 'RTT',
+        };
+        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+          cpType,
+          rttType,
+        ]);
+        // resolveAllocatedDays: 25 days for each type
+        mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+          totalDays: 25,
+        });
+        // Single query returns all leaves with status+leaveTypeId.
+        // Mon from first week of cy, used for approved CP leave fixture.
+        const mon1 = firstMondayOfYear(cy);
+        const end1 = addWorkdays(mon1, 5);
+        mockPrismaService.leave.findMany.mockResolvedValue([
+          {
+            startDate: mon1,
+            endDate: end1,
+            halfDay: null,
+            status: 'APPROVED',
+            leaveTypeId: 'lt-cp',
+          },
+        ]);
+
+        await service.getLeaveBalance('user-1');
+
+        // RED before fix: called 4 times (2 per type × 2 types).
+        // GREEN after fix: called exactly once (single bulk query).
+        expect(mockPrismaService.leave.findMany).toHaveBeenCalledTimes(1);
       },
     );
   });

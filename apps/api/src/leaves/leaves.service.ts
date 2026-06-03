@@ -2576,7 +2576,35 @@ export class LeavesService {
       parisYearWindow(currentYear);
     const holidayKeys = await this.getHolidayKeySet(yearStart, yearEnd);
 
-    // Pour chaque type, calculer le solde
+    // PER-002 — single bulk query for all leave types and statuses; in-memory
+    // join replaces the previous 2×N per-type findMany calls.
+    // NOTE: groupBy(_sum: days) is intentionally NOT used here because the
+    // correct day count must be derived from splitLeaveByYear() per record
+    // (COR-007: cross-year leaves must only count in-year workdays; raw
+    // days column cannot be summed directly).
+    const allLeaves = await this.prisma.leave.findMany({
+      where: {
+        userId,
+        status: {
+          in: [
+            LeaveStatus.APPROVED,
+            LeaveStatus.CANCELLATION_REQUESTED,
+            LeaveStatus.PENDING,
+          ],
+        },
+        startDate: { lt: yearEnd },
+        endDate: { gte: yearStart },
+      },
+      select: {
+        leaveTypeId: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        halfDay: true,
+      },
+    });
+
+    // Pour chaque type, calculer le solde en filtrant le résultat en mémoire
     const balancesByType = await Promise.all(
       leaveTypes.map(async (lt) => {
         const totalDays = await this.resolveAllocatedDays(
@@ -2585,18 +2613,12 @@ export class LeavesService {
           currentYear,
         );
 
-        const approvedLeaves = await this.prisma.leave.findMany({
-          where: {
-            userId,
-            leaveTypeId: lt.id,
-            status: {
-              in: [LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED],
-            },
-            startDate: { lt: yearEnd },
-            endDate: { gte: yearStart },
-          },
-          select: { startDate: true, endDate: true, halfDay: true },
-        });
+        const approvedLeaves = allLeaves.filter(
+          (l) =>
+            l.leaveTypeId === lt.id &&
+            (l.status === LeaveStatus.APPROVED ||
+              l.status === LeaveStatus.CANCELLATION_REQUESTED),
+        );
         const usedDays = approvedLeaves.reduce((sum, l) => {
           const buckets = splitLeaveByYear(
             l.startDate,
@@ -2609,16 +2631,10 @@ export class LeavesService {
           return sum + (bucket?.workDays ?? 0);
         }, 0);
 
-        const pendingLeaves = await this.prisma.leave.findMany({
-          where: {
-            userId,
-            leaveTypeId: lt.id,
-            status: LeaveStatus.PENDING,
-            startDate: { lt: yearEnd },
-            endDate: { gte: yearStart },
-          },
-          select: { startDate: true, endDate: true, halfDay: true },
-        });
+        const pendingLeaves = allLeaves.filter(
+          (l) =>
+            l.leaveTypeId === lt.id && l.status === LeaveStatus.PENDING,
+        );
         const pendingDays = pendingLeaves.reduce((sum, l) => {
           const buckets = splitLeaveByYear(
             l.startDate,
