@@ -88,6 +88,9 @@ model User {
   auditLogs                        AuditLog[]                    @relation("AuditActor")
   completedAssignments             PredefinedTaskAssignment[]    @relation("AssignmentCompletedBy")
 
+  @@index([isActive])     // PER-011: hot predicate — presence, analytics, workload, leaves import
+  @@index([departmentId]) // PER-011: hot predicate — organigramme, per-department queries
+  @@index([roleId])       // PER-011: hot predicate — RBAC V4 role-scoped queries
   @@map("users")
 }
 

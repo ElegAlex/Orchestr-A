@@ -5640,7 +5640,7 @@ Fail-pre: 2 tests asserted select presence and startDate/endDate in where; both 
 ---
 ### PER-011 — User table missing indexes on isActive, departmentId, roleId
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5678,7 +5678,8 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added @@index([isActive]), @@index([departmentId]), @@index([roleId]) to User model in schema.prisma. Created migration 20260603121211_per011_user_missing_indexes. SCHEMA INDEX EXCEPTION: fail-pre witness is structural — before migration, pg_indexes on users showed only 5 entries (pkey, email_key, email_lower_uk, login_key, login_lower_uk); no isActive/departmentId/roleId indexes. After deploy, all three present. Integration test per011-user-indexes.int.spec.ts was RED (4/4 fail) before migration, GREEN (4/4 pass) after. Index names match Prisma convention (tableName_column_idx). Gate build=0 test=0 before apply.
 
 ---
 ### PER-012 — Event table missing indexes on date, projectId, createdById
