@@ -324,7 +324,6 @@ export class TasksService {
 
     // Filtrage par plage de dates : on récupère les tâches qui chevauchent la plage
     // Une tâche chevauche si : startDate <= finPlage ET endDate >= débutPlage
-    const hasDateFilter = startDate || endDate;
     if (startDate && endDate) {
       // Tâches dont la plage [startDate, endDate] chevauche [startDate, endDate] du filtre
       andFilters.push(
@@ -357,8 +356,8 @@ export class TasksService {
     const [tasks, total] = await Promise.all([
       this.prisma.task.findMany({
         where,
-        // Pas de pagination si filtre par date (pour le planning)
-        ...(hasDateFilter ? {} : { skip, take: safeLimit }),
+        skip,
+        take: safeLimit,
         include: {
           project: {
             select: {
@@ -413,6 +412,80 @@ export class TasksService {
         totalPages: Math.ceil(total / safeLimit),
       },
     };
+  }
+
+  /**
+   * Dedicated read for planning/overview — always enforces a hard cap of 500
+   * rows and restricts to the columns the planning grid actually needs.
+   * Replaces the date-filter path of findAll() that bypassed skip/take.
+   */
+  async findForPlanningOverview(
+    startDate: string,
+    endDate: string,
+    currentUser: { id: string; role: string | null },
+  ) {
+    const PLANNING_HARD_CAP = 500;
+
+    const where: Prisma.TaskWhereInput = {};
+    const andFilters: Prisma.TaskWhereInput[] = [];
+
+    andFilters.push(await this.accessScope.taskReadWhere(currentUser));
+
+    // Overlap: task.endDate >= startDate AND (task.startDate <= endDate OR task.startDate IS NULL)
+    andFilters.push(
+      { endDate: { gte: new Date(startDate) } },
+      {
+        OR: [
+          { startDate: { lte: new Date(endDate) } },
+          { startDate: null },
+        ],
+      },
+    );
+
+    where.AND = andFilters;
+
+    const tasks = await this.prisma.task.findMany({
+      where,
+      take: PLANNING_HARD_CAP,
+      orderBy: { endDate: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        priority: true,
+        startDate: true,
+        endDate: true,
+        projectId: true,
+        assigneeId: true,
+        project: {
+          select: { id: true, name: true },
+        },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
+          },
+        },
+        assignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+                avatarPreset: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return { data: tasks };
   }
 
   /**

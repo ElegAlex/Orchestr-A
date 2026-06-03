@@ -5265,7 +5265,7 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ---
 ### PER-007 — Planning overview multiplies unbounded subqueries
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5303,7 +5303,20 @@ pnpm test apps/api/src/planning/planning.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Fixed the unbounded task query in planning overview.
+
+Root cause: tasks.service.ts:361 used `hasDateFilter ? {} : { skip, take: safeLimit }` which dropped the take/skip cap whenever startDate or endDate was present, causing ALL matching tasks to be fetched.
+
+Fix (1): removed the hasDateFilter bypass — skip/take now always apply in findAll().
+
+Fix (2) per design_decision: added TasksService.findForPlanningOverview() as a dedicated minimal-surface method with a hard cap of 500 rows and a select projection (only columns the planning grid needs). PlanningService now calls findForPlanningOverview instead of the generic findAll.
+
+planning.service.spec.ts updated: mock now exposes findForPlanningOverview, and the RBAC propagation assertion was updated to match the new call signature. This is an interface-change update, not an assertion weakening.
+
+Fail-pre witness: tasks.service.spec.ts `should apply take/skip cap even when a date filter is present (PER-007)` was RED (AssertionError: findMany called without take when date filter present) on unfixed code, GREEN after fix.
+
+No audit_logs entry needed (read-only path). Scope note: tasks.service.spec.ts was added to the real_files scope because tasks.service.ts:361 is the named root cause location.
 
 ---
 ### PER-010 — Leave model has ZERO indexes — every leaves query is a seq scan

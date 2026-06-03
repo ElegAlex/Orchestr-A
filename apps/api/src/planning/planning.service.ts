@@ -66,17 +66,7 @@ export class PlanningService {
     const [usersResult, servicesResult, tasksResult] = await Promise.all([
       this.usersService.findAll(1, 1000),
       this.servicesService.findAll(1, 1000),
-      this.tasksService.findAll(
-        1,
-        1000,
-        undefined,
-        undefined,
-        undefined,
-        startDate,
-        endDate,
-        undefined,
-        currentUser,
-      ),
+      this.tasksService.findForPlanningOverview(startDate, endDate, currentUser),
     ]);
 
     const visibleUserIds = usersResult.data

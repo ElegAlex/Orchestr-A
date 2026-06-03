@@ -370,6 +370,20 @@ describe('TasksService', () => {
         }),
       );
     });
+
+    it('should apply take/skip cap even when a date filter is present (PER-007)', async () => {
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.task.count.mockResolvedValue(0);
+
+      await service.findAll(1, 1000, undefined, undefined, undefined, '2026-04-13', '2026-04-19');
+
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 1000,
+          skip: 0,
+        }),
+      );
+    });
   });
 
   describe('findOne', () => {

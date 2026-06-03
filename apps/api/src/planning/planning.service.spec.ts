@@ -22,7 +22,7 @@ describe('PlanningService', () => {
 
   const mockUsersService = { findAll: vi.fn() };
   const mockServicesService = { findAll: vi.fn() };
-  const mockTasksService = { findAll: vi.fn() };
+  const mockTasksService = { findAll: vi.fn(), findForPlanningOverview: vi.fn() };
   const mockLeavesService = { findAll: vi.fn() };
   const mockEventsService = { findAll: vi.fn() };
   const mockTeleworkService = {
@@ -42,6 +42,7 @@ describe('PlanningService', () => {
     );
     mockServicesService.findAll.mockResolvedValue(paginated([{ id: 's1' }]));
     mockTasksService.findAll.mockResolvedValue(paginated([{ id: 't1' }]));
+    mockTasksService.findForPlanningOverview.mockResolvedValue(paginated([{ id: 't1' }]));
     mockLeavesService.findAll.mockResolvedValue(paginated([{ id: 'l1' }]));
     mockEventsService.findAll.mockResolvedValue([{ id: 'e1' }]);
     mockTeleworkService.findForPlanningOverview.mockResolvedValue([
@@ -119,15 +120,9 @@ describe('PlanningService', () => {
 
     await service.getOverview(START, END, USER);
 
-    expect(mockTasksService.findAll).toHaveBeenCalledWith(
-      1,
-      1000,
-      undefined,
-      undefined,
-      undefined,
+    expect(mockTasksService.findForPlanningOverview).toHaveBeenCalledWith(
       START,
       END,
-      undefined,
       USER,
     );
     expect(mockLeavesService.findAll).toHaveBeenCalledWith(
