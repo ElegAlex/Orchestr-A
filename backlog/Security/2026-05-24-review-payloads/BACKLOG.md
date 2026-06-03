@@ -4885,7 +4885,7 @@ pnpm test apps/api/src/telework/telework.service.spec.ts  # may need creation if
 ---
 ### COR-013 — findByYear uses local-TZ year window; isNonWorkingHoliday relies on exact-instant key
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 8
 - **Cluster:** C
 - **Confidence:** claude-only
@@ -4923,7 +4923,13 @@ pnpm test apps/api/src/holidays/holidays.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+findByYear lines 53-54 fixed: replaced new Date(year, 0, 1)/new Date(year, 11, 31) with Date.UTC variants so the @db.Date boundary is timezone-safe.
+isNonWorkingHoliday line 317 fixed: added private toLocalDayUtcMidnight() helper that re-builds the Date from local calendar components via Date.UTC; caller input may be local-midnight on a +UTC host (Paris +01 = 2024-12-31T23:00Z) which truncates to the wrong day.
+Existing findByYear test at line 116-117 asserted the local-TZ dates (encoding the bug). Updated assertion to Date.UTC values — this is correcting a wrong assertion, not weakening it (noted here).
+New isNonWorkingHoliday test uses mockImplementation to simulate Prisma @db.Date truncation and a local-constructed Date as input; RED pre-fix (false), GREEN post-fix (true).
+Fail-pre run: TZ=Europe/Paris vitest run holidays.service → 2 failures: findByYear (boundary off-by-1 UTC day) + isNonWorkingHoliday (false expected true).
+Scope: only holidays.service.ts + holidays.service.spec.ts touched. No audit_logs needed (not auth/leaves/RBAC sensitive).
 
 ---
 ### COR-026 — splitLeaveByYear reconciles weekend-only floor to startYear even when startYear has 0 weekdays

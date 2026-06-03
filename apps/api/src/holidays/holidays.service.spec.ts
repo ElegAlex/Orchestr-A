@@ -113,8 +113,11 @@ describe('HolidaysService', () => {
         expect.objectContaining({
           where: {
             date: {
-              gte: new Date(2025, 0, 1),
-              lte: new Date(2025, 11, 31),
+              // Must be UTC-midnight so the @db.Date column boundary is correct
+              // on any host TZ.  new Date(year, 0, 1) is local-midnight and
+              // resolves to Dec-31 UTC on a +UTC host (Europe/Paris).
+              gte: new Date(Date.UTC(2025, 0, 1)),
+              lte: new Date(Date.UTC(2025, 11, 31)),
             },
           },
         }),
@@ -452,6 +455,31 @@ describe('HolidaysService', () => {
       });
 
       const result = await service.isNonWorkingHoliday(new Date('2025-01-01'));
+
+      expect(result).toBe(true);
+    });
+
+    it('should find holiday correctly when input is local-constructed Date (TZ-safety)', async () => {
+      // Simulate Prisma @db.Date truncation: Prisma matches by the UTC date
+      // embedded in the timestamp.  new Date(2025, 0, 1) is local midnight
+      // which is 2024-12-31T23:00Z on Europe/Paris (+01) — so findUnique would
+      // receive a key that truncates to 2024-12-31, NOT 2025-01-01, causing a
+      // missed match.  The fix must normalise the input to UTC midnight via
+      // the local calendar components before querying.
+      mockPrismaService.holiday.findUnique.mockImplementation(
+        ({ where }: { where: { date: Date } }) => {
+          const utcDay = new Date(where.date).toISOString().slice(0, 10);
+          return Promise.resolve(
+            utcDay === '2025-01-01'
+              ? { ...mockHoliday, isWorkDay: false }
+              : null,
+          );
+        },
+      );
+
+      // Use local-constructed Date to replicate a caller on Europe/Paris TZ
+      const localDate = new Date(2025, 0, 1); // 2024-12-31T23:00Z on +01 host
+      const result = await service.isNonWorkingHoliday(localDate);
 
       expect(result).toBe(true);
     });

@@ -50,8 +50,11 @@ export class HolidaysService {
    * Récupère les jours fériés d'une année donnée
    */
   async findByYear(year: number): Promise<Holiday[]> {
-    const startOfYear = new Date(year, 0, 1);
-    const endOfYear = new Date(year, 11, 31);
+    // Use Date.UTC so the year boundary is correct on any host timezone.
+    // @db.Date stores/matches by UTC date components; a local-midnight Date
+    // on a +UTC host (e.g. Europe/Paris) shifts the boundary to Dec-31.
+    const startOfYear = new Date(Date.UTC(year, 0, 1));
+    const endOfYear = new Date(Date.UTC(year, 11, 31));
 
     return this.prisma.holiday.findMany({
       where: {
@@ -204,6 +207,22 @@ export class HolidaysService {
   }
 
   /**
+   * Normalise a Date to UTC midnight using its *local* calendar components.
+   *
+   * The @db.Date column is matched by Prisma using the UTC date embedded in
+   * the timestamp.  A caller that passes a local-constructed Date (e.g.
+   * `new Date(year, month, day)`) on a +UTC host (Europe/Paris) produces a
+   * timestamp that is 23:00 of the *previous* UTC day, causing findUnique to
+   * miss the record.  Re-building the Date from the local components via
+   * Date.UTC pins it to 00:00:00Z of the intended calendar day.
+   */
+  private toLocalDayUtcMidnight(date: Date): Date {
+    return new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    );
+  }
+
+  /**
    * Importe les jours fériés légaux français pour une année donnée
    */
   async importFrenchHolidays(
@@ -314,8 +333,11 @@ export class HolidaysService {
    * Vérifie si une date est un jour férié non ouvré
    */
   async isNonWorkingHoliday(date: Date): Promise<boolean> {
+    // Normalise to UTC midnight from the local calendar day so the @db.Date
+    // key matches regardless of the caller's construction method or host TZ.
+    const normalised = this.toLocalDayUtcMidnight(date);
     const holiday = await this.prisma.holiday.findUnique({
-      where: { date },
+      where: { date: normalised },
     });
 
     return holiday !== null && !holiday.isWorkDay;
