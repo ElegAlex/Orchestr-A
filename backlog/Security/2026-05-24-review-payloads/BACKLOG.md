@@ -4416,7 +4416,7 @@ Wrap with AbortController + 10s timeout; add @Throttle on the controller endpoin
 pnpm test apps/api/src/school-vacations/school-vacations.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 04b4c15
 **Learnings:**
 AbortController + 10s timeout wrapped around the external fetch at service.ts:177 using try/finally to always clearTimeout. @Throttle({ default: { limit: 3, ttl: 60000 } }) added to the /import endpoint controller to rate-limit per-IP. Redis caching deferred (optional per discover decision, adds infra). Fail-pre: test asserting opts.signal instanceof AbortSignal was RED (undefined) on unfixed code; GREEN after fix. All 21 spec tests pass. Build + full test suite green.
 
