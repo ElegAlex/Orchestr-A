@@ -5446,7 +5446,7 @@ Audit every @relation(fields:[X]) and add @@index([X]) unless already covered by
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 68da3b9
 **Learnings:**
 Added 25 single-column B-tree indexes on FK columns that lacked them. Followed SCHEMA INDEX EXCEPTION: no behavioural unit test, structural witness via pg_indexes (all absent before migration, all present after). Skipped Leave.userId/validatorId/leaveTypeId (covered as leading columns in DAT-010 composites) and Service.departmentId (leading in unique composite). Leave.validatedById added separately since validated_by_id is @map'd and not covered by DAT-010 composites. Migration: 20260603115724_dat011_fk_indexes — pure CREATE INDEX only. Index names verified verbatim from generated SQL before pinning in spec.
 
