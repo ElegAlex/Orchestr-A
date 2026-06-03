@@ -103,7 +103,9 @@ export class TeleworkService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    const teleworkDate = new Date(date);
+    // Normalise to UTC-midnight of the Paris calendar day regardless of any
+    // time-of-day component or UTC offset in the DTO string (COR-027).
+    const teleworkDate = dayKeyToUTCDate(teleworkDayKey(new Date(date)));
 
     // Vérifier qu'il n'y a pas déjà un télétravail pour cette date
     const existing = await this.prisma.teleworkSchedule.findUnique({
@@ -533,26 +535,32 @@ export class TeleworkService {
     const updateData: Prisma.TeleworkScheduleUpdateInput = {};
 
     // Si la date change, vérifier l'unicité
-    if (date && date !== existingTelework.date.toISOString().split('T')[0]) {
-      const newDate = new Date(date);
+    // Normalise input to Paris calendar-day UTC-midnight (COR-027) before
+    // comparing — avoids false "changed" detection for timed/offset inputs.
+    if (date) {
+      const newDate = dayKeyToUTCDate(teleworkDayKey(new Date(date)));
+      const existingDateKey = teleworkDayKey(existingTelework.date);
+      const newDateKey = teleworkDayKey(newDate);
 
-      // Vérifier que la nouvelle date n'est pas déjà utilisée
-      const conflict = await this.prisma.teleworkSchedule.findUnique({
-        where: {
-          userId_date: {
-            userId: existingTelework.userId,
-            date: newDate,
+      if (newDateKey !== existingDateKey) {
+        // Vérifier que la nouvelle date n'est pas déjà utilisée
+        const conflict = await this.prisma.teleworkSchedule.findUnique({
+          where: {
+            userId_date: {
+              userId: existingTelework.userId,
+              date: newDate,
+            },
           },
-        },
-      });
+        });
 
-      if (conflict && conflict.id !== id) {
-        throw new ConflictException(
-          'Un télétravail existe déjà pour cette date',
-        );
+        if (conflict && conflict.id !== id) {
+          throw new ConflictException(
+            'Un télétravail existe déjà pour cette date',
+          );
+        }
+
+        updateData.date = newDate;
       }
-
-      updateData.date = new Date(date);
     }
 
     if (isTelework !== undefined) {

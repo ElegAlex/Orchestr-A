@@ -200,6 +200,38 @@ describe('TeleworkService', () => {
         service.create('user-1', 'CONTRIBUTEUR', createDto),
       ).rejects.toThrow(ConflictException);
     });
+
+    // COR-027: timezone-shifted input must be normalised to UTC-midnight of the
+    // Paris calendar day — not to the raw UTC instant of the input string.
+    // Input 2026-03-10T00:30:00+01:00 = Paris day March 10, but UTC = March 9.
+    // Before fix: new Date(...) passes T23:30:00Z → stored as March 9 → wrong.
+    // After fix: dayKeyToUTCDate(teleworkDayKey(...)) → T00:00:00.000Z (March 10).
+    it('COR-027: normalises timezone-shifted DTO date to UTC-midnight of the Paris calendar day', async () => {
+      // Paris: 2026-03-10T00:30:00+01:00 = calendar day March 10
+      // Raw UTC: 2026-03-09T23:30:00Z  → wrong day if not normalised
+      const createDto = {
+        date: '2026-03-10T00:30:00+01:00',
+        isTelework: true,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
+      mockPrismaService.teleworkSchedule.create.mockResolvedValue({
+        ...mockTelework,
+        date: new Date('2026-03-10T00:00:00.000Z'),
+      });
+
+      await service.create('user-1', 'CONTRIBUTEUR', createDto);
+
+      // The date passed to Prisma create must be UTC midnight of March 10 (not March 9)
+      expect(mockPrismaService.teleworkSchedule.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            date: new Date('2026-03-10T00:00:00.000Z'),
+          }) as object,
+        }),
+      );
+    });
   });
 
   describe('findAll', () => {

@@ -5071,7 +5071,7 @@ Fixed getTime() instant comparison in validateLeavesImport by replacing with par
 ---
 ### COR-027 — TeleworkSchedule.date stored as full timestamp; unique index userId_date breaks on time-of-day drift
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 8
 - **Cluster:** C
 - **Confidence:** claude-only
@@ -5109,7 +5109,14 @@ pnpm test apps/api/src/telework/telework.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Fixed in create() line 106 and update() lines 537-557. Normalise DTO date via dayKeyToUTCDate(teleworkDayKey(new Date(date))) — reuses existing helpers already used in the recurring-rules expanders (consistent UTC-midnight storage). fromZonedTime was NOT used (spec suggestion): it yields Paris midnight = 2026-03-09T23:00:00Z, landing on the WRONG calendar day under @db.Date (Prisma UTC-truncates). The existing helpers are the correct path.
+
+update() fix: replaced string split comparison with day-key comparison (teleworkDayKey vs teleworkDayKey) to avoid false "changed" detection on timed input strings.
+
+Fail-pre witness: input 2026-03-10T00:30:00+01:00 (Paris day March 10, UTC March 9). Before fix: new Date(...) stored 2026-03-09T23:30:00Z. After fix: 2026-03-10T00:00:00.000Z. Test COR-027 was RED before fix, GREEN after.
+
+No migration needed: schema @db.Date already on TeleworkSchedule (line 683). No audit entry: telework not in audit-sensitive list.
 
 ---
 
