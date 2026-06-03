@@ -1120,8 +1120,10 @@ export class ProjectsService {
 
   /**
    * Capture un snapshot de progression pour tous les projets actifs.
-   * Idempotent à la journée : upsert keyed on (projectId, startOfDay).
-   * The @@unique([projectId, date]) index (COR-014) is the DB-level race guard.
+   * PER-003: batched — 2 DB queries regardless of project count.
+   *   1. findMany: fetch project IDs that already have a snapshot today.
+   *   2. createMany (skipDuplicates): insert only new snapshots.
+   * The @@unique([projectId, date]) constraint (COR-014) is the DB-level race guard.
    */
   async captureSnapshots() {
     const projects = await this.prisma.project.findMany({
@@ -1132,12 +1134,28 @@ export class ProjectsService {
       },
     });
 
+    if (projects.length === 0) {
+      return { captured: 0 };
+    }
+
     const now = new Date();
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const results = await Promise.all(
-      projects.map(async (project) => {
+    // Batch-fetch existing snapshots for today (1 query)
+    const existingToday = await this.prisma.projectSnapshot.findMany({
+      where: {
+        projectId: { in: projects.map((p) => p.id) },
+        date: startOfDay,
+      },
+      select: { projectId: true },
+    });
+    const alreadySnapshotted = new Set(existingToday.map((s) => s.projectId));
+
+    // Build payload for projects that don't yet have today's snapshot
+    const snapshotData = projects
+      .filter((project) => !alreadySnapshotted.has(project.id))
+      .map((project) => {
         const tasksTotal = project.tasks.length;
         const tasksDone = project.tasks.filter(
           (t) => t.status === 'DONE',
@@ -1161,30 +1179,31 @@ export class ProjectsService {
           (m) => m.status !== 'COMPLETED' && m.dueDate >= now,
         ).length;
 
-        await this.prisma.projectSnapshot.upsert({
-          where: {
-            projectId_date: { projectId: project.id, date: startOfDay },
-          },
-          create: {
-            projectId: project.id,
-            date: startOfDay,
-            progress,
-            tasksDone,
-            tasksTotal,
-            tasksInProgress,
-            tasksBlocked,
-            milestonesReached,
-            milestonesOverdue,
-            milestonesUpcoming,
-          },
-          update: {},
-        });
-        return { created: true };
-      }),
-    );
+        return {
+          projectId: project.id,
+          date: startOfDay,
+          progress,
+          tasksDone,
+          tasksTotal,
+          tasksInProgress,
+          tasksBlocked,
+          milestonesReached,
+          milestonesOverdue,
+          milestonesUpcoming,
+        };
+      });
 
-    const captured = results.filter((r) => r.created).length;
-    return { captured };
+    if (snapshotData.length === 0) {
+      return { captured: 0 };
+    }
+
+    // Single batched insert — skipDuplicates guards against concurrent-tick races (COR-014)
+    const { count } = await this.prisma.projectSnapshot.createMany({
+      data: snapshotData,
+      skipDuplicates: true,
+    });
+
+    return { captured: count };
   }
 
   /**

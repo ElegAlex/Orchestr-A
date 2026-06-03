@@ -5222,7 +5222,7 @@ Existing getLeaveBalance tests migrated: removed two-call mockResolvedValueOnce 
 ---
 ### PER-003 — Daily snapshot cron N+1: findFirst per project then create
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** cross-validated
@@ -5260,7 +5260,8 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Implemented batched snapshot write: replaced N per-project upserts with 1 findMany (existing today) + 1 createMany(skipDuplicates). COR-014 had already added @@unique([projectId,date]) and converted findFirst+create to upsert-per-project; PER-003 eliminates the remaining O(P) writes to O(2). No schema change needed — constraint already exists. captured count now reflects actually-inserted rows (0 when all already exist). Fail-pre: test asserted upsert.not.toHaveBeenCalled(); code called upsert twice (2 projects), confirming RED. All 9 captureSnapshots tests rewritten to createMany semantics while preserving counter/date/idempotency assertions.
 
 ---
 ### PER-007 — Planning overview multiplies unbounded subqueries

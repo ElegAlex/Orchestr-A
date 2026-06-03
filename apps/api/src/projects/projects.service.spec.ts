@@ -53,6 +53,7 @@ describe('ProjectsService', () => {
     projectSnapshot: {
       create: vi.fn(),
       upsert: vi.fn(),
+      createMany: vi.fn(),
       findFirst: vi.fn(),
       findMany: vi.fn(),
       count: vi.fn(),
@@ -1727,10 +1728,13 @@ describe('ProjectsService', () => {
     };
 
     beforeEach(() => {
+      // PER-003: batched path — findMany (existing today) + createMany (new only)
+      mockPrismaService.projectSnapshot.findMany.mockResolvedValue([]);
+      mockPrismaService.projectSnapshot.createMany.mockResolvedValue({ count: 0 });
+      // legacy stubs — no longer called by captureSnapshots, kept to detect regressions
       mockPrismaService.projectSnapshot.upsert.mockImplementation(
         ({ create: data }) => Promise.resolve({ id: 'snap-id', ...data }),
       );
-      // create/findFirst kept for backward compat but code now uses upsert (COR-014)
       mockPrismaService.projectSnapshot.create.mockImplementation(({ data }) =>
         Promise.resolve({ id: 'snap-id', ...data }),
       );
@@ -1752,15 +1756,50 @@ describe('ProjectsService', () => {
       });
     });
 
+    // PER-003: batched write — 2 total DB queries regardless of project count
+    it('PER-003: uses one findMany + one createMany (2 total writes) instead of N upserts', async () => {
+      const projects = [projectWithMixedData, emptyProject];
+      mockPrismaService.project.findMany.mockResolvedValue(projects);
+      // No existing snapshots today
+      mockPrismaService.projectSnapshot.findMany.mockResolvedValue([]);
+      mockPrismaService.projectSnapshot.createMany.mockResolvedValue({
+        count: 2,
+      });
+
+      const result = await service.captureSnapshots();
+
+      // Must NOT call upsert per-project (the old N+1 pattern)
+      expect(mockPrismaService.projectSnapshot.upsert).not.toHaveBeenCalled();
+
+      // Exactly one batched snapshot findMany (to check for existing today snapshots)
+      expect(mockPrismaService.projectSnapshot.findMany).toHaveBeenCalledTimes(
+        1,
+      );
+
+      // Exactly one createMany (not N individual writes)
+      expect(mockPrismaService.projectSnapshot.createMany).toHaveBeenCalledTimes(1);
+      const createManyCall =
+        mockPrismaService.projectSnapshot.createMany.mock.calls[0][0];
+      expect(createManyCall.skipDuplicates).toBe(true);
+      expect(createManyCall.data).toHaveLength(2);
+
+      expect(result).toEqual({ captured: 2 });
+    });
+
     it('computes the 5 enriched counters correctly for a project with mixed data', async () => {
       mockPrismaService.project.findMany.mockResolvedValue([
         projectWithMixedData,
       ]);
+      mockPrismaService.projectSnapshot.createMany.mockResolvedValue({
+        count: 1,
+      });
 
       await service.captureSnapshots();
 
-      const call = mockPrismaService.projectSnapshot.upsert.mock.calls[0][0];
-      expect(call.create).toMatchObject({
+      // PER-003: payload lives in createMany data array (not upsert.create)
+      const createManyCall =
+        mockPrismaService.projectSnapshot.createMany.mock.calls[0][0];
+      expect(createManyCall.data[0]).toMatchObject({
         projectId: 'p-mixed',
         progress: 25, // 2 done / 8 total = 25%
         tasksDone: 2,
@@ -1775,11 +1814,15 @@ describe('ProjectsService', () => {
 
     it('produces all-zero counters and progress=0 for a project with no tasks/milestones', async () => {
       mockPrismaService.project.findMany.mockResolvedValue([emptyProject]);
+      mockPrismaService.projectSnapshot.createMany.mockResolvedValue({
+        count: 1,
+      });
 
       await service.captureSnapshots();
 
-      const call = mockPrismaService.projectSnapshot.upsert.mock.calls[0][0];
-      expect(call.create).toMatchObject({
+      const createManyCall =
+        mockPrismaService.projectSnapshot.createMany.mock.calls[0][0];
+      expect(createManyCall.data[0]).toMatchObject({
         projectId: 'p-empty',
         progress: 0,
         tasksDone: 0,
@@ -1797,11 +1840,15 @@ describe('ProjectsService', () => {
         projectWithMixedData,
         emptyProject,
       ]);
+      mockPrismaService.projectSnapshot.createMany.mockResolvedValue({
+        count: 2,
+      });
 
       const result = await service.captureSnapshots();
 
+      // PER-003: single createMany covers all projects
       expect(result).toEqual({ captured: 2 });
-      expect(mockPrismaService.projectSnapshot.upsert).toHaveBeenCalledTimes(2);
+      expect(mockPrismaService.projectSnapshot.createMany).toHaveBeenCalledTimes(1);
     });
 
     it('rounds progress to nearest integer', async () => {
@@ -1817,90 +1864,81 @@ describe('ProjectsService', () => {
           milestones: [],
         },
       ]);
-
-      await service.captureSnapshots();
-
-      const call = mockPrismaService.projectSnapshot.upsert.mock.calls[0][0];
-      expect(call.create.progress).toBe(67); // 2/3 = 66.66 → rounded to 67
-    });
-
-    // W1.F — Idempotency guard (upsert-based, DB-level race safety via @@unique([projectId,date]))
-    it('uses upsert keyed on projectId_date to prevent concurrent-tick duplicates (COR-014)', async () => {
-      mockPrismaService.project.findMany.mockResolvedValue([
-        projectWithMixedData,
-      ]);
-      mockPrismaService.projectSnapshot.upsert.mockResolvedValue({
-        id: 'snap-id',
-        projectId: 'p-mixed',
-        progress: 25,
+      mockPrismaService.projectSnapshot.createMany.mockResolvedValue({
+        count: 1,
       });
 
       await service.captureSnapshots();
 
-      // Must use upsert (not create) so the DB unique index can enforce idempotency
-      expect(mockPrismaService.projectSnapshot.upsert).toHaveBeenCalledTimes(1);
+      const createManyCall =
+        mockPrismaService.projectSnapshot.createMany.mock.calls[0][0];
+      expect(createManyCall.data[0].progress).toBe(67); // 2/3 = 66.66 → rounded to 67
+    });
+
+    // PER-003 + COR-014: idempotency via skipDuplicates + @@unique([projectId,date])
+    it('uses createMany(skipDuplicates) with date normalized to startOfDay for DB-level race safety (COR-014)', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([
+        projectWithMixedData,
+      ]);
+      mockPrismaService.projectSnapshot.createMany.mockResolvedValue({
+        count: 1,
+      });
+
+      await service.captureSnapshots();
+
+      // Must NOT use upsert or per-row create
+      expect(mockPrismaService.projectSnapshot.upsert).not.toHaveBeenCalled();
       expect(mockPrismaService.projectSnapshot.create).not.toHaveBeenCalled();
 
-      const call = mockPrismaService.projectSnapshot.upsert.mock.calls[0][0];
+      const createManyCall =
+        mockPrismaService.projectSnapshot.createMany.mock.calls[0][0];
       const expectedStartOfDay = new Date();
       expectedStartOfDay.setHours(0, 0, 0, 0);
 
-      // where must key on the unique composite (projectId + normalized date = startOfDay)
-      expect(call.where.projectId_date).toEqual({
-        projectId: 'p-mixed',
-        date: expectedStartOfDay,
-      });
-      // update is a no-op (idempotent: existing row wins)
-      expect(call.update).toEqual({});
-      // create contains the full snapshot data
-      expect(call.create.projectId).toBe('p-mixed');
-      expect(call.create.date).toEqual(expectedStartOfDay);
+      // skipDuplicates is the DB-level race guard (@@unique constraint handles concurrent ticks)
+      expect(createManyCall.skipDuplicates).toBe(true);
+      // date in payload must be normalized to midnight (start of day)
+      expect(createManyCall.data[0].projectId).toBe('p-mixed');
+      expect(createManyCall.data[0].date).toEqual(expectedStartOfDay);
     });
 
-    it('should skip creation if snapshot already exists today for project (upsert returns existing, captured=0)', async () => {
+    it('should skip creation if snapshot already exists today for project (captured=0)', async () => {
       mockPrismaService.project.findMany.mockResolvedValue([
         projectWithMixedData,
       ]);
-      // upsert with update:{} returns the existing row unchanged; track via a flag from mock
-      let upsertCallCount = 0;
-      mockPrismaService.projectSnapshot.upsert.mockImplementation(() => {
-        upsertCallCount++;
-        return Promise.resolve({
-          id: 'existing-snap',
-          projectId: 'p-mixed',
-          progress: 25,
-          date: new Date(),
-          _wasCreated: false,
-        });
+      // Simulate: existing snapshot for today already in DB
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      mockPrismaService.projectSnapshot.findMany.mockResolvedValue([
+        { projectId: 'p-mixed' },
+      ]);
+
+      const result = await service.captureSnapshots();
+
+      // All projects already snapshotted → createMany not called, captured=0
+      expect(mockPrismaService.projectSnapshot.createMany).not.toHaveBeenCalled();
+      expect(result).toEqual({ captured: 0 });
+    });
+
+    it('creates snapshot for new day with date key normalized to startOfDay', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([
+        projectWithMixedData,
+      ]);
+      // No existing snapshot today
+      mockPrismaService.projectSnapshot.findMany.mockResolvedValue([]);
+      mockPrismaService.projectSnapshot.createMany.mockResolvedValue({
+        count: 1,
       });
 
       const result = await service.captureSnapshots();
 
-      // With upsert idempotency, a re-run on same day still counts as captured=1
-      // (the DB unique constraint prevents a duplicate row; the code always upserts)
-      expect(upsertCallCount).toBe(1);
-      expect(result).toEqual({ captured: 1 });
-    });
-
-    it("should create snapshot for new day (upsert with startOfDay date key)", async () => {
-      mockPrismaService.project.findMany.mockResolvedValue([
-        projectWithMixedData,
-      ]);
-      mockPrismaService.projectSnapshot.upsert.mockResolvedValue({
-        id: 'new-snap',
-        projectId: 'p-mixed',
-        progress: 25,
-      });
-
-      const result = await service.captureSnapshots();
-
-      const call = mockPrismaService.projectSnapshot.upsert.mock.calls[0][0];
+      const createManyCall =
+        mockPrismaService.projectSnapshot.createMany.mock.calls[0][0];
       const expectedStartOfDay = new Date();
       expectedStartOfDay.setHours(0, 0, 0, 0);
 
       // The date stored must be normalized to midnight (start of day)
-      expect(call.where.projectId_date.date).toEqual(expectedStartOfDay);
-      expect(call.create.date).toEqual(expectedStartOfDay);
+      expect(createManyCall.data[0].date).toEqual(expectedStartOfDay);
       expect(mockPrismaService.projectSnapshot.create).not.toHaveBeenCalled();
       expect(result).toEqual({ captured: 1 });
     });
