@@ -5611,7 +5611,7 @@ Project users to {id, email, firstName, lastName} only. Query overlap leaves fil
 pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 818a290
 **Learnings:**
 validateLeavesImport: added select:{id,email,firstName,lastName} to user.findMany (was leaking passwordHash) + date-span filter (lte maxEnd / gte minStart) to leave.findMany so only leaves overlapping the CSV window are loaded.
 importLeaves: same user select projection (only id+email needed); date-span filter pre-computed before $transaction and spread into tx.leave.findMany where clause.
