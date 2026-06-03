@@ -5322,7 +5322,7 @@ No audit_logs entry needed (read-only path). Scope note: tasks.service.spec.ts w
 ---
 ### PER-010 — Leave model has ZERO indexes — every leaves query is a seq scan
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** cross-validated
@@ -5360,7 +5360,8 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added 3 missing Leave indexes to schema.prisma: [userId,startDate], [status,startDate], [userId,leaveTypeId,startDate]. DAT-010 already covered [validatorId,status] and [startDate,endDate]. Migration 20260603120451_per010_leave_missing_indexes created and applied. Exact Prisma-convention names: leaves_userId_startDate_idx, leaves_status_startDate_idx, leaves_userId_leave_type_id_startDate_idx. Fail-pre witness: docker exec confirmed all 3 absent before migration. Post witness: all 3 present after migrate deploy. Int spec per010-leave-indexes.int.spec.ts follows DAT-010 pattern (SCHEMA INDEX EXCEPTION — pg_indexes structural witness). Gate: build+test both green.
 
 ---
 ### DAT-010 — Leave table missing indexes on hot query paths (userId+status+startDate, validatorId, status)

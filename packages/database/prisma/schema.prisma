@@ -621,6 +621,9 @@ model Leave {
   @@index([startDate, endDate])
   @@index([leaveTypeId, status])
   @@index([validatedById]) // DAT-011: FK without auto-index (not covered by DAT-010 composites)
+  @@index([userId, startDate]) // PER-010: user leave history by date range
+  @@index([status, startDate]) // PER-010: status-scoped calendar queries
+  @@index([userId, leaveTypeId, startDate]) // PER-010: per-user per-type date range
   @@map("leaves")
 }
 
