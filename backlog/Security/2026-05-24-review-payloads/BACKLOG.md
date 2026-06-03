@@ -6232,7 +6232,7 @@ Fail-pre witness: structural — old L182-184 tautology identified: `contributeu
 ---
 ### TST-005 — leaves.spec.ts contains zero negative-path assertions and no balance/approve coverage
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 11
 - **Cluster:** H
 - **Confidence:** claude-only
@@ -6270,7 +6270,21 @@ pnpm test:e2e -- e2e/tests/workflows/leaves.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+CORRECTED PREMISE: The spec states REFERENT gets 403 on POST /api/leaves — this is WRONG. The permission-matrix (allowedRoles) includes referent for leaves:create. No false REFERENT-deny test was added.
+
+FAIL-PRE WITNESS (structural): grep -c page.request leaves.spec.ts returned 0 — zero API assertions existed before the fix.
+
+FIX: Added 5 new API-level workflow tests to e2e/tests/workflows/leaves.spec.ts:
+  (a) CONTRIBUTEUR creates leave → 201 + PENDING
+  (b) ADMIN approves that leave → 200 + APPROVED + balance debited (used days increased)
+  (c) ADMIN rejects a PENDING leave → 200 + REJECTED + balance NOT debited
+  (d) ADMIN cancels an APPROVED leave → 200 + CANCELLED
+  (e) CONTRIBUTEUR tries to approve any leave → 403 (real leave ID, not placeholder — avoids 404-before-403 race)
+
+DESIGN: OBSERVATEUR raw-403 on POST /api/leaves already covered by api-permissions.spec.ts PERMISSION_MATRIX loop — not duplicated. Self-approval/gating already in leave-balance-gating.spec.ts — not duplicated. Used ADMIN as approver/rejecter (not manager) per documented note in leave-balance-gating.spec.ts line 216 (manager-test not guaranteed perimeter access to contributeur-test leaves). Used OTHER leave type (no balance gate) for create→approve→balance test to avoid gate failures in isolation.
+
+GATE: build=0, test=0, npx playwright test --list discovers 54 tests (9 cases × 6 roles).
 
 ---
 ### TST-006 — 8 tests in tasks page test are it.skip with TODO comments — silent rot
