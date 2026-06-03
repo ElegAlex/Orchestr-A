@@ -4695,7 +4695,7 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ---
 ### DAT-024 — Create leave: $transaction lacks Serializable isolation despite race-window comment
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 7
 - **Cluster:** D
 - **Confidence:** claude-only
@@ -4733,7 +4733,13 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Implemented Serializable isolation + one-shot P2034 retry for create() transaction at line 528.
+Design: chose option (a) Serializable + retry vs advisory lock because (a) is testable with mocked $transaction and matches Prisma first-class isolationLevel support.
+Fix: extracted tx body to named txBody arrow function (Prisma.TransactionClient param), wrapped in try/catch with instanceof Prisma.PrismaClientKnownRequestError + code===P2034 guard for single retry. Updated comment at lines 519-527 to reflect Serializable isolation + controlled retry.
+Fail-pre: before fix, P2034 from mockRejectedValueOnce propagated directly to caller (no retry). Test Error: could not serialize access due to concurrent update.
+Scope: ONLY create() at line 528. The twin ReadCommitted transactions at lines ~1320 (update), ~1710 (approve) etc. are separate tasks — not touched per acceptance #6.
+Mock note: Prisma.PrismaClientKnownRequestError imported from database mock (vitest.setup.ts defines it). No $transaction mock restoration needed — vi.fn(impl) inline implementation survives vi.resetAllMocks().
 
 ---
 ### COR-018 — update() clients sync runs outside the project-update transaction

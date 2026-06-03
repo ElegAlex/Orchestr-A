@@ -9,6 +9,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { LeaveStatus, LeaveType, Role } from '../__mocks__/database';
+import { Prisma } from 'database';
 import { AuditService } from '../audit/audit.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { PermissionsService } from '../rbac/permissions.service';
@@ -931,6 +932,134 @@ describe('LeavesService', () => {
         2026,
       );
       expect(available).toBe(25);
+    });
+
+    // DAT-024 — create() $transaction must use Serializable isolation and
+    // retry exactly once on a serialization-failure (P2034). Before the fix
+    // no isolationLevel was set and no retry existed, so a P2034 from the DB
+    // propagated directly to the caller.
+    it('DAT-024: retries create() once on P2034 serialization failure with Serializable isolation', async () => {
+      // Build a P2034 error using the mocked PrismaClientKnownRequestError.
+      const p2034 = new Prisma.PrismaClientKnownRequestError(
+        'could not serialize access due to concurrent update',
+        { code: 'P2034' } as { code: string; clientVersion: string },
+      );
+
+      // First $transaction call → throws P2034 (simulates Postgres serialization
+      // failure). Second call → executes normally (retry succeeds).
+      mockPrismaService.$transaction
+        .mockRejectedValueOnce(p2034)
+        .mockImplementationOnce(
+          <T>(cb: (tx: typeof mockPrismaService) => T): T =>
+            cb(mockPrismaService),
+        );
+
+      // Set up body mocks for the second (successful) attempt only.
+      // user + leaveTypeConfig fetched before the $transaction
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(mockUser) // initial user lookup
+        .mockResolvedValueOnce({
+          ...mockUser,
+          department: { ...mockUser.department, manager: { id: 'manager-1' } },
+        }); // findValidatorForUser
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValueOnce(
+        mockLeaveTypeConfig,
+      );
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValueOnce(
+        null,
+      );
+      // overlap check (findMany before $transaction)
+      mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
+      // Inside the $transaction body (attempt 2): hasConfiguredBalance
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        id: 'bal-1',
+      });
+      // snapshot resolveAllocatedDays → 25
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 25,
+      });
+      // getAvailableDays inner resolveAllocatedDays → 25
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 25,
+      });
+      // getAvailableDays intersecting leaves (used days = 0)
+      mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
+      // re-read snapshot (snapshot unchanged)
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.create.mockResolvedValueOnce(mockLeave);
+
+      const result = await service.create('user-1', {
+        leaveTypeId: 'leave-type-1',
+        startDate: '2025-06-02',
+        endDate: '2025-06-06',
+        reason: 'P2034 retry test',
+      });
+
+      // (a) Result must exist — the retry succeeded.
+      expect(result).toBeDefined();
+      expect(result.id).toBe('leave-1');
+
+      // (b) $transaction must have been called twice (first attempt + retry).
+      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(2);
+
+      // (c) Both calls must use Serializable isolation.
+      expect(mockPrismaService.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({ isolationLevel: 'Serializable' }),
+      );
+    });
+
+    it('DAT-024: does NOT retry on non-P2034 errors (passes through immediately)', async () => {
+      // A ConflictException thrown inside the tx must propagate without retry —
+      // the retry gate is narrowed to P2034 only.
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(mockUser);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValueOnce(
+        mockLeaveTypeConfig,
+      );
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValueOnce(
+        null,
+      );
+      mockPrismaService.leave.findMany.mockResolvedValueOnce([]); // overlap
+
+      // hasConfiguredBalance
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        id: 'bal-1',
+      });
+      // snapshot resolveAllocatedDays → 25
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 25,
+      });
+      // getAvailableDays
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
+      // re-read snapshot → changed (triggers ConflictException, not P2034)
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 20,
+      });
+
+      await expect(
+        service.create('user-1', {
+          leaveTypeId: 'leave-type-1',
+          startDate: '2025-06-02',
+          endDate: '2025-06-06',
+          reason: 'no retry on conflict',
+        }),
+      ).rejects.toThrow(ConflictException);
+
+      // Exactly one $transaction call — no spurious retry.
+      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -520,12 +520,11 @@ export class LeavesService {
     // création doivent partager une même connexion : sinon un admin qui
     // supprime/modifie une LeaveBalance entre les deux lectures renvoie un
     // "Solde insuffisant" trompeur, et la création prend effet contre un
-    // état différent de celui validé. Isolation par défaut (ReadCommitted)
-    // suffit ici uniquement parce qu'on RE-LIT chaque allocation juste
-    // avant l'insert et qu'on abort en ConflictException si elle a bougé.
-    // Une isolation Serializable serait plus stricte mais introduit des
-    // retries non maîtrisés sur un endpoint très sollicité.
-    const leave = await this.prisma.$transaction(async (tx) => {
+    // état différent de celui validé. DAT-024: isolation Serializable pour
+    // éliminer la fenêtre de course TOCTOU entre la gate de solde et
+    // l'insert. Un échec de sérialisation (P2034) est retenté une seule
+    // fois — contention faible attendue sur cet endpoint.
+    const txBody = async (tx: Prisma.TransactionClient) => {
       const allocationSnapshots = new Map<number, number>();
       for (const bucket of yearBuckets) {
         const hasBalance = await this.hasConfiguredBalance(
@@ -627,7 +626,29 @@ export class LeavesService {
           },
         },
       });
-    });
+    };
+
+    // DAT-024 — one-shot retry on P2034 (serialization failure). Postgres
+    // aborts the tx on P2034; the retry re-runs the entire body against a
+    // fresh snapshot. Any other error (ConflictException, BadRequest, etc.)
+    // propagates immediately without retry.
+    let leave: Awaited<ReturnType<typeof txBody>>;
+    try {
+      leave = await this.prisma.$transaction(txBody, {
+        isolationLevel: 'Serializable',
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2034'
+      ) {
+        leave = await this.prisma.$transaction(txBody, {
+          isolationLevel: 'Serializable',
+        });
+      } else {
+        throw err;
+      }
+    }
 
     // Trace d'audit séparée pour les auto-validations (finding #6). La
     // colonne `selfApproved` rend la distinction lisible dans la table,
