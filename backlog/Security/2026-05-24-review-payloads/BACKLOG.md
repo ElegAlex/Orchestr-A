@@ -5209,7 +5209,7 @@ Replace with prisma.leave.groupBy({ by: ['leaveTypeId', 'status'], where: { user
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 00c7efd
 **Learnings:**
 Single findMany replacing 2xN per-type queries.
 
