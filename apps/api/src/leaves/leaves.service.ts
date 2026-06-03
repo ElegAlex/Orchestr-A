@@ -132,6 +132,45 @@ export class LeavesService {
   }
 
   /**
+   * PER-015 — Consolidated 2-query helper for the service-perimeter waterfall.
+   * Returns the deduplicated service IDs for a given userId (managed + member).
+   *
+   * Accepts an optional `memo` Map for per-operation memoization: callers that
+   * need the serviceIds more than once within the same operation (e.g. a future
+   * bulk path) can share the same Map instance so the 2 DB queries fire only
+   * once per userId instead of N times.
+   */
+  private async getServiceIds(
+    userId: string,
+    memo?: Map<string, string[]>,
+  ): Promise<string[]> {
+    if (memo?.has(userId)) {
+      return memo.get(userId)!;
+    }
+
+    const [managedServices, userServices] = await Promise.all([
+      this.prisma.service.findMany({
+        where: { managerId: userId },
+        select: { id: true },
+      }),
+      this.prisma.userService.findMany({
+        where: { userId },
+        select: { serviceId: true },
+      }),
+    ]);
+
+    const serviceIds = [
+      ...new Set([
+        ...managedServices.map((s) => s.id),
+        ...userServices.map((us) => us.serviceId),
+      ]),
+    ];
+
+    memo?.set(userId, serviceIds);
+    return serviceIds;
+  }
+
+  /**
    * Récupérer les IDs des utilisateurs dans le périmètre du user courant.
    *  - Permission `leaves:manage_any` → 'all' (aucune restriction)
    *  - Sinon : services managés (managerId) + appartenance (user_services)
@@ -152,21 +191,7 @@ export class LeavesService {
       return 'all';
     }
 
-    const managedServices = await this.prisma.service.findMany({
-      where: { managerId: currentUserId },
-      select: { id: true },
-    });
-    const userServices = await this.prisma.userService.findMany({
-      where: { userId: currentUserId },
-      select: { serviceId: true },
-    });
-
-    const serviceIds = [
-      ...new Set([
-        ...managedServices.map((s) => s.id),
-        ...userServices.map((us) => us.serviceId),
-      ]),
-    ];
+    const serviceIds = await this.getServiceIds(currentUserId);
 
     if (serviceIds.length === 0) return new Set<string>();
 
@@ -361,20 +386,7 @@ export class LeavesService {
         }
 
         // Find services where requesting user is member or manager
-        const userServices = await this.prisma.userService.findMany({
-          where: { userId: requestingUserId },
-          select: { serviceId: true },
-        });
-
-        const managedServices = await this.prisma.service.findMany({
-          where: { managerId: requestingUserId },
-          select: { id: true },
-        });
-
-        const serviceIds = [
-          ...userServices.map((us) => us.serviceId),
-          ...managedServices.map((s) => s.id),
-        ];
+        const serviceIds = await this.getServiceIds(requestingUserId);
 
         if (serviceIds.length === 0) {
           throw new ForbiddenException(
@@ -897,23 +909,8 @@ export class LeavesService {
 
     // Permission d'approbation → périmètre services
     if (hasApprove) {
-      // 1. Find services the user belongs to via user_services
-      const userServices = await this.prisma.userService.findMany({
-        where: { userId: validatorId },
-        select: { serviceId: true },
-      });
-
-      // 2. Find services where user is manager
-      const managedServices = await this.prisma.service.findMany({
-        where: { managerId: validatorId },
-        select: { id: true },
-      });
-
-      // Combine service IDs
-      const serviceIds = [
-        ...userServices.map((us) => us.serviceId),
-        ...managedServices.map((s) => s.id),
-      ];
+      // 1+2. Find services the user belongs to (managed + member) — PER-015
+      const serviceIds = await this.getServiceIds(validatorId);
 
       // If no services, return empty array
       if (serviceIds.length === 0) {
@@ -1005,20 +1002,8 @@ export class LeavesService {
 
     // Permission d'approbation → users du même périmètre services
     if (hasApprove) {
-      const userServices = await this.prisma.userService.findMany({
-        where: { userId: managerId },
-        select: { serviceId: true },
-      });
-
-      const managedServices = await this.prisma.service.findMany({
-        where: { managerId },
-        select: { id: true },
-      });
-
-      const serviceIds = [
-        ...userServices.map((us) => us.serviceId),
-        ...managedServices.map((s) => s.id),
-      ];
+      // PER-015 — consolidated 2-query helper
+      const serviceIds = await this.getServiceIds(managerId);
 
       if (serviceIds.length === 0) {
         return [];
@@ -1587,20 +1572,8 @@ export class LeavesService {
 
     // Permission d'approbation → uniquement dans le périmètre services
     if (validatorPerms.includes(APPROVE_LEAVES)) {
-      const userServices = await this.prisma.userService.findMany({
-        where: { userId: validatorId },
-        select: { serviceId: true },
-      });
-      const managedServices = await this.prisma.service.findMany({
-        where: { managerId: validatorId },
-        select: { id: true },
-      });
-      const serviceIds = [
-        ...new Set([
-          ...userServices.map((us) => us.serviceId),
-          ...managedServices.map((s) => s.id),
-        ]),
-      ];
+      // PER-015 — consolidated 2-query helper
+      const serviceIds = await this.getServiceIds(validatorId);
 
       if (serviceIds.length > 0) {
         const leaveUserService = await this.prisma.userService.findFirst({

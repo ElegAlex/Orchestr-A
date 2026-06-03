@@ -4530,4 +4530,27 @@ describe('LeavesService', () => {
       expect(result.errors).toBeGreaterThan(0);
     });
   });
+
+  // PER-015 — getServiceIds memoization: second call with shared memo must
+  // not fire additional DB queries (query-count drops from 4 to 2).
+  describe('getServiceIds memoization (PER-015)', () => {
+    it('fires DB queries only once when the same userId is requested twice with a shared memo', async () => {
+      mockPrismaService.service.findMany.mockResolvedValue([{ id: 'svc-1' }]);
+      mockPrismaService.userService.findMany.mockResolvedValue([
+        { serviceId: 'svc-2' },
+      ]);
+
+      const memo = new Map<string, string[]>();
+
+      // First call — hits the DB
+      const ids1 = await (service as any).getServiceIds('user-memo-1', memo);
+      // Second call with the same memo — must use the cache, no DB hit
+      const ids2 = await (service as any).getServiceIds('user-memo-1', memo);
+
+      expect(ids1).toEqual(ids2);
+      // With memoization: each of the 2 DB queries fires exactly once
+      expect(mockPrismaService.service.findMany).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.userService.findMany).toHaveBeenCalledTimes(1);
+    });
+  });
 });
