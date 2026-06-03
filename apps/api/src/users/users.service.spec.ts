@@ -593,6 +593,27 @@ describe('UsersService', () => {
       const countArgs = mockPrismaService.user.count.mock.calls[0][0];
       expect(countArgs.where).toEqual({});
     });
+
+    // PER-004: hard ceiling of 200 to prevent 5-20 MB planning payloads
+    it('PER-004: caps limit at 200 when no allowFullScan opt-in', async () => {
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.user.count.mockResolvedValue(0);
+
+      await service.findAll(1, 1000);
+
+      const args = mockPrismaService.user.findMany.mock.calls[0][0];
+      expect(args.take).toBe(200);
+    });
+
+    it('PER-004: allowFullScan:true bypasses the 200 ceiling', async () => {
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.user.count.mockResolvedValue(0);
+
+      await service.findAll(1, 1000, undefined, undefined, { allowFullScan: true });
+
+      const args = mockPrismaService.user.findMany.mock.calls[0][0];
+      expect(args.take).toBe(1000);
+    });
   });
 
   describe('findOne', () => {

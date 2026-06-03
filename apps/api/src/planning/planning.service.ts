@@ -64,7 +64,7 @@ export class PlanningService {
     const dateOnlyEnd = endDate.slice(0, 10);
 
     const [usersResult, servicesResult, tasksResult] = await Promise.all([
-      this.usersService.findAll(1, 1000),
+      this.usersService.findAll(1, 1000, undefined, undefined, { allowFullScan: true }),
       this.servicesService.findAll(1, 1000),
       this.tasksService.findForPlanningOverview(startDate, endDate, currentUser),
     ]);

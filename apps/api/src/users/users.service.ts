@@ -211,8 +211,13 @@ export class UsersService {
     limit: number = 20,
     roleCode?: string,
     caller?: AccessUser,
+    options?: { allowFullScan?: boolean },
   ) {
-    const safeLimit = Math.min(limit || 1000, 1000);
+    const HARD_CEILING = 200;
+    const safeLimit =
+      options?.allowFullScan === true
+        ? Math.min(limit || 20, 1000)
+        : Math.min(limit || 20, HARD_CEILING);
     const skip = (page - 1) * safeLimit;
 
     const where = roleCode ? { role: { code: roleCode } } : {};

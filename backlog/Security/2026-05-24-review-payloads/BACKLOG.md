@@ -5450,7 +5450,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### PER-004 — User listing default limit 1000 — effective unbounded
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5488,7 +5488,8 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Hard ceiling of 200 added to findAll() via 5th param options:{allowFullScan?:boolean}. Signature kept backward-compatible (5th slot, not 3rd) to avoid breaking findAll(1,50,"ADMIN") and SEC-031 callers. PlanningService.getOverview now calls findAll(1,1000,undefined,undefined,{allowFullScan:true}) for its org-wide directory fetch. The || 1000 fallback replaced with || 20 to kill the unbounded default. Audit note: read-only path, no audit_logs entry needed. planning.service.spec.ts needed no edits — its only usersService assertion is a mockResolvedValue, not a toHaveBeenCalledWith.
 
 ---
 ### PER-005 — Projects findAll default limit 1000 + N tasks per row
