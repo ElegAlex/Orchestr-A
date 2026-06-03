@@ -336,6 +336,11 @@ model Task {
   @@index([projectId])
   @@index([assigneeId])
   @@index([status])
+  @@index([endDate])
+  @@index([startDate])
+  @@index([milestoneId])
+  @@index([epicId])
+  @@index([projectId, status])
   @@map("tasks")
 }
 

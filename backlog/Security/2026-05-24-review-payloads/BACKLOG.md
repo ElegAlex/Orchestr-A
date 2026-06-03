@@ -5728,7 +5728,7 @@ Added @@index([date]) and @@index([createdById, date]) to Event, and @@index([us
 ---
 ### PER-013 — Task missing indexes on endDate/startDate/milestoneId/epicId
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5766,7 +5766,8 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added 5 indexes to Task model: endDate, startDate, milestoneId, epicId, (projectId, status) composite. Migration: 20260603122315_per013_task_planning_indexes. Existing indexes (projectId, assigneeId, status) preserved (add-only). Fail-pre witness: before migration, pg_indexes showed only tasks_assigneeId_idx/tasks_pkey/tasks_projectId_idx/tasks_status_idx — 6 int spec tests RED. After migration file created, ephemeral harness applied it and all 6 GREEN. status indexdef is unquoted by PostgreSQL — matched with \bstatus\b not /"status"/. Not audit-sensitive (no audit_logs entry needed).
 
 ---
 ### PER-015 — Repeated service+managedService+userService pattern (4 queries) on every leaves list call
