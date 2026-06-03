@@ -5808,7 +5808,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ---
 ### PER-016 — getUsersPresence loads 4 large tables in parallel without paging
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5846,7 +5846,8 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+getUsersPresence was at line 1663 (not 1197 as spec said). Replaced 5 sequential findMany fan-outs (users + teleworkSchedules + leaves + externalTasks + externalEvents) with a single $queryRaw round-trip JOIN that computes presence_status via a SQL CASE expression. Status precedence ABSENT > EXTERNAL > REMOTE > ON_SITE preserved. LATERAL JOIN used for first service name. Fail-pre: added PER-016 test asserting $queryRaw called once and all 5 findMany not called; RED on unfixed code (TypeError: Cannot read properties of undefined on teleworkSchedules.map). Updated beforeEach to mock $queryRaw returning 4 rows with presence_status field; existing 3 tests kept intact. Added $queryRaw: vi.fn() to mockPrismaService. Note: SQL correctness is not exercised by the mocked unit tests — only integration tests against a real DB would verify the SQL. Categorization now lives in the SQL CASE statement rather than TS if/else-if.
 
 ---
 ### PER-025 — Analytics projectProgressData / taskStatusData filter in JS over full task array

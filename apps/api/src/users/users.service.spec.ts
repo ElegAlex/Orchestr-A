@@ -110,6 +110,7 @@ describe('UsersService', () => {
     auditLog: {
       count: vi.fn(),
     },
+    $queryRaw: vi.fn(),
     $transaction: vi.fn(async (callback) => callback(mockPrismaService)),
   };
 
@@ -2501,17 +2502,62 @@ describe('UsersService', () => {
     ];
 
     beforeEach(() => {
-      mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
-      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
-        { userId: 'user-2' },
+      // PER-016: single $queryRaw consolidates all 5 fan-out queries
+      mockPrismaService.$queryRaw.mockResolvedValue([
+        {
+          id: 'user-1',
+          first_name: 'Jean',
+          last_name: 'Dupont',
+          avatar_url: null,
+          avatar_preset: null,
+          department_name: 'IT',
+          service_name: 'Développement',
+          presence_status: 'ON_SITE',
+        },
+        {
+          id: 'user-2',
+          first_name: 'Marie',
+          last_name: 'Martin',
+          avatar_url: null,
+          avatar_preset: null,
+          department_name: null,
+          service_name: null,
+          presence_status: 'REMOTE',
+        },
+        {
+          id: 'user-3',
+          first_name: 'Pierre',
+          last_name: 'Bernard',
+          avatar_url: null,
+          avatar_preset: null,
+          department_name: null,
+          service_name: null,
+          presence_status: 'ABSENT',
+        },
+        {
+          id: 'user-4',
+          first_name: 'Sophie',
+          last_name: 'Leroy',
+          avatar_url: null,
+          avatar_preset: null,
+          department_name: null,
+          service_name: null,
+          presence_status: 'EXTERNAL',
+        },
       ]);
-      mockPrismaService.leave.findMany.mockResolvedValue([
-        { userId: 'user-3' },
-      ]);
-      mockPrismaService.task.findMany.mockResolvedValue([
-        { assignees: [{ userId: 'user-4' }] },
-      ]);
-      mockPrismaService.event.findMany.mockResolvedValue([]);
+    });
+
+    it('PER-016: should use a single $queryRaw instead of 5 separate findMany fan-outs', async () => {
+      await service.getUsersPresence('2025-01-15');
+
+      // After the fix: one raw query replaces all fan-outs
+      expect(mockPrismaService.$queryRaw).toHaveBeenCalledTimes(1);
+      // None of the 5 individual table scans should fire
+      expect(mockPrismaService.user.findMany).not.toHaveBeenCalled();
+      expect(mockPrismaService.teleworkSchedule.findMany).not.toHaveBeenCalled();
+      expect(mockPrismaService.leave.findMany).not.toHaveBeenCalled();
+      expect(mockPrismaService.task.findMany).not.toHaveBeenCalled();
+      expect(mockPrismaService.event.findMany).not.toHaveBeenCalled();
     });
 
     it('should return presence data with all four categories', async () => {

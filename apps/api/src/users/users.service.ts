@@ -1658,7 +1658,11 @@ export class UsersService {
   }
 
   /**
-   * Récupère les statuts de présence des utilisateurs pour une date donnée
+   * Récupère les statuts de présence des utilisateurs pour une date donnée.
+   *
+   * PER-016: consolidates the former 5 sequential findMany fan-outs into a
+   * single $queryRaw round-trip. Status precedence: ABSENT > EXTERNAL > REMOTE
+   * > ON_SITE (matches the original if/else-if ordering).
    */
   async getUsersPresence(dateStr?: string) {
     const targetDate = dateStr ? new Date(dateStr) : new Date();
@@ -1667,93 +1671,76 @@ export class UsersService {
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const users = await this.prisma.user.findMany({
-      where: {
-        isActive: true,
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        avatarUrl: true,
-        avatarPreset: true,
-        department: {
-          select: {
-            name: true,
-          },
-        },
-        userServices: {
-          take: 1,
-          select: {
-            service: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
-    });
+    type PresenceRow = {
+      id: string;
+      first_name: string;
+      last_name: string;
+      avatar_url: string | null;
+      avatar_preset: string | null;
+      department_name: string | null;
+      service_name: string | null;
+      presence_status: 'ON_SITE' | 'REMOTE' | 'ABSENT' | 'EXTERNAL';
+    };
 
-    const teleworkSchedules = await this.prisma.teleworkSchedule.findMany({
-      where: {
-        date: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-        isTelework: true,
-      },
-      select: { userId: true },
-    });
-    const remoteUserIds = new Set(teleworkSchedules.map((t) => t.userId));
-
-    const leaves = await this.prisma.leave.findMany({
-      where: {
-        startDate: { lte: endOfDay },
-        endDate: { gte: startOfDay },
-        status: 'APPROVED',
-      },
-      select: { userId: true },
-    });
-    const absentUserIds = new Set(leaves.map((l) => l.userId));
-
-    const externalTasks = await this.prisma.task.findMany({
-      where: {
-        isExternalIntervention: true,
-        startDate: { lte: endOfDay },
-        endDate: { gte: startOfDay },
-        status: { notIn: ['DONE'] },
-      },
-      select: {
-        assignees: {
-          select: { userId: true },
-        },
-      },
-    });
-    const externalUserIds = new Set(
-      externalTasks.flatMap((t) => t.assignees.map((a) => a.userId)),
-    );
-
-    const externalEvents = await this.prisma.event.findMany({
-      where: {
-        isExternalIntervention: true,
-        date: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-      },
-      select: {
-        participants: {
-          select: { userId: true },
-        },
-      },
-    });
-    for (const event of externalEvents) {
-      for (const p of event.participants) {
-        externalUserIds.add(p.userId);
-      }
-    }
+    // Single round-trip: JOIN users with the four status sources and compute
+    // presence via a CASE expression that respects absent > external > remote
+    // > on_site precedence. The sub-queries replace the four auxiliary
+    // findMany calls (telework_schedules, leaves, task_assignees via tasks,
+    // event_participants via events).
+    const rows = await this.prisma.$queryRaw<PresenceRow[]>`
+      SELECT
+        u.id,
+        u.first_name,
+        u.last_name,
+        u.avatar_url,
+        u.avatar_preset,
+        d.name            AS department_name,
+        s.name            AS service_name,
+        CASE
+          WHEN EXISTS (
+            SELECT 1 FROM leaves l
+            WHERE l.user_id = u.id
+              AND l.start_date <= ${endOfDay}::date
+              AND l.end_date   >= ${startOfDay}::date
+              AND l.status = 'APPROVED'
+          ) THEN 'ABSENT'
+          WHEN EXISTS (
+            SELECT 1 FROM task_assignees ta
+            JOIN tasks t ON t.id = ta.task_id
+            WHERE ta.user_id = u.id
+              AND t.is_external_intervention = TRUE
+              AND t.start_date <= ${endOfDay}
+              AND t.end_date   >= ${startOfDay}
+              AND t.status <> 'DONE'
+          ) OR EXISTS (
+            SELECT 1 FROM event_participants ep
+            JOIN events e ON e.id = ep.event_id
+            WHERE ep.user_id = u.id
+              AND e.is_external_intervention = TRUE
+              AND e.date >= ${startOfDay}
+              AND e.date <= ${endOfDay}
+          ) THEN 'EXTERNAL'
+          WHEN EXISTS (
+            SELECT 1 FROM telework_schedules ts
+            WHERE ts.user_id = u.id
+              AND ts.date >= ${startOfDay}::date
+              AND ts.date <= ${endOfDay}::date
+              AND ts.is_telework = TRUE
+          ) THEN 'REMOTE'
+          ELSE 'ON_SITE'
+        END AS presence_status
+      FROM users u
+      LEFT JOIN departments d ON d.id = u.department_id
+      LEFT JOIN LATERAL (
+        SELECT sv.name
+        FROM user_services us2
+        JOIN services sv ON sv.id = us2.service_id
+        WHERE us2.user_id = u.id
+        LIMIT 1
+      ) s ON TRUE
+      WHERE u.is_active = TRUE
+      ORDER BY u.last_name ASC, u.first_name ASC
+    `;
 
     const onSite: Array<{
       id: string;
@@ -1768,25 +1755,29 @@ export class UsersService {
     const absent: typeof onSite = [];
     const external: typeof onSite = [];
 
-    for (const user of users) {
+    for (const row of rows) {
       const item = {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatarUrl: user.avatarUrl ?? undefined,
-        avatarPreset: user.avatarPreset ?? undefined,
-        serviceName: user.userServices[0]?.service?.name,
-        departmentName: user.department?.name,
+        id: row.id,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        avatarUrl: row.avatar_url ?? undefined,
+        avatarPreset: row.avatar_preset ?? undefined,
+        serviceName: row.service_name ?? undefined,
+        departmentName: row.department_name ?? undefined,
       };
 
-      if (absentUserIds.has(user.id)) {
-        absent.push(item);
-      } else if (externalUserIds.has(user.id)) {
-        external.push(item);
-      } else if (remoteUserIds.has(user.id)) {
-        remote.push(item);
-      } else {
-        onSite.push(item);
+      switch (row.presence_status) {
+        case 'ABSENT':
+          absent.push(item);
+          break;
+        case 'EXTERNAL':
+          external.push(item);
+          break;
+        case 'REMOTE':
+          remote.push(item);
+          break;
+        default:
+          onSite.push(item);
       }
     }
 
@@ -1801,7 +1792,7 @@ export class UsersService {
         remote: remote.length,
         absent: absent.length,
         external: external.length,
-        total: users.length,
+        total: rows.length,
       },
     };
   }
