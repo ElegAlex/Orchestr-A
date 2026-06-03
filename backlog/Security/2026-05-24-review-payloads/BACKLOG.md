@@ -6352,7 +6352,7 @@ pnpm test:e2e -- e2e/tests/security/ownership-idor.spec.ts
 ---
 ### TST-009 — Leaves service spec relies on hand-rolled $transaction mock that re-feeds the same mock object
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 11
 - **Cluster:** H
 - **Confidence:** claude-only
@@ -6390,7 +6390,16 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Additive real-Postgres integration test for the SERIALIZABLE balance-gating path.
+
+Design: two independent PrismaClient connections open concurrent $transaction callbacks (Serializable isolation). A JS Promise barrier forces both gate reads to complete before either write, guaranteeing the write-skew window that Postgres SSI detects and aborts (SQLSTATE 40001 / P2034). The assertion: total consumed days must be ≤ 5 (the allocated balance). Passes cleanly because one txn is aborted.
+
+Mutation witness (READ COMMITTED, MUTATION_WITNESS=1): both inserts land → 6 days consumed → AssertionError: expected total consumed days (6) to be ≤ balance (5). RED captured and confirmed.
+
+Design boundary: exercises the DB-level SSI semantics directly (no service constructor), not the service retry loop. The mock-based spec keeps covering branching logic. The no-overlap EXCLUDE constraint on APPROVED leaves is avoided by using non-overlapping future dates and PENDING status.
+
+Gate: pnpm run build and pnpm run test both exit 0. The *.int.spec.ts file is excluded from the unit/build gate by vitest.int.config.ts and vitest.config.ts patterns.
 
 ---
 ### TST-010 — Export service Excel tests assert createObjectURL/click/revokeObjectURL — testing browser stubs, not output
