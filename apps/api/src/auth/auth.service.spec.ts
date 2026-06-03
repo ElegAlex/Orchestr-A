@@ -754,6 +754,33 @@ describe('AuthService', () => {
       expect(mockAuditService.log).not.toHaveBeenCalled();
     });
 
+    it('should NOT expose token/resetUrl when NODE_ENV=production even if AUTH_EXPOSE_RESET_TOKEN=true (SEC-018)', async () => {
+      const origNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        // Flag is true, but production → token must NOT be returned
+        arrangeUsers({
+          target: { id: 'user-id-1', login: 'jdoe', roleCode: 'CONTRIBUTEUR' },
+          caller: { roleCode: 'ADMIN' },
+        });
+        mockPrismaService.passwordResetToken.updateMany.mockResolvedValue({
+          count: 0,
+        });
+        mockPrismaService.passwordResetToken.create.mockResolvedValue({
+          id: 'token-id',
+        });
+
+        const result = await service.generateResetToken('user-id-1', 'admin-id');
+
+        expect(result).toEqual({ ok: true });
+        expect(result).not.toHaveProperty('token');
+        expect(result).not.toHaveProperty('resetUrl');
+        expect(mockPrismaService.passwordResetToken.create).toHaveBeenCalled();
+      } finally {
+        process.env.NODE_ENV = origNodeEnv;
+      }
+    });
+
     it('should NOT expose token/resetUrl when AUTH_EXPOSE_RESET_TOKEN is false (Issue 2: disclosure)', async () => {
       mockConfigService.get.mockImplementationOnce((key: string) => {
         if (key === 'AUTH_EXPOSE_RESET_TOKEN') return 'false';

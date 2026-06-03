@@ -4328,7 +4328,7 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ---
 ### SEC-018 — AUTH_EXPOSE_RESET_TOKEN=true in .env.example trains operators to ship insecure config
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 6
 - **Cluster:** J
 - **Confidence:** claude-only
@@ -4366,7 +4366,15 @@ TBD — manual verification (env config), plus boot-assert test if applicable
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+auth.service.ts (adjacent file) justified: the disclosure point is generateResetToken, which reads the flag; the production guard must live there (not in main.ts alone) to be unit-testable.
+Fix: exposeToken condition now includes `&& process.env.NODE_ENV !== "production"`, using process.env directly (not ConfigService.get) to avoid disturbing the existing mockImplementationOnce call-count contract in tests.
+Boot guard added to main.ts (lines ~42-52): same structural pattern as SEC-001/RBAC_GUARD_MODE; not unit-tested (importing main.ts runs void bootstrap(), no seam).
+.env.example default changed from true→false with "NEVER true in production" comment.
+.env.production.example: explicit AUTH_EXPOSE_RESET_TOKEN=false added to SECURITY section.
+FAIL-PRE witness: test "should NOT expose token/resetUrl when NODE_ENV=production even if AUTH_EXPOSE_RESET_TOKEN=true" was RED (received { ok:true, token:..., resetUrl:... } vs expected { ok:true }).
+Acceptance #4 (audit_logs): N/A — withholding token from response is not a state mutation; token is still created and audited as before.
+Prod deploy note: if prod .env.production has AUTH_EXPOSE_RESET_TOKEN=true, the boot guard will prevent startup — operator must set it to false before deploying this commit.
 
 ---
 ### SEC-024 — External HTTP fetch to data.education.gouv.fr with no timeout / circuit breaker

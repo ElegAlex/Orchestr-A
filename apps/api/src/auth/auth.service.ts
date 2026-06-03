@@ -483,8 +483,11 @@ export class AuthService {
       success: true,
     });
 
+    // SEC-018: never expose token in production, even if flag is true.
+    // Flag is only honoured in non-production (dev / E2E).
     const exposeToken =
-      this.configService.get<string>('AUTH_EXPOSE_RESET_TOKEN') === 'true';
+      this.configService.get<string>('AUTH_EXPOSE_RESET_TOKEN') === 'true' &&
+      process.env.NODE_ENV !== 'production';
     if (!exposeToken) {
       return { ok: true };
     }

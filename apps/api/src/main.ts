@@ -40,6 +40,21 @@ async function bootstrap() {
     );
   }
 
+  // SEC-018: refuse to start in production if AUTH_EXPOSE_RESET_TOKEN=true.
+  // The flag returns the raw reset token in the HTTP response (dev/E2E only).
+  // Shipping it to production would expose tokens via logs, proxies, and
+  // browser dev-tools.
+  if (
+    process.env.NODE_ENV === 'production' &&
+    process.env.AUTH_EXPOSE_RESET_TOKEN === 'true'
+  ) {
+    throw new Error(
+      "AUTH_EXPOSE_RESET_TOKEN='true' is forbidden in production " +
+        '(reset tokens would be returned in the HTTP response body). ' +
+        "Unset the variable or set it to 'false'.",
+    );
+  }
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     // SEC-013: trust the nginx hop on the internal docker network so req.ip is
