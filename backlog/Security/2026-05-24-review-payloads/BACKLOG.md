@@ -5402,7 +5402,7 @@ Add @@index([userId, status]), @@index([validatorId, status]), @@index([startDat
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 5400b37
 **Learnings:**
 Added 4 composite indexes to the Leave model in schema.prisma: [userId,status], [validatorId,status], [startDate,endDate], [leaveTypeId,status]. Migration 20260603114945_dat010_leave_indexes contains exactly 4 CREATE INDEX statements (no DROP/ALTER). Prisma mixes field names and mapped column names in index names — lifted exact names verbatim from generated SQL. Structural witness: before=leaves_no_overlap+leaves_pkey only; after=all 4 indexes present (confirmed via pg_indexes). Int spec follows dat016 pattern, asserting exact index names via pg_indexes. Acceptance #4 (audit entry) is N/A — pure index addition touches no audit-sensitive code path.
 
