@@ -14,6 +14,7 @@ import { test, expect } from "@playwright/test";
 import {
   PERMISSION_MATRIX,
   getResources,
+  isAuthorizedStatus,
   type PermissionEntry,
 } from "../../fixtures/permission-matrix";
 import { ROLE_STORAGE_PATHS, type Role } from "../../fixtures/roles";
@@ -105,13 +106,15 @@ for (const resource of resources) {
           const token = getTokenFromStorageState(role);
           const response = await callApi(request, baseURL, entry, token);
 
+          // TST-013: tightened from .not.toBe(403) — rejects 5xx / 401 as well.
+          // isAuthorizedStatus(): status < 500 && != 401 && != 403
           expect(
-            response.status(),
-            `[${role}] ${entry.method} ${entry.apiEndpoint} ne devrait PAS retourner 403.\n` +
+            isAuthorizedStatus(response.status()),
+            `[${role}] ${entry.method} ${entry.apiEndpoint} — statut non autorisé reçu.\n` +
               `Action: ${entry.action}\n` +
               `Description: ${entry.description ?? "—"}\n` +
-              `Statut reçu: ${response.status()}`,
-          ).not.toBe(403);
+              `Statut reçu: ${response.status()} (attendu: 2xx/3xx/4xx sauf 401/403)`,
+          ).toBe(true);
         });
       }
 

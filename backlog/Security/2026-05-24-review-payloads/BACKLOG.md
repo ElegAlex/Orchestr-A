@@ -6468,7 +6468,7 @@ Strengthened export.service tests: (1) Excel tests now capture the Blob from cre
 ---
 ### TST-013 — RBAC API permission test uses expect().not.toBe(403) — passes on 404/500 as 'authorized'
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 11
 - **Cluster:** H
 - **Confidence:** claude-only
@@ -6506,7 +6506,8 @@ pnpm test:e2e -- e2e/tests/rbac/api-permissions.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Extracted isAuthorizedStatus() pure helper from e2e/fixtures/permission-matrix.ts (export). Fixed predicate: status < 500 && != 401 && != 403 (replaces .not.toBe(403)). Unit test in packages/rbac/__tests__/rbac-auth-status.spec.ts imports across package boundary (vitest resolves it fine). FAIL-PRE: with broken predicate (status !== 403), test "rejects 500 Internal Server Error" fails: AssertionError: expected true to be false. PASS-POST: all 9 tests green. Spec assertion updated to expect(isAuthorizedStatus(response.status())).toBe(true). test:e2e not run (no app boot per E2E-GATE); structural witness: playwright --list 3582 tests still collected + build/unit gate green.
 
 ---
 ### TST-014 — Root e2e/permissions.spec.ts contains test.skip() and UI logins — duplicates and pollutes the structured RBAC matrix

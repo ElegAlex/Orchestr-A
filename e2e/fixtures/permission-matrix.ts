@@ -45,6 +45,21 @@ export interface PermissionEntry {
 // 404 = autorisé mais ressource absente ; 403 = interdit
 const PLACEHOLDER_UUID = "00000000-0000-0000-0000-000000000001";
 
+/**
+ * TST-013 — Tightened allowed-role status predicate.
+ *
+ * Returns true when a response status indicates the role WAS authorized
+ * (regardless of business-level outcome). Rejects 5xx (server error),
+ * 401 (unauthenticated), and 403 (forbidden) as non-authorized.
+ *
+ * Previous code used `.not.toBe(403)` which accepted 500/401 as "authorized",
+ * letting regressions where a guard was disabled but the controller throws 500
+ * pass silently.
+ */
+export function isAuthorizedStatus(status: number): boolean {
+  return status < 500 && status !== 401 && status !== 403;
+}
+
 // UUID v4 valide pour les endpoints utilisant ParseUUIDPipe (version: 4 par défaut).
 // Le nil UUID ci-dessus n'étant pas v4, le pipe 400-reject avant le guard d'autorisation.
 const PLACEHOLDER_UUID_V4 = "00000000-0000-4000-8000-000000000001";
