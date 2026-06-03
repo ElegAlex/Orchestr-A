@@ -6180,7 +6180,7 @@ pnpm test:e2e -- e2e/tests/security/telework-ownership.spec.ts
 ---
 ### TST-004 — Leave lifecycle E2E does not verify balance debit — final assertion is a tautology
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 11
 - **Cluster:** H
 - **Confidence:** claude-only
@@ -6218,7 +6218,14 @@ pnpm test:e2e -- e2e/tests/multi-role/leave-lifecycle.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Replaced the tautological assertion at L182-184 (right operand `url().includes("/leaves")` always true after reload) with a real balance-delta assertion.
+
+Design: fully API-driven — (1) GET /api/leaves/me/balance to read CP used-days before creation; (2) POST /api/leaves to create a 2026-08-25→26 CP leave (2 workdays, no holidays, in currentYear window); (3) POST /api/leaves/:id/approve via admin token (leaves:manage_any guarantees success regardless of service scope); (4) re-read balance and assert used === usedBefore + leave.days.
+
+Key decisions: (a) dates in 2026 so the Paris-year-window bucket matches currentYear; (b) admin approver to bypass service-scope canValidate check; (c) expectedDelta derived from create response (leave.days) not hardcoded to stay consistent with workday computation.
+
+Fail-pre witness: structural — old L182-184 tautology identified: `contributeurPage.url().includes("/leaves")` is always true after reload() to /leaves, so `isApproved || true` trivially passes. Spec parses and registers via `npx playwright test --list`: 2 tests, 8 project combinations confirmed.
 
 ---
 ### TST-005 — leaves.spec.ts contains zero negative-path assertions and no balance/approve coverage
