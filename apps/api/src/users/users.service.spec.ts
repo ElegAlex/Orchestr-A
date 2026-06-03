@@ -2578,6 +2578,42 @@ describe('UsersService', () => {
 
       expect(result.avatarUrl).toContain('user-1.webp');
     });
+
+    it('SEC-017: cleanup only deletes files with known extensions (.jpg/.png/.webp), not arbitrary userId-prefixed files', async () => {
+      // Before the fix: startsWith(userId+'.') also matches e.g. 'user-1.txt',
+      // 'user-1.sh' etc. — unlink would be called on non-avatar files.
+      (fs.readdir as unknown as Mock).mockResolvedValueOnce([
+        'user-1.jpg', // should be deleted (old avatar)
+        'user-1.txt', // must NOT be deleted
+        'user-1.sh',  // must NOT be deleted
+        'user-1_backup.png', // must NOT be deleted (underscore variant, unknown extension)
+        'user-2.jpg', // must NOT be deleted (different user)
+      ]);
+      mockPrismaService.user.update.mockResolvedValue({
+        id: 'user-1',
+        avatarUrl: '/api/uploads/avatars/user-1.png',
+        avatarPreset: null,
+      });
+
+      const mockFile = {
+        mimetype: 'image/png',
+        toBuffer: vi.fn().mockResolvedValue(Buffer.from('fake-png')),
+      } as any;
+
+      await service.uploadAvatar('user-1', mockFile);
+
+      const unlinkMock = fs.unlink as unknown as Mock;
+      const uploadsDir = join(process.cwd(), 'uploads', 'avatars');
+
+      // Must NOT unlink non-image-extension files
+      expect(unlinkMock).not.toHaveBeenCalledWith(join(uploadsDir, 'user-1.txt'));
+      expect(unlinkMock).not.toHaveBeenCalledWith(join(uploadsDir, 'user-1.sh'));
+      expect(unlinkMock).not.toHaveBeenCalledWith(join(uploadsDir, 'user-1_backup.png'));
+      // Must NOT touch other users' files
+      expect(unlinkMock).not.toHaveBeenCalledWith(join(uploadsDir, 'user-2.jpg'));
+      // Must unlink the old avatar
+      expect(unlinkMock).toHaveBeenCalledWith(join(uploadsDir, 'user-1.jpg'));
+    });
   });
 
   describe('setAvatarPreset', () => {

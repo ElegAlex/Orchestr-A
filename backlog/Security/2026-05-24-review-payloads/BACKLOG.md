@@ -4285,7 +4285,7 @@ pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ---
 ### SEC-017 — Avatar upload race condition / TOCTOU: cleanup loop deletes by userId prefix without validating ownership
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 6
 - **Cluster:** J
 - **Confidence:** claude-only
@@ -4323,7 +4323,8 @@ pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missi
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Fix: (1) Added @Throttle({ short: { limit: 5, ttl: 60_000 } }) on uploadAvatar controller endpoint (mirrors auth.controller.ts pattern, uses pre-configured "short" bucket). (2) Replaced permissive startsWith(userId+".") / startsWith(userId+"_") cleanup in both uploadAvatar and deleteAvatar with exact-match against the three known extensions (.jpg/.png/.webp) via f === `${userId}${ext}`. (3) Buffer-then-validate kept (not stream-chunk) because @fastify/multipart already caps fileSize at 2MB in main.ts — the buffer is bounded; stream plumbing would break existing upload tests for no security gain. Design: deleteAvatar was also affected by the same permissive-prefix pattern (same line 1884); both loops fixed together so the vuln class is fully closed. Acceptance #4 (audit log) not applicable — avatar upload is not in audit-sensitive list. FAIL-PRE: test SEC-017 (users.service.spec.ts) asserted unlink was NOT called on user-1.txt/user-1.sh/user-1_backup.png — RED on unfixed code (unlink IS called on all userId-prefixed files); GREEN after fix.
 
 ---
 ### SEC-018 — AUTH_EXPOSE_RESET_TOKEN=true in .env.example trains operators to ship insecure config

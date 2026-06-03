@@ -33,6 +33,7 @@ import {
   UsersValidationPreviewDto,
 } from './dto/import-users.dto';
 import { AvatarPresetDto } from './dto/avatar-preset.dto';
+import { Throttle } from '@nestjs/throttler';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 import { AllowPasswordChange } from '../auth/decorators/allow-password-change.decorator';
@@ -263,6 +264,7 @@ export class UsersController {
 
   @Post('me/avatar')
   @AllowSelfService()
+  @Throttle({ short: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Uploader un avatar (jpg, png, webp, max 2MB)' })
   @ApiConsumes('multipart/form-data')

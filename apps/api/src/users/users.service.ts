@@ -1828,10 +1828,14 @@ export class UsersService {
 
     await fs.mkdir(uploadsDir, { recursive: true });
 
+    // SEC-017: restrict cleanup to the three known extensions only.
+    // The old startsWith(userId+'.') / startsWith(userId+'_') was permissive
+    // and could delete non-image files (e.g. user-<id>.sh) sharing the prefix.
+    const KNOWN_AVATAR_EXTS = ['.jpg', '.png', '.webp'];
     try {
       const existing = await fs.readdir(uploadsDir);
       for (const f of existing) {
-        if (f.startsWith(userId + '.') || f.startsWith(userId + '_')) {
+        if (KNOWN_AVATAR_EXTS.some((ext) => f === `${userId}${ext}`)) {
           await fs.unlink(join(uploadsDir, f)).catch(() => null);
         }
       }
@@ -1878,10 +1882,14 @@ export class UsersService {
     const uploadsDir = join(process.cwd(), 'uploads', 'avatars');
     const resolvedUploadsDir = resolve(uploadsDir);
 
+    // SEC-017: mirror uploadAvatar's tightened cleanup — only the three known
+    // image extensions, matched by exact basename. The resolve() boundary check
+    // is kept as belt-and-suspenders from SEC-015.
+    const KNOWN_AVATAR_EXTS = ['.jpg', '.png', '.webp'];
     try {
       const existing = await fs.readdir(uploadsDir);
       for (const f of existing) {
-        if (f.startsWith(userId + '.') || f.startsWith(userId + '_')) {
+        if (KNOWN_AVATAR_EXTS.some((ext) => f === `${userId}${ext}`)) {
           const candidate = resolve(uploadsDir, f);
           if (candidate.startsWith(resolvedUploadsDir + sep)) {
             await fs.unlink(candidate).catch(() => null);
