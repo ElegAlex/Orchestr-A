@@ -174,7 +174,16 @@ export class SchoolVacationsService {
       `Importing school vacations for zone ${zone}, year ${anneeScolaire}`,
     );
 
-    const response = await fetch(`${url}?${params.toString()}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    let response: Response;
+    try {
+      response = await fetch(`${url}?${params.toString()}`, {
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     if (!response.ok) {
       throw new Error(
         `Open Data API error: ${response.status} ${response.statusText}`,

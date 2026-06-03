@@ -465,5 +465,19 @@ describe('SchoolVacationsService', () => {
       expect(result.created).toBe(1);
       expect(mockPrismaService.schoolVacation.create).toHaveBeenCalledTimes(1);
     });
+
+    it('should pass an AbortSignal to fetch (timeout guard)', async () => {
+      mockPrismaService.schoolVacation.create.mockResolvedValue({});
+
+      await service.importFromOpenData(2025, SchoolVacationZone.A, 'user-1');
+
+      // The fetch call must have received an options object with an AbortSignal
+      // so that a 10s timeout can cancel the request on slow upstream responses.
+      const fetchMock = vi.mocked(globalThis.fetch);
+      const callArgs = fetchMock.mock.calls[0];
+      expect(callArgs).toBeDefined();
+      const opts = callArgs[1] as RequestInit | undefined;
+      expect(opts?.signal).toBeInstanceOf(AbortSignal);
+    });
   });
 });

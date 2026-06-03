@@ -20,6 +20,7 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { SchoolVacationsService } from './school-vacations.service';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -98,6 +99,7 @@ export class SchoolVacationsController {
 
   @Post('import')
   @RequirePermissions('school_vacations:create')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
   @ApiOperation({
     summary:
       "Importer les vacances scolaires depuis l'Open Data Éducation Nationale (Admin uniquement)",
