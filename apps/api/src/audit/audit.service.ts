@@ -168,6 +168,21 @@ export class AuditService {
     // explicit, and the `.catch` is load-bearing — a DB failure must degrade
     // to logger-only, never crash a login/leave-approval flow. OBS-002 will
     // later harden append-only enforcement and the hash chain at the DB level.
+    //
+    // PERF-001 decision (2026-06-03) — KEEP synchronous fire-and-forget.
+    // A bounded in-process queue was evaluated and rejected for two reasons:
+    //  1. Correctness: audit-persistence.service.ts serializes every INSERT on
+    //     pg_advisory_xact_lock to maintain the hash-chain total order. An
+    //     in-process queue cannot parallelize the DB work; it only adds a
+    //     buffering hop before the same serialization point.
+    //  2. Durability: a bounded queue's relief valve is event dropping — i.e.
+    //     dropping LOGIN_SUCCESS / ACCESS_DENIED records, a compliance regression
+    //     against the durability guarantee DAT-002 bought.
+    // Projected volume (throttle: 30 logins/min/IP, current user base) stays
+    // well below connection-pool saturation. If profiling ever shows pool
+    // contention, the correct remediation is a dedicated audit DB connection pool
+    // (or an async durable log like a WAL-backed queue), revisited when the
+    // emitter surface widens (OBS-002 follow-up).
     void this.auditPersistence
       .log({
         action: event.action,

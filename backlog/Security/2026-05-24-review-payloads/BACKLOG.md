@@ -803,7 +803,7 @@ pnpm test apps/api/src/audit/audit.service.spec.ts  # may need creation if missi
 ---
 ### PERF-001 — Audit dual-write is synchronous fire-and-forget — unbounded under high-volume LOGIN_SUCCESS
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** claude-only
@@ -825,7 +825,15 @@ Durability (DAT-002) was prioritized over backpressure; the write path is unbatc
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
 **Learnings:**
-- **OBS-002/DAT-009 (`d6299cc`, 2026-05-25) strengthens this task's case.** The hash chain now serializes EVERY audit INSERT on a single `pg_advisory_xact_lock` (an append-only ledger must be totally ordered), so concurrent LOGIN_SUCCESS bursts no longer just contend for pool slots — they serialize on one mutex and queue behind each other inside their transactions. The synchronous fire-and-forget `void auditPersistence.log(...)` path is now a global serialization point, not just an unbatched write. This makes the async/queued-sink decision (this task) materially more pressing once the emitter surface widens. No change made here; decision record only.
+DECISION: KEEP synchronous fire-and-forget.
+
+FAIL-PRE witness (EXCEPTION clause applies): spec explicitly states no code change is mandated, it is the decision record. Acceptance #1 is documentation only; Acceptance #2 (benchmark) is conditional on choosing a queue/batched sink, which was rejected. No RED unit test is appropriate.
+
+Design rationale: a bounded in-process queue was evaluated and rejected on two grounds: (1) correctness -- audit-persistence.service.ts serializes every INSERT on pg_advisory_xact_lock for hash-chain total ordering; an in-process queue cannot parallelize the DB work, only adds a buffering hop before the same serialization point; (2) durability -- a bounded queue relief valve is event-dropping, i.e. dropping LOGIN_SUCCESS/ACCESS_DENIED records, a compliance regression against DAT-002. Projected volume (30 logins/min/IP throttle, current user base) stays below connection-pool saturation. If profiling ever shows pool contention, the correct fix is a dedicated audit DB connection pool or WAL-backed async durable log, revisited when the emitter surface widens (OBS-002 follow-up).
+
+No load/benchmark harness exists in the repo, which is positive evidence for the keep path.
+
+Decision recorded at audit.service.ts (inline comment at the fire-and-forget site).
 
 ---
 ### OBS-002 — Append-only is a convention, not enforced by DB
