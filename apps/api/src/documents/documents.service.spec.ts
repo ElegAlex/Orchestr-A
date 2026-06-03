@@ -238,15 +238,49 @@ describe('DocumentsService', () => {
   });
 
   describe('remove', () => {
-    it('should delete a document', async () => {
+    it('should soft-delete a document (DAT-025: sets deletedAt, does NOT hard-delete)', async () => {
       mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
-      mockPrismaService.document.delete.mockResolvedValue(mockDocument);
+      mockPrismaService.document.update.mockResolvedValue({
+        ...mockDocument,
+        deletedAt: new Date(),
+      });
 
       await service.remove('doc-1');
 
-      expect(mockPrismaService.document.delete).toHaveBeenCalledWith({
-        where: { id: 'doc-1' },
+      // After DAT-025 fix: soft-delete via update, not hard-delete
+      expect(mockPrismaService.document.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'doc-1' },
+          data: expect.objectContaining({ deletedAt: expect.any(Date) }) as object,
+        }),
+      );
+      expect(mockPrismaService.document.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findAll (DAT-025: excludes soft-deleted)', () => {
+    it('filters out soft-deleted documents (deletedAt: null in where clause)', async () => {
+      mockPrismaService.document.findMany.mockResolvedValue([mockDocument]);
+      mockPrismaService.document.count.mockResolvedValue(1);
+
+      await service.findAll(1, 10);
+
+      expect(mockPrismaService.document.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ deletedAt: null }) as object,
+        }),
+      );
+    });
+  });
+
+  describe('findOne (DAT-025: soft-deleted document treated as not found)', () => {
+    it('throws NotFoundException for a soft-deleted document', async () => {
+      mockPrismaService.document.findUnique.mockResolvedValue({
+        ...mockDocument,
+        deletedAt: new Date(),
       });
+
+      await expect(service.findOne('doc-1')).rejects.toThrow(NotFoundException);
     });
   });
 });

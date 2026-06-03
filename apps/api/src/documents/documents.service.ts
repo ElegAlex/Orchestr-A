@@ -55,7 +55,7 @@ export class DocumentsService {
   ) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
-    const where: Prisma.DocumentWhereInput = {};
+    const where: Prisma.DocumentWhereInput = { deletedAt: null }; // DAT-025: exclude soft-deleted
     if (projectId) where.projectId = projectId;
     if (currentUser) {
       where.AND = [await this.accessScope.documentReadWhere(currentUser)];
@@ -100,7 +100,7 @@ export class DocumentsService {
         project: true,
       },
     });
-    if (!document) throw new NotFoundException('Document introuvable');
+    if (!document || document.deletedAt) throw new NotFoundException('Document introuvable'); // DAT-025: treat soft-deleted as not found
 
     // OBS-006 — emit DOCUMENT_READ only on a caller-driven fetch-by-id, AFTER
     // the access check and existence check pass (no trail for denied/missing
@@ -156,7 +156,11 @@ export class DocumentsService {
 
   async remove(id: string) {
     await this.findOne(id);
-    await this.prisma.document.delete({ where: { id } });
+    // DAT-025: soft-delete — set deletedAt instead of hard-delete; preserves FK audit trail
+    await this.prisma.document.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
     return { message: 'Document supprimé avec succès' };
   }
 }

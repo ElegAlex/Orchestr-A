@@ -87,6 +87,7 @@ model User {
   archivedProjects                 Project[]                     @relation("ProjectArchiver")
   auditLogs                        AuditLog[]                    @relation("AuditActor")
   completedAssignments             PredefinedTaskAssignment[]    @relation("AssignmentCompletedBy")
+  uploadedDocuments                Document[]                    @relation("DocumentUploader") // DAT-025: back-relation for uploadedBy FK
 
   @@index([isActive])     // PER-011: hot predicate — presence, analytics, workload, leaves import
   @@index([departmentId]) // PER-011: hot predicate — organigramme, per-department queries
@@ -775,21 +776,25 @@ enum SkillLevel {
 // ===========================
 
 model Document {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  url         String
-  mimeType    String
-  size        Int // Size in bytes
-  projectId   String
-  uploadedBy  String
-  createdAt   DateTime @default(now())
+  id             String    @id @default(uuid())
+  name           String
+  description    String?
+  url            String
+  mimeType       String
+  size           Int // Size in bytes
+  projectId      String
+  uploadedBy     String? // DAT-025: nullable for onDelete:SetNull on User FK
+  contentSha256  String? // DAT-025: integrity hash (nullable — no upload pipeline yet)
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime? // DAT-025: soft-delete timestamp
 
   // Relations
-  project Project @relation(fields: [projectId], references: [id], onDelete: Restrict) // DAT-007: Restrict (was Cascade) — project documents must not be erased by a Project hard-delete
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Restrict) // DAT-007: Restrict (was Cascade) — project documents must not be erased by a Project hard-delete
+  uploader User?   @relation("DocumentUploader", fields: [uploadedBy], references: [id], onDelete: SetNull) // DAT-025: FK to User; SetNull on user deletion
 
   @@index([projectId])  // DAT-011: FK without auto-index
   @@index([uploadedBy]) // DAT-011: FK without auto-index
+  @@index([deletedAt])  // DAT-025: soft-delete filter performance
   @@map("documents")
 }
 
