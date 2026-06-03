@@ -108,6 +108,7 @@ model Department {
   users    User[]    @relation("DepartmentUsers")
   services Service[]
 
+  @@index([managerId]) // DAT-011: FK without auto-index
   @@map("departments")
 }
 
@@ -130,6 +131,7 @@ model Service {
   // same name in different departments remain legal (the app layer already
   // pre-checks { name, departmentId }).
   @@unique([departmentId, name])
+  @@index([managerId]) // DAT-011: FK without auto-index (departmentId already leading in unique composite)
   @@map("services")
 }
 
@@ -188,6 +190,10 @@ model Project {
   snapshots         ProjectSnapshot[]
 
   @@index([archivedAt])
+  @@index([createdById]) // DAT-011: FK without auto-index
+  @@index([managerId])   // DAT-011: FK without auto-index
+  @@index([sponsorId])   // DAT-011: FK without auto-index
+  @@index([archivedById]) // DAT-011: FK without auto-index
   @@map("projects")
 }
 
@@ -257,6 +263,7 @@ model Epic {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks   Task[]
 
+  @@index([projectId]) // DAT-011: FK without auto-index
   @@map("epics")
 }
 
@@ -274,6 +281,7 @@ model Milestone {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks   Task[]
 
+  @@index([projectId]) // DAT-011: FK without auto-index
   @@map("milestones")
 }
 
@@ -612,6 +620,7 @@ model Leave {
   @@index([validatorId, status])
   @@index([startDate, endDate])
   @@index([leaveTypeId, status])
+  @@index([validatedById]) // DAT-011: FK without auto-index (not covered by DAT-010 composites)
   @@map("leaves")
 }
 
@@ -630,6 +639,8 @@ model LeaveValidationDelegate {
   delegator User @relation("DelegatorUser", fields: [delegatorId], references: [id], onDelete: Cascade)
   delegate  User @relation("DelegateUser", fields: [delegateId], references: [id], onDelete: Cascade)
 
+  @@index([delegatorId]) // DAT-011: FK without auto-index
+  @@index([delegateId])  // DAT-011: FK without auto-index
   @@map("leave_validation_delegates")
 }
 
@@ -766,6 +777,8 @@ model Document {
   // Relations
   project Project @relation(fields: [projectId], references: [id], onDelete: Restrict) // DAT-007: Restrict (was Cascade) — project documents must not be erased by a Project hard-delete
 
+  @@index([projectId])  // DAT-011: FK without auto-index
+  @@index([uploadedBy]) // DAT-011: FK without auto-index
   @@map("documents")
 }
 
@@ -785,6 +798,8 @@ model Comment {
   task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
+  @@index([taskId])   // DAT-011: FK without auto-index
+  @@index([authorId]) // DAT-011: FK without auto-index
   @@map("comments")
 }
 
@@ -854,6 +869,7 @@ model Holiday {
 
   @@unique([date])
   @@index([date])
+  @@index([createdById]) // DAT-011: FK without auto-index
   @@map("holidays")
 }
 
@@ -932,6 +948,9 @@ model Event {
   parentEvent  Event?             @relation("EventRecurrence", fields: [parentEventId], references: [id], onDelete: Cascade)
   childEvents  Event[]            @relation("EventRecurrence")
 
+  @@index([projectId])    // DAT-011: FK without auto-index
+  @@index([createdById])  // DAT-011: FK without auto-index
+  @@index([parentEventId]) // DAT-011: FK without auto-index (recurrence chain lookups)
   @@map("events")
 }
 
@@ -1024,6 +1043,7 @@ model PredefinedTask {
   assignments    PredefinedTaskAssignment[]
   recurringRules PredefinedTaskRecurringRule[]
 
+  @@index([createdById]) // DAT-011: FK without auto-index
   @@map("predefined_tasks")
 }
 
@@ -1079,6 +1099,9 @@ model PredefinedTaskRecurringRule {
   createdBy      User                       @relation("PredefinedTaskRecurringRuleCreator", fields: [createdById], references: [id], onDelete: Cascade)
   assignments    PredefinedTaskAssignment[]
 
+  @@index([predefinedTaskId]) // DAT-011: FK without auto-index
+  @@index([userId])           // DAT-011: FK without auto-index
+  @@index([createdById])      // DAT-011: FK without auto-index
   @@map("predefined_task_recurring_rules")
 }
 
@@ -1099,6 +1122,8 @@ model PasswordResetToken {
   user      User @relation("PasswordResetTokenUser", fields: [userId], references: [id], onDelete: Cascade)
   createdBy User @relation("PasswordResetTokenCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
+  @@index([userId])      // DAT-011: FK without auto-index
+  @@index([createdById]) // DAT-011: FK without auto-index
   @@map("password_reset_tokens")
 }
 

@@ -5409,7 +5409,7 @@ Added 4 composite indexes to the Leave model in schema.prisma: [userId,status], 
 ---
 ### DAT-011 — Missing indexes on FK columns: Department.managerId, Service.{departmentId,managerId}, ProjectMember.userId, Comment.{taskId,authorId}, etc.
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5447,7 +5447,8 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added 25 single-column B-tree indexes on FK columns that lacked them. Followed SCHEMA INDEX EXCEPTION: no behavioural unit test, structural witness via pg_indexes (all absent before migration, all present after). Skipped Leave.userId/validatorId/leaveTypeId (covered as leading columns in DAT-010 composites) and Service.departmentId (leading in unique composite). Leave.validatedById added separately since validated_by_id is @map'd and not covered by DAT-010 composites. Migration: 20260603115724_dat011_fk_indexes — pure CREATE INDEX only. Index names verified verbatim from generated SQL before pinning in spec.
 
 ---
 ### PER-004 — User listing default limit 1000 — effective unbounded
