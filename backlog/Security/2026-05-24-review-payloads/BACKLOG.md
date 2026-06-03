@@ -6175,7 +6175,7 @@ Delete the placeholder file. If kept for traceability, convert it to a documente
 pnpm test:e2e -- e2e/tests/security/telework-ownership.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 9b1085b
 **Learnings:**
 Deleted empty placeholder e2e/tests/security/telework-ownership.spec.ts that contained a single test.skip stub. Real cross-user telework IDOR coverage (PATCH/DELETE non-owner→403, ADMIN→2xx) lives in e2e/tests/security/ownership-idor.spec.ts (Ownership IDOR — telework (BUG-01) describe block, lines 292+). Fail-pre witness: grep -c test.skip telework-ownership.spec.ts=1 before fix; file absent after fix. No unit test fabricated — structural witness per discover-report instructions.
 
