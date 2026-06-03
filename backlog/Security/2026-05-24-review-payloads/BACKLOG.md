@@ -4365,7 +4365,7 @@ Set AUTH_EXPOSE_RESET_TOKEN=false in .env.example and explicitly document it as 
 TBD — manual verification (env config), plus boot-assert test if applicable
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** a3597d0
 **Learnings:**
 auth.service.ts (adjacent file) justified: the disclosure point is generateResetToken, which reads the flag; the production guard must live there (not in main.ts alone) to be unit-testable.
 Fix: exposeToken condition now includes `&& process.env.NODE_ENV !== "production"`, using process.env directly (not ConfigService.get) to avoid disturbing the existing mockImplementationOnce call-count contract in tests.
