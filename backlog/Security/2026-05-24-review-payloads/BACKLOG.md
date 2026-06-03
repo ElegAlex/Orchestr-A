@@ -5684,7 +5684,7 @@ Added @@index([isActive]), @@index([departmentId]), @@index([roleId]) to User mo
 ---
 ### PER-012 — Event table missing indexes on date, projectId, createdById
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 9
 - **Cluster:** E
 - **Confidence:** claude-only
@@ -5722,7 +5722,8 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added @@index([date]) and @@index([createdById, date]) to Event, and @@index([userId]) to EventParticipant. DAT-011 had already added single-column projectId and createdById indexes so those were NOT re-added (additive only). Migration 20260603121745_per012_event_missing_indexes. SCHEMA INDEX EXCEPTION: fail-pre witness = pg_indexes showed events_date_idx, events_createdById_date_idx, event_participants_userId_idx ABSENT before migration; PRESENT after migrate deploy. Int spec (per012-event-indexes.int.spec.ts) was RED (4 failures) before migration file existed, GREEN after.
 
 ---
 ### PER-013 — Task missing indexes on endDate/startDate/milestoneId/epicId

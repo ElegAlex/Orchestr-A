@@ -957,6 +957,8 @@ model Event {
   @@index([projectId])    // DAT-011: FK without auto-index
   @@index([createdById])  // DAT-011: FK without auto-index
   @@index([parentEventId]) // DAT-011: FK without auto-index (recurrence chain lookups)
+  @@index([date])                // PER-012: primary range filter — /planning 6-month window
+  @@index([createdById, date])   // PER-012: owner + date composite — list events by creator with range
   @@map("events")
 }
 
@@ -969,6 +971,7 @@ model EventParticipant {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([eventId, userId])
+  @@index([userId]) // PER-012: participant look-up without full table scan
   @@map("event_participants")
 }
 
