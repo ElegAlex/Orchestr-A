@@ -6330,7 +6330,7 @@ fail_pre: tasks project filter test — Found a label with the text of: /projet/
 ---
 ### TST-007 — Security IDOR tests rely on beforeAll-created IDs and skip with 'creation failed in beforeAll' — green when broken
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 11
 - **Cluster:** H
 - **Confidence:** claude-only
@@ -6368,7 +6368,8 @@ pnpm test:e2e -- e2e/tests/security/ownership-idor.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Replaced 23 test.skip(!id, msg) guards across 4 security E2E specs with expect(id, msg).toBeTruthy() so a failed beforeAll fixture now FAILs the test instead of silently skipping it (green-when-broken). Design decision: used toBeTruthy() not toBeDefined() because ids initialize as null — expect(null).toBeDefined() would PASS (null is defined), defeating the fix entirely. Multi-line case in users-create-hierarchy L127-130 handled with Edit tool. The 3 intentional project-name guards (test.skip(testInfo.project.name!==admin)) were preserved untouched. Fail-pre is STRUCTURAL: behavioral RED requires booting the app (barred by E2E-GATE); witness = grep showing 23 dangerous patterns before fix, 0 after; npx playwright test --list confirms all specs still parse and collect tests. force-password-change.spec.ts has 2 similar patterns but is outside real_files scope for this task.
 
 ---
 ### TST-009 — Leaves service spec relies on hand-rolled $transaction mock that re-feeds the same mock object

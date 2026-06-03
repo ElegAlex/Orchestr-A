@@ -146,7 +146,7 @@ test.describe(
     test("responsable (ADMIN_DELEGATED) cannot reset an ADMIN-tier user → 403", async ({
       request,
     }) => {
-      test.skip(!targetUserId, "target user setup failed in beforeAll");
+      expect(targetUserId, "target user setup failed in beforeAll").toBeTruthy();
       const res = await request.post(
         `${baseUrl()}/api/auth/reset-password-token`,
         {
@@ -163,7 +163,7 @@ test.describe(
     test("admin can reset, response carries token, target refresh tokens are revoked", async ({
       request,
     }) => {
-      test.skip(!targetUserId, "target user setup failed in beforeAll");
+      expect(targetUserId, "target user setup failed in beforeAll").toBeTruthy();
 
       const tokenRes = await request.post(
         `${baseUrl()}/api/auth/reset-password-token`,

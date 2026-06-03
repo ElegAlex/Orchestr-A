@@ -133,7 +133,7 @@ test.describe("Ownership IDOR — projects (BUG-04/08)", () => {
     "PATCH /projects/:id as non-owner contributeur → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      test.skip(!projectId, "Project creation failed in beforeAll");
+      expect(projectId, "Project creation failed in beforeAll").toBeTruthy();
       const res = await request.patch(
         `${baseUrl()}/api/projects/${projectId}`,
         {
@@ -149,7 +149,7 @@ test.describe("Ownership IDOR — projects (BUG-04/08)", () => {
     "DELETE /projects/:id as non-owner contributeur → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      test.skip(!projectId, "Project creation failed in beforeAll");
+      expect(projectId, "Project creation failed in beforeAll").toBeTruthy();
       const res = await request.delete(
         `${baseUrl()}/api/projects/${projectId}`,
         { headers: auth("contributeur") },
@@ -161,7 +161,7 @@ test.describe("Ownership IDOR — projects (BUG-04/08)", () => {
   test("POST /projects/:id/members as non-owner contributeur → 403", async ({
     request,
   }) => {
-    test.skip(!projectId, "Project creation failed in beforeAll");
+    expect(projectId, "Project creation failed in beforeAll").toBeTruthy();
     const target = userFor("referent");
     const res = await request.post(
       `${baseUrl()}/api/projects/${projectId}/members`,
@@ -177,7 +177,7 @@ test.describe("Ownership IDOR — projects (BUG-04/08)", () => {
     "PATCH /projects/:id as ADMIN (bypass projects:manage_any) → 2xx",
     { tag: "@smoke" },
     async ({ request }) => {
-      test.skip(!projectId, "Project creation failed in beforeAll");
+      expect(projectId, "Project creation failed in beforeAll").toBeTruthy();
       const res = await request.patch(
         `${baseUrl()}/api/projects/${projectId}`,
         {
@@ -239,7 +239,7 @@ test.describe("Ownership IDOR — events (BUG-05)", () => {
     "PATCH /events/:id as non-owner referent → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      test.skip(!eventId, "Event creation failed in beforeAll");
+      expect(eventId, "Event creation failed in beforeAll").toBeTruthy();
       const res = await request.patch(`${baseUrl()}/api/events/${eventId}`, {
         headers: auth("referent", true),
         data: { title: "Hijacked by referent" },
@@ -252,7 +252,7 @@ test.describe("Ownership IDOR — events (BUG-05)", () => {
     "DELETE /events/:id as non-owner referent → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      test.skip(!eventId, "Event creation failed in beforeAll");
+      expect(eventId, "Event creation failed in beforeAll").toBeTruthy();
       const res = await request.delete(`${baseUrl()}/api/events/${eventId}`, {
         headers: auth("referent"),
       });
@@ -263,7 +263,7 @@ test.describe("Ownership IDOR — events (BUG-05)", () => {
   test("POST /events/:id/participants as non-owner referent → 403", async ({
     request,
   }) => {
-    test.skip(!eventId, "Event creation failed in beforeAll");
+    expect(eventId, "Event creation failed in beforeAll").toBeTruthy();
     const target = userFor("observateur");
     const res = await request.post(
       `${baseUrl()}/api/events/${eventId}/participants`,
@@ -278,7 +278,7 @@ test.describe("Ownership IDOR — events (BUG-05)", () => {
   test("PATCH /events/:id as ADMIN (bypass events:manage_any) → 2xx", async ({
     request,
   }) => {
-    test.skip(!eventId, "Event creation failed in beforeAll");
+    expect(eventId, "Event creation failed in beforeAll").toBeTruthy();
     const res = await request.patch(`${baseUrl()}/api/events/${eventId}`, {
       headers: auth("admin", true),
       data: { title: "Updated by admin with manage_any" },
@@ -320,7 +320,7 @@ test.describe("Ownership IDOR — telework (BUG-01)", () => {
     "PATCH /telework/:id as non-owner referent → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      test.skip(!teleworkId, "Telework creation failed in beforeAll");
+      expect(teleworkId, "Telework creation failed in beforeAll").toBeTruthy();
       const res = await request.patch(
         `${baseUrl()}/api/telework/${teleworkId}`,
         {
@@ -336,7 +336,7 @@ test.describe("Ownership IDOR — telework (BUG-01)", () => {
     "DELETE /telework/:id as non-owner referent → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      test.skip(!teleworkId, "Telework creation failed in beforeAll");
+      expect(teleworkId, "Telework creation failed in beforeAll").toBeTruthy();
       const res = await request.delete(
         `${baseUrl()}/api/telework/${teleworkId}`,
         { headers: auth("referent") },
@@ -346,7 +346,7 @@ test.describe("Ownership IDOR — telework (BUG-01)", () => {
   );
 
   test("PATCH /telework/:id as ADMIN → 2xx", async ({ request }) => {
-    test.skip(!teleworkId, "Telework creation failed in beforeAll");
+    expect(teleworkId, "Telework creation failed in beforeAll").toBeTruthy();
     const res = await request.patch(`${baseUrl()}/api/telework/${teleworkId}`, {
       headers: auth("admin", true),
       data: { date: "2027-07-16T00:00:00Z" },
@@ -393,7 +393,7 @@ test.describe("Ownership IDOR — time-tracking (SEC-06)", () => {
     "PATCH /time-tracking/:id as non-owner referent → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      test.skip(!timeEntryId, "Time entry creation failed in beforeAll");
+      expect(timeEntryId, "Time entry creation failed in beforeAll").toBeTruthy();
       const res = await request.patch(
         `${baseUrl()}/api/time-tracking/${timeEntryId}`,
         {
@@ -409,7 +409,7 @@ test.describe("Ownership IDOR — time-tracking (SEC-06)", () => {
     "DELETE /time-tracking/:id as non-owner referent → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      test.skip(!timeEntryId, "Time entry creation failed in beforeAll");
+      expect(timeEntryId, "Time entry creation failed in beforeAll").toBeTruthy();
       const res = await request.delete(
         `${baseUrl()}/api/time-tracking/${timeEntryId}`,
         { headers: auth("referent") },
@@ -444,7 +444,7 @@ test.describe("Ownership IDOR — time-tracking (SEC-06)", () => {
   });
 
   test("PATCH /time-tracking/:id as ADMIN → 2xx", async ({ request }) => {
-    test.skip(!timeEntryId, "Time entry creation failed in beforeAll");
+    expect(timeEntryId, "Time entry creation failed in beforeAll").toBeTruthy();
     const res = await request.patch(
       `${baseUrl()}/api/time-tracking/${timeEntryId}`,
       {
@@ -494,7 +494,7 @@ test.describe("Ownership IDOR — leaves (cancel / reject-cancellation)", () => 
     "POST /leaves/:id/cancel as out-of-perimeter MANAGER → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      test.skip(!leaveId, "Leave creation failed in beforeAll");
+      expect(leaveId, "Leave creation failed in beforeAll").toBeTruthy();
       // test manager is not the hierarchical manager of test contributeur
       // → cancel of another user's leave must be refused.
       const res = await request.post(
@@ -514,7 +514,7 @@ test.describe("Ownership IDOR — leaves (cancel / reject-cancellation)", () => 
     "POST /leaves/:id/reject-cancellation as out-of-perimeter MANAGER → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      test.skip(!leaveId, "Leave creation failed in beforeAll");
+      expect(leaveId, "Leave creation failed in beforeAll").toBeTruthy();
       const res = await request.post(
         `${baseUrl()}/api/leaves/${leaveId}/reject-cancellation`,
         { headers: auth("manager", true), data: {} },
@@ -571,7 +571,7 @@ test.describe("Ownership IDOR — full 6-role smoke matrix", () => {
       `PATCH /projects/:id as ${role} → ${expectForbidden ? "403" : "2xx"}`,
       { tag: "@smoke" },
       async ({ request }) => {
-        test.skip(!projectId, "Project creation failed in beforeAll");
+        expect(projectId, "Project creation failed in beforeAll").toBeTruthy();
         const res = await request.patch(
           `${baseUrl()}/api/projects/${projectId}`,
           {

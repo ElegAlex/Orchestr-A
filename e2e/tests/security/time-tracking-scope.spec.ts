@@ -135,7 +135,7 @@ test.describe(
     test("contributeur POST /time-tracking with out-of-scope taskId → 403", async ({
       request,
     }) => {
-      test.skip(!taskId, "Project/task setup failed in beforeAll");
+      expect(taskId, "Project/task setup failed in beforeAll").toBeTruthy();
       const res = await request.post(`${baseUrl()}/api/time-tracking`, {
         headers: auth("contributeur", true),
         data: {
@@ -155,7 +155,7 @@ test.describe(
     test("contributeur POST /time-tracking with out-of-scope projectId → 403", async ({
       request,
     }) => {
-      test.skip(!projectId, "Project/task setup failed in beforeAll");
+      expect(projectId, "Project/task setup failed in beforeAll").toBeTruthy();
       const res = await request.post(`${baseUrl()}/api/time-tracking`, {
         headers: auth("contributeur", true),
         data: {
@@ -175,7 +175,7 @@ test.describe(
     test("admin POST /time-tracking against same task → 201 (manage_any bypass)", async ({
       request,
     }) => {
-      test.skip(!taskId, "Project/task setup failed in beforeAll");
+      expect(taskId, "Project/task setup failed in beforeAll").toBeTruthy();
       const res = await request.post(`${baseUrl()}/api/time-tracking`, {
         headers: auth("admin", true),
         data: {

@@ -124,10 +124,7 @@ test.describe(
       test(`role "${role}" attempts POST /users with ADMIN-template role`, async ({
         request,
       }) => {
-        test.skip(
-          !institutionalAdminRoleId,
-          "Institutional ADMIN role setup failed in beforeAll",
-        );
+        expect(institutionalAdminRoleId, "Institutional ADMIN role setup failed in beforeAll").toBeTruthy();
         const res = await request.post(`${baseUrl()}/api/users`, {
           headers: auth(role, true),
           data: payloadFor(role),
