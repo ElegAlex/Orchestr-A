@@ -686,7 +686,7 @@ Pick ONE — (a) drop the backup tables now via a one-shot SQL script committed 
 pnpm --filter database exec prisma migrate dev --create-only --name _probe  # succeeds (no drift error) after the chosen mechanism; delete the probe migration afterwards
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 07cc23b
 **Learnings:**
 - **Mechanism: forward migration `20260603120000_drop_dat005_backup_tables`, NOT the suggested scripts/db one-shot (option a).** The 5 `_dat005_backup_*` tables are CREATED by migration `20260524100000_dat005_backup_float_columns` and absent from schema.prisma. Dropping them out-of-band (a scripts/db SQL run) leaves migration-history-vs-DB drift — empirically: after a manual drop, `migrate dev --create-only` reported `[-] Removed tables … We need to reset`. Only a dedicated forward migration reconciles schema.prisma ↔ history ↔ DB, append-only.
 - **Applied to dev via `prisma migrate resolve --applied 20260603120000_drop_dat005_backup_tables`** (the tables had already been dropped during diagnosis; resolve records the migration without re-running).
