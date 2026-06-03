@@ -35,6 +35,7 @@ import { ThirdPartiesModule } from './third-parties/third-parties.module';
 import { ClientsModule } from './clients/clients.module';
 import { PlanningModule } from './planning/planning.module';
 import { CommonModule } from './common/common.module';
+import { TestingModule } from './testing/testing.module';
 
 @Module({
   imports: [
@@ -86,6 +87,8 @@ import { CommonModule } from './common/common.module';
     ClientsModule,
     PlanningModule,
     CommonModule,
+    // TST-017: DB-reset endpoint for E2E test isolation — not available in production
+    ...(process.env.NODE_ENV !== 'production' ? [TestingModule] : []),
   ],
   controllers: [AppController],
   providers: [AppService],

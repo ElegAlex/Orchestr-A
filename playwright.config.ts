@@ -4,7 +4,18 @@ const baseURL = process.env.CI
   ? "http://localhost:3000"
   : "http://localhost:4001";
 
+// TST-017: reset the E2E DB to a clean state before each full Playwright run.
+// The globalSetup module calls POST /api/testing/reset (NODE_ENV!==production
+// guard on server) then lets CI re-seed via pnpm db:seed.
+// This gives a deterministic starting state and eliminates cross-spec data leakage.
+const apiURL = process.env.CI
+  ? "http://localhost:3001"
+  : "http://localhost:3001";
+
+export { apiURL };
+
 export default defineConfig({
+  globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

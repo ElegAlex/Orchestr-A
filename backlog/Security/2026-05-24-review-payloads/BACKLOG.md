@@ -6576,7 +6576,7 @@ pnpm test:e2e -- e2e/tests/gantt/gantt-project.spec.ts
 ---
 ### TST-017 — E2E DB is not reset between runs and is seeded once — test data leaks across spec files
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 11
 - **Cluster:** H
 - **Confidence:** claude-only
@@ -6614,7 +6614,16 @@ TBD — manual verification (config change, no automated test)
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Implemented guarded test-only POST /api/testing/reset endpoint.
+
+Design: TestingController calls prisma.cleanDatabase() with a dual-layer guard: (1) AppModule conditionally registers TestingModule only when NODE_ENV!==production; (2) the handler itself throws ForbiddenException if NODE_ENV===production as defense-in-depth. Endpoint is @Public() because Playwright globalSetup runs before any auth state is established.
+
+Fail-pre witness: structural absence — `ls apps/api/src/testing/` → ENOENT before implementation; unit test `testing.controller.spec.ts` → Cannot find module error (RED). Post-fix: 3/3 tests GREEN.
+
+Scope note: globalSetup gives a clean *start* for each full Playwright run, eliminating the one-seed-per-CI-run data leakage. It does NOT isolate parallel workers from each other within a single run — full per-spec isolation (e.g. savepoint wrapping) is future work. The seed step in ci.yml stays in place and runs after the reset. e2e/global-setup.ts swallows connection-refused errors in local dev so tests still run when the API is not up.
+
+Plaintiff spec (leave-balance-gating.spec.ts) used years 2030/2031 as a workaround for the missing isolation — this remains harmless but can be normalised in a follow-up once the reset endpoint is proven in CI.
 
 ---
 ### TST-019 — Auth controller spec asserts toHaveBeenCalledWith for thin pass-throughs — tests the mock, not behavior
