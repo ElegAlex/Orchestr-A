@@ -4602,7 +4602,7 @@ Wrap in a single $transaction([...]) (sequential) or set positions to negative o
 pnpm test apps/api/src/tasks/tasks.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** e822fe5
 **Learnings:**
 Replaced Promise.all with this.prisma.$transaction([...]) (array form, sequential). Extended subtask mock with update+findMany; updated $transaction mock to handle both array and callback forms (Array.isArray branch). Discriminating assertion: $transaction called 0x on unfixed code (RED), 1x on fixed code (GREEN). Acceptance #4 (audit_log) does not apply — reorderSubtasks is not in the audit-sensitive list.
 
