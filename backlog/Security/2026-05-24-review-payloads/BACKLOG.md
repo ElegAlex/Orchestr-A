@@ -5765,7 +5765,7 @@ Add @@index([endDate]), @@index([startDate]), @@index([milestoneId]), @@index([e
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 55490e6
 **Learnings:**
 Added 5 indexes to Task model: endDate, startDate, milestoneId, epicId, (projectId, status) composite. Migration: 20260603122315_per013_task_planning_indexes. Existing indexes (projectId, assigneeId, status) preserved (add-only). Fail-pre witness: before migration, pg_indexes showed only tasks_assigneeId_idx/tasks_pkey/tasks_projectId_idx/tasks_status_idx — 6 int spec tests RED. After migration file created, ephemeral harness applied it and all 6 GREEN. status indexdef is unquoted by PostgreSQL — matched with \bstatus\b not /"status"/. Not audit-sensitive (no audit_logs entry needed).
 
