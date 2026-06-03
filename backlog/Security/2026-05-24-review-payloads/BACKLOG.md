@@ -4565,7 +4565,7 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ---
 ### COR-019 — reorderSubtasks Promise.all updates can produce duplicate position values
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 7
 - **Cluster:** D
 - **Confidence:** claude-only
@@ -4603,7 +4603,8 @@ pnpm test apps/api/src/tasks/tasks.service.spec.ts  # may need creation if missi
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Replaced Promise.all with this.prisma.$transaction([...]) (array form, sequential). Extended subtask mock with update+findMany; updated $transaction mock to handle both array and callback forms (Array.isArray branch). Discriminating assertion: $transaction called 0x on unfixed code (RED), 1x on fixed code (GREEN). Acceptance #4 (audit_log) does not apply — reorderSubtasks is not in the audit-sensitive list.
 
 ---
 ### COR-024 — Bulk import does no transactional overlap-check, races with itself and with live API

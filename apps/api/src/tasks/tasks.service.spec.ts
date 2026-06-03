@@ -58,6 +58,8 @@ describe('TasksService', () => {
     },
     subtask: {
       count: vi.fn().mockResolvedValue(0),
+      update: vi.fn().mockResolvedValue({}),
+      findMany: vi.fn().mockResolvedValue([]),
     },
     timeEntry: {
       groupBy: vi.fn().mockResolvedValue([]),
@@ -68,11 +70,12 @@ describe('TasksService', () => {
     projectMember: {
       findUnique: vi.fn().mockResolvedValue(null),
     },
-    $transaction: vi.fn(
-      async <T>(
-        callback: (tx: typeof mockPrismaService) => Promise<T>,
-      ): Promise<T> => callback(mockPrismaService),
-    ),
+    $transaction: vi.fn(async (arg: unknown) => {
+      if (Array.isArray(arg)) return Promise.all(arg);
+      return (
+        arg as (tx: typeof mockPrismaService) => Promise<unknown>
+      )(mockPrismaService);
+    }),
   };
 
   // OBS-026 — the CSV export emits a fire-and-forget DATA_EXPORTED audit row.
@@ -1824,6 +1827,53 @@ describe('TasksService', () => {
       });
 
       expect(result.csv).toContain('title;description');
+    });
+  });
+
+  // COR-019 — reorderSubtasks must wrap updates in a single $transaction
+  describe('reorderSubtasks', () => {
+    const TASK_ID = 'task-cor019';
+    const SUBTASK_IDS = ['sub-a', 'sub-b', 'sub-c'];
+
+    beforeEach(() => {
+      // Provide a task so the not-found guard passes
+      (mockPrismaService.task.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: TASK_ID,
+        projectId: 'proj-1',
+      });
+      (mockPrismaService.subtask.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
+        SUBTASK_IDS.map((id, i) => ({ id, position: i, taskId: TASK_ID })),
+      );
+      vi.clearAllMocks();
+      // Re-set after clearAllMocks so the task lookup still resolves
+      (mockPrismaService.task.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: TASK_ID,
+        projectId: 'proj-1',
+      });
+      (mockPrismaService.subtask.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
+        SUBTASK_IDS.map((id, i) => ({ id, position: i, taskId: TASK_ID })),
+      );
+      (mockPrismaService.subtask.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
+      (mockPrismaService.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
+        async (arg: unknown) => {
+          if (Array.isArray(arg)) return Promise.all(arg);
+          return (arg as (tx: typeof mockPrismaService) => Promise<unknown>)(
+            mockPrismaService,
+          );
+        },
+      );
+    });
+
+    it('wraps all subtask position updates in a single $transaction (COR-019)', async () => {
+      await service.reorderSubtasks(TASK_ID, SUBTASK_IDS);
+
+      // The discriminating assertion: unfixed code (Promise.all) never calls $transaction
+      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
+
+      // The argument must be an array of N promises, not a callback
+      const [arg] = (mockPrismaService.$transaction as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(Array.isArray(arg)).toBe(true);
+      expect(arg).toHaveLength(SUBTASK_IDS.length);
     });
   });
 });

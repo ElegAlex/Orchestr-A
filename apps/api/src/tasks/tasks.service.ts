@@ -1980,7 +1980,7 @@ export class TasksService {
     const task = await this.prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new NotFoundException('Tâche introuvable');
 
-    await Promise.all(
+    await this.prisma.$transaction(
       subtaskIds.map((id, index) =>
         this.prisma.subtask.update({
           where: { id },
