@@ -5163,7 +5163,7 @@ Replace the .map(async) with a single prisma.task.groupBy({ by: ['projectId', 's
 pnpm test apps/api/src/analytics/analytics.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** ebd86db
 **Learnings:**
 Replaced N calculateProjectProgress(task.findMany) calls with a single task.groupBy over all project IDs (PER-001 fix). getTasks() kept — its full task objects are needed for overdue detection, status data, and per-project details; dropping it would regress calculateMetrics and getTaskStatusData. Progress is now a done-count / total ratio from groupBy, not hours-weighted (estimatedHours was never used in the original calculateProjectProgress either). Existing tests that setup task.findMany mocks for progress were updated to use task.groupBy instead; no assertions weakened. Fail-pre: with 1 project findMany count=2, with 3 projects count=4 (N+1 demonstrated). After fix both =1 (constant).
 
