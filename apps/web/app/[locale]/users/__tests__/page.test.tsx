@@ -13,6 +13,7 @@ jest.mock("next-intl", () => ({
         "createModal.title": "Créer un utilisateur",
         "createModal.cancel": "Annuler",
         "createModal.submit": "Créer",
+        "createModal.create": "Créer",
         "createModal.firstName": "Prénom",
         "createModal.lastName": "Nom",
         "createModal.email": "Email",
@@ -25,6 +26,10 @@ jest.mock("next-intl", () => ({
         "createModal.selectDepartmentFirst":
           "Sélectionnez d'abord un département",
         "editModal.title": "Modifier l'utilisateur",
+        "editModal.save": "Enregistrer",
+        "editModal.newPassword": "Nouveau mot de passe (optionnel)",
+        "editModal.passwordPlaceholder": "Laisser vide pour ne pas changer",
+        "editModal.passwordHint": "Laissez vide si vous ne souhaitez pas modifier le mot de passe",
         "edit.title": "Modifier l'utilisateur",
         cancel: "Annuler",
         importButton: "Importer",
@@ -191,6 +196,21 @@ const mockRoles = [
     isDefault: false,
     userCount: 1,
     permissionsCount: 20,
+    createdAt: "",
+    updatedAt: "",
+  },
+  // Institutional (assignable) roles — isSystem: false
+  {
+    id: "role-agent-inst",
+    code: "AGENT_TERRAIN",
+    label: "Agent terrain",
+    templateKey: "CONTRIBUTOR",
+    category: "STANDARD_USER",
+    description: "",
+    isSystem: false,
+    isDefault: false,
+    userCount: 0,
+    permissionsCount: 10,
     createdAt: "",
     updatedAt: "",
   },
@@ -374,8 +394,7 @@ describe("UsersPage", () => {
     });
   });
 
-  // TODO: Fix form input selection - labels not properly associated with inputs
-  it.skip("should create user and show success message", async () => {
+  it("should create user and show success message", async () => {
     const user = userEvent.setup();
     render(<UsersPage />);
 
@@ -395,23 +414,22 @@ describe("UsersPage", () => {
       ).toBeInTheDocument();
     });
 
-    // Find inputs - the form has: firstName, lastName (first row), email, login, password
-    const inputs = document.querySelectorAll(
-      '.bg-white.rounded-lg input[type="text"], .bg-white.rounded-lg input[type="email"], .bg-white.rounded-lg input[type="password"]',
-    );
+    // Fill form using accessible label associations (exact text to avoid ambiguity)
+    await user.type(screen.getByLabelText("Prénom"), "New");
+    await user.type(screen.getByLabelText("Nom"), "User");
+    await user.type(screen.getByLabelText("Email"), "newuser@test.com");
+    await user.type(screen.getByLabelText("Login"), "newuser");
+    await user.type(screen.getByLabelText("Mot de passe"), "Password1!");
 
-    // Fill form using specific input positions in the create modal
-    if (inputs.length >= 5) {
-      await user.type(inputs[0] as HTMLElement, "New"); // firstName
-      await user.type(inputs[1] as HTMLElement, "User"); // lastName
-      await user.type(inputs[2] as HTMLElement, "newuser@test.com"); // email
-      await user.type(inputs[3] as HTMLElement, "newuser"); // login
-      await user.type(inputs[4] as HTMLElement, "password123"); // password
-    }
+    // Wait for institutional roles to load, then select a role (required)
+    await waitFor(() => {
+      expect(screen.getAllByText("Agent terrain").length).toBeGreaterThan(0);
+    });
+    await user.selectOptions(screen.getByLabelText("Rôle"), "AGENT_TERRAIN");
 
-    // Soumettre - use the submit button inside the modal (not the header button)
+    // Submit the form
     const buttons = screen.getAllByRole("button", { name: /^créer$/i });
-    const submitButton = buttons[buttons.length - 1]; // Last "Créer" button is the form submit
+    const submitButton = buttons[buttons.length - 1];
     await user.click(submitButton);
 
     await waitFor(() => {
@@ -474,8 +492,7 @@ describe("UsersPage", () => {
     }
   });
 
-  // TODO: Fix form input selection - labels not properly associated with inputs
-  it.skip("should update user and show success message", async () => {
+  it("should update user and show success message", async () => {
     const user = userEvent.setup();
     render(<UsersPage />);
 
@@ -513,8 +530,7 @@ describe("UsersPage", () => {
     }
   });
 
-  // TODO: Fix form interaction - services don't appear after department selection in test
-  it.skip("should filter services by department", async () => {
+  it("should filter services by department", async () => {
     const user = userEvent.setup();
     render(<UsersPage />);
 
@@ -545,9 +561,9 @@ describe("UsersPage", () => {
       await user.selectOptions(departmentSelect, "dept-1");
     }
 
-    // Les services du département devraient être disponibles
+    // Les services du département devraient être disponibles dans la modal
     await waitFor(() => {
-      expect(screen.getByText("Development")).toBeInTheDocument();
+      expect(screen.getAllByText("Development").length).toBeGreaterThan(0);
     });
   });
 });

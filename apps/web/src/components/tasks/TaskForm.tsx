@@ -568,10 +568,11 @@ export function TaskForm({
     <form onSubmit={handleSubmit} className="p-6 space-y-6">
       {/* Title */}
       <div>
-        <label className="block text-sm font-medium text-gray-900 mb-2">
+        <label htmlFor="task-title" className="block text-sm font-medium text-gray-900 mb-2">
           {t("modal.create.titleLabel")} <span className="text-red-500">*</span>
         </label>
         <input
+          id="task-title"
           type="text"
           required
           value={values.title}

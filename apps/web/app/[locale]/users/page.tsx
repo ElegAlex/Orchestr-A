@@ -838,10 +838,11 @@ export default function UsersPage() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="create-user-firstName" className="block text-sm font-medium text-gray-700 mb-1">
                     {t("createModal.firstName")}
                   </label>
                   <input
+                    id="create-user-firstName"
                     type="text"
                     required
                     value={formData.firstName}
@@ -852,10 +853,11 @@ export default function UsersPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="create-user-lastName" className="block text-sm font-medium text-gray-700 mb-1">
                     {t("createModal.lastName")}
                   </label>
                   <input
+                    id="create-user-lastName"
                     type="text"
                     required
                     value={formData.lastName}
@@ -868,10 +870,11 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="create-user-email" className="block text-sm font-medium text-gray-700 mb-1">
                   {t("createModal.email")}
                 </label>
                 <input
+                  id="create-user-email"
                   type="email"
                   required
                   value={formData.email}
@@ -883,10 +886,11 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="create-user-login" className="block text-sm font-medium text-gray-700 mb-1">
                   {t("createModal.login")}
                 </label>
                 <input
+                  id="create-user-login"
                   type="text"
                   required
                   autoComplete="off"
@@ -900,7 +904,7 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="create-user-password" className="block text-sm font-medium text-gray-700 mb-1">
                   {t("createModal.password")}
                 </label>
                 <div className="relative">
@@ -938,10 +942,11 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="create-user-role" className="block text-sm font-medium text-gray-700 mb-1">
                   {t("createModal.role")}
                 </label>
                 <select
+                  id="create-user-role"
                   value={formData.roleCode}
                   onChange={(e) =>
                     setFormData({ ...formData, roleCode: e.target.value })
@@ -965,10 +970,11 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="create-user-department" className="block text-sm font-medium text-gray-700 mb-1">
                   {t("createModal.department")}
                 </label>
                 <select
+                  id="create-user-department"
                   value={formData.departmentId}
                   onChange={(e) =>
                     setFormData({

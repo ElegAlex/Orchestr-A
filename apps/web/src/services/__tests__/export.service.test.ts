@@ -4,6 +4,7 @@ jest.mock("jspdf", () => {
       pageSize: { getWidth: () => 210, getHeight: () => 297 },
       pages: [1, 2],
     },
+    lastAutoTable: { finalY: 0 },
     text: jest.fn(),
     setFontSize: jest.fn(),
     setFont: jest.fn(),
@@ -89,23 +90,24 @@ describe("ExportService", () => {
   });
 
   describe("exportToPDF", () => {
-    // Note: PDF export tests are skipped because jspdf-autotable requires
-    // complex mocking of the lastAutoTable property which is set dynamically
-    it.skip("should generate PDF without errors", async () => {
+    it("should generate PDF without errors", async () => {
       await ExportService.exportToPDF(mockAnalyticsData, "month");
+      expect(true).toBe(true); // smoke: no throw
     });
 
-    it.skip("should include project filter in header when specified", async () => {
+    it("should include project filter in header when specified", async () => {
       await ExportService.exportToPDF(
         mockAnalyticsData,
         "quarter",
         "project-1",
       );
+      expect(true).toBe(true); // smoke: no throw
     });
 
-    it.skip("should handle different date ranges", async () => {
+    it("should handle different date ranges", async () => {
       await ExportService.exportToPDF(mockAnalyticsData, "week");
       await ExportService.exportToPDF(mockAnalyticsData, "year");
+      expect(true).toBe(true); // smoke: no throw
     });
   });
 

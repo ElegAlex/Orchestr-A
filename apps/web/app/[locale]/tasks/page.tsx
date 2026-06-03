@@ -331,10 +331,11 @@ export default function TasksPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Project Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="filter-project" className="block text-sm font-medium text-gray-700 mb-1">
                 {t("filters.project")}
               </label>
               <select
+                id="filter-project"
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -351,10 +352,11 @@ export default function TasksPage() {
 
             {/* Priority Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="filter-priority" className="block text-sm font-medium text-gray-700 mb-1">
                 {t("filters.priority")}
               </label>
               <select
+                id="filter-priority"
                 value={selectedPriority}
                 onChange={(e) =>
                   setSelectedPriority(e.target.value as Priority | "ALL")
