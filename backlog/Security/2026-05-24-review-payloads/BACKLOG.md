@@ -6389,7 +6389,7 @@ Add at least one Prisma-integration spec (real Postgres or pg-mem) that exercise
 pnpm test apps/api/src/leaves/leaves.service.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 2cc1b7b
 **Learnings:**
 Additive real-Postgres integration test for the SERIALIZABLE balance-gating path.
 
