@@ -5487,7 +5487,7 @@ Hard ceiling at 100 (or 200), require explicit opt-in. Planning view should requ
 pnpm test apps/api/src/users/users.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** db78d73
 **Learnings:**
 Hard ceiling of 200 added to findAll() via 5th param options:{allowFullScan?:boolean}. Signature kept backward-compatible (5th slot, not 3rd) to avoid breaking findAll(1,50,"ADMIN") and SEC-031 callers. PlanningService.getOverview now calls findAll(1,1000,undefined,undefined,{allowFullScan:true}) for its org-wide directory fetch. The || 1000 fallback replaced with || 20 to kill the unbounded default. Audit note: read-only path, no audit_logs entry needed. planning.service.spec.ts needed no edits — its only usersService assertion is a mockResolvedValue, not a toHaveBeenCalledWith.
 
