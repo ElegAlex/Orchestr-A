@@ -6454,7 +6454,7 @@ Capture the Blob passed to createObjectURL, decode the xlsx with read() from xls
 pnpm test apps/web/src/services/__tests__/export.service.test.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 3980b80
 **Learnings:**
 Strengthened export.service tests: (1) Excel tests now capture the Blob from createObjectURL, read it with FileReader (blob.text() absent in this jsdom version), parse HTML with DOMParser, then assert 3 sheet names (h2), column headers (th), data row count and values (td). (2) PDF tests now assert on jsPDF mock (text/save called) and autoTable mock calls (metrics body = 2 rows with correct values; projects body = 2 rows). (3) Mutation witness: setting sheets=[] in saveExcelWorkbook made sheet-name test RED (Expected 3, Received 0); reverting restored GREEN. (4) FileReader fallback required because jsdom Blob.text() unavailable. (5) export.service.ts untouched — tests only.
 
