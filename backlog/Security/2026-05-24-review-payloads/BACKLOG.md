@@ -5854,7 +5854,7 @@ Replace with prisma.task.groupBy({ by: ['projectId', 'status'], _count: true }) 
 pnpm test apps/api/src/analytics/analytics.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** f827699
 **Learnings:**
 Replaced O(P×T) in-memory task.filter in getProjectProgressData and 5 separate filter passes in getTaskStatusData with a single task.groupBy(projectId+status) scoped to resolved project IDs. getTasks (findMany) is intentionally kept — calculateMetrics (needs endDate for overdue) and getProjectDetails still consume the full task array. Two groupBy queries now exist in the service: the PER-001 progress groupBy inside getProjects (left untouched to avoid disturbing PER-001 tests) and the new PER-025 groupBy in getAnalytics feeding getProjectProgressData+getTaskStatusData. Orphan tasks (null projectId) are excluded from taskStatusData — consistent with previous behavior where getTasks used a relation filter scoped to projectWhere. Updated existing task status data test to source counts from groupBy mock rather than findMany.
 
