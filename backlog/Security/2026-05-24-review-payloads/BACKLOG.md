@@ -6217,7 +6217,7 @@ Query GET /api/leaves/balance for the CP type before submission; submit a 2-day 
 pnpm test:e2e -- e2e/tests/multi-role/leave-lifecycle.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 35a3c3c
 **Learnings:**
 Replaced the tautological assertion at L182-184 (right operand `url().includes("/leaves")` always true after reload) with a real balance-delta assertion.
 
