@@ -70,6 +70,17 @@ describe('RefreshTokenService', () => {
       expect(call.data.ip).toBe('1.2.3.4');
       expect(call.data.expiresAt).toBeInstanceOf(Date);
     });
+
+    it('clamps userAgent to 512 chars in issue()', async () => {
+      mockPrisma.refreshToken.create.mockResolvedValue({});
+      const longUA = 'A'.repeat(600);
+
+      await service.issue('user-1', { userAgent: longUA });
+
+      const call = mockPrisma.refreshToken.create.mock.calls[0][0];
+      expect(call.data.userAgent).toHaveLength(512);
+      expect(call.data.userAgent).toBe(longUA.slice(0, 512));
+    });
   });
 
   describe('rotate', () => {
@@ -137,6 +148,26 @@ describe('RefreshTokenService', () => {
       await expect(service.rotate(plaintext)).rejects.toThrow(
         UnauthorizedException,
       );
+    });
+
+    it('clamps userAgent to 512 chars in rotate()', async () => {
+      const plaintext = 'valid-token';
+      const longUA = 'B'.repeat(700);
+      mockPrisma.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-3',
+        userId: 'user-1',
+        tokenHash: sha256(plaintext),
+        expiresAt: new Date(Date.now() + 1_000_000),
+        revokedAt: null,
+      });
+      mockPrisma.refreshToken.update.mockResolvedValue({});
+      mockPrisma.refreshToken.create.mockResolvedValue({});
+
+      await service.rotate(plaintext, { userAgent: longUA });
+
+      const createCall = mockPrisma.refreshToken.create.mock.calls[0][0];
+      expect(createCall.data.userAgent).toHaveLength(512);
+      expect(createCall.data.userAgent).toBe(longUA.slice(0, 512));
     });
   });
 

@@ -67,7 +67,7 @@ export class RefreshTokenService {
         userId,
         tokenHash,
         expiresAt,
-        userAgent: meta?.userAgent ?? null,
+        userAgent: meta?.userAgent ? meta.userAgent.slice(0, 512) : null,
         ip: meta?.ip ?? null,
       },
     });
@@ -132,7 +132,7 @@ export class RefreshTokenService {
             userId: existing.userId,
             tokenHash: newTokenHash,
             expiresAt,
-            userAgent: meta?.userAgent ?? null,
+            userAgent: meta?.userAgent ? meta.userAgent.slice(0, 512) : null,
             ip: meta?.ip ?? null,
           },
         });

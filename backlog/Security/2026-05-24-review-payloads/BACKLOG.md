@@ -9634,7 +9634,7 @@ pnpm test apps/api/src/common/services/access-scope.service.spec.ts  # may need 
 ---
 ### SEC-029 — Refresh token issuance stores UA verbatim with no bounding — log/DB bloat vector
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9672,7 +9672,8 @@ pnpm test apps/api/src/auth/refresh-token.service.spec.ts  # may need creation i
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Service-layer clamp: added .slice(0,512) to meta?.userAgent in both issue() and rotate() in refresh-token.service.ts (L70, L135). No migration needed (DB column has no constraint, clamp is pure service logic). Fail-pre: 2 tests RED on unfixed code (issue clamp: got length 600, rotate clamp: got length 700). Pass-post: all 10 tests GREEN. Gate: build=0, test=0.
 
 ---
 ### TST-025 — E2E job runs all Playwright projects sequentially in one job — long feedback loop, no smoke fast-path
