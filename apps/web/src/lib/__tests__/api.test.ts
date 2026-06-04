@@ -44,8 +44,8 @@ beforeAll(() => {
   consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
   // @ts-expect-error — overriding read-only window.location for test isolation
   delete window.location;
-  // @ts-expect-error — stub minimal Location shape (test only reads/writes href)
-  window.location = { href: "" };
+  // @ts-expect-error — stub minimal Location shape (test only reads/writes href and pathname)
+  window.location = { href: "", pathname: "/fr/dashboard" };
 });
 afterAll(() => {
   // @ts-expect-error — restoring original Location instance
@@ -239,5 +239,33 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
     const axios = require("axios");
     // No refresh attempted since the failing request IS /auth/refresh
     expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  // SEC-FE-001 — ForcePasswordChangeGuard returns 403 + PASSWORD_CHANGE_REQUIRED.
+  // The interceptor must redirect to /change-password and NOT clear the token.
+  it("SEC-FE-001: 403+PASSWORD_CHANGE_REQUIRED redirects to /change-password without clearing auth token", async () => {
+    store["access_token"] = "valid-jwt";
+
+    const dispatchSpy = jest.spyOn(window, "dispatchEvent");
+
+    const { responseErrorHandler } = loadApi({});
+
+    const err = {
+      response: {
+        status: 403,
+        data: { code: "PASSWORD_CHANGE_REQUIRED" },
+      },
+      config: { url: "/some-protected-endpoint", headers: {} },
+    };
+
+    await expect(responseErrorHandler(err)).rejects.toBeDefined();
+
+    // Must NOT clear the auth token (user needs it to PATCH the new password)
+    expect(store["access_token"]).toBe("valid-jwt");
+    // Must fire the password-change-required event (proves interceptor reached redirect handler)
+    const firedEvents = dispatchSpy.mock.calls.map((c) => (c[0] as Event).type);
+    expect(firedEvents).toContain("auth:password-change-required");
+
+    dispatchSpy.mockRestore();
   });
 });

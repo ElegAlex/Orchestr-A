@@ -44,7 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       pathname.match(/^\/(fr|en)\/login$/) ||
       pathname.match(/^\/(fr|en)\/register$/) ||
       pathname.match(/^\/(fr|en)\/forgot-password$/) ||
-      pathname.match(/^\/(fr|en)\/reset-password$/);
+      pathname.match(/^\/(fr|en)\/reset-password$/) ||
+      // SEC-FE-001 — change-password screen is accessible without full auth state
+      // (flagged session has a valid JWT but /auth/me is blocked by the guard).
+      pathname.match(/^\/(fr|en)\/change-password$/);
 
     if (!isAuthenticated && !isPublicRoute) {
       router.push(`/${locale}/login`);

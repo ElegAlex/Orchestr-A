@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth.store";
-import { api } from "@/lib/api";
+import { api, PASSWORD_CHANGE_REQUIRED_CODE } from "@/lib/api";
 import { AUTH_TOKEN_KEY } from "@/services/auth.service";
 import type { User } from "@/types";
+import type { AxiosError } from "axios";
 
 /**
  * SEC-03 — Bootstrap hook.
@@ -53,8 +54,18 @@ export function useAuthBootstrap(): boolean {
       .then(([user, permissions]) => {
         setAuth(user, permissions);
       })
-      .catch(() => {
-        clear();
+      .catch((err: AxiosError) => {
+        // SEC-FE-001 — If the backend blocks the session with PASSWORD_CHANGE_REQUIRED,
+        // keep the token in localStorage: the user still needs it to submit the new
+        // password via PATCH /users/me/change-password. The interceptor in api.ts has
+        // already fired the redirect to /change-password.
+        const isPasswordChangeRequired =
+          err?.response?.status === 403 &&
+          (err?.response?.data as { code?: string })?.code ===
+            PASSWORD_CHANGE_REQUIRED_CODE;
+        if (!isPasswordChangeRequired) {
+          clear();
+        }
       })
       .finally(() => {
         setLoading(false);

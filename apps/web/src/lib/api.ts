@@ -90,11 +90,37 @@ function isRefreshRequest(config?: AxiosRequestConfig): boolean {
   return url.includes("/auth/refresh");
 }
 
+export const PASSWORD_CHANGE_REQUIRED_CODE = "PASSWORD_CHANGE_REQUIRED";
+
+function redirectToChangePassword() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("auth:password-change-required"));
+    // Detect locale from current path (e.g. /fr/dashboard → fr)
+    const pathname = window.location.pathname ?? "";
+    const segments = pathname.split("/");
+    const locale = ["fr", "en"].includes(segments[1]) ? segments[1] : "fr";
+    window.location.href = `/${locale}/change-password`;
+  }
+}
+
 // Response interceptor - attempt auto-refresh on 401, then retry original request.
+// Also handles 403 PASSWORD_CHANGE_REQUIRED (SEC-FE-001): redirect to change-password
+// without clearing the auth token (the token is required to PATCH the new password).
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalConfig = error.config as RetriableConfig | undefined;
+
+    // SEC-FE-001 — ForcePasswordChangeGuard returns 403 + code: PASSWORD_CHANGE_REQUIRED.
+    // Redirect the user to the change-password screen; do NOT clear the token.
+    if (
+      error.response?.status === 403 &&
+      (error.response.data as { code?: string })?.code ===
+        PASSWORD_CHANGE_REQUIRED_CODE
+    ) {
+      redirectToChangePassword();
+      return Promise.reject(error);
+    }
 
     if (error.response?.status !== 401 || !originalConfig) {
       return Promise.reject(error);
