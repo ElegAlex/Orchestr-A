@@ -9050,7 +9050,7 @@ Gate: build=0, test=0.
 ---
 ### COR-031 — milestonesOverdue treats milestones with null dueDate as overdue
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9088,7 +9088,8 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added null guard (dueDate != null) before both comparisons in captureSnapshots (lines 1188-1193 of projects.service.ts). Fail-pre: test showed milestonesOverdue=2 for 2 PENDING/IN_PROGRESS milestones with null dueDate instead of 0, because null < now is false in JS (null coerces to 0 = epoch, which is < now). Fix: added m.dueDate != null guard before each date comparison. Test added: COR-031 milestone with null dueDate is not counted as overdue or upcoming.
 
 ---
 ### COR-032 — getProjectStats milestones.upcoming uses Date.now() inline twice

@@ -1186,10 +1186,10 @@ export class ProjectsService {
           (m) => m.status === 'COMPLETED',
         ).length;
         const milestonesOverdue = project.milestones.filter(
-          (m) => m.status !== 'COMPLETED' && m.dueDate < now,
+          (m) => m.status !== 'COMPLETED' && m.dueDate != null && m.dueDate < now,
         ).length;
         const milestonesUpcoming = project.milestones.filter(
-          (m) => m.status !== 'COMPLETED' && m.dueDate >= now,
+          (m) => m.status !== 'COMPLETED' && m.dueDate != null && m.dueDate >= now,
         ).length;
 
         return {

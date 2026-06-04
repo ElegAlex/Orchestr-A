@@ -1988,6 +1988,35 @@ describe('ProjectsService', () => {
       expect(result).toEqual({ captured: 0 });
     });
 
+    // COR-031: milestones with null dueDate must NOT be counted as overdue or upcoming
+    it('COR-031: milestone with null dueDate is not counted as overdue or upcoming', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([
+        {
+          id: 'p-null-due',
+          status: ProjectStatus.ACTIVE,
+          tasks: [],
+          milestones: [
+            { status: MilestoneStatus.PENDING, dueDate: null },
+            { status: MilestoneStatus.IN_PROGRESS, dueDate: null },
+          ],
+        },
+      ]);
+      mockPrismaService.projectSnapshot.createMany.mockResolvedValue({
+        count: 1,
+      });
+
+      await service.captureSnapshots();
+
+      const createManyCall =
+        mockPrismaService.projectSnapshot.createMany.mock.calls[0][0];
+      expect(createManyCall.data[0]).toMatchObject({
+        projectId: 'p-null-due',
+        milestonesReached: 0,
+        milestonesOverdue: 0,   // null dueDate must NOT be counted as overdue
+        milestonesUpcoming: 0,  // null dueDate must NOT be counted as upcoming
+      });
+    });
+
     it('creates snapshot for new day with date key normalized to startOfDay', async () => {
       mockPrismaService.project.findMany.mockResolvedValue([
         projectWithMixedData,
