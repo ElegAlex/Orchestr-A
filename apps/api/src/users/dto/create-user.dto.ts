@@ -5,6 +5,7 @@ import {
   MinLength,
   IsOptional,
   IsArray,
+  IsUUID,
   Matches,
   MaxLength,
 } from 'class-validator';
@@ -85,7 +86,9 @@ export class CreateUserDto {
     required: false,
   })
   @IsOptional()
-  @IsString()
+  // SEC-025: departmentId is a FK → must be a v4 UUID; @IsString admitted
+  // non-UUID strings that caused Prisma findUnique to throw a 500.
+  @IsUUID('4')
   departmentId?: string;
 
   @ApiProperty({
@@ -95,7 +98,9 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
+  // SEC-025: each item is a FK → must be UUID v4; @IsString({ each: true })
+  // admitted non-UUID items that caused Prisma to throw a 500.
+  @IsUUID('4', { each: true })
   serviceIds?: string[];
 
   @ApiProperty({

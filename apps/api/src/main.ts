@@ -84,6 +84,9 @@ async function bootstrap() {
       logger: fastifyLoggerOptions,
       trustProxy: [...TRUST_PROXY],
       genReqId,
+      // SEC-025: explicit bodyLimit (1 MiB) prevents unbounded JSON bodies from
+      // exhausting memory before the ValidationPipe can reject them.
+      bodyLimit: 1048576,
     }),
   );
 

@@ -8574,7 +8574,7 @@ pnpm test apps/api/src/users/users.controller.spec.ts  # may need creation if mi
 ---
 ### SEC-025 — departmentId / serviceIds typed as @IsString without @IsUUID — allows weird values and inconsistent error semantics
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8612,7 +8612,8 @@ pnpm test apps/api/src/users/dto/create-user.dto.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Changed @IsString to @IsUUID(4) on departmentId and @IsUUID(4, {each:true}) on serviceIds in create-user.dto.ts (FK fields must be v4 UUID to avoid Prisma 500 on invalid values). Added explicit bodyLimit:1048576 to FastifyAdapter in main.ts. roleCode left as @IsString (it is a role code string, not a UUID). fail-pre: 2 tests RED with TypeError (isUuid constraint absent on unfixed code); pass-post: all 17 tests GREEN after fix.
 
 ---
 ### TST-012 — Date tests use new Date(YYYY, M, D) (local timezone) without freezing clock or pinning TZ

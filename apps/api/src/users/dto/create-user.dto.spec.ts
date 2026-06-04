@@ -132,6 +132,59 @@ describe('SEC-011 — caller cannot set isActive on create; UPDATE path preserve
   });
 });
 
+describe('SEC-025 — departmentId / serviceIds must be UUIDs v4', () => {
+  // Witness (AC#2): FAILS pre-fix (@IsString accepts any string including
+  // non-UUID values), PASSES post-fix (@IsUUID('4') rejects non-UUID strings).
+
+  it('rejects a non-UUID departmentId (exact failure mode: Prisma 500 leak)', async () => {
+    const dto = plainToInstance(CreateUserDto, {
+      ...base,
+      departmentId: 'not-a-uuid',
+    });
+    const errors = await validate(dto);
+    const err = errors.find((e) => e.property === 'departmentId');
+    expect(err?.constraints).toHaveProperty('isUuid');
+  });
+
+  it('rejects non-UUID items in serviceIds', async () => {
+    const dto = plainToInstance(CreateUserDto, {
+      ...base,
+      serviceIds: ['not-a-uuid', 'also-not-a-uuid'],
+    });
+    const errors = await validate(dto);
+    const err = errors.find((e) => e.property === 'serviceIds');
+    expect(err?.constraints).toHaveProperty('isUuid');
+  });
+
+  it('accepts a valid UUID v4 departmentId', async () => {
+    const dto = plainToInstance(CreateUserDto, {
+      ...base,
+      departmentId: 'd0ed2849-b92e-47c3-91ad-4c4fb549c993',
+    });
+    const errors = await validate(dto);
+    expect(errors.find((e) => e.property === 'departmentId')).toBeUndefined();
+  });
+
+  it('accepts valid UUID v4 items in serviceIds', async () => {
+    const dto = plainToInstance(CreateUserDto, {
+      ...base,
+      serviceIds: [
+        'd0ed2849-b92e-47c3-91ad-4c4fb549c993',
+        '44689f12-4566-4b1c-9da4-9e43020de677',
+      ],
+    });
+    const errors = await validate(dto);
+    expect(errors.find((e) => e.property === 'serviceIds')).toBeUndefined();
+  });
+
+  it('accepts omitted departmentId and serviceIds (@IsOptional)', async () => {
+    const dto = plainToInstance(CreateUserDto, { ...base });
+    const errors = await validate(dto);
+    expect(errors.find((e) => e.property === 'departmentId')).toBeUndefined();
+    expect(errors.find((e) => e.property === 'serviceIds')).toBeUndefined();
+  });
+});
+
 describe('UpdateUserDto — SEC-010 propagation via PartialType', () => {
   it('rejects a javascript: scheme avatarUrl on the PATCH path', async () => {
     const dto = plainToInstance(UpdateUserDto, {
