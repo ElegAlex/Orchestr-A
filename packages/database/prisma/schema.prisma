@@ -150,6 +150,7 @@ model UserService {
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, serviceId])
+  @@index([serviceId]) // DAT-029: reverse-lookup 'all users in service X'
   @@map("user_services")
 }
 
@@ -245,6 +246,7 @@ model ProjectMember {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
+  @@index([userId]) // DAT-029: reverse-lookup 'all projects for user X'
   @@map("project_members")
 }
 

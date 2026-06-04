@@ -9277,7 +9277,7 @@ Added @@index([userId, usedAt]) and @@index([expiresAt]) to PasswordResetToken (
 ---
 ### DAT-029 — UserService and similar join tables: createdAt has no updatedAt and no @@index on serviceId
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9315,7 +9315,8 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added @@index([serviceId]) to UserService and @@index([userId]) to ProjectMember in schema.prisma. EventParticipant.@@index([userId]) was already present (PER-012, 2026-05-31) — correctly skipped. Migration 20260604051843_dat029_join_table_indexes applied to local dev DB. Structural fail-pre witness: user_services_serviceId_idx and project_members_userId_idx ABSENT before migration, PRESENT after. Int spec excluded from gate per vitest.config.ts exclude pattern.
 
 ---
 ### OBS-019 — /health exposes process.uptime — info leak with no auth, and not a real health check
