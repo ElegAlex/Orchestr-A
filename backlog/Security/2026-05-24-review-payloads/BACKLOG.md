@@ -8919,7 +8919,7 @@ pnpm test:e2e -- e2e/tests/multi-role/leave-lifecycle.spec.ts
 ---
 ### COR-020 — Conflicting where.endDate assignments in findAll when overdue + date range
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8957,7 +8957,10 @@ pnpm test apps/api/src/tasks/tasks.service.spec.ts  # may need creation if missi
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Moved overdue constraints (endDate lt:now and status not:DONE) from direct where mutation into andFilters array, so they compose additively with caller-supplied status and date-range constraints instead of clobbering them.
+Fail-pre: test 1 was RED with `expected { not: DONE } to be TODO` (caller status clobbered); test 2 was RED with `expected undefined to deeply equal ArrayContaining` (endDate lt gone after startDate branch overwrote where.endDate). Both GREEN after fix.
+Scope: only the overdue block (lines 320-322) changed — date-range branches left untouched to preserve PER-007 semantics.
 
 ---
 ### COR-025 — canSelfApprove permits self-approval when targetUserId === requestingUserId

@@ -384,6 +384,60 @@ describe('TasksService', () => {
         }),
       );
     });
+
+    it('COR-020: overdue+status — caller status must survive, not-DONE constraint must reach AND (not clobber)', async () => {
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.task.count.mockResolvedValue(0);
+
+      // status=TODO + overdue=true: caller status must stay TODO, and {status:{not:DONE}} goes to AND
+      await service.findAll(
+        1, 10,
+        TaskStatus.TODO,    // caller status — must not be overwritten
+        undefined, undefined, undefined, undefined,
+        true,               // overdue=true
+      );
+
+      const findManyCall = mockPrismaService.task.findMany.mock.calls[0][0] as {
+        where: { status?: unknown; AND?: unknown[] };
+      };
+      const { where } = findManyCall;
+
+      // Caller-supplied status must not be overwritten by overdue logic
+      expect(where.status).toBe(TaskStatus.TODO);
+
+      // Overdue not-DONE constraint must be present in AND
+      expect(where.AND).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ status: { not: TaskStatus.DONE } }),
+        ]),
+      );
+    });
+
+    it('COR-020: overdue+startDate — endDate lt:now must survive in AND alongside gte:startDate', async () => {
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.task.count.mockResolvedValue(0);
+
+      // startDate only + overdue: both {endDate:{lt:now}} and {endDate:{gte:startDate}} must coexist in AND
+      await service.findAll(
+        1, 10,
+        undefined, undefined, undefined,
+        '2020-01-01',   // startDate
+        undefined,
+        true,           // overdue=true
+      );
+
+      const findManyCall = mockPrismaService.task.findMany.mock.calls[0][0] as {
+        where: { endDate?: unknown; AND?: unknown[] };
+      };
+      const { where } = findManyCall;
+
+      // endDate lt:now constraint must be in AND (not clobbered by gte branch)
+      expect(where.AND).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ endDate: expect.objectContaining({ lt: expect.any(Date) }) }),
+        ]),
+      );
+    });
   });
 
   describe('findForPlanningOverview', () => {

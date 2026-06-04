@@ -318,8 +318,8 @@ export class TasksService {
     }
 
     if (overdue) {
-      where.endDate = { ...((where.endDate as object) || {}), lt: new Date() };
-      where.status = { not: TaskStatus.DONE };
+      andFilters.push({ endDate: { lt: new Date() } });
+      andFilters.push({ status: { not: TaskStatus.DONE } });
     }
 
     // Filtrage par plage de dates : on récupère les tâches qui chevauchent la plage
