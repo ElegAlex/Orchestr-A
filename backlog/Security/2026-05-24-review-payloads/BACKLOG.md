@@ -9406,7 +9406,7 @@ Swapped 3 console.warn calls (Redis read/del/write errors) to this.logger.warn i
 ---
 ### OBS-025 — Nginx access log uses default 'main' format — no request_id, no upstream timing
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9444,7 +9444,16 @@ TBD — derive test from finding description for nginx/nginx.conf
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added $request_id to log_format in both nginx configs for log correlation.
+
+FAIL-PRE (structural): Before fix, grep showed $request_id only in proxy_set_header in nginx/nginx.conf (line 131) and absent entirely from docker/all-in-one/nginx.conf. The log_format in nginx/nginx.conf (lines 19-23) had rt/uct/uht/urt timing but NOT $request_id.
+
+FIX: (1) nginx/nginx.conf: appended rid=$request_id to end of existing log_format main string (kept key=value text format). (2) docker/all-in-one/nginx.conf: added new log_format orchestr_a (distinct name avoids collision with Ubuntu base image) with $request_id, updated access_log to reference it, added proxy_set_header X-Request-ID $request_id in /api/ location.
+
+DEVIATION FROM SPEC: spec suggests JSON format but (a) timing fields rt/uct/uht/urt already present in nginx/nginx.conf, (b) severity=nit, (c) Acceptance #6 mandates minimal scope. key=value addition is the minimum viable fix.
+
+GATE: build=0 test=0 both green.
 
 ---
 ### PER-030 — Leave list includes full leaveType object instead of selected fields
