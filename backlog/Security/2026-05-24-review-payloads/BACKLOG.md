@@ -8956,7 +8956,7 @@ Build all filters via andFilters (immutable composition); never overwrite where.
 pnpm test apps/api/src/tasks/tasks.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 72028346
 **Learnings:**
 Moved overdue constraints (endDate lt:now and status not:DONE) from direct where mutation into andFilters array, so they compose additively with caller-supplied status and date-range constraints instead of clobbering them.
 Fail-pre: test 1 was RED with `expected { not: DONE } to be TODO` (caller status clobbered); test 2 was RED with `expected undefined to deeply equal ArrayContaining` (endDate lt gone after startDate branch overwrote where.endDate). Both GREEN after fix.
