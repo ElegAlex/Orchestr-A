@@ -7231,7 +7231,7 @@ pnpm --filter api run build && ls apps/api/dist/main.js
 ---
 ### COR-005 — findValidatorForUser ignores the link between the leave's user and the active delegation
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7269,7 +7269,16 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Scoped leaveValidationDelegate.findFirst to delegatorId: user.department.managerId (query-only). The old code had no delegatorId filter — any active delegation from any manager role would win, allowing cross-department leakage.
+
+Design: per discover decision, the any-active-delegate backstop is entirely removed (not kept as fallback for managerless users). When user has no dept manager, code falls through directly to MANAGE_ANY — no unscoped delegate lookup at any point.
+
+The delegatorRoles filter (role.code IN roles) was also removed from the scoped path: once we scope to delegatorId, the delegator identity is already constrained; the role filter is redundant and adds a Prisma join for no gain.
+
+Fail-pre: called findValidatorForUser directly via (service as any). Mock returns crossTeamDelegate when delegatorId != manager-1, null when delegatorId === manager-1. Before fix: returned delegate-B (RED). After fix: scoped query returns null, manager-1 returned directly (GREEN).
+
+Scope note: dormant self-assignment defect (no id:not guard in manager path) intentionally deferred per 716f7ec.
 
 ---
 ### TST-002 — Three first-class API modules have no service spec at all

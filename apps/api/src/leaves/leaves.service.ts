@@ -695,33 +695,34 @@ export class LeavesService {
 
     if (!user) return null;
 
-    // Chercher d'abord un délégué actif créé par un rôle autorisé à déléguer
+    // COR-005: scope the delegation lookup to the user's own department manager.
+    // An any-active-delegate query is the root cause — a delegate set up by a
+    // manager of department B must never become the validator for dept A users.
     const today = new Date();
-    const delegatorRoles =
-      await this.getRoleCodesWithPermission(MANAGE_DELEGATIONS);
-    const activeDelegate = await this.prisma.leaveValidationDelegate.findFirst({
-      where: {
-        ...(delegatorRoles.length > 0 && {
-          delegator: { role: { code: { in: delegatorRoles } } },
-        }),
-        isActive: true,
-        startDate: { lte: today },
-        endDate: { gte: today },
-      },
-      include: {
-        delegate: true,
-      },
-    });
-
-    if (activeDelegate) {
-      return activeDelegate.delegateId;
-    }
-
-    // Sinon, utiliser le manager du département
     if (user.department?.managerId) {
-      return user.department.managerId;
+      const managerId = user.department.managerId;
+      const activeDelegate =
+        await this.prisma.leaveValidationDelegate.findFirst({
+          where: {
+            delegatorId: managerId,
+            isActive: true,
+            startDate: { lte: today },
+            endDate: { gte: today },
+          },
+          include: {
+            delegate: true,
+          },
+        });
+
+      if (activeDelegate) {
+        return activeDelegate.delegateId;
+      }
+
+      // No active delegation: the manager validates directly.
+      return managerId;
     }
 
+    // No department manager: fall through to MANAGE_ANY fallback.
     // En dernier recours, chercher un user avec accès complet aux congés
     const fallbackRoles =
       await this.getRoleCodesWithPermission(MANAGE_ANY_LEAVES);

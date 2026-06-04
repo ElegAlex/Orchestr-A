@@ -539,6 +539,41 @@ describe('LeavesService', () => {
       expect(result.validatorId).toBe('delegate-1');
     });
 
+    it('COR-005 — cross-team delegate is rejected; only dept manager delegation wins', async () => {
+      // RED before fix: the unscoped findFirst returns crossTeamDelegate (dept-B manager)
+      // even though user-1 belongs to dept-1 (manager-1). The validator would
+      // wrongly become 'delegate-B' instead of 'manager-1'.
+      // GREEN after fix: findFirst is called with delegatorId:'manager-1', which
+      // is NOT 'manager-B', so mockImpl returns null → falls back to 'manager-1'.
+      const today = new Date();
+      const crossTeamDelegate = {
+        id: 'delegation-B',
+        delegatorId: 'manager-B',
+        delegateId: 'delegate-B',
+        delegate: { id: 'delegate-B', firstName: 'Delegate', lastName: 'B' },
+        isActive: true,
+        startDate: new Date(today.getTime() - 86400000),
+        endDate: new Date(today.getTime() + 86400000),
+      };
+
+      // user-1 belongs to dept-1 whose manager is manager-1 (not manager-B)
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      // Returns cross-team delegate only when delegatorId is NOT scoped to the
+      // user's dept manager (i.e. when the old unscoped query runs).
+      mockPrismaService.leaveValidationDelegate.findFirst.mockImplementation(
+        (args: { where?: { delegatorId?: string } } = {}) => {
+          if (args?.where?.delegatorId === 'manager-1') return Promise.resolve(null);
+          return Promise.resolve(crossTeamDelegate); // cross-team leak
+        },
+      );
+
+      const validator = await (service as any).findValidatorForUser('user-1');
+
+      // After fix: the cross-team delegate must NOT win; dept manager is returned.
+      expect(validator).toBe('manager-1');
+    });
+
     it('should find fallback validator when no manager or delegate', async () => {
       const userWithoutManager = {
         ...mockUser,
