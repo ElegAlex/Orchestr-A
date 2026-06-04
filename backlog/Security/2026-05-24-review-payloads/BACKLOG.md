@@ -7674,7 +7674,7 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ---
 ### COR-021 — leaveTypeConfig.code → LeaveType enum fallback silently masks misconfiguration
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7712,7 +7712,8 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added Logger.warn at both fallback sites in leaves.service.ts (create path line ~517 and importLeaves path line ~3479) to surface silent LeaveType.OTHER mapping when leaveTypeConfig.code is not a known enum value. Two COR-021 tests added: one in the create describe block and one in importLeaves. Both were RED before the fix (Logger.warn spy called 0 times), GREEN after. No existing assertions weakened. Logger imported from @nestjs/common; private logger property added to LeavesService class.
 
 ---
 ### COR-030 — cancel() lets the OWNER cancel an APPROVED leave without manager confirmation

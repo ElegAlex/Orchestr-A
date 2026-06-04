@@ -705,6 +705,46 @@ describe('LeavesService', () => {
         }),
       );
     });
+
+    it('COR-021 — logs a warn when leaveTypeConfig.code is not a known LeaveType enum value', async () => {
+      // The fallback silently maps unknown codes to OTHER. This test asserts
+      // that a Logger.warn is emitted so the misconfiguration is surfaced.
+      const { Logger } = await import('@nestjs/common');
+      const warnSpy = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => {});
+
+      const unknownCodeConfig = {
+        ...mockLeaveTypeConfig,
+        code: 'UNKNOWN_CODE_XYZ',
+      };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        unknownCodeConfig,
+      );
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        unknownCodeConfig,
+      ]);
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.leave.create.mockResolvedValue({
+        ...mockLeave,
+        type: LeaveType.OTHER,
+      });
+
+      await service.create('user-1', createLeaveDto);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('UNKNOWN_CODE_XYZ'),
+      );
+
+      warnSpy.mockRestore();
+    });
   });
 
   // ============================================
@@ -4504,6 +4544,45 @@ describe('LeavesService', () => {
           data: expect.objectContaining({ type: LeaveType.OTHER }),
         }),
       );
+    });
+
+    it('COR-021 — importLeaves logs a warn when leaveType.code is not a known LeaveType enum value', async () => {
+      // The fallback silently maps unknown codes to OTHER in importLeaves.
+      // This test asserts that a Logger.warn is emitted so the
+      // misconfiguration is surfaced without blocking import.
+      const { Logger } = await import('@nestjs/common');
+      const warnSpy = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => {});
+
+      const leaveTypeUnknownCode = {
+        id: 'lt-x',
+        name: 'Congé Spécial',
+        code: 'UNKNOWN_IMPORT_CODE',
+        requiresApproval: false,
+      };
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        leaveTypeUnknownCode,
+      ]);
+
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Spécial',
+            startDate: '2026-03-03',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+      );
+
+      expect(result.created).toBe(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('UNKNOWN_IMPORT_CODE'),
+      );
+
+      warnSpy.mockRestore();
     });
 
     it('should apply halfDay MORNING for single-day leave', async () => {

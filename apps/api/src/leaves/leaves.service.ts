@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   ConflictException,
@@ -87,6 +88,8 @@ interface LeaveActorSnapshot {
 
 @Injectable()
 export class LeavesService {
+  private readonly logger = new Logger(LeavesService.name);
+
   /**
    * Vérifier si un rôle a une permission donnée (via cache Redis + DB).
    */
@@ -514,6 +517,12 @@ export class LeavesService {
     const enumType = validEnumTypes.includes(leaveTypeConfig.code as LeaveType)
       ? (leaveTypeConfig.code as LeaveType)
       : LeaveType.OTHER;
+    // COR-021 — warn when code is unknown so silent OTHER-merge is surfaced.
+    if (enumType === LeaveType.OTHER && leaveTypeConfig.code !== LeaveType.OTHER) {
+      this.logger.warn(
+        `leaveTypeConfig.code "${leaveTypeConfig.code}" is not a known LeaveType enum value; falling back to OTHER (leaveTypeId=${leaveTypeConfig.id})`,
+      );
+    }
 
     // Vérifier le solde par année calendaire Paris : un congé qui chevauche
     // 2026 et 2027 doit être validé contre chaque allocation séparément. Si
@@ -3468,6 +3477,12 @@ export class LeavesService {
           const enumType = validEnumTypes.includes(leaveType.code as LeaveType)
             ? (leaveType.code as LeaveType)
             : LeaveType.OTHER;
+          // COR-021 — warn when code is unknown so silent OTHER-merge is surfaced.
+          if (enumType === LeaveType.OTHER && leaveType.code !== LeaveType.OTHER) {
+            this.logger.warn(
+              `importLeaves: leaveType.code "${leaveType.code}" is not a known LeaveType enum value; falling back to OTHER (leaveTypeId=${leaveType.id})`,
+            );
+          }
 
           // Créer le congé via le client transactionnel — toute erreur ici
           // propage hors du callback et Prisma annule la transaction entière.
