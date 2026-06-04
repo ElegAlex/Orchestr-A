@@ -36,6 +36,7 @@ import { ClientsModule } from './clients/clients.module';
 import { PlanningModule } from './planning/planning.module';
 import { CommonModule } from './common/common.module';
 import { TestingModule } from './testing/testing.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { TestingModule } from './testing/testing.module';
     ScheduleModule.forRoot(),
     AuditModule,
     DeploymentsModule,
+    HealthModule,
     PrismaModule,
     AuthModule,
     UsersModule,

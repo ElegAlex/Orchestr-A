@@ -9210,7 +9210,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### OBS-019 — /health exposes process.uptime — info leak with no auth, and not a real health check
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9248,7 +9248,8 @@ pnpm test apps/api/src/app.controller.spec.ts  # may need creation if missing
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Replaced stub getHealth() in AppController (which leaked process.uptime + NODE_ENV) with a dedicated HealthModule (health.controller.ts + health.service.ts). HealthService pings DB via $queryRaw SELECT 1 and Redis via PING; throws ServiceUnavailableException (HTTP 503) on any failure. Kept route /health (not /healthz) to preserve docker-compose healthcheck configs (standalone + prod both use /api/health). Removed dead AppService.getHealth() (was never called by controller). No @nestjs/terminus dep — no-dep design per discovery decision. Fail-pre witness: Cannot find module ./health.controller (RED, import-not-found before fix). Pass-post: 3 tests green after fix.
 
 ---
 ### OBS-022 — Redis errors swallowed with console.warn — no metric, no alert

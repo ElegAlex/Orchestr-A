@@ -21,14 +21,4 @@ export class AppController {
       message: 'API is running. Access endpoints via /api/*',
     };
   }
-
-  @Public()
-  @Get('health')
-  getHealth() {
-    return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-    };
-  }
 }
