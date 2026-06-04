@@ -7311,7 +7311,7 @@ Add at minimum service specs for settings (singleton config, partial update, ADM
 TBD — derive test from finding description for apps/api/src
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 5592346e
 **Learnings:**
 Added 3 service specs: personal-todos (12 tests, MAX_TODOS=20 cap), leave-types (14 tests, soft-archive when leaves>0), settings (12 tests, isKnownKey gate rejects unknown keys). Mutation discipline applied: each key throw confirmed RED before commit. Settings ADMIN-only check is controller-layer only (no service-level role guard). Specs follow existing vitest+NestJS Testing pattern with vi.fn() mocks.
 
