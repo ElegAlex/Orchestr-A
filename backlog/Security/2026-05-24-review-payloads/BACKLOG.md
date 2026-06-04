@@ -9553,7 +9553,7 @@ pnpm test apps/api/src/auth/refresh-token.service.spec.ts  # may need creation i
 ---
 ### TST-025 — E2E job runs all Playwright projects sequentially in one job — long feedback loop, no smoke fast-path
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9591,7 +9591,11 @@ TBD — manual verification (config change, no automated test)
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added e2e-smoke job (job 4a) in ci.yml that runs --grep @smoke --workers=4, self-contained with full services/seed/build setup, gated on needs:[lint].
+Changed e2e-tests (job 4b) needs from [lint] to [backend-tests, e2e-smoke] so the full suite only runs after unit tests AND smoke are green.
+Fail-pre structural witness: before edit grep -nE "e2e-smoke|--grep @smoke" ci.yml returned no output; after edit lines 187, 285, 309 are present and python3 yaml.safe_load parses clean.
+Note: --grep @smoke may skip the Playwright setup/auth project if it is not tagged @smoke; this is a known Playwright concern but not locally verifiable — added workers=4 as spec suggested; artifact names disambiguated (playwright-smoke-report vs playwright-report).
 
 ---
 ### DAT-030 — Seed creates E2E test users when E2E_SEED=true OR NODE_ENV=test — fragile prod safety
