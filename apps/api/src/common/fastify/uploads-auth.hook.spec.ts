@@ -80,6 +80,21 @@ describe('SEC-016 — uploads static auth hook', () => {
       expect(res.statusCode).toBe(401);
     });
 
+    it('does NOT 401 a CORS preflight (OPTIONS carries no Bearer) — lets CORS answer', async () => {
+      const res = await app.inject({
+        method: 'OPTIONS',
+        url: AVATAR_URL,
+        headers: {
+          origin: 'http://localhost:4001',
+          'access-control-request-method': 'GET',
+          'access-control-request-headers': 'authorization',
+        },
+      });
+      // The hook must pass the preflight through (here, with no CORS plugin
+      // registered, Fastify routing yields 404 — the point is it is NOT 401).
+      expect(res.statusCode).not.toBe(401);
+    });
+
     it('rejects a malformed / non-Bearer Authorization header with 401', async () => {
       const res = await app.inject({
         method: 'GET',

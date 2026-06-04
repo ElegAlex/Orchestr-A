@@ -55,6 +55,16 @@ export function createUploadsAuthHook(verifier: AccessTokenVerifier) {
       return; // not an uploads route — leave Nest routes untouched
     }
 
+    // Let the CORS layer answer preflights: a cross-origin authenticated blob
+    // fetch (the frontend's avatar loader) sends `Authorization`, which makes
+    // the browser fire an OPTIONS preflight FIRST — and a preflight carries no
+    // Bearer. This hook runs before enableCors(), so 401-ing OPTIONS here would
+    // block the preflight and the real GET never happens. A preflight returns no
+    // file; the actual GET below still requires a valid token.
+    if (request.method === 'OPTIONS') {
+      return;
+    }
+
     const authHeader = request.headers['authorization'];
     const token =
       typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
