@@ -7268,7 +7268,7 @@ Determine the would-be validator first (department.managerId), then look up an a
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** e7a39227
 **Learnings:**
 Scoped leaveValidationDelegate.findFirst to delegatorId: user.department.managerId (query-only). The old code had no delegatorId filter — any active delegation from any manager role would win, allowing cross-department leakage.
 
