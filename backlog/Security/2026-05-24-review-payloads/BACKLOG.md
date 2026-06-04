@@ -7225,7 +7225,7 @@ Pin `"rootDir": "./src"` in `apps/api/tsconfig.json` (or `tsconfig.build.json`) 
 pnpm --filter api run build && ls apps/api/dist/main.js
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** e77da66e
 **Learnings:**
 Pin rootDir=./src in apps/api/tsconfig.build.json (not tsconfig.json to avoid breaking vitest config files). Before fix: adding probe-build001.ts at apps/api root caused silent relocation of dist/main.js to dist/src/main.js. After fix: tsc hard-errors with TS6059 (file not under rootDir). Witness: apps/api/test/build-layout.test.sh — RED before (SILENT RELOCATION), GREEN after (TS6059 loud error). scripts/** exclude from 8e4b593 kept as belt-and-braces.
 
