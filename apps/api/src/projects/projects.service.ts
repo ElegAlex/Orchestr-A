@@ -1286,6 +1286,11 @@ export class ProjectsService {
       throw new NotFoundException('Projet introuvable');
     }
 
+    // Capture a single consistent reference time for the upcoming-milestone
+    // window so that both bounds of the filter are evaluated atomically.
+    const now = new Date();
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
     // Calculer les statistiques
     const totalTasks = project.tasks.length;
     const completedTasks = project.tasks.filter(
@@ -1370,9 +1375,8 @@ export class ProjectsService {
         upcoming: project.milestones.filter(
           (m) =>
             m.status !== 'COMPLETED' &&
-            new Date(m.dueDate) > new Date() &&
-            new Date(m.dueDate) <
-              new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            new Date(m.dueDate) > now &&
+            new Date(m.dueDate) < sevenDaysLater,
         ).length,
       },
       budget: project.budgetHours

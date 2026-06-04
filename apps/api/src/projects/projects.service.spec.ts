@@ -1457,6 +1457,43 @@ describe('ProjectsService', () => {
       expect(result.budget?.remainingHours).toBe(900);
     });
 
+    it('uses a single consistent now for the upcoming window (COR-032)', async () => {
+      // A milestone 50 days from real now is clearly outside the 7-day window.
+      // Spy Date.now() to return a value 100 days in the future so the upper
+      // bound (Date.now() + 7d) would be ~107 days ahead, which would
+      // incorrectly include the 50-day milestone if the unfixed code is used
+      // (because new Date() still reads the real clock → 50d passes lower
+      // bound, and Date.now()+7d → 107d passes upper bound too).
+      const realNow = Date.now();
+      const spyNow = vi.spyOn(Date, 'now').mockReturnValue(
+        realNow + 100 * 24 * 60 * 60 * 1000,
+      );
+      try {
+        mockPrismaService.project.findUnique.mockResolvedValue({
+          ...projectWithData,
+          milestones: [
+            {
+              status: 'IN_PROGRESS',
+              dueDate: new Date(realNow + 50 * 24 * 60 * 60 * 1000),
+            },
+          ],
+        });
+        mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+
+        const result = await service.getProjectStats('project-1');
+
+        // The 50-day milestone is outside the real 7-day window → should be 0.
+        // Before the fix: Date.now() spy shifts upper bound to ~107 days ahead
+        // while new Date() (lower bound) still reads the real clock → the
+        // milestone erroneously counts as upcoming (= 1) → assertion is RED.
+        // After the fix: both bounds derive from const now captured once (no
+        // Date.now() call at all) → spy is inert → upcoming = 0 → GREEN.
+        expect(result.milestones.upcoming).toBe(0);
+      } finally {
+        spyNow.mockRestore();
+      }
+    });
+
     it('should calculate correct progress percentage', async () => {
       const projectHalfDone = {
         ...mockProject,

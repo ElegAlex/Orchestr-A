@@ -9094,7 +9094,7 @@ Added null guard (dueDate != null) before both comparisons in captureSnapshots (
 ---
 ### COR-032 — getProjectStats milestones.upcoming uses Date.now() inline twice
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9132,7 +9132,12 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Fix: captured const now = new Date() and sevenDaysLater once at the top of getProjectStats (after the !project guard), then replaced the three inline new Date()/Date.now() calls in the upcoming-milestone filter with the captured constants.
+
+Fail-pre: vi.spyOn(Date, "now") returned realNow+100d; the unfixed code used Date.now() for the upper bound (shifted to ~107d) while new Date() for the lower bound still read the real clock, so a 50-day milestone incorrectly counted as upcoming → expected 0, received 1 (RED). After fix: Date.now() is no longer called in the filter, spy is inert, upstream-milestone = 0 (GREEN).
+
+Scope note: a pre-existing const now exists at line ~1154 in a different method (getHRStats or similar) — not touched.
 
 ---
 ### COR-033 — enrichLeavesWithPermissions inconsistent for REJECTED leaves on owner edit
