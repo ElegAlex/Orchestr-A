@@ -919,18 +919,16 @@ export class UsersService {
       entityId: id,
       actorId: requestingUserId ?? null,
       payload: {
+        // OBS-027 — REFERENCE-ONLY governed accountability metadata. The trail
+        // proves "admin <actorId> deleted user <id> (role/department/active state)
+        // at <row timestamp>"; it must NOT denormalise the person's identity, so
+        // anonymising the User row (the audit-bearing path) erases PII everywhere.
+        // No name/email/login/avatar (nor the password hash) is ever recorded.
         snapshot: {
           id: user.id,
-          email: user.email,
-          login: user.login,
-          firstName: user.firstName,
-          lastName: user.lastName,
           roleId: user.roleId,
           departmentId: user.departmentId,
           isActive: user.isActive,
-          avatarUrl: user.avatarUrl,
-          avatarPreset: user.avatarPreset,
-          forcePasswordChange: user.forcePasswordChange,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
@@ -1148,7 +1146,7 @@ export class UsersService {
       action: AuditAction.PASSWORD_CHANGED,
       userId: callerId,
       targetId: userId,
-      details: `Admin password reset for user ${user.login}`,
+      details: `Admin password reset for user ${user.id}`, // OBS-027: opaque id, not login (targetId already references the user)
       success: true,
     });
 

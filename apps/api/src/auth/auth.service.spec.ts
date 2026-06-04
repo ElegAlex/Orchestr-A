@@ -286,6 +286,14 @@ describe('AuthService', () => {
       expect(mockAuditService.log).not.toHaveBeenCalledWith(
         expect.objectContaining({ action: AuditAction.LOGIN_FAILURE }),
       );
+      // OBS-027 — the details must reference the opaque id, never the login/email
+      // (no direct identifier into the immutable trail or the stdout sink).
+      const loginCall = mockAuditService.log.mock.calls.find(
+        (c) => c[0].action === AuditAction.LOGIN_SUCCESS,
+      );
+      expect(loginCall?.[0].details).toContain(mockUser.id);
+      expect(loginCall?.[0].details).not.toContain(mockUser.login);
+      expect(loginCall?.[0].details).not.toContain(mockUser.email);
     });
 
     // SEC-004 — a forcePasswordChange-flagged user's session must be stamped

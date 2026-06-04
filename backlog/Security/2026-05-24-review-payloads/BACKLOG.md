@@ -10073,3 +10073,96 @@ Fix: Re-derive allowedRoles/deniedRoles for the 7 entries that contradict ROLE_T
 **Closed_by:** 81da4c9
 
 ---
+### OBS-027 — PII minimisation in the immutable audit trail (RGPD): events must not denormalise user identifiers
+
+- **Status:** DONE
+- **Phase:** 13
+- **Cluster:** —
+- **Confidence:** operator-directed
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** observability · rgpd · pii
+- **File:** `apps/api/src/users/users.service.ts` + `apps/api/src/auth/auth.service.ts`
+- **Source:** operator finding 2026-06-04 (follow-up to the DAT-008/026 anonymised-shell decision: `audit_logs` are immutable (OBS-002) and retained forever, so any direct identifier written there survives user erasure — defeating "full erasure").
+
+**Description:**
+Several audit events denormalised a user's direct identifiers into the immutable
+`audit_logs` trail instead of referencing the opaque user id. Because the trail is
+append-only and never purged, this PII could never be erased — so anonymising the
+User row (DAT-026 shell path) did NOT erase PII everywhere. Goal: make the trail
+**reference-only** (opaque ids), so anonymising the User row erases PII everywhere.
+FORWARD-ONLY — existing rows and the OBS-002 trigger are untouched.
+
+**Per-event field audit (primary source — every writer/event enumerated):**
+Two sinks: `AuditPersistenceService.log({payload, entityId, actorId, …})` and
+`AuditService.log(event)` which persists `payload = {ip, details, success, timestamp,
+ua, reason, before, after}` + `entityId = resolveEntityId(event)`. Flagged = stores a
+direct identifier (firstName/lastName/email/login/avatar) in clear. (`actorId`/`userId`
+opaque ids are fine.)
+
+| Event (writer) | What it wrote | PII? |
+|---|---|---|
+| `USER_DELETED` (users.service hardDelete) | payload.snapshot: id, **email, login, firstName, lastName, avatarUrl, avatarPreset**, roleId, departmentId, isActive, … | **YES → fixed** |
+| `LOGIN_SUCCESS` (auth.service) | details `User ${login} logged in…` | **login → fixed (→id)** |
+| `REGISTER` (auth.service) | details `New user registered: ${login}…` | **login → fixed (→id)** |
+| `PASSWORD_CHANGED` reset-token gen (auth.service) | details `…for user ${login}` | **login → fixed (→id)** |
+| `PASSWORD_CHANGED` admin reset (users.service) | details `Admin password reset for user ${login}` | **login → fixed (→id)** |
+| `LOGIN_FAILURE` / `ACCOUNT_LOCKED` (auth.service) | entityId = attempted login/email | borderline — **kept** (see below) |
+| `ROLE_DELETED` (roles.service) | role metadata (code/label/templateKey) | no |
+| `ROLE_CHANGE` / `USER_DEACTIVATED` / `USER_REACTIVATED` / `DEPARTMENT_CHANGED` / `SERVICE_MEMBERSHIP_CHANGED` (users.service) | before/after of roleCode / isActive / departmentId / serviceIds | no (ids/flags/codes) |
+| `LEAVE_*` (leaves.service, 8 emitters) | subject `{leaveId, userId}` + leave-field before/after | no |
+| `LEAVE_BALANCE_ADJUSTED` (leaves.service) | userId + totalDays before/after | no |
+| `PASSWORD_CHANGED` self-service / reset-via-token (users/auth) | generic details, before/after `forcePasswordChange`/`updatedAt` | no |
+| `PROJECT_*` (projects.service) | project metadata | no |
+| `RELEASE_DEPLOYED` (deployments.service) | release/env/node | no |
+| `SYSTEM_BACKFILL` (system-backfill script) | script/args/phase/counts | no |
+
+Note: `roles.service` DOES read users' email/firstName/lastName but only to build a
+`ConflictException` **response body** (409 to the caller) — NOT an audit row.
+
+**LOGIN_FAILURE / ACCOUNT_LOCKED entityId — deliberately kept (out of scope, with reasoning):**
+the attempted identifier is **attacker-controlled** and may not correspond to any real
+user; it is the only available *subject* of an unauthenticated attempt ("who was
+targeted"); it is already OBS-013-governed (kept readable in the RGPD-controlled table,
+hashed off the stdout sink). It is NOT a denormalised known-user identity tied to a User
+row, so anonymising a User row would not reach it anyway. A separate finding could hash
+it if the operator/DPO wants zero raw attempted-logins in the trail — that is a
+brute-force-forensics trade-off, not user-erasure.
+
+**Root cause:**
+Audit snapshots/details were written for human readability (names/logins) rather than
+opaque references, before the immutability + retention implications were considered.
+
+**Suggested fix:**
+Make every flagged event REFERENCE-ONLY: `USER_DELETED` snapshot keeps only id +
+role/department ids + isActive + timestamps (no name/email/login/avatar); the four
+`details` strings reference `${user.id}` not `${user.login}`. No schema change, no
+migration, no touching existing rows or OBS-002.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot.
+5. Commit message includes `[closes OBS-027]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm --filter api test -- users.service auth.service && pnpm --filter api test:integration -- audit-immutability
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:**
+Forward-only PII minimisation. USER_DELETED snapshot reduced to {id, roleId,
+departmentId, isActive, createdAt, updatedAt}; 4 `details` strings now interpolate
+`${user.id}` (LOGIN_SUCCESS, REGISTER, PASSWORD_CHANGED reset-token gen + admin reset).
+Witnesses RED→GREEN: users.service.spec asserts the USER_DELETED snapshot has NO
+email/login/firstName/lastName/avatarUrl/avatarPreset/passwordHash (RED on the old
+snapshot); auth.service.spec asserts LOGIN_SUCCESS details references the id, never the
+login/email. AC#4 N/A — this REDUCES what audit-sensitive paths record (the events still
+emit, just reference-only). No migration; `audit_logs.actorId`/OBS-002 trigger untouched
+(audit-immutability.int.spec.ts stays green). **EXISTING historical USER_DELETED
+snapshots still hold identifiers** — they are immutable and out of scope here
+(operator/DPO call); this fix changes only FUTURE events. Gate green: 2035 api unit +
+126 int + types + lint + build.

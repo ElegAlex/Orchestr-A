@@ -238,7 +238,9 @@ export class AuthService {
       userId: user.id,
       ip: meta?.ip,
       ua: meta?.userAgent,
-      details: `User ${user.login} logged in successfully`,
+      // OBS-027 — reference the user by opaque id, never the login (PII), so the
+      // immutable trail (and the stdout sink) carries no direct identifier.
+      details: `User ${user.id} logged in successfully`,
       success: true,
     });
 
@@ -360,7 +362,7 @@ export class AuthService {
     this.auditService.log({
       action: AuditAction.REGISTER,
       userId: user.id,
-      details: `New user registered: ${user.login} (pending activation)`,
+      details: `New user registered: ${user.id} (pending activation)`, // OBS-027: opaque id, not login
       success: true,
     });
 
@@ -522,7 +524,7 @@ export class AuthService {
     this.auditService.log({
       action: AuditAction.PASSWORD_CHANGED,
       userId: createdById,
-      details: `Password reset token generated for user ${targetUser.login}`,
+      details: `Password reset token generated for user ${targetUser.id}`, // OBS-027: opaque id, not login
       success: true,
     });
 

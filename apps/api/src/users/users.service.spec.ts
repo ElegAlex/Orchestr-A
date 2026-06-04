@@ -1908,6 +1908,10 @@ describe('UsersService', () => {
       expect(mockPrismaService.user.delete).toHaveBeenCalled();
 
       // USER_DELETED emitted before the delete, mirroring DAT-007 PROJECT_DELETED.
+      // OBS-027 — REFERENCE-ONLY: the immutable trail records who (id) + which
+      // role/department + active state was deleted by which admin (actorId) at the
+      // row timestamp. It must NOT denormalise the person's identity, so anonymising
+      // the User row erases PII everywhere.
       expect(mockAuditPersistence.log).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'USER_DELETED',
@@ -1915,19 +1919,25 @@ describe('UsersService', () => {
           entityId: 'user-1',
           actorId: 'admin-1',
           payload: expect.objectContaining({
-            snapshot: expect.objectContaining({
-              id: 'user-1',
-              email: 'user@example.com',
-              login: 'jdupont',
-            }),
+            snapshot: expect.objectContaining({ id: 'user-1' }),
           }),
         }),
       );
-      // The snapshot never leaks the password hash.
+      // OBS-027 — no direct identifier (nor the password hash) enters the trail.
       const logArg = mockAuditPersistence.log.mock.calls[0][0] as {
         payload: { snapshot: Record<string, unknown> };
       };
-      expect(logArg.payload.snapshot).not.toHaveProperty('passwordHash');
+      for (const pii of [
+        'email',
+        'login',
+        'firstName',
+        'lastName',
+        'avatarUrl',
+        'avatarPreset',
+        'passwordHash',
+      ]) {
+        expect(logArg.payload.snapshot).not.toHaveProperty(pii);
+      }
     });
   });
 
