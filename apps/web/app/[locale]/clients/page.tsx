@@ -11,6 +11,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { clientsService } from "@/services/clients.service";
 import { ExportService } from "@/services/export.service";
 import { Client, CreateClientDto, UpdateClientDto } from "@/types";
+import { logger } from '@/lib/logger';
 
 export default function ClientsPage() {
   const tc = useTranslations("common");
@@ -43,7 +44,7 @@ export default function ClientsPage() {
       });
       setClients(res.data);
     } catch (err) {
-      console.error("Error loading clients:", err);
+      logger.error("Error loading clients:", err);
       toast.error("Impossible de charger les clients");
     } finally {
       setLoading(false);
@@ -66,7 +67,7 @@ export default function ClientsPage() {
       setEditing(null);
       await fetchData();
     } catch (err) {
-      console.error("Error saving client:", err);
+      logger.error("Error saving client:", err);
       const message =
         (err as { response?: { data?: { message?: string } } }).response?.data
           ?.message ?? "Erreur lors de la sauvegarde";
@@ -112,7 +113,7 @@ export default function ClientsPage() {
     try {
       ExportService.exportClientsToPDF(buildClientExportData());
     } catch (err) {
-      console.error("Export PDF error:", err);
+      logger.error("Export PDF error:", err);
       toast.error("Erreur lors de l'export PDF");
     } finally {
       setExporting(false);
@@ -168,7 +169,7 @@ export default function ClientsPage() {
 
       ExportService.exportClientsToExcel(buildClientExportData(), projectRows);
     } catch (err) {
-      console.error("Export Excel error:", err);
+      logger.error("Export Excel error:", err);
       toast.error("Erreur lors de l'export Excel");
     } finally {
       setExporting(false);

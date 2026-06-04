@@ -15,6 +15,7 @@ import {
   ThirdPartyType,
   UpdateThirdPartyDto,
 } from "@/types";
+import { logger } from '@/lib/logger';
 
 const TYPE_LABELS: Record<ThirdPartyType, string> = {
   [ThirdPartyType.EXTERNAL_PROVIDER]: "Prestataire externe",
@@ -58,7 +59,7 @@ export default function ThirdPartiesPage() {
       });
       setThirdParties(res.data);
     } catch (err) {
-      console.error("Error loading third parties:", err);
+      logger.error("Error loading third parties:", err);
       toast.error("Impossible de charger les tiers");
     } finally {
       setLoading(false);
@@ -83,7 +84,7 @@ export default function ThirdPartiesPage() {
       setEditing(null);
       await fetchData();
     } catch (err) {
-      console.error("Error saving third party:", err);
+      logger.error("Error saving third party:", err);
       const message =
         (err as { response?: { data?: { message?: string } } }).response?.data
           ?.message ?? "Erreur lors de la sauvegarde";
@@ -100,7 +101,7 @@ export default function ThirdPartiesPage() {
       setDeleting(null);
       await fetchData();
     } catch (err) {
-      console.error("Error deleting third party:", err);
+      logger.error("Error deleting third party:", err);
       toast.error("Suppression impossible");
       throw err;
     }

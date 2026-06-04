@@ -9,6 +9,7 @@ import {
   UpdateLeaveTypeDto,
 } from "@/services/leave-types.service";
 import toast from "react-hot-toast";
+import { logger } from '@/lib/logger';
 
 interface LeaveTypesManagerProps {
   onTypeChange?: () => void;
@@ -41,7 +42,7 @@ export const LeaveTypesManager = ({ onTypeChange }: LeaveTypesManagerProps) => {
       const data = await leaveTypesService.getAll(showInactive);
       setLeaveTypes(data);
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       toast.error(tc("errors.serverError"));
     } finally {
       setLoading(false);

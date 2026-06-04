@@ -26,6 +26,7 @@ import { PresenceDialog } from "@/components/PresenceDialog";
 import { MyTasksSection } from "@/components/dashboard/MyTasksSection";
 import { TimeEntryModal } from "@/components/time-tracking/TimeEntryModal";
 import toast from "react-hot-toast";
+import { logger } from '@/lib/logger';
 
 const MAX_TODOS = 20;
 
@@ -137,7 +138,7 @@ export default function DashboardPage() {
       }
     } catch (err) {
       toast.error(t("tasks.errors.statusUpdate"));
-      console.error(err);
+      logger.error(err);
     }
   };
 
@@ -178,7 +179,7 @@ export default function DashboardPage() {
       const data = await personalTodosService.getAll();
       setTodos(data);
     } catch (err) {
-      console.error("Error fetching todos:", err);
+      logger.error("Error fetching todos:", err);
     } finally {
       setLoadingTodos(false);
     }
@@ -261,7 +262,7 @@ export default function DashboardPage() {
               ? projectsService.getByUser(user.id).catch((err) => {
                   const axiosError = err as { response?: { status?: number } };
                   if (axiosError.response?.status !== 404) {
-                    console.error("Error fetching projects:", err);
+                    logger.error("Error fetching projects:", err);
                   }
                   return [] as Project[];
                 })
@@ -271,7 +272,7 @@ export default function DashboardPage() {
             tasksService.getByAssignee(user.id).catch((err) => {
               const axiosError = err as { response?: { status?: number } };
               if (axiosError.response?.status !== 404) {
-                console.error("Error fetching tasks:", err);
+                logger.error("Error fetching tasks:", err);
               }
               return [] as Task[];
             }),
@@ -284,7 +285,7 @@ export default function DashboardPage() {
                     axiosError.response?.status !== 404 &&
                     axiosError.response?.status !== 403
                   ) {
-                    console.error("Error fetching undeclared tasks:", err);
+                    logger.error("Error fetching undeclared tasks:", err);
                   }
                   return [] as Task[];
                 })
@@ -322,7 +323,7 @@ export default function DashboardPage() {
         }
       } catch (err) {
         toast.error(t("errors.loadData"));
-        console.error(err);
+        logger.error(err);
       } finally {
         setLoading(false);
       }

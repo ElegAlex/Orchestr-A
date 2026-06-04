@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/usePermissions";
 import { api } from "@/lib/api";
 import { ClientSelector } from "@/components/clients/ClientSelector";
+import { logger } from '@/lib/logger';
 
 export default function ReportsPage() {
   const t = useTranslations("admin.reports");
@@ -55,7 +56,7 @@ export default function ReportsPage() {
       const projectsData = response.data;
       setProjects(projectsData.data || projectsData);
     } catch (error) {
-      console.error("Error loading projects:", error);
+      logger.error("Error loading projects:", error);
     }
   }, []);
 
@@ -74,7 +75,7 @@ export default function ReportsPage() {
       // Load projects for filter if not already loaded
       loadProjects();
     } catch (error) {
-      console.error("Error loading analytics:", error);
+      logger.error("Error loading analytics:", error);
     } finally {
       setLoading(false);
     }
@@ -154,7 +155,7 @@ export default function ReportsPage() {
         }
       }
     } catch (error) {
-      console.error("Error exporting report:", error);
+      logger.error("Error exporting report:", error);
       alert(t("errors.exportError"));
     }
   };

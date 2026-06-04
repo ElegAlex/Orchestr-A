@@ -12,6 +12,7 @@ import {
 import { tasksService } from "@/services/tasks.service";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import { logger } from '@/lib/logger';
 
 interface TaskDependencyModalProps {
   task: Task;
@@ -107,7 +108,7 @@ export function TaskDependencyModal({
         axiosError.response?.data?.message ||
           t("messages.dependenciesUpdateError"),
       );
-      console.error(err);
+      logger.error(err);
     } finally {
       setSaving(false);
     }

@@ -7,6 +7,7 @@ import {
 } from "@/services/personal-todos.service";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import { logger } from '@/lib/logger';
 
 const MAX_TODOS = 20;
 
@@ -33,7 +34,7 @@ export const PersonalTodoWidget = () => {
       setTodos(data);
     } catch (err) {
       toast.error(t("errors.loadData"));
-      console.error(err);
+      logger.error(err);
     } finally {
       setLoading(false);
     }
@@ -57,7 +58,7 @@ export const PersonalTodoWidget = () => {
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       toast.error(error.response?.data?.message || t("todos.errors.add"));
-      console.error(err);
+      logger.error(err);
     } finally {
       setAdding(false);
     }
@@ -71,7 +72,7 @@ export const PersonalTodoWidget = () => {
       setTodos(todos.map((t) => (t.id === todo.id ? updated : t)));
     } catch (err) {
       toast.error(t("todos.errors.update"));
-      console.error(err);
+      logger.error(err);
     }
   };
 
@@ -82,7 +83,7 @@ export const PersonalTodoWidget = () => {
       toast.success(t("todos.success.deleted"));
     } catch (err) {
       toast.error(t("todos.errors.delete"));
-      console.error(err);
+      logger.error(err);
     }
   };
 
@@ -106,7 +107,7 @@ export const PersonalTodoWidget = () => {
       toast.success(t("todos.success.updated"));
     } catch (err) {
       toast.error(t("todos.errors.update"));
-      console.error(err);
+      logger.error(err);
     }
   };
 

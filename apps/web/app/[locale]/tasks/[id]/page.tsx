@@ -31,6 +31,7 @@ import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import { UserAvatar } from "@/components/UserAvatar";
+import { logger } from '@/lib/logger';
 
 interface TaskMilestone {
   name: string;
@@ -99,7 +100,7 @@ export default function TaskDetailPage() {
             );
             setMilestones(projectMilestones);
           } catch (error) {
-            console.error("Error fetching milestones:", error);
+            logger.error("Error fetching milestones:", error);
             setMilestones([]);
           }
 
@@ -113,7 +114,7 @@ export default function TaskDetailPage() {
               : (projectTasksData as { data?: Task[] }).data || [];
             setProjectTasks(tasksArray);
           } catch (error) {
-            console.error("Error fetching project tasks:", error);
+            logger.error("Error fetching project tasks:", error);
             setProjectTasks([]);
           }
         }
@@ -143,7 +144,7 @@ export default function TaskDetailPage() {
             : (usersResponse as { data?: User[] }).data || [];
           setUsers(allUsers);
         } catch (error) {
-          console.error("Error fetching users:", error);
+          logger.error("Error fetching users:", error);
           setUsers([]);
         }
 
@@ -155,7 +156,7 @@ export default function TaskDetailPage() {
             : (projectsData as { data?: Project[] }).data || [];
           setProjects(allProjects);
         } catch (error) {
-          console.error("Error fetching projects:", error);
+          logger.error("Error fetching projects:", error);
           setProjects([]);
         }
 
@@ -193,7 +194,7 @@ export default function TaskDetailPage() {
         });
       } catch (err) {
         toast.error(t("messages.loadTaskError"));
-        console.error(err);
+        logger.error(err);
         router.push(`/${locale}/tasks`);
       } finally {
         setLoading(false);
@@ -255,7 +256,7 @@ export default function TaskDetailPage() {
       toast.error(
         axiosError.response?.data?.message || t("messages.updateError"),
       );
-      console.error(err);
+      logger.error(err);
     }
   };
 
@@ -309,7 +310,7 @@ export default function TaskDetailPage() {
       toast.error(
         axiosError.response?.data?.message || t("messages.deleteError"),
       );
-      console.error(err);
+      logger.error(err);
     }
   };
 
@@ -395,7 +396,7 @@ export default function TaskDetailPage() {
         axiosError.response?.data?.message ||
           t("messages.dependenciesUpdateError"),
       );
-      console.error(err);
+      logger.error(err);
       // Reset to original
       setSelectedDependencyIds(currentIds);
     } finally {

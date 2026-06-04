@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { Client, CreateClientDto, UpdateClientDto } from "@/types";
+import { logger } from '@/lib/logger';
 
 interface ClientModalProps {
   isOpen: boolean;
@@ -59,7 +60,7 @@ export function ClientModal({
       await onSave(payload);
       onClose();
     } catch (err) {
-      console.error("Error saving client:", err);
+      logger.error("Error saving client:", err);
     } finally {
       setSubmitting(false);
     }

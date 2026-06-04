@@ -17,6 +17,7 @@ import {
   TimeEntry,
 } from "@/types";
 import { ThirdPartySelector } from "@/components/third-parties/ThirdPartySelector";
+import { logger } from '@/lib/logger';
 
 type Props = {
   open: boolean;
@@ -96,7 +97,7 @@ export function TimeEntryModal({
           if (!cancelled) setProjects([]);
           const axiosError = err as { response?: { status?: number } };
           if (axiosError.response?.status !== 404) {
-            console.error("Error fetching projects:", err);
+            logger.error("Error fetching projects:", err);
           }
         }
       }
@@ -110,7 +111,7 @@ export function TimeEntryModal({
         if (!cancelled) setTasks([]);
         const axiosError = err as { response?: { status?: number } };
         if (axiosError.response?.status !== 404) {
-          console.error("Error fetching tasks:", err);
+          logger.error("Error fetching tasks:", err);
         }
       }
     };

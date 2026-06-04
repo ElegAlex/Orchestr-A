@@ -6,6 +6,7 @@ import { skillsService } from "@/services/skills.service";
 import { SkillCategory, SkillLevel } from "@/types";
 import toast from "react-hot-toast";
 import { UserAvatar } from "@/components/UserAvatar";
+import { logger } from '@/lib/logger';
 
 interface MatrixData {
   totalUsers: number;
@@ -104,7 +105,7 @@ function LevelCell({
       }
     } catch (err) {
       toast.error(tc("errors.validationError"));
-      console.error(err);
+      logger.error(err);
     } finally {
       setIsUpdating(false);
       setIsEditing(false);
@@ -266,7 +267,7 @@ export function SkillsMatrix() {
       setData(result as unknown as MatrixData);
     } catch (err) {
       setError(t("matrix.loadingError"));
-      console.error(err);
+      logger.error(err);
     } finally {
       setLoading(false);
     }

@@ -15,6 +15,7 @@ import {
 } from "@/types";
 import toast from "react-hot-toast";
 import { format, isSameDay } from "date-fns";
+import { logger } from '@/lib/logger';
 
 // ─────────────────────────────────────────────
 // Recurring Rule Modal
@@ -430,7 +431,7 @@ export default function TeleworkPage() {
       setTeleworkDays(Array.isArray(data) ? data : []);
       setRecurringRules(Array.isArray(rules) ? rules : []);
     } catch (err) {
-      console.error("Erreur chargement télétravail:", err);
+      logger.error("Erreur chargement télétravail:", err);
       toast.error(tc("errors.serverError"));
     } finally {
       setLoading(false);

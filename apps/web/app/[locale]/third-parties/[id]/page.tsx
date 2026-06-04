@@ -15,6 +15,7 @@ import {
   ThirdPartyType,
   UpdateThirdPartyDto,
 } from "@/types";
+import { logger } from '@/lib/logger';
 
 const TYPE_LABELS: Record<ThirdPartyType, string> = {
   [ThirdPartyType.EXTERNAL_PROVIDER]: "Prestataire externe",
@@ -43,7 +44,7 @@ export default function ThirdPartyDetailPage() {
       const tp = await thirdPartiesService.getById(params.id);
       setThirdParty(tp);
     } catch (err) {
-      console.error("Error loading third party:", err);
+      logger.error("Error loading third party:", err);
       toast.error("Tiers introuvable");
     } finally {
       setLoading(false);
@@ -78,7 +79,7 @@ export default function ThirdPartyDetailPage() {
       toast.success("Tiers supprimé");
       router.push(`/${locale}/third-parties`);
     } catch (err) {
-      console.error("Error deleting third party:", err);
+      logger.error("Error deleting third party:", err);
       toast.error("Suppression impossible");
       throw err;
     }

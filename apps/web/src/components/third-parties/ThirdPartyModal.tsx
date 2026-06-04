@@ -9,6 +9,7 @@ import {
   ThirdPartyType,
   UpdateThirdPartyDto,
 } from "@/types";
+import { logger } from '@/lib/logger';
 
 interface ThirdPartyModalProps {
   isOpen: boolean;
@@ -98,7 +99,7 @@ export function ThirdPartyModal({
       await onSave(payload);
       onClose();
     } catch (err) {
-      console.error("Error saving third party:", err);
+      logger.error("Error saving third party:", err);
     } finally {
       setSubmitting(false);
     }

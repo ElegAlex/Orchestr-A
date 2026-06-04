@@ -12,6 +12,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import { logger } from '@/lib/logger';
 
 interface EventCreateModalProps {
   isOpen: boolean;
@@ -99,7 +100,7 @@ export const EventCreateModal = ({
         setServices([]);
       }
     } catch (err) {
-      console.error("Error fetching initial data:", err);
+      logger.error("Error fetching initial data:", err);
     }
   };
 

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { thirdPartiesService } from "@/services/third-parties.service";
 import { ThirdParty, ThirdPartyType } from "@/types";
+import { logger } from '@/lib/logger';
 
 interface ThirdPartySelectorProps {
   value?: string | null;
@@ -38,7 +39,7 @@ export function ThirdPartySelector({
     thirdPartiesService
       .getAll({ isActive: true, limit: 200 })
       .then((res) => setThirdParties(res.data))
-      .catch((err) => console.error("Error loading third parties:", err))
+      .catch((err) => logger.error("Error loading third parties:", err))
       .finally(() => setLoading(false));
   }, []);
 

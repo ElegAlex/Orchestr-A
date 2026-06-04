@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { clientsService } from "@/services/clients.service";
 import { Client, ClientDeletionImpact } from "@/types";
+import { logger } from '@/lib/logger';
 
 interface ClientDeleteConfirmModalProps {
   isOpen: boolean;
@@ -34,7 +35,7 @@ export function ClientDeleteConfirmModal({
       .getDeletionImpact(client.id)
       .then(setImpact)
       .catch((err) => {
-        console.error("Error fetching deletion impact:", err);
+        logger.error("Error fetching deletion impact:", err);
         toast.error("Impossible de calculer l'impact de la suppression");
       })
       .finally(() => setLoading(false));
@@ -46,7 +47,7 @@ export function ClientDeleteConfirmModal({
       await onConfirm();
       onClose();
     } catch (err) {
-      console.error("Error deleting client:", err);
+      logger.error("Error deleting client:", err);
     } finally {
       setDeleting(false);
     }

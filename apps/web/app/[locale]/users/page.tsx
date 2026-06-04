@@ -25,6 +25,7 @@ import toast from "react-hot-toast";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { parseCSV as parseCSVRaw } from "@/lib/csv-parser";
+import { logger } from '@/lib/logger';
 
 /**
  * Fallback role code quand aucun rôle `isDefault: true` n'est trouvé côté DB.
@@ -152,7 +153,7 @@ export default function UsersPage() {
       setAvailableRoles(roles);
     } catch (err) {
       toast.error(t("messages.loadError"));
-      console.error(err);
+      logger.error(err);
     } finally {
       setLoading(false);
     }
@@ -173,7 +174,7 @@ export default function UsersPage() {
       setDepartments(depts);
       setServices(servs);
     } catch (err) {
-      console.error(
+      logger.error(
         "Erreur lors du chargement des départements/services:",
         err,
       );

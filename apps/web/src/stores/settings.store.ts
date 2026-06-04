@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { settingsService } from "@/services/settings.service";
+import { logger } from '@/lib/logger';
 
 interface SettingsState {
   settings: Record<string, unknown>;
@@ -46,7 +47,7 @@ export const useSettingsStore = create<SettingsState>()(
             isLoaded: true,
           });
         } catch (error: unknown) {
-          console.error("Error fetching settings:", error);
+          logger.error("Error fetching settings:", error);
           const message =
             error instanceof Error
               ? error.message
@@ -66,7 +67,7 @@ export const useSettingsStore = create<SettingsState>()(
             settings: { ...state.settings, [key]: value },
           }));
         } catch (error: unknown) {
-          console.error("Error updating setting:", error);
+          logger.error("Error updating setting:", error);
           throw error;
         }
       },

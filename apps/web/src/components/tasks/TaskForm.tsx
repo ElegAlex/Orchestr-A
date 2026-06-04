@@ -39,6 +39,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import { ThirdPartySelector } from "@/components/third-parties/ThirdPartySelector";
+import { logger } from '@/lib/logger';
 
 // ─── Types publics ───────────────────────────────────────────────────────────
 
@@ -490,7 +491,7 @@ export function TaskForm({
       }
     } catch (err) {
       // Parent is responsible for error toasting; we just log.
-      console.error("TaskForm submit error:", err);
+      logger.error("TaskForm submit error:", err);
     } finally {
       setIsSubmitting(false);
     }

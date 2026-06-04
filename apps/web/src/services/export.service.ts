@@ -3,6 +3,7 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toPng } from "html-to-image";
+import { logger } from '@/lib/logger';
 
 interface AnalyticsData {
   metrics: Array<{
@@ -521,7 +522,7 @@ export class ExportService {
         currentY += imgHeight + 8;
         chartRendered = true;
       } catch (err) {
-        console.warn("Chart capture failed, falling back to table:", err);
+        logger.warn("Chart capture failed, falling back to table:", err);
       }
     }
 

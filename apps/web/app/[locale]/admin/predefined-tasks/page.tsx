@@ -14,6 +14,7 @@ import {
 import toast from "react-hot-toast";
 import { RecurringRulesModal } from "@/components/predefined-tasks/RecurringRulesModal";
 import { WeightInput } from "@/components/predefined-tasks/WeightInput";
+import { logger } from '@/lib/logger';
 
 const DURATION_LABELS: Record<TaskDuration, string> = {
   HALF_DAY: "Demi-journée",
@@ -120,7 +121,7 @@ export default function PredefinedTasksAdminPage() {
       const list = await predefinedTasksService.getAll();
       setTasks(list);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       toast.error("Erreur lors du chargement des tâches prédéfinies");
     } finally {
       setLoading(false);
@@ -223,7 +224,7 @@ export default function PredefinedTasksAdminPage() {
       toast.success(task.isActive ? "Tâche désactivée" : "Tâche réactivée");
       fetchTasks();
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       toast.error("Erreur lors de la mise à jour");
     }
   };
@@ -255,7 +256,7 @@ export default function PredefinedTasksAdminPage() {
       });
       setRulesForTask(rules);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       setRulesForTask([]);
     }
     setShowRulesModal(true);

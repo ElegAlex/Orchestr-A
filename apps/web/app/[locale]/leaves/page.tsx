@@ -21,6 +21,7 @@ import { parseCSV } from "@/lib/csv-parser";
 import { Leave, LeaveType, LeaveStatus, HalfDay, User } from "@/types";
 import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
+import { logger } from '@/lib/logger';
 
 type TabType =
   | "my-leaves"
@@ -117,7 +118,7 @@ export default function LeavesPage() {
         setUsers([]);
       }
     } catch (error) {
-      console.error("Error fetching users:", error);
+      logger.error("Error fetching users:", error);
     }
   };
 
@@ -127,7 +128,7 @@ export default function LeavesPage() {
       const data = await leavesService.getSubordinates();
       setSubordinates(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Error fetching subordinates:", error);
+      logger.error("Error fetching subordinates:", error);
     }
   };
 
@@ -138,7 +139,7 @@ export default function LeavesPage() {
     } catch (err) {
       const axiosError = err as { response?: { status?: number } };
       if (axiosError.response?.status !== 404) {
-        console.error(err);
+        logger.error(err);
       }
       setLeaves([]);
     }
@@ -150,7 +151,7 @@ export default function LeavesPage() {
       const data = await leavesService.getPendingForValidation();
       setPendingLeaves(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       setPendingLeaves([]);
     }
   };
@@ -162,7 +163,7 @@ export default function LeavesPage() {
       const data = await leavesService.getAll(1, 100, url);
       setAllLeaves(Array.isArray(data.data) ? data.data : []);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       setAllLeaves([]);
     }
   };
@@ -173,7 +174,7 @@ export default function LeavesPage() {
       const data = await leavesService.getMyDelegations();
       setDelegations(data);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       setDelegations({ given: [], received: [] });
     }
   };
@@ -187,7 +188,7 @@ export default function LeavesPage() {
         setFormData((prev) => ({ ...prev, leaveTypeId: data[0].id }));
       }
     } catch (err) {
-      console.error("Error fetching leave types:", err);
+      logger.error("Error fetching leave types:", err);
       setLeaveTypes([]);
     }
   };
@@ -198,7 +199,7 @@ export default function LeavesPage() {
       const data = await leavesService.getDefaultBalances(balanceYear);
       setBalances(data);
     } catch (err) {
-      console.error("Error fetching balances:", err);
+      logger.error("Error fetching balances:", err);
       setBalances([]);
     }
   };

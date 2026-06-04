@@ -14,6 +14,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { IcsExportSection } from "@/components/planning-export/IcsExportSection";
 import { IcsImportSection } from "@/components/planning-export/IcsImportSection";
 import { PERSONA_PRESETS } from "@/constants/avatar-presets";
+import { logger } from '@/lib/logger';
 
 const INITIALS_PRESET = "initials";
 
@@ -45,7 +46,7 @@ export default function ProfilePage() {
       setUser({ ...user!, ...updated });
       toast.success("Avatar mis à jour");
     } catch (err) {
-      console.error("Avatar preset error:", err);
+      logger.error("Avatar preset error:", err);
       const axiosErr = err as { response?: { data?: { message?: string } } };
       const msg = axiosErr?.response?.data?.message || "Erreur inconnue";
       toast.error(`Erreur avatar: ${msg}`);
@@ -63,7 +64,7 @@ export default function ProfilePage() {
       setUser({ ...user!, ...updated });
       toast.success("Avatar mis à jour");
     } catch (err) {
-      console.error("Avatar upload error:", err);
+      logger.error("Avatar upload error:", err);
       const axiosErr = err as { response?: { data?: { message?: string } } };
       const msg = axiosErr?.response?.data?.message || "Erreur inconnue";
       toast.error(`Erreur upload: ${msg}`);

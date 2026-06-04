@@ -20,6 +20,7 @@ import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import { logger } from '@/lib/logger';
 
 export default function EventsPage() {
   const t = useTranslations("events");
@@ -75,7 +76,7 @@ export default function EventsPage() {
           projectsData = [];
           const axiosError = err as { response?: { status?: number } };
           if (axiosError.response?.status !== 404)
-            console.error("Error fetching projects:", err);
+            logger.error("Error fetching projects:", err);
         }
       }
       setProjects(projectsData);
@@ -89,7 +90,7 @@ export default function EventsPage() {
         eventsData = [];
         const axiosError = err as { response?: { status?: number } };
         if (axiosError.response?.status !== 404)
-          console.error("Error fetching events:", err);
+          logger.error("Error fetching events:", err);
       }
       setEvents(eventsData);
 
@@ -102,7 +103,7 @@ export default function EventsPage() {
           setUsers([]);
           const axiosError = err as { response?: { status?: number } };
           if (axiosError.response?.status !== 404)
-            console.error("Error fetching users:", err);
+            logger.error("Error fetching users:", err);
         }
       }
 
@@ -117,7 +118,7 @@ export default function EventsPage() {
       }
     } catch (err) {
       toast.error(t("errors.loadData"));
-      console.error(err);
+      logger.error(err);
     } finally {
       setLoading(false);
     }

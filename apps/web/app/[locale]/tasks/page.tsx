@@ -15,6 +15,7 @@ import { TaskForm } from "@/components/tasks/TaskForm";
 import TaskKanban from "@/components/tasks/TaskKanban";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import toast from "react-hot-toast";
+import { logger } from '@/lib/logger';
 
 export default function TasksPage() {
   const router = useRouter();
@@ -69,7 +70,7 @@ export default function TasksPage() {
           projectsData = [];
           const axiosError = err as { response?: { status?: number } };
           if (axiosError.response?.status !== 404)
-            console.error("Error fetching projects:", err);
+            logger.error("Error fetching projects:", err);
         }
       }
       setProjects(projectsData);
@@ -94,7 +95,7 @@ export default function TasksPage() {
           tasksData = [];
           const axiosError = err as { response?: { status?: number } };
           if (axiosError.response?.status !== 404)
-            console.error("Error fetching tasks:", err);
+            logger.error("Error fetching tasks:", err);
         }
       }
       setTasks(tasksData);
@@ -108,7 +109,7 @@ export default function TasksPage() {
           setOrphanTasks([]);
           const axiosError = err as { response?: { status?: number } };
           if (axiosError.response?.status !== 404)
-            console.error("Error fetching orphan tasks:", err);
+            logger.error("Error fetching orphan tasks:", err);
         }
       }
 
@@ -121,7 +122,7 @@ export default function TasksPage() {
           setUsers([]);
           const axiosError = err as { response?: { status?: number } };
           if (axiosError.response?.status !== 404)
-            console.error("Error fetching users:", err);
+            logger.error("Error fetching users:", err);
         }
       }
 
@@ -136,7 +137,7 @@ export default function TasksPage() {
       }
     } catch (err) {
       toast.error(t("messages.loadError"));
-      console.error(err);
+      logger.error(err);
     } finally {
       setLoading(false);
     }

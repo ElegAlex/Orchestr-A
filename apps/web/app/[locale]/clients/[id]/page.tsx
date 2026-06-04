@@ -15,6 +15,7 @@ import {
   CreateClientDto,
   UpdateClientDto,
 } from "@/types";
+import { logger } from '@/lib/logger';
 
 type Tab = "infos" | "projets";
 
@@ -60,7 +61,7 @@ export default function ClientDetailPage() {
       const c = await clientsService.getById(params.id);
       setClient(c);
     } catch (err) {
-      console.error("Error loading client:", err);
+      logger.error("Error loading client:", err);
       toast.error("Client introuvable");
     } finally {
       setLoading(false);
@@ -73,7 +74,7 @@ export default function ClientDetailPage() {
       const data = await clientsService.getProjectsWithSummary(params.id);
       setProjectsData(data);
     } catch (err) {
-      console.error("Error loading client projects:", err);
+      logger.error("Error loading client projects:", err);
       toast.error("Impossible de charger les projets du client");
     } finally {
       setProjectsLoading(false);
@@ -129,7 +130,7 @@ export default function ClientDetailPage() {
       toast.success(client.isActive ? "Client archivé" : "Client réactivé");
       await fetchData();
     } catch (err) {
-      console.error("Error toggling client active:", err);
+      logger.error("Error toggling client active:", err);
       toast.error("Impossible de modifier le statut du client");
     }
   };

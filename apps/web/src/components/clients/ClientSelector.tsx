@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clientsService } from "@/services/clients.service";
 import { Client } from "@/types";
+import { logger } from '@/lib/logger';
 
 interface ClientSelectorProps {
   /** Currently selected client IDs */
@@ -35,7 +36,7 @@ export function ClientSelector({
     clientsService
       .getAll({ isActive: true, limit: 500 })
       .then((res) => setClients(res.data))
-      .catch((err) => console.error("Error loading clients:", err))
+      .catch((err) => logger.error("Error loading clients:", err))
       .finally(() => setLoading(false));
   }, []);
 

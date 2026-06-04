@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Milestone, MilestoneStatus } from "@/types";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import { logger } from '@/lib/logger';
 
 interface MilestoneModalProps {
   isOpen: boolean;
@@ -79,7 +80,7 @@ export function MilestoneModal({
       await onSave(milestoneData);
       onClose();
     } catch (err) {
-      console.error("Error saving milestone:", err);
+      logger.error("Error saving milestone:", err);
     } finally {
       setIsSubmitting(false);
     }

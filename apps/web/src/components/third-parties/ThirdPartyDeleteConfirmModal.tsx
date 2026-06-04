@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { thirdPartiesService } from "@/services/third-parties.service";
 import { ThirdParty, ThirdPartyDeletionImpact } from "@/types";
+import { logger } from '@/lib/logger';
 
 interface ThirdPartyDeleteConfirmModalProps {
   isOpen: boolean;
@@ -34,7 +35,7 @@ export function ThirdPartyDeleteConfirmModal({
       .getDeletionImpact(thirdParty.id)
       .then(setImpact)
       .catch((err) => {
-        console.error("Error fetching deletion impact:", err);
+        logger.error("Error fetching deletion impact:", err);
         toast.error("Impossible de calculer l'impact de la suppression");
       })
       .finally(() => setLoading(false));
@@ -46,7 +47,7 @@ export function ThirdPartyDeleteConfirmModal({
       await onConfirm();
       onClose();
     } catch (err) {
-      console.error("Error deleting third party:", err);
+      logger.error("Error deleting third party:", err);
     } finally {
       setDeleting(false);
     }

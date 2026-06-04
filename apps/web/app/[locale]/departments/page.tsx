@@ -15,6 +15,7 @@ import {
 import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import { logger } from '@/lib/logger';
 
 export default function DepartmentsPage() {
   const t = useTranslations("admin.departments");
@@ -72,7 +73,7 @@ export default function DepartmentsPage() {
       const axiosError = err as { response?: { status?: number } };
       if (axiosError.response?.status !== 404) {
         toast.error(t("messages.loadError"));
-        console.error(err);
+        logger.error(err);
       }
     } finally {
       setLoading(false);

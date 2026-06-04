@@ -7,6 +7,7 @@ import type {
   GanttDependency,
 } from "@/components/gantt";
 import { TaskStatus } from "@/types";
+import { logger } from '@/lib/logger';
 
 const today = new Date();
 const d = (offset: number) => {
@@ -278,8 +279,8 @@ export default function GanttDevPage() {
           view="week"
           dependencies={dependencies}
           groupBy="milestone"
-          onRowClick={(row) => console.log("click", row.id)}
-          onRowDoubleClick={(row) => console.log("dblclick", row.id)}
+          onRowClick={(row) => logger.info("click", row.id)}
+          onRowDoubleClick={(row) => logger.info("dblclick", row.id)}
         />
       </section>
     </div>

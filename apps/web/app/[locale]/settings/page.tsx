@@ -11,6 +11,7 @@ import { HolidaysManager } from "@/components/holidays/HolidaysManager";
 import { SchoolVacationsManager } from "@/components/school-vacations/SchoolVacationsManager";
 import { SCHOOL_VACATION_ZONE_LABELS } from "@/types";
 import { useTranslations, useLocale } from "next-intl";
+import { logger } from '@/lib/logger';
 
 type CategoryTab = "display" | "planning" | "holidays" | "schoolVacations";
 
@@ -82,7 +83,7 @@ export default function SettingsPage() {
       setSettings(response.settings);
       setSettingsList(response.list);
     } catch (err) {
-      console.error("Error loading settings:", err);
+      logger.error("Error loading settings:", err);
       toast.error(t("messages.loadError"));
     } finally {
       setLoading(false);
@@ -103,7 +104,7 @@ export default function SettingsPage() {
       toast.success(t("messages.saveSuccess"));
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      console.error("Error saving settings:", err);
+      logger.error("Error saving settings:", err);
       toast.error(
         axiosError.response?.data?.message || t("messages.saveError"),
       );
@@ -126,7 +127,7 @@ export default function SettingsPage() {
       setHasChanges(false);
       toast.success(t("messages.resetSuccess"));
     } catch (err) {
-      console.error("Error resetting settings:", err);
+      logger.error("Error resetting settings:", err);
       toast.error(t("messages.resetError"));
     } finally {
       setSaving(false);

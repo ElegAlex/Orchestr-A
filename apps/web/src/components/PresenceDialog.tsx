@@ -9,6 +9,7 @@ import {
 } from "@/services/users.service";
 import { usePermissions } from "@/hooks/usePermissions";
 import { UserAvatar } from "@/components/UserAvatar";
+import { logger } from '@/lib/logger';
 
 function PresenceList({
   users,
@@ -92,7 +93,7 @@ export function PresenceDialog() {
       setData(result);
     } catch (err) {
       setError(t("loadError"));
-      console.error(err);
+      logger.error(err);
     } finally {
       setLoading(false);
     }

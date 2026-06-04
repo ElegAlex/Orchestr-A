@@ -9,6 +9,7 @@ import { fr } from "date-fns/locale";
 import { api } from "@/lib/api";
 import { ProjectIcon } from "@/components/ProjectIcon";
 import { ProjectDetail } from "../types";
+import { logger } from '@/lib/logger';
 
 interface ProjectsDetailTableProps {
   projects: ProjectDetail[];
@@ -170,7 +171,7 @@ export function ProjectsDetailTable({
         setTasks(Array.isArray(taskData) ? taskData : (taskData.data ?? []));
         setMilestones(Array.isArray(msData) ? msData : (msData.data ?? []));
       } catch (err) {
-        console.error("Error loading projects detail data:", err);
+        logger.error("Error loading projects detail data:", err);
       }
     };
     load();

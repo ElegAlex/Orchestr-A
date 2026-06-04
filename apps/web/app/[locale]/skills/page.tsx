@@ -12,6 +12,7 @@ import { SkillsMatrix } from "@/components/SkillsMatrix";
 import { ImportPreviewModal } from "@/components/ImportPreviewModal";
 import { parseCSV } from "@/lib/csv-parser";
 import toast from "react-hot-toast";
+import { logger } from '@/lib/logger';
 
 export default function SkillsPage() {
   const t = useTranslations("hr.skills");
@@ -66,7 +67,7 @@ export default function SkillsPage() {
       );
       setSkills(response.data || []);
     } catch (err) {
-      console.error(t("messages.loadError"), err);
+      logger.error(t("messages.loadError"), err);
     } finally {
       setLoading(false);
     }
@@ -83,7 +84,7 @@ export default function SkillsPage() {
         setSelectedUser((prev) => prev || usersData[0].id);
       }
     } catch (err) {
-      console.error("Error loading users:", err);
+      logger.error("Error loading users:", err);
     }
   }, []);
 
@@ -104,7 +105,7 @@ export default function SkillsPage() {
       // Le service retourne directement UserSkill[]
       setUserSkills(Array.isArray(response) ? response : []);
     } catch (err) {
-      console.error("Error loading user skills:", err);
+      logger.error("Error loading user skills:", err);
       setUserSkills([]);
     }
   };
@@ -295,7 +296,7 @@ export default function SkillsPage() {
       setShowImportModal(false);
       setShowSkillsPreview(true);
     } catch (error) {
-      console.error("Import error:", error);
+      logger.error("Import error:", error);
       toast.error("Erreur lors de la lecture du fichier");
     }
 
@@ -341,7 +342,7 @@ export default function SkillsPage() {
       setPendingSkillsImport([]);
       await fetchSkills();
     } catch (error) {
-      console.error("Import error:", error);
+      logger.error("Import error:", error);
       toast.error("Erreur lors de l'import");
     } finally {
       setImportingSkills(false);

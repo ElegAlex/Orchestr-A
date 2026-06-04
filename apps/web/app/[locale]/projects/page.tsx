@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import { clientsService } from "@/services/clients.service";
 import { Client } from "@/types";
 import { ClientSelector } from "@/components/clients/ClientSelector";
+import { logger } from '@/lib/logger';
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -122,7 +123,7 @@ export default function ProjectsPage() {
     } catch (err) {
       setProjects([]);
       toast.error(t("messages.loadError"));
-      console.error(err);
+      logger.error(err);
     } finally {
       setLoading(false);
     }
@@ -257,7 +258,7 @@ export default function ProjectsPage() {
     } catch (error) {
       setManagers([]);
       setDepartments([]);
-      console.error("Error loading managers and departments:", error);
+      logger.error("Error loading managers and departments:", error);
     }
   };
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from '@/lib/logger';
 
 const HOP_BY_HOP = new Set([
   "connection",
@@ -44,7 +45,7 @@ async function proxy(
       headers: filterHeaders(response.headers),
     });
   } catch (err) {
-    console.error(`[api-proxy] ${request.method} ${target}`, err);
+    logger.error(`[api-proxy] ${request.method} ${target}`, err);
     return NextResponse.json({ error: "Bad Gateway" }, { status: 502 });
   }
 }

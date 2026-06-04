@@ -11,6 +11,7 @@ import { TimeEntry, ActivityType, Project } from "@/types";
 import { ProjectIcon } from "@/components/ProjectIcon";
 import { TimeEntryModal } from "@/components/time-tracking/TimeEntryModal";
 import toast from "react-hot-toast";
+import { logger } from '@/lib/logger';
 
 export default function TimeTrackingPage() {
   const t = useTranslations("hr.timeTracking");
@@ -41,14 +42,14 @@ export default function TimeTrackingPage() {
           setProjects([]);
           const axiosError = err as { response?: { status?: number } };
           if (axiosError.response?.status !== 404)
-            console.error("Error fetching projects:", err);
+            logger.error("Error fetching projects:", err);
         }
       }
     } catch (err) {
       const axiosError = err as { response?: { status?: number } };
       if (axiosError.response?.status !== 404) {
         toast.error(t("messages.loadError"));
-        console.error(err);
+        logger.error(err);
       }
     } finally {
       setLoading(false);

@@ -6810,7 +6810,7 @@ Gate: build=0, test=0.
 
 ### OBS-016 — 112 console.* calls in frontend with no client logger or scrubbing
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 12
 - **Cluster:** I
 - **Confidence:** claude-only
@@ -6848,7 +6848,12 @@ pnpm --filter web test  # no targeted spec inferred from apps/web/src
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Created apps/web/src/lib/logger.ts with NODE_ENV guard (debug/info/warn silent in production, error always emits) + PII scrubbing (token/password/email/accessToken/refreshToken replaced with [REDACTED]) + DSN-optional no-op error reporter stub.
+Fail-pre: wrote logger.test.ts (11 tests) + naive passthrough stub, confirmed 6 RED (3 NODE_ENV guard + 3 PII scrub).
+Key trap avoided: console.* bound at module load bypasses Jest spies — call console.* at invocation time.
+Migrated 41 files (console.* → logger.*) with logger import injection; 4 files had import inserted mid-multi-line-import block — fixed with second-pass script.
+Final state: 0 console.* in app/src outside logger.ts itself. Build=0, Tests=629 all green.
 
 ---
 ### PER-017 — Dashboard does 3 sequential client-side fetches in one useEffect — render storm + waterfall

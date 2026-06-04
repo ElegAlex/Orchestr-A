@@ -45,6 +45,7 @@ import { TaskListView } from "@/components/tasks/TaskListView";
 import api from "@/lib/api";
 import { ProjectIcon } from "@/components/ProjectIcon";
 import { UserAvatar } from "@/components/UserAvatar";
+import { logger } from '@/lib/logger';
 
 const GanttChart = dynamic(() => import("@/components/GanttChart"), {
   ssr: false,
@@ -172,7 +173,7 @@ export default function ProjectDetailPage() {
           setTasks([]);
           const axiosError = err as { response?: { status?: number } };
           if (axiosError.response?.status !== 404) {
-            console.error("Error fetching tasks:", err);
+            logger.error("Error fetching tasks:", err);
           }
         }
 
@@ -187,12 +188,12 @@ export default function ProjectDetailPage() {
           setMilestones([]);
           const axiosError = err as { response?: { status?: number } };
           if (axiosError.response?.status !== 404) {
-            console.error("Error fetching milestones:", err);
+            logger.error("Error fetching milestones:", err);
           }
         }
       } catch (err) {
         toast.error(t("messages.loadDetailError"));
-        console.error(err);
+        logger.error(err);
         router.push(`/${locale}/projects`);
       } finally {
         setLoading(false);
@@ -437,7 +438,7 @@ export default function ProjectDetailPage() {
         project?.name?.replace(/[^a-zA-Z0-9-_]/g, "_") || "project";
       pdf.save(`gantt-${sanitizedName}.pdf`);
     } catch (err) {
-      console.error("PDF export error:", err);
+      logger.error("PDF export error:", err);
       toast.error("Erreur lors de l'export PDF");
     }
   };
@@ -549,7 +550,7 @@ export default function ProjectDetailPage() {
         : (usersResponse as { data?: User[] }).data || [];
       setAllUsers(users);
     } catch (err) {
-      console.error("Error loading users:", err);
+      logger.error("Error loading users:", err);
       setAllUsers([]);
     }
     // Load services
@@ -601,7 +602,7 @@ export default function ProjectDetailPage() {
       const tasksData = await tasksService.getByProject(projectId);
       setTasks(Array.isArray(tasksData) ? tasksData : []);
     } catch (err) {
-      console.error("Error refreshing tasks:", err);
+      logger.error("Error refreshing tasks:", err);
     }
   };
 
@@ -657,7 +658,7 @@ export default function ProjectDetailPage() {
       toast.error(
         axiosError.response?.data?.message || t("messages.validationError"),
       );
-      console.error("Validation error:", err);
+      logger.error("Validation error:", err);
     } finally {
       setImportingTasks(false);
       e.target.value = "";
@@ -682,7 +683,7 @@ export default function ProjectDetailPage() {
       }
       if (result.errors > 0) {
         toast.error(tTasks("messages.importErrors", { count: result.errors }));
-        console.error("Import errors:", result.errorDetails);
+        logger.error("Import errors:", result.errorDetails);
       }
 
       // Refresh tasks
@@ -697,7 +698,7 @@ export default function ProjectDetailPage() {
       toast.error(
         axiosError.response?.data?.message || t("messages.importError"),
       );
-      console.error("Import error:", err);
+      logger.error("Import error:", err);
     } finally {
       setImportingTasks(false);
     }
@@ -747,7 +748,7 @@ export default function ProjectDetailPage() {
       toast.error(
         axiosError.response?.data?.message || t("messages.validationError"),
       );
-      console.error("Validation error:", err);
+      logger.error("Validation error:", err);
     } finally {
       setImportingMilestones(false);
       e.target.value = "";
@@ -774,7 +775,7 @@ export default function ProjectDetailPage() {
         toast.error(
           t("messages.milestonesImportErrors", { count: result.errors }),
         );
-        console.error("Import errors:", result.errorDetails);
+        logger.error("Import errors:", result.errorDetails);
       }
 
       // Refresh milestones
@@ -792,7 +793,7 @@ export default function ProjectDetailPage() {
       toast.error(
         axiosError.response?.data?.message || t("messages.importError"),
       );
-      console.error("Import error:", err);
+      logger.error("Import error:", err);
     } finally {
       setImportingMilestones(false);
     }
@@ -845,7 +846,7 @@ export default function ProjectDetailPage() {
       const data = await thirdPartiesService.listProjectMembers(projectId);
       setThirdPartyMembers(data);
     } catch (err) {
-      console.error("Error loading third party members:", err);
+      logger.error("Error loading third party members:", err);
     }
   };
 
@@ -862,7 +863,7 @@ export default function ProjectDetailPage() {
       const data = await clientsService.listProjectClients(projectId);
       setProjectClients(data);
     } catch (err) {
-      console.error("Error loading project clients:", err);
+      logger.error("Error loading project clients:", err);
     }
   };
 
