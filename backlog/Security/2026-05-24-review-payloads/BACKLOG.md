@@ -8212,7 +8212,7 @@ Keep pagination always on. Introduce /tasks/planning?from&to&userIds= returning 
 pnpm test apps/api/src/tasks/tasks.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 1fd56d4a
 **Learnings:**
 Added findForPlanningOverview describe block (3 tests) to tasks.service.spec.ts. Fail-pre witness: removed take:PLANNING_HARD_CAP from service then test always enforces the 500-row hard cap (PER-008) was RED (AssertionError: vi.fn() called without take:500). Restored via git checkout -- and confirmed GREEN (110/110). Service fix was already committed (no hasDateFilter bypass, findForPlanningOverview with take:500 hard cap). Only spec file changed in this commit (AC6 respected). AC4 N/A (read-only path).
 
