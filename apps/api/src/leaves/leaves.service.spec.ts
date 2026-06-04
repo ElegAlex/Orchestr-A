@@ -1670,6 +1670,37 @@ describe('LeavesService', () => {
       expect(leaves[0].leaveType.color).toBe('#10B981');
       expect(leaves[0].leaveType.icon).toBe('🌴');
     });
+
+    it('PER-030 — findAll uses scoped leaveType select (id,code,name,color,icon) not leaveType:true', async () => {
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      mockPrismaService.leave.count.mockResolvedValue(0);
+
+      await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'admin-user-id',
+        'ADMIN',
+      );
+
+      const callArg = mockPrismaService.leave.findMany.mock.calls[0][0];
+      const leaveTypeInclude = callArg?.include?.leaveType;
+      // Must be a scoped select object, not the boolean `true`
+      expect(leaveTypeInclude).not.toBe(true);
+      expect(leaveTypeInclude).toEqual({
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          color: true,
+          icon: true,
+        },
+      });
+    });
   });
 
   // ============================================

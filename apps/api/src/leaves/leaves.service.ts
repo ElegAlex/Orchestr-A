@@ -634,7 +634,7 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: true,
+          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
           validator: {
             select: {
               id: true,
@@ -811,7 +811,7 @@ export class LeavesService {
               },
             },
           },
-          leaveType: true,
+          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
           validator: {
             select: {
               id: true,
@@ -900,7 +900,7 @@ export class LeavesService {
               },
             },
           },
-          leaveType: true,
+          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
           validator: {
             select: {
               id: true,
@@ -962,7 +962,7 @@ export class LeavesService {
               },
             },
           },
-          leaveType: true,
+          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
           validator: {
             select: {
               id: true,
@@ -1079,7 +1079,7 @@ export class LeavesService {
             email: true,
           },
         },
-        leaveType: true,
+        leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
         validator: {
           select: {
             id: true,
@@ -1148,7 +1148,7 @@ export class LeavesService {
             },
           },
         },
-        leaveType: true,
+        leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
         validator: {
           select: {
             id: true,
@@ -1408,7 +1408,7 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: true,
+          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
           validator: {
             select: {
               id: true,
@@ -1774,7 +1774,7 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: true,
+          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
           validatedBy: {
             select: {
               id: true,
@@ -1913,7 +1913,7 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: true,
+          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
           validatedBy: {
             select: {
               id: true,
@@ -2040,7 +2040,7 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: true,
+          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
         },
       });
 
@@ -2140,7 +2140,7 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: true,
+          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
         },
       });
 
@@ -2232,7 +2232,7 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: true,
+          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
         },
       });
     });
