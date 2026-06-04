@@ -7451,7 +7451,7 @@ Either remove endHalfDay from UpdateLeaveDto, or thread it through.
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** f4ab084c
 **Learnings:**
 Threaded endHalfDay from UpdateLeaveDto through calculateLeaveDays() and splitLeaveByYear() in update(), consistent with create(). Root cause: eslint-disable no-unused-vars suppressed the warning; the DTO field was destructured but undefined was passed downstream. No schema fallback needed: Leave model has only a single halfDay column, not endHalfDay. effectiveEndHalfDay = endHalfDay ?? null guards against undefined vs null mismatch. fail-pre: expected 5 received 4.5 (RED); after fix 4.5==4.5 (GREEN). Scope note: this fixes the day-count computation; endHalfDay is not persisted (no column), so a later update omitting it does not recover the deduction — schema concern explicitly out of scope (criterion #6).
 
