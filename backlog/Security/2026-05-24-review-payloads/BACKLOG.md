@@ -9353,7 +9353,7 @@ Replace console.warn with Nest Logger AND increment a metric (rbac_cache_error_t
 pnpm test apps/api/src/rbac/permissions.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** eea71f67
 **Learnings:**
 Swapped 3 console.warn calls (Redis read/del/write errors) to this.logger.warn in apps/api/src/rbac/permissions.service.ts (lines 76, 185, 197). Logger was already instantiated (L36). Added 3 RED→GREEN tests in permissions.service.spec.ts (OBS-022 block) verifying logger.warn called and console.warn not called on each Redis error path. No new AuditAction needed (observability fix only, not a business mutation).
 
