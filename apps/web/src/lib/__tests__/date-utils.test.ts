@@ -228,6 +228,22 @@ describe("date-utils", () => {
     });
   });
 
+  describe("clock-freeze determinism", () => {
+    beforeAll(() => {
+      jest.useFakeTimers({ now: new Date("2025-01-15T10:00:00Z") });
+    });
+    afterAll(() => {
+      jest.useRealTimers();
+    });
+
+    it("should format real now deterministically when clock is frozen to 2025-01-15", () => {
+      // Without a frozen clock, formatDate(new Date()) returns today's real date,
+      // making this test time-dependent. The freeze makes it deterministic.
+      const result = formatDate(new Date());
+      expect(result).toBe("15/01/2025");
+    });
+  });
+
   describe("Edge cases", () => {
     it("should handle dates at midnight", () => {
       const date = new Date(2025, 5, 15, 0, 0, 0);

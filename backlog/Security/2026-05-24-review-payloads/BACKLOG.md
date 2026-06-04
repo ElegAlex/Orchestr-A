@@ -8623,7 +8623,7 @@ Changed @IsString to @IsUUID(4) on departmentId and @IsUUID(4, {each:true}) on s
 ---
 ### TST-012 — Date tests use new Date(YYYY, M, D) (local timezone) without freezing clock or pinning TZ
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8661,7 +8661,11 @@ pnpm test apps/web/src/lib/__tests__/date-utils.test.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added a dedicated clock-freeze describe block with jest.useFakeTimers({now: new Date("2025-01-15T10:00:00Z")}) + afterAll restore in date-utils.test.ts.
+Design decision: per-describe freeze (NOT global jest.setup.js) to avoid breaking async testing-library utilities in other suites.
+Fail-pre witness: without freeze, formatDate(new Date()) returned "04/06/2026" instead of "15/01/2025" (RED). After freeze: GREEN.
+Note: spec suggested converting new Date(Y,M,D) local-ctor to ISO-Z; NOT done — the midnight/end-of-day tests would break under TZ=Europe/Paris (UTC+2), and TZ is already pinned in jest.setup.js so those constructors are already deterministic. Scope kept minimal per AC#6.
 
 ---
 ### TST-016 — Documents service spec — only one negative test; no MIME/size/auth assertions
