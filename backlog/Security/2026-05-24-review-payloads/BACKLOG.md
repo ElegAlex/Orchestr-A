@@ -8903,7 +8903,7 @@ Gate: pnpm run build=0, pnpm run test=0. No production code modified (test-only 
 ---
 ### TST-024 — No multi-role E2E for reject, cancel, delegation, or balance restoration
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8941,7 +8941,21 @@ pnpm test:e2e -- e2e/tests/multi-role/leave-lifecycle.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added 4 new multi-role E2E test blocks to e2e/tests/multi-role/leave-lifecycle.spec.ts (TST-024 blocks A-D), preserving the 2 existing tests byte-intact.
+
+Block A (reject): ADMIN rejects PENDING leave → asserts used CP unchanged (REJECTED status not counted in balance computation).
+Block B (cancel): ADMIN approves then cancels APPROVED leave → asserts used CP restored to pre-approve value (cancel() sets status=REJECTED, balance is computed from status).
+Block C (delegation): MANAGER creates delegation via POST /api/leaves/delegations → ADMIN (as delegate) approves → asserts balance debited; delegation cleaned up via DELETE.
+Block D (dormant-manager fallback): ADMIN deactivates manager via PATCH /api/users/:id → contributeur submits leave → ADMIN approves as MANAGE_ANY fallback → asserts balance debited; manager reactivated in finally block.
+
+Fail-pre witness (structural per Discover report, gate=build+unit, no browser/app boot):
+  BEFORE edit: `npx playwright test --list` showed only 2 test titles for this file.
+  AFTER edit: same command shows 6 test titles (2 existing + 4 new) — all 4 new block titles present at lines 182, 277, 394, 524.
+
+Balance restoration is implicit in the balance computation: cancel() sets status=REJECTED; the balance query only counts APPROVED and CANCELLATION_REQUESTED leaves. No explicit balance table update is needed.
+
+Dormant-manager note: the test deactivates the fixture manager user temporarily. If the manager is already the contributeur department manager, the fallback path exercises getLeavesValidator() line 711 (isActive !== false check). If not scoped to the same dept, ADMIN still approves via manage_any. The test asserts the approval succeeds and balance is debited in both scenarios.
 
 ---
 ### COR-020 — Conflicting where.endDate assignments in findAll when overdue + date range
