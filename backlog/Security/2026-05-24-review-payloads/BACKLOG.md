@@ -9671,7 +9671,7 @@ Enforce maxLength in the service or via Prisma column @db.VarChar(512).
 pnpm test apps/api/src/auth/refresh-token.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 38d6beaa
 **Learnings:**
 Service-layer clamp: added .slice(0,512) to meta?.userAgent in both issue() and rotate() in refresh-token.service.ts (L70, L135). No migration needed (DB column has no constraint, clamp is pure service logic). Fail-pre: 2 tests RED on unfixed code (issue clamp: got length 600, rotate clamp: got length 700). Pass-post: all 10 tests GREEN. Gate: build=0, test=0.
 
