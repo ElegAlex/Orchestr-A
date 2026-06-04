@@ -377,6 +377,31 @@ describe('LeavesService', () => {
       );
     });
 
+    it('COR-010 — checkOverlap queries include CANCELLATION_REQUESTED in status filter', async () => {
+      // A leave in CANCELLATION_REQUESTED is NOT free space: rejectCancellation
+      // can restore it to APPROVED, which would create two overlapping approved leaves.
+      // This test verifies the status.in list includes CANCELLATION_REQUESTED.
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(mockLeaveTypeConfig);
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+
+      // We don't care about the final result; we care that checkOverlap issued
+      // a findMany with CANCELLATION_REQUESTED in its status filter.
+      try {
+        await service.create('user-1', createLeaveDto);
+      } catch {
+        // ignore — balance / validator resolution may fail in a trimmed mock
+      }
+
+      // The FIRST findMany call is the checkOverlap query.
+      const overlapCall = mockPrismaService.leave.findMany.mock.calls[0]?.[0] as {
+        where?: { status?: { in?: string[] } };
+      };
+      expect(overlapCall?.where?.status?.in).toContain(
+        LeaveStatus.CANCELLATION_REQUESTED,
+      );
+    });
+
     it('should throw BadRequestException when configured balance is exceeded', async () => {
       const typeWithBalance = { ...mockLeaveTypeConfig, code: 'RTT' };
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);

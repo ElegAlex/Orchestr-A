@@ -7458,7 +7458,7 @@ Threaded endHalfDay from UpdateLeaveDto through calculateLeaveDays() and splitLe
 ---
 ### COR-010 — checkOverlap omits CANCELLATION_REQUESTED, allowing later phantom conflicts
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7496,7 +7496,8 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added LeaveStatus.CANCELLATION_REQUESTED to the status.in filter at 3 sites in leaves.service.ts: checkOverlap (private method ~line 2939), import-preview findMany (~line 3081), import-tx findMany (~line 3343). Test (fail-pre RED): expected [ PENDING, APPROVED ] to include CANCELLATION_REQUESTED. All 3 sites previously omitted CANCELLATION_REQUESTED, treating those leaves as free slots; rejectCancellation would restore them to APPROVED, producing overlapping approved leaves.
 
 ---
 ### COR-011 — findAll returns array when filtered by date — breaks pagination contract and totalCount

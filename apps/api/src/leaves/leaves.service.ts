@@ -2936,7 +2936,7 @@ export class LeavesService {
     const where: Prisma.LeaveWhereInput = {
       userId,
       status: {
-        in: [LeaveStatus.PENDING, LeaveStatus.APPROVED],
+        in: [LeaveStatus.PENDING, LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED],
       },
       OR: [
         {
@@ -3075,10 +3075,10 @@ export class LeavesService {
           }
         : {};
 
-    // Récupérer les congés existants (PENDING/APPROVED) pour détection chevauchement
+    // Récupérer les congés existants (PENDING/APPROVED/CANCELLATION_REQUESTED) pour détection chevauchement
     const existingLeaves = await this.prisma.leave.findMany({
       where: {
-        status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
+        status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED] },
         ...spanFilter,
       },
       select: {
@@ -3340,7 +3340,7 @@ export class LeavesService {
         // PER-009 — restrict to the CSV date span to avoid loading full history.
         const existingLeaves = await tx.leave.findMany({
           where: {
-            status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
+            status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED] },
             ...importSpanFilter,
           },
           select: {
