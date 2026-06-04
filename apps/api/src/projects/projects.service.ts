@@ -90,9 +90,9 @@ export class ProjectsService {
     const { startDate, endDate, clientIds, ...projectData } = createProjectDto;
 
     // Vérifier que la date de fin est après la date de début
-    if (endDate && startDate && new Date(endDate) <= new Date(startDate)) {
+    if (endDate && startDate && new Date(endDate) < new Date(startDate)) {
       throw new BadRequestException(
-        'La date de fin doit être postérieure à la date de début',
+        'La date de fin doit être postérieure ou égale à la date de début',
       );
     }
 
@@ -572,9 +572,9 @@ export class ProjectsService {
     } = updateProjectDto;
 
     // Vérifier les dates si fournies
-    if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
       throw new BadRequestException(
-        'La date de fin doit être postérieure à la date de début',
+        'La date de fin doit être postérieure ou égale à la date de début',
       );
     }
 

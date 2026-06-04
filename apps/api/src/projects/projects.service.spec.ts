@@ -210,6 +210,23 @@ describe('ProjectsService', () => {
       );
     });
 
+    it('should allow same-day project (startDate === endDate)', async () => {
+      const sameDayDto = {
+        ...createProjectDto,
+        startDate: '2025-06-04',
+        endDate: '2025-06-04',
+      };
+
+      setupTransactionMock({
+        ...mockProject,
+        startDate: new Date('2025-06-04'),
+        endDate: new Date('2025-06-04'),
+      });
+
+      const result = await service.create(sameDayDto, creatorId);
+      expect(result).toBeDefined();
+    });
+
     it('should create project without dates', async () => {
       const dtoWithoutDates = {
         name: 'Test Project',
@@ -750,6 +767,23 @@ describe('ProjectsService', () => {
       await expect(service.update('project-1', invalidDto)).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it('should allow same-day project update (startDate === endDate)', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.project.update.mockResolvedValue({
+        ...mockProject,
+        startDate: new Date('2025-06-04'),
+        endDate: new Date('2025-06-04'),
+      });
+
+      const sameDayDto = {
+        startDate: '2025-06-04',
+        endDate: '2025-06-04',
+      };
+
+      const result = await service.update('project-1', sameDayDto);
+      expect(result).toBeDefined();
     });
 
     it('should update dates successfully', async () => {

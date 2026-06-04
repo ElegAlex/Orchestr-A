@@ -7545,7 +7545,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ---
 ### COR-015 — Project date validation: create uses <= (rejects same-day), tasks uses < (accepts) — inconsistent
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7583,7 +7583,8 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Changed `<=` to `<` at L93 (create) and L575 (update) in projects.service.ts, aligning with tasks.service.ts convention. Same-day projects (startDate === endDate) are now valid. Two regression tests added: one for create, one for update, both RED before fix and GREEN after. No shared validator needed per scope decision — inline fix only.
 
 ---
 ### COR-016 — Soft-delete (CANCELLED) project can be revived via update without restriction
