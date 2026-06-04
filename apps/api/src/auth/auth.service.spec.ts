@@ -18,6 +18,9 @@ import { ConfigService } from '@nestjs/config';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
 import { LoginLockoutService } from './login-lockout.service';
 import { JwtNotBeforeService } from './jwt-not-before.service';
+import { validate } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
+import { RegisterDto } from './dto/register.dto';
 
 vi.mock('bcrypt');
 
@@ -126,6 +129,10 @@ describe('AuthService', () => {
       if (key === 'JWT_ACCESS_TTL') return '15m';
       if (key === 'JWT_EXPIRES_IN') return undefined;
       if (key === 'AUTH_EXPOSE_RESET_TOKEN') return 'true';
+      // SEC-008: registration enabled in tests by default (prod default is false)
+      if (key === 'REGISTRATION_ENABLED') return 'true';
+      // SEC-008: no domain restriction by default in unit tests
+      if (key === 'REGISTRATION_EMAIL_DOMAIN') return undefined;
       return undefined;
     }),
   };
@@ -637,6 +644,133 @@ describe('AuthService', () => {
       const createCallData = mockPrismaService.user.create.mock.calls[0][0]
         .data as Record<string, unknown>;
       expect(createCallData.role).toBeUndefined();
+    });
+
+    // SEC-008 — REGISTRATION_ENABLED gate + domain allowlist
+    // Nested describe to save/restore mockConfigService.get implementation
+    // (vi.clearAllMocks does not reset mock implementations, only calls)
+    describe('SEC-008 registration gate and domain allowlist', () => {
+      let savedImpl: ((key: string) => string | undefined) | undefined;
+
+      beforeEach(() => {
+        savedImpl = mockConfigService.get.getMockImplementation() as
+          | ((key: string) => string | undefined)
+          | undefined;
+      });
+
+      afterEach(() => {
+        if (savedImpl) {
+          mockConfigService.get.mockImplementation(savedImpl);
+        }
+      });
+
+      it('should throw ForbiddenException when REGISTRATION_ENABLED is false (production default)', async () => {
+        mockConfigService.get.mockImplementation((key: string) => {
+          if (key === 'REGISTRATION_ENABLED') return 'false';
+          if (key === 'JWT_ACCESS_TTL') return '15m';
+          if (key === 'AUTH_EXPOSE_RESET_TOKEN') return 'true';
+          return undefined;
+        });
+
+        await expect(service.register(registerDto)).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(mockPrismaService.user.create).not.toHaveBeenCalled();
+        expect(mockAuditService.log).not.toHaveBeenCalled();
+      });
+
+      it('should throw ForbiddenException when email domain is not in REGISTRATION_EMAIL_DOMAIN allowlist', async () => {
+        mockConfigService.get.mockImplementation((key: string) => {
+          if (key === 'REGISTRATION_ENABLED') return 'true';
+          if (key === 'REGISTRATION_EMAIL_DOMAIN') return 'mairie.fr,collectivite.fr';
+          if (key === 'JWT_ACCESS_TTL') return '15m';
+          if (key === 'AUTH_EXPOSE_RESET_TOKEN') return 'true';
+          return undefined;
+        });
+
+        // email is newuser@example.com, not in mairie.fr,collectivite.fr
+        await expect(service.register(registerDto)).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(mockPrismaService.user.create).not.toHaveBeenCalled();
+      });
+
+      it('should allow registration when email domain matches REGISTRATION_EMAIL_DOMAIN', async () => {
+        mockConfigService.get.mockImplementation((key: string) => {
+          if (key === 'REGISTRATION_ENABLED') return 'true';
+          if (key === 'REGISTRATION_EMAIL_DOMAIN') return 'example.com,mairie.fr';
+          if (key === 'JWT_ACCESS_TTL') return '15m';
+          if (key === 'AUTH_EXPOSE_RESET_TOKEN') return 'true';
+          return undefined;
+        });
+
+        mockPrismaService.user.findFirst.mockResolvedValue(null);
+        mockPrismaService.role.findFirst.mockResolvedValue({ id: 'default-role-id' });
+        mockPrismaService.role.findUnique.mockResolvedValue({ id: 'default-role-id' });
+        vi.mocked(bcrypt.hash).mockResolvedValue('$2b$12$hashedpassword' as never);
+        mockPrismaService.user.create.mockResolvedValue({
+          id: 'new-user-id',
+          email: registerDto.email,
+          login: registerDto.login,
+          firstName: registerDto.firstName,
+          lastName: registerDto.lastName,
+          roleId: 'default-role-id',
+          role: { id: 'default-role-id', code: 'CONTRIBUTEUR', label: 'Contributeur', templateKey: 'CONTRIBUTEUR' },
+          departmentId: null,
+          createdAt: new Date(),
+        });
+
+        const result = await service.register(registerDto);
+        expect(result.user.email).toBe(registerDto.email);
+        expect(mockPrismaService.user.create).toHaveBeenCalled();
+      });
+    });
+  });
+
+  // SEC-008 — RegisterDto DTO-level validators (MaxLength + control-char)
+  describe('RegisterDto validators (SEC-008)', () => {
+    const validBase = {
+      email: 'jean.dupont@example.com',
+      login: 'jean.dupont',
+      password: 'P@ssword1!',
+      firstName: 'Jean',
+      lastName: 'Dupont',
+    };
+
+    it('should reject firstName longer than 50 characters', async () => {
+      const dto = plainToInstance(RegisterDto, {
+        ...validBase,
+        firstName: 'A'.repeat(51),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'firstName')).toBe(true);
+    });
+
+    it('should reject lastName longer than 50 characters', async () => {
+      const dto = plainToInstance(RegisterDto, {
+        ...validBase,
+        lastName: 'B'.repeat(51),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'lastName')).toBe(true);
+    });
+
+    it('should reject firstName containing control characters', async () => {
+      const dto = plainToInstance(RegisterDto, {
+        ...validBase,
+        firstName: 'Jean\nXss',
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'firstName')).toBe(true);
+    });
+
+    it('should accept accented firstName (French names must work)', async () => {
+      const dto = plainToInstance(RegisterDto, {
+        ...validBase,
+        firstName: 'Héléne-François',
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'firstName')).toBe(false);
     });
   });
 

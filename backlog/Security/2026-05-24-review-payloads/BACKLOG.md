@@ -8393,7 +8393,7 @@ Added PROJECT_DETAILS_LIMIT=50 const to analytics.service.ts; added take: PROJEC
 ---
 ### SEC-008 — Self-registration accepts arbitrary email and login with no domain restriction
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8431,7 +8431,8 @@ pnpm test apps/api/src/auth/auth.service.spec.ts  # may need creation if missing
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+REGISTRATION_ENABLED gate (default false, must be true to allow registration) + REGISTRATION_EMAIL_DOMAIN comma-list enforced at top of register() via ForbiddenException before any DB access. DTO: @MaxLength(50) + @Matches(/^[^\\p{Cc}\\p{Cn}]+$/u) on firstName/lastName rejecting control chars while allowing accented French names. Fail-pre: 5 RED tests (gate rejection, domain rejection, MaxLength x2, control-char) on unfixed code; all 36 GREEN after fix. Documented in .env.example. Mock isolation: nested describe with beforeEach save/afterEach restore of getMockImplementation to prevent implementation bleed (vi.clearAllMocks does not reset impls).
 
 ---
 ### SEC-012 — CORS env-var mismatch between code (ALLOWED_ORIGINS) and prod template (CORS_ORIGIN)

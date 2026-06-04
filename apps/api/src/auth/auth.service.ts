@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
   HttpException,
   HttpStatus,
@@ -252,6 +253,27 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto) {
+    // SEC-008: REGISTRATION_ENABLED gate (default false — disabled in production)
+    const registrationEnabled = this.configService.get<string>('REGISTRATION_ENABLED');
+    if (!registrationEnabled || registrationEnabled.toLowerCase() !== 'true') {
+      throw new ForbiddenException('La création de compte autonome est désactivée');
+    }
+
+    // SEC-008: REGISTRATION_EMAIL_DOMAIN allowlist (optional; empty = no restriction)
+    const domainAllowlist = this.configService.get<string>('REGISTRATION_EMAIL_DOMAIN');
+    if (domainAllowlist && domainAllowlist.trim()) {
+      const allowed = domainAllowlist
+        .split(',')
+        .map((d) => d.trim().toLowerCase())
+        .filter(Boolean);
+      const emailDomain = registerDto.email.split('@')[1]?.toLowerCase() ?? '';
+      if (!allowed.includes(emailDomain)) {
+        throw new ForbiddenException(
+          `Les inscriptions sont réservées aux adresses des domaines autorisés`,
+        );
+      }
+    }
+
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await this.prisma.user.findFirst({
       where: {
