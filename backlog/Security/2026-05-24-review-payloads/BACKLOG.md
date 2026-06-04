@@ -7274,7 +7274,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ---
 ### TST-002 — Three first-class API modules have no service spec at all
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7312,7 +7312,8 @@ TBD — derive test from finding description for apps/api/src
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added 3 service specs: personal-todos (12 tests, MAX_TODOS=20 cap), leave-types (14 tests, soft-archive when leaves>0), settings (12 tests, isKnownKey gate rejects unknown keys). Mutation discipline applied: each key throw confirmed RED before commit. Settings ADMIN-only check is controller-layer only (no service-level role guard). Specs follow existing vitest+NestJS Testing pattern with vi.fn() mocks.
 
 ---
 ### TST-008 — Comments service spec is 100% happy-path — no negative tests, no ownership checks
