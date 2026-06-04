@@ -8343,7 +8343,7 @@ Cache result in Redis with key tasks:assignee:<userId> TTL 30-60s, bust on task 
 pnpm test apps/api/src/tasks/tasks.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 614683c2
 **Learnings:**
 Folded timeEntry aggregation into the task.findMany include by adding timeEntries:{where:{isDismissal:false},select:{hours:true}} and summing in memory. Dropped the separate timeEntry.groupBy round-trip. Destructured timeEntries out of the response shape to avoid leaking raw rows to the frontend. Design note: at the SQL level, a Prisma relation include is fetched as a separate query, so this is a mock-call-count win reflecting cleaner code structure rather than a guaranteed single SQL round-trip. fail-pre: AssertionError: expected timeEntry.groupBy to not be called at all, but actually been called 1 times.
 
