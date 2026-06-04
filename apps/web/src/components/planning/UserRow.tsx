@@ -1,3 +1,4 @@
+import React from "react";
 import { User, Task } from "@/types";
 import { Event } from "@/services/events.service";
 import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
@@ -29,7 +30,7 @@ interface UserRowProps {
   onAddPredefinedTask: (userId: string, date: Date) => void;
 }
 
-export const UserRow = ({
+export const UserRow = React.memo(({
   user,
   group,
   displayDays,
@@ -106,4 +107,6 @@ export const UserRow = ({
       })}
     </div>
   );
-};
+});
+
+UserRow.displayName = "UserRow";

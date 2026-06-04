@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Task } from "@/types";
 import { Event } from "@/services/events.service";
 import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
@@ -150,8 +150,11 @@ export const PlanningGrid = ({
     displayFilters,
   });
 
-  // Shared grid template for all rows
-  const gridCols = `220px repeat(${displayDays.length}, 1fr)`;
+  // Shared grid template for all rows — memoized so UserRow/GroupHeader get a stable reference
+  const gridCols = useMemo(
+    () => `220px repeat(${displayDays.length}, 1fr)`,
+    [displayDays.length],
+  );
 
   // Compute school vacation banners overlapping displayed days
   const vacationBanners = useMemo(() => {
@@ -233,7 +236,7 @@ export const PlanningGrid = ({
     silentRefetch();
   }, [refreshTrigger]);
 
-  const handleTeleworkToggle = async (userId: string, date: Date) => {
+  const handleTeleworkToggle = useCallback(async (userId: string, date: Date) => {
     try {
       const cell = getDayCell(userId, date);
       const existing = cell.teleworkSchedule;
@@ -255,19 +258,19 @@ export const PlanningGrid = ({
     } catch {
       toast.error(t("telework.updateError"));
     }
-  };
+  }, [getDayCell, silentRefetch, t]);
 
-  const handleDragStart = (task: Task, sourceUserId: string) => {
+  const handleDragStart = useCallback((task: Task, sourceUserId: string) => {
     setDraggedTask(task);
     setDragSourceUserId(sourceUserId);
-  };
+  }, []);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     setDraggedTask(null);
     setDragSourceUserId(null);
-  };
+  }, []);
 
-  const handleDrop = async (targetUserId: string, date: Date) => {
+  const handleDrop = useCallback(async (targetUserId: string, date: Date) => {
     if (!draggedTask || !dragSourceUserId) return;
 
     const currentAssigneeIds =
@@ -333,44 +336,42 @@ export const PlanningGrid = ({
     } catch {
       toast.error(t("taskMove.moveError"));
     }
-  };
+  }, [draggedTask, dragSourceUserId, silentRefetch, t]);
 
-  const handleTaskClick = (task: Task) => {
+  const handleTaskClick = useCallback((task: Task) => {
     setSelectedTask(task);
     setShowTaskModal(true);
-  };
+  }, []);
 
-  const handleEventClick = (event: Event) => {
+  const handleEventClick = useCallback((event: Event) => {
     setSelectedEvent(event);
     setShowEventModal(true);
-  };
+  }, []);
 
-  const handleCloseTaskModal = () => {
+  const handleCloseTaskModal = useCallback(() => {
     setShowTaskModal(false);
     setSelectedTask(null);
-  };
+  }, []);
 
-  const handleCloseEventModal = () => {
+  const handleCloseEventModal = useCallback(() => {
     setShowEventModal(false);
     setSelectedEvent(null);
-  };
+  }, []);
 
-  const handlePredefinedTaskClick = (
-    assignment: PredefinedTaskAssignment,
-    date: Date,
-  ) => {
+  const handlePredefinedTaskClick = useCallback(
+    (assignment: PredefinedTaskAssignment, date: Date) => {
     setExistingAssignment(assignment);
     setAssignmentModalDates([date]);
     setAssignmentModalUserIds([assignment.userId]);
     setShowAssignmentModal(true);
-  };
+  }, []);
 
-  const handleAddPredefinedTask = (userId: string, date: Date) => {
+  const handleAddPredefinedTask = useCallback((userId: string, date: Date) => {
     setExistingAssignment(null);
     setAssignmentModalDates([date]);
     setAssignmentModalUserIds([userId]);
     setShowAssignmentModal(true);
-  };
+  }, []);
 
   if (loading) {
     return (

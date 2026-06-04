@@ -1,3 +1,4 @@
+import React from "react";
 import { ServiceGroup } from "@/hooks/usePlanningData";
 import { getGroupColors } from "@/lib/planning-utils";
 import { usePlanningViewStore } from "@/stores/planningView.store";
@@ -8,7 +9,7 @@ interface GroupHeaderProps {
   taskCount: number;
 }
 
-export const GroupHeader = ({ group, taskCount }: GroupHeaderProps) => {
+export const GroupHeader = React.memo(({ group, taskCount }: GroupHeaderProps) => {
   const t = useTranslations("planning");
   const colors = getGroupColors(group.color, group.isManagement);
   const { collapsedServices, toggleService } = usePlanningViewStore();
@@ -98,4 +99,6 @@ export const GroupHeader = ({ group, taskCount }: GroupHeaderProps) => {
       </div>
     </div>
   );
-};
+});
+
+GroupHeader.displayName = "GroupHeader";

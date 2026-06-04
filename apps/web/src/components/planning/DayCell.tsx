@@ -1,3 +1,4 @@
+import React from "react";
 import { Task, TaskStatus } from "@/types";
 import { Event } from "@/services/events.service";
 import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
@@ -69,7 +70,7 @@ interface DayCellProps {
   onAddPredefinedTask: (userId: string, date: Date) => void;
 }
 
-export const DayCell = ({
+export const DayCell = React.memo(({
   cell,
   userId,
   viewMode,
@@ -548,4 +549,6 @@ export const DayCell = ({
       </div>
     </div>
   );
-};
+});
+
+DayCell.displayName = "DayCell";
