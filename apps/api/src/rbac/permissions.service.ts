@@ -73,7 +73,7 @@ export class PermissionsService {
         return JSON.parse(cached) as readonly PermissionCode[];
       }
     } catch (error) {
-      console.warn('[PermissionsService] Redis read error:', error);
+      this.logger.warn('[PermissionsService] Redis read error:', error);
     }
 
     // 2. In-process singleflight: coalesce concurrent DB lookups for the same role
@@ -182,7 +182,7 @@ export class PermissionsService {
     try {
       await this.redis.del(`role-permissions:${roleCode}`);
     } catch (error) {
-      console.warn('[PermissionsService] Redis del error:', error);
+      this.logger.warn('[PermissionsService] Redis del error:', error);
     }
   }
 
@@ -194,7 +194,7 @@ export class PermissionsService {
     try {
       await this.redis.setex(key, ttl, JSON.stringify(perms));
     } catch (error) {
-      console.warn('[PermissionsService] Redis write error:', error);
+      this.logger.warn('[PermissionsService] Redis write error:', error);
     }
   }
 }

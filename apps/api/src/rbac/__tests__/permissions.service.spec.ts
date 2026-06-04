@@ -104,6 +104,56 @@ describe('PermissionsService — V4', () => {
       const perms = await service.getPermissionsForRole('ADMIN');
       expect(perms.length).toBe(ROLE_TEMPLATES.ADMIN.permissions.length);
     });
+
+    it('OBS-022: Redis read error logs via this.logger.warn, not console.warn', async () => {
+      redis.get.mockRejectedValue(new Error('Redis read fail'));
+      prisma.role.findUnique.mockResolvedValue({ templateKey: 'ADMIN' });
+      const loggerWarnSpy = vi
+        .spyOn((service as unknown as { logger: { warn: unknown } }).logger, 'warn')
+        .mockImplementation(() => undefined);
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      await service.getPermissionsForRole('ADMIN');
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Redis read error'),
+        expect.anything(),
+      );
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
+      loggerWarnSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('OBS-022: Redis del error logs via this.logger.warn, not console.warn', async () => {
+      redis.del.mockRejectedValue(new Error('Redis del fail'));
+      const loggerWarnSpy = vi
+        .spyOn((service as unknown as { logger: { warn: unknown } }).logger, 'warn')
+        .mockImplementation(() => undefined);
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      await service.invalidateRoleCache('ADMIN');
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Redis del error'),
+        expect.anything(),
+      );
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
+      loggerWarnSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('OBS-022: Redis write error logs via this.logger.warn, not console.warn', async () => {
+      redis.setex.mockRejectedValue(new Error('Redis write fail'));
+      prisma.role.findUnique.mockResolvedValue({ templateKey: 'ADMIN' });
+      const loggerWarnSpy = vi
+        .spyOn((service as unknown as { logger: { warn: unknown } }).logger, 'warn')
+        .mockImplementation(() => undefined);
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      await service.getPermissionsForRole('ADMIN');
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Redis write error'),
+        expect.anything(),
+      );
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
+      loggerWarnSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   describe('getPermissionsForUser', () => {

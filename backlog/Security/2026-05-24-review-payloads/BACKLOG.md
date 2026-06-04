@@ -9316,7 +9316,7 @@ Replaced stub getHealth() in AppController (which leaked process.uptime + NODE_E
 ---
 ### OBS-022 — Redis errors swallowed with console.warn — no metric, no alert
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9354,7 +9354,8 @@ pnpm test apps/api/src/rbac/permissions.service.spec.ts  # may need creation if 
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Swapped 3 console.warn calls (Redis read/del/write errors) to this.logger.warn in apps/api/src/rbac/permissions.service.ts (lines 76, 185, 197). Logger was already instantiated (L36). Added 3 RED→GREEN tests in permissions.service.spec.ts (OBS-022 block) verifying logger.warn called and console.warn not called on each Redis error path. No new AuditAction needed (observability fix only, not a business mutation).
 
 ---
 ### OBS-025 — Nginx access log uses default 'main' format — no request_id, no upstream timing
