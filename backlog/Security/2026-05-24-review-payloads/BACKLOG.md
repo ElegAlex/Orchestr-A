@@ -7944,7 +7944,7 @@ Gate: build + vitest both exit 0.
 ---
 ### OBS-010 — No error tracking (Sentry / equivalent) wired anywhere
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7982,7 +7982,8 @@ pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Scaffolded DSN-optional no-op error reporter (apps/api/src/common/error-reporter.ts): ErrorReporter interface + NoopErrorReporter (logs to stdout, zero egress, zero deps) + installGlobalErrorHandlers (idempotent via WeakSet, injectable emitter for test isolation). Wired in main.ts before bootstrap() so unhandledRejection/uncaughtException are captured from first tick. Provider choice (Sentry vs GlitchTip RGPD-sovereignty) deferred to operator config — no SDK imported. Existing SentryClient stub in all-exceptions.filter.ts left in place (out of scope, OBS-017 code). Fail-pre: module import error (Cannot find module ./common/error-reporter) on unfixed code. Pass-post: 5 tests green.
 
 ---
 ### OBS-011 — No metrics endpoint (Prometheus/OTLP)

@@ -15,6 +15,16 @@ import { fastifyLoggerOptions } from './common/fastify/redact.config';
 import { TRUST_PROXY } from './common/fastify/trust-proxy.config';
 import { genReqId, requestIdStore } from './common/fastify/request-id.context';
 import { timingSafeEqual } from 'crypto';
+import {
+  NoopErrorReporter,
+  installGlobalErrorHandlers,
+} from './common/error-reporter';
+
+// OBS-010: install process-level error handlers before the app boots so that
+// unhandledRejection and uncaughtException are captured from the very first tick.
+// NoopErrorReporter logs to stdout only; replace with a DSN-configured reporter
+// when an operator-approved tracking backend (Sentry, GlitchTip …) is set up.
+installGlobalErrorHandlers(new NoopErrorReporter());
 
 function safeEqual(a: string, b: string): boolean {
   const aBuf = Buffer.from(a);
