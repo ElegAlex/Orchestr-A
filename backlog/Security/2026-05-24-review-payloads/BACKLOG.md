@@ -9760,7 +9760,7 @@ Wrap E2E block in if ((process.env.E2E_SEED === 'true' || process.env.NODE_ENV =
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 5a789e20
 **Learnings:**
 Extracted `shouldSeedE2EUsers(env)` pure function to packages/database/prisma/seed-utils.ts. The unfixed version (OR-only gate) returned true for {E2E_SEED=true,NODE_ENV=production}; the fix adds `&& env.NODE_ENV !== production`. Fail-pre witness: vitest RED on 2 cases (production+E2E_SEED=true and production+no-flag) before fix; GREEN on all 6 assertions after. Test lives at apps/api/src/__tests__/seed-guard.spec.ts, imported via database alias (vitest.config resolve). Seed.ts updated to import and call the extracted function.
 
