@@ -9314,7 +9314,7 @@ Add @@index([serviceId]) on UserService, @@index([userId]) on ProjectMember, etc
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 25a17322
 **Learnings:**
 Added @@index([serviceId]) to UserService and @@index([userId]) to ProjectMember in schema.prisma. EventParticipant.@@index([userId]) was already present (PER-012, 2026-05-31) — correctly skipped. Migration 20260604051843_dat029_join_table_indexes applied to local dev DB. Structural fail-pre witness: user_services_serviceId_idx and project_members_userId_idx ABSENT before migration, PRESENT after. Int spec excluded from gate per vitest.config.ts exclude pattern.
 
