@@ -8653,7 +8653,7 @@ Add: BadRequest on oversize, BadRequest/UnsupportedMediaType on mime mismatch, F
 pnpm test apps/api/src/documents/documents.service.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** aedd402
 **Learnings:**
 Added service-layer size cap (MAX_DOCUMENT_SIZE_BYTES=200MB) guard in create() with BadRequestException + test (RED: resolved without throw; GREEN: throws). Added optional currentUser param to remove() with ownership assertion via documentReadWhere empty-object heuristic (empty={} = manage_any bypass, non-empty = scoped = require uploadedBy match); ForbiddenException on cross-user delete (RED: resolved; GREEN: throws). Controller wired to pass currentUser to remove(). Controller spec updated. findAll scoping coverage test added (documentReadWhere called with currentUser). MIME not duplicated at service (SEC-009 covers it at DTO). No DOCUMENT_DELETE audit added (beyond suggested fix scope; OwnershipGuard already guards HTTP layer). Fail-pre witness: size cap test + cross-user delete test both RED before fix.
 
