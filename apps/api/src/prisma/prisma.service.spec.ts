@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { Logger } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 
 describe('PrismaService', () => {
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('onModuleInit', () => {
@@ -19,6 +20,20 @@ describe('PrismaService', () => {
       expect(connectSpy).toHaveBeenCalledTimes(1);
       consoleSpy.mockRestore();
     });
+
+    it('should log via NestJS Logger (not console.log) on connect', async () => {
+      const service = new PrismaService();
+      vi.spyOn(service, '$connect').mockResolvedValue(undefined);
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const loggerSpy = vi
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => {});
+
+      await service.onModuleInit();
+
+      expect(loggerSpy).toHaveBeenCalled();
+      expect(consoleSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('onModuleDestroy', () => {
@@ -33,6 +48,20 @@ describe('PrismaService', () => {
 
       expect(disconnectSpy).toHaveBeenCalledTimes(1);
       consoleSpy.mockRestore();
+    });
+
+    it('should log via NestJS Logger (not console.log) on disconnect', async () => {
+      const service = new PrismaService();
+      vi.spyOn(service, '$disconnect').mockResolvedValue(undefined);
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const loggerSpy = vi
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => {});
+
+      await service.onModuleDestroy();
+
+      expect(loggerSpy).toHaveBeenCalled();
+      expect(consoleSpy).not.toHaveBeenCalled();
     });
   });
 

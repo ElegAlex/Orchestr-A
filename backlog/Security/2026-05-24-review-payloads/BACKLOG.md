@@ -8079,7 +8079,7 @@ Design: kept censor=[REDACTED] consistent; added inline comment grouping for fut
 ---
 ### OBS-015 — Production startup banner uses console.log instead of structured logger
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8117,7 +8117,8 @@ pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Replaced console.log ASCII banner in main.ts (L218) with NestJS Logger (Bootstrap context, already in scope). Replaced console.log in PrismaService onModuleInit/onModuleDestroy with private readonly logger = new Logger(PrismaService). main.spec.ts not created — booting NestFactory to test banner is fragile/out-of-scope; prisma.service.spec.ts covers the same failure mode (console.log in a production path bypassing structured logger). Fail-pre: added 2 new tests asserting Logger.prototype.log called + console.log NOT called; both RED on unfixed code (loggerSpy not called). After fix all 7 tests GREEN. afterEach switched from vi.clearAllMocks() to vi.restoreAllMocks() to avoid Logger.prototype spy leak across tests.
 
 ---
 ### OBS-017 — No global Nest ExceptionFilter — unknown errors leak stack/details or get lost
