@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { validate } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 import { LeavesController } from './leaves.controller';
 import { LeavesService } from './leaves.service';
 import { PermissionsService } from '../rbac/permissions.service';
@@ -8,6 +10,8 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { ApproveLeaveDto } from './dto/approve-leave.dto';
+import { RejectLeaveDto } from './dto/reject-leave.dto';
 
 describe('LeavesController', () => {
   let controller: LeavesController;
@@ -471,7 +475,7 @@ describe('LeavesController', () => {
         'manager-id-1',
         { code: 'ADMIN', templateKey: 'ADMIN' },
         { headers: { 'user-agent': 'jest' }, ip: '127.0.0.1' },
-        'Approuvé',
+        { comment: 'Approuvé' },
       );
 
       expect(result.status).toBe('APPROVED');
@@ -498,7 +502,7 @@ describe('LeavesController', () => {
       );
 
       await expect(
-        controller.approve('leave-id-1', 'other-user', null, {}, undefined),
+        controller.approve('leave-id-1', 'other-user', null, {}, {}),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -510,7 +514,7 @@ describe('LeavesController', () => {
       );
 
       await expect(
-        controller.approve('leave-id-1', 'manager-id-1', null, {}, undefined),
+        controller.approve('leave-id-1', 'manager-id-1', null, {}, {}),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -529,7 +533,7 @@ describe('LeavesController', () => {
         'manager-id-1',
         { code: 'ADMIN', templateKey: 'ADMIN' },
         { headers: { 'user-agent': 'jest' }, ip: '127.0.0.1' },
-        'Non disponible',
+        { reason: 'Non disponible' },
       );
 
       expect(result.status).toBe('REJECTED');
@@ -554,7 +558,7 @@ describe('LeavesController', () => {
       );
 
       await expect(
-        controller.reject('leave-id-1', 'other-user', null, {}, undefined),
+        controller.reject('leave-id-1', 'other-user', null, {}, {}),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -696,6 +700,55 @@ describe('LeavesController', () => {
       await expect(
         controller.deactivateDelegation('nonexistent', 'manager-id-1'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // SEC-027 — ApproveLeaveDto / RejectLeaveDto MaxLength validation
+  describe('ApproveLeaveDto validators (SEC-027)', () => {
+    it('should reject comment longer than 2000 characters', async () => {
+      const dto = plainToInstance(ApproveLeaveDto, {
+        comment: 'A'.repeat(2001),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'comment')).toBe(true);
+    });
+
+    it('should accept comment of exactly 2000 characters', async () => {
+      const dto = plainToInstance(ApproveLeaveDto, {
+        comment: 'A'.repeat(2000),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'comment')).toBe(false);
+    });
+
+    it('should accept missing comment (optional)', async () => {
+      const dto = plainToInstance(ApproveLeaveDto, {});
+      const errors = await validate(dto);
+      expect(errors.length).toBe(0);
+    });
+  });
+
+  describe('RejectLeaveDto validators (SEC-027)', () => {
+    it('should reject reason longer than 2000 characters', async () => {
+      const dto = plainToInstance(RejectLeaveDto, {
+        reason: 'B'.repeat(2001),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'reason')).toBe(true);
+    });
+
+    it('should accept reason of exactly 2000 characters', async () => {
+      const dto = plainToInstance(RejectLeaveDto, {
+        reason: 'B'.repeat(2000),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'reason')).toBe(false);
+    });
+
+    it('should accept missing reason (optional)', async () => {
+      const dto = plainToInstance(RejectLeaveDto, {});
+      const errors = await validate(dto);
+      expect(errors.length).toBe(0);
     });
   });
 });

@@ -28,6 +28,8 @@ import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { UpsertLeaveBalanceDto } from './dto/upsert-leave-balance.dto';
 import { CreateDelegationDto } from './dto/create-delegation.dto';
+import { ApproveLeaveDto } from './dto/approve-leave.dto';
+import { RejectLeaveDto } from './dto/reject-leave.dto';
 import {
   ImportLeavesDto,
   ImportLeavesResultDto,
@@ -465,15 +467,7 @@ export class LeavesController {
     summary:
       'Approuver une demande de congé (validateur assigné, délégué ou Admin/Responsable)',
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        comment: { type: 'string', description: 'Commentaire optionnel' },
-      },
-    },
-    required: false,
-  })
+  @ApiBody({ type: ApproveLeaveDto, required: false })
   @ApiResponse({
     status: 200,
     description: 'Demande de congé approuvée',
@@ -495,9 +489,9 @@ export class LeavesController {
     @CurrentUser('id') validatorId: string,
     @CurrentUser('role') role: { code: string; templateKey: string } | null,
     @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
-    @Body('comment') comment?: string,
+    @Body() dto: ApproveLeaveDto,
   ) {
-    return this.leavesService.approve(id, validatorId, comment, {
+    return this.leavesService.approve(id, validatorId, dto?.comment, {
       roleCode: role?.code ?? null,
       templateKey: role?.templateKey ?? null,
       ...extractMeta(req),
@@ -511,15 +505,7 @@ export class LeavesController {
     summary:
       'Refuser une demande de congé (validateur assigné, délégué ou Admin/Responsable)',
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        reason: { type: 'string', description: 'Motif du refus' },
-      },
-    },
-    required: false,
-  })
+  @ApiBody({ type: RejectLeaveDto, required: false })
   @ApiResponse({
     status: 200,
     description: 'Demande de congé refusée',
@@ -541,9 +527,9 @@ export class LeavesController {
     @CurrentUser('id') validatorId: string,
     @CurrentUser('role') role: { code: string; templateKey: string } | null,
     @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
-    @Body('reason') reason?: string,
+    @Body() dto: RejectLeaveDto,
   ) {
-    return this.leavesService.reject(id, validatorId, reason, {
+    return this.leavesService.reject(id, validatorId, dto?.reason, {
       roleCode: role?.code ?? null,
       templateKey: role?.templateKey ?? null,
       ...extractMeta(req),

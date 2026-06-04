@@ -9441,7 +9441,7 @@ TBD — manual verification (env config), plus boot-assert test if applicable
 ---
 ### SEC-027 — Approve/Reject endpoints use @Body('comment')/@Body('reason') without DTO — bypasses ValidationPipe whitelist
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9479,7 +9479,8 @@ pnpm test apps/api/src/leaves/leaves.controller.spec.ts  # may need creation if 
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Created ApproveLeaveDto (comment, @IsOptional @IsString @MaxLength(2000)) and RejectLeaveDto (reason, same constraints) in apps/api/src/leaves/dto/. Switched controller approve/reject from @Body(field) to @Body() dto to route through ValidationPipe with metatype. Updated existing approve/reject controller tests to pass DTO objects instead of raw strings. Added 6 new DTO validation tests (SEC-027 block) verifying >2000-char rejection and boundary acceptance. FAIL-PRE witness: Cannot find module ./dto/approve-leave.dto before DTOs were created.
 
 ---
 ### SEC-028 — taskReadWhere allows access via assigneeId — task can be 'leaked' by reassignment
