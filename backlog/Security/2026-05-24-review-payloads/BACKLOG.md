@@ -8512,7 +8512,7 @@ Align: rename code to read CORS_ORIGIN or fix the template. Add a boot-time asse
 pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** b4b82d8e
 **Learnings:**
 Extracted CORS origin resolution into apps/api/src/common/fastify/cors.config.ts (testable pure function). Design decision: CORS_ORIGIN is canonical (aligns with .env.production.example), ALLOWED_ORIGINS is a backward-compat alias. Boot assertion throws in production when neither is set. Fail-pre: 3 RED tests (primary witness: resolveAllowedOrigins({CORS_ORIGIN: "https://app.example.com", NODE_ENV: "production"}) returned false instead of ["https://app.example.com"]). Fixed by reading CORS_ORIGIN || ALLOWED_ORIGINS. All 6 tests GREEN post-fix. Updated .env.example and .env.production.example.
 
