@@ -8877,7 +8877,7 @@ Add page-level tests for /leaves, /projects/[id], /settings, /telework that rend
 pnpm --filter web test  # no targeted spec inferred from apps/web/src/components
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 1cea2065
 **Learnings:**
 Added page-integration tests for leaves, settings, telework pages asserting RBAC-gated affordances via usePermissions mock.
 
