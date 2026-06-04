@@ -54,6 +54,8 @@ const snapshot = z.unknown();
  * The `AuditService.log()` generic security envelope (DAT-002 dual-write).
  * `success` + `timestamp` are always set by the writer; `ip`/`details` keys are
  * always present (value may be undefined); the rest are conditional.
+ * `requestId` is OBS-009: optional correlation id from the ALS context, lets an
+ * SRE stitch a security-envelope audit row back to the originating HTTP request.
  */
 const securityEnvelope = z
   .object({
@@ -65,6 +67,7 @@ const securityEnvelope = z
     reason: optStr,
     before: snapshot.optional(),
     after: snapshot.optional(),
+    requestId: optStr,
   })
   .strict();
 

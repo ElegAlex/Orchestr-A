@@ -7891,7 +7891,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### OBS-009 — No correlation/request ID propagation
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7929,7 +7929,17 @@ pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Implemented AsyncLocalStorage request-id context (OBS-009).
+
+Design: genReqId() honours x-request-id header (sanitised: CR/LF stripped, capped at 128 chars) or generates UUID v4. requestIdStore (ALS) bound in a Fastify onRequest hook via enterWith() (not run()) so the store persists through the full NestJS async chain. getRequestId() public helper lets any service thread the id without parameter-passing. runWithRequestId() test wrapper for unit tests without a real server.
+
+Audit: requestId added to securityEnvelope only (the AuditService.log() generic path). Other per-action strict() schemas not touched to avoid mass churn; actual population of requestId in audit writes is a follow-up concern.
+
+Note: spec grep claim (0 matches) was stale -- all-exceptions.filter.ts:78 and leaves.service.ts already referenced requestId, but no ALS context or genReqId honoring x-request-id header existed.
+
+Fail-pre: Cannot find module ./request-id.context (module not implemented = honest red).
+Gate: build + vitest both exit 0.
 
 ---
 ### OBS-010 — No error tracking (Sentry / equivalent) wired anywhere

@@ -13,6 +13,7 @@ import fastifyStatic from '@fastify/static';
 import { join } from 'path';
 import { fastifyLoggerOptions } from './common/fastify/redact.config';
 import { TRUST_PROXY } from './common/fastify/trust-proxy.config';
+import { genReqId, requestIdStore } from './common/fastify/request-id.context';
 import { timingSafeEqual } from 'crypto';
 
 function safeEqual(a: string, b: string): boolean {
@@ -60,11 +61,26 @@ async function bootstrap() {
     AppModule,
     // SEC-013: trust the nginx hop on the internal docker network so req.ip is
     // the real client behind the proxy (drives per-client throttle/lockout/audit).
+    // OBS-009: genReqId honours x-request-id header (sanitised) or generates a
+    // fresh UUID v4 so every request has a stable correlation id.
     new FastifyAdapter({
       logger: fastifyLoggerOptions,
       trustProxy: [...TRUST_PROXY],
+      genReqId,
     }),
   );
+
+  // OBS-009: bind the request id into AsyncLocalStorage so any service can call
+  // getRequestId() to thread correlation without parameter-passing.
+  // enterWith() is used (not run()) so the store persists across the full async
+  // chain spawned from this hook, including NestJS interceptors and services.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addHook('onRequest', (request, _reply, done) => {
+      requestIdStore.enterWith({ requestId: request.id as string });
+      done();
+    });
 
   // Multipart (file uploads)
   await app.register(fastifyMultipart as Parameters<typeof app.register>[0], {
