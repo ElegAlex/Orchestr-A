@@ -59,9 +59,13 @@ describe('DAT-037 — cross-table task.projectId consistency (real DB)', () => {
 
   beforeAll(async () => {
     await db.$connect();
-    const a = await db.project.create({ data: { name: `DAT-037 A ${randomUUID()}` } });
+    const a = await db.project.create({
+      data: { name: `DAT-037 A ${randomUUID()}` },
+    });
     projectA = a.id;
-    const b = await db.project.create({ data: { name: `DAT-037 B ${randomUUID()}` } });
+    const b = await db.project.create({
+      data: { name: `DAT-037 B ${randomUUID()}` },
+    });
     projectB = b.id;
   });
 
@@ -76,7 +80,10 @@ describe('DAT-037 — cross-table task.projectId consistency (real DB)', () => {
     return e.id;
   }
 
-  async function mkMilestone(projectId: string, label: string): Promise<string> {
+  async function mkMilestone(
+    projectId: string,
+    label: string,
+  ): Promise<string> {
     const m = await db.milestone.create({
       data: {
         name: `DAT-037 ms ${label} ${randomUUID()}`,
@@ -150,7 +157,11 @@ describe('DAT-037 — cross-table task.projectId consistency (real DB)', () => {
     const epicInA = await mkEpic(projectA, 'both-epic');
     const msInA = await mkMilestone(projectA, 'both-ms');
     await expect(
-      insertTaskRaw({ projectId: projectA, epicId: epicInA, milestoneId: msInA }),
+      insertTaskRaw({
+        projectId: projectA,
+        epicId: epicInA,
+        milestoneId: msInA,
+      }),
     ).resolves.toBe(1);
   });
 
@@ -162,10 +173,18 @@ describe('DAT-037 — cross-table task.projectId consistency (real DB)', () => {
     // Setup: epic in project A with two child tasks both in project A.
     const e = await mkEpic(projectA, 'cascade-epic');
     const t1 = await db.task.create({
-      data: { title: `DAT-037 cas-t1 ${randomUUID()}`, projectId: projectA, epicId: e },
+      data: {
+        title: `DAT-037 cas-t1 ${randomUUID()}`,
+        projectId: projectA,
+        epicId: e,
+      },
     });
     const t2 = await db.task.create({
-      data: { title: `DAT-037 cas-t2 ${randomUUID()}`, projectId: projectA, epicId: e },
+      data: {
+        title: `DAT-037 cas-t2 ${randomUUID()}`,
+        projectId: projectA,
+        epicId: e,
+      },
     });
 
     // Move the epic to project B. Without the parent-side cascade, the task-side

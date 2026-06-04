@@ -525,8 +525,9 @@ export class ProjectsService {
       const roleCode =
         typeof currentUser.role === 'string'
           ? currentUser.role
-          : currentUser.role?.code ?? null;
-      const perms = await this.permissionsService.getPermissionsForRole(roleCode);
+          : (currentUser.role?.code ?? null);
+      const perms =
+        await this.permissionsService.getPermissionsForRole(roleCode);
       const hasArchivePerm = perms.includes('projects:archive');
       canArchive = hasArchivePerm && project.archivedAt == null;
       canUnarchive = hasArchivePerm && project.archivedAt != null;
@@ -813,7 +814,11 @@ export class ProjectsService {
       });
     }
 
-    return { projectId: id, canDelete: dependencies.length === 0, dependencies };
+    return {
+      projectId: id,
+      canDelete: dependencies.length === 0,
+      dependencies,
+    };
   }
 
   /**
@@ -834,8 +839,7 @@ export class ProjectsService {
       throw new NotFoundException('Projet introuvable');
     }
 
-    const { canDelete, dependencies } =
-      await this.checkProjectDependencies(id);
+    const { canDelete, dependencies } = await this.checkProjectDependencies(id);
     if (!canDelete) {
       throw new ConflictException({
         message:
@@ -1186,10 +1190,12 @@ export class ProjectsService {
           (m) => m.status === 'COMPLETED',
         ).length;
         const milestonesOverdue = project.milestones.filter(
-          (m) => m.status !== 'COMPLETED' && m.dueDate != null && m.dueDate < now,
+          (m) =>
+            m.status !== 'COMPLETED' && m.dueDate != null && m.dueDate < now,
         ).length;
         const milestonesUpcoming = project.milestones.filter(
-          (m) => m.status !== 'COMPLETED' && m.dueDate != null && m.dueDate >= now,
+          (m) =>
+            m.status !== 'COMPLETED' && m.dueDate != null && m.dueDate >= now,
         ).length;
 
         return {

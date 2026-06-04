@@ -84,12 +84,19 @@ describe('PrismaService', () => {
     });
 
     it('should call Logger.warn for queries exceeding the slow-query threshold', async () => {
-      let capturedHandler: ((e: { duration: number; query: string }) => void) | undefined;
-      vi.spyOn(service, '$on').mockImplementation((event: string, handler: (e: unknown) => void) => {
-        if (event === 'query') {
-          capturedHandler = handler as (e: { duration: number; query: string }) => void;
-        }
-      });
+      let capturedHandler:
+        | ((e: { duration: number; query: string }) => void)
+        | undefined;
+      vi.spyOn(service, '$on').mockImplementation(
+        (event: string, handler: (e: unknown) => void) => {
+          if (event === 'query') {
+            capturedHandler = handler as (e: {
+              duration: number;
+              query: string;
+            }) => void;
+          }
+        },
+      );
 
       await service.onModuleInit();
       expect(capturedHandler).toBeDefined();
@@ -100,12 +107,19 @@ describe('PrismaService', () => {
     });
 
     it('should NOT call Logger.warn for fast queries below the slow-query threshold', async () => {
-      let capturedHandler: ((e: { duration: number; query: string }) => void) | undefined;
-      vi.spyOn(service, '$on').mockImplementation((event: string, handler: (e: unknown) => void) => {
-        if (event === 'query') {
-          capturedHandler = handler as (e: { duration: number; query: string }) => void;
-        }
-      });
+      let capturedHandler:
+        | ((e: { duration: number; query: string }) => void)
+        | undefined;
+      vi.spyOn(service, '$on').mockImplementation(
+        (event: string, handler: (e: unknown) => void) => {
+          if (event === 'query') {
+            capturedHandler = handler as (e: {
+              duration: number;
+              query: string;
+            }) => void;
+          }
+        },
+      );
 
       await service.onModuleInit();
       expect(capturedHandler).toBeDefined();

@@ -181,7 +181,8 @@ export class MilestonesController {
   async exportProjectMilestones(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @CurrentUser('id') userId: string,
-    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+    @Req()
+    req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
     @Res() reply: FastifyReply,
   ) {
     const { csv, filename } =

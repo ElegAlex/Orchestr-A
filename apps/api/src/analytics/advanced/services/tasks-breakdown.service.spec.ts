@@ -171,7 +171,13 @@ describe('TasksBreakdownService', () => {
     const result = await service.getTasksBreakdown({});
 
     expect(Object.keys(result.byStatus)).toEqual(
-      expect.arrayContaining(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'BLOCKED', 'DONE']),
+      expect.arrayContaining([
+        'TODO',
+        'IN_PROGRESS',
+        'IN_REVIEW',
+        'BLOCKED',
+        'DONE',
+      ]),
     );
     expect(result.byStatus.TODO).toBe(0);
     expect(result.byStatus.IN_PROGRESS).toBe(0);
@@ -186,8 +192,12 @@ describe('TasksBreakdownService', () => {
 
     await service.getTasksBreakdown({});
 
-    const callArgs = mockPrismaService.task.findMany.mock.calls[0][0] as { where: { project: unknown } };
-    expect(JSON.stringify(callArgs.where.project)).toContain('"archivedAt":null');
+    const callArgs = mockPrismaService.task.findMany.mock.calls[0][0] as {
+      where: { project: unknown };
+    };
+    expect(JSON.stringify(callArgs.where.project)).toContain(
+      '"archivedAt":null',
+    );
   });
 
   // ─── Select projection ────────────────────────────────────────────────────────

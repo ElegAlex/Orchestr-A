@@ -73,9 +73,7 @@ const securityEnvelope = z
 
 /** Symmetric before/after mutation (role reassignment, (de)activation, dept,
  *  default-role flip). Both snapshots present. */
-const beforeAfter = z
-  .object({ before: snapshot, after: snapshot })
-  .strict();
+const beforeAfter = z.object({ before: snapshot, after: snapshot }).strict();
 
 /** Final column snapshot written BEFORE a row is erased (USER/PROJECT/ROLE
  *  delete). */

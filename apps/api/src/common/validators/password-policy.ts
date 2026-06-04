@@ -34,7 +34,9 @@ export function IsStrongPassword(): PropertyDecorator {
   return applyDecorators(
     IsString(),
     MinLength(PASSWORD_MIN_LENGTH, { message: PASSWORD_LENGTH_MESSAGE }),
-    Matches(PASSWORD_COMPLEXITY_REGEX, { message: PASSWORD_COMPLEXITY_MESSAGE }),
+    Matches(PASSWORD_COMPLEXITY_REGEX, {
+      message: PASSWORD_COMPLEXITY_MESSAGE,
+    }),
   );
 }
 

@@ -339,7 +339,9 @@ describe('MilestonesCompletionService', () => {
   it('default excludes archived projects (archivedAt: null in milestone project where)', async () => {
     mockPrisma.milestone.findMany.mockResolvedValue([]);
     await service.getMilestonesCompletion();
-    const callArgs = mockPrisma.milestone.findMany.mock.calls[0][0] as { where: unknown };
+    const callArgs = mockPrisma.milestone.findMany.mock.calls[0][0] as {
+      where: unknown;
+    };
     expect(JSON.stringify(callArgs.where)).toContain('"archivedAt":null');
   });
 

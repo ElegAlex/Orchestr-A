@@ -27,7 +27,9 @@ async function backfill() {
     logger.log('Capturing snapshots for all ACTIVE projects...');
     const start = Date.now();
     const result = await projectsService.captureSnapshots();
-    logger.log(`Done: ${result.captured} snapshot(s) in ${Date.now() - start}ms`);
+    logger.log(
+      `Done: ${result.captured} snapshot(s) in ${Date.now() - start}ms`,
+    );
 
     await emitSystemBackfill(auditPersistence, 'COMPLETED', {
       script: SCRIPT_NAME,
@@ -42,7 +44,6 @@ async function backfill() {
 backfill()
   .then(() => process.exit(0))
   .catch((err) => {
-    // eslint-disable-next-line no-console
     console.error('Backfill failed:', err);
     process.exit(1);
   });

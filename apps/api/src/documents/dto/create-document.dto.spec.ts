@@ -27,12 +27,15 @@ describe('CreateDocumentDto — SEC-009 url/mimeType validation', () => {
   });
 
   it('rejects data: and file: scheme URLs', async () => {
-    for (const url of ['data:text/html,<script>alert(1)</script>', 'file:///etc/passwd']) {
+    for (const url of [
+      'data:text/html,<script>alert(1)</script>',
+      'file:///etc/passwd',
+    ]) {
       const dto = plainToInstance(CreateDocumentDto, { ...base, url });
       const errors = await validate(dto);
-      expect(errors.find((e) => e.property === 'url')?.constraints).toHaveProperty(
-        'isUrl',
-      );
+      expect(
+        errors.find((e) => e.property === 'url')?.constraints,
+      ).toHaveProperty('isUrl');
     }
   });
 
@@ -40,9 +43,9 @@ describe('CreateDocumentDto — SEC-009 url/mimeType validation', () => {
     const url = `https://example.com/${'a'.repeat(2100)}`;
     const dto = plainToInstance(CreateDocumentDto, { ...base, url });
     const errors = await validate(dto);
-    expect(errors.find((e) => e.property === 'url')?.constraints).toHaveProperty(
-      'maxLength',
-    );
+    expect(
+      errors.find((e) => e.property === 'url')?.constraints,
+    ).toHaveProperty('maxLength');
   });
 
   it('accepts a normal https URL', async () => {
@@ -57,9 +60,9 @@ describe('CreateDocumentDto — SEC-009 url/mimeType validation', () => {
       mimeType: 'application/x-evil',
     });
     const errors = await validate(dto);
-    expect(errors.find((e) => e.property === 'mimeType')?.constraints).toHaveProperty(
-      'isIn',
-    );
+    expect(
+      errors.find((e) => e.property === 'mimeType')?.constraints,
+    ).toHaveProperty('isIn');
   });
 });
 
@@ -69,8 +72,8 @@ describe('UpdateDocumentDto — SEC-009 validation propagates via PartialType', 
       url: 'javascript:alert(1)',
     });
     const errors = await validate(dto);
-    expect(errors.find((e) => e.property === 'url')?.constraints).toHaveProperty(
-      'isUrl',
-    );
+    expect(
+      errors.find((e) => e.property === 'url')?.constraints,
+    ).toHaveProperty('isUrl');
   });
 });

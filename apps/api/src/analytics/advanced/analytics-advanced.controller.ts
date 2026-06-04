@@ -80,7 +80,8 @@ export class AnalyticsAdvancedController {
   @Get('project-health')
   @RequirePermissions('reports:view')
   @ApiOperation({
-    summary: 'Per-project health table with overdueMilestones-based status (bloc 4)',
+    summary:
+      'Per-project health table with overdueMilestones-based status (bloc 4)',
   })
   async getProjectHealth(
     @Query() query: ProjectHealthQueryDto,
@@ -95,7 +96,8 @@ export class AnalyticsAdvancedController {
   @Get('milestones-completion')
   @RequirePermissions('reports:view')
   @ApiOperation({
-    summary: 'Milestones reached on time over due, with per-project breakdown (bloc 5)',
+    summary:
+      'Milestones reached on time over due, with per-project breakdown (bloc 5)',
   })
   async getMilestonesCompletion(
     @Query() query: MilestonesCompletionQueryDto,

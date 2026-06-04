@@ -146,7 +146,12 @@ describe('MetricsInterceptor (OBS-011)', () => {
       });
     });
 
-    expect(spy).toHaveBeenCalledWith('GET', '/api/test', 200, expect.any(Number));
+    expect(spy).toHaveBeenCalledWith(
+      'GET',
+      '/api/test',
+      200,
+      expect.any(Number),
+    );
   });
 
   it('does not throw when the handler errors', async () => {
@@ -171,6 +176,11 @@ describe('MetricsInterceptor (OBS-011)', () => {
       });
     });
 
-    expect(spy).toHaveBeenCalledWith('POST', '/api/tasks', 500, expect.any(Number));
+    expect(spy).toHaveBeenCalledWith(
+      'POST',
+      '/api/tasks',
+      500,
+      expect.any(Number),
+    );
   });
 });

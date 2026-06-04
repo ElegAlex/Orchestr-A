@@ -50,9 +50,18 @@ const EXPECTED: ReadonlyArray<readonly [string, string]> = [
   ['milestones', 'milestones_projectId_idx'],
   ['password_reset_tokens', 'password_reset_tokens_userId_idx'],
   ['password_reset_tokens', 'password_reset_tokens_createdById_idx'],
-  ['predefined_task_recurring_rules', 'predefined_task_recurring_rules_predefinedTaskId_idx'],
-  ['predefined_task_recurring_rules', 'predefined_task_recurring_rules_userId_idx'],
-  ['predefined_task_recurring_rules', 'predefined_task_recurring_rules_createdById_idx'],
+  [
+    'predefined_task_recurring_rules',
+    'predefined_task_recurring_rules_predefinedTaskId_idx',
+  ],
+  [
+    'predefined_task_recurring_rules',
+    'predefined_task_recurring_rules_userId_idx',
+  ],
+  [
+    'predefined_task_recurring_rules',
+    'predefined_task_recurring_rules_createdById_idx',
+  ],
   ['predefined_tasks', 'predefined_tasks_createdById_idx'],
   ['projects', 'projects_createdById_idx'],
   ['projects', 'projects_managerId_idx'],
@@ -73,7 +82,9 @@ describe('DAT-011 — FK indexes on unindexed FK columns (real DB)', () => {
   it('all 25 FK indexes exist in pg_indexes', async () => {
     const indexNames = EXPECTED.map(([, name]) => name);
 
-    const rows = await db.$queryRawUnsafe<{ indexname: string; tablename: string }[]>(
+    const rows = await db.$queryRawUnsafe<
+      { indexname: string; tablename: string }[]
+    >(
       `SELECT tablename, indexname FROM pg_indexes
        WHERE indexname = ANY($1::text[])
        ORDER BY tablename, indexname`,
@@ -93,7 +104,9 @@ describe('DAT-011 — FK indexes on unindexed FK columns (real DB)', () => {
   });
 
   it('comments FK indexes cover correct columns (taskId, authorId)', async () => {
-    const rows = await db.$queryRawUnsafe<{ indexname: string; indexdef: string }[]>(
+    const rows = await db.$queryRawUnsafe<
+      { indexname: string; indexdef: string }[]
+    >(
       `SELECT indexname, indexdef FROM pg_indexes
        WHERE tablename = 'comments' AND indexname IN ('comments_taskId_idx','comments_authorId_idx')
        ORDER BY indexname`,
@@ -112,8 +125,10 @@ describe('DAT-011 — FK indexes on unindexed FK columns (real DB)', () => {
     expect(rows[0].indexdef).toMatch(/validated_by_id/);
   });
 
-  it('leave_validation_delegates indexes cover @map'd delegator_id and delegate_id', async () => {
-    const rows = await db.$queryRawUnsafe<{ indexname: string; indexdef: string }[]>(
+  it("leave_validation_delegates indexes cover @map'd delegator_id and delegate_id", async () => {
+    const rows = await db.$queryRawUnsafe<
+      { indexname: string; indexdef: string }[]
+    >(
       `SELECT indexname, indexdef FROM pg_indexes
        WHERE tablename = 'leave_validation_delegates'
          AND indexname IN (
@@ -124,12 +139,18 @@ describe('DAT-011 — FK indexes on unindexed FK columns (real DB)', () => {
     );
     expect(rows).toHaveLength(2);
     const defs = Object.fromEntries(rows.map((r) => [r.indexname, r.indexdef]));
-    expect(defs['leave_validation_delegates_delegator_id_idx']).toMatch(/delegator_id/);
-    expect(defs['leave_validation_delegates_delegate_id_idx']).toMatch(/delegate_id/);
+    expect(defs['leave_validation_delegates_delegator_id_idx']).toMatch(
+      /delegator_id/,
+    );
+    expect(defs['leave_validation_delegates_delegate_id_idx']).toMatch(
+      /delegate_id/,
+    );
   });
 
   it('projects FK indexes cover all four user-FK columns', async () => {
-    const rows = await db.$queryRawUnsafe<{ indexname: string; indexdef: string }[]>(
+    const rows = await db.$queryRawUnsafe<
+      { indexname: string; indexdef: string }[]
+    >(
       `SELECT indexname, indexdef FROM pg_indexes
        WHERE tablename = 'projects'
          AND indexname IN (

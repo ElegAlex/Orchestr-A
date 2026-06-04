@@ -153,7 +153,9 @@ describe('LeaveTypesService', () => {
 
     it('should throw BadRequestException when modifying forbidden system fields', async () => {
       const systemType = makeLeaveType({ isSystem: true });
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(systemType);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        systemType,
+      );
 
       // 'code' is not in the allowed fields for system types
       await expect(
@@ -164,7 +166,9 @@ describe('LeaveTypesService', () => {
     it('should allow updating display fields on system types', async () => {
       const systemType = makeLeaveType({ isSystem: true });
       const updated = makeLeaveType({ isSystem: true, name: 'New Name' });
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(systemType);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        systemType,
+      );
       mockPrismaService.leaveTypeConfig.update.mockResolvedValue(updated);
 
       await expect(
@@ -206,8 +210,13 @@ describe('LeaveTypesService', () => {
     });
 
     it('should throw BadRequestException when trying to delete a system type', async () => {
-      const systemType = makeLeaveType({ isSystem: true, _count: { leaves: 0 } });
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(systemType);
+      const systemType = makeLeaveType({
+        isSystem: true,
+        _count: { leaves: 0 },
+      });
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        systemType,
+      );
 
       await expect(service.remove('lt-1')).rejects.toBeInstanceOf(
         BadRequestException,

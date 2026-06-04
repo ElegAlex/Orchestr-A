@@ -39,9 +39,9 @@ describe('ErrorReporter scaffold (OBS-010)', () => {
   });
 
   it('NoopErrorReporter.report() does not trigger fetch or http egress', () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(
-      () => Promise.resolve(new Response()),
-    );
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(() => Promise.resolve(new Response()));
     const reporter = new NoopErrorReporter();
     reporter.report(new Error('no egress'));
     expect(fetchSpy).not.toHaveBeenCalled();

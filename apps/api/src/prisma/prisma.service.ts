@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { PrismaClient } from 'database';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -32,12 +37,10 @@ export class PrismaService
 
   async onModuleInit() {
     // Register slow-query listener before connecting (OBS-023).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     (this as any).$on('query', (e: { duration: number; query: string }) => {
       if (e.duration > SLOW_QUERY_THRESHOLD_MS) {
-        this.logger.warn(
-          `Slow query detected (${e.duration}ms): ${e.query}`,
-        );
+        this.logger.warn(`Slow query detected (${e.duration}ms): ${e.query}`);
       }
     });
     await this.$connect();

@@ -105,7 +105,6 @@ export const PlanningView = ({
     groupedUsers,
     filteredGroups,
     refetch,
-    silentRefetch,
     predefinedAssignments,
     getHolidayForDate,
     leaves,

@@ -36,6 +36,18 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-return': 'warn',
       '@typescript-eslint/require-await': 'warn',
       '@typescript-eslint/no-redundant-type-constituents': 'warn',
+      // Honour the existing `_`-prefix convention for intentionally-unused
+      // bindings (already used across the codebase, e.g. `_err`, `_ctx`,
+      // `_reply`). Aligns the rule with the code's intent; genuinely-dead
+      // non-prefixed vars are still flagged.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },

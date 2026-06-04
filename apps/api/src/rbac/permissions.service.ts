@@ -32,7 +32,10 @@ export class PermissionsService {
    * In-process singleflight map: prevents cache stampede by coalescing concurrent
    * DB lookups for the same roleCode into a single Promise.
    */
-  private readonly inflight = new Map<string, Promise<readonly PermissionCode[]>>();
+  private readonly inflight = new Map<
+    string,
+    Promise<readonly PermissionCode[]>
+  >();
   private readonly logger = new Logger(PermissionsService.name);
 
   constructor(

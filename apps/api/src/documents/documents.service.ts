@@ -125,7 +125,8 @@ export class DocumentsService {
         project: true,
       },
     });
-    if (!document || document.deletedAt) throw new NotFoundException('Document introuvable'); // DAT-025: treat soft-deleted as not found
+    if (!document || document.deletedAt)
+      throw new NotFoundException('Document introuvable'); // DAT-025: treat soft-deleted as not found
 
     // OBS-006 — emit DOCUMENT_READ only on a caller-driven fetch-by-id, AFTER
     // the access check and existence check pass (no trail for denied/missing
@@ -190,7 +191,8 @@ export class DocumentsService {
       const scopeWhere = await this.accessScope.documentReadWhere(currentUser);
       const isFullAccess =
         !scopeWhere ||
-        (typeof scopeWhere === 'object' && Object.keys(scopeWhere).length === 0);
+        (typeof scopeWhere === 'object' &&
+          Object.keys(scopeWhere).length === 0);
       const isOwner = document.uploadedBy === currentUser.id;
       if (!isFullAccess && !isOwner) {
         throw new ForbiddenException(

@@ -466,7 +466,11 @@ describe('RolesService — V3 F', () => {
         prisma.role.create.mockResolvedValue(createdRole());
 
         await service.createRole(
-          { code: 'CUSTOM_LEAD', label: 'Custom Lead', templateKey: 'PROJECT_LEAD' },
+          {
+            code: 'CUSTOM_LEAD',
+            label: 'Custom Lead',
+            templateKey: 'PROJECT_LEAD',
+          },
           caller,
         );
 
@@ -538,8 +542,14 @@ describe('RolesService — V3 F', () => {
             entityId: 'r-1',
             actorId: 'actor-1',
             payload: expect.objectContaining({
-              before: expect.objectContaining({ label: 'Old', description: null }),
-              after: expect.objectContaining({ label: 'New', description: 'desc' }),
+              before: expect.objectContaining({
+                label: 'Old',
+                description: null,
+              }),
+              after: expect.objectContaining({
+                label: 'New',
+                description: 'desc',
+              }),
               changed: expect.arrayContaining(['label', 'description']),
             }),
           }),
@@ -596,7 +606,7 @@ describe('RolesService — V3 F', () => {
         });
 
         let snapshotPresentAtDeleteTime = false;
-        prisma.role.delete.mockImplementation(async () => {
+        prisma.role.delete.mockImplementation(() => {
           // The audit row (with snapshot) must already be emitted by the time
           // the row is erased (DAT-007 PROJECT_DELETED precedent).
           snapshotPresentAtDeleteTime = audit.log.mock.calls.some(

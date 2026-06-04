@@ -32,7 +32,9 @@ export class MilestonesCompletionService {
   ): Promise<MilestonesCompletionResponseDto> {
     const now = new Date();
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
-    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
+    const archivedClause = archivedWhere(
+      query.archived ?? ArchivedFilter.ACTIVE,
+    );
 
     const milestones = await this.prisma.milestone.findMany({
       where: { project: { AND: [projectScope, archivedClause] } },

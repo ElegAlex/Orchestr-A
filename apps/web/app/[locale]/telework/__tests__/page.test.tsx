@@ -108,6 +108,7 @@ jest.mock("date-fns", () => ({
 // Import after mocks
 // ---------------------------------------------------------------------------
 import TeleworkPage from "../page";
+import { usersService } from "@/services/users.service";
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -180,7 +181,6 @@ describe("TST-023 — TeleworkPage: RBAC gated affordances", () => {
   describe("when user has telework:manage_any AND users:read permissions (manager)", () => {
     beforeEach(() => {
       mockPermissions = ["telework:manage_any", "users:read"];
-      const { usersService } = require("@/services/users.service");
       usersService.getAll.mockResolvedValue([
         {
           id: "user-1",

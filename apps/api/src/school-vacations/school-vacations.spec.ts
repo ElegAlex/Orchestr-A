@@ -476,7 +476,7 @@ describe('SchoolVacationsService', () => {
       const fetchMock = vi.mocked(globalThis.fetch);
       const callArgs = fetchMock.mock.calls[0];
       expect(callArgs).toBeDefined();
-      const opts = callArgs[1] as RequestInit | undefined;
+      const opts = callArgs[1];
       expect(opts?.signal).toBeInstanceOf(AbortSignal);
     });
   });

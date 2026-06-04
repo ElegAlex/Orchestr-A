@@ -59,7 +59,9 @@ export class MetricsService {
     const lines: string[] = [];
 
     // --- http_requests_total ---
-    lines.push('# HELP http_requests_total Total number of HTTP requests received.');
+    lines.push(
+      '# HELP http_requests_total Total number of HTTP requests received.',
+    );
     lines.push('# TYPE http_requests_total counter');
     for (const [labels, entry] of this.requestCounter) {
       lines.push(`http_requests_total{${labels}} ${entry.value}`);
@@ -75,9 +77,7 @@ export class MetricsService {
       lines.push(
         `http_request_duration_seconds_count{${labels}} ${entry.count}`,
       );
-      lines.push(
-        `http_request_duration_seconds_sum{${labels}} ${sumSeconds}`,
-      );
+      lines.push(`http_request_duration_seconds_sum{${labels}} ${sumSeconds}`);
     }
 
     return lines.join('\n') + '\n';

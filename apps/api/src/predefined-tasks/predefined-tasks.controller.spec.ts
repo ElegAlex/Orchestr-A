@@ -389,5 +389,4 @@ describe('PredefinedTasksController', () => {
       expect(result.rulesProcessed).toBe(2);
     });
   });
-
 });

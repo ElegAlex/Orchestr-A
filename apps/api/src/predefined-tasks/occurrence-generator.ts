@@ -29,11 +29,6 @@ export class InvalidRuleError extends Error {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-/** Convertit un dayOfWeek JS (0=Dim..6=Sam) vers notre convention (0=Lun..6=Dim) */
-function jsToOur(jsDay: number): number {
-  return jsDay === 0 ? 6 : jsDay - 1;
-}
-
 /** Convertit notre convention (0=Lun..6=Dim) vers JS (0=Dim..6=Sam) */
 function ourToJs(ourDay: number): number {
   return ourDay === 6 ? 0 : ourDay + 1;
@@ -283,7 +278,9 @@ export function generateOccurrences(
     default: {
       // TypeScript exhaustiveness — ne devrait pas arriver
       const exhaustive: never = rule.recurrenceType;
-      throw new InvalidRuleError(`Type de récurrence inconnu : ${exhaustive}`);
+      throw new InvalidRuleError(
+        `Type de récurrence inconnu : ${String(exhaustive)}`,
+      );
     }
   }
 }

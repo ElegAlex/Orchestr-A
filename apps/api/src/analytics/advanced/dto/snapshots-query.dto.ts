@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 import { ArchivedFilter } from '../../../projects/dto/archived-filter.dto';
 
 export class SnapshotsQueryDto {
@@ -25,7 +31,11 @@ export class SnapshotsQueryDto {
   @IsDateString()
   to?: string;
 
-  @ApiProperty({ required: false, enum: ArchivedFilter, default: ArchivedFilter.ACTIVE })
+  @ApiProperty({
+    required: false,
+    enum: ArchivedFilter,
+    default: ArchivedFilter.ACTIVE,
+  })
   @IsOptional()
   @IsEnum(ArchivedFilter)
   archived?: ArchivedFilter;

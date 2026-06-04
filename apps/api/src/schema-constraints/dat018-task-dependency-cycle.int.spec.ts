@@ -47,9 +47,10 @@ async function expectSelfLoopRejected(insert: Promise<unknown>): Promise<void> {
   } catch (err) {
     message = err instanceof Error ? err.message : String(err);
   }
-  expect(message, 'expected a check_violation (23514) but the INSERT was accepted').toMatch(
-    /23514/,
-  );
+  expect(
+    message,
+    'expected a check_violation (23514) but the INSERT was accepted',
+  ).toMatch(/23514/);
   expect(message).toContain('task_dependencies_no_self_ck');
 }
 
@@ -65,9 +66,10 @@ async function expectCycleRejected(insert: Promise<unknown>): Promise<void> {
   } catch (err) {
     message = err instanceof Error ? err.message : String(err);
   }
-  expect(message, 'expected the cycle trigger to RAISE but the INSERT was accepted').toContain(
-    'task_dependencies_no_cycle',
-  );
+  expect(
+    message,
+    'expected the cycle trigger to RAISE but the INSERT was accepted',
+  ).toContain('task_dependencies_no_cycle');
 }
 
 describe('DAT-018 — task_dependencies cycle prevention (real DB)', () => {
@@ -75,7 +77,9 @@ describe('DAT-018 — task_dependencies cycle prevention (real DB)', () => {
 
   beforeAll(async () => {
     await db.$connect();
-    const project = await db.project.create({ data: { name: `DAT-018 project ${randomUUID()}` } });
+    const project = await db.project.create({
+      data: { name: `DAT-018 project ${randomUUID()}` },
+    });
     projectId = project.id;
   });
 
@@ -85,7 +89,9 @@ describe('DAT-018 — task_dependencies cycle prevention (real DB)', () => {
 
   /** Create a fresh task within the shared project; returns its id. */
   async function mkTask(label: string): Promise<string> {
-    const t = await db.task.create({ data: { title: `DAT-018 ${label} ${randomUUID()}`, projectId } });
+    const t = await db.task.create({
+      data: { title: `DAT-018 ${label} ${randomUUID()}`, projectId },
+    });
     return t.id;
   }
 
@@ -162,7 +168,9 @@ describe('DAT-018 — task_dependencies cycle prevention (real DB)', () => {
     const a = await mkTask('upd-A');
     const b = await mkTask('upd-B');
     const c = await mkTask('upd-C');
-    const edge = await db.taskDependency.create({ data: { taskId: a, dependsOnTaskId: b } });
+    const edge = await db.taskDependency.create({
+      data: { taskId: a, dependsOnTaskId: b },
+    });
     await expect(
       db.$executeRawUnsafe(
         `UPDATE task_dependencies SET "dependsOnTaskId" = $1 WHERE id = $2`,

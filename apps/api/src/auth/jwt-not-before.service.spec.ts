@@ -31,9 +31,7 @@ describe('JwtNotBeforeService (SEC-019)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new JwtNotBeforeService(
-      makeConfig() as unknown as ConfigService,
-    );
+    service = new JwtNotBeforeService(makeConfig() as unknown as ConfigService);
   });
 
   afterEach(() => {

@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import Redis from 'ioredis';
@@ -61,7 +65,9 @@ export class HealthService {
     try {
       const pong = await this.redis.ping();
       if (pong !== 'PONG') {
-        this.logger.warn(`Redis health ping returned unexpected: ${pong}`);
+        this.logger.warn(
+          `Redis health ping returned unexpected: ${String(pong)}`,
+        );
         redisStatus = 'down';
       }
     } catch (err) {

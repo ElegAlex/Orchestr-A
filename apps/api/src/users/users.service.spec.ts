@@ -224,7 +224,9 @@ describe('UsersService', () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
       mockPrismaService.department.findUnique.mockResolvedValue(mockDepartment);
       mockPrismaService.service.findMany.mockResolvedValue(mockServices);
-      mockPrismaService.role.findUnique.mockResolvedValue({ id: 'role-contrib' });
+      mockPrismaService.role.findUnique.mockResolvedValue({
+        id: 'role-contrib',
+      });
       mockPrismaService.user.create.mockResolvedValue({
         id: '1',
         ...createUserDto,
@@ -359,9 +361,9 @@ describe('UsersService', () => {
           RESPONSABLE: { templateKey: 'ADMIN_DELEGATED' },
         });
 
-        await expect(service.create(adminTargetDto, 'RESPONSABLE')).rejects.toThrow(
-          'administrateur',
-        );
+        await expect(
+          service.create(adminTargetDto, 'RESPONSABLE'),
+        ).rejects.toThrow('administrateur');
         expect(mockPrismaService.user.create).not.toHaveBeenCalled();
       });
 
@@ -396,7 +398,9 @@ describe('UsersService', () => {
         const mockDepartment = { id: 'dept-1', name: 'IT' };
         const mockServices = [{ id: 'service-1', name: 'Dev' }];
         mockPrismaService.user.findFirst.mockResolvedValue(null);
-        mockPrismaService.department.findUnique.mockResolvedValue(mockDepartment);
+        mockPrismaService.department.findUnique.mockResolvedValue(
+          mockDepartment,
+        );
         mockPrismaService.service.findMany.mockResolvedValue(mockServices);
         mockRoleLookups({
           INSTITUTIONAL_ADMIN: {
@@ -427,7 +431,9 @@ describe('UsersService', () => {
           department: mockDepartment,
           userServices: [],
         });
-        mockPrismaService.userService.createMany.mockResolvedValue({ count: 1 });
+        mockPrismaService.userService.createMany.mockResolvedValue({
+          count: 1,
+        });
 
         const result = await service.create(adminTargetDto, 'ADMIN');
 
@@ -439,7 +445,9 @@ describe('UsersService', () => {
         const mockDepartment = { id: 'dept-1', name: 'IT' };
         const mockServices = [{ id: 'service-1', name: 'Dev' }];
         mockPrismaService.user.findFirst.mockResolvedValue(null);
-        mockPrismaService.department.findUnique.mockResolvedValue(mockDepartment);
+        mockPrismaService.department.findUnique.mockResolvedValue(
+          mockDepartment,
+        );
         mockPrismaService.service.findMany.mockResolvedValue(mockServices);
         mockRoleLookups({
           CONTRIBUTEUR: {
@@ -470,7 +478,9 @@ describe('UsersService', () => {
           department: mockDepartment,
           userServices: [],
         });
-        mockPrismaService.userService.createMany.mockResolvedValue({ count: 1 });
+        mockPrismaService.userService.createMany.mockResolvedValue({
+          count: 1,
+        });
 
         const result = await service.create(createUserDto, 'RESPONSABLE');
 
@@ -613,7 +623,9 @@ describe('UsersService', () => {
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.user.count.mockResolvedValue(0);
 
-      await service.findAll(1, 1000, undefined, undefined, { allowFullScan: true });
+      await service.findAll(1, 1000, undefined, undefined, {
+        allowFullScan: true,
+      });
 
       const args = mockPrismaService.user.findMany.mock.calls[0][0];
       expect(args.take).toBe(1000);
@@ -774,7 +786,10 @@ describe('UsersService', () => {
     describe('horizontal scope (SEC-002)', () => {
       const callerOutOfScope = {
         id: 'caller-delegated-1',
-        role: { code: 'INSTITUTIONAL_DELEGATED', templateKey: 'ADMIN_DELEGATED' },
+        role: {
+          code: 'INSTITUTIONAL_DELEGATED',
+          templateKey: 'ADMIN_DELEGATED',
+        },
       };
       const callerAdmin = {
         id: 'caller-admin-1',
@@ -795,7 +810,12 @@ describe('UsersService', () => {
         mockPrismaService.userService.count.mockResolvedValueOnce(0);
 
         await expect(
-          service.update(targetId, updateUserDto, 'INSTITUTIONAL_DELEGATED', callerOutOfScope),
+          service.update(
+            targetId,
+            updateUserDto,
+            'INSTITUTIONAL_DELEGATED',
+            callerOutOfScope,
+          ),
         ).rejects.toThrow('périmètre');
         expect(mockPrismaService.user.update).not.toHaveBeenCalled();
       });
@@ -1231,7 +1251,12 @@ describe('UsersService', () => {
         role: { code: 'CONTRIBUTEUR' },
       });
 
-      await service.update('target-1', { isActive: true }, 'ADMIN', callerAdmin);
+      await service.update(
+        'target-1',
+        { isActive: true },
+        'ADMIN',
+        callerAdmin,
+      );
 
       expect(mockAuditPersistence.log).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1262,7 +1287,12 @@ describe('UsersService', () => {
         role: { code: 'CONTRIBUTEUR' },
       });
 
-      await service.update('target-1', { isActive: true }, 'ADMIN', callerAdmin);
+      await service.update(
+        'target-1',
+        { isActive: true },
+        'ADMIN',
+        callerAdmin,
+      );
 
       expect(mockAuditPersistence.log).not.toHaveBeenCalled();
     });
@@ -1821,7 +1851,9 @@ describe('UsersService', () => {
       mockPrismaService.leaveValidationDelegate.deleteMany.mockResolvedValue({
         count: 0,
       });
-      mockPrismaService.projectMember.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.projectMember.deleteMany.mockResolvedValue({
+        count: 0,
+      });
       mockPrismaService.userService.deleteMany.mockResolvedValue({ count: 0 });
       mockPrismaService.leave.deleteMany.mockResolvedValue({ count: 0 });
       mockPrismaService.task.deleteMany.mockResolvedValue({ count: 0 });
@@ -1932,7 +1964,11 @@ describe('UsersService', () => {
           .mockResolvedValueOnce({ templateKey: 'ADMIN_DELEGATED' }); // caller
 
         await expect(
-          service.resetPassword('admin-target', 'newpassword123', 'caller-delegated'),
+          service.resetPassword(
+            'admin-target',
+            'newpassword123',
+            'caller-delegated',
+          ),
         ).rejects.toThrow(
           'Seul un administrateur peut cibler un rôle rattaché au template ADMIN',
         );
@@ -2365,7 +2401,9 @@ describe('UsersService', () => {
         const joined = result.errorDetails.join('\n');
         expect(joined.toLowerCase()).toContain('admin');
         expect(
-          result.createdUsers.some((u: any) => u.email === 'attacker@example.com'),
+          result.createdUsers.some(
+            (u: any) => u.email === 'attacker@example.com',
+          ),
         ).toBe(false);
       });
 
@@ -2465,45 +2503,6 @@ describe('UsersService', () => {
   });
 
   describe('getUsersPresence', () => {
-    const mockUsers = [
-      {
-        id: 'user-1',
-        firstName: 'Jean',
-        lastName: 'Dupont',
-        avatarUrl: null,
-        avatarPreset: null,
-        department: { name: 'IT' },
-        userServices: [{ service: { name: 'Développement' } }],
-      },
-      {
-        id: 'user-2',
-        firstName: 'Marie',
-        lastName: 'Martin',
-        avatarUrl: null,
-        avatarPreset: null,
-        department: null,
-        userServices: [],
-      },
-      {
-        id: 'user-3',
-        firstName: 'Pierre',
-        lastName: 'Bernard',
-        avatarUrl: null,
-        avatarPreset: null,
-        department: null,
-        userServices: [],
-      },
-      {
-        id: 'user-4',
-        firstName: 'Sophie',
-        lastName: 'Leroy',
-        avatarUrl: null,
-        avatarPreset: null,
-        department: null,
-        userServices: [],
-      },
-    ];
-
     beforeEach(() => {
       // PER-016: single $queryRaw consolidates all 5 fan-out queries
       mockPrismaService.$queryRaw.mockResolvedValue([
@@ -2557,7 +2556,9 @@ describe('UsersService', () => {
       expect(mockPrismaService.$queryRaw).toHaveBeenCalledTimes(1);
       // None of the 5 individual table scans should fire
       expect(mockPrismaService.user.findMany).not.toHaveBeenCalled();
-      expect(mockPrismaService.teleworkSchedule.findMany).not.toHaveBeenCalled();
+      expect(
+        mockPrismaService.teleworkSchedule.findMany,
+      ).not.toHaveBeenCalled();
       expect(mockPrismaService.leave.findMany).not.toHaveBeenCalled();
       expect(mockPrismaService.task.findMany).not.toHaveBeenCalled();
       expect(mockPrismaService.event.findMany).not.toHaveBeenCalled();
@@ -2685,7 +2686,7 @@ describe('UsersService', () => {
       (fs.readdir as unknown as Mock).mockResolvedValueOnce([
         'user-1.jpg', // should be deleted (old avatar)
         'user-1.txt', // must NOT be deleted
-        'user-1.sh',  // must NOT be deleted
+        'user-1.sh', // must NOT be deleted
         'user-1_backup.png', // must NOT be deleted (underscore variant, unknown extension)
         'user-2.jpg', // must NOT be deleted (different user)
       ]);
@@ -2706,11 +2707,19 @@ describe('UsersService', () => {
       const uploadsDir = join(process.cwd(), 'uploads', 'avatars');
 
       // Must NOT unlink non-image-extension files
-      expect(unlinkMock).not.toHaveBeenCalledWith(join(uploadsDir, 'user-1.txt'));
-      expect(unlinkMock).not.toHaveBeenCalledWith(join(uploadsDir, 'user-1.sh'));
-      expect(unlinkMock).not.toHaveBeenCalledWith(join(uploadsDir, 'user-1_backup.png'));
+      expect(unlinkMock).not.toHaveBeenCalledWith(
+        join(uploadsDir, 'user-1.txt'),
+      );
+      expect(unlinkMock).not.toHaveBeenCalledWith(
+        join(uploadsDir, 'user-1.sh'),
+      );
+      expect(unlinkMock).not.toHaveBeenCalledWith(
+        join(uploadsDir, 'user-1_backup.png'),
+      );
       // Must NOT touch other users' files
-      expect(unlinkMock).not.toHaveBeenCalledWith(join(uploadsDir, 'user-2.jpg'));
+      expect(unlinkMock).not.toHaveBeenCalledWith(
+        join(uploadsDir, 'user-2.jpg'),
+      );
       // Must unlink the old avatar
       expect(unlinkMock).toHaveBeenCalledWith(join(uploadsDir, 'user-1.jpg'));
     });
@@ -2862,7 +2871,12 @@ describe('UsersService', () => {
         userServices: [],
       });
 
-      await service.update('target-1', { isActive: false }, 'ADMIN', callerAdmin);
+      await service.update(
+        'target-1',
+        { isActive: false },
+        'ADMIN',
+        callerAdmin,
+      );
 
       expect(mockJwtNotBefore.bumpUser).toHaveBeenCalledWith('target-1');
     });

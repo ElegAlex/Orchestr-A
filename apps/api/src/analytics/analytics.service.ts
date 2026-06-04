@@ -68,7 +68,10 @@ export class AnalyticsService {
   ) {}
 
   /** Build a stable, user-scoped cache key so user A's report is never served to user B. */
-  private buildAnalyticsCacheKey(query: AnalyticsQueryDto, currentUser?: AccessUser): string {
+  private buildAnalyticsCacheKey(
+    query: AnalyticsQueryDto,
+    currentUser?: AccessUser,
+  ): string {
     const userId = currentUser?.id ?? 'anonymous';
     const { projectId, dateRange, archived } = query;
     return `cache:analytics:${userId}:${projectId ?? ''}:${dateRange ?? ''}:${archived ?? ''}`;
@@ -90,7 +93,9 @@ export class AnalyticsService {
     // narrow project or task visibility, otherwise users miss projects they
     // own (see incident: 36 projects in scope, only 7 displayed).
     // Archived projects are excluded by default; pass archived=all to include them.
-    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
+    const archivedClause = archivedWhere(
+      query.archived ?? ArchivedFilter.ACTIVE,
+    );
     const projectWhere: Prisma.ProjectWhereInput = {
       AND: [projectScope, archivedClause],
     };
@@ -114,7 +119,10 @@ export class AnalyticsService {
 
     // Calculate metrics
     const metrics = this.calculateMetrics(projects, tasks, users);
-    const projectProgressData = this.getProjectProgressData(projects, taskStatusGroupBy);
+    const projectProgressData = this.getProjectProgressData(
+      projects,
+      taskStatusGroupBy,
+    );
     const taskStatusData = this.getTaskStatusData(taskStatusGroupBy);
     const projectDetails = await this.getProjectDetails(projects, tasks);
 
@@ -190,14 +198,17 @@ export class AnalyticsService {
     const doneMap: Record<string, number> = {};
     for (const row of statusCounts) {
       if (!row.projectId) continue;
-      totalMap[row.projectId] = (totalMap[row.projectId] ?? 0) + row._count._all;
+      totalMap[row.projectId] =
+        (totalMap[row.projectId] ?? 0) + row._count._all;
       if (row.status === 'DONE') {
-        doneMap[row.projectId] = (doneMap[row.projectId] ?? 0) + row._count._all;
+        doneMap[row.projectId] =
+          (doneMap[row.projectId] ?? 0) + row._count._all;
       }
     }
     for (const id of projectIds) {
       const total = totalMap[id] ?? 0;
-      progressMap[id] = total === 0 ? 0 : Math.round(((doneMap[id] ?? 0) / total) * 100);
+      progressMap[id] =
+        total === 0 ? 0 : Math.round(((doneMap[id] ?? 0) / total) * 100);
     }
 
     return projects.map((project) => ({
@@ -313,14 +324,19 @@ export class AnalyticsService {
 
   private getProjectProgressData(
     projects: ProjectWithDetails[],
-    taskStatusGroupBy: Array<{ projectId: string | null; status: string; _count: { _all: number } }>,
+    taskStatusGroupBy: Array<{
+      projectId: string | null;
+      status: string;
+      _count: { _all: number };
+    }>,
   ): ProjectProgressDataDto[] {
     // PER-025: build a per-project task count from the groupBy result instead
     // of filtering the full in-memory task array (was O(P×T)).
     const taskCountMap: Record<string, number> = {};
     for (const row of taskStatusGroupBy) {
       if (!row.projectId) continue;
-      taskCountMap[row.projectId] = (taskCountMap[row.projectId] ?? 0) + row._count._all;
+      taskCountMap[row.projectId] =
+        (taskCountMap[row.projectId] ?? 0) + row._count._all;
     }
     return projects.map((project) => ({
       name: project.name,
@@ -332,13 +348,18 @@ export class AnalyticsService {
   }
 
   private getTaskStatusData(
-    taskStatusGroupBy: Array<{ projectId: string | null; status: string; _count: { _all: number } }>,
+    taskStatusGroupBy: Array<{
+      projectId: string | null;
+      status: string;
+      _count: { _all: number };
+    }>,
   ): TaskStatusDataDto[] {
     // PER-025: aggregate counts from the shared groupBy instead of running
     // 5 separate filter passes over the full in-memory task array.
     const countByStatus: Record<string, number> = {};
     for (const row of taskStatusGroupBy) {
-      countByStatus[row.status] = (countByStatus[row.status] ?? 0) + row._count._all;
+      countByStatus[row.status] =
+        (countByStatus[row.status] ?? 0) + row._count._all;
     }
     const statusCounts = {
       'À faire': countByStatus['TODO'] ?? 0,

@@ -73,7 +73,10 @@ describe('DAT-014 — leaves.type auto-sync trigger (real DB)', () => {
 
     const custom = await db.leaveTypeConfig.create({
       // A code that is NOT a member of the "LeaveType" enum → must coerce to OTHER.
-      data: { code: `CUSTOM_${randomUUID().slice(0, 8)}`, name: 'Custom type (DAT-014)' },
+      data: {
+        code: `CUSTOM_${randomUUID().slice(0, 8)}`,
+        name: 'Custom type (DAT-014)',
+      },
     });
     customConfigId = custom.id;
   });
@@ -83,7 +86,10 @@ describe('DAT-014 — leaves.type auto-sync trigger (real DB)', () => {
   });
 
   /** Insert a leave with an explicit (possibly wrong) `type`, return its id. */
-  async function insertLeave(leaveTypeId: string, type: string | null): Promise<string> {
+  async function insertLeave(
+    leaveTypeId: string,
+    type: string | null,
+  ): Promise<string> {
     const id = randomUUID();
     const typeSql = type === null ? 'NULL' : `'${type}'::"LeaveType"`;
     await db.$executeRawUnsafe(

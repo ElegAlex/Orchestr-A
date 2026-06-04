@@ -72,9 +72,9 @@ describe('TasksService', () => {
     },
     $transaction: vi.fn(async (arg: unknown) => {
       if (Array.isArray(arg)) return Promise.all(arg);
-      return (
-        arg as (tx: typeof mockPrismaService) => Promise<unknown>
-      )(mockPrismaService);
+      return (arg as (tx: typeof mockPrismaService) => Promise<unknown>)(
+        mockPrismaService,
+      );
     }),
   };
 
@@ -375,7 +375,15 @@ describe('TasksService', () => {
       mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.task.count.mockResolvedValue(0);
 
-      await service.findAll(1, 1000, undefined, undefined, undefined, '2026-04-13', '2026-04-19');
+      await service.findAll(
+        1,
+        1000,
+        undefined,
+        undefined,
+        undefined,
+        '2026-04-13',
+        '2026-04-19',
+      );
 
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -391,10 +399,14 @@ describe('TasksService', () => {
 
       // status=TODO + overdue=true: caller status must stay TODO, and {status:{not:DONE}} goes to AND
       await service.findAll(
-        1, 10,
-        TaskStatus.TODO,    // caller status — must not be overwritten
-        undefined, undefined, undefined, undefined,
-        true,               // overdue=true
+        1,
+        10,
+        TaskStatus.TODO, // caller status — must not be overwritten
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        true, // overdue=true
       );
 
       const findManyCall = mockPrismaService.task.findMany.mock.calls[0][0] as {
@@ -419,11 +431,14 @@ describe('TasksService', () => {
 
       // startDate only + overdue: both {endDate:{lt:now}} and {endDate:{gte:startDate}} must coexist in AND
       await service.findAll(
-        1, 10,
-        undefined, undefined, undefined,
-        '2020-01-01',   // startDate
+        1,
+        10,
         undefined,
-        true,           // overdue=true
+        undefined,
+        undefined,
+        '2020-01-01', // startDate
+        undefined,
+        true, // overdue=true
       );
 
       const findManyCall = mockPrismaService.task.findMany.mock.calls[0][0] as {
@@ -434,7 +449,9 @@ describe('TasksService', () => {
       // endDate lt:now constraint must be in AND (not clobbered by gte branch)
       expect(where.AND).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ endDate: expect.objectContaining({ lt: expect.any(Date) }) }),
+          expect.objectContaining({
+            endDate: expect.objectContaining({ lt: expect.any(Date) }),
+          }),
         ]),
       );
     });
@@ -448,7 +465,11 @@ describe('TasksService', () => {
     });
 
     it('always enforces the 500-row hard cap to prevent unbounded fetch (PER-008)', async () => {
-      await service.findForPlanningOverview('2026-01-01', '2026-06-30', planningUser);
+      await service.findForPlanningOverview(
+        '2026-01-01',
+        '2026-06-30',
+        planningUser,
+      );
 
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ take: 500 }),
@@ -456,13 +477,19 @@ describe('TasksService', () => {
     });
 
     it('applies date-overlap filter (endDate >= startDate)', async () => {
-      await service.findForPlanningOverview('2026-01-01', '2026-06-30', planningUser);
+      await service.findForPlanningOverview(
+        '2026-01-01',
+        '2026-06-30',
+        planningUser,
+      );
 
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             AND: expect.arrayContaining([
-              expect.objectContaining({ endDate: { gte: new Date('2026-01-01') } }),
+              expect.objectContaining({
+                endDate: { gte: new Date('2026-01-01') },
+              }),
             ]) as unknown[],
           }) as object,
         }),
@@ -473,7 +500,11 @@ describe('TasksService', () => {
       const mockTasks = [{ id: 't1', title: 'Planning task', status: 'TODO' }];
       mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
 
-      const result = await service.findForPlanningOverview('2026-01-01', '2026-06-30', planningUser);
+      const result = await service.findForPlanningOverview(
+        '2026-01-01',
+        '2026-06-30',
+        planningUser,
+      );
 
       expect(result).toEqual({ data: mockTasks });
     });
@@ -868,8 +899,18 @@ describe('TasksService', () => {
   describe('getTasksByAssignee', () => {
     it('should return tasks assigned to user with totalLoggedHours=0 when no entries', async () => {
       const mockTasks = [
-        { id: 'task-1', title: 'Task 1', assigneeId: 'user-1', timeEntries: [] },
-        { id: 'task-2', title: 'Task 2', assigneeId: 'user-1', timeEntries: [] },
+        {
+          id: 'task-1',
+          title: 'Task 1',
+          assigneeId: 'user-1',
+          timeEntries: [],
+        },
+        {
+          id: 'task-2',
+          title: 'Task 2',
+          assigneeId: 'user-1',
+          timeEntries: [],
+        },
       ];
 
       mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
@@ -890,7 +931,10 @@ describe('TasksService', () => {
             ],
           },
           include: expect.objectContaining({
-            timeEntries: { where: { isDismissal: false }, select: { hours: true } },
+            timeEntries: {
+              where: { isDismissal: false },
+              select: { hours: true },
+            },
           }),
         }),
       );
@@ -899,7 +943,11 @@ describe('TasksService', () => {
     it('should aggregate hours per task and exclude dismissals', async () => {
       // timeEntries are folded into findMany include; groupBy is no longer called.
       const mockTasks = [
-        { id: 'task-1', title: 'Task 1', timeEntries: [{ hours: 2 }, { hours: 1.5 }] },
+        {
+          id: 'task-1',
+          title: 'Task 1',
+          timeEntries: [{ hours: 2 }, { hours: 1.5 }],
+        },
         { id: 'task-2', title: 'Task 2', timeEntries: [] },
       ];
 
@@ -1964,24 +2012,34 @@ describe('TasksService', () => {
 
     beforeEach(() => {
       // Provide a task so the not-found guard passes
-      (mockPrismaService.task.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      (
+        mockPrismaService.task.findUnique as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         id: TASK_ID,
         projectId: 'proj-1',
       });
-      (mockPrismaService.subtask.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
+      (
+        mockPrismaService.subtask.findMany as ReturnType<typeof vi.fn>
+      ).mockResolvedValue(
         SUBTASK_IDS.map((id, i) => ({ id, position: i, taskId: TASK_ID })),
       );
       vi.clearAllMocks();
       // Re-set after clearAllMocks so the task lookup still resolves
-      (mockPrismaService.task.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      (
+        mockPrismaService.task.findUnique as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         id: TASK_ID,
         projectId: 'proj-1',
       });
-      (mockPrismaService.subtask.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
+      (
+        mockPrismaService.subtask.findMany as ReturnType<typeof vi.fn>
+      ).mockResolvedValue(
         SUBTASK_IDS.map((id, i) => ({ id, position: i, taskId: TASK_ID })),
       );
-      (mockPrismaService.subtask.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
-      (mockPrismaService.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
+      (
+        mockPrismaService.subtask.update as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({});
+      mockPrismaService.$transaction.mockImplementation(
         async (arg: unknown) => {
           if (Array.isArray(arg)) return Promise.all(arg);
           return (arg as (tx: typeof mockPrismaService) => Promise<unknown>)(
@@ -1998,7 +2056,8 @@ describe('TasksService', () => {
       expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
 
       // The argument must be an array of N promises, not a callback
-      const [arg] = (mockPrismaService.$transaction as ReturnType<typeof vi.fn>).mock.calls[0];
+      const [arg] = (mockPrismaService.$transaction as ReturnType<typeof vi.fn>)
+        .mock.calls[0];
       expect(Array.isArray(arg)).toBe(true);
       expect(arg).toHaveLength(SUBTASK_IDS.length);
     });

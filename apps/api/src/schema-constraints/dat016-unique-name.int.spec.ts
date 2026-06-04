@@ -55,9 +55,10 @@ async function expectUniqueViolation(
   } catch (err) {
     message = err instanceof Error ? err.message : String(err);
   }
-  expect(message, 'expected a unique_violation (23505) but the INSERT was accepted').toMatch(
-    /23505/,
-  );
+  expect(
+    message,
+    'expected a unique_violation (23505) but the INSERT was accepted',
+  ).toMatch(/23505/);
   expect(message).toContain(keySignature);
 }
 

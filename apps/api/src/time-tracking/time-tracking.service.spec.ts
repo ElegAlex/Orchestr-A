@@ -721,9 +721,7 @@ describe('TimeTrackingService', () => {
           { activityType: 'DEVELOPMENT', _sum: { hours: '4.00' } },
         ])
         // groupBy: projectId
-        .mockResolvedValueOnce([
-          { projectId: 'p1', _sum: { hours: '4.00' } },
-        ])
+        .mockResolvedValueOnce([{ projectId: 'p1', _sum: { hours: '4.00' } }])
         // groupBy: date
         .mockResolvedValueOnce([
           { date: new Date('2025-01-01'), _sum: { hours: '4.00' } },
@@ -764,16 +762,31 @@ describe('TimeTrackingService', () => {
       // aggregate: userHours + thirdPartyHours
       mockPrismaService.timeEntry.aggregate
         .mockResolvedValueOnce({ _sum: { hours: '5.00' }, _count: { _all: 1 } })
-        .mockResolvedValueOnce({ _sum: { hours: '3.00' }, _count: { _all: 1 } });
+        .mockResolvedValueOnce({
+          _sum: { hours: '3.00' },
+          _count: { _all: 1 },
+        });
       // groupBy: byUser, byThirdParty, byTypeUser, byTypeThirdParty
       mockPrismaService.timeEntry.groupBy
         .mockResolvedValueOnce([{ userId: 'user-1', _sum: { hours: '5.00' } }])
-        .mockResolvedValueOnce([{ thirdPartyId: 'tp-1', _sum: { hours: '3.00' } }])
-        .mockResolvedValueOnce([{ activityType: 'DEVELOPMENT', _sum: { hours: '5.00' } }])
-        .mockResolvedValueOnce([{ activityType: 'MEETING', _sum: { hours: '3.00' } }]);
+        .mockResolvedValueOnce([
+          { thirdPartyId: 'tp-1', _sum: { hours: '3.00' } },
+        ])
+        .mockResolvedValueOnce([
+          { activityType: 'DEVELOPMENT', _sum: { hours: '5.00' } },
+        ])
+        .mockResolvedValueOnce([
+          { activityType: 'MEETING', _sum: { hours: '3.00' } },
+        ]);
       // Name resolution
       mockPrismaService.user.findMany.mockResolvedValue([
-        { id: 'user-1', firstName: 'John', lastName: 'Doe', avatarUrl: null, avatarPreset: null },
+        {
+          id: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          avatarUrl: null,
+          avatarPreset: null,
+        },
       ]);
       mockPrismaService.thirdParty.findMany.mockResolvedValue([
         { id: 'tp-1', organizationName: 'Acme', type: 'EXTERNAL_PROVIDER' },
@@ -893,19 +906,28 @@ describe('TimeTrackingService', () => {
     };
 
     it('rejects a single entry above 24 hours (hours=25)', async () => {
-      const dto = plainToInstance(CreateTimeEntryDto, { ...baseDto, hours: 25 });
+      const dto = plainToInstance(CreateTimeEntryDto, {
+        ...baseDto,
+        hours: 25,
+      });
       const errors = await validate(dto);
       expect(errors.some((e) => e.property === 'hours')).toBe(true);
     });
 
     it('rejects negative hours (hours=-1)', async () => {
-      const dto = plainToInstance(CreateTimeEntryDto, { ...baseDto, hours: -1 });
+      const dto = plainToInstance(CreateTimeEntryDto, {
+        ...baseDto,
+        hours: -1,
+      });
       const errors = await validate(dto);
       expect(errors.some((e) => e.property === 'hours')).toBe(true);
     });
 
     it('accepts a single entry at the 24-hour bound', async () => {
-      const dto = plainToInstance(CreateTimeEntryDto, { ...baseDto, hours: 24 });
+      const dto = plainToInstance(CreateTimeEntryDto, {
+        ...baseDto,
+        hours: 24,
+      });
       const errors = await validate(dto);
       expect(errors.filter((e) => e.property === 'hours')).toHaveLength(0);
     });
@@ -1011,7 +1033,9 @@ describe('TimeTrackingService', () => {
       mockPrismaService.timeEntry.aggregate.mockResolvedValue({
         _sum: { hours: 10 },
       });
-      mockPrismaService.timeEntry.update.mockResolvedValue({ id: 'entry-self' });
+      mockPrismaService.timeEntry.update.mockResolvedValue({
+        id: 'entry-self',
+      });
 
       await service.update('entry-self', { hours: 5 }, currentUser);
 
@@ -1044,7 +1068,9 @@ describe('TimeTrackingService', () => {
         mockPermissionsService.getPermissionsForRole.mockResolvedValue([
           'time_tracking:declare_for_third_party',
         ]);
-        mockThirdPartiesService.assertExistsAndActive.mockResolvedValue(undefined);
+        mockThirdPartiesService.assertExistsAndActive.mockResolvedValue(
+          undefined,
+        );
         mockThirdPartiesService.assertAssignedToTaskOrProject.mockResolvedValue(
           undefined,
         );
@@ -1249,9 +1275,7 @@ describe('TimeTrackingService', () => {
           { activityType: 'DEVELOPMENT', _sum: { hours: 6 } },
           { activityType: 'MEETING', _sum: { hours: 2 } },
         ])
-        .mockResolvedValueOnce([
-          { projectId: 'p1', _sum: { hours: 8 } },
-        ])
+        .mockResolvedValueOnce([{ projectId: 'p1', _sum: { hours: 8 } }])
         .mockResolvedValueOnce([
           { date: new Date('2025-01-15'), _sum: { hours: 8 } },
         ]);
@@ -1269,7 +1293,11 @@ describe('TimeTrackingService', () => {
     });
 
     it('aggregates totalHours from SQL (not JS reduce) and returns correct byType — fails before fix', async () => {
-      const result = await service.getUserReport('user-1', '2025-01-01', '2025-01-31');
+      const result = await service.getUserReport(
+        'user-1',
+        '2025-01-01',
+        '2025-01-31',
+      );
 
       expect(result.byType).toMatchObject({ DEVELOPMENT: 6, MEETING: 2 });
       expect(result.totalHours).toBe(8);
@@ -1287,15 +1315,14 @@ describe('TimeTrackingService', () => {
       // aggregate: userHours + thirdPartyHours (called twice in Promise.all)
       mockPrismaService.timeEntry.aggregate
         .mockResolvedValueOnce({ _sum: { hours: '5.00' }, _count: { _all: 1 } })
-        .mockResolvedValueOnce({ _sum: { hours: '3.00' }, _count: { _all: 1 } });
+        .mockResolvedValueOnce({
+          _sum: { hours: '3.00' },
+          _count: { _all: 1 },
+        });
       // groupBy order: byUser, byThirdParty, byTypeUser, byTypeThirdParty
       mockPrismaService.timeEntry.groupBy
-        .mockResolvedValueOnce([
-          { userId: 'user-1', _sum: { hours: 5 } },
-        ])
-        .mockResolvedValueOnce([
-          { thirdPartyId: 'tp-1', _sum: { hours: 3 } },
-        ])
+        .mockResolvedValueOnce([{ userId: 'user-1', _sum: { hours: 5 } }])
+        .mockResolvedValueOnce([{ thirdPartyId: 'tp-1', _sum: { hours: 3 } }])
         .mockResolvedValueOnce([
           { activityType: 'DEVELOPMENT', _sum: { hours: 5 } },
         ])
@@ -1304,7 +1331,13 @@ describe('TimeTrackingService', () => {
         ]);
       // name resolution via findMany (not findUnique)
       mockPrismaService.user.findMany.mockResolvedValue([
-        { id: 'user-1', firstName: 'John', lastName: 'Doe', avatarUrl: null, avatarPreset: null },
+        {
+          id: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          avatarUrl: null,
+          avatarPreset: null,
+        },
       ]);
       mockPrismaService.thirdParty.findMany.mockResolvedValue([
         { id: 'tp-1', organizationName: 'Acme', type: 'EXTERNAL_PROVIDER' },

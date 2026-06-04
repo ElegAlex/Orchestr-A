@@ -100,7 +100,7 @@ async function bootstrap() {
     .getHttpAdapter()
     .getInstance()
     .addHook('onRequest', (request, _reply, done) => {
-      requestIdStore.enterWith({ requestId: request.id as string });
+      requestIdStore.enterWith({ requestId: request.id });
       done();
     });
 

@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEmail, MinLength, MaxLength, Matches } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  MinLength,
+  MaxLength,
+  Matches,
+} from 'class-validator';
 import { IsStrongPassword } from '../../common/validators/password-policy';
 
 // SEC-008: reject control characters (Cc = control, Cn = unassigned) while allowing
@@ -38,7 +44,9 @@ export class RegisterDto {
   @IsString()
   @MinLength(2)
   @MaxLength(50)
-  @Matches(NO_CONTROL_CHARS, { message: 'firstName must not contain control characters' })
+  @Matches(NO_CONTROL_CHARS, {
+    message: 'firstName must not contain control characters',
+  })
   firstName: string;
 
   @ApiProperty({
@@ -48,6 +56,8 @@ export class RegisterDto {
   @IsString()
   @MinLength(2)
   @MaxLength(50)
-  @Matches(NO_CONTROL_CHARS, { message: 'lastName must not contain control characters' })
+  @Matches(NO_CONTROL_CHARS, {
+    message: 'lastName must not contain control characters',
+  })
   lastName: string;
 }

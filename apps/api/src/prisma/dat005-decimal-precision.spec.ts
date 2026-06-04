@@ -54,11 +54,35 @@ interface ExpectedColumn {
 }
 
 const DAT005_COLUMNS: ExpectedColumn[] = [
-  { model: 'TimeEntry', field: 'hours', precision: 5, scale: 2, optional: false },
+  {
+    model: 'TimeEntry',
+    field: 'hours',
+    precision: 5,
+    scale: 2,
+    optional: false,
+  },
   { model: 'Leave', field: 'days', precision: 6, scale: 2, optional: false },
-  { model: 'LeaveBalance', field: 'totalDays', precision: 6, scale: 2, optional: false },
-  { model: 'Task', field: 'estimatedHours', precision: 5, scale: 2, optional: true },
-  { model: 'ProjectSnapshot', field: 'progress', precision: 5, scale: 2, optional: false },
+  {
+    model: 'LeaveBalance',
+    field: 'totalDays',
+    precision: 6,
+    scale: 2,
+    optional: false,
+  },
+  {
+    model: 'Task',
+    field: 'estimatedHours',
+    precision: 5,
+    scale: 2,
+    optional: true,
+  },
+  {
+    model: 'ProjectSnapshot',
+    field: 'progress',
+    precision: 5,
+    scale: 2,
+    optional: false,
+  },
 ];
 
 describe('DAT-005 — Decimal precision migration', () => {
@@ -96,7 +120,7 @@ describe('DAT-005 — Decimal precision migration', () => {
       // boundary. If a future refactor reintroduces `sum + l.days` without the
       // coercion, this assertion is the canary.
       const days = new Decimal('1.50');
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
+
       const bad = (0 as unknown as number) + (days as unknown as number);
       expect(typeof bad).toBe('string');
       expect(bad).toBe('01.5');

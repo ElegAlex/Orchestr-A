@@ -15,14 +15,18 @@ describe('export-audit.helper (OBS-026)', () => {
     it('emits DATA_EXPORTED with the full RGPD egress shape', () => {
       const log = vi.fn().mockResolvedValue(undefined);
 
-      emitDataExported({ log } as unknown as AuditPersistenceService, makeLogger(), {
-        actorId: 'user-1',
-        format: 'csv',
-        scope: 'project-tasks',
-        recordCount: 12,
-        subject: { projectId: 'proj-9' },
-        meta: { ip: '10.0.0.5', ua: 'vitest' },
-      });
+      emitDataExported(
+        { log } as unknown as AuditPersistenceService,
+        makeLogger(),
+        {
+          actorId: 'user-1',
+          format: 'csv',
+          scope: 'project-tasks',
+          recordCount: 12,
+          subject: { projectId: 'proj-9' },
+          meta: { ip: '10.0.0.5', ua: 'vitest' },
+        },
+      );
 
       expect(log).toHaveBeenCalledTimes(1);
       const entry = log.mock.calls[0][0];
@@ -44,15 +48,23 @@ describe('export-audit.helper (OBS-026)', () => {
     it('omits subject/ip/ua when not provided (no misleading empty keys)', () => {
       const log = vi.fn().mockResolvedValue(undefined);
 
-      emitDataExported({ log } as unknown as AuditPersistenceService, makeLogger(), {
-        actorId: 'user-2',
+      emitDataExported(
+        { log } as unknown as AuditPersistenceService,
+        makeLogger(),
+        {
+          actorId: 'user-2',
+          format: 'csv',
+          scope: 'milestones',
+          recordCount: 0,
+        },
+      );
+
+      const payload = log.mock.calls[0][0].payload;
+      expect(payload).toEqual({
         format: 'csv',
         scope: 'milestones',
         recordCount: 0,
       });
-
-      const payload = log.mock.calls[0][0].payload;
-      expect(payload).toEqual({ format: 'csv', scope: 'milestones', recordCount: 0 });
       expect('subject' in payload).toBe(false);
       expect('ip' in payload).toBe(false);
       expect('ua' in payload).toBe(false);
@@ -65,12 +77,16 @@ describe('export-audit.helper (OBS-026)', () => {
       // Fire-and-forget: the synchronous call must not throw even though the
       // underlying persistence rejects — a read/export must never 500.
       expect(() =>
-        emitDataExported({ log } as unknown as AuditPersistenceService, logger, {
-          actorId: 'user-3',
-          format: 'csv',
-          scope: 'project-tasks',
-          recordCount: 1,
-        }),
+        emitDataExported(
+          { log } as unknown as AuditPersistenceService,
+          logger,
+          {
+            actorId: 'user-3',
+            format: 'csv',
+            scope: 'project-tasks',
+            recordCount: 1,
+          },
+        ),
       ).not.toThrow();
 
       // Flush the microtask queue so the .catch handler runs.

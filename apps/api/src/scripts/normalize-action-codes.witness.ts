@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { PrismaClient } from 'database';
 import {
   AuditPersistenceService,
@@ -76,7 +75,10 @@ function verifyChain(rows: Row[]): { ok: boolean; detail: string } {
   let prev: string | null = null;
   for (const r of rows) {
     if (r.prevHash !== prev) {
-      return { ok: false, detail: `prevHash break at ${r.id} (action=${r.action})` };
+      return {
+        ok: false,
+        detail: `prevHash break at ${r.id} (action=${r.action})`,
+      };
     }
     const expected = computeRowHash({
       action: r.action,
@@ -89,7 +91,10 @@ function verifyChain(rows: Row[]): { ok: boolean; detail: string } {
       prevHash: r.prevHash,
     });
     if (r.rowHash !== expected) {
-      return { ok: false, detail: `rowHash mismatch at ${r.id} (action=${r.action})` };
+      return {
+        ok: false,
+        detail: `rowHash mismatch at ${r.id} (action=${r.action})`,
+      };
     }
     prev = r.rowHash;
   }
@@ -191,8 +196,7 @@ async function main(): Promise<void> {
     }
 
     // ---- W-1: seed a genesis chain (A, B, C, D) ------------------------------------
-    const t = (min: number) =>
-      new Date(Date.UTC(2026, 0, 1, 8, min, 0, 0));
+    const t = (min: number) => new Date(Date.UTC(2026, 0, 1, 8, min, 0, 0));
     const hA = await seed(prisma, null, {
       action: FROM_VALUE,
       entityType: 'User',
@@ -222,7 +226,13 @@ async function main(): Promise<void> {
       entityId: 'export-1',
       createdAt: t(3),
       payload: {
-        nested: { z: 1, a: [3, 2, 1], mid: 'é"\\/\n\t', flag: true, none: null },
+        nested: {
+          z: 1,
+          a: [3, 2, 1],
+          mid: 'é"\\/\n\t',
+          flag: true,
+          none: null,
+        },
         count: 42,
         ratio: 3.5,
         big: 9007199254740991,
@@ -234,29 +244,65 @@ async function main(): Promise<void> {
     const seeded = await readChain(prisma);
     check('W-1 four rows seeded', seeded.length === 4, `got ${seeded.length}`);
     const v1 = verifyChain(seeded);
-    check('W-1 seeded chain verifies (incl. complex payload D / W-6)', v1.ok, v1.detail);
+    check(
+      'W-1 seeded chain verifies (incl. complex payload D / W-6)',
+      v1.ok,
+      v1.detail,
+    );
 
     // ---- W-2: first run ------------------------------------------------------------
     console.log('W-2 — first normalization run:');
     const r1 = await runOnce(prisma, audit);
-    check('W-2 affectedCount === 2 (A,C)', r1.affectedCount === 2, `got ${r1.affectedCount}`);
+    check(
+      'W-2 affectedCount === 2 (A,C)',
+      r1.affectedCount === 2,
+      `got ${r1.affectedCount}`,
+    );
 
-    const afterFrom = await prisma.auditLog.count({ where: { action: FROM_VALUE } });
-    check('W-2 zero legacy rows remain', afterFrom === 0, `count(${FROM_VALUE})=${afterFrom}`);
-    const afterTo = await prisma.auditLog.count({ where: { action: TO_VALUE } });
-    check('W-2 two canonical rows present', afterTo === 2, `count(${TO_VALUE})=${afterTo}`);
+    const afterFrom = await prisma.auditLog.count({
+      where: { action: FROM_VALUE },
+    });
+    check(
+      'W-2 zero legacy rows remain',
+      afterFrom === 0,
+      `count(${FROM_VALUE})=${afterFrom}`,
+    );
+    const afterTo = await prisma.auditLog.count({
+      where: { action: TO_VALUE },
+    });
+    check(
+      'W-2 two canonical rows present',
+      afterTo === 2,
+      `count(${TO_VALUE})=${afterTo}`,
+    );
 
     const chain2 = await readChain(prisma);
     const v2 = verifyChain(chain2);
-    check('W-2 full chain verifies post-recompute (incl. STARTED row re-hashed)', v2.ok, v2.detail);
-    check('W-2 recomputed the whole tail', r1.recomputedCount >= 4, `recomputed=${r1.recomputedCount}`);
+    check(
+      'W-2 full chain verifies post-recompute (incl. STARTED row re-hashed)',
+      v2.ok,
+      v2.detail,
+    );
+    check(
+      'W-2 recomputed the whole tail',
+      r1.recomputedCount >= 4,
+      `recomputed=${r1.recomputedCount}`,
+    );
     check('W-2 trigger ENABLED after run', await triggerEnabled(prisma));
-    check('W-2 in-tx verify passed', r1.verified === true, `verified=${r1.verified}`);
+    check(
+      'W-2 in-tx verify passed',
+      r1.verified === true,
+      `verified=${r1.verified}`,
+    );
 
     // ---- W-5: SYSTEM_BACKFILL trace after the first run ----------------------------
     console.log('W-5 — SYSTEM_BACKFILL trace:');
     const sb = await countSystemBackfill(prisma);
-    check('W-5 exactly 2 SYSTEM_BACKFILL rows', sb.total === 2, `got ${sb.total}`);
+    check(
+      'W-5 exactly 2 SYSTEM_BACKFILL rows',
+      sb.total === 2,
+      `got ${sb.total}`,
+    );
     check(
       'W-5 phases STARTED + COMPLETED',
       sb.phases.includes('STARTED') && sb.phases.includes('COMPLETED'),
@@ -277,13 +323,25 @@ async function main(): Promise<void> {
       blocked = true;
       errMsg = e instanceof Error ? e.message : String(e);
     }
-    check('W-4 direct UPDATE raised', blocked, errMsg.split('\n')[0].slice(0, 120));
+    check(
+      'W-4 direct UPDATE raised',
+      blocked,
+      errMsg.split('\n')[0].slice(0, 120),
+    );
 
     // ---- W-3: idempotency ----------------------------------------------------------
     console.log('W-3 — idempotency (second run):');
     const r2 = await runOnce(prisma, audit);
-    check('W-3 affectedCount === 0', r2.affectedCount === 0, `got ${r2.affectedCount}`);
-    check('W-3 recomputedCount === 0', r2.recomputedCount === 0, `got ${r2.recomputedCount}`);
+    check(
+      'W-3 affectedCount === 0',
+      r2.affectedCount === 0,
+      `got ${r2.affectedCount}`,
+    );
+    check(
+      'W-3 recomputedCount === 0',
+      r2.recomputedCount === 0,
+      `got ${r2.recomputedCount}`,
+    );
     const chain3 = await readChain(prisma);
     const v3 = verifyChain(chain3);
     check('W-3 chain still verifies after idempotent run', v3.ok, v3.detail);

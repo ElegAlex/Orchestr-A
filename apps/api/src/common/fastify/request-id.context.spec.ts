@@ -6,14 +6,8 @@
  * the value bound in the current ALS scope.
  */
 
-import { AsyncLocalStorage } from 'node:async_hooks';
-
 // These imports will RED on unfixed code (module missing):
-import {
-  genReqId,
-  getRequestId,
-  runWithRequestId,
-} from './request-id.context';
+import { genReqId, getRequestId, runWithRequestId } from './request-id.context';
 
 describe('request-id.context', () => {
   describe('genReqId()', () => {
@@ -50,9 +44,9 @@ describe('request-id.context', () => {
       expect(getRequestId()).toBeUndefined();
     });
 
-    it('returns the id bound inside runWithRequestId()', async () => {
+    it('returns the id bound inside runWithRequestId()', () => {
       const expected = 'test-correlation-id';
-      await runWithRequestId(expected, () => {
+      runWithRequestId(expected, () => {
         expect(getRequestId()).toBe(expected);
       });
     });

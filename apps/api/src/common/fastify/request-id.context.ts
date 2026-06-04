@@ -46,14 +46,16 @@ export const requestIdStore = new AsyncLocalStorage<RequestIdStore>();
  * Called by Fastify early in the request lifecycle (before any hook) so
  * `request.id` is always populated.
  */
-export function genReqId(req: { headers: Record<string, string | string[] | undefined> }): string {
+export function genReqId(req: {
+  headers: Record<string, string | string[] | undefined>;
+}): string {
   const raw = req.headers['x-request-id'];
   const candidate = Array.isArray(raw) ? raw[0] : raw;
 
   if (candidate && typeof candidate === 'string') {
     const sanitised = candidate
-      .replace(/[\r\n]/g, '')   // strip log-injection chars
-      .slice(0, 128);           // cap length
+      .replace(/[\r\n]/g, '') // strip log-injection chars
+      .slice(0, 128); // cap length
     if (sanitised.length > 0) return sanitised;
   }
 

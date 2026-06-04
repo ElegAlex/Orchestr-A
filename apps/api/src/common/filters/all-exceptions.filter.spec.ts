@@ -48,7 +48,7 @@ describe('AllExceptionsFilter', () => {
   // timestamp, path } and `message` is always "Internal server error".
   // -----------------------------------------------------------------------
   it('masks unknown (non-HttpException) errors — never leaks raw message or stack', () => {
-    const { host, reply, send, status } = buildHost();
+    const { host, send, status } = buildHost();
 
     const boom = new Error('boom — secret DB creds in message');
     filter.catch(boom, host as unknown as ArgumentsHost);

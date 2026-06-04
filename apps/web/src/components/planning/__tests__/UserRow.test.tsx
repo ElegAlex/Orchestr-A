@@ -10,7 +10,7 @@
 import React from "react";
 import { render } from "@testing-library/react";
 import { UserRow } from "../UserRow";
-import type { User, Task } from "@/types";
+import type { User } from "@/types";
 import type { ServiceGroup, DayCell as DayCellData } from "@/hooks/usePlanningData";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────

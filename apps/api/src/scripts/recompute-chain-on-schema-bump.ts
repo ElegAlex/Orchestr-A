@@ -219,7 +219,6 @@ if (require.main === module) {
   main()
     .then(() => process.exit(0))
     .catch((err) => {
-      // eslint-disable-next-line no-console
       console.error('recompute-chain-on-schema-bump failed:', err);
       process.exit(1);
     });

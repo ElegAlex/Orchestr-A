@@ -149,9 +149,19 @@ describe('leave-year-window', () => {
       const cases: Array<[string, string, string | null, string | null]> = [
         ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', null, null], // Mon-Fri
         ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', 'MORNING', null],
-        ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', 'MORNING', 'AFTERNOON'],
+        [
+          '2026-01-12T00:00:00Z',
+          '2026-01-16T00:00:00Z',
+          'MORNING',
+          'AFTERNOON',
+        ],
         ['2026-12-28T00:00:00Z', '2027-01-08T00:00:00Z', null, null], // cross-year
-        ['2026-12-28T00:00:00Z', '2027-01-08T00:00:00Z', 'MORNING', 'AFTERNOON'],
+        [
+          '2026-12-28T00:00:00Z',
+          '2027-01-08T00:00:00Z',
+          'MORNING',
+          'AFTERNOON',
+        ],
         ['2026-01-17T00:00:00Z', '2026-01-18T00:00:00Z', null, null], // weekend-only
         ['2026-01-17T00:00:00Z', '2026-01-18T00:00:00Z', 'MORNING', null], // weekend + half
       ];
@@ -293,9 +303,9 @@ describe('leave-year-window', () => {
       const weekendHoliday = new Set<string>(['2026-05-02']);
       // Mon–Fri = 5 weekdays (Sat excluded), regardless of the set.
       expect(calculateLeaveDays(start, end)).toBe(5);
-      expect(
-        calculateLeaveDays(start, end, null, null, weekendHoliday),
-      ).toBe(5);
+      expect(calculateLeaveDays(start, end, null, null, weekendHoliday)).toBe(
+        5,
+      );
     });
 
     it('subtracts a holiday independently in each year of a cross-year leave', () => {
@@ -336,9 +346,19 @@ describe('leave-year-window', () => {
       const cases: Array<[string, string, string | null, string | null]> = [
         ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', null, null],
         ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', 'MORNING', null],
-        ['2026-01-12T00:00:00Z', '2026-01-16T00:00:00Z', 'MORNING', 'AFTERNOON'],
+        [
+          '2026-01-12T00:00:00Z',
+          '2026-01-16T00:00:00Z',
+          'MORNING',
+          'AFTERNOON',
+        ],
         ['2026-12-28T00:00:00Z', '2027-01-08T00:00:00Z', null, null],
-        ['2026-12-28T00:00:00Z', '2027-01-08T00:00:00Z', 'MORNING', 'AFTERNOON'],
+        [
+          '2026-12-28T00:00:00Z',
+          '2027-01-08T00:00:00Z',
+          'MORNING',
+          'AFTERNOON',
+        ],
       ];
       for (const [s, e, sh, eh] of cases) {
         const start = new Date(s);
@@ -359,9 +379,9 @@ describe('leave-year-window', () => {
       expect(calculateLeaveDays(start, end, null, null, undefined)).toBe(
         calculateLeaveDays(start, end),
       );
-      expect(
-        splitLeaveByYear(start, end, null, null, undefined),
-      ).toEqual(splitLeaveByYear(start, end));
+      expect(splitLeaveByYear(start, end, null, null, undefined)).toEqual(
+        splitLeaveByYear(start, end),
+      );
     });
   });
 });

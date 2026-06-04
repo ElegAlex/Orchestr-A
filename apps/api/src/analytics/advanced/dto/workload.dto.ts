@@ -12,7 +12,11 @@ export class WorkloadQueryDto {
   @Max(100)
   limit?: number = 15;
 
-  @ApiProperty({ required: false, enum: ArchivedFilter, default: ArchivedFilter.ACTIVE })
+  @ApiProperty({
+    required: false,
+    enum: ArchivedFilter,
+    default: ArchivedFilter.ACTIVE,
+  })
   @IsOptional()
   @IsEnum(ArchivedFilter)
   archived?: ArchivedFilter;

@@ -66,7 +66,11 @@ export class CreateDocumentDto {
   // SEC-009: scheme-allowlist the URL to block stored XSS via javascript:/data:/
   // file: schemes rendered as <a href={doc.url}>. require_tld rejects scheme-less
   // and dotless-host forms; all existing/legit values are external https URLs.
-  @IsUrl({ protocols: ['http', 'https'], require_protocol: true, require_tld: true })
+  @IsUrl({
+    protocols: ['http', 'https'],
+    require_protocol: true,
+    require_tld: true,
+  })
   @MaxLength(2048)
   @IsNotEmpty()
   url: string;

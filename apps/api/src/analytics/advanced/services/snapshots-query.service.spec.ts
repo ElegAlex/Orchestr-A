@@ -94,7 +94,8 @@ describe('SnapshotsQueryService', () => {
     const to = '2025-06-30';
     await service.getSnapshots({ from, to });
 
-    const snapWhere = mockPrisma.projectSnapshot.findMany.mock.calls[0][0].where;
+    const snapWhere =
+      mockPrisma.projectSnapshot.findMany.mock.calls[0][0].where;
     expect(snapWhere.date).toEqual({
       gte: new Date(from),
       lte: new Date(to),
@@ -108,7 +109,8 @@ describe('SnapshotsQueryService', () => {
 
     await service.getSnapshots({});
 
-    const snapWhere = mockPrisma.projectSnapshot.findMany.mock.calls[0][0].where;
+    const snapWhere =
+      mockPrisma.projectSnapshot.findMany.mock.calls[0][0].where;
     expect(snapWhere.date).toBeUndefined();
   });
 
@@ -242,7 +244,8 @@ describe('SnapshotsQueryService', () => {
 
     await service.getSnapshots({ from: '2025-01-01' });
 
-    const snapWhere = mockPrisma.projectSnapshot.findMany.mock.calls[0][0].where;
+    const snapWhere =
+      mockPrisma.projectSnapshot.findMany.mock.calls[0][0].where;
     expect(snapWhere.date).toEqual({ gte: new Date('2025-01-01') });
     expect(snapWhere.date.lte).toBeUndefined();
   });
@@ -255,7 +258,8 @@ describe('SnapshotsQueryService', () => {
 
     await service.getSnapshots({ to: '2025-12-31' });
 
-    const snapWhere = mockPrisma.projectSnapshot.findMany.mock.calls[0][0].where;
+    const snapWhere =
+      mockPrisma.projectSnapshot.findMany.mock.calls[0][0].where;
     expect(snapWhere.date).toEqual({ lte: new Date('2025-12-31') });
     expect(snapWhere.date.gte).toBeUndefined();
   });

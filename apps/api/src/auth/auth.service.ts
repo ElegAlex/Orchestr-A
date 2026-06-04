@@ -254,13 +254,19 @@ export class AuthService {
 
   async register(registerDto: RegisterDto) {
     // SEC-008: REGISTRATION_ENABLED gate (default false — disabled in production)
-    const registrationEnabled = this.configService.get<string>('REGISTRATION_ENABLED');
+    const registrationEnabled = this.configService.get<string>(
+      'REGISTRATION_ENABLED',
+    );
     if (!registrationEnabled || registrationEnabled.toLowerCase() !== 'true') {
-      throw new ForbiddenException('La création de compte autonome est désactivée');
+      throw new ForbiddenException(
+        'La création de compte autonome est désactivée',
+      );
     }
 
     // SEC-008: REGISTRATION_EMAIL_DOMAIN allowlist (optional; empty = no restriction)
-    const domainAllowlist = this.configService.get<string>('REGISTRATION_EMAIL_DOMAIN');
+    const domainAllowlist = this.configService.get<string>(
+      'REGISTRATION_EMAIL_DOMAIN',
+    );
     if (domainAllowlist && domainAllowlist.trim()) {
       const allowed = domainAllowlist
         .split(',')
@@ -287,10 +293,14 @@ export class AuthService {
 
     if (existingUser) {
       // DAT-015: case-fold before comparing
-      if (existingUser.email.toLowerCase() === registerDto.email.toLowerCase()) {
+      if (
+        existingUser.email.toLowerCase() === registerDto.email.toLowerCase()
+      ) {
         throw new ConflictException('Cet email est déjà utilisé');
       }
-      if (existingUser.login.toLowerCase() === registerDto.login.toLowerCase()) {
+      if (
+        existingUser.login.toLowerCase() === registerDto.login.toLowerCase()
+      ) {
         throw new ConflictException('Ce login est déjà utilisé');
       }
     }

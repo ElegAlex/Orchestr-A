@@ -56,9 +56,9 @@ describe('SettingsService', () => {
     });
 
     it('should include the key name in the error', async () => {
-      await expect(
-        service.update('injected_key', 'bad'),
-      ).rejects.toThrow('unknown_key_xyz' in {} ? '' : 'Unknown setting');
+      await expect(service.update('injected_key', 'bad')).rejects.toThrow(
+        'unknown_key_xyz' in {} ? '' : 'Unknown setting',
+      );
     });
 
     it('should update a known key successfully', async () => {

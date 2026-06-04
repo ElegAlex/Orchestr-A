@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { createHash } from 'node:crypto';
 import { PrismaClient } from 'database';
 import {
@@ -218,13 +217,24 @@ async function main(): Promise<void> {
     );
 
     const result = await recomputeChainOnSchemaBump({ prisma, dryRun: false });
-    check('W-4 recomputed all 3 rows', result.recomputedCount === 3, `got ${result.recomputedCount}`);
+    check(
+      'W-4 recomputed all 3 rows',
+      result.recomputedCount === 3,
+      `got ${result.recomputedCount}`,
+    );
     check('W-4 in-tx verify passed', result.verified === true);
 
     const after = await readChain(prisma);
     const vAfter = verifyChain(after);
-    check('W-4 (PASS-post) chain valid with schemaVersion folded in', vAfter.ok, vAfter.detail);
-    check('W-4 every row schemaVersion=1', after.every((r) => r.schemaVersion === 1));
+    check(
+      'W-4 (PASS-post) chain valid with schemaVersion folded in',
+      vAfter.ok,
+      vAfter.detail,
+    );
+    check(
+      'W-4 every row schemaVersion=1',
+      after.every((r) => r.schemaVersion === 1),
+    );
     check('W-4 trigger ENABLED after run', await triggerEnabled(prisma));
 
     // ---- W-6: containment query is plannable against the GIN index ----------------

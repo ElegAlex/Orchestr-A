@@ -20,9 +20,7 @@ export class UpdateMemberDto {
   })
   // DAT-035 — same trim + length contract as AddMemberDto; see that file for
   // the layer-of-rejection rationale.
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @Length(1, 100)
   @IsOptional()

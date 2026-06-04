@@ -45,9 +45,10 @@ async function expectSelfLoopRejected(insert: Promise<unknown>): Promise<void> {
   } catch (err) {
     message = err instanceof Error ? err.message : String(err);
   }
-  expect(message, 'expected a check_violation (23514) but the INSERT was accepted').toMatch(
-    /23514/,
-  );
+  expect(
+    message,
+    'expected a check_violation (23514) but the INSERT was accepted',
+  ).toMatch(/23514/);
   expect(message).toContain('events_parent_no_self_ck');
 }
 
@@ -58,9 +59,10 @@ async function expectCycleRejected(stmt: Promise<unknown>): Promise<void> {
   } catch (err) {
     message = err instanceof Error ? err.message : String(err);
   }
-  expect(message, 'expected the cycle trigger to RAISE but the statement was accepted').toContain(
-    'events_parent_no_cycle',
-  );
+  expect(
+    message,
+    'expected the cycle trigger to RAISE but the statement was accepted',
+  ).toContain('events_parent_no_cycle');
 }
 
 describe('DAT-038 — events parent-chain cycle prevention (real DB)', () => {
@@ -86,7 +88,10 @@ describe('DAT-038 — events parent-chain cycle prevention (real DB)', () => {
 
   /** Create a fresh event with a known id and an optional parent. Goes through the
    *  ORM so the trigger sees the same write path as production code. */
-  async function mkEvent(label: string, parentEventId: string | null = null): Promise<string> {
+  async function mkEvent(
+    label: string,
+    parentEventId: string | null = null,
+  ): Promise<string> {
     const e = await db.event.create({
       data: {
         title: `DAT-038 ${label} ${randomUUID()}`,
@@ -100,7 +105,10 @@ describe('DAT-038 — events parent-chain cycle prevention (real DB)', () => {
 
   /** Raw INSERT of an event with a specific id + parent. Used for self-loop / 2-hop /
    *  3-hop cycle witnesses so the SQLSTATE / RAISE message surfaces verbatim. */
-  function insertEventWith(id: string, parentEventId: string | null): Promise<unknown> {
+  function insertEventWith(
+    id: string,
+    parentEventId: string | null,
+  ): Promise<unknown> {
     return db.$executeRawUnsafe(
       `INSERT INTO events (id, title, date, "isAllDay", "isExternalIntervention", "isRecurring", "createdById", "createdAt", "updatedAt", "parentEventId")
        VALUES ($1, $2, DATE '2026-06-01', true, false, false, $3, now(), now(), $4)`,
@@ -123,7 +131,11 @@ describe('DAT-038 — events parent-chain cycle prevention (real DB)', () => {
     const a = await mkEvent('2hop-A');
     const b = await mkEvent('2hop-B', a);
     await expectCycleRejected(
-      db.$executeRawUnsafe(`UPDATE events SET "parentEventId" = $1 WHERE id = $2`, b, a),
+      db.$executeRawUnsafe(
+        `UPDATE events SET "parentEventId" = $1 WHERE id = $2`,
+        b,
+        a,
+      ),
     );
   });
 
@@ -133,7 +145,11 @@ describe('DAT-038 — events parent-chain cycle prevention (real DB)', () => {
     const b = await mkEvent('3hop-B', a);
     const c = await mkEvent('3hop-C', b);
     await expectCycleRejected(
-      db.$executeRawUnsafe(`UPDATE events SET "parentEventId" = $1 WHERE id = $2`, c, a),
+      db.$executeRawUnsafe(
+        `UPDATE events SET "parentEventId" = $1 WHERE id = $2`,
+        c,
+        a,
+      ),
     );
   });
 
@@ -167,7 +183,11 @@ describe('DAT-038 — events parent-chain cycle prevention (real DB)', () => {
     const b = await mkEvent('upd-B', a);
     const c = await mkEvent('upd-C', b);
     await expect(
-      db.$executeRawUnsafe(`UPDATE events SET "parentEventId" = $1 WHERE id = $2`, a, c),
+      db.$executeRawUnsafe(
+        `UPDATE events SET "parentEventId" = $1 WHERE id = $2`,
+        a,
+        c,
+      ),
     ).resolves.toBe(1);
   });
 });

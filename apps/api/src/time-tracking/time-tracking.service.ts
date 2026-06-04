@@ -565,8 +565,7 @@ export class TimeTrackingService {
     // this entry's own contribution. Selects the dimension from the existing
     // row (the update path forbids cross-actor mutations elsewhere — see
     // `'thirdPartyId' in updateTimeEntryDto` guard).
-    const effectiveHours =
-      hours !== undefined ? hours : Number(existing.hours);
+    const effectiveHours = hours !== undefined ? hours : Number(existing.hours);
     const effectiveDate = date ? new Date(date) : existing.date;
     if (existing.userId) {
       await this.ensureDailyCapNotExceeded(
@@ -717,8 +716,8 @@ export class TimeTrackingService {
     };
 
     // Push all aggregation to Postgres via groupBy — no JS reduce() over rows
-    const [totalAgg, byTypeRows, byProjectRows, byDateRows, entryCount] =
-      await Promise.all([
+    const [totalAgg, byTypeRows, byProjectRows, byDateRows] = await Promise.all(
+      [
         this.prisma.timeEntry.aggregate({
           where: dateWhere,
           _sum: { hours: true },
@@ -739,9 +738,8 @@ export class TimeTrackingService {
           where: dateWhere,
           _sum: { hours: true },
         }),
-        // entryCount comes from the aggregate above
-        Promise.resolve(null),
-      ]);
+      ],
+    );
 
     const totalHours = Number(totalAgg._sum.hours ?? 0);
     const totalEntries = totalAgg._count._all;
@@ -767,7 +765,9 @@ export class TimeTrackingService {
       }
     }
     const byProject = byProjectRows
-      .filter((r): r is typeof r & { projectId: string } => r.projectId !== null)
+      .filter(
+        (r): r is typeof r & { projectId: string } => r.projectId !== null,
+      )
       .map((r) => ({
         projectId: r.projectId,
         projectName: projectNameMap[r.projectId] ?? '',
@@ -890,12 +890,23 @@ export class TimeTrackingService {
       .filter((id): id is string => id !== null);
     const userMap: Record<
       string,
-      { firstName: string; lastName: string; avatarUrl: string | null; avatarPreset: string | null }
+      {
+        firstName: string;
+        lastName: string;
+        avatarUrl: string | null;
+        avatarPreset: string | null;
+      }
     > = {};
     if (userIds.length > 0) {
       const users = await this.prisma.user.findMany({
         where: { id: { in: userIds } },
-        select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+          avatarPreset: true,
+        },
       });
       for (const u of users) {
         userMap[u.id] = u;
@@ -925,11 +936,17 @@ export class TimeTrackingService {
         select: { id: true, organizationName: true, type: true },
       });
       for (const tp of tps) {
-        thirdPartyMap[tp.id] = { organizationName: tp.organizationName, type: tp.type };
+        thirdPartyMap[tp.id] = {
+          organizationName: tp.organizationName,
+          type: tp.type,
+        };
       }
     }
     const byThirdParty = byThirdPartyRows
-      .filter((r): r is typeof r & { thirdPartyId: string } => r.thirdPartyId !== null)
+      .filter(
+        (r): r is typeof r & { thirdPartyId: string } =>
+          r.thirdPartyId !== null,
+      )
       .map((r) => ({
         thirdPartyId: r.thirdPartyId,
         organizationName: thirdPartyMap[r.thirdPartyId]?.organizationName ?? '',

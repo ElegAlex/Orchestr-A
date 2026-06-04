@@ -286,9 +286,15 @@ export class ProjectsController {
 
   @Post(':id/archive')
   @RequirePermissions('projects:archive')
-  @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
+  @OwnershipCheck({
+    resource: 'project',
+    bypassPermission: 'projects:manage_any',
+  })
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Archiver un projet (le retire du suivi général, reste accessible)' })
+  @ApiOperation({
+    summary:
+      'Archiver un projet (le retire du suivi général, reste accessible)',
+  })
   @ApiResponse({ status: 200, description: 'Projet archivé' })
   @ApiResponse({ status: 404, description: 'Projet introuvable' })
   @ApiResponse({ status: 409, description: 'Projet déjà archivé' })
@@ -304,7 +310,10 @@ export class ProjectsController {
 
   @Post(':id/unarchive')
   @RequirePermissions('projects:archive')
-  @OwnershipCheck({ resource: 'project', bypassPermission: 'projects:manage_any' })
+  @OwnershipCheck({
+    resource: 'project',
+    bypassPermission: 'projects:manage_any',
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Désarchiver un projet' })
   @ApiResponse({ status: 200, description: 'Projet désarchivé' })

@@ -36,15 +36,16 @@ async function expectCheckViolation(
   } catch (err) {
     message = err instanceof Error ? err.message : String(err);
   }
-  expect(message, 'expected a check_violation (23514) but the INSERT was accepted').toMatch(
-    /23514/,
-  );
+  expect(
+    message,
+    'expected a check_violation (23514) but the INSERT was accepted',
+  ).toMatch(/23514/);
   expect(message).toContain(constraint);
 }
 
 describe('DAT-035 — project_members.role length CHECK (real DB)', () => {
   let projectId: string;
-  let userPool: string[] = [];
+  const userPool: string[] = [];
   let userCursor = 0;
 
   beforeAll(async () => {
@@ -93,7 +94,10 @@ describe('DAT-035 — project_members.role length CHECK (real DB)', () => {
   // Negative — empty string. The dominant audit failure mode (a careless write
   // of role = '' would have landed silently pre-fix).
   it('rejects role = "" (project_members_role_length_ck, lower bound)', async () => {
-    await expectCheckViolation(insertMember(''), 'project_members_role_length_ck');
+    await expectCheckViolation(
+      insertMember(''),
+      'project_members_role_length_ck',
+    );
   });
 
   // Negative — 101 chars. Pins the upper bound at 100 (anything >100 rejects).

@@ -30,10 +30,7 @@ import {
 } from './dto/create-recurring-rule.dto';
 import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from '../auth/decorators/current-user.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('predefined-tasks')
 @Controller('predefined-tasks')
@@ -271,5 +268,4 @@ export class PredefinedTasksController {
       generateFromRulesDto,
     );
   }
-
 }

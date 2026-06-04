@@ -16,8 +16,6 @@ import {
 } from './dto/create-recurring-rule.dto';
 import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
 import { generateOccurrences, RuleLike } from './occurrence-generator';
-import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
-import type { PredefinedTaskAssignment } from 'database';
 
 @Injectable()
 export class PredefinedTasksService {

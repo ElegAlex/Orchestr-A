@@ -53,7 +53,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // 1. Determine HTTP status and safe message
     // ------------------------------------------------------------------
     let status: number;
-    let safeMessage: string;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -70,7 +69,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     // Non-HttpException → opaque 500, log full detail server-side.
     status = HttpStatus.INTERNAL_SERVER_ERROR;
-    safeMessage = 'Internal server error';
+    const safeMessage = 'Internal server error';
 
     // ------------------------------------------------------------------
     // 2. Server-side structured log (full detail, never forwarded)

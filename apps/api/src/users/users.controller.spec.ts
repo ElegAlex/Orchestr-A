@@ -230,7 +230,10 @@ describe('UsersController', () => {
       expect(result).toEqual(mockUser);
       // SEC-030: the caller is forwarded so the service can apply horizontal
       // scope + payload restriction.
-      expect(mockUsersService.findOne).toHaveBeenCalledWith('user-id-1', caller);
+      expect(mockUsersService.findOne).toHaveBeenCalledWith(
+        'user-id-1',
+        caller,
+      );
     });
 
     it('should throw NotFoundException when user not found', async () => {
@@ -249,7 +252,10 @@ describe('UsersController', () => {
       const departmentUsers = [mockUser];
       mockUsersService.getUsersByDepartment.mockResolvedValue(departmentUsers);
 
-      const result = await controller.getUsersByDepartment('dept-1', ADMIN_CALLER);
+      const result = await controller.getUsersByDepartment(
+        'dept-1',
+        ADMIN_CALLER,
+      );
 
       expect(result).toEqual(departmentUsers);
       // SEC-031: caller threaded for horizontal scope + payload restriction.
@@ -265,7 +271,10 @@ describe('UsersController', () => {
       const serviceUsers = [mockUser];
       mockUsersService.getUsersByService.mockResolvedValue(serviceUsers);
 
-      const result = await controller.getUsersByService('service-1', ADMIN_CALLER);
+      const result = await controller.getUsersByService(
+        'service-1',
+        ADMIN_CALLER,
+      );
 
       expect(result).toEqual(serviceUsers);
       expect(mockUsersService.getUsersByService).toHaveBeenCalledWith(

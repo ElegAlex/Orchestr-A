@@ -89,8 +89,10 @@ describe('SEC-011 — caller cannot set isActive on create; UPDATE path preserve
     forbidNonWhitelisted: true,
     transform: true,
   });
-  const asBody = (metatype: new () => object) =>
-    ({ type: 'body' as const, metatype });
+  const asBody = (metatype: new () => object) => ({
+    type: 'body' as const,
+    metatype,
+  });
 
   // Witness (AC#2): FAILS pre-fix (isActive was a whitelisted create field, so
   // the caller-supplied value was honored → user created), PASSES post-fix (the
@@ -195,7 +197,8 @@ describe('UpdateUserDto — SEC-010 propagation via PartialType', () => {
 
   it('accepts the server-issued relative avatar path on the PATCH path', async () => {
     const dto = plainToInstance(UpdateUserDto, {
-      avatarUrl: '/api/uploads/avatars/d0ed2849-b92e-47c3-91ad-4c4fb549c993.jpg',
+      avatarUrl:
+        '/api/uploads/avatars/d0ed2849-b92e-47c3-91ad-4c4fb549c993.jpg',
     });
     expect(await avatarErr(dto)).toBeUndefined();
   });

@@ -683,7 +683,8 @@ describe('AuthService', () => {
       it('should throw ForbiddenException when email domain is not in REGISTRATION_EMAIL_DOMAIN allowlist', async () => {
         mockConfigService.get.mockImplementation((key: string) => {
           if (key === 'REGISTRATION_ENABLED') return 'true';
-          if (key === 'REGISTRATION_EMAIL_DOMAIN') return 'mairie.fr,collectivite.fr';
+          if (key === 'REGISTRATION_EMAIL_DOMAIN')
+            return 'mairie.fr,collectivite.fr';
           if (key === 'JWT_ACCESS_TTL') return '15m';
           if (key === 'AUTH_EXPOSE_RESET_TOKEN') return 'true';
           return undefined;
@@ -699,16 +700,23 @@ describe('AuthService', () => {
       it('should allow registration when email domain matches REGISTRATION_EMAIL_DOMAIN', async () => {
         mockConfigService.get.mockImplementation((key: string) => {
           if (key === 'REGISTRATION_ENABLED') return 'true';
-          if (key === 'REGISTRATION_EMAIL_DOMAIN') return 'example.com,mairie.fr';
+          if (key === 'REGISTRATION_EMAIL_DOMAIN')
+            return 'example.com,mairie.fr';
           if (key === 'JWT_ACCESS_TTL') return '15m';
           if (key === 'AUTH_EXPOSE_RESET_TOKEN') return 'true';
           return undefined;
         });
 
         mockPrismaService.user.findFirst.mockResolvedValue(null);
-        mockPrismaService.role.findFirst.mockResolvedValue({ id: 'default-role-id' });
-        mockPrismaService.role.findUnique.mockResolvedValue({ id: 'default-role-id' });
-        vi.mocked(bcrypt.hash).mockResolvedValue('$2b$12$hashedpassword' as never);
+        mockPrismaService.role.findFirst.mockResolvedValue({
+          id: 'default-role-id',
+        });
+        mockPrismaService.role.findUnique.mockResolvedValue({
+          id: 'default-role-id',
+        });
+        vi.mocked(bcrypt.hash).mockResolvedValue(
+          '$2b$12$hashedpassword' as never,
+        );
         mockPrismaService.user.create.mockResolvedValue({
           id: 'new-user-id',
           email: registerDto.email,
@@ -716,7 +724,12 @@ describe('AuthService', () => {
           firstName: registerDto.firstName,
           lastName: registerDto.lastName,
           roleId: 'default-role-id',
-          role: { id: 'default-role-id', code: 'CONTRIBUTEUR', label: 'Contributeur', templateKey: 'CONTRIBUTEUR' },
+          role: {
+            id: 'default-role-id',
+            code: 'CONTRIBUTEUR',
+            label: 'Contributeur',
+            templateKey: 'CONTRIBUTEUR',
+          },
           departmentId: null,
           createdAt: new Date(),
         });
@@ -905,7 +918,10 @@ describe('AuthService', () => {
           id: 'token-id',
         });
 
-        const result = await service.generateResetToken('user-id-1', 'admin-id');
+        const result = await service.generateResetToken(
+          'user-id-1',
+          'admin-id',
+        );
 
         expect(result).toEqual({ ok: true });
         expect(result).not.toHaveProperty('token');

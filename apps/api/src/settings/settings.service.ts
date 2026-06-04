@@ -167,9 +167,7 @@ export class SettingsService implements OnModuleInit {
     // DAT-012: category is now a native enum. An unknown category string would
     // make Postgres reject the WHERE comparison (22P02); short-circuit to []
     // to preserve the prior "unknown category → empty result" read behaviour.
-    if (
-      !(Object.values(AppSettingsCategory) as string[]).includes(category)
-    ) {
+    if (!(Object.values(AppSettingsCategory) as string[]).includes(category)) {
       return [];
     }
     const settings = await this.prisma.appSettings.findMany({

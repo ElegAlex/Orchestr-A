@@ -81,10 +81,7 @@ export class RolesController {
   })
   @ApiResponse({ status: 201, description: 'Rôle créé' })
   @ApiResponse({ status: 409, description: 'Code déjà existant' })
-  create(
-    @Body() dto: CreateRoleDto,
-    @CurrentUser() caller: { id: string },
-  ) {
+  create(@Body() dto: CreateRoleDto, @CurrentUser() caller: { id: string }) {
     return this.rolesService.createRole(dto, caller);
   }
 

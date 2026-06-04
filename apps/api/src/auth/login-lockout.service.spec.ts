@@ -5,7 +5,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * (incr / expire / set EX / ttl / del). Enough fidelity to exercise the
  * progressive-lockout logic end to end without a real Redis.
  */
-const store = { vals: new Map<string, string>(), ttls: new Map<string, number>() };
+const store = {
+  vals: new Map<string, string>(),
+  ttls: new Map<string, number>(),
+};
 
 const redisInstance = {
   incr: vi.fn(async (k: string) => {
@@ -87,7 +90,9 @@ describe('LoginLockoutService', () => {
     });
     const status = await service.isLocked('alice', '10.0.0.1');
     expect(status.locked).toBe(true);
-    expect(status.retryAfterSeconds).toBe(LoginLockoutService.BASE_LOCK_SECONDS);
+    expect(status.retryAfterSeconds).toBe(
+      LoginLockoutService.BASE_LOCK_SECONDS,
+    );
   });
 
   it('resets the failure counter after arming a lock', async () => {
@@ -106,7 +111,7 @@ describe('LoginLockoutService', () => {
       for (let i = 0; i < LoginLockoutService.FAILURE_THRESHOLD; i++) {
         result = await service.recordFailure('alice', '10.0.0.1');
       }
-      durations.push(result!.lockSeconds!);
+      durations.push(result!.lockSeconds);
     }
     // 900, 1800, 3600, … doubling until capped at MAX_LOCK_SECONDS.
     expect(durations[0]).toBe(LoginLockoutService.BASE_LOCK_SECONDS);

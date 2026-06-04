@@ -111,13 +111,16 @@ describe('AnalyticsService', () => {
       });
 
       // Single project: record findMany call count
-      mockPrismaService.project.findMany.mockResolvedValue([makeProject('p-1')]);
+      mockPrismaService.project.findMany.mockResolvedValue([
+        makeProject('p-1'),
+      ]);
       mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.task.groupBy.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
       await service.getAnalytics({});
-      const callsWith1Project = mockPrismaService.task.findMany.mock.calls.length;
+      const callsWith1Project =
+        mockPrismaService.task.findMany.mock.calls.length;
 
       mockPrismaService.task.findMany.mockClear();
 
@@ -130,7 +133,8 @@ describe('AnalyticsService', () => {
       mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.task.groupBy.mockResolvedValue([]);
       await service.getAnalytics({});
-      const callsWith3Projects = mockPrismaService.task.findMany.mock.calls.length;
+      const callsWith3Projects =
+        mockPrismaService.task.findMany.mock.calls.length;
 
       expect(callsWith1Project).toBe(callsWith3Projects);
     });
@@ -652,9 +656,11 @@ describe('AnalyticsService', () => {
 
       await service.getAnalytics({});
 
-      const projectWhere = (mockPrismaService.project.findMany.mock.calls[0][0] as {
-        where: Record<string, unknown>;
-      }).where;
+      const projectWhere = (
+        mockPrismaService.project.findMany.mock.calls[0][0] as {
+          where: Record<string, unknown>;
+        }
+      ).where;
       expect(JSON.stringify(projectWhere)).toContain('"archivedAt":null');
     });
 
@@ -666,9 +672,11 @@ describe('AnalyticsService', () => {
 
       await service.getAnalytics({ archived: ArchivedFilter.ALL });
 
-      const projectWhere = (mockPrismaService.project.findMany.mock.calls[0][0] as {
-        where: Record<string, unknown>;
-      }).where;
+      const projectWhere = (
+        mockPrismaService.project.findMany.mock.calls[0][0] as {
+          where: Record<string, unknown>;
+        }
+      ).where;
       expect(JSON.stringify(projectWhere)).not.toContain('archivedAt');
     });
 
@@ -693,9 +701,15 @@ describe('AnalyticsService', () => {
       const result = await service.getAnalytics({});
 
       // taskStatusData must reflect groupBy counts, not the empty findMany
-      const todoStatus = result.taskStatusData.find((s) => s.name === 'À faire');
-      const doneStatus = result.taskStatusData.find((s) => s.name === 'Terminé');
-      const inProgressStatus = result.taskStatusData.find((s) => s.name === 'En cours');
+      const todoStatus = result.taskStatusData.find(
+        (s) => s.name === 'À faire',
+      );
+      const doneStatus = result.taskStatusData.find(
+        (s) => s.name === 'Terminé',
+      );
+      const inProgressStatus = result.taskStatusData.find(
+        (s) => s.name === 'En cours',
+      );
       expect(todoStatus?.value).toBe(3);
       expect(doneStatus?.value).toBe(2);
       expect(inProgressStatus?.value).toBe(1);
@@ -797,8 +811,12 @@ describe('AnalyticsService', () => {
       const store = new Map<string, unknown>();
       const statefulCache = {
         get: vi.fn(async (key: string) => store.get(key)),
-        set: vi.fn(async (key: string, value: unknown) => { store.set(key, value); }),
-        del: vi.fn(async (key: string) => { store.delete(key); }),
+        set: vi.fn(async (key: string, value: unknown) => {
+          store.set(key, value);
+        }),
+        del: vi.fn(async (key: string) => {
+          store.delete(key);
+        }),
       };
 
       const cacheModule = await Test.createTestingModule({
@@ -827,7 +845,9 @@ describe('AnalyticsService', () => {
     });
 
     it('PER-026: 2nd getAnalytics call with same user hits cache — prisma.project.findMany called only once', async () => {
-      const user = { id: 'user-cache-1', role: 'ADMIN' } as Parameters<typeof cachedService.getAnalytics>[1];
+      const user = { id: 'user-cache-1', role: 'ADMIN' } as Parameters<
+        typeof cachedService.getAnalytics
+      >[1];
 
       // First call: cache miss → Prisma queries run
       await cachedService.getAnalytics({}, user);
@@ -839,8 +859,12 @@ describe('AnalyticsService', () => {
     });
 
     it('PER-026: different users get independent cache entries (no cross-user data leak)', async () => {
-      const userA = { id: 'user-A', role: 'ADMIN' } as Parameters<typeof cachedService.getAnalytics>[1];
-      const userB = { id: 'user-B', role: 'ADMIN' } as Parameters<typeof cachedService.getAnalytics>[1];
+      const userA = { id: 'user-A', role: 'ADMIN' } as Parameters<
+        typeof cachedService.getAnalytics
+      >[1];
+      const userB = { id: 'user-B', role: 'ADMIN' } as Parameters<
+        typeof cachedService.getAnalytics
+      >[1];
 
       // Both users call — each should trigger its own Prisma query (separate cache keys)
       await cachedService.getAnalytics({}, userA);

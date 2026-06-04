@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DocumentsService } from './documents.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { AccessScopeService } from '../common/services/access-scope.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
@@ -179,9 +183,9 @@ describe('DocumentsService', () => {
 
       // The read must still resolve with the document even if the audit
       // emission fails — a read path must not 500 on an audit hiccup.
-      await expect(service.findOne('doc-1', caller, meta)).resolves.toMatchObject(
-        { id: 'doc-1' },
-      );
+      await expect(
+        service.findOne('doc-1', caller, meta),
+      ).resolves.toMatchObject({ id: 'doc-1' });
     });
 
     it('does NOT emit when caller is undefined (internal findOne / backward-compat)', async () => {
@@ -251,7 +255,9 @@ describe('DocumentsService', () => {
       expect(mockPrismaService.document.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'doc-1' },
-          data: expect.objectContaining({ deletedAt: expect.any(Date) }) as object,
+          data: expect.objectContaining({
+            deletedAt: expect.any(Date),
+          }) as object,
         }),
       );
       expect(mockPrismaService.document.delete).not.toHaveBeenCalled();
@@ -326,8 +332,11 @@ describe('DocumentsService', () => {
       });
 
       await expect(
-        (service as unknown as { remove(id: string, user: unknown): Promise<unknown> })
-          .remove('doc-1', nonOwner),
+        (
+          service as unknown as {
+            remove(id: string, user: unknown): Promise<unknown>;
+          }
+        ).remove('doc-1', nonOwner),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -344,8 +353,11 @@ describe('DocumentsService', () => {
         uploadedBy: 'user-1',
       });
       await expect(
-        (service as unknown as { remove(id: string, user: unknown): Promise<unknown> })
-          .remove('doc-1', owner),
+        (
+          service as unknown as {
+            remove(id: string, user: unknown): Promise<unknown>;
+          }
+        ).remove('doc-1', owner),
       ).resolves.toBeDefined();
     });
 
@@ -360,8 +372,11 @@ describe('DocumentsService', () => {
       const adminUser = { id: 'user-admin', role: 'ADMIN' };
       accessScope.documentReadWhere.mockResolvedValueOnce({});
       await expect(
-        (service as unknown as { remove(id: string, user: unknown): Promise<unknown> })
-          .remove('doc-1', adminUser),
+        (
+          service as unknown as {
+            remove(id: string, user: unknown): Promise<unknown>;
+          }
+        ).remove('doc-1', adminUser),
       ).resolves.toBeDefined();
     });
   });

@@ -27,7 +27,10 @@ describe('resolveAllowedOrigins (SEC-012)', () => {
       CORS_ORIGIN: 'https://app.example.com, https://admin.example.com',
       NODE_ENV: 'production',
     });
-    expect(result).toEqual(['https://app.example.com', 'https://admin.example.com']);
+    expect(result).toEqual([
+      'https://app.example.com',
+      'https://admin.example.com',
+    ]);
   });
 
   // --- BACKWARD COMPAT ---
@@ -50,9 +53,9 @@ describe('resolveAllowedOrigins (SEC-012)', () => {
 
   // --- BOOT ASSERTION ---
   it('throws in production when neither CORS_ORIGIN nor ALLOWED_ORIGINS is set', () => {
-    expect(() =>
-      resolveAllowedOrigins({ NODE_ENV: 'production' }),
-    ).toThrow(/CORS_ORIGIN/);
+    expect(() => resolveAllowedOrigins({ NODE_ENV: 'production' })).toThrow(
+      /CORS_ORIGIN/,
+    );
   });
 
   // --- DEV FALLBACK ---

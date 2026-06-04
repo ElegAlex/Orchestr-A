@@ -34,9 +34,7 @@ export class AddMemberDto {
   // then enforce 1..100 — matches the DB CHECK bounds; the DTO rejects 400
   // before the request hits the DB. Value space stays open per the audit's
   // free-form decision (DAT-012 bail rationale).
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @Length(1, 100)
   @IsOptional()

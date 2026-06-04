@@ -47,9 +47,10 @@ async function expectCheckViolation(
   } catch (err) {
     message = err instanceof Error ? err.message : String(err);
   }
-  expect(message, 'expected a check_violation (23514) but the INSERT was accepted').toMatch(
-    /23514/,
-  );
+  expect(
+    message,
+    'expected a check_violation (23514) but the INSERT was accepted',
+  ).toMatch(/23514/);
   expect(message).toContain(constraint);
 }
 
@@ -60,14 +61,20 @@ describe('DAT-017 — task parent-consistency CHECK (real DB)', () => {
 
   beforeAll(async () => {
     await db.$connect();
-    const project = await db.project.create({ data: { name: `DAT-017 project ${randomUUID()}` } });
+    const project = await db.project.create({
+      data: { name: `DAT-017 project ${randomUUID()}` },
+    });
     projectId = project.id;
     const epic = await db.epic.create({
       data: { name: `DAT-017 epic ${randomUUID()}`, projectId },
     });
     epicId = epic.id;
     const milestone = await db.milestone.create({
-      data: { name: `DAT-017 milestone ${randomUUID()}`, projectId, dueDate: new Date() },
+      data: {
+        name: `DAT-017 milestone ${randomUUID()}`,
+        projectId,
+        dueDate: new Date(),
+      },
     });
     milestoneId = milestone.id;
   });
@@ -103,7 +110,9 @@ describe('DAT-017 — task parent-consistency CHECK (real DB)', () => {
   // Positive #1 — true transverse task: all three NULL. The legitimate use case the
   // audit explicitly preserves (projectId nullable for meetings / cross-cutting work).
   it('ACCEPTS a transverse task with projectId/epicId/milestoneId all NULL', async () => {
-    const task = await db.task.create({ data: { title: `DAT-017 transverse ${randomUUID()}` } });
+    const task = await db.task.create({
+      data: { title: `DAT-017 transverse ${randomUUID()}` },
+    });
     expect(task.projectId).toBeNull();
     expect(task.epicId).toBeNull();
     expect(task.milestoneId).toBeNull();

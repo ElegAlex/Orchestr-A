@@ -185,7 +185,8 @@ export class AuthController {
   @ApiOperation({ summary: "Rafraîchir le token d'accès" })
   @ApiResponse({
     status: 200,
-    description: 'Nouveau access_token; refresh token renouvelé en cookie HttpOnly',
+    description:
+      'Nouveau access_token; refresh token renouvelé en cookie HttpOnly',
   })
   @ApiResponse({ status: 401, description: 'Refresh token invalide ou expiré' })
   async refresh(

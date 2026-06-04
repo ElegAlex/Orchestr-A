@@ -52,14 +52,10 @@ describe('assertJwtSecretStrength (SEC-026)', () => {
   });
 
   it('does NOT throw in test even with undefined JWT_SECRET', () => {
-    expect(() =>
-      assertJwtSecretStrength(undefined, 'test'),
-    ).not.toThrow();
+    expect(() => assertJwtSecretStrength(undefined, 'test')).not.toThrow();
   });
 
   it('does NOT throw when NODE_ENV is undefined (local dev without .env)', () => {
-    expect(() =>
-      assertJwtSecretStrength(TOO_SHORT, undefined),
-    ).not.toThrow();
+    expect(() => assertJwtSecretStrength(TOO_SHORT, undefined)).not.toThrow();
   });
 });

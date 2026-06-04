@@ -86,7 +86,10 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto, callerRoleCode?: string) {
-    await this.roleHierarchy.assertCanAssignRole(callerRoleCode, createUserDto.roleCode);
+    await this.roleHierarchy.assertCanAssignRole(
+      callerRoleCode,
+      createUserDto.roleCode,
+    );
 
     const existingUser = await this.prisma.user.findFirst({
       where: {
@@ -100,10 +103,14 @@ export class UsersService {
 
     if (existingUser) {
       // DAT-015: case-fold before comparing so 'Admin@Foo.com' === 'admin@foo.com'
-      if (existingUser.email.toLowerCase() === createUserDto.email.toLowerCase()) {
+      if (
+        existingUser.email.toLowerCase() === createUserDto.email.toLowerCase()
+      ) {
         throw new ConflictException('Cet email est déjà utilisé');
       }
-      if (existingUser.login.toLowerCase() === createUserDto.login.toLowerCase()) {
+      if (
+        existingUser.login.toLowerCase() === createUserDto.login.toLowerCase()
+      ) {
         throw new ConflictException('Ce login est déjà utilisé');
       }
     }
@@ -231,7 +238,9 @@ export class UsersService {
     // NOT where-scoped (see FULL_LIST_SELECT comment). Management-tier callers
     // see the sensitive fields; a plain directory caller gets the reduced
     // projection.
-    const isManagement = await this.accessScope.hasAny(caller, ['users:manage']);
+    const isManagement = await this.accessScope.hasAny(caller, [
+      'users:manage',
+    ]);
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -466,7 +475,9 @@ export class UsersService {
     // restricted to self / same-service / managed-service/department. An
     // out-of-scope id therefore collapses to a 404 (non-disclosing).
     const scopeWhere = await this.accessScope.userReadWhere(caller);
-    const isManagement = await this.accessScope.hasAny(caller, ['users:manage']);
+    const isManagement = await this.accessScope.hasAny(caller, [
+      'users:manage',
+    ]);
 
     const user = await this.prisma.user.findFirst({
       where: { id, ...scopeWhere },
@@ -518,7 +529,10 @@ export class UsersService {
     // est strictement inférieur au sien. Les templates ADMIN et ADMIN_DELEGATED
     // ne sont assignables que par un ADMIN (pas par un ADMIN_DELEGATED).
     if (updateUserDto.roleCode) {
-      await this.roleHierarchy.assertCanAssignRole(callerRoleCode, updateUserDto.roleCode);
+      await this.roleHierarchy.assertCanAssignRole(
+        callerRoleCode,
+        updateUserDto.roleCode,
+      );
     }
 
     if (updateUserDto.email || updateUserDto.login) {
@@ -530,10 +544,20 @@ export class UsersService {
               OR: [
                 // DAT-015: case-insensitive lookup matches the LOWER() unique index
                 updateUserDto.email
-                  ? { email: { equals: updateUserDto.email, mode: 'insensitive' } }
+                  ? {
+                      email: {
+                        equals: updateUserDto.email,
+                        mode: 'insensitive',
+                      },
+                    }
                   : {},
                 updateUserDto.login
-                  ? { login: { equals: updateUserDto.login, mode: 'insensitive' } }
+                  ? {
+                      login: {
+                        equals: updateUserDto.login,
+                        mode: 'insensitive',
+                      },
+                    }
                   : {},
               ],
             },
@@ -543,10 +567,16 @@ export class UsersService {
 
       if (duplicate) {
         // DAT-015: case-fold before comparing
-        if (updateUserDto.email && duplicate.email.toLowerCase() === updateUserDto.email.toLowerCase()) {
+        if (
+          updateUserDto.email &&
+          duplicate.email.toLowerCase() === updateUserDto.email.toLowerCase()
+        ) {
           throw new ConflictException('Cet email est déjà utilisé');
         }
-        if (updateUserDto.login && duplicate.login.toLowerCase() === updateUserDto.login.toLowerCase()) {
+        if (
+          updateUserDto.login &&
+          duplicate.login.toLowerCase() === updateUserDto.login.toLowerCase()
+        ) {
           throw new ConflictException('Ce login est déjà utilisé');
         }
       }
@@ -1103,11 +1133,7 @@ export class UsersService {
    * le mot de passe). Émet aussi un événement console via AuditService pour
    * parité avec le path AuthService — OBS-001 unifiera ces deux sinks.
    */
-  async resetPassword(
-    userId: string,
-    newPassword: string,
-    callerId?: string,
-  ) {
+  async resetPassword(userId: string, newPassword: string, callerId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -1124,7 +1150,7 @@ export class UsersService {
 
     if (callerId && callerId === userId) {
       throw new ForbiddenException(
-        "Self-reset interdit via cet endpoint admin — utilisez /auth/change-password",
+        'Self-reset interdit via cet endpoint admin — utilisez /auth/change-password',
       );
     }
 
@@ -1188,7 +1214,9 @@ export class UsersService {
   // the reduced payload (email + role.templateKey stripped).
   async getUsersByDepartment(departmentId: string, caller?: AccessUser) {
     const scopeWhere = await this.accessScope.userReadWhere(caller);
-    const isManagement = await this.accessScope.hasAny(caller, ['users:manage']);
+    const isManagement = await this.accessScope.hasAny(caller, [
+      'users:manage',
+    ]);
     return this.prisma.user.findMany({
       where: {
         departmentId,
@@ -1226,7 +1254,9 @@ export class UsersService {
 
   async getUsersByService(serviceId: string, caller?: AccessUser) {
     const scopeWhere = await this.accessScope.userReadWhere(caller);
-    const isManagement = await this.accessScope.hasAny(caller, ['users:manage']);
+    const isManagement = await this.accessScope.hasAny(caller, [
+      'users:manage',
+    ]);
     return this.prisma.user.findMany({
       where: {
         userServices: {
@@ -1258,7 +1288,9 @@ export class UsersService {
 
   async getUsersByRole(roleCode: string, caller?: AccessUser) {
     const scopeWhere = await this.accessScope.userReadWhere(caller);
-    const isManagement = await this.accessScope.hasAny(caller, ['users:manage']);
+    const isManagement = await this.accessScope.hasAny(caller, [
+      'users:manage',
+    ]);
     return this.prisma.user.findMany({
       where: {
         role: { code: roleCode },
@@ -1398,7 +1430,10 @@ export class UsersService {
         }
 
         try {
-          await this.roleHierarchy.assertCanAssignRole(callerRoleCode, userData.roleCode);
+          await this.roleHierarchy.assertCanAssignRole(
+            callerRoleCode,
+            userData.roleCode,
+          );
         } catch (err) {
           result.errors++;
           const message =
@@ -1601,7 +1636,10 @@ export class UsersService {
 
       if (userData.roleCode) {
         try {
-          await this.roleHierarchy.assertCanAssignRole(callerRoleCode, userData.roleCode);
+          await this.roleHierarchy.assertCanAssignRole(
+            callerRoleCode,
+            userData.roleCode,
+          );
         } catch (err) {
           previewItem.status = 'error';
           previewItem.messages.push(

@@ -496,7 +496,11 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.addDependency('nonexistent', addDependencyDto, mockCurrentUser),
+        controller.addDependency(
+          'nonexistent',
+          addDependencyDto,
+          mockCurrentUser,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -506,7 +510,11 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.addDependency('task-id-1', addDependencyDto, mockCurrentUser),
+        controller.addDependency(
+          'task-id-1',
+          addDependencyDto,
+          mockCurrentUser,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -516,7 +524,11 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.addDependency('task-id-1', addDependencyDto, mockCurrentUser),
+        controller.addDependency(
+          'task-id-1',
+          addDependencyDto,
+          mockCurrentUser,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -526,7 +538,11 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.addDependency('task-id-1', addDependencyDto, mockCurrentUser),
+        controller.addDependency(
+          'task-id-1',
+          addDependencyDto,
+          mockCurrentUser,
+        ),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -557,7 +573,11 @@ describe('TasksController', () => {
       );
 
       await expect(
-        controller.removeDependency('task-id-1', 'nonexistent', mockCurrentUser),
+        controller.removeDependency(
+          'task-id-1',
+          'nonexistent',
+          mockCurrentUser,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });

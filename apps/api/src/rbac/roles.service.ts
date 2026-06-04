@@ -228,7 +228,10 @@ export class RolesService {
     // (mirrors OBS-004's dedicated SERVICE_MEMBERSHIP_CHANGED carve-out). No-op
     // DTOs (nothing in the monitored set changed) emit nothing.
     if (caller) {
-      const before = { label: existing.label, description: existing.description };
+      const before = {
+        label: existing.label,
+        description: existing.description,
+      };
       const after = { label: updated.label, description: updated.description };
       const changed = (['label', 'description'] as const).filter(
         (k) => before[k] !== after[k],

@@ -701,9 +701,9 @@ describe('MilestonesService', () => {
       );
 
       expect(result.name).toBe('Institutional Admin Updated');
-      expect(
-        mockPermissionsService.getPermissionsForRole,
-      ).toHaveBeenCalledWith('DIRECTION_SI');
+      expect(mockPermissionsService.getPermissionsForRole).toHaveBeenCalledWith(
+        'DIRECTION_SI',
+      );
     });
 
     it('should throw ForbiddenException for a non-member role without projects:manage_any', async () => {

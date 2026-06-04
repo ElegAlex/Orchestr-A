@@ -26,7 +26,9 @@ export class TasksBreakdownService {
     currentUser?: AccessUser,
   ): Promise<TasksBreakdownResponseDto> {
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
-    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
+    const archivedClause = archivedWhere(
+      query.archived ?? ArchivedFilter.ACTIVE,
+    );
     const projectIds =
       query.projectIds && query.projectIds.length > 0
         ? query.projectIds

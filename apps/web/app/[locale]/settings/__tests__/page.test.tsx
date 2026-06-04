@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // TST-023 — Settings page RBAC affordances test
@@ -99,6 +99,7 @@ jest.mock("@/components/school-vacations/SchoolVacationsManager", () => ({
 // Import after mocks
 // ---------------------------------------------------------------------------
 import SettingsPage from "../page";
+import { settingsService } from "@/services/settings.service";
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -135,7 +136,6 @@ describe("TST-023 — SettingsPage: RBAC route-guard affordances", () => {
   describe("when settings:update permission is GRANTED", () => {
     beforeEach(() => {
       mockHasPermission = true;
-      const { settingsService } = require("@/services/settings.service");
       settingsService.getAll.mockResolvedValue({ settings: {}, list: [] });
     });
 

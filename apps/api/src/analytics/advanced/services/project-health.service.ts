@@ -46,7 +46,9 @@ export class ProjectHealthService {
   ): Promise<ProjectHealthRowDto[]> {
     const now = new Date();
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
-    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
+    const archivedClause = archivedWhere(
+      query.archived ?? ArchivedFilter.ACTIVE,
+    );
     const where: Prisma.ProjectWhereInput = {
       status: 'ACTIVE',
       AND: [projectScope, archivedClause],

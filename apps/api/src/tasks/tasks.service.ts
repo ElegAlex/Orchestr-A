@@ -435,10 +435,7 @@ export class TasksService {
     andFilters.push(
       { endDate: { gte: new Date(startDate) } },
       {
-        OR: [
-          { startDate: { lte: new Date(endDate) } },
-          { startDate: null },
-        ],
+        OR: [{ startDate: { lte: new Date(endDate) } }, { startDate: null }],
       },
     );
 

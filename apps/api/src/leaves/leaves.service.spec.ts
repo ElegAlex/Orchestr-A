@@ -96,8 +96,8 @@ describe('LeavesService', () => {
     // $transaction. The mock forwards the same client to the callback so
     // every queued mock (leaveBalance.findUnique etc.) continues to be
     // consumed transparently — no test rewrite needed.
-    $transaction: vi.fn(<T>(cb: (tx: typeof mockPrismaService) => T): T =>
-      cb(mockPrismaService),
+    $transaction: vi.fn(
+      <T>(cb: (tx: typeof mockPrismaService) => T): T => cb(mockPrismaService),
     ),
   };
 
@@ -382,7 +382,9 @@ describe('LeavesService', () => {
       // can restore it to APPROVED, which would create two overlapping approved leaves.
       // This test verifies the status.in list includes CANCELLATION_REQUESTED.
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(mockLeaveTypeConfig);
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
       mockPrismaService.leave.findMany.mockResolvedValue([]);
 
       // We don't care about the final result; we care that checkOverlap issued
@@ -394,7 +396,8 @@ describe('LeavesService', () => {
       }
 
       // The FIRST findMany call is the checkOverlap query.
-      const overlapCall = mockPrismaService.leave.findMany.mock.calls[0]?.[0] as {
+      const overlapCall = mockPrismaService.leave.findMany.mock
+        .calls[0]?.[0] as {
         where?: { status?: { in?: string[] } };
       };
       expect(overlapCall?.where?.status?.in).toContain(
@@ -410,11 +413,15 @@ describe('LeavesService', () => {
       );
       // hasConfiguredBalance: no individual balance, global exists
       mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null); // individual (hasConfiguredBalance)
-      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ id: 'g1' }); // global (hasConfiguredBalance) → true
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        id: 'g1',
+      }); // global (hasConfiguredBalance) → true
 
       // getAvailableDays → resolveAllocatedDays: no individual, global = 1 day
       mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null); // individual (resolveAllocatedDays)
-      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ totalDays: 1 }); // global (resolveAllocatedDays)
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 1,
+      }); // global (resolveAllocatedDays)
 
       mockPrismaService.leave.findMany
         .mockResolvedValueOnce([]) // No overlap
@@ -440,7 +447,9 @@ describe('LeavesService', () => {
       mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce(null);
 
       mockPrismaService.leave.findMany.mockResolvedValueOnce([]); // overlap check only
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
       mockPrismaService.leave.create.mockResolvedValue(mockLeave);
 
       const result = await service.create('user-1', createLeaveDto);
@@ -457,11 +466,15 @@ describe('LeavesService', () => {
 
       // hasConfiguredBalance: no individual, global row exists (totalDays will be 0)
       mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
-      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ id: 'g1' });
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        id: 'g1',
+      });
 
       // resolveAllocatedDays inside getAvailableDays: individual null, global totalDays=0
       mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
-      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ totalDays: 0 });
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 0,
+      });
 
       mockPrismaService.leave.findMany
         .mockResolvedValueOnce([]) // overlap
@@ -479,10 +492,14 @@ describe('LeavesService', () => {
       mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(typeRtt);
 
       // hasConfiguredBalance: individual exists → returns true immediately
-      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce({ id: 'i1' });
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce({
+        id: 'i1',
+      });
 
       // getAvailableDays → resolveAllocatedDays: individual gives totalDays=3
-      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce({ totalDays: 3 });
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce({
+        totalDays: 3,
+      });
 
       mockPrismaService.leave.findMany
         .mockResolvedValueOnce([]) // overlap
@@ -588,7 +605,8 @@ describe('LeavesService', () => {
       // user's dept manager (i.e. when the old unscoped query runs).
       mockPrismaService.leaveValidationDelegate.findFirst.mockImplementation(
         (args: { where?: { delegatorId?: string } } = {}) => {
-          if (args?.where?.delegatorId === 'manager-1') return Promise.resolve(null);
+          if (args?.where?.delegatorId === 'manager-1')
+            return Promise.resolve(null);
           return Promise.resolve(crossTeamDelegate); // cross-team leak
         },
       );
@@ -608,7 +626,12 @@ describe('LeavesService', () => {
         department: {
           ...mockUser.department,
           managerId: 'manager-1',
-          manager: { id: 'manager-1', firstName: 'Manager', lastName: 'One', isActive: false },
+          manager: {
+            id: 'manager-1',
+            firstName: 'Manager',
+            lastName: 'One',
+            isActive: false,
+          },
         },
       };
       const fallbackValidator = {
@@ -616,9 +639,13 @@ describe('LeavesService', () => {
         isActive: true,
       };
 
-      mockPrismaService.user.findUnique.mockResolvedValueOnce(userWithDormantManager);
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(
+        userWithDormantManager,
+      );
       // No active delegation for dormant manager
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValueOnce(null);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValueOnce(
+        null,
+      );
       // getRoleCodesWithPermission: uses ROLE_TEMPLATES (in-memory) + prisma.role.findMany
       mockPrismaService.role.findMany.mockResolvedValueOnce([
         { code: 'ADMIN' },
@@ -1312,7 +1339,7 @@ describe('LeavesService', () => {
 
     it('keeps PENDING status when user does not have leaves:self_approve', async () => {
       // CONTRIBUTEUR role has no leaves:self_approve
-      mockGetPermissionsForRole.mockImplementation((role: string) => {
+      mockGetPermissionsForRole.mockImplementation(() => {
         return Promise.resolve(['leaves:read', 'leaves:readAll']);
       });
 
@@ -1331,7 +1358,9 @@ describe('LeavesService', () => {
       // overlap check
       mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
 
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
 
       const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING };
       mockPrismaService.leave.create.mockResolvedValue(pendingLeave);
@@ -1381,7 +1410,9 @@ describe('LeavesService', () => {
       // overlap check
       mockPrismaService.leave.findMany.mockResolvedValueOnce([]);
 
-      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(null);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
 
       // declaredByManager path → APPROVED (existing manager-for-other logic)
       const approvedLeave = {
@@ -1443,10 +1474,14 @@ describe('LeavesService', () => {
 
       // Balance configured globally with only 1 day
       mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
-      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ id: 'g1' });
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        id: 'g1',
+      });
       // resolveAllocatedDays: global = 1 day
       mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
-      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ totalDays: 1 });
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+        totalDays: 1,
+      });
 
       mockPrismaService.leave.findMany
         .mockResolvedValueOnce([]) // overlap
@@ -2807,13 +2842,14 @@ describe('LeavesService', () => {
       //   2nd call  → resolveAllocatedDays (inside getAvailableDays): totalDays=3
       //   (note: the leave itself is excluded via excludeLeaveId so findMany=[])
       mockPrismaService.leaveBalance.findUnique
-        .mockResolvedValueOnce({ id: 'bal-2025' })       // hasConfiguredBalance
-        .mockResolvedValueOnce({                          // resolveAllocatedDays
+        .mockResolvedValueOnce({ id: 'bal-2025' }) // hasConfiguredBalance
+        .mockResolvedValueOnce({
+          // resolveAllocatedDays
           id: 'bal-2025',
           userId: 'user-1',
           leaveTypeId: 'leave-type-1',
           year: 2025,
-          totalDays: 3,                                  // reduced: was 5, now 3
+          totalDays: 3, // reduced: was 5, now 3
         });
 
       // No consumed leaves besides the leave being approved (it is excluded
@@ -2991,7 +3027,10 @@ describe('LeavesService', () => {
   describe('cancel', () => {
     it('should cancel an approved leave', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
-      const cancelledLeave = { ...approvedLeave, status: LeaveStatus.CANCELLED };
+      const cancelledLeave = {
+        ...approvedLeave,
+        status: LeaveStatus.CANCELLED,
+      };
 
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
       mockPrismaService.leave.update.mockResolvedValue(cancelledLeave);
@@ -3189,9 +3228,9 @@ describe('LeavesService', () => {
       };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
 
-      await expect(
-        service.requestCancel('leave-1', 'user-1'),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.requestCancel('leave-1', 'user-1')).rejects.toThrow(
+        ForbiddenException,
+      );
 
       expect(mockAuditPersistence.log).not.toHaveBeenCalled();
       expect(mockPrismaService.leave.update).not.toHaveBeenCalled();
@@ -3222,9 +3261,9 @@ describe('LeavesService', () => {
         .mockResolvedValueOnce(approvedOutside)
         .mockResolvedValueOnce(alreadyRequestedInsideTx);
 
-      await expect(
-        service.requestCancel('leave-1', 'user-1'),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.requestCancel('leave-1', 'user-1')).rejects.toThrow(
+        ConflictException,
+      );
 
       // No status mutation and no audit on the conflict path.
       expect(mockPrismaService.leave.update).not.toHaveBeenCalled();
@@ -3716,90 +3755,84 @@ describe('LeavesService', () => {
       expect(result.pending).toBe(5);
     });
 
-    it(
-      'COR-007 — cross-year leave sums only in-year days (parisYearWindow + splitLeaveByYear)',
-      async () => {
-        const cy = new Date().getFullYear();
-        const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-        mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
-          cpLeaveType,
-        ]);
-        // resolveAllocatedDays: 25 days
-        mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
-          totalDays: 25,
-        });
-        // APPROVED leave spanning Dec 28 cy → Jan 8 cy+1.
-        // Stores days=10 (full span). In-year (cy) workdays = Mon 29, Tue 30
-        // = 2 days (Dec 28 = Sun, Dec 31 = Wed + Jan 1 fall in cy+1).
-        // Exact count varies by year; we only assert 0 < used < 10.
-        const crossStart = new Date(Date.UTC(cy, 11, 28, 12, 0, 0));
-        const crossEnd = new Date(Date.UTC(cy + 1, 0, 8, 12, 0, 0));
-        // PER-002: single bulk query; cross-year leave carries status+leaveTypeId
-        mockPrismaService.leave.findMany.mockResolvedValue([
-          {
-            days: 10,
-            startDate: crossStart,
-            endDate: crossEnd,
-            halfDay: null,
-            status: 'APPROVED',
-            leaveTypeId: mockLeaveTypeConfig.id,
-          },
-        ]);
+    it('COR-007 — cross-year leave sums only in-year days (parisYearWindow + splitLeaveByYear)', async () => {
+      const cy = new Date().getFullYear();
+      const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        cpLeaveType,
+      ]);
+      // resolveAllocatedDays: 25 days
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      // APPROVED leave spanning Dec 28 cy → Jan 8 cy+1.
+      // Stores days=10 (full span). In-year (cy) workdays = Mon 29, Tue 30
+      // = 2 days (Dec 28 = Sun, Dec 31 = Wed + Jan 1 fall in cy+1).
+      // Exact count varies by year; we only assert 0 < used < 10.
+      const crossStart = new Date(Date.UTC(cy, 11, 28, 12, 0, 0));
+      const crossEnd = new Date(Date.UTC(cy + 1, 0, 8, 12, 0, 0));
+      // PER-002: single bulk query; cross-year leave carries status+leaveTypeId
+      mockPrismaService.leave.findMany.mockResolvedValue([
+        {
+          days: 10,
+          startDate: crossStart,
+          endDate: crossEnd,
+          halfDay: null,
+          status: 'APPROVED',
+          leaveTypeId: mockLeaveTypeConfig.id,
+        },
+      ]);
 
-        const result = await service.getLeaveBalance('user-1');
-        const used = result.byType[0].used;
+      const result = await service.getLeaveBalance('user-1');
+      const used = result.byType[0].used;
 
-        // Before fix: Number(l.days) = 10 → fails toBeGreaterThan(0) + toBeLessThan(10)
-        // After fix: splitLeaveByYear in-year workdays only → 1–4 depending on year
-        expect(used).toBeGreaterThan(0);
-        expect(used).toBeLessThan(10);
-      },
-    );
+      // Before fix: Number(l.days) = 10 → fails toBeGreaterThan(0) + toBeLessThan(10)
+      // After fix: splitLeaveByYear in-year workdays only → 1–4 depending on year
+      expect(used).toBeGreaterThan(0);
+      expect(used).toBeLessThan(10);
+    });
 
-    it(
-      'PER-002 — N leave types fire exactly 1 leave.findMany (not 2N)',
-      async () => {
-        // Fail-pre witness: with 2 active leave types, unfixed code calls
-        // leave.findMany 4 times (2 per type). Fixed code: exactly 1 call.
-        const cy = new Date().getFullYear();
-        const cpType = { ...mockLeaveTypeConfig, id: 'lt-cp', code: 'CP' };
-        const rttType = {
-          ...mockLeaveTypeConfig,
-          id: 'lt-rtt',
-          code: 'RTT',
-          name: 'RTT',
-        };
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-        mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
-          cpType,
-          rttType,
-        ]);
-        // resolveAllocatedDays: 25 days for each type
-        mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
-          totalDays: 25,
-        });
-        // Single query returns all leaves with status+leaveTypeId.
-        // Mon from first week of cy, used for approved CP leave fixture.
-        const mon1 = firstMondayOfYear(cy);
-        const end1 = addWorkdays(mon1, 5);
-        mockPrismaService.leave.findMany.mockResolvedValue([
-          {
-            startDate: mon1,
-            endDate: end1,
-            halfDay: null,
-            status: 'APPROVED',
-            leaveTypeId: 'lt-cp',
-          },
-        ]);
+    it('PER-002 — N leave types fire exactly 1 leave.findMany (not 2N)', async () => {
+      // Fail-pre witness: with 2 active leave types, unfixed code calls
+      // leave.findMany 4 times (2 per type). Fixed code: exactly 1 call.
+      const cy = new Date().getFullYear();
+      const cpType = { ...mockLeaveTypeConfig, id: 'lt-cp', code: 'CP' };
+      const rttType = {
+        ...mockLeaveTypeConfig,
+        id: 'lt-rtt',
+        code: 'RTT',
+        name: 'RTT',
+      };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        cpType,
+        rttType,
+      ]);
+      // resolveAllocatedDays: 25 days for each type
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      // Single query returns all leaves with status+leaveTypeId.
+      // Mon from first week of cy, used for approved CP leave fixture.
+      const mon1 = firstMondayOfYear(cy);
+      const end1 = addWorkdays(mon1, 5);
+      mockPrismaService.leave.findMany.mockResolvedValue([
+        {
+          startDate: mon1,
+          endDate: end1,
+          halfDay: null,
+          status: 'APPROVED',
+          leaveTypeId: 'lt-cp',
+        },
+      ]);
 
-        await service.getLeaveBalance('user-1');
+      await service.getLeaveBalance('user-1');
 
-        // RED before fix: called 4 times (2 per type × 2 types).
-        // GREEN after fix: called exactly once (single bulk query).
-        expect(mockPrismaService.leave.findMany).toHaveBeenCalledTimes(1);
-      },
-    );
+      // RED before fix: called 4 times (2 per type × 2 types).
+      // GREEN after fix: called exactly once (single bulk query).
+      expect(mockPrismaService.leave.findMany).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ============================================
@@ -4407,7 +4440,8 @@ describe('LeavesService', () => {
         },
       ]);
 
-      const leaveFindManyCall = mockPrismaService.leave.findMany.mock.calls[0][0];
+      const leaveFindManyCall =
+        mockPrismaService.leave.findMany.mock.calls[0][0];
       // Must restrict to the date span of the uploaded CSV rows
       expect(leaveFindManyCall.where).toHaveProperty('startDate');
       expect(leaveFindManyCall.where).toHaveProperty('endDate');

@@ -97,22 +97,6 @@ const baseTask: PredefinedTask = {
   updatedAt: "2024-01-01T00:00:00Z",
 };
 
-const weeklyRule: PredefinedTaskRecurringRule = {
-  id: "rule-1",
-  predefinedTaskId: "task-1",
-  userId: "u1",
-  recurrenceType: "WEEKLY",
-  dayOfWeek: "MONDAY",
-  period: "FULL_DAY",
-  weekInterval: 1,
-  startDate: "2024-01-01",
-  isActive: true,
-  createdById: "admin",
-  createdAt: "2024-01-01T00:00:00Z",
-  updatedAt: "2024-01-01T00:00:00Z",
-  user: { id: "u1", firstName: "Alice", lastName: "Dupont", email: "a@a.fr" },
-};
-
 const monthlyDayRule: PredefinedTaskRecurringRule = {
   id: "rule-2",
   predefinedTaskId: "task-1",

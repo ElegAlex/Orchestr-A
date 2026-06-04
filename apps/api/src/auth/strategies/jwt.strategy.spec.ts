@@ -96,7 +96,12 @@ describe('JwtStrategy', () => {
 
     it('rejects a token whose iat predates nbf (iat = nbf - 1)', async () => {
       await expect(
-        strategy.validate({ sub: 'u1', login: 'x', role: 'CONTRIBUTEUR', iat: NBF - 1 }),
+        strategy.validate({
+          sub: 'u1',
+          login: 'x',
+          role: 'CONTRIBUTEUR',
+          iat: NBF - 1,
+        }),
       ).rejects.toThrow(UnauthorizedException);
       // Gate short-circuits before the DB fetch.
       expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
@@ -129,7 +134,12 @@ describe('JwtStrategy', () => {
       const bumpSec = 5000;
       mockNotBefore.getNotBefore.mockResolvedValue(bumpSec + 1);
       await expect(
-        strategy.validate({ sub: 'u1', login: 'x', role: 'CONTRIBUTEUR', iat: bumpSec }),
+        strategy.validate({
+          sub: 'u1',
+          login: 'x',
+          role: 'CONTRIBUTEUR',
+          iat: bumpSec,
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 

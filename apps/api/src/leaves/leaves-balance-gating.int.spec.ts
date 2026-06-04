@@ -159,7 +159,11 @@ async function runConcurrentInserts(
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         // P2034 / SQLSTATE 40001 = serialization failure → expected under SSI
-        if (msg.includes('P2034') || msg.includes('40001') || msg.includes('could not serialize')) {
+        if (
+          msg.includes('P2034') ||
+          msg.includes('40001') ||
+          msg.includes('could not serialize')
+        ) {
           return undefined; // absorb — this is the correct rejection
         }
         throw err; // unexpected error — surface it
@@ -238,7 +242,9 @@ describe('TST-009 — Serializable balance gating prevents overdraw (real DB)', 
         total,
         `expected total consumed days (${total}) to be ≤ balance (5)`,
       ).toBeLessThanOrEqual(5);
-      expect(total, 'expected at least one insert to succeed').toBeGreaterThan(0);
+      expect(total, 'expected at least one insert to succeed').toBeGreaterThan(
+        0,
+      );
     },
   );
 });

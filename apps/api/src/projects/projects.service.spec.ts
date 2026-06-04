@@ -603,7 +603,8 @@ describe('ProjectsService', () => {
         mockPrismaService.project.count.mockResolvedValue(0);
 
         await service.findAll(1, 10);
-        const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+        const callArgs = mockPrismaService.project.findMany.mock
+          .calls[0][0] as {
           where: Record<string, unknown>;
         };
         expect(JSON.stringify(callArgs.where)).toContain('"archivedAt":null');
@@ -613,19 +614,39 @@ describe('ProjectsService', () => {
         mockPrismaService.project.findMany.mockResolvedValue([]);
         mockPrismaService.project.count.mockResolvedValue(0);
 
-        await service.findAll(1, 10, undefined, undefined, undefined, undefined, ArchivedFilter.ARCHIVED);
-        const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+        await service.findAll(
+          1,
+          10,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          ArchivedFilter.ARCHIVED,
+        );
+        const callArgs = mockPrismaService.project.findMany.mock
+          .calls[0][0] as {
           where: Record<string, unknown>;
         };
-        expect(JSON.stringify(callArgs.where)).toContain('"archivedAt":{"not":null}');
+        expect(JSON.stringify(callArgs.where)).toContain(
+          '"archivedAt":{"not":null}',
+        );
       });
 
       it('archived=all does not filter on archivedAt', async () => {
         mockPrismaService.project.findMany.mockResolvedValue([]);
         mockPrismaService.project.count.mockResolvedValue(0);
 
-        await service.findAll(1, 10, undefined, undefined, undefined, undefined, ArchivedFilter.ALL);
-        const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+        await service.findAll(
+          1,
+          10,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          ArchivedFilter.ALL,
+        );
+        const callArgs = mockPrismaService.project.findMany.mock
+          .calls[0][0] as {
           where: Record<string, unknown>;
         };
         expect(JSON.stringify(callArgs.where)).not.toContain('archivedAt');
@@ -642,7 +663,8 @@ describe('ProjectsService', () => {
 
         await service.findAll(1, 10);
 
-        const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+        const callArgs = mockPrismaService.project.findMany.mock
+          .calls[0][0] as {
           include: Record<string, unknown>;
         };
         expect(callArgs.include).not.toHaveProperty('tasks');
@@ -651,7 +673,10 @@ describe('ProjectsService', () => {
       it('task.groupBy is called with all project IDs on the page (single fan-out)', async () => {
         const project1 = { ...mockProject, id: 'p-1' };
         const project2 = { ...mockProject, id: 'p-2' };
-        mockPrismaService.project.findMany.mockResolvedValue([project1, project2]);
+        mockPrismaService.project.findMany.mockResolvedValue([
+          project1,
+          project2,
+        ]);
         mockPrismaService.project.count.mockResolvedValue(2);
         mockPrismaService.task.groupBy.mockResolvedValue([
           { projectId: 'p-1', status: 'DONE', _count: { _all: 3 } },
@@ -676,7 +701,9 @@ describe('ProjectsService', () => {
       });
 
       it('progress is 0 when project has no tasks (groupBy returns no rows)', async () => {
-        mockPrismaService.project.findMany.mockResolvedValue([{ ...mockProject, id: 'p-empty' }]);
+        mockPrismaService.project.findMany.mockResolvedValue([
+          { ...mockProject, id: 'p-empty' },
+        ]);
         mockPrismaService.project.count.mockResolvedValue(1);
         mockPrismaService.task.groupBy.mockResolvedValue([]);
 
@@ -862,7 +889,10 @@ describe('ProjectsService', () => {
 
     // COR-016 — update() must reject all mutations on CANCELLED projects
     it('COR-016: should throw ConflictException when updating a CANCELLED project', async () => {
-      const cancelledProject = { ...mockProject, status: ProjectStatus.CANCELLED };
+      const cancelledProject = {
+        ...mockProject,
+        status: ProjectStatus.CANCELLED,
+      };
       mockPrismaService.project.findUnique.mockResolvedValue(cancelledProject);
 
       await expect(
@@ -873,7 +903,10 @@ describe('ProjectsService', () => {
     });
 
     it('COR-016: should throw ConflictException when trying to revive a CANCELLED project via status change', async () => {
-      const cancelledProject = { ...mockProject, status: ProjectStatus.CANCELLED };
+      const cancelledProject = {
+        ...mockProject,
+        status: ProjectStatus.CANCELLED,
+      };
       mockPrismaService.project.findUnique.mockResolvedValue(cancelledProject);
 
       await expect(
@@ -893,8 +926,12 @@ describe('ProjectsService', () => {
           callback(mockPrismaService),
       );
       mockPrismaService.project.update.mockResolvedValue(updatedProject);
-      mockPrismaService.projectClient.deleteMany.mockResolvedValue({ count: 0 });
-      mockPrismaService.projectClient.createMany.mockResolvedValue({ count: 1 });
+      mockPrismaService.projectClient.deleteMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.projectClient.createMany.mockResolvedValue({
+        count: 1,
+      });
 
       await service.update('project-1', { clientIds: ['client-1'] } as any);
 
@@ -1465,9 +1502,9 @@ describe('ProjectsService', () => {
       // (because new Date() still reads the real clock → 50d passes lower
       // bound, and Date.now()+7d → 107d passes upper bound too).
       const realNow = Date.now();
-      const spyNow = vi.spyOn(Date, 'now').mockReturnValue(
-        realNow + 100 * 24 * 60 * 60 * 1000,
-      );
+      const spyNow = vi
+        .spyOn(Date, 'now')
+        .mockReturnValue(realNow + 100 * 24 * 60 * 60 * 1000);
       try {
         mockPrismaService.project.findUnique.mockResolvedValue({
           ...projectWithData,
@@ -1611,7 +1648,10 @@ describe('ProjectsService', () => {
         ...mockProject,
         archivedAt: null,
       });
-      const result = await service.findOne('project-1', { id: 'user-1', role: 'MANAGER' });
+      const result = await service.findOne('project-1', {
+        id: 'user-1',
+        role: 'MANAGER',
+      });
       expect(result.canArchive).toBe(true);
       expect(result.canUnarchive).toBe(false);
     });
@@ -1621,7 +1661,10 @@ describe('ProjectsService', () => {
         ...mockProject,
         archivedAt: new Date(),
       });
-      const result = await service.findOne('project-1', { id: 'user-1', role: 'MANAGER' });
+      const result = await service.findOne('project-1', {
+        id: 'user-1',
+        role: 'MANAGER',
+      });
       expect(result.canArchive).toBe(false);
       expect(result.canUnarchive).toBe(true);
     });
@@ -1634,7 +1677,10 @@ describe('ProjectsService', () => {
         ...mockProject,
         archivedAt: null,
       });
-      const result = await service.findOne('project-1', { id: 'user-1', role: 'OBSERVATEUR' });
+      const result = await service.findOne('project-1', {
+        id: 'user-1',
+        role: 'OBSERVATEUR',
+      });
       expect(result.canArchive).toBe(false);
       expect(result.canUnarchive).toBe(false);
     });
@@ -1648,7 +1694,9 @@ describe('ProjectsService', () => {
       expect(result.canArchive).toBe(false);
       expect(result.canUnarchive).toBe(false);
       // No permissions lookup when no user
-      expect(mockPermissionsService.getPermissionsForRole).not.toHaveBeenCalled();
+      expect(
+        mockPermissionsService.getPermissionsForRole,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -1728,7 +1776,9 @@ describe('ProjectsService', () => {
           entityType: 'Project',
           entityId: 'project-1',
           actorId: 'user-1',
-          payload: expect.objectContaining({ previousArchivedAt: expect.any(Date) }),
+          payload: expect.objectContaining({
+            previousArchivedAt: expect.any(Date),
+          }),
         }),
         expect.anything(), // tx client (DAT-006: audit is inside the same $transaction)
       );
@@ -1835,7 +1885,9 @@ describe('ProjectsService', () => {
     beforeEach(() => {
       // PER-003: batched path — findMany (existing today) + createMany (new only)
       mockPrismaService.projectSnapshot.findMany.mockResolvedValue([]);
-      mockPrismaService.projectSnapshot.createMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.projectSnapshot.createMany.mockResolvedValue({
+        count: 0,
+      });
       // legacy stubs — no longer called by captureSnapshots, kept to detect regressions
       mockPrismaService.projectSnapshot.upsert.mockImplementation(
         ({ create: data }) => Promise.resolve({ id: 'snap-id', ...data }),
@@ -1882,7 +1934,9 @@ describe('ProjectsService', () => {
       );
 
       // Exactly one createMany (not N individual writes)
-      expect(mockPrismaService.projectSnapshot.createMany).toHaveBeenCalledTimes(1);
+      expect(
+        mockPrismaService.projectSnapshot.createMany,
+      ).toHaveBeenCalledTimes(1);
       const createManyCall =
         mockPrismaService.projectSnapshot.createMany.mock.calls[0][0];
       expect(createManyCall.skipDuplicates).toBe(true);
@@ -1953,7 +2007,9 @@ describe('ProjectsService', () => {
 
       // PER-003: single createMany covers all projects
       expect(result).toEqual({ captured: 2 });
-      expect(mockPrismaService.projectSnapshot.createMany).toHaveBeenCalledTimes(1);
+      expect(
+        mockPrismaService.projectSnapshot.createMany,
+      ).toHaveBeenCalledTimes(1);
     });
 
     it('rounds progress to nearest integer', async () => {
@@ -2021,7 +2077,9 @@ describe('ProjectsService', () => {
       const result = await service.captureSnapshots();
 
       // All projects already snapshotted → createMany not called, captured=0
-      expect(mockPrismaService.projectSnapshot.createMany).not.toHaveBeenCalled();
+      expect(
+        mockPrismaService.projectSnapshot.createMany,
+      ).not.toHaveBeenCalled();
       expect(result).toEqual({ captured: 0 });
     });
 
@@ -2049,8 +2107,8 @@ describe('ProjectsService', () => {
       expect(createManyCall.data[0]).toMatchObject({
         projectId: 'p-null-due',
         milestonesReached: 0,
-        milestonesOverdue: 0,   // null dueDate must NOT be counted as overdue
-        milestonesUpcoming: 0,  // null dueDate must NOT be counted as upcoming
+        milestonesOverdue: 0, // null dueDate must NOT be counted as overdue
+        milestonesUpcoming: 0, // null dueDate must NOT be counted as upcoming
       });
     });
 

@@ -109,9 +109,14 @@ describe('PermissionsService — V4', () => {
       redis.get.mockRejectedValue(new Error('Redis read fail'));
       prisma.role.findUnique.mockResolvedValue({ templateKey: 'ADMIN' });
       const loggerWarnSpy = vi
-        .spyOn((service as unknown as { logger: { warn: unknown } }).logger, 'warn')
+        .spyOn(
+          (service as unknown as { logger: { warn: unknown } }).logger,
+          'warn',
+        )
         .mockImplementation(() => undefined);
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => undefined);
       await service.getPermissionsForRole('ADMIN');
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('Redis read error'),
@@ -125,9 +130,14 @@ describe('PermissionsService — V4', () => {
     it('OBS-022: Redis del error logs via this.logger.warn, not console.warn', async () => {
       redis.del.mockRejectedValue(new Error('Redis del fail'));
       const loggerWarnSpy = vi
-        .spyOn((service as unknown as { logger: { warn: unknown } }).logger, 'warn')
+        .spyOn(
+          (service as unknown as { logger: { warn: unknown } }).logger,
+          'warn',
+        )
         .mockImplementation(() => undefined);
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => undefined);
       await service.invalidateRoleCache('ADMIN');
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('Redis del error'),
@@ -142,9 +152,14 @@ describe('PermissionsService — V4', () => {
       redis.setex.mockRejectedValue(new Error('Redis write fail'));
       prisma.role.findUnique.mockResolvedValue({ templateKey: 'ADMIN' });
       const loggerWarnSpy = vi
-        .spyOn((service as unknown as { logger: { warn: unknown } }).logger, 'warn')
+        .spyOn(
+          (service as unknown as { logger: { warn: unknown } }).logger,
+          'warn',
+        )
         .mockImplementation(() => undefined);
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => undefined);
       await service.getPermissionsForRole('ADMIN');
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('Redis write error'),

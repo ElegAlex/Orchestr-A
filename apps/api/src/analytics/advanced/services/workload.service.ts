@@ -31,7 +31,9 @@ export class WorkloadService {
   ): Promise<WorkloadUserDto[]> {
     const limit = query.limit ?? 15;
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
-    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
+    const archivedClause = archivedWhere(
+      query.archived ?? ArchivedFilter.ACTIVE,
+    );
     const activeTaskWhere: Prisma.TaskWhereInput = {
       status: { in: [...ACTIVE_STATUSES] },
       project: { AND: [projectScope, archivedClause] },
@@ -72,14 +74,14 @@ export class WorkloadService {
       const taskMap = new Map<string, TaskStatus>();
 
       for (const t of user.tasks) {
-        const status = t.status as TaskStatus;
+        const status = t.status;
         if ((ACTIVE_STATUSES as readonly TaskStatus[]).includes(status)) {
           taskMap.set(t.id, status);
         }
       }
       for (const ta of user.taskAssignments) {
         if (!taskMap.has(ta.task.id)) {
-          const status = ta.task.status as TaskStatus;
+          const status = ta.task.status;
           if ((ACTIVE_STATUSES as readonly TaskStatus[]).includes(status)) {
             taskMap.set(ta.task.id, status);
           }

@@ -45,7 +45,9 @@ export class SnapshotsQueryService {
     currentUser?: AccessUser,
   ): Promise<SnapshotsResponseDto> {
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
-    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
+    const archivedClause = archivedWhere(
+      query.archived ?? ArchivedFilter.ACTIVE,
+    );
     // ── 1. Resolve active projects ─────────────────────────────────────────
     const where: Prisma.ProjectWhereInput = {
       status: 'ACTIVE',

@@ -41,9 +41,10 @@ async function expectCheckViolation(
   } catch (err) {
     message = err instanceof Error ? err.message : String(err);
   }
-  expect(message, 'expected a check_violation (23514) but the INSERT was accepted').toMatch(
-    /23514/,
-  );
+  expect(
+    message,
+    'expected a check_violation (23514) but the INSERT was accepted',
+  ).toMatch(/23514/);
   expect(message).toContain(constraint);
 }
 
@@ -68,7 +69,9 @@ describe('DAT-003 — date-range CHECK constraints (real DB)', () => {
       data: { code: `DAT003-${randomUUID()}`, name: 'DAT-003 witness type' },
     });
     leaveTypeId = leaveType.id;
-    const project = await db.project.create({ data: { name: 'DAT-003 witness project' } });
+    const project = await db.project.create({
+      data: { name: 'DAT-003 witness project' },
+    });
     projectId = project.id;
   });
 

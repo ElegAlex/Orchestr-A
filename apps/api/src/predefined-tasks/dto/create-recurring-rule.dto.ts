@@ -76,10 +76,10 @@ export class IsValidRecurrenceConfigConstraint
  * Décorateur de classe qui valide la cohérence entre recurrenceType et les champs
  * dayOfWeek / monthlyOrdinal / monthlyDayOfMonth.
  */
-export function IsValidRecurrenceConfig(
-  validationOptions?: ValidationOptions,
-): ClassDecorator {
-  return function (target: Function) {
+export function IsValidRecurrenceConfig(validationOptions?: ValidationOptions) {
+  // Class decorator: `target` is the decorated class constructor. Typed as a
+  // constructor rather than the bare `Function` type (no-unsafe-function-type).
+  return function (target: new (...args: any[]) => object) {
     registerDecorator({
       name: 'isValidRecurrenceConfig',
       target,
@@ -122,7 +122,8 @@ export class CreateRecurringRuleDto {
   recurrenceType: RecurrenceType = RecurrenceType.WEEKLY;
 
   @ApiPropertyOptional({
-    description: 'Jour de la semaine (0=Lundi, ..., 6=Dimanche). Requis pour WEEKLY et MONTHLY_ORDINAL.',
+    description:
+      'Jour de la semaine (0=Lundi, ..., 6=Dimanche). Requis pour WEEKLY et MONTHLY_ORDINAL.',
     example: 0,
     minimum: 0,
     maximum: 6,

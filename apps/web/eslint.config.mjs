@@ -19,7 +19,16 @@ const eslintConfig = defineConfig([
       // Strict rules - all errors must be fixed
       "@typescript-eslint/no-explicit-any": "error",
       "react/no-unescaped-entities": "error",
-      "@typescript-eslint/no-unused-vars": "error",
+      // Honour the `_`-prefix convention for intentionally-unused bindings
+      // (e.g. `_params`, `_code`, `_leaves`); genuinely-dead vars still error.
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
       "@typescript-eslint/no-require-imports": "error",
     },
   },

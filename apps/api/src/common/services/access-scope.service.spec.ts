@@ -12,9 +12,12 @@ describe('AccessScopeService.userReadWhere', () => {
   beforeEach(() => {
     getPermissionsForRole.mockReset();
     getPermissionsForRole.mockResolvedValue([]);
-    service = new AccessScopeService({} as never, {
-      getPermissionsForRole,
-    } as never);
+    service = new AccessScopeService(
+      {} as never,
+      {
+        getPermissionsForRole,
+      } as never,
+    );
   });
 
   it('returns a sentinel no-access where when there is no caller', async () => {
@@ -62,9 +65,12 @@ describe('AccessScopeService.taskReadWhere — SEC-028 confidential gate', () =>
   beforeEach(() => {
     getPermissionsForRole.mockReset();
     getPermissionsForRole.mockResolvedValue([]);
-    service = new AccessScopeService({} as never, {
-      getPermissionsForRole,
-    } as never);
+    service = new AccessScopeService(
+      {} as never,
+      {
+        getPermissionsForRole,
+      } as never,
+    );
   });
 
   it('returns sentinel no-access where when there is no caller', async () => {
@@ -88,7 +94,10 @@ describe('AccessScopeService.taskReadWhere — SEC-028 confidential gate', () =>
 
     // The assigneeId branch MUST include confidential:false so that a
     // confidential task reached only via reassignment is excluded.
-    expect(where.OR).toContainEqual({ assigneeId: caller.id, confidential: false });
+    expect(where.OR).toContainEqual({
+      assigneeId: caller.id,
+      confidential: false,
+    });
 
     // The multi-assignee (TaskAssignee) branch MUST also be gated.
     expect(where.OR).toContainEqual({
@@ -104,9 +113,7 @@ describe('AccessScopeService.taskReadWhere — SEC-028 confidential gate', () =>
     const where = await service.taskReadWhere(caller);
 
     // The project-role branch must exist and must NOT carry a confidential filter
-    const projectBranch = (where.OR as object[]).find(
-      (b) => 'project' in b,
-    );
+    const projectBranch = (where.OR as object[]).find((b) => 'project' in b);
     expect(projectBranch).toBeDefined();
     expect(projectBranch).not.toHaveProperty('confidential');
   });

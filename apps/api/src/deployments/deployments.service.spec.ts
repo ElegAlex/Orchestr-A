@@ -22,16 +22,15 @@ describe('DeploymentsService', () => {
   beforeEach(() => {
     prisma = {
       deployment: { create: vi.fn().mockResolvedValue({ id: 'dep-1' }) },
-      $queryRaw: vi.fn().mockResolvedValue([
-        { migration_name: '20260525190000_audit_logs' },
-        { migration_name: '20260525200000_dat007' },
-      ]),
+      $queryRaw: vi
+        .fn()
+        .mockResolvedValue([
+          { migration_name: '20260525190000_audit_logs' },
+          { migration_name: '20260525200000_dat007' },
+        ]),
     };
     audit = { log: vi.fn() };
-    service = new DeploymentsService(
-      prisma as never,
-      audit as never,
-    );
+    service = new DeploymentsService(prisma as never, audit as never);
   });
 
   afterEach(() => {
@@ -133,7 +132,10 @@ describe('DeploymentsService', () => {
     it('resolves even when the deployments write rejects', async () => {
       vi.stubEnv('RELEASE_SHA', 'beadfed');
       const errSpy = vi
-        .spyOn((service as unknown as { logger: { error: () => void } }).logger, 'error')
+        .spyOn(
+          (service as unknown as { logger: { error: () => void } }).logger,
+          'error',
+        )
         .mockImplementation(() => {});
       prisma.deployment.create.mockRejectedValueOnce(new Error('chain hiccup'));
 

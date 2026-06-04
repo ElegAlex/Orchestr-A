@@ -99,12 +99,24 @@ describe('RecentActivityService', () => {
 
     mockPrisma.task.findMany.mockResolvedValue([
       // Within window → counted
-      makeTask({ status: 'DONE', updatedAt: new Date(windowStart.getTime() + 1000) }),
-      makeTask({ status: 'DONE', updatedAt: new Date(windowStart.getTime() + 2000) }),
+      makeTask({
+        status: 'DONE',
+        updatedAt: new Date(windowStart.getTime() + 1000),
+      }),
+      makeTask({
+        status: 'DONE',
+        updatedAt: new Date(windowStart.getTime() + 2000),
+      }),
       // DONE but before the window → NOT counted
-      makeTask({ status: 'DONE', updatedAt: new Date(windowStart.getTime() - 1000) }),
+      makeTask({
+        status: 'DONE',
+        updatedAt: new Date(windowStart.getTime() - 1000),
+      }),
       // Not DONE but updatedAt in window → NOT counted
-      makeTask({ status: 'IN_PROGRESS', updatedAt: new Date(windowStart.getTime() + 1000) }),
+      makeTask({
+        status: 'IN_PROGRESS',
+        updatedAt: new Date(windowStart.getTime() + 1000),
+      }),
     ]);
 
     const result = await service.getRecentActivity({ days: 30 });
@@ -122,10 +134,19 @@ describe('RecentActivityService', () => {
 
     mockPrisma.task.findMany.mockResolvedValue([
       // Within window
-      makeTask({ status: 'TODO', createdAt: new Date(windowStart.getTime() + 1000) }),
-      makeTask({ status: 'DONE', createdAt: new Date(windowStart.getTime() + 2000) }),
+      makeTask({
+        status: 'TODO',
+        createdAt: new Date(windowStart.getTime() + 1000),
+      }),
+      makeTask({
+        status: 'DONE',
+        createdAt: new Date(windowStart.getTime() + 2000),
+      }),
       // Before window → NOT counted
-      makeTask({ status: 'TODO', createdAt: new Date(windowStart.getTime() - 1000) }),
+      makeTask({
+        status: 'TODO',
+        createdAt: new Date(windowStart.getTime() - 1000),
+      }),
     ]);
 
     const result = await service.getRecentActivity({ days: 30 });
@@ -231,7 +252,9 @@ describe('RecentActivityService', () => {
     const windowStart = new Date(Date.UTC(2026, 3, 17, 0, 0, 0)); // 2026-04-17
 
     // One completion on the second bucket day
-    const completionDate = new Date(windowStart.getTime() + 1 * 24 * 60 * 60 * 1000); // 2026-04-18
+    const completionDate = new Date(
+      windowStart.getTime() + 1 * 24 * 60 * 60 * 1000,
+    ); // 2026-04-18
     mockPrisma.task.findMany.mockResolvedValue([
       makeTask({ status: 'DONE', updatedAt: completionDate }),
     ]);
@@ -257,9 +280,18 @@ describe('RecentActivityService', () => {
     const windowStart = new Date(Date.UTC(2026, 3, 17, 0, 0, 0)); // 2026-04-17
 
     mockPrisma.task.findMany.mockResolvedValue([
-      makeTask({ status: 'DONE', updatedAt: new Date(windowStart.getTime() + 1000) }),
-      makeTask({ status: 'DONE', updatedAt: new Date(windowStart.getTime() + 2000) }),
-      makeTask({ status: 'DONE', updatedAt: new Date(windowStart.getTime() + 1 * 24 * 60 * 60 * 1000) }),
+      makeTask({
+        status: 'DONE',
+        updatedAt: new Date(windowStart.getTime() + 1000),
+      }),
+      makeTask({
+        status: 'DONE',
+        updatedAt: new Date(windowStart.getTime() + 2000),
+      }),
+      makeTask({
+        status: 'DONE',
+        updatedAt: new Date(windowStart.getTime() + 1 * 24 * 60 * 60 * 1000),
+      }),
     ]);
 
     const result = await service.getRecentActivity({ days: 7 });
@@ -359,7 +391,11 @@ describe('RecentActivityService', () => {
 
     await service.getRecentActivity({ days: 30 });
 
-    const callArgs = mockPrisma.task.findMany.mock.calls[0][0] as { where: { project: unknown } };
-    expect(JSON.stringify(callArgs.where.project)).toContain('"archivedAt":null');
+    const callArgs = mockPrisma.task.findMany.mock.calls[0][0] as {
+      where: { project: unknown };
+    };
+    expect(JSON.stringify(callArgs.where.project)).toContain(
+      '"archivedAt":null',
+    );
   });
 });

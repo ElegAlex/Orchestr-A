@@ -192,8 +192,8 @@ describe('WorkloadService', () => {
 
     expect(result).toHaveLength(3);
     expect(result[0].userId).toBe('u-high'); // 3
-    expect(result[1].userId).toBe('u-mid');  // 2
-    expect(result[2].userId).toBe('u-low');  // 1
+    expect(result[1].userId).toBe('u-mid'); // 2
+    expect(result[2].userId).toBe('u-low'); // 1
   });
 
   // 5b. Stable tiebreaker: alphabetical by name when totals are equal

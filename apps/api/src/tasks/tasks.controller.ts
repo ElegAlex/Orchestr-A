@@ -202,7 +202,8 @@ export class TasksController {
   async exportProjectTasks(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+    @Req()
+    req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
     @Res() reply: FastifyReply,
   ) {
     const { csv, filename } = await this.tasksService.exportProjectTasksCsv(

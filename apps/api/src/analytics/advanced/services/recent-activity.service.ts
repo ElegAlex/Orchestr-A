@@ -29,7 +29,9 @@ export class RecentActivityService {
     const days = query.days ?? 30;
     const now = new Date();
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
-    const archivedClause = archivedWhere(query.archived ?? ArchivedFilter.ACTIVE);
+    const archivedClause = archivedWhere(
+      query.archived ?? ArchivedFilter.ACTIVE,
+    );
 
     // Single query — orphan tasks (null projectId) are implicitly excluded
     // because project: { status: 'ACTIVE' } only matches tasks with a project.
@@ -85,7 +87,11 @@ export class RecentActivityService {
       }
 
       // overdue = not DONE AND endDate in the past (null endDate excluded naturally by Prisma/JS)
-      if (task.status !== TaskStatus.DONE && task.endDate !== null && task.endDate < now) {
+      if (
+        task.status !== TaskStatus.DONE &&
+        task.endDate !== null &&
+        task.endDate < now
+      ) {
         overdue++;
       }
     }

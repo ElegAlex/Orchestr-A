@@ -30,7 +30,8 @@ export class AnalyticsQueryDto {
   @ApiProperty({
     enum: ArchivedFilter,
     default: ArchivedFilter.ACTIVE,
-    description: 'Include archived projects in analytics (default: active only)',
+    description:
+      'Include archived projects in analytics (default: active only)',
     required: false,
   })
   @IsOptional()

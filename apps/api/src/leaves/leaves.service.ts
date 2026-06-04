@@ -313,10 +313,7 @@ export class LeavesService {
    * are harmless because the cursor only probes keys within `[start, end]`.
    * Holidays flagged `isWorkDay` (e.g. a worked bank holiday) are excluded.
    */
-  private async getHolidayKeySet(
-    start: Date,
-    end: Date,
-  ): Promise<Set<DayKey>> {
+  private async getHolidayKeySet(start: Date, end: Date): Promise<Set<DayKey>> {
     const from = new Date(start);
     from.setUTCDate(from.getUTCDate() - 1);
     const to = new Date(end);
@@ -326,9 +323,7 @@ export class LeavesService {
       to.toISOString(),
     );
     return new Set(
-      holidays
-        .filter((h) => !h.isWorkDay)
-        .map((h) => parisDayKey(h.date)),
+      holidays.filter((h) => !h.isWorkDay).map((h) => parisDayKey(h.date)),
     );
   }
 
@@ -342,7 +337,6 @@ export class LeavesService {
   ) {
     const {
       leaveTypeId,
-      type,
       startDate,
       endDate,
       halfDay,
@@ -518,7 +512,10 @@ export class LeavesService {
       ? (leaveTypeConfig.code as LeaveType)
       : LeaveType.OTHER;
     // COR-021 — warn when code is unknown so silent OTHER-merge is surfaced.
-    if (enumType === LeaveType.OTHER && leaveTypeConfig.code !== LeaveType.OTHER) {
+    if (
+      enumType === LeaveType.OTHER &&
+      leaveTypeConfig.code !== LeaveType.OTHER
+    ) {
       this.logger.warn(
         `leaveTypeConfig.code "${leaveTypeConfig.code}" is not a known LeaveType enum value; falling back to OTHER (leaveTypeId=${leaveTypeConfig.id})`,
       );
@@ -634,7 +631,15 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
+          leaveType: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
           validator: {
             select: {
               id: true,
@@ -708,7 +713,10 @@ export class LeavesService {
     // An any-active-delegate query is the root cause — a delegate set up by a
     // manager of department B must never become the validator for dept A users.
     const today = new Date();
-    if (user.department?.managerId && user.department.manager?.isActive !== false) {
+    if (
+      user.department?.managerId &&
+      user.department.manager?.isActive !== false
+    ) {
       const managerId = user.department.managerId;
       const activeDelegate =
         await this.prisma.leaveValidationDelegate.findFirst({
@@ -811,7 +819,15 @@ export class LeavesService {
               },
             },
           },
-          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
+          leaveType: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
           validator: {
             select: {
               id: true,
@@ -900,7 +916,15 @@ export class LeavesService {
               },
             },
           },
-          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
+          leaveType: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
           validator: {
             select: {
               id: true,
@@ -962,7 +986,15 @@ export class LeavesService {
               },
             },
           },
-          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
+          leaveType: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
           validator: {
             select: {
               id: true,
@@ -1079,7 +1111,9 @@ export class LeavesService {
             email: true,
           },
         },
-        leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
+        leaveType: {
+          select: { id: true, code: true, name: true, color: true, icon: true },
+        },
         validator: {
           select: {
             id: true,
@@ -1148,7 +1182,9 @@ export class LeavesService {
             },
           },
         },
-        leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
+        leaveType: {
+          select: { id: true, code: true, name: true, color: true, icon: true },
+        },
         validator: {
           select: {
             id: true,
@@ -1240,15 +1276,8 @@ export class LeavesService {
       );
     }
 
-    const {
-      type,
-      startDate,
-      endDate,
-      halfDay,
-      startHalfDay,
-      endHalfDay,
-      reason,
-    } = updateLeaveDto;
+    const { startDate, endDate, halfDay, startHalfDay, endHalfDay, reason } =
+      updateLeaveDto;
     const effectiveHalfDay = halfDay || startHalfDay;
 
     // Recalculer les jours si les dates changent
@@ -1408,7 +1437,15 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
+          leaveType: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
           validator: {
             select: {
               id: true,
@@ -1631,9 +1668,8 @@ export class LeavesService {
       id: actorId,
       roleCode,
       templateKey: actor?.templateKey ?? null,
-      permissions: await this.permissionsService.getPermissionsForRole(
-        roleCode,
-      ),
+      permissions:
+        await this.permissionsService.getPermissionsForRole(roleCode),
     };
   }
 
@@ -1709,118 +1745,126 @@ export class LeavesService {
     let updatedLeave: Awaited<ReturnType<typeof this.prisma.$transaction>>;
     try {
       updatedLeave = await this.prisma.$transaction(async (tx) => {
-      const current = await tx.leave.findUnique({ where: { id } });
-      if (!current) {
-        throw new NotFoundException('Demande de congé introuvable');
-      }
-      if (current.status !== LeaveStatus.PENDING) {
-        throw new ConflictException(
-          'La demande de congé a été modifiée pendant le traitement. Veuillez réessayer.',
-        );
-      }
-
-      // COR-008 — Re-validate the allocation inside the tx so that a balance
-      // reduction between PENDING creation and validator approval is caught
-      // before APPROVED is written. Uses excludeLeaveId (mirror of update())
-      // so the PENDING leave being approved does not count against itself in
-      // usedThisYear (getAvailableDays counts PENDING leaves).
-      for (const bucket of approveYearBuckets) {
-        const hasBalance = await this.hasConfiguredBalance(
-          current.userId,
-          current.leaveTypeId,
-          bucket.year,
-          tx,
-        );
-        if (!hasBalance) continue;
-        const available = await this.getAvailableDays(
-          current.userId,
-          current.leaveTypeId,
-          bucket.year,
-          { excludeLeaveId: id },
-          tx,
-        );
-        if (available < bucket.workDays) {
+        const current = await tx.leave.findUnique({ where: { id } });
+        if (!current) {
+          throw new NotFoundException('Demande de congé introuvable');
+        }
+        if (current.status !== LeaveStatus.PENDING) {
           throw new ConflictException(
-            `Solde devenu insuffisant pour approuver cette demande en ${bucket.year} : ` +
-              `${bucket.workDays} jours demandés, ${available} jours disponibles. ` +
-              `Veuillez ajuster le solde et réessayer.`,
+            'La demande de congé a été modifiée pendant le traitement. Veuillez réessayer.',
           );
         }
-      }
 
-      const beforeSnapshot = {
-        status: current.status,
-        validatedById: current.validatedById,
-        validatedAt: current.validatedAt?.toISOString() ?? null,
-        validationComment: current.validationComment,
-      };
+        // COR-008 — Re-validate the allocation inside the tx so that a balance
+        // reduction between PENDING creation and validator approval is caught
+        // before APPROVED is written. Uses excludeLeaveId (mirror of update())
+        // so the PENDING leave being approved does not count against itself in
+        // usedThisYear (getAvailableDays counts PENDING leaves).
+        for (const bucket of approveYearBuckets) {
+          const hasBalance = await this.hasConfiguredBalance(
+            current.userId,
+            current.leaveTypeId,
+            bucket.year,
+            tx,
+          );
+          if (!hasBalance) continue;
+          const available = await this.getAvailableDays(
+            current.userId,
+            current.leaveTypeId,
+            bucket.year,
+            { excludeLeaveId: id },
+            tx,
+          );
+          if (available < bucket.workDays) {
+            throw new ConflictException(
+              `Solde devenu insuffisant pour approuver cette demande en ${bucket.year} : ` +
+                `${bucket.workDays} jours demandés, ${available} jours disponibles. ` +
+                `Veuillez ajuster le solde et réessayer.`,
+            );
+          }
+        }
 
-      const updated = await tx.leave.update({
-        where: { id },
-        data: {
-          status: LeaveStatus.APPROVED,
-          validatedById: validatorId,
-          validatedAt: new Date(),
-          validationComment: comment,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              avatarPreset: true,
-              email: true,
+        const beforeSnapshot = {
+          status: current.status,
+          validatedById: current.validatedById,
+          validatedAt: current.validatedAt?.toISOString() ?? null,
+          validationComment: current.validationComment,
+        };
+
+        const updated = await tx.leave.update({
+          where: { id },
+          data: {
+            status: LeaveStatus.APPROVED,
+            validatedById: validatorId,
+            validatedAt: new Date(),
+            validationComment: comment,
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+                avatarPreset: true,
+                email: true,
+              },
+            },
+            leaveType: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                color: true,
+                icon: true,
+              },
+            },
+            validatedBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+                avatarPreset: true,
+              },
             },
           },
-          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
-          validatedBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              avatarPreset: true,
+        });
+
+        await this.auditPersistence.log({
+          action: AuditAction.LEAVE_APPROVED,
+          entityType: 'Leave',
+          entityId: id,
+          actorId: validatorId,
+          payload: {
+            // OBS-003 — actor + subject snapshots so an auditor can answer "who
+            // approved leave X, with which role/permissions at the time". ip/ua
+            // conditional (mirrors OBS-006). requestId omitted: no request-id
+            // propagation exists yet (OBS-009 open — not implemented inline).
+            actor: actorSnapshot,
+            subject: { leaveId: id, userId: current.userId },
+            ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
+            ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
+            targetUserId: current.userId,
+            validatorAssigned: current.validatorId,
+            // Wave 3 : `selfApproved` est figé à la création (true seulement si
+            // `leaves:self_approve` a écrit directement APPROVED). Sur la voie
+            // approve() le gate PENDING garantit qu'il vaut false ici, mais on
+            // remonte la valeur lue pour que l'audit reste honnête à 100% si
+            // un import/seed inattendu changeait l'invariant.
+            selfApproved: current.selfApproved,
+            before: beforeSnapshot,
+            after: {
+              status: updated.status,
+              validatedById: updated.validatedById,
+              validatedAt: updated.validatedAt?.toISOString() ?? null,
+              validationComment: updated.validationComment,
             },
           },
-        },
-      });
+        });
 
-      await this.auditPersistence.log({
-        action: AuditAction.LEAVE_APPROVED,
-        entityType: 'Leave',
-        entityId: id,
-        actorId: validatorId,
-        payload: {
-          // OBS-003 — actor + subject snapshots so an auditor can answer "who
-          // approved leave X, with which role/permissions at the time". ip/ua
-          // conditional (mirrors OBS-006). requestId omitted: no request-id
-          // propagation exists yet (OBS-009 open — not implemented inline).
-          actor: actorSnapshot,
-          subject: { leaveId: id, userId: current.userId },
-          ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
-          ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
-          targetUserId: current.userId,
-          validatorAssigned: current.validatorId,
-          // Wave 3 : `selfApproved` est figé à la création (true seulement si
-          // `leaves:self_approve` a écrit directement APPROVED). Sur la voie
-          // approve() le gate PENDING garantit qu'il vaut false ici, mais on
-          // remonte la valeur lue pour que l'audit reste honnête à 100% si
-          // un import/seed inattendu changeait l'invariant.
-          selfApproved: current.selfApproved,
-          before: beforeSnapshot,
-          after: {
-            status: updated.status,
-            validatedById: updated.validatedById,
-            validatedAt: updated.validatedAt?.toISOString() ?? null,
-            validationComment: updated.validationComment,
-          },
-        },
+        return updated;
       });
-
-      return updated;
-    });
     } catch (err) {
       if (isLeaveOverlapViolation(err)) {
         // Same message shape as checkOverlap() (used by create/update) so the
@@ -1913,7 +1957,15 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
+          leaveType: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
           validatedBy: {
             select: {
               id: true,
@@ -2045,7 +2097,15 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
+          leaveType: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
         },
       });
 
@@ -2145,7 +2205,15 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
+          leaveType: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
         },
       });
 
@@ -2237,7 +2305,15 @@ export class LeavesService {
               email: true,
             },
           },
-          leaveType: { select: { id: true, code: true, name: true, color: true, icon: true } },
+          leaveType: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
         },
       });
     });
@@ -2626,8 +2702,7 @@ export class LeavesService {
         }, 0);
 
         const pendingLeaves = allLeaves.filter(
-          (l) =>
-            l.leaveTypeId === lt.id && l.status === LeaveStatus.PENDING,
+          (l) => l.leaveTypeId === lt.id && l.status === LeaveStatus.PENDING,
         );
         const pendingDays = pendingLeaves.reduce((sum, l) => {
           const buckets = splitLeaveByYear(
@@ -2792,7 +2867,12 @@ export class LeavesService {
         actorId: actorId ?? null,
         payload: {
           actor: actorSnapshot,
-          subject: { balanceId: r.id, userId: userId ?? null, leaveTypeId, year },
+          subject: {
+            balanceId: r.id,
+            userId: userId ?? null,
+            leaveTypeId,
+            year,
+          },
           operation,
           ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
           ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
@@ -2944,7 +3024,11 @@ export class LeavesService {
     const where: Prisma.LeaveWhereInput = {
       userId,
       status: {
-        in: [LeaveStatus.PENDING, LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED],
+        in: [
+          LeaveStatus.PENDING,
+          LeaveStatus.APPROVED,
+          LeaveStatus.CANCELLATION_REQUESTED,
+        ],
       },
       OR: [
         {
@@ -3078,15 +3162,25 @@ export class LeavesService {
     const spanFilter =
       csvDates.length > 0
         ? {
-            startDate: { lte: new Date(Math.max(...csvDates.map((d) => d.getTime()))) },
-            endDate: { gte: new Date(Math.min(...csvDates.map((d) => d.getTime()))) },
+            startDate: {
+              lte: new Date(Math.max(...csvDates.map((d) => d.getTime()))),
+            },
+            endDate: {
+              gte: new Date(Math.min(...csvDates.map((d) => d.getTime()))),
+            },
           }
         : {};
 
     // Récupérer les congés existants (PENDING/APPROVED/CANCELLATION_REQUESTED) pour détection chevauchement
     const existingLeaves = await this.prisma.leave.findMany({
       where: {
-        status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED] },
+        status: {
+          in: [
+            LeaveStatus.PENDING,
+            LeaveStatus.APPROVED,
+            LeaveStatus.CANCELLATION_REQUESTED,
+          ],
+        },
         ...spanFilter,
       },
       select: {
@@ -3329,8 +3423,12 @@ export class LeavesService {
     const importSpanFilter =
       importDates.length > 0
         ? {
-            startDate: { lte: new Date(Math.max(...importDates.map((d) => d.getTime()))) },
-            endDate: { gte: new Date(Math.min(...importDates.map((d) => d.getTime()))) },
+            startDate: {
+              lte: new Date(Math.max(...importDates.map((d) => d.getTime()))),
+            },
+            endDate: {
+              gte: new Date(Math.min(...importDates.map((d) => d.getTime()))),
+            },
           }
         : {};
 
@@ -3348,7 +3446,13 @@ export class LeavesService {
         // PER-009 — restrict to the CSV date span to avoid loading full history.
         const existingLeaves = await tx.leave.findMany({
           where: {
-            status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED, LeaveStatus.CANCELLATION_REQUESTED] },
+            status: {
+              in: [
+                LeaveStatus.PENDING,
+                LeaveStatus.APPROVED,
+                LeaveStatus.CANCELLATION_REQUESTED,
+              ],
+            },
             ...importSpanFilter,
           },
           select: {
@@ -3359,7 +3463,10 @@ export class LeavesService {
         });
 
         // Map pour détecter les doublons dans le fichier
-        const leavesInFile = new Map<string, Array<{ start: Date; end: Date }>>();
+        const leavesInFile = new Map<
+          string,
+          Array<{ start: Date; end: Date }>
+        >();
 
         for (let i = 0; i < leaves.length; i++) {
           const leaveData = leaves[i];
@@ -3443,7 +3550,8 @@ export class LeavesService {
           const halfDay =
             leaveData.halfDay &&
             parisDayKey(startDate) === parisDayKey(endDate) &&
-            (leaveData.halfDay === 'MORNING' || leaveData.halfDay === 'AFTERNOON')
+            (leaveData.halfDay === 'MORNING' ||
+              leaveData.halfDay === 'AFTERNOON')
               ? leaveData.halfDay
               : null;
 
@@ -3477,7 +3585,10 @@ export class LeavesService {
             ? (leaveType.code as LeaveType)
             : LeaveType.OTHER;
           // COR-021 — warn when code is unknown so silent OTHER-merge is surfaced.
-          if (enumType === LeaveType.OTHER && leaveType.code !== LeaveType.OTHER) {
+          if (
+            enumType === LeaveType.OTHER &&
+            leaveType.code !== LeaveType.OTHER
+          ) {
             this.logger.warn(
               `importLeaves: leaveType.code "${leaveType.code}" is not a known LeaveType enum value; falling back to OTHER (leaveTypeId=${leaveType.id})`,
             );

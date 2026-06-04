@@ -242,7 +242,9 @@ describe('EventsService', () => {
 
       // POST-FIX assertion: findMany must NOT have been called with parentEventId
       expect(prisma.event.findMany).not.toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ parentEventId: 'parent-1' }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ parentEventId: 'parent-1' }),
+        }),
       );
       // POST-FIX assertion: event.create called more than once (parent + children)
       expect(prisma.event.create).toHaveBeenCalledTimes(3); // parent + 2 occurrences

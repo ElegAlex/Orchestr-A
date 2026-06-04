@@ -46,7 +46,8 @@ export class PlanningExportController {
   @ApiResponse({ status: 200, description: 'Fichier ICS genere' })
   async exportIcs(
     @CurrentUser('id') userId: string,
-    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+    @Req()
+    req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
     @Query('start') start?: string,
     @Query('end') end?: string,
     @Res() res?: FastifyReply,

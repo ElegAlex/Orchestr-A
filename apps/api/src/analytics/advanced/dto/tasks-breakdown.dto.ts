@@ -15,7 +15,11 @@ export class TasksBreakdownQueryDto {
   @Type(() => String)
   projectIds?: string[];
 
-  @ApiProperty({ required: false, enum: ArchivedFilter, default: ArchivedFilter.ACTIVE })
+  @ApiProperty({
+    required: false,
+    enum: ArchivedFilter,
+    default: ArchivedFilter.ACTIVE,
+  })
   @IsOptional()
   @IsEnum(ArchivedFilter)
   archived?: ArchivedFilter;

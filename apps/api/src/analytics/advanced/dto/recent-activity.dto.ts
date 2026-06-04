@@ -12,7 +12,11 @@ export class RecentActivityQueryDto {
   @Max(365)
   days?: number = 30;
 
-  @ApiProperty({ required: false, enum: ArchivedFilter, default: ArchivedFilter.ACTIVE })
+  @ApiProperty({
+    required: false,
+    enum: ArchivedFilter,
+    default: ArchivedFilter.ACTIVE,
+  })
   @IsOptional()
   @IsEnum(ArchivedFilter)
   archived?: ArchivedFilter;

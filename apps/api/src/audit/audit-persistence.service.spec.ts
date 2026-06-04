@@ -75,8 +75,7 @@ describe('AuditPersistenceService', () => {
     $queryRaw: vi.fn(async () => (chainTip ? [chainTip] : [])),
     user: {
       findUnique: vi.fn(
-        async ({ where }: { where: { id: string } }) =>
-          users[where.id] ?? null,
+        async ({ where }: { where: { id: string } }) => users[where.id] ?? null,
       ),
     },
     auditLog: {
@@ -93,8 +92,8 @@ describe('AuditPersistenceService', () => {
 
   const mockPrismaService = {
     // Interactive transaction: run the callback against the tx mock.
-    $transaction: vi.fn(
-      async (cb: (tx: typeof txMock) => Promise<unknown>) => cb(txMock),
+    $transaction: vi.fn(async (cb: (tx: typeof txMock) => Promise<unknown>) =>
+      cb(txMock),
     ),
   };
 
@@ -177,7 +176,11 @@ describe('AuditPersistenceService', () => {
         // DAT-021 — LOGIN_SUCCESS routes the AuditService security envelope, so a
         // valid payload carries success + timestamp (the gate would reject a bare
         // { ip }). Hash mechanics are unaffected by the payload's exact shape.
-        payload: { success: true, timestamp: new Date().toISOString(), ip: '10.0.0.1' },
+        payload: {
+          success: true,
+          timestamp: new Date().toISOString(),
+          ip: '10.0.0.1',
+        },
       });
 
       expect(created[0].rowHash).toBeDefined();
@@ -237,7 +240,10 @@ describe('AuditPersistenceService', () => {
         entityType: 'Leave',
         entityId: 'leave-9',
         actorId: 'validator-1',
-        payload: { before: { status: 'PENDING' }, after: { status: 'APPROVED' } },
+        payload: {
+          before: { status: 'PENDING' },
+          after: { status: 'APPROVED' },
+        },
       });
       const row = created[0];
       const tampered = recomputeRowHash({
@@ -446,10 +452,9 @@ describe('AuditPersistenceService', () => {
 
     it('unknown (non-enum) action is a no-op — unreachable in prod via the OBS-024 type gate', () => {
       expect(() =>
-        validatePayloadForAction(
-          'NOT_A_REAL_ACTION' as AuditAction,
-          { anything: true },
-        ),
+        validatePayloadForAction('NOT_A_REAL_ACTION' as AuditAction, {
+          anything: true,
+        }),
       ).not.toThrow();
     });
   });

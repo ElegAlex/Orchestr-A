@@ -1,6 +1,5 @@
 import React from "react";
 import { render, screen, act, fireEvent, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before any imports that pull in the mocked modules

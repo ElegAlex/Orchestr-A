@@ -46,7 +46,10 @@ describe('AnalyticsController', () => {
 
       mockAnalyticsService.getAnalytics.mockResolvedValue(mockResult);
 
-      const result = await controller.getAnalytics(query, mockCurrentUser as any);
+      const result = await controller.getAnalytics(
+        query,
+        mockCurrentUser as any,
+      );
 
       expect(mockAnalyticsService.getAnalytics).toHaveBeenCalledWith(
         query,

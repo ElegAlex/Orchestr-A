@@ -108,7 +108,8 @@ export class JwtNotBeforeService {
   async bumpUser(userId: string): Promise<void> {
     if (!userId) return;
     const nbfSeconds = Math.floor(Date.now() / 1000) + 1;
-    const ttl = this.accessTtlSeconds() + JwtNotBeforeService.TTL_MARGIN_SECONDS;
+    const ttl =
+      this.accessTtlSeconds() + JwtNotBeforeService.TTL_MARGIN_SECONDS;
     try {
       await this.redis.set(
         `${JwtNotBeforeService.KEY_PREFIX}${userId}`,

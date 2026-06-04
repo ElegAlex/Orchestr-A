@@ -1,5 +1,8 @@
 import { render, screen, act } from "@testing-library/react";
 import React from "react";
+import { projectsService } from "@/services/projects.service";
+import { tasksService } from "@/services/tasks.service";
+import { personalTodosService } from "@/services/personal-todos.service";
 
 // Mock Dashboard page (existing tests preserved)
 const MockDashboard = () => {
@@ -137,10 +140,6 @@ describe("PER-017 — fetchData must fire all 3 service calls in parallel (not s
   });
 
   it("fires getByAssignee and getMyDoneUndeclared without waiting for getByUser to resolve", async () => {
-    const { projectsService } = require("@/services/projects.service");
-    const { tasksService } = require("@/services/tasks.service");
-    const { personalTodosService } = require("@/services/personal-todos.service");
-
     // All 3 primary fetches return a NEVER-resolving promise.
     // Sequential code: getByUser blocks → getByAssignee never called → test FAILS.
     // Parallel code (Promise.all): all 3 initiated immediately → test PASSES.

@@ -92,19 +92,16 @@ describe('DAT-022 — User.department onDelete Restrict (real DB)', () => {
     // drop fixtures cleanly regardless of whether the FK is SetNull or Restrict.
     await db.user.delete({ where: { id: userId } }).catch(() => null);
     await db.department.delete({ where: { id: deptId } }).catch(() => null);
-    await db.department.delete({ where: { id: emptyDeptId } }).catch(() => null);
+    await db.department
+      .delete({ where: { id: emptyDeptId } })
+      .catch(() => null);
     await db.$disconnect();
   });
 
-  it(
-    'rejects department delete when users are still assigned (restrict_violation 23001)',
-    async () => {
-      // Bypass the service guard and hit the DB constraint directly.
-      await expectFkViolation(
-        db.department.delete({ where: { id: deptId } }),
-      );
-    },
-  );
+  it('rejects department delete when users are still assigned (restrict_violation 23001)', async () => {
+    // Bypass the service guard and hit the DB constraint directly.
+    await expectFkViolation(db.department.delete({ where: { id: deptId } }));
+  });
 
   it('allows department delete when no users are assigned (Restrict only blocks on references)', async () => {
     // Positive case: an empty department must still be deletable after the fix.

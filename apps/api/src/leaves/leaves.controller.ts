@@ -147,7 +147,8 @@ export class LeavesController {
     @Body() dto: UpsertLeaveBalanceDto,
     @CurrentUser('id') actorId: string,
     @CurrentUser('role') role: { code: string; templateKey: string } | null,
-    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+    @Req()
+    req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
   ) {
     return this.leavesService.upsertBalance(dto, actorId, {
       roleCode: role?.code ?? null,
@@ -166,7 +167,8 @@ export class LeavesController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') actorId: string,
     @CurrentUser('role') role: { code: string; templateKey: string } | null,
-    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+    @Req()
+    req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
   ) {
     return this.leavesService.deleteBalance(id, actorId, {
       roleCode: role?.code ?? null,
@@ -415,7 +417,8 @@ export class LeavesController {
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
     @CurrentUser('role') role: { code: string; templateKey: string } | null,
-    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+    @Req()
+    req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
   ) {
     return this.leavesService.update(
       id,
@@ -450,7 +453,8 @@ export class LeavesController {
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
     @CurrentUser('role') role: { code: string; templateKey: string } | null,
-    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+    @Req()
+    req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
   ) {
     return this.leavesService.remove(
       id,
@@ -488,7 +492,8 @@ export class LeavesController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') validatorId: string,
     @CurrentUser('role') role: { code: string; templateKey: string } | null,
-    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+    @Req()
+    req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
     @Body() dto: ApproveLeaveDto,
   ) {
     return this.leavesService.approve(id, validatorId, dto?.comment, {
@@ -526,7 +531,8 @@ export class LeavesController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') validatorId: string,
     @CurrentUser('role') role: { code: string; templateKey: string } | null,
-    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+    @Req()
+    req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
     @Body() dto: RejectLeaveDto,
   ) {
     return this.leavesService.reject(id, validatorId, dto?.reason, {
@@ -562,7 +568,8 @@ export class LeavesController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('id') userId: string,
     @CurrentUser('role') role: { code: string; templateKey: string } | null,
-    @Req() req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
+    @Req()
+    req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
   ) {
     return this.leavesService.requestCancel(id, userId, {
       roleCode: role?.code ?? null,
