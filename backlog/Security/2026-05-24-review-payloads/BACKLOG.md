@@ -8175,7 +8175,7 @@ Created apps/api/src/common/filters/all-exceptions.filter.ts: global @Catch() Ex
 ---
 ### PER-008 — Tasks findAll bypasses pagination on date filter
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8213,7 +8213,8 @@ pnpm test apps/api/src/tasks/tasks.service.spec.ts  # may need creation if missi
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added findForPlanningOverview describe block (3 tests) to tasks.service.spec.ts. Fail-pre witness: removed take:PLANNING_HARD_CAP from service then test always enforces the 500-row hard cap (PER-008) was RED (AssertionError: vi.fn() called without take:500). Restored via git checkout -- and confirmed GREEN (110/110). Service fix was already committed (no hasDateFilter bypass, findForPlanningOverview with take:500 hard cap). Only spec file changed in this commit (AC6 respected). AC4 N/A (read-only path).
 
 ---
 ### PER-014 — Role-permissions cache stampede risk + no negative caching

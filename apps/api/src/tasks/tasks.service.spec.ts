@@ -386,6 +386,45 @@ describe('TasksService', () => {
     });
   });
 
+  describe('findForPlanningOverview', () => {
+    const planningUser = { id: 'user-1', role: 'ADMIN' };
+
+    beforeEach(() => {
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+    });
+
+    it('always enforces the 500-row hard cap to prevent unbounded fetch (PER-008)', async () => {
+      await service.findForPlanningOverview('2026-01-01', '2026-06-30', planningUser);
+
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 500 }),
+      );
+    });
+
+    it('applies date-overlap filter (endDate >= startDate)', async () => {
+      await service.findForPlanningOverview('2026-01-01', '2026-06-30', planningUser);
+
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({ endDate: { gte: new Date('2026-01-01') } }),
+            ]) as unknown[],
+          }) as object,
+        }),
+      );
+    });
+
+    it('returns data array from planning overview', async () => {
+      const mockTasks = [{ id: 't1', title: 'Planning task', status: 'TODO' }];
+      mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
+
+      const result = await service.findForPlanningOverview('2026-01-01', '2026-06-30', planningUser);
+
+      expect(result).toEqual({ data: mockTasks });
+    });
+  });
+
   describe('findOne', () => {
     it('should return a task by id', async () => {
       const mockTask = {
